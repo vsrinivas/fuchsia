@@ -81,15 +81,11 @@ zx_status_t fdio::connect(const struct sockaddr* addr, socklen_t addrlen, int16_
   return ZX_OK;
 }
 
-zx_status_t fdio::listen(int backlog, int16_t* out_code) {
-  *out_code = EBADF;
-  return ZX_OK;
-}
+zx_status_t fdio::listen(int backlog, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; }
 
 zx_status_t fdio::accept(int flags, struct sockaddr* addr, socklen_t* addrlen,
                          zx_handle_t* out_handle, int16_t* out_code) {
-  *out_code = EBADF;
-  return ZX_OK;
+  return ZX_ERR_WRONG_TYPE;
 }
 
 zx_status_t fdio::getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {

@@ -34,6 +34,94 @@ namespace frawsocket = fuchsia_posix_socket_raw;
 namespace fpacketsocket = fuchsia_posix_socket_packet;
 namespace fnet = fuchsia_net;
 
+/* Socket class hierarchy
+ *
+ *  Wrapper structs for supported FIDL protocols that encapsulate associated
+ *  types and specialized per-protocol logic.
+ *
+ *   +-------------------------+  +---------------------+
+ *   |   struct StreamSocket   |  |  struct RawSocket   |
+ *   |  fsocket::StreamSocket  |  |  frawsocket:Socket  |
+ *   +-------------------------+  +---------------------+
+ *   +-------------------------+  +-------------------------------------+
+ *   |   struct PacketSocket   |  |  struct SynchronousDatagramSocket   |
+ *   |  fpacketsocket::Socket  |  |  fsocket:SynchronousDatagramSocket  |
+ *   +-------------------------+  +-------------------------------------+
+ *
+ *  Utility classes constructed on-the-fly for common socket operations, enabled
+ *  for relevant FIDL wrappers:
+ *
+ *      +-------------------------+          +-------------------------+
+ *      |   class BaseSocket      |          |   class NetworkSocket   |
+ *      |                         |          |                         |
+ *      |        Enabled:         |          |        Enabled:         |
+ *      |        RawSocket        |          |        RawSocket        |
+ *      |     SyncDgramSocket     |          |     SyncDgramSocket     |
+ *      |       StreamSocket      + -------> |       StreamSocket      |
+ *      |       PacketSocket      |          |                         |
+ *      |                         |          |       Implements:       |
+ *      |       Implements:       |          |  Operations for network |
+ *      |     Operations for      |          |        sockets          |
+ *      |     all socket types    |          |                         |
+ *      +-------------------------+          +-------------------------+
+ *
+ *  Stateful class hierarchy for wrapping zircon primitives, enabled for
+ *  relevant FIDL wrappers:
+ *
+ *                            +-----------------------------+
+ *                            |  network_socket_with_event  |     +-----------------+
+ *  +---------------+         |                             |     |  stream_socket  |
+ *  | packet_socket |         |           Enabled:          |     |                 |
+ *  |               |         |           RawSocket         |     |    Enabled:     |
+ *  |   Enabled:    |         |        SyncDgramSocket      |     |   StreamSocket  |
+ *  |  PacketSocket |         |                             |     |                 |
+ *  |               |         |                             |     |    Implements:  |
+ *  |  Implements:  |         |     Implements: Template    |     |  Overrides for  |
+ *  | Overrides for |         |      for instantiating      |     |  sockets using  |
+ *  |    packet     |         |     network sockets that    |     |  zx::socket as  |
+ *  |    sockets    |         |    use FIDL over channel    |     |  a data plane   |
+ *  |  (AF_PACKET)  |         |    (SOCK_RAW, SOCK_DGRAM)   |     |  (SOCK_STREAM)  |
+ *  +---------------+         +-----------------------------+     +-----------------+
+ *          ^                        ^                ^                    ^
+ *          |                        |                |                    |
+ *          |                        |                |                    |
+ *          +-----------+------------+                +-------------+      |
+ *                      |                                           |      |
+ *                      |                                           |      |
+ *          +-----------+-----------+                       +-------+------+--------+
+ *          |  socket_with_event    |                       |    network_socket     |
+ *          |                       |                       |                       |
+ *          |       Enabled:        |                       |       Enabled:        |
+ *          |     PacketSocket      |                       |       RawSocket       |
+ *          |       RawSocket       |                       |    SyncDgramSocket    |
+ *          |    SyncDgramSocket    |                       |     Streamsocket      |
+ *          |                       | <---------+---------> |                       |
+ *          | Implements: Overrides |           |           | Implements: Overrides |
+ *          |   for sockets using   |           |           |  for network layer    |
+ *          |   FIDL over channel   |           |           |       sockets         |
+ *          |    as a data plane    |           |           |                       |
+ *          +-----------------------+           |           +-----------------------+
+ *                                              |
+ *                               +--------------+-------------+
+ *                               |         base_socket        |
+ *                               |                            |
+ *                               |         Enabled: All       |
+ *                               |                            |
+ *                               |  Implements: Overrides for |
+ *                               |       all socket types     |
+ *                               +----------------------------+
+ *                                              ^
+ *                                              |
+ *                                              |
+ *                                   +----------+-----------+
+ *                                   |         zxio         |
+ *                                   |                      |
+ *                                   |  Implements: POSIX   |
+ *                                   | interface + behavior |
+ *                                   |    for generic fds   |
+ *                                   +----------------------+
+ */
+
 namespace {
 
 // A helper structure to keep a socket address and the variants allocations on the stack.
@@ -1332,7 +1420,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return getname(client()->GetPeerName(), addr, addrlen, out_code);
-    ;
   }
 
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
@@ -1750,187 +1837,200 @@ static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kPortsel) == 
 static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kAutomedia) == IFF_AUTOMEDIA);
 static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kDynamic) == IFF_DYNAMIC);
 
-template <typename F>
-Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
-  switch (req) {
-    case SIOCGIFNAME: {
-      auto& provider = get_client<fsocket::Provider>();
-      if (provider.is_error()) {
-        return Errno(fdio_status_to_errno(provider.error_value()));
-      }
-      struct ifreq* ifr = va_arg(va, struct ifreq*);
-      auto response = provider->InterfaceIndexToName(static_cast<uint64_t>(ifr->ifr_ifindex));
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        return Errno(fdio_status_to_errno(status));
-      }
-      auto const& result = response.value();
-      if (result.is_error()) {
-        if (result.error_value() == ZX_ERR_NOT_FOUND) {
-          return Errno(ENODEV);
-        }
-        return Errno(fdio_status_to_errno(result.error_value()));
-      }
-      auto const& if_name = result.value()->name;
-      const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
-      auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
-      if (it != std::end(ifr->ifr_name)) {
-        *it = 0;
-      }
-      return Errno(Errno::Ok);
-    }
-    case SIOCGIFINDEX: {
-      auto& provider = get_client<fsocket::Provider>();
-      if (provider.is_error()) {
-        return Errno(fdio_status_to_errno(provider.error_value()));
-      }
-      struct ifreq* ifr = va_arg(va, struct ifreq*);
-      fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
-      auto response = provider->InterfaceNameToIndex(name);
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        if (status == ZX_ERR_INVALID_ARGS) {
-          // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
-          // (`name` in this case) fails UTF-8 validation.
-          return Errno(ENODEV);
-        }
-        return Errno(fdio_status_to_errno(status));
-      }
-      auto const& result = response.value();
-      if (result.is_error()) {
-        if (result.error_value() == ZX_ERR_NOT_FOUND) {
-          return Errno(ENODEV);
-        }
-        return Errno(fdio_status_to_errno(result.error_value()));
-      }
-      ifr->ifr_ifindex = static_cast<int>(result.value()->index);
-      return Errno(Errno::Ok);
-    }
-    case SIOCGIFFLAGS: {
-      auto& provider = get_client<fsocket::Provider>();
-      if (provider.is_error()) {
-        return Errno(fdio_status_to_errno(provider.error_value()));
-      }
-      struct ifreq* ifr = va_arg(va, struct ifreq*);
-      fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
-      auto response = provider->InterfaceNameToFlags(name);
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        if (status == ZX_ERR_INVALID_ARGS) {
-          // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
-          // (`name` in this case) fails UTF-8 validation.
-          return Errno(ENODEV);
-        }
-        return Errno(fdio_status_to_errno(status));
-      }
-      auto const& result = response.value();
-      if (result.is_error()) {
-        if (result.error_value() == ZX_ERR_NOT_FOUND) {
-          return Errno(ENODEV);
-        }
-        return Errno(fdio_status_to_errno(result.error_value()));
-      }
-      ifr->ifr_flags =
-          static_cast<uint16_t>(result.value()->flags);  // NOLINT(bugprone-narrowing-conversions)
-      return Errno(Errno::Ok);
-    }
-    case SIOCGIFCONF: {
-      struct ifconf* ifc_ptr = va_arg(va, struct ifconf*);
-      if (ifc_ptr == nullptr) {
-        return Errno(EFAULT);
-      }
-      struct ifconf& ifc = *ifc_ptr;
-
-      auto& provider = get_client<fsocket::Provider>();
-      if (provider.is_error()) {
-        return Errno(fdio_status_to_errno(provider.error_value()));
-      }
-      auto response = provider->GetInterfaceAddresses();
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        return Errno(fdio_status_to_errno(status));
-      }
-      const auto& interfaces = response.value().interfaces;
-
-      // If `ifc_req` is NULL, return the necessary buffer size in bytes for
-      // receiving all available addresses in `ifc_len`.
-      //
-      // This allows the caller to determine the necessary buffer size
-      // beforehand, and is the documented manual behavior.
-      // See: https://man7.org/linux/man-pages/man7/netdevice.7.html
-      if (ifc.ifc_req == nullptr) {
-        int len = 0;
-        for (const auto& iface : interfaces) {
-          for (const auto& address : iface.addresses()) {
-            if (address.addr.Which() == fnet::wire::IpAddress::Tag::kIpv4) {
-              len += sizeof(struct ifreq);
-            }
-          }
-        }
-        ifc.ifc_len = len;
-        return Errno(Errno::Ok);
-      }
-
-      struct ifreq* ifr = ifc.ifc_req;
-      const auto buffer_full = [&] {
-        return ifr + 1 > ifc.ifc_req + ifc.ifc_len / sizeof(struct ifreq);
-      };
-      for (const auto& iface : interfaces) {
-        // Don't write past the caller-allocated buffer.
-        // C++ doesn't support break labels, so we check this in both the inner
-        // and outer loops.
-        if (buffer_full()) {
-          break;
-        }
-        // This should not happen, and would indicate a protocol error with
-        // fuchsia.posix.socket/Provider.GetInterfaceAddresses.
-        if (!iface.has_name() || !iface.has_addresses()) {
-          continue;
-        }
-
-        const auto& if_name = iface.name();
-        for (const auto& address : iface.addresses()) {
-          // Don't write past the caller-allocated buffer.
-          if (buffer_full()) {
-            break;
-          }
-          // SIOCGIFCONF only returns interface addresses of the AF_INET (IPv4)
-          // family for compatibility; this is the behavior documented in the
-          // manual. See: https://man7.org/linux/man-pages/man7/netdevice.7.html
-          const auto& addr = address.addr;
-          if (addr.Which() != fnet::wire::IpAddress::Tag::kIpv4) {
-            continue;
-          }
-
-          // Write interface name.
-          const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
-          auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
-          if (it != std::end(ifr->ifr_name)) {
-            *it = 0;
-          }
-
-          // Write interface address.
-          auto& s = *reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
-          const auto& ipv4 = addr.ipv4();
-          s.sin_family = AF_INET;
-          s.sin_port = 0;
-          static_assert(sizeof(s.sin_addr) == sizeof(ipv4.addr));
-          memcpy(&s.sin_addr, ipv4.addr.data(), sizeof(ipv4.addr));
-
-          ifr++;
-        }
-      }
-      ifc.ifc_len = static_cast<int>((ifr - ifc.ifc_req) * sizeof(struct ifreq));
-      return Errno(Errno::Ok);
-    }
-    default:
-      return fallback(req, va);
-  }
-}
-
 }  // namespace
 
 namespace fdio_internal {
+
+struct SynchronousDatagramSocket;
+struct RawSocket;
+struct PacketSocket;
+struct StreamSocket;
+
+template <typename T,
+          typename = std::enable_if_t<
+              std::is_same_v<T, SynchronousDatagramSocket> || std::is_same_v<T, RawSocket> ||
+              std::is_same_v<T, PacketSocket> || std::is_same_v<T, StreamSocket>>>
+struct base_socket : public zxio {
+  Errno posix_ioctl(int req, va_list va) final {
+    switch (req) {
+      case SIOCGIFNAME: {
+        auto& provider = get_client<fsocket::Provider>();
+        if (provider.is_error()) {
+          return Errno(fdio_status_to_errno(provider.error_value()));
+        }
+        struct ifreq* ifr = va_arg(va, struct ifreq*);
+        auto response = provider->InterfaceIndexToName(static_cast<uint64_t>(ifr->ifr_ifindex));
+        zx_status_t status = response.status();
+        if (status != ZX_OK) {
+          return Errno(fdio_status_to_errno(status));
+        }
+        auto const& result = response.value();
+        if (result.is_error()) {
+          if (result.error_value() == ZX_ERR_NOT_FOUND) {
+            return Errno(ENODEV);
+          }
+          return Errno(fdio_status_to_errno(result.error_value()));
+        }
+        auto const& if_name = result.value()->name;
+        const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
+        auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
+        if (it != std::end(ifr->ifr_name)) {
+          *it = 0;
+        }
+        return Errno(Errno::Ok);
+      }
+      case SIOCGIFINDEX: {
+        auto& provider = get_client<fsocket::Provider>();
+        if (provider.is_error()) {
+          return Errno(fdio_status_to_errno(provider.error_value()));
+        }
+        struct ifreq* ifr = va_arg(va, struct ifreq*);
+        fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
+        auto response = provider->InterfaceNameToIndex(name);
+        zx_status_t status = response.status();
+        if (status != ZX_OK) {
+          if (status == ZX_ERR_INVALID_ARGS) {
+            // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
+            // (`name` in this case) fails UTF-8 validation.
+            return Errno(ENODEV);
+          }
+          return Errno(fdio_status_to_errno(status));
+        }
+        auto const& result = response.value();
+        if (result.is_error()) {
+          if (result.error_value() == ZX_ERR_NOT_FOUND) {
+            return Errno(ENODEV);
+          }
+          return Errno(fdio_status_to_errno(result.error_value()));
+        }
+        ifr->ifr_ifindex = static_cast<int>(result.value()->index);
+        return Errno(Errno::Ok);
+      }
+      case SIOCGIFFLAGS: {
+        auto& provider = get_client<fsocket::Provider>();
+        if (provider.is_error()) {
+          return Errno(fdio_status_to_errno(provider.error_value()));
+        }
+        struct ifreq* ifr = va_arg(va, struct ifreq*);
+        fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
+        auto response = provider->InterfaceNameToFlags(name);
+        zx_status_t status = response.status();
+        if (status != ZX_OK) {
+          if (status == ZX_ERR_INVALID_ARGS) {
+            // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
+            // (`name` in this case) fails UTF-8 validation.
+            return Errno(ENODEV);
+          }
+          return Errno(fdio_status_to_errno(status));
+        }
+        auto const& result = response.value();
+        if (result.is_error()) {
+          if (result.error_value() == ZX_ERR_NOT_FOUND) {
+            return Errno(ENODEV);
+          }
+          return Errno(fdio_status_to_errno(result.error_value()));
+        }
+        ifr->ifr_flags =
+            static_cast<uint16_t>(result.value()->flags);  // NOLINT(bugprone-narrowing-conversions)
+        return Errno(Errno::Ok);
+      }
+      case SIOCGIFCONF: {
+        struct ifconf* ifc_ptr = va_arg(va, struct ifconf*);
+        if (ifc_ptr == nullptr) {
+          return Errno(EFAULT);
+        }
+        struct ifconf& ifc = *ifc_ptr;
+
+        auto& provider = get_client<fsocket::Provider>();
+        if (provider.is_error()) {
+          return Errno(fdio_status_to_errno(provider.error_value()));
+        }
+        auto response = provider->GetInterfaceAddresses();
+        zx_status_t status = response.status();
+        if (status != ZX_OK) {
+          return Errno(fdio_status_to_errno(status));
+        }
+        const auto& interfaces = response.value().interfaces;
+
+        // If `ifc_req` is NULL, return the necessary buffer size in bytes for
+        // receiving all available addresses in `ifc_len`.
+        //
+        // This allows the caller to determine the necessary buffer size
+        // beforehand, and is the documented manual behavior.
+        // See: https://man7.org/linux/man-pages/man7/netdevice.7.html
+        if (ifc.ifc_req == nullptr) {
+          int len = 0;
+          for (const auto& iface : interfaces) {
+            for (const auto& address : iface.addresses()) {
+              if (address.addr.Which() == fnet::wire::IpAddress::Tag::kIpv4) {
+                len += sizeof(struct ifreq);
+              }
+            }
+          }
+          ifc.ifc_len = len;
+          return Errno(Errno::Ok);
+        }
+
+        struct ifreq* ifr = ifc.ifc_req;
+        const auto buffer_full = [&] {
+          return ifr + 1 > ifc.ifc_req + ifc.ifc_len / sizeof(struct ifreq);
+        };
+        for (const auto& iface : interfaces) {
+          // Don't write past the caller-allocated buffer.
+          // C++ doesn't support break labels, so we check this in both the inner
+          // and outer loops.
+          if (buffer_full()) {
+            break;
+          }
+          // This should not happen, and would indicate a protocol error with
+          // fuchsia.posix.socket/Provider.GetInterfaceAddresses.
+          if (!iface.has_name() || !iface.has_addresses()) {
+            continue;
+          }
+
+          const auto& if_name = iface.name();
+          for (const auto& address : iface.addresses()) {
+            // Don't write past the caller-allocated buffer.
+            if (buffer_full()) {
+              break;
+            }
+            // SIOCGIFCONF only returns interface addresses of the AF_INET (IPv4)
+            // family for compatibility; this is the behavior documented in the
+            // manual. See: https://man7.org/linux/man-pages/man7/netdevice.7.html
+            const auto& addr = address.addr;
+            if (addr.Which() != fnet::wire::IpAddress::Tag::kIpv4) {
+              continue;
+            }
+
+            // Write interface name.
+            const size_t len = std::min(if_name.size(), std::size(ifr->ifr_name));
+            auto it = std::copy_n(if_name.begin(), len, std::begin(ifr->ifr_name));
+            if (it != std::end(ifr->ifr_name)) {
+              *it = 0;
+            }
+
+            // Write interface address.
+            auto& s = *reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
+            const auto& ipv4 = addr.ipv4();
+            s.sin_family = AF_INET;
+            s.sin_port = 0;
+            static_assert(sizeof(s.sin_addr) == sizeof(ipv4.addr));
+            memcpy(&s.sin_addr, ipv4.addr.data(), sizeof(ipv4.addr));
+
+            ifr++;
+          }
+        }
+        ifc.ifc_len = static_cast<int>((ifr - ifc.ifc_req) * sizeof(struct ifreq));
+        return Errno(Errno::Ok);
+      }
+      default:
+        return zxio::posix_ioctl(req, va);
+    }
+  }
+
+ protected:
+  virtual fidl::WireSyncClient<typename T::FidlProtocol>& GetClient() = 0;
+};
 
 void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void* addr,
                                     socklen_t& addr_len) {
@@ -1944,7 +2044,12 @@ void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void*
   addr_len = fidl_to_sockaddr(fidl, addr, addr_len);
 }
 
+struct StreamSocket {
+  using FidlProtocol = fsocket::StreamSocket;
+};
+
 struct SynchronousDatagramSocket {
+  using FidlProtocol = fsocket::SynchronousDatagramSocket;
   using FidlSockAddr = SocketAddress;
   using FidlSendControlData = fsocket::wire::DatagramSocketSendControlData;
   using zxio_type = zxio_synchronous_datagram_socket_t;
@@ -1966,6 +2071,7 @@ struct SynchronousDatagramSocket {
 };
 
 struct RawSocket {
+  using FidlProtocol = frawsocket::Socket;
   using FidlSockAddr = SocketAddress;
   using FidlSendControlData = fsocket::wire::NetworkSocketSendControlData;
   using zxio_type = zxio_raw_socket_t;
@@ -1983,6 +2089,7 @@ struct RawSocket {
 };
 
 struct PacketSocket {
+  using FidlProtocol = fpacketsocket::Socket;
   using FidlSockAddr = PacketInfo;
   using FidlSendControlData = fpacketsocket::wire::SendControlData;
   using zxio_type = zxio_packet_socket_t;
@@ -2032,7 +2139,9 @@ typename std::enable_if<!FitxResultHasValue<T>::value>::type HandleSendMsgRespon
 template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
                                                   std::is_same_v<T, RawSocket> ||
                                                   std::is_same_v<T, PacketSocket>>>
-struct base_socket_with_event : public zxio {
+// inheritance is virtual to avoid multiple copies of `base_socket<T>` when derived classes
+// inherit from `socket_with_event` and `network_socket`.
+struct socket_with_event : virtual public base_socket<T> {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalOutgoing = ZX_USER_SIGNAL_1;
   static constexpr zx_signals_t kSignalError = ZX_USER_SIGNAL_2;
@@ -2072,18 +2181,6 @@ struct base_socket_with_event : public zxio {
     *out_events = events;
   }
 
-  Errno posix_ioctl(int req, va_list va) final {
-    return zxsio_posix_ioctl(req, va,
-                             [this](int req, va_list va) { return zxio::posix_ioctl(req, va); });
-  }
-
-  zx_status_t listen(int backlog, int16_t* out_code) override { return ZX_ERR_WRONG_TYPE; }
-
-  zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen, zx_handle_t* out_handle,
-                     int16_t* out_code) override {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
     size_t datalen = 0;
@@ -2093,8 +2190,8 @@ struct base_socket_with_event : public zxio {
 
     bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
     bool want_cmsg = msg->msg_controllen != 0 && msg->msg_control != nullptr;
-    auto response = zxio_socket_with_event().client->RecvMsg(
-        want_addr, static_cast<uint32_t>(datalen), want_cmsg, to_recvmsg_flags(flags));
+    auto response = GetClient()->RecvMsg(want_addr, static_cast<uint32_t>(datalen), want_cmsg,
+                                         to_recvmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2206,7 +2303,7 @@ struct base_socket_with_event : public zxio {
     // TODO(https://fxbug.dev/58503): Use better representation of nullable union when
     // available. Currently just using a default-initialized union with an invalid tag.
     auto response = addr.WithFIDL([&](auto address) {
-      return zxio_socket_with_event().client->SendMsg(address, vec, cdata, to_sendmsg_flags(flags));
+      return GetClient()->SendMsg(address, vec, cdata, to_sendmsg_flags(flags));
     });
     zx_status_t status = response.status();
     if (status != ZX_OK) {
@@ -2226,111 +2323,108 @@ struct base_socket_with_event : public zxio {
   }
 
  protected:
-  friend class fbl::internal::MakeRefCountedHelper<base_socket_with_event<T>>;
-  friend class fbl::RefPtr<base_socket_with_event<T>>;
+  friend class fbl::internal::MakeRefCountedHelper<socket_with_event<T>>;
+  friend class fbl::RefPtr<socket_with_event<T>>;
 
-  base_socket_with_event<T>() = default;
-  ~base_socket_with_event<T>() override = default;
+  socket_with_event<T>() = default;
+  ~socket_with_event<T>() override = default;
+
+  fidl::WireSyncClient<typename T::FidlProtocol>& GetClient() override {
+    return zxio_socket_with_event().client;
+  }
 
   typename T::zxio_type& zxio_socket_with_event() {
-    return *reinterpret_cast<typename T::zxio_type*>(&zxio_storage().io);
+    return *reinterpret_cast<typename T::zxio_type*>(&base_socket<T>::zxio_storage().io);
   }
 };
 
 template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
+                                                  std::is_same_v<T, StreamSocket> ||
                                                   std::is_same_v<T, RawSocket>>>
-struct socket_with_event : public base_socket_with_event<T> {
-  using base_socket_with_event<T>::zxio_socket_with_event;
-
+// inheritance is virtual to avoid multiple copies of `base_socket<T>` when derived classes
+// inherit from `network_socket` and `socket_with_event`.
+struct network_socket : virtual public base_socket<T> {
+  using base_socket<T>::GetClient;
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_socket_with_event().client).bind(addr, addrlen, out_code);
+    return BaseNetworkSocket(GetClient()).bind(addr, addrlen, out_code);
   }
 
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_socket_with_event().client).connect(addr, addrlen, out_code);
+    return BaseNetworkSocket(GetClient()).connect(addr, addrlen, out_code);
   }
 
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_socket_with_event().client).getsockname(addr, addrlen, out_code);
+    return BaseNetworkSocket(GetClient()).getsockname(addr, addrlen, out_code);
   }
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_socket_with_event().client).getpeername(addr, addrlen, out_code);
+    return BaseNetworkSocket(GetClient()).getpeername(addr, addrlen, out_code);
   }
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
-    SockOptResult result = BaseNetworkSocket(zxio_socket_with_event().client)
-                               .getsockopt_fidl(level, optname, optval, optlen);
+    SockOptResult result =
+        BaseNetworkSocket(GetClient()).getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   }
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
-    SockOptResult result = BaseNetworkSocket(zxio_socket_with_event().client)
-                               .setsockopt_fidl(level, optname, optval, optlen);
+    SockOptResult result =
+        BaseNetworkSocket(GetClient()).setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_socket_with_event().client).shutdown(how, out_code);
+    return BaseNetworkSocket(GetClient()).shutdown(how, out_code);
   }
-
- protected:
-  friend class fbl::internal::MakeRefCountedHelper<socket_with_event<T>>;
-  friend class fbl::RefPtr<socket_with_event<T>>;
-
-  socket_with_event<T>() = default;
-  ~socket_with_event<T>() override = default;
 };
 
 template <>
-zx_status_t socket_with_event<RawSocket>::getsockopt(int level, int optname, void* optval,
-                                                     socklen_t* optlen, int16_t* out_code) {
+zx_status_t network_socket<RawSocket>::getsockopt(int level, int optname, void* optval,
+                                                  socklen_t* optlen, int16_t* out_code) {
   SockOptResult result = [&]() {
     GetSockOptProcessor proc(optval, optlen);
     switch (level) {
       case SOL_ICMPV6:
         switch (optname) {
           case ICMP6_FILTER:
-            return proc.Process(zxio_socket_with_event().client->GetIcmpv6Filter(),
+            return proc.Process(GetClient()->GetIcmpv6Filter(),
                                 [](const auto& response) { return response.filter; });
         }
         break;
       case SOL_IPV6:
         switch (optname) {
           case IPV6_CHECKSUM:
-            return proc.Process(
-                zxio_socket_with_event().client->GetIpv6Checksum(), [](const auto& response) {
-                  switch (response.config.Which()) {
-                    case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kDisabled:
-                      return -1;
-                    case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kOffset:
-                      return response.config.offset();
-                  };
-                });
+            return proc.Process(GetClient()->GetIpv6Checksum(), [](const auto& response) {
+              switch (response.config.Which()) {
+                case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kDisabled:
+                  return -1;
+                case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kOffset:
+                  return response.config.offset();
+              };
+            });
         }
         break;
       case SOL_IP:
         switch (optname) {
           case IP_HDRINCL:
-            return proc.Process(zxio_socket_with_event().client->GetIpHeaderIncluded(),
+            return proc.Process(GetClient()->GetIpHeaderIncluded(),
                                 [](const auto& response) { return response.value; });
         }
         break;
     }
-    return BaseNetworkSocket(zxio_socket_with_event().client)
-        .getsockopt_fidl(level, optname, optval, optlen);
+    return BaseNetworkSocket(GetClient()).getsockopt_fidl(level, optname, optval, optlen);
   }();
   *out_code = result.err;
   return result.status;
 }
 
 template <>
-zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, const void* optval,
-                                                     socklen_t optlen, int16_t* out_code) {
+zx_status_t network_socket<RawSocket>::setsockopt(int level, int optname, const void* optval,
+                                                  socklen_t optlen, int16_t* out_code) {
   SockOptResult result = [&]() {
     SetSockOptProcessor proc(optval, optlen);
 
@@ -2340,7 +2434,7 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
           case ICMP6_FILTER:
             return proc.Process<frawsocket::wire::Icmpv6Filter>(
                 [this](frawsocket::wire::Icmpv6Filter value) {
-                  return zxio_socket_with_event().client->SetIcmpv6Filter(value);
+                  return GetClient()->SetIcmpv6Filter(value);
                 });
         }
         break;
@@ -2357,28 +2451,37 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
                 config = frawsocket::wire::Ipv6ChecksumConfiguration::WithOffset(value);
               }
 
-              return zxio_socket_with_event().client->SetIpv6Checksum(config);
+              return GetClient()->SetIpv6Checksum(config);
             });
         }
         break;
       case SOL_IP:
         switch (optname) {
           case IP_HDRINCL:
-            return proc.Process<bool>([this](bool value) {
-              return zxio_socket_with_event().client->SetIpHeaderIncluded(value);
-            });
+            return proc.Process<bool>(
+                [this](bool value) { return GetClient()->SetIpHeaderIncluded(value); });
         }
         break;
     }
-    return BaseNetworkSocket(zxio_socket_with_event().client)
-        .setsockopt_fidl(level, optname, optval, optlen);
+    return BaseNetworkSocket(GetClient()).setsockopt_fidl(level, optname, optval, optlen);
   }();
   *out_code = result.err;
   return result.status;
 }
 
-using synchronous_datagram_socket = socket_with_event<SynchronousDatagramSocket>;
-using raw_socket = socket_with_event<RawSocket>;
+template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
+                                                  std::is_same_v<T, RawSocket>>>
+struct network_socket_with_event : public socket_with_event<T>, public network_socket<T> {
+ protected:
+  friend class fbl::internal::MakeRefCountedHelper<network_socket_with_event<T>>;
+  friend class fbl::RefPtr<network_socket_with_event<T>>;
+
+  network_socket_with_event<T>() = default;
+  ~network_socket_with_event<T>() override = default;
+};
+
+using synchronous_datagram_socket = network_socket_with_event<SynchronousDatagramSocket>;
+using raw_socket = network_socket_with_event<RawSocket>;
 
 }  // namespace fdio_internal
 
@@ -2416,7 +2519,7 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 
 namespace fdio_internal {
 
-struct stream_socket : public zxio {
+struct stream_socket : public network_socket<StreamSocket> {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalConnected = ZX_USER_SIGNAL_3;
 
@@ -2524,18 +2627,8 @@ struct stream_socket : public zxio {
     *out_events = events;
   }
 
-  Errno posix_ioctl(int req, va_list va) final {
-    return zxsio_posix_ioctl(req, va,
-                             [this](int req, va_list va) { return zxio::posix_ioctl(req, va); });
-  }
-
-  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_stream_socket().client).bind(addr, addrlen, out_code);
-  }
-
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    zx_status_t status =
-        BaseNetworkSocket(zxio_stream_socket().client).connect(addr, addrlen, out_code);
+    zx_status_t status = network_socket::connect(addr, addrlen, out_code);
     if (status == ZX_OK) {
       std::lock_guard lock(state_lock_);
       switch (*out_code) {
@@ -2551,7 +2644,7 @@ struct stream_socket : public zxio {
   }
 
   zx_status_t listen(int backlog, int16_t* out_code) override {
-    auto response = zxio_stream_socket().client->Listen(safemath::saturated_cast<int16_t>(backlog));
+    auto response = GetClient()->Listen(safemath::saturated_cast<int16_t>(backlog));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2572,7 +2665,7 @@ struct stream_socket : public zxio {
   zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen, zx_handle_t* out_handle,
                      int16_t* out_code) override {
     bool want_addr = addr != nullptr && addrlen != nullptr;
-    auto response = zxio_stream_socket().client->Accept(want_addr);
+    auto response = GetClient()->Accept(want_addr);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2592,30 +2685,6 @@ struct stream_socket : public zxio {
       *addrlen = static_cast<socklen_t>(fidl_to_sockaddr(out, addr, *addrlen));
     }
     return ZX_OK;
-  }
-
-  zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_stream_socket().client).getsockname(addr, addrlen, out_code);
-  }
-
-  zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_stream_socket().client).getpeername(addr, addrlen, out_code);
-  }
-
-  zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
-                         int16_t* out_code) override {
-    SockOptResult result = BaseNetworkSocket(zxio_stream_socket().client)
-                               .getsockopt_fidl(level, optname, optval, optlen);
-    *out_code = result.err;
-    return result.status;
-  }
-
-  zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
-                         int16_t* out_code) override {
-    SockOptResult result = BaseNetworkSocket(zxio_stream_socket().client)
-                               .setsockopt_fidl(level, optname, optval, optlen);
-    *out_code = result.err;
-    return result.status;
   }
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
@@ -2699,10 +2768,6 @@ struct stream_socket : public zxio {
     }
   }
 
-  zx_status_t shutdown(int how, int16_t* out_code) override {
-    return BaseNetworkSocket(zxio_stream_socket().client).shutdown(how, out_code);
-  }
-
  private:
   zxio_stream_socket_t& zxio_stream_socket() { return ::zxio_stream_socket(&zxio_storage().io); }
 
@@ -2736,7 +2801,7 @@ struct stream_socket : public zxio {
   }
 
   zx::status<int32_t> GetError() {
-    fidl::WireResult response = zxio_stream_socket().client->GetError();
+    fidl::WireResult response = GetClient()->GetError();
     if (!response.ok()) {
       return zx::error(response.status());
     }
@@ -2745,6 +2810,10 @@ struct stream_socket : public zxio {
       return zx::ok(static_cast<int32_t>(result.error_value()));
     }
     return zx::ok(0);
+  }
+
+  fidl::WireSyncClient<fsocket::StreamSocket>& GetClient() override {
+    return zxio_stream_socket().client;
   }
 
   std::mutex state_lock_;
@@ -2833,9 +2902,7 @@ zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
 
 namespace fdio_internal {
 
-struct packet_socket : public base_socket_with_event<PacketSocket> {
-  using base_socket_with_event<PacketSocket>::zxio_socket_with_event;
-
+struct packet_socket : public socket_with_event<PacketSocket> {
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
     if (addr == nullptr || addrlen < sizeof(sockaddr_ll)) {
       return ZX_ERR_INVALID_ARGS;
@@ -2867,8 +2934,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
           fidl::ObjectView<uint64_t>::FromExternal(&ifindex));
     }
 
-    const fidl::WireResult response =
-        zxio_socket_with_event().client->Bind(proto_assoc, interface_id);
+    const fidl::WireResult response = GetClient()->Bind(proto_assoc, interface_id);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2892,7 +2958,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
       return ZX_OK;
     }
 
-    const fidl::WireResult response = zxio_socket_with_event().client->GetInfo();
+    const fidl::WireResult response = GetClient()->GetInfo();
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2937,8 +3003,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
     switch (level) {
       case SOL_SOCKET:
-        return BaseSocket(zxio_socket_with_event().client)
-            .get_solsocket_sockopt_fidl(optname, optval, optlen);
+        return BaseSocket(GetClient()).get_solsocket_sockopt_fidl(optname, optval, optlen);
       default:
         return SockOptResult::Errno(EPROTONOSUPPORT);
     }
@@ -2954,8 +3019,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
   SockOptResult setsockopt_fidl(int level, int optname, const void* optval, socklen_t optlen) {
     switch (level) {
       case SOL_SOCKET:
-        return BaseSocket(zxio_socket_with_event().client)
-            .set_solsocket_sockopt_fidl(optname, optval, optlen);
+        return BaseSocket(GetClient()).set_solsocket_sockopt_fidl(optname, optval, optlen);
       default:
         return SockOptResult::Errno(EPROTONOSUPPORT);
     }
