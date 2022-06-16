@@ -16,7 +16,6 @@ group("all") {
   testonly = true
   public_deps = [
     ":acpidump",
-    ":atheros",
     ":bluetooth_a2dp",
     ":bluetooth_all",
     ":bluetooth_atheros",
@@ -54,14 +53,6 @@ group("all") {
     "//src/ui/a11y:a11y",
     "//src/zircon/bin/hwstress",
     "//third_party/sbase",
-  ]
-}
-
-group("atheros") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -258,8 +249,5 @@ group("wifi_intel") {
 }
 
 group("wlan_drivers") {
-  public_deps = [
-    ":atheros",
-    ":broadcom",
-  ]
+  public_deps = [ ":broadcom" ]
 }
