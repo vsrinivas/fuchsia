@@ -28,7 +28,7 @@ go_test("syslog_test") {
 }
 
 fuchsia_unittest_package("syslog-gotests") {
-  manifest = "meta/syslog_test.cmx"
+  manifest = "meta/syslog_test.cml"
   deps = [ ":syslog_test" ]
   test_specs = {
     environments = [ emu_env ]
