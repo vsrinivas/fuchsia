@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("server") {
+  name = "multi_nic_test_server"
+  testonly = true
+  deps = [
+    "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:tracing",
+  ]
+  source_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}

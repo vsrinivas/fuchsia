@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("bin") {
+  output_name = "multi_nic_test_client"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_llcpp",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("server") {
+  manifest = "meta/server.cml"
+  deps = [ "server" ]
+}
+
+fuchsia_unittest_component("client") {
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("test") {
+  manifest = "meta/runner-test.cml"
+  deps = [
+    ":client",
+    ":server",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/sync-manager",
+  ]
+}
+
+fuchsia_test_package("netstack-multi-nic-tests") {
+  test_components = [ ":test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":netstack-multi-nic-tests" ]
+}

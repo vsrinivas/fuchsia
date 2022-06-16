@@ -209,6 +209,7 @@ group("tests") {
     "fidl:tests",
     "getifaddrs:tests",
     "integration:tests",
+    "multi_nic:tests",
   ]
   if (host_os == "linux") {
     public_deps += [
