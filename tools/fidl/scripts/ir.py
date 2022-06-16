@@ -68,7 +68,7 @@ class Type(dict):
                 # a cycle
                 return self['identifier'] + nullable
             value = self.library.libraries.find(self['identifier'])
-            if isinstance(value, Interface):
+            if isinstance(value, Protocol):
                 return self['identifier'] + nullable
             else:
                 return value.decl(
@@ -147,13 +147,13 @@ class Argument(Declaration):
 
 
 class Method(Declaration):
-    def __init__(self, interface: 'Interface', value: dict):
-        Declaration.__init__(self, interface.library, value)
-        self.interface = interface
+    def __init__(self, protocol: 'Protocol', value: dict):
+        Declaration.__init__(self, protocol.library, value)
+        self.protocol = protocol
 
     @property
     def name(self) -> str:
-        return '%s.%s' % (self.interface.name, self['name'])
+        return '%s.%s' % (self.protocol.name, self['name'])
 
     def is_event(self) -> bool:
         return 'maybe_request' not in self
@@ -192,7 +192,7 @@ class Method(Declaration):
                 ', '.join(arg.decl(state) for arg in self.response()) + ');')
 
 
-class Interface(Declaration):
+class Protocol(Declaration):
     @property
     def methods(self) -> t.List[Method]:
         return [Method(self, m) for m in self.get('methods', [])]
@@ -294,7 +294,7 @@ DECLARATION_TYPES = {
     'const': ('const_declarations', Const),
     'enum': ('enum_declarations', Enum),
     'bits': ('bits_declarations', Bits),
-    'interface': ('interface_declarations', Interface),
+    'protocol': ('protocol_declarations', Protocol),
     'struct': ('struct_declarations', Struct),
     'table': ('table_declarations', Table),
     'union': ('union_declarations', Union),
@@ -324,8 +324,8 @@ class Library(dict):
         return [Bits(self, value) for value in self['bits_declarations']]
 
     @property
-    def interfaces(self) -> t.List[Interface]:
-        return [Interface(self, v) for v in self['interface_declarations']]
+    def protocols(self) -> t.List[Protocol]:
+        return [Protocol(self, v) for v in self['protocol_declarations']]
 
     @property
     def structs(self) -> t.List[Struct]:
@@ -342,11 +342,11 @@ class Library(dict):
     @property
     def methods(self) -> t.List[Method]:
         return [
-            method for interface in self.interfaces
-            for method in interface.methods
+            method for protocol in self.protocols
+            for method in protocol.methods
         ]
 
-    def find(self, identifier: str) -> t.Union[None, Const, Enum, Interface, Struct, Table, Union]:
+    def find(self, identifier: str) -> t.Union[None, Const, Enum, Protocol, Struct, Table, Union]:
         if identifier not in self['declarations']:
           return None
         declaration_type = self['declarations'][identifier]
@@ -389,9 +389,9 @@ class Libraries(list):
         return [bit for library in self for bit in library.bits]
 
     @property
-    def interfaces(self) -> t.List[Interface]:
+    def protocols(self) -> t.List[Protocol]:
         return [
-            interface for library in self for interface in library.interfaces
+            protocol for library in self for protocol in library.protocols
         ]
 
     @property
@@ -411,7 +411,7 @@ class Libraries(list):
         return [method for library in self for method in library.methods]
 
     def find(self, identifier: str
-             ) -> t.Union[None, Const, Enum, Interface, Struct, Table, Union]:
+             ) -> t.Union[None, Const, Enum, Protocol, Struct, Table, Union]:
         library_name, _ = identifier.split('/')
         if library_name not in self.by_name:
           return None

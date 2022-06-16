@@ -61,8 +61,8 @@ MaybeValue GetAttributeStandaloneArgValue(const rapidjson::Value& element,
   return std::nullopt;
 }
 
-bool ValidateTransport(const rapidjson::Value& interface) {
-  const MaybeValue maybe_value = GetAttributeStandaloneArgValue(interface, "transport");
+bool ValidateTransport(const rapidjson::Value& protocol) {
+  const MaybeValue maybe_value = GetAttributeStandaloneArgValue(protocol, "transport");
   return maybe_value.has_value() && maybe_value.value().get().Get<std::string>() == "Syscall";
 }
 
@@ -73,16 +73,16 @@ std::string StripLibraryName(const std::string& full_name) {
   return full_name.substr(prefix_len, full_name.size() - prefix_len);
 }
 
-std::string GetCategory(const rapidjson::Value& interface, const std::string& interface_name) {
-  if (interface.HasMember("maybe_attributes")) {
-    for (const auto& attrib : interface["maybe_attributes"].GetArray()) {
+std::string GetCategory(const rapidjson::Value& protocol, const std::string& protocol_name) {
+  if (protocol.HasMember("maybe_attributes")) {
+    for (const auto& attrib : protocol["maybe_attributes"].GetArray()) {
       if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "no_protocol_prefix") {
         return std::string();
       }
     }
   }
 
-  return ToLowerAscii(StripLibraryName(interface_name));
+  return ToLowerAscii(StripLibraryName(protocol_name));
 }
 
 std::string GetDocAttribute(const rapidjson::Value& method) {
@@ -490,7 +490,7 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   ZX_ASSERT(library->syscalls_.empty());
 
   // The order of these loads is significant. For example, enums must be loaded to be able to be
-  // referred to by interface methods.
+  // referred to by protocol methods.
 
   if (!LoadBits(document, library)) {
     return false;
@@ -512,7 +512,7 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
     return false;
   }
 
-  if (!LoadInterfaces(document, library)) {
+  if (!LoadProtocols(document, library)) {
     return false;
   }
 
@@ -621,20 +621,20 @@ bool SyscallLibraryLoader::LoadEnums(const rapidjson::Document& document, Syscal
 }
 
 // static
-bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
-                                          SyscallLibrary* library) {
-  for (const auto& interface : document["protocol_declarations"].GetArray()) {
-    if (!ValidateTransport(interface)) {
+bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
+                                         SyscallLibrary* library) {
+  for (const auto& protocol : document["protocol_declarations"].GetArray()) {
+    if (!ValidateTransport(protocol)) {
       fprintf(stderr, "Expected Transport to be Syscall.\n");
       return false;
     }
 
-    std::string interface_name = interface["name"].GetString();
-    std::string category = GetCategory(interface, interface_name);
+    std::string protocol_name = protocol["name"].GetString();
+    std::string category = GetCategory(protocol, protocol_name);
 
-    for (const auto& method : interface["methods"].GetArray()) {
+    for (const auto& method : protocol["methods"].GetArray()) {
       auto syscall = std::make_unique<Syscall>();
-      syscall->id_ = interface_name;
+      syscall->id_ = protocol_name;
       syscall->original_name_ = method["name"].GetString();
       syscall->category_ = category;
       std::string snake_name = CamelToSnake(method["name"].GetString());
@@ -721,7 +721,7 @@ bool SyscallLibraryLoader::LoadStructs(const rapidjson::Document& document,
   // TODO(scottmg): In transition, we're still relying on the existing Zircon headers to define all
   // these structures. So we only load their names for the time being, which is enough for now to
   // know that there's something in the .fidl file where the struct is declared. Note also that
-  // interface parsing fills out request/response "structs", so that code should likely be shared
+  // protocol parsing fills out request/response "structs", so that code should likely be shared
   // when this is implemented.
   for (const auto& struct_json : document["struct_declarations"].GetArray()) {
     auto obj = std::make_unique<Struct>();

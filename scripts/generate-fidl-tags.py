@@ -845,9 +845,9 @@ def extract_name_and_members(json):
     return result
 
 
-def extract_interfaces(json):
+def extract_protocols(json):
     """
-    >>> extract_interfaces([
+    >>> extract_protocols([
     ... {
     ... "name": "fuchsia.wlan.device/Phy",
     ... "location": {
@@ -902,7 +902,7 @@ def extract_interfaces(json):
     Some special handling for Transport=Syscall to add the leading zx_ as an
     alternate name.
 
-    >>> extract_interfaces([
+    >>> extract_protocols([
     ... {
     ... "name": "zz/profile",
     ... "location": {
@@ -998,7 +998,7 @@ def get_tags(json, tags):
     tags.extend(extract_name_and_members(json['bits_declarations']))
     tags.extend(extract_consts(json['const_declarations']))
     tags.extend(extract_name_and_members(json['enum_declarations']))
-    tags.extend(extract_interfaces(json['interface_declarations']))
+    tags.extend(extract_protocols(json['protocol_declarations']))
     tags.extend(extract_name_and_members(json['struct_declarations']))
     tags.extend(extract_name_and_members(json['table_declarations']))
     tags.extend(extract_name_and_members(json['union_declarations']))

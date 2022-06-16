@@ -453,7 +453,7 @@ class SyscallLibraryLoader {
                              const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadEnums(const rapidjson::Document& document, SyscallLibrary* library);
-  static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadProtocols(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadTypeAliases(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadTables(const rapidjson::Document& document, SyscallLibrary* library);
