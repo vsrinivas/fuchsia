@@ -17,13 +17,11 @@
 
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 
-using cobalt_registry::kScenicLatchToActualPresentationMetricId;
-using cobalt_registry::kScenicRenderTimeMetricId;
 using CobaltFrameStatus =
     cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus;
-using cobalt_registry::kScenicRenderTimeIntBucketsFloor;
-using cobalt_registry::kScenicRenderTimeIntBucketsNumBuckets;
-using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
+using cobalt_registry::kScenicRenderTimeMigratedIntBucketsFloor;
+using cobalt_registry::kScenicRenderTimeMigratedIntBucketsNumBuckets;
+using cobalt_registry::kScenicRenderTimeMigratedIntBucketsStepSize;
 
 namespace scheduling {
 
@@ -47,9 +45,9 @@ FrameStats::FrameStats(inspect::Node inspect_node, metrics::Metrics* metrics_log
 void FrameStats::InitializeFrameTimeBucketConfig() {
   cobalt::IntegerBuckets bucket_proto;
   cobalt::LinearIntegerBuckets* linear = bucket_proto.mutable_linear();
-  linear->set_floor(kScenicRenderTimeIntBucketsFloor);
-  linear->set_num_buckets(kScenicRenderTimeIntBucketsNumBuckets);
-  linear->set_step_size(kScenicRenderTimeIntBucketsStepSize);
+  linear->set_floor(kScenicRenderTimeMigratedIntBucketsFloor);
+  linear->set_num_buckets(kScenicRenderTimeMigratedIntBucketsNumBuckets);
+  linear->set_step_size(kScenicRenderTimeMigratedIntBucketsStepSize);
   frame_times_bucket_config_ = cobalt::config::IntegerBucketConfig::CreateFromProto(bucket_proto);
 }
 

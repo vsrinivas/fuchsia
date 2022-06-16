@@ -23,7 +23,8 @@ class MetricsImpl final
 
   void LogRareEvent(cobalt_registry::ScenicRareEventMigratedMetricDimensionEvent event) override;
   void LogLatchToActualPresentation(
-      std::optional<cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus>
+      std::optional<
+          cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus>
           frame_status,
       std::vector<fuchsia_metrics::HistogramBucket> histogram) override;
 

@@ -31,7 +31,8 @@ void MetricsImpl::LogRareEvent(cobalt_registry::ScenicRareEventMigratedMetricDim
 }
 
 void MetricsImpl::LogLatchToActualPresentation(
-    std::optional<cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus>
+    std::optional<
+        cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus>
         frame_status,
     std::vector<fuchsia_metrics::HistogramBucket> histogram) {
   Do([frame_status, histogram = std::move(histogram)](fidl::Client<MetricEventLogger>& logger,

@@ -15,7 +15,8 @@ class Metrics {
  public:
   virtual void LogRareEvent(cobalt_registry::ScenicRareEventMigratedMetricDimensionEvent event) = 0;
   virtual void LogLatchToActualPresentation(
-      std::optional<cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus>
+      std::optional<
+          cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus>
           frame_status,
       std::vector<fuchsia_metrics::HistogramBucket> histogram) = 0;
 };
