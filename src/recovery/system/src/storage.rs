@@ -103,7 +103,9 @@ impl Storage {
         let (blobfs_root, remote) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
         fdio::open(
             "/b",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE,
             remote.into_channel(),
         )?;
         Ok(blobfs_root)

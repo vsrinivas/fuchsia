@@ -674,7 +674,12 @@ impl RecoveryViewAssistant {
             #[cfg(feature = "http_setup_server")]
             RecoveryMessages::OtaFinished { result } => {
                 if let Err(e) = result {
-                    self.body = Some(format!("OTA failed: {:?}", e).into());
+                    self.body = Some(format!("OTA failed").into());
+                    #[cfg(feature = "debug_console")]
+                    self.app_sender.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(ConsoleMessages::AddText(format!("OTA error: {:?}", e))),
+                    );
                 } else {
                     self.body = Some("OTA succeeded".into());
                 }
