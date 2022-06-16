@@ -13,6 +13,7 @@
 # Add a lib/API:
 #   That's "what" the Fuchsia SDK is, ask
 abarth@google.com
+hjfreyer@google.com
 
 # Add/Change how the SDK is built:
 #   That's "how" the SDK is made, ask
