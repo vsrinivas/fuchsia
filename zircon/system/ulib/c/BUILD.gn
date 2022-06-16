@@ -255,10 +255,11 @@ verify_public_symbols("verify_abi") {
   # libc conditionally exports weak sanitizer symbols to satisfy references
   # to this symbols from libc. They are not meant to be exported, the actual
   # symbols provided by the sanitizer libraries will be loaded before
-  # any user code needs them. See sanitizer/{asan,ubsan}-stubs.cc for
+  # any user code needs them. See sanitizer/{asan,hwasan,ubsan}-stubs.cc for
   # detailed explanations.
   ifs_args = [
     "--exclude=__asan*",
+    "--exclude=__hwasan*",
     "--exclude=__ubsan*",
   ]
 }
