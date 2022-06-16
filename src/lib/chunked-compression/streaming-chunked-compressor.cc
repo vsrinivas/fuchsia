@@ -77,13 +77,13 @@ Status StreamingChunkedCompressor::Init(size_t stream_len, void* output, size_t 
 
   size_t r = ZSTD_initCStream(context_->inner_, params_.compression_level);
   if (ZSTD_isError(r)) {
-    FX_LOGS(ERROR) << "Failed to init stream";
+    FX_SLOG(ERROR, "Failed to init stream");
     return kStatusErrInternal;
   }
   if (params_.frame_checksum) {
     r = ZSTD_CCtx_setParameter(context_->inner_, ZSTD_c_checksumFlag, 1);
     if (ZSTD_isError(r)) {
-      FX_LOGS(ERROR) << "Failed to init stream";
+      FX_SLOG(ERROR, "Failed to init stream");
       return kStatusErrInternal;
     }
   }
@@ -229,17 +229,19 @@ Status StreamingChunkedCompressor::AppendToFrame(const void* data, size_t len) {
 
   size_t r = ZSTD_compressStream(context_->inner_, &out_buf, &in_buf);
   if (ZSTD_isError(r)) {
-    FX_LOGS(ERROR) << "ZSTD_compressStream failed: " << ZSTD_getErrorName(r);
+    FX_SLOG(ERROR, "ZSTD_compressStream failed", KV("status", r),
+            KV("status_str", ZSTD_getErrorName(r)));
     return kStatusErrInternal;
   } else if (in_buf.pos < in_buf.size) {
-    FX_LOGS(ERROR) << "Partial read";
+    FX_SLOG(ERROR, "Partial read");
     return kStatusErrInternal;
   }
 
   if (will_finish_frame) {
     r = ZSTD_endStream(context_->inner_, &out_buf);
     if (ZSTD_isError(r)) {
-      FX_LOGS(ERROR) << "ZSTD_endStream failed: " << ZSTD_getErrorName(r);
+      FX_SLOG(ERROR, "ZSTD_endStream failed", KV("status", r),
+              KV("status_str", ZSTD_getErrorName(r)));
       return kStatusErrInternal;
     }
   }
@@ -252,14 +254,14 @@ Status StreamingChunkedCompressor::AppendToFrame(const void* data, size_t len) {
     // frame.
     Status status = EndFrame(current_frame_start, current_frame_end - current_frame_start);
     if (status != kStatusOk) {
-      FX_LOGS(ERROR) << "Failed to finalize frame";
+      FX_SLOG(ERROR, "Failed to finalize frame");
       return status;
     }
 
     if (input_offset_ < input_len_) {
       status = StartFrame();
       if (status != kStatusOk) {
-        FX_LOGS(ERROR) << "Failed to start next frame";
+        FX_SLOG(ERROR, "Failed to start next frame");
       }
     }
   } else {

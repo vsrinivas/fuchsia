@@ -30,7 +30,7 @@ source_set("chunked-compression") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//zircon/system/ulib/syslog" ]
+    deps += [ "//sdk/lib/syslog/cpp" ]
     public_deps += [ "//zircon/system/ulib/zx" ]
   }
 }
