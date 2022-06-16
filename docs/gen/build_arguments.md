@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/1711ec475ac7fe9b52084167a1db1210a15e184d/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/55e847d2cad2f7999189e2a2f42ffeee5ba50bb4/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/1711ec475ac7fe9b52084167a1db1210a15e184d/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/55e847d2cad2f7999189e2a2f42ffeee5ba50bb4/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -871,7 +871,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:125
+From //build/toolchain/rbe.gni:178
 
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
@@ -896,7 +896,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:117
+From //build/toolchain/rbe.gni:170
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1124,6 +1124,59 @@ From //build/images/custom_signing.gni:21
 **Current value (from the default):** `""`
 
 From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/37ddb9eec895e48acfabfff82796ccd0f558bd15/BUILD.gn#22)
+
+### cxx_rbe_check
+Run one of the more expensive checks, intended for CI.
+All of these require cxx_rbe_enable=true.
+
+One of:
+
+  * "none": No additional check.
+
+  * "determinism":
+      Check of determinism of C++ targets by running locally twice
+      and comparing outputs, failing if any differences are found.
+      Even though this check doesn't involve RBE, it uses the same
+      wrapper script, which knows what output files to expect and
+      compare.
+
+      Build outputs that depend on time are discouraged because they
+      impact caching.
+      If your result depends on the current time, this check will
+      definitely fail.  If it depends on only the date, there is still
+      a nonzero chance of failure, if the rerun falls on the next day.
+
+  * "consistency":
+      Check consistency between local and remote C++ compiles,
+      by running both and comparing results.
+
+
+**Current value (from the default):** `"none"`
+
+From //build/toolchain/rbe.gni:119
+
+### cxx_rbe_enable
+Set to true to enable distributed compilation of C++ using RBE.
+Enabling this takes precedence over `use_goma`.
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:82
+
+### cxx_rbe_exec_strategy
+One of:
+
+  * "remote": Execute action remotely on cache miss.
+        The remote cache is always updated with this result.
+
+  * "local": Lookup action in the remote cache, but execute action
+        locally on cache miss.  The locally produced result is
+        not uploaded to the remote cache.
+  (There are other rewrapper options that are not exposed.)
+
+**Current value (from the default):** `"remote"`
+
+From //build/toolchain/rbe.gni:93
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
@@ -1454,7 +1507,7 @@ This may affect Rust and C++ compiles.
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:74
+From //build/toolchain/rbe.gni:127
 
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
@@ -3772,7 +3825,7 @@ One of {local,remote}:
 
 **Current value (from the default):** `""`
 
-From //build/toolchain/rbe.gni:92
+From //build/toolchain/rbe.gni:145
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -3900,10 +3953,12 @@ From //build/rust/config.gni:41
 
 ### rust_rbe_check
 Run one of the more expensive checks, intended for CI.
-All of these require rbe_rust.enable=true.
+All of these require rust_rbe_enable=true.
 
 One of:
-  * "": No additional check.
+
+  * "none": No additional check.
+
   * "determinism":
       Check of determinism of rustc targets by running locally twice
       and comparing outputs, failing if any differences are found.
@@ -3922,12 +3977,12 @@ One of:
       by running both and comparing results.
 
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `"none"`
 
-From //build/toolchain/rbe.gni:66
+From //build/toolchain/rbe.gni:74
 
 ### rust_rbe_enable
-Set to true to enable distributed compilation using RBE.
+Set to true to enable distributed compilation of Rust using RBE.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
@@ -3935,7 +3990,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:33
+From //build/toolchain/rbe.gni:37
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -3943,12 +3998,14 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:33
+From //build/toolchain/rbe.gni:37
 
 ### rust_rbe_exec_strategy
 One of:
+
   * "remote": Execute action remotely on cache miss.
         The remote cache is always updated with this result.
+
   * "local": Lookup action in the remote cache, but execute action
         locally on cache miss.  The locally produced result is
         not uploaded to the remote cache.
@@ -3956,7 +4013,7 @@ One of:
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:42
+From //build/toolchain/rbe.gni:48
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
@@ -4758,7 +4815,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:83
+From //build/toolchain/rbe.gni:136
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
