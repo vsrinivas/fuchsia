@@ -11,9 +11,9 @@ use fuchsia_inspect::{
 };
 use fuchsia_zircon as zx;
 use httpdate_hyper::HttpsDateErrorType;
-use log::error;
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use tracing::error;
 
 /// Maximum number of successful samples recorded.
 const SAMPLES_RECORDED: usize = 5;

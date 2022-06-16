@@ -15,12 +15,11 @@ use crate::sampler::HttpsSamplerImpl;
 use anyhow::{Context, Error};
 use fidl_fuchsia_net_interfaces::StateMarker;
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{future::join3, FutureExt, StreamExt, TryFutureExt};
-use log::warn;
 use push_source::PushSource;
+use tracing::warn;
 
 /// Retry strategy used while polling for time.
 const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
@@ -35,10 +34,8 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
 // TODO(fxbug.dev/68621): Allow configuration per product.
 const REQUEST_URI: &str = "https://clients3.google.com/generate_204";
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging")?;
-
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
 

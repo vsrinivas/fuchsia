@@ -15,9 +15,9 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt};
 use httpdate_hyper::HttpsDateErrorType;
-use log::{error, info, warn};
 use push_source::{Update, UpdateAlgorithm};
 use rand::Rng;
+use tracing::{error, info, warn};
 
 /// A definition of how long an algorithm should wait between polls. Defines fixed wait durations
 /// following successful poll attempts, and a capped exponential backoff following failed poll

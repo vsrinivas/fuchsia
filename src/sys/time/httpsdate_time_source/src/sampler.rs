@@ -11,7 +11,7 @@ use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, FutureExt};
 use httpdate_hyper::{HttpsDateError, HttpsDateErrorType, NetworkTimeClient};
 use hyper::Uri;
-use log::warn;
+use tracing::warn;
 
 const HTTPS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
 const NANOS_IN_SECONDS: i64 = 1_000_000_000;
