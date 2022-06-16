@@ -300,7 +300,7 @@
             from: "#vulkan_loader",
         },
 
-        // Used by SL4F in appmgr
+        // Used by Bluetooth shell tools via appmgr.
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
@@ -310,6 +310,7 @@
                 "fuchsia.bluetooth.sys.Access",
                 "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "#bluetooth-core",
         },

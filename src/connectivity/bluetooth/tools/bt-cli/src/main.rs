@@ -7,8 +7,8 @@ use {
     fidl_fuchsia_bluetooth::{HostId as FidlHostId, PeerId as FidlPeerId},
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, BondableMode, HostWatcherMarker, HostWatcherProxy,
-        PairingDelegateMarker, PairingOptions, PairingSecurityLevel, ProcedureTokenProxy,
-        TechnologyType,
+        PairingDelegateMarker, PairingMarker, PairingOptions, PairingProxy, PairingSecurityLevel,
+        ProcedureTokenProxy, TechnologyType,
     },
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
@@ -374,7 +374,7 @@ async fn pair(
     }
 }
 
-async fn allow_pairing(args: &[&str], access_svc: &AccessProxy) -> Result<String, Error> {
+async fn allow_pairing(args: &[&str], pairing_svc: &PairingProxy) -> Result<String, Error> {
     let mut input_cap = InputCapability::None;
     let mut output_cap = OutputCapability::None;
     match args.len() {
@@ -397,7 +397,7 @@ async fn allow_pairing(args: &[&str], access_svc: &AccessProxy) -> Result<String
     let pairing_delegate_server =
         pairing_delegate::handle_requests(pairing_delegate_server_stream, sig_sender);
 
-    let _ = access_svc.set_pairing_delegate(
+    let _ = pairing_svc.set_pairing_delegate(
         input_cap.into(),
         output_cap.into(),
         pairing_delegate_client,
@@ -517,11 +517,14 @@ impl State {
 async fn parse_and_handle_cmd(
     bt_svc: &AccessProxy,
     host_svc: &HostWatcherProxy,
+    pairing_svc: &PairingProxy,
     state: Arc<Mutex<State>>,
     line: String,
 ) -> Result<ReplControl, Error> {
     match parse_cmd(line) {
-        ParseResult::Valid((cmd, args)) => handle_cmd(bt_svc, host_svc, state, cmd, args).await,
+        ParseResult::Valid((cmd, args)) => {
+            handle_cmd(bt_svc, host_svc, pairing_svc, state, cmd, args).await
+        }
         ParseResult::Empty => Ok(ReplControl::Continue),
         ParseResult::Error(err) => {
             println!("{}", err);
@@ -556,6 +559,7 @@ fn parse_cmd(line: String) -> ParseResult<(Cmd, Vec<String>)> {
 async fn handle_cmd(
     access_svc: &AccessProxy,
     host_svc: &HostWatcherProxy,
+    pairing_svc: &PairingProxy,
     state: Arc<Mutex<State>>,
     cmd: Cmd,
     args: Vec<String>,
@@ -566,7 +570,7 @@ async fn handle_cmd(
         Cmd::Connect => connect(args, &state, &access_svc).await,
         Cmd::Disconnect => disconnect(args, &state, &access_svc).await,
         Cmd::Pair => pair(args, &state, &access_svc).await,
-        Cmd::AllowPairing => allow_pairing(args, &access_svc).await,
+        Cmd::AllowPairing => allow_pairing(args, &pairing_svc).await,
         Cmd::Forget => forget(args, &state, &access_svc).await,
         Cmd::StartDiscovery => set_discovery(true, &state, &access_svc).await,
         Cmd::StopDiscovery => set_discovery(false, &state, &access_svc).await,
@@ -694,6 +698,7 @@ async fn watch_hosts(host_svc: HostWatcherProxy, state: Arc<Mutex<State>>) -> Re
 async fn run_repl(
     access_svc: AccessProxy,
     host_svc: HostWatcherProxy,
+    pairing_svc: PairingProxy,
     state: Arc<Mutex<State>>,
 ) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
@@ -701,7 +706,7 @@ async fn run_repl(
     let (mut commands, mut acks) = cmd_stream(state.clone());
 
     while let Some(cmd) = commands.next().await {
-        match parse_and_handle_cmd(&access_svc, &host_svc, state.clone(), cmd).await {
+        match parse_and_handle_cmd(&access_svc, &host_svc, &pairing_svc, state.clone(), cmd).await {
             Ok(ReplControl::Continue) => {} // continue silently
             Ok(ReplControl::Break) => break,
             Err(e) => println!("Error handling command: {}", e),
@@ -717,9 +722,11 @@ async fn main() -> Result<(), Error> {
         .context("failed to connect to bluetooth access interface")?;
     let host_watcher_svc =
         connect_to_protocol::<HostWatcherMarker>().context("failed to watch hosts")?;
+    let pairing_svc = connect_to_protocol::<PairingMarker>()
+        .context("failed to connect to bluetooth pairing interface")?;
     let state = Arc::new(Mutex::new(State::new()));
     let peer_watcher = watch_peers(access_svc.clone(), state.clone());
-    let repl = run_repl(access_svc, host_watcher_svc.clone(), state.clone())
+    let repl = run_repl(access_svc, host_watcher_svc.clone(), pairing_svc, state.clone())
         .map_err(|e| e.context("REPL failed unexpectedly").into());
     let host_watcher = watch_hosts(host_watcher_svc, state);
     pin_mut!(repl);
@@ -736,7 +743,7 @@ mod tests {
     use super::*;
     use {
         assert_matches::assert_matches,
-        bt_fidl_mocks::sys::AccessMock,
+        bt_fidl_mocks::sys::{AccessMock, PairingMock},
         fidl::endpoints::Proxy,
         fidl_fuchsia_bluetooth as fbt, fidl_fuchsia_bluetooth_sys as fsys,
         fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability},
@@ -1216,7 +1223,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         let args = vec![];
-        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = PairingMock::new(1.second()).expect("failed to create mock");
         let pair = allow_pairing(args.as_slice(), &proxy);
         pin_mut!(pair);
 
@@ -1232,7 +1239,7 @@ mod tests {
     fn test_allow_pairing_args() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
-        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = PairingMock::new(1.second()).expect("failed to create mock");
 
         // Enable pairing with confirmation input cap and display output cap.
         let args = vec!["confirmation", "display"];
@@ -1262,13 +1269,13 @@ mod tests {
     async fn test_allow_pairing_error() {
         // Arguments that don't correspond to any capabilities.
         let args = vec!["nonsense", "fake"];
-        let (proxy, _mock) = AccessMock::new(1.second()).expect("failed to create mock");
+        let (proxy, _mock) = PairingMock::new(1.second()).expect("failed to create mock");
 
         assert!(allow_pairing(args.as_slice(), &proxy).await.is_err());
 
         // Incorrect number of arguments.
         let args = vec!["none"];
-        let (proxy, _mock) = AccessMock::new(1.second()).expect("failed to create mock");
+        let (proxy, _mock) = PairingMock::new(1.second()).expect("failed to create mock");
 
         assert!(allow_pairing(args.as_slice(), &proxy).await.is_err());
     }

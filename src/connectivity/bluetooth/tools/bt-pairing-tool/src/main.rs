@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, PairingDelegateMarker},
+    fidl_fuchsia_bluetooth_sys::{PairingDelegateMarker, PairingMarker},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
     fuchsia_component::client::connect_to_protocol,
@@ -36,8 +36,8 @@ struct Opt {
 fn run(opt: Opt) -> Result<(), Error> {
     let mut exec = fasync::LocalExecutor::new().context("Error creating event loop")?;
 
-    let access = connect_to_protocol::<AccessMarker>()
-        .context("Failed to connect to bluetooth access interface")?;
+    let pairing = connect_to_protocol::<PairingMarker>()
+        .context("Failed to connect to bluetooth pairing interface")?;
 
     // Setup pairing delegate
     let (pairing_delegate_client, pairing_delegate_server_stream) =
@@ -48,7 +48,7 @@ fn run(opt: Opt) -> Result<(), Error> {
         pairing_delegate::handle_requests(pairing_delegate_server_stream, sig_sender);
 
     let pair_set =
-        access.set_pairing_delegate(opt.input.into(), opt.output.into(), pairing_delegate_client);
+        pairing.set_pairing_delegate(opt.input.into(), opt.output.into(), pairing_delegate_client);
 
     if let Err(err) = pair_set {
         return Err(format_err!(

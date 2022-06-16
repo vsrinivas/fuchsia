@@ -8,10 +8,40 @@ use {
     fidl_fuchsia_bluetooth::PeerId,
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, AccessRequest, AccessRequestStream, Error as AccessError,
-        InputCapability, OutputCapability, PairingDelegateProxy, PairingOptions,
+        InputCapability, OutputCapability, PairingDelegateProxy, PairingMarker, PairingOptions,
+        PairingProxy, PairingRequest, PairingRequestStream,
     },
     fuchsia_zircon::Duration,
 };
+
+/// Provides a simple mock implementation of `fuchsia.bluetooth.sys.Pairing`.
+pub struct PairingMock {
+    stream: PairingRequestStream,
+    timeout: Duration,
+}
+
+impl PairingMock {
+    pub fn new(timeout: Duration) -> Result<(PairingProxy, PairingMock), Error> {
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PairingMarker>()?;
+        Ok((proxy, PairingMock { stream, timeout }))
+    }
+
+    pub async fn expect_set_pairing_delegate(
+        &mut self,
+        expected_input_cap: InputCapability,
+        expected_output_cap: OutputCapability,
+    ) -> Result<PairingDelegateProxy, Error> {
+        expect_call(&mut self.stream, self.timeout, move |req| match req {
+            PairingRequest::SetPairingDelegate { input, output, delegate, control_handle: _ }
+                if input == expected_input_cap && output == expected_output_cap =>
+            {
+                Ok(Status::Satisfied(delegate.into_proxy()?))
+            }
+            _ => Ok(Status::Pending),
+        })
+        .await
+    }
+}
 
 /// Provides a simple mock implementation of `fuchsia.bluetooth.sys.Access`.
 pub struct AccessMock {
@@ -73,6 +103,7 @@ impl AccessMock {
         .await
     }
 
+    // TODO(fxbug.dev/98413): Remove this when SetPairingDelegate is removed from `sys.Access`.
     pub async fn expect_set_pairing_delegate(
         &mut self,
         expected_input_cap: InputCapability,
@@ -125,7 +156,8 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_expect_set_pairing_delegate() {
-        let (proxy, mut mock) = AccessMock::new(timeout_duration()).expect("failed to create mock");
+        let (proxy, mut mock) =
+            PairingMock::new(timeout_duration()).expect("failed to create mock");
 
         let input_cap = InputCapability::None;
         let output_cap = OutputCapability::Display;
