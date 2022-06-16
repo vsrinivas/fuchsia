@@ -18,13 +18,14 @@ F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions options)
       block_size_(options.block_size)
 
 {
+  mkfs_options_ = options.mkfs_options;
   for (auto opt : options.mount_options) {
-    options_.SetValue(options_.GetNameView(opt.first), opt.second);
+    mount_options_.SetValue(mount_options_.GetNameView(opt.first), opt.second);
   }
 
   fbl::RefPtr<VnodeF2fs> root;
-  FileTester::MkfsOnFakeDev(&bc_, block_count_);
-  FileTester::MountWithOptions(loop_.dispatcher(), options_, &bc_, &fs_);
+  FileTester::MkfsOnFakeDevWithOptions(&bc_, mkfs_options_, block_count_);
+  FileTester::MountWithOptions(loop_.dispatcher(), mount_options_, &bc_, &fs_);
   FileTester::CreateRoot(fs_.get(), &root);
   root_dir_ = fbl::RefPtr<Dir>::Downcast(std::move(root));
 }

@@ -16,6 +16,7 @@ namespace f2fs {
 struct TestOptions {
   uint64_t block_count = 819200;
   uint64_t block_size = kDefaultSectorSize;
+  MkfsOptions mkfs_options{};
   std::vector<std::pair<uint32_t, uint32_t>> mount_options;
 };
 
@@ -27,7 +28,8 @@ class F2fsFakeDevTestFixture : public testing::Test {
  protected:
   uint64_t block_count_;
   uint64_t block_size_;
-  MountOptions options_{};
+  MkfsOptions mkfs_options_{};
+  MountOptions mount_options_{};
   std::unique_ptr<f2fs::Bcache> bc_;
   std::unique_ptr<F2fs> fs_;
   fbl::RefPtr<Dir> root_dir_;
