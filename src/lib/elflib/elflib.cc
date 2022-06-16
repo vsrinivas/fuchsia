@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 
 namespace elflib {

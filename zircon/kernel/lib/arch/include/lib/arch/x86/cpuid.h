@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_
 
 #include <array>
+#include <iterator>
 #include <optional>
 #include <string_view>
 #include <type_traits>
