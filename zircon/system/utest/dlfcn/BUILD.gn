@@ -18,6 +18,8 @@ test("dlfcn") {
     "//zircon/system/ulib/zxtest",
   ]
 
+  defines = [ "LIBPREFIX=\"/boot/lib/${toolchain_variant.libprefix}\"" ]
+
   data_deps = [ ":test-dso-no-note" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

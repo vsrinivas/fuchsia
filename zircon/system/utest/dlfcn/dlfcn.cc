@@ -20,14 +20,8 @@
 
 #include "src/lib/loader_service/loader_service.h"
 
-#if __has_feature(address_sanitizer)
-#if __has_feature(undefined_behavior_sanitizer)
-#define LIBPREFIX "/boot/lib/asan-ubsan/"
-#else
-#define LIBPREFIX "/boot/lib/asan/"
-#endif
-#else
-#define LIBPREFIX "/boot/lib/"
+#ifndef LIBPREFIX
+#error "BUILD.gn should define LIBPREFIX"
 #endif
 
 zx_status_t load_vmo(const char* filename, zx_handle_t* out) {
