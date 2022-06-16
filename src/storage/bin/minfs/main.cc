@@ -20,6 +20,8 @@
 
 namespace {
 
+const char* kComponentCommand = "component";
+
 int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& mount_options) {
   minfs::FsckOptions options;
   // If the disk is read only, pass that in.
@@ -48,6 +50,34 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
 
 int Mkfs(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   return minfs::Mkfs(options, bc.get()).status_value();
+}
+
+int StartComponent(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
+  FX_LOGS(INFO) << "starting minfs component";
+
+  // The arguments are either null or don't matter, we collect the real ones later on the startup
+  // protocol. What does matter is the DIRECTORY_REQUEST so we can start serving that protocol.
+  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
+  if (!outgoing_server.is_valid()) {
+    FX_LOGS(ERROR) << "PA_DIRECTORY_REQUEST startup handle is required.";
+    return EXIT_FAILURE;
+  }
+  fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir(std::move(outgoing_server));
+
+  zx::channel lifecycle_channel = zx::channel(zx_take_startup_handle(PA_LIFECYCLE));
+  if (!lifecycle_channel.is_valid()) {
+    FX_LOGS(ERROR) << "PA_LIFECYCLE startup handle is required.";
+    return EXIT_FAILURE;
+  }
+  fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request(
+      std::move(lifecycle_channel));
+
+  zx::status status = minfs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request));
+  if (status.is_error()) {
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
 
 struct Command {
@@ -108,6 +138,7 @@ int main(int argc, char** argv) {
   minfs::MountOptions options;
 
   const std::vector<Command> commands = {
+      Command{kComponentCommand, StartComponent, "start the minfs component"},
       Command{"create", Mkfs, "initialize filesystem"},
       Command{"mkfs", Mkfs, "initialize filesystem"},
       Command{"check", Fsck, "check filesystem integrity"},
@@ -159,23 +190,27 @@ int main(int argc, char** argv) {
   }
   char* cmd = argv[0];
 
-  // Block device passed by handle
-  zx::channel device_channel = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
-
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not access block device";
-    return EXIT_FAILURE;
-  }
-
-  std::unique_ptr<minfs::Bcache> bc;
-  if (int ret = CreateBcacheUpdatingOptions(std::move(device), &options, &bc); ret != 0) {
-    return ret;
-  }
-
   for (const auto& command : commands) {
     if (strcmp(cmd, command.name) == 0) {
+      std::unique_ptr<minfs::Bcache> bc;
+      if (strcmp(cmd, kComponentCommand) != 0) {
+        // If we aren't being launched as a component, we are getting the block device as a startup
+        // handle. Get it and create the bcache.
+        zx::channel device_channel = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+
+        std::unique_ptr<block_client::RemoteBlockDevice> device;
+        zx_status_t status =
+            block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Could not access block device";
+          return EXIT_FAILURE;
+        }
+
+        if (int ret = CreateBcacheUpdatingOptions(std::move(device), &options, &bc); ret != 0) {
+          return ret;
+        }
+      }
+
       int r = command.func(std::move(bc), options);
       if (options.verbose) {
         fprintf(stderr, "minfs: %s completed with result: %d\n", cmd, r);

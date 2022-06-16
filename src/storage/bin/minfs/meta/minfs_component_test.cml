@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/minfs_component_test",
+    },
+    offer: [
+        {
+            directory: "dev",
+            from: "#storage_driver_test_realm",
+            to: [ "#fs-collection" ],
+        },
+    ],
+}

@@ -93,6 +93,8 @@ static_library("minfs") {
       "allocator/inode_manager.cc",
       "allocator/storage.cc",
       "bcache.cc",
+      "component_runner.cc",
+      "component_runner.h",
       "file_target.cc",
       "inspector/command_handler.cc",
       "inspector/disk_struct.cc",
@@ -117,6 +119,10 @@ static_library("minfs") {
       "resizeable_vmo_buffer.cc",
       "service/admin.cc",
       "service/admin.h",
+      "service/lifecycle.cc",
+      "service/lifecycle.h",
+      "service/startup.cc",
+      "service/startup.h",
       "superblock.cc",
       "vnode_allocation.cc",
     ]
@@ -135,6 +141,12 @@ static_library("minfs") {
 
       # runner.h includes lib/async-loop/cpp/loop.h
       "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+      # mount.h includes fidl/fuchsia.process.lifecycle/cpp/wire.h
+      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+
+      # minfs_private.h includes fidl/fuchsia.minfs/cpp/wire.h
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     ]
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -145,6 +157,7 @@ static_library("minfs") {
       "//sdk/lib/inspect/service/cpp:cpp",
       "//sdk/lib/sys/cpp:cpp",
       "//sdk/lib/syslog/cpp",
+      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
       "//src/storage/fvm",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",

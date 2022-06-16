@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/storage/testing/driver_test_realm.gni")
+
 executable("minfs") {
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/block_client/cpp",
@@ -15,4 +21,45 @@ executable("minfs") {
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+}
+
+fuchsia_component("minfs-component") {
+  manifest = "meta/minfs.cml"
+  component_name = "minfs"
+  deps = [ ":minfs" ]
+}
+
+test("minfs_component_test") {
+  sources = [ "minfs_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/testing:storage_driver_test_support",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("minfs-component-test-component") {
+  testonly = true
+  manifest = "meta/minfs_component_test.cml"
+  deps = [
+    ":minfs_component_test",
+    "//src/storage/testing:storage_driver_test_realm",
+  ]
+}
+
+fuchsia_test_package("minfs-component-tests") {
+  test_components = [ ":minfs-component-test-component" ]
+  deps = [ ":minfs-component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":minfs-component-tests" ]
 }

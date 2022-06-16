@@ -175,6 +175,26 @@ test("fs_tests") {
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
+test("minfs_component_runner_test") {
+  output_name = "minfs_component_runner_test"
+  sources = [ "integration/minfs_component_runner_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp:fake_device",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/minfs",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/id_allocator",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 storage_driver_test_realm_v2_component("minfs-integration-fs-tests") {
   deps = [ ":fs_tests" ]
 }
@@ -218,6 +238,10 @@ fuchsia_unittest_component("minfs-unit-test") {
   manifest = "meta/minfs_unit_test.cml"
 }
 
+fuchsia_unittest_component("minfs-component-runner-test") {
+  deps = [ ":minfs_component_runner_test" ]
+}
+
 fs_test_config("minfs") {
   timestamp_granularity = 1
   supports_hard_links = true
@@ -247,6 +271,7 @@ fs_test_suite("minfs") {
     "//src/storage/bin/minfs",
   ]
   extra_components = [
+    ":minfs-component-runner-test",
     ":minfs-dirty-cache-integration-test",
     ":minfs-integration-fs-tests",
     ":minfs-unit-test",

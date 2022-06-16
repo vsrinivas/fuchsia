@@ -16,6 +16,7 @@
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
+#include "src/storage/minfs/component_runner.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/runner.h"
 #include "src/storage/minfs/service/admin.h"
@@ -77,6 +78,23 @@ zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& op
 
   if (options.verbose) {
     FX_LOGS(INFO) << "Mounted successfully";
+  }
+
+  // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.
+  ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
+  return zx::ok();
+}
+
+zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+
+  std::unique_ptr<ComponentRunner> runner(new ComponentRunner(loop.dispatcher()));
+  runner->SetUnmountCallback([&loop]() { loop.Quit(); });
+  auto status = runner->ServeRoot(std::move(root), std::move(lifecycle));
+  if (status.is_error()) {
+    return status;
   }
 
   // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.

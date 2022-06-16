@@ -36,6 +36,9 @@ type StartOptions = resource struct {
     /// If true, decompression is run in a sandbox component (if the filesystem supports it).
     @allow_deprecated_struct_defaults
     sandbox_decompression bool = false;
+    /// If true, run fsck after every transaction. This is for testing purposes only - it's very
+    /// slow to run a filesystem like this.
+    fsck_after_every_transaction bool;
 
     /// A compression algorithm specifier for the filesystem to use when storing files (if the
     /// filesystem supports it). Defaults to ZSTD_CHUNKED.
@@ -70,6 +73,8 @@ type FormatOptions = resource struct {
     /// supported for blobfs.
     @allow_deprecated_struct_defaults
     num_inodes uint64 = 0;
+    /// The number of fvm slices to preallocate for data when the filesystem is created.
+    fvm_data_slices uint32;
 
     /// An optional connection to a crypt client (for encrypted filesystems).
     crypt client_end:<fuchsia.fxfs.Crypt, optional>;

@@ -8,6 +8,8 @@
 #include <memory>
 
 #ifdef __Fuchsia__
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
+
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/storage/minfs/bcache.h"
 #endif
@@ -55,6 +57,9 @@ zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
 // until the filesystem terminates.
 zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
                    fidl::ServerEnd<fuchsia_io::Directory> root);
+
+zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle);
 
 #endif  // __Fuchsia__
 
