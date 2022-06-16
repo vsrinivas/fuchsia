@@ -5,6 +5,7 @@
 #include "radarutil.h"
 
 #include <fidl/fuchsia.hardware.radar/cpp/wire.h>
+#include <getopt.h>
 #include <lib/async/time.h>
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/clock.h>
@@ -45,15 +46,25 @@ zx::status<zx::duration> ParseDuration(char* arg) {
 
 void Usage() {
   constexpr char kUsageString[] =
-      "Usage: radarutil [-h] [-p burst process time] [-t run time|-b burst count]\n"
-      "                 [-v vmos] [-o output file]\n"
-      "    burst process time: Time to sleep after each burst to simulate processing\n"
-      "                        delay. Default: 0s\n"
-      "    run time: Total time to read frames. Default: 1s\n"
-      "    burst count: Total number of bursts to read.\n"
-      "    vmos: Number of VMOs to register for receiving frames. Default: 10\n"
-      "    output file: Path of the file to write radar bursts to, or \"-\" for stdout.\n"
-      "                 If omitted, received bursts are not written.\n"
+      "Usage: radarutil [options]\n"
+      "\n"
+      "Options:\n"
+      "    --help/-h: Show this message.\n"
+      "    --burst-process-time/-p [time]: Time to sleep after each burst to simulate\n"
+      "            processing delay. Default: 0s\n"
+      "    --run-time/-t [time]: Total time to read bursts. Mutually exclusive with\n"
+      "            --burst-count. Default: 1s\n"
+      "    --burst-count/-b [count]: Total number of bursts to ready. Mutually\n"
+      "            exclusive with --run-time.\n"
+      "    --vmos/-v [vmos]: Number of VMOs to register for receiving bursts.\n"
+      "            Default: 10\n"
+      "    --output/-o [path]: Path of the file to write radar bursts to, or \"-\" for\n"
+      "            stdout. If omitted, received bursts are not written.\n"
+      "    --burst-period-ns [period]: The time between radar bursts reported by this\n"
+      "            sensor. Must be greater than zero.\n"
+      "    --max-error-rate [rate]: The maximum allowable error rate in errors per\n"
+      "            million bursts. radarutil will return nonzero if this rate is\n"
+      "            exceeded. Requires either --burst-period-ns or --burst-count.\n"
       "\n"
       "    For time arguments, add a suffix (h,m,s,ms,us,ns) to indicate units.\n"
       "    For example: radarutil -p 3ms -t 5m -v 20\n";
@@ -115,8 +126,20 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
     return ZX_OK;
   }
 
+  constexpr option kLongOptions[] = {
+      {"help", no_argument, nullptr, 'h'},
+      {"burst-process-time", required_argument, nullptr, 'p'},
+      {"time", required_argument, nullptr, 't'},
+      {"burst-count", required_argument, nullptr, 'b'},
+      {"vmos", required_argument, nullptr, 'v'},
+      {"output", required_argument, nullptr, 'o'},
+      {"burst-period-ns", required_argument, nullptr, 'n'},
+      {"max-error-rate", required_argument, nullptr, 'm'},
+      {nullptr, 0, nullptr, 0},
+  };
+
   int opt, vmos, burst_count;
-  while ((opt = getopt(argc, argv, "hp:t:b:v:o:")) != -1) {
+  while ((opt = getopt_long(argc, argv, "hp:t:b:v:o:", kLongOptions, nullptr)) != -1) {
     switch (opt) {
       case 'h':
         Usage();
@@ -178,6 +201,16 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
           }
         }
         break;
+      case 'n':
+        burst_period_ = zx::duration(strtol(optarg, nullptr, 10));
+        if (burst_period_.get() <= 0) {
+          Usage();
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+      case 'm':
+        max_error_rate_ = strtoul(optarg, nullptr, 10);
+        break;
       default:
         Usage();
         return ZX_ERR_INVALID_ARGS;
@@ -186,6 +219,12 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
 
   if (!run_time_.has_value() && !burst_count_.has_value()) {
     run_time_.emplace(kDefaultRunTime);
+  }
+
+  // --max-error-rate requires -b or --burst-period-ns.
+  if (max_error_rate_ && burst_period_ == zx::duration::infinite_past() && !burst_count_) {
+    Usage();
+    return ZX_ERR_INVALID_ARGS;
   }
 
   return ZX_OK;
@@ -319,6 +358,26 @@ zx_status_t RadarUtil::Run() {
   } else {
     fprintf(stderr, "Received %lu bursts and %lu burst errors in %lu seconds\n", bursts_received_,
             burst_errors_, elapsed.to_secs());
+  }
+
+  // We have some notion of the expected number of bursts; use that to calculate the error rate.
+  if (burst_period_ != zx::duration::infinite_past() || burst_count_) {
+    const uint64_t expected_bursts =
+        burst_count_ ? *burst_count_ : elapsed.to_nsecs() / burst_period_.to_nsecs();
+    const uint64_t diff = (expected_bursts < bursts_received_)
+                              ? (bursts_received_ - expected_bursts)
+                              : (expected_bursts - bursts_received_);
+    const uint64_t error_rate = (diff * 1'000'000) / expected_bursts;
+
+    if (burst_count_) {
+      fprintf(stderr, "Error rate %lu\n", error_rate);
+    } else {
+      fprintf(stderr, "Expected %lu bursts, error rate %lu\n", expected_bursts, error_rate);
+    }
+
+    if (max_error_rate_) {
+      return error_rate > *max_error_rate_ ? ZX_ERR_IO : ZX_OK;
+    }
   }
 
   return burst_errors_ == 0 ? ZX_OK : ZX_ERR_IO;

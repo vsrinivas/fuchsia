@@ -47,7 +47,8 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
   // Indicates a burst error from the callback filling the queue to the worker draining it.
   static constexpr uint32_t kInvalidVmoId = UINT32_MAX;
 
-  RadarUtil() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  RadarUtil()
+      : loop_(&kAsyncLoopConfigNeverAttachToThread), burst_period_(zx::duration::infinite_past()) {}
   ~RadarUtil() override;
 
   fidl::AnyTeardownObserver teardown_observer();
@@ -82,6 +83,9 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
   uint64_t burst_errors_ = 0;
 
   bool help_ = false;
+
+  zx::duration burst_period_;
+  std::optional<uint64_t> max_error_rate_;
 };
 
 }  // namespace radarutil

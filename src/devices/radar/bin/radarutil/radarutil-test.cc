@@ -309,6 +309,8 @@ TEST(RadarUtilTest, InvalidArgs) {
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "zzz", "-p", "1ms"}));
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "-3", "-p", "1ms"}));
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-b", "20"}));
+  EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "--max-error-rate", "1000"}));
+  EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "--burst-period-ns", "0"}));
 }
 
 TEST(RadarUtilTest, InjectError) {
@@ -324,6 +326,26 @@ TEST(RadarUtilTest, Help) {
   FakeRadarDevice device;
   EXPECT_OK(device.RunRadarUtil({"radarutil", "-h"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 0);
+}
+
+TEST(RadarUtilTest, ErrorRatePass) {
+  // One burst error/300 bursts -> error rate 3333
+  FakeRadarDevice device;
+  device.SetErrorOnBurst(10);
+
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-b", "300", "--max-error-rate", "5000"}));
+}
+
+TEST(RadarUtilTest, ErrorRateFail) {
+  FakeRadarDevice device;
+  device.SetErrorOnBurst(10);
+
+  EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-b", "300", "--max-error-rate", "1000"}));
+}
+
+TEST(RadarUtilTest, BurstPeriod) {
+  FakeRadarDevice device;
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "5s", "--burst-period-ns", "33333000"}));
 }
 
 }  // namespace radarutil
