@@ -83,18 +83,12 @@ rustc_library("fuchsia-pkg-testing") {
   ]
 }
 
-fuchsia_component("fuchsia-pkg-testing-tests-component") {
-  testonly = true
-  component_name = "fuchsia-pkg-testing-tests"
-  manifest = "meta/fuchsia-pkg-testing-tests.cmx"
-  deps = [ ":fuchsia-pkg-testing_test" ]
-}
-
-fuchsia_test_package("fuchsia-pkg-testing-tests") {
-  test_components = [ ":fuchsia-pkg-testing-tests-component" ]
+fuchsia_unittest_package("fuchsia-pkg-testing-tests") {
+  manifest = "meta/fuchsia-pkg-testing-tests.cml"
   deps = [
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
+    ":fuchsia-pkg-testing_test",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
