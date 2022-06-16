@@ -272,27 +272,44 @@ pub trait Crypt: Send + Sync {
 #[cfg(any(test, feature = "insecure_crypt"))]
 pub mod insecure {
     use {
-        super::{
-            Crypt, KeyBytes, KeyPurpose, UnwrappedKey, WrappedKey, WrappedKeyBytes, KEY_SIZE,
-            WRAPPED_KEY_SIZE,
+        super::{Crypt, KeyPurpose, UnwrappedKey, WrappedKey, WrappedKeyBytes},
+        aes_gcm_siv::{
+            aead::{Aead, NewAead},
+            Aes256GcmSiv, Key, Nonce,
         },
-        anyhow::Error,
+        anyhow::{anyhow, Context, Error},
         async_trait::async_trait,
-        rand::RngCore,
+        rand::{rngs::StdRng, RngCore, SeedableRng},
+        std::{collections::HashMap, convert::TryInto},
     };
 
     /// This struct provides the `Crypt` trait without any strong security.
     ///
     /// It is intended for use only in test code where actual security is inconsequential.
-    pub struct InsecureCrypt {}
-
-    /// Used by `InsecureCrypt` as an extremely weak form of 'encryption'.
-    const DATA_WRAP_XOR: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
-    const METADATA_WRAP_XOR: [u8; 8] = [0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10];
-
+    #[derive(Default)]
+    pub struct InsecureCrypt {
+        ciphers: HashMap<u64, Aes256GcmSiv>,
+        active_data_key: Option<u64>,
+        active_metadata_key: Option<u64>,
+    }
     impl InsecureCrypt {
         pub fn new() -> Self {
-            Self {}
+            const DATA_KEY: [u8; 32] = [
+                0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+                0x1e, 0x1f,
+            ];
+            const METADATA_KEY: [u8; 32] = [
+                0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2,
+                0xf1, 0xf0, 0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4,
+                0xe3, 0xe2, 0xe1, 0xe0,
+            ];
+            let mut this = Self::default();
+            this.ciphers.insert(0, Aes256GcmSiv::new(Key::from_slice(&DATA_KEY)));
+            this.ciphers.insert(1, Aes256GcmSiv::new(Key::from_slice(&METADATA_KEY)));
+            this.active_data_key = Some(0);
+            this.active_metadata_key = Some(1);
+            this
         }
     }
 
@@ -303,22 +320,27 @@ pub mod insecure {
             owner: u64,
             purpose: KeyPurpose,
         ) -> Result<(WrappedKey, UnwrappedKey), Error> {
-            let mut rng = rand::thread_rng();
-            let mut key: KeyBytes = [0; KEY_SIZE];
-            rng.fill_bytes(&mut key);
-            let mut wrapped: WrappedKeyBytes = WrappedKeyBytes([0; WRAPPED_KEY_SIZE]);
-            let owner_bytes = owner.to_le_bytes();
-            let (wrap_xor, wrapping_key_id) = match purpose {
-                KeyPurpose::Data => (&DATA_WRAP_XOR, 0),
-                KeyPurpose::Metadata => (&METADATA_WRAP_XOR, 1),
-            };
-            // This intentionally leaves the extra bytes in the wrapped key as zero.  They are
-            // unused.
-            for i in 0..key.len() {
-                let j = i % wrap_xor.len();
-                wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+            let wrapping_key_id = match purpose {
+                KeyPurpose::Data => self.active_data_key.as_ref(),
+                KeyPurpose::Metadata => self.active_metadata_key.as_ref(),
             }
-            Ok((WrappedKey { wrapping_key_id, key: wrapped }, UnwrappedKey::new(key)))
+            .ok_or(anyhow!("Invalid args in create_key"))?;
+            let cipher = self.ciphers.get(wrapping_key_id).ok_or(anyhow!("No cipher."))?;
+            let mut nonce = Nonce::default();
+            nonce.as_mut_slice()[..8].copy_from_slice(&owner.to_le_bytes());
+
+            let mut key = [0u8; 32];
+            StdRng::from_entropy().fill_bytes(&mut key);
+
+            let wrapped: Vec<u8> =
+                cipher.encrypt(&nonce, &key[..]).context("Failed to wrap key")?;
+            let wrapped = WrappedKeyBytes(
+                wrapped.try_into().map_err(|_| anyhow!("wrapped key wrong length"))?,
+            );
+            Ok((
+                WrappedKey { wrapping_key_id: *wrapping_key_id, key: wrapped },
+                UnwrappedKey::new(key),
+            ))
         }
 
         async fn unwrap_key(
@@ -326,18 +348,17 @@ pub mod insecure {
             wrapped_key: &WrappedKey,
             owner: u64,
         ) -> Result<UnwrappedKey, Error> {
-            let mut unwrapped: KeyBytes = [0; KEY_SIZE];
-            let owner_bytes = owner.to_le_bytes();
-            let wrap_xor = match wrapped_key.wrapping_key_id {
-                0 => &DATA_WRAP_XOR,
-                1 => &METADATA_WRAP_XOR,
-                _ => panic!("Unexpected wrapping key ID for {:?}", wrapped_key),
-            };
-            for i in 0..unwrapped.len() {
-                let j = i % wrap_xor.len();
-                unwrapped[i] = wrapped_key.key[i] ^ wrap_xor[j] ^ owner_bytes[j];
-            }
-            Ok(UnwrappedKey::new(unwrapped))
+            let cipher =
+                self.ciphers.get(&wrapped_key.wrapping_key_id).ok_or(anyhow!("cipher fail"))?;
+            let mut nonce = Nonce::default();
+            nonce.as_mut_slice()[..8].copy_from_slice(&owner.to_le_bytes());
+            Ok(UnwrappedKey::new(
+                cipher
+                    .decrypt(&nonce, &wrapped_key.key.0[..])
+                    .map_err(|_| anyhow!("unwrap keys failed"))?
+                    .try_into()
+                    .map_err(|_| anyhow!("Unexpected wrapped key length"))?,
+            ))
         }
     }
 }

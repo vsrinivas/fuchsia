@@ -133,6 +133,7 @@ if (is_fuchsia) {
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
     "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:aes-gcm-siv",
     "//third_party/rust_crates:zstd",
     "//third_party/zstd",
   ]
@@ -182,6 +183,7 @@ rustc_library("lib") {
   }
   if (is_host) {
     features += [ "insecure_crypt" ]
+    deps += [ "//third_party/rust_crates:aes-gcm-siv" ]
   }
 }
 
