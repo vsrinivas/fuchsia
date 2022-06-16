@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _, Result},
+    errors,
     fidl::prelude::*,
     fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_remotecontrol::{
@@ -11,6 +12,7 @@ use {
     },
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::futures::StreamExt,
+    fuchsia_async::futures::TryFutureExt,
     hoist::OvernetInstance as _,
     selectors::VerboseError,
     std::hash::{Hash, Hasher},
@@ -151,4 +153,56 @@ async fn knock_rcs_impl(rcs_proxy: &RemoteControlProxy) -> Result<(), KnockRcsEr
         Err(_) => Ok(()), // timeout is fine here, it means the connection wasn't lost.
         Ok(r) => r.ok_or(KnockRcsError::FailedToKnock).map(drop),
     }
+}
+
+pub async fn connect_with_timeout(
+    dur: Duration,
+    selector: &str,
+    rcs_proxy: &RemoteControlProxy,
+    server_end: fidl::Channel,
+) -> Result<()> {
+    timeout::timeout(dur, rcs_proxy.connect(selectors::parse_selector::<VerboseError>(selector)?, server_end)
+        .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+            fidl_result.map(|_| ()).map_err(|e| {
+                    match e {
+                        ConnectError::NoMatchingServices => {
+                            errors::ffx_error!(format!(
+"The plugin service selector '{}' did not match any services on the target.
+
+It is possible that the expected component is either not built into the system image, or that the
+package server has not been setup.
+
+For users, ensure your Fuchsia device is registered with ffx. To do this you can run:
+
+$ ffx target repository register -r $IMAGE_TYPE --alias fuchsia.com
+
+For plugin developers, it may be possible that the moniker you're attempting to connect to is
+incorrect. You can use `ffx component select moniker '<selector>'` to explore the component topology
+of your target device to fix this selector if this is the case.
+
+If you believe you have encountered a bug after walking through the above please report it at
+http://fxbug.dev/new/ffx+User+Bug",
+                            selector)).into()
+                        }
+                        ConnectError::MultipleMatchingServices => {
+                            errors::ffx_error!(
+                                format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new/ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select moniker '{}'` to see which services matched the provided selector.",
+                                    selector, selector)).into()
+                        }
+                        _ => {
+                            anyhow::anyhow!(
+                                format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, selector)
+                            )
+                        }
+                    }
+                })
+        })).await.map_err(|_| errors::ffx_error!("Timed out connecting to service: '{}'.
+This is likely due to a sudden shutdown or disconnect of the target.
+If you have encountered what you think is a bug, Please report it at http://fxbug.dev/new/ffx+User+Bug
+
+To diagnose the issue, use `ffx doctor`.", selector).into()).and_then(|r| r)
 }

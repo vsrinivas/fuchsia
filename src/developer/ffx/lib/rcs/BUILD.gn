@@ -14,6 +14,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/hoist",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",

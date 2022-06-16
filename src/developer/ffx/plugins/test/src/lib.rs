@@ -70,19 +70,24 @@ impl RunBuilderConnector {
     }
 }
 
-#[ffx_plugin(ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query")]
+#[ffx_plugin()]
 pub async fn test(
-    query_proxy_result: Result<ftest_manager::QueryProxy>,
     remote_control_result: Result<fremotecontrol::RemoteControlProxy>,
     cmd: TestCommand,
 ) -> Result<()> {
     let writer = Box::new(stdout());
-
-    let query_proxy =
-        query_proxy_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     let remote_control =
         remote_control_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
-
+    let (query_proxy, query_server_end) =
+        fidl::endpoints::create_proxy::<ftest_manager::QueryMarker>()?;
+    rcs::connect_with_timeout(
+        std::time::Duration::from_secs(45),
+        "core/test_manager:expose:fuchsia.test.manager.Query",
+        &remote_control,
+        query_server_end.into_channel(),
+    )
+    .await
+    .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     match cmd.subcommand {
         TestSubcommand::Run(run) => {
             run_test(RunBuilderConnector::new(remote_control), writer, run).await
