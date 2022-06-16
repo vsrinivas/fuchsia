@@ -8,13 +8,12 @@ use {
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionMarker,
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     payload_streamer::PayloadStreamer,
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     std::fs::File,
+    tracing::{error, info},
 };
 
 /// Block size of the ramdisk.
@@ -62,7 +61,7 @@ impl Drop for BlockWatcherPauser {
                 fuchsia_async::LocalExecutor::new().expect("failed to create executor");
             executor
                 .run_singlethreaded(self.resume())
-                .map_err(|e| fx_log_err!("failed to resume block watcher: {:?}", e))
+                .map_err(|err| error!(?err, "failed to resume block watcher"))
                 .ok();
         }
     }
@@ -109,7 +108,7 @@ impl FvmRamdisk {
     /// Pave the FVM into this ramdisk, consuming this object
     /// and leaving the ramdisk to run once the application has quit.
     pub async fn pave_fvm(mut self) -> Result<(), Error> {
-        fx_log_info!("connecting to the paver");
+        info!("connecting to the paver");
         let channel = self.ramdisk.open().context("Opening ramdisk")?;
         let paver =
             fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_paver::PaverMarker>()?;
@@ -170,7 +169,7 @@ impl FvmRamdisk {
 mod tests {
     use super::*;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_not_enough_physmem() {
         assert!(FvmRamdisk::new_with_physmemfn(512, "".to_owned(), || 512).await.is_err());
         assert!(FvmRamdisk::new_with_physmemfn(512, "".to_owned(), || 6).await.is_err());

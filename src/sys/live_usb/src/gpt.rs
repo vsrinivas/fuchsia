@@ -5,13 +5,13 @@
 use {
     crate::block_wrapper::{FileLike, WrappedBlockDevice},
     anyhow::{Context, Error},
-    fuchsia_syslog::fx_log_info,
     gpt::{
         disk::LogicalBlockSize,
         partition_types::{OperatingSystem, Type as PartitionType},
         GptConfig,
     },
     std::collections::BTreeMap,
+    tracing::info,
 };
 
 /// Size of the misc partition on the ramdisk, in bytes.
@@ -47,9 +47,9 @@ pub fn write_ramdisk<'a, T: FileLike + 'a>(ramdisk: T) -> Result<gpt::DiskDevice
     disk.add_partition("fuchsia-fvm", available_space - MISC_SIZE, fvm_type, 0, None)
         .context("adding fvm partition")?;
     disk.add_partition("misc", MISC_SIZE, misc_type, 0, None).context("adding misc partition")?;
-    fx_log_info!("free sectors: {:?}", disk.find_free_sectors());
-    fx_log_info!("partitions: {:?}", disk.partitions());
-    fx_log_info!("disk header: {:?}", disk.primary_header().unwrap());
+    info!("free sectors: {:?}", disk.find_free_sectors());
+    info!("partitions: {:?}", disk.partitions());
+    info!("disk header: {:?}", disk.primary_header().unwrap());
 
     Ok(disk.write().context("Writing GPT")?)
 }

@@ -12,12 +12,11 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsMarker, BoolPair},
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_watch::PathEvent,
     fuchsia_zircon as zx,
     futures::prelude::*,
     std::path::PathBuf,
+    tracing::{error, info},
 };
 
 /// This GUID is used by the installer to identify partitions that contain
@@ -99,7 +98,7 @@ async fn wait_for_sparse_fvm() -> Result<String, Error> {
 async fn inner_main() -> Result<(), Error> {
     // Find the sparse FVM partition.
     let sparse_fvm_partition = wait_for_sparse_fvm().await?;
-    fx_log_info!("using {} as sparse partition", sparse_fvm_partition);
+    info!("using {} as sparse partition", sparse_fvm_partition);
 
     // Cap the ramdisk at 1/4 of system ram, unless that's not big enough for the FVM, a misc
     // partition and FVM_MINIMUM_PADDING bytes of extra room.
@@ -111,7 +110,7 @@ async fn inner_main() -> Result<(), Error> {
             + gpt::FVM_MINIMUM_PADDING,
     );
 
-    fx_log_info!("using {} bytes for ramdisk", ramdisk_size);
+    info!("using {} bytes for ramdisk", ramdisk_size);
     let ramdisk = FvmRamdisk::new(ramdisk_size, sparse_fvm_partition)
         .await
         .context("creating FVM ramdisk")?;
@@ -123,27 +122,25 @@ async fn inner_main() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["live_usb.cm"])]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["live_usb.cm"]).expect("logging init");
-
     let enable_live_usb = match is_live_usb_enabled().await {
         Ok(val) => val,
-        Err(e) => {
-            fx_log_err!("Failed to check boot arguments: {:?}", e);
+        Err(err) => {
+            error!(?err, "Failed to check boot arguments");
             false
         }
     };
 
     if !enable_live_usb {
-        fx_log_info!("Not booting from a USB!");
+        info!("Not booting from a USB!");
         return;
     }
 
-    fx_log_info!("Doing live USB boot!");
+    info!("Doing live USB boot!");
     let error = inner_main().await;
-    if let Err(e) = error {
-        fx_log_err!("Failed to do USB boot: {:?}", e);
+    if let Err(err) = error {
+        error!(?err, "Failed to do USB boot");
     }
 }
 
@@ -159,7 +156,6 @@ mod tests {
         },
         fidl_fuchsia_device::ControllerProxy,
         fidl_fuchsia_hardware_block_partition::PartitionProxy,
-        fuchsia_async as fasync,
         ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
         std::{collections::BTreeMap, fs::File},
     };
@@ -208,7 +204,7 @@ mod tests {
         ramdisk
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_wait_for_sparse_fvm() {
         let uuids = vec![
             "1d75395d-f2c6-476b-a8b7-45cc1c97b476", // MISC - 001
