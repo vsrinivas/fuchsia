@@ -62,7 +62,7 @@ action("dart_sdk_docs") {
     "--gen-dir",
     rebase_path(target_gen_dir, root_build_dir),
     "--out-dir",
-    rebase_path(target_out_dir, target_gen_dir),
+    rebase_path("$target_out_dir/__untraced_dartdoc_output__", target_gen_dir),
     "--prebuilts-dir",
     rebase_path("//prebuilt/third_party/dart/${host_platform}/bin",
                 target_gen_dir),
@@ -302,10 +302,12 @@ build_api_module("generated_docs") {
   data_keys = [ "generated_docset" ]
   deps = [
     ":dart_sdk_docs($host_toolchain)",
-    ":invoke_clidoc($host_toolchain)",
+
+    #":invoke_clidoc($host_toolchain)",
     ":invoke_cmldoc($host_toolchain)",
-    ":invoke_fidldoc($host_toolchain)",
-    ":invoke_helpdoc($host_toolchain)",
+
+    #":invoke_fidldoc($host_toolchain)",
+    #":invoke_helpdoc($host_toolchain)",
     "//bundles:create_all_drivers_doc",
   ]
 }

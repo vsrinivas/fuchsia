@@ -964,6 +964,10 @@ def main():
         # which cannot be determined at GN gen time, so write them to
         # `__untraced_flutter_assets__` and ignore accesses to them.
         "__untraced_flutter_assets__",
+        # https://fxbug.dev/102217: our current dartdoc implementation seems
+        # to be throwing aberrant unexpected reads and is also missing
+        # some writes. We declare this exemption temporarily until it is fixed.
+        "__untraced_dartdoc_output__",
     }
     # It's ok to access */.git/* if your action is sensitive to .git contents.
     for args_input in args.inputs:

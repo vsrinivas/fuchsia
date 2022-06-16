@@ -237,8 +237,16 @@ def generate_docs(
     # Zip generated docs and delete original docs to make build hermetic.
     if zipped_result:
         pkg_to_out = os.path.join(package_dir, out_dir)
+        prefix, final_component = os.path.split(pkg_to_out)
+
+        # Action tracer is unable to trace dartdoc operations
+        # so an exemption at __untraced_dartdoc_output__ is created.
+        # However we do not want to write our final output there.
+        # See https://fxbug.dev/102217.
         shutil.make_archive(
-            os.path.join(pkg_to_out, 'dartdoc_out'),
+            os.path.join(prefix if final_component == 
+                         "__untraced_dartdoc_output__" else pkg_to_out,
+                         'dartdoc_out'),
             'zip',
             root_dir=pkg_to_out,
             base_dir='dartdoc')
