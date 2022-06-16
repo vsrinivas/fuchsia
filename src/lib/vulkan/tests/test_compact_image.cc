@@ -367,7 +367,7 @@ TEST(CompactImage, TrimCompactImageDeviceMemoryFUCHSIA) {
 
   // Trim device memory to compact size. This will reduce the memory
   // committment to what is required for the current image layout.
-  f_vkTrimCompactImageDeviceMemoryFUCHSIA(device, image, image_memory, 0);
+  EXPECT_EQ(VK_SUCCESS, f_vkTrimCompactImageDeviceMemoryFUCHSIA(device, image, image_memory, 0));
   // TODO(reveman): Querying commitment for memory when
   // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT is supported.
 

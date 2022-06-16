@@ -657,18 +657,8 @@ class ImageCompactor {
   }
 
   void FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator) {
-    // Decommit the full-range of compact image memory when released to
-    // ensure that memory is released to the system immediately.
     auto it = compact_image_memory_.find(memory);
     if (it != compact_image_memory_.end()) {
-      VkMemoryRangeFUCHSIA range = {
-          .memory = memory,
-          .offset = 0,
-          .size = VK_WHOLE_SIZE,
-      };
-      dispatch_->ModifyMemoryRangesFUCHSIA(
-          device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA | VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA, 1, &range,
-          nullptr);
       compact_image_memory_.erase(it);
     }
     dispatch_->FreeMemory(device_, memory, pAllocator);
@@ -780,9 +770,30 @@ class ImageCompactor {
                   memoryOffset,
         .size = VK_WHOLE_SIZE,
     };
-    return dispatch_->ModifyMemoryRangesFUCHSIA(
-        device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA | VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA, 1, &range,
-        nullptr);
+
+    // Both mappings of the memory must be unpinned before it's legal to
+    // decommit the memory.
+    VkResult result = dispatch_->ModifyMemoryRangesFUCHSIA(device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA,
+                                                           1, &range, nullptr);
+
+    if (result != VK_SUCCESS) {
+      return result;
+    }
+
+    range.memory = compact_image.buffer.memory;
+
+    result =
+        dispatch_->ModifyMemoryRangesFUCHSIA(device_, VK_MEMORY_OP_UNPIN_BIT_FUCHSIA, 1, &range,
+
+                                             nullptr);
+    if (result != VK_SUCCESS) {
+      return result;
+    }
+
+    result = dispatch_->ModifyMemoryRangesFUCHSIA(device_, VK_MEMORY_OP_DECOMMIT_BIT_FUCHSIA, 1,
+                                                  &range, nullptr);
+
+    return result;
   }
 
  private:
