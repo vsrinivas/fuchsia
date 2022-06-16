@@ -140,7 +140,6 @@ fuchsia_package_with_single_component("system_recovery") {
     ":roboto_regular",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
   ]
   manifest = "meta/system_recovery.cmx"
 }
@@ -194,7 +193,6 @@ fuchsia_package_with_single_component("system_recovery_fdr") {
     ":roboto_regular",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
   ]
   manifest = "meta/system_recovery_fdr.cmx"
 }
@@ -214,7 +212,6 @@ fuchsia_test_package("system_recovery_tests") {
     "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
@@ -306,7 +303,6 @@ fuchsia_package_with_single_component("system_recovery_installer") {
     ":roboto_regular",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
   ]
   manifest = "meta/system_recovery_installer.cmx"
 }
@@ -326,7 +322,6 @@ fuchsia_test_package("system_installer_tests") {
     "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
