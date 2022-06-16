@@ -559,11 +559,14 @@ async fn regular_echo_at_service_instance(
         )
         .expect("failed to connect to filtered service instance");
 
-    let response = service_instance
-        .regular_echo()
-        .expect("failed to connect to regular_echo member from original service")
-        .echo_string(echo_string)
-        .await;
+    let response = async {
+        // Accessing a non-existent service instance can fail when opening the member protocol
+        // or calling a method on the protocol, depending on when the underlying channel used to open the
+        // service capability is closed.
+        let proxy = service_instance.regular_echo()?;
+        proxy.echo_string(echo_string).await
+    }
+    .await;
 
     // Ensure that calling the protocol directly produces the same result as opening the
     // service instance directory first, then connecting to the protocol through the open
