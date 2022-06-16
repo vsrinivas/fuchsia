@@ -12,13 +12,13 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/cpuperf/session_result_spec.h"
-#include "src/developer/cpuperf/session_spec.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/cpuperf/session_result_spec.h"
+#include "src/performance/cpuperf/session_spec.h"
 #include "src/performance/lib/perfmon/file_reader.h"
 
 #if defined(__x86_64__)

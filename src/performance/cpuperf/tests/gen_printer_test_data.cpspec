@@ -3,7 +3,7 @@
 // $ cpuperf --quiet --spec-file=/pkgfs/packages/cpuperf_tests/0/data/gen_printer_test_data.cpspec
 // The --quiet flag is to remove environment-dependent text from the output.
 // To copy the results to your desktop:
-// $ sh src/developer/cpuperf/copy_cpuperf.sh /data/cpuperf-test.cpsession /tmp
+// $ sh src/performance/cpuperf/copy_cpuperf.sh /data/cpuperf-test.cpsession /tmp
 // To generate the reference output text:
 // $ out/x64/host_x64/cpuperf_print --quiet --session=/tmp/cpuperf-test.cpsession
 {

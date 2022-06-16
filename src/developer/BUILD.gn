@@ -7,7 +7,6 @@ group("developer") {
   deps = [
     ":tests",
     "build_info:build-info-service",
-    "cpuperf",
     "debug",
     "ffx",
     "forensics",
@@ -24,7 +23,6 @@ group("tests") {
 
   deps = [
     "build_info:tests",
-    "cpuperf:tests",
     "debug:tests",
     "ffx:tests",
     "forensics:tests",

@@ -167,8 +167,8 @@ group("cobalt_client") {
 group("cpuperf") {
   testonly = true
   public_deps = [
-    "//src/developer/cpuperf",
-    "//src/developer/cpuperf/print:host_cpuperf_print",
+    "//src/performance/cpuperf",
+    "//src/performance/cpuperf/print:host_cpuperf_print",
   ]
 }
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_CPUPERF_PRINT_PRINTER_CONFIG_H_
-#define SRC_DEVELOPER_CPUPERF_PRINT_PRINTER_CONFIG_H_
+#ifndef SRC_PERFORMANCE_CPUPERF_PRINT_PRINTER_CONFIG_H_
+#define SRC_PERFORMANCE_CPUPERF_PRINT_PRINTER_CONFIG_H_
 
 #include <string>
 
@@ -28,4 +28,4 @@ struct PrinterConfig {
 
 }  // namespace cpuperf
 
-#endif  // SRC_DEVELOPER_CPUPERF_PRINT_PRINTER_CONFIG_H_
+#endif  // SRC_PERFORMANCE_CPUPERF_PRINT_PRINTER_CONFIG_H_

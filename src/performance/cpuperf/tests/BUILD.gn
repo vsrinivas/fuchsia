@@ -17,8 +17,8 @@ executable("cpuperf_tests_bin") {
   output_name = "cpuperf_tests"
 
   deps = [
-    "//src/developer/cpuperf:unittests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/performance/cpuperf:unittests",
   ]
 }
 
@@ -58,10 +58,10 @@ executable("cpuperf_integration_tests_bin") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//src/developer/cpuperf:session_result_spec",
-    "//src/developer/cpuperf:session_spec",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//src/performance/cpuperf:session_result_spec",
+    "//src/performance/cpuperf:session_spec",
     "//src/performance/lib/perfmon",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",

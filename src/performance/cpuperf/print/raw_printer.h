@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_
-#define SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_
+#ifndef SRC_PERFORMANCE_CPUPERF_PRINT_RAW_PRINTER_H_
+#define SRC_PERFORMANCE_CPUPERF_PRINT_RAW_PRINTER_H_
 
 #include <cstdio>
 #include <memory>
 #include <string>
 
-#include "src/developer/cpuperf/session_result_spec.h"
 #include "src/lib/fxl/macros.h"
+#include "src/performance/cpuperf/session_result_spec.h"
 #include "src/performance/lib/perfmon/records.h"
 
 namespace cpuperf {
@@ -54,4 +54,4 @@ class RawPrinter {
 
 }  // namespace cpuperf
 
-#endif  // SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_
+#endif  // SRC_PERFORMANCE_CPUPERF_PRINT_RAW_PRINTER_H_

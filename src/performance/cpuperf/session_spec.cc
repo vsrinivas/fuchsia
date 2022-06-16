@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/cpuperf/session_spec.h"
+#include "src/performance/cpuperf/session_spec.h"
 
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>

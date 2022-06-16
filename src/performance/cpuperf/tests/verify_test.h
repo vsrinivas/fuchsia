@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_CPUPERF_TESTS_VERIFY_TEST_H_
-#define SRC_DEVELOPER_CPUPERF_TESTS_VERIFY_TEST_H_
+#ifndef SRC_PERFORMANCE_CPUPERF_TESTS_VERIFY_TEST_H_
+#define SRC_PERFORMANCE_CPUPERF_TESTS_VERIFY_TEST_H_
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
-#include "src/developer/cpuperf/session_result_spec.h"
+#include "src/performance/cpuperf/session_result_spec.h"
 #include "src/performance/lib/perfmon/events.h"
 #include "src/performance/lib/perfmon/records.h"
 
@@ -71,4 +71,4 @@ extern const size_t kTestSpecCount;
 // |spec_file_path| is the path to the cpspec file.
 void VerifySpec(const std::string& spec_file_path);
 
-#endif  // SRC_DEVELOPER_CPUPERF_TESTS_VERIFY_TEST_H_
+#endif  // SRC_PERFORMANCE_CPUPERF_TESTS_VERIFY_TEST_H_
