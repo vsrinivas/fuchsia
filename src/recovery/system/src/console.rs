@@ -175,7 +175,8 @@ mod tests {
 
     #[test]
     fn test_small_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
-        let mut console_view_assistant = ConsoleViewAssistant::new().unwrap();
+        let font_face = font::load_default_font_face()?;
+        let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Add a multiline message to Console.
         console_view_assistant.handle_message(make_message(ConsoleMessages::AddText(
@@ -198,7 +199,8 @@ mod tests {
 
     #[test]
     fn test_giant_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
-        let mut console_view_assistant = ConsoleViewAssistant::new().unwrap();
+        let font_face = font::load_default_font_face()?;
+        let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Add a giant (more rows than the screen can display) multiline message to Console.
         console_view_assistant.handle_message(make_message(ConsoleMessages::AddText(
