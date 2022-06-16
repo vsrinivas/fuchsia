@@ -142,3 +142,19 @@ group("tests") {
   testonly = true
   public_deps = [ ":pkg-cache-tests" ]
 }
+
+# If the file in this resource is included in the system_image package, then pkg-cache will *not*
+# enforce executability restrictions.
+resource("disable-executability-restrictions-resource") {
+  sources = [ "disable_executability_restrictions" ]
+  outputs = [ "data/pkgfs_disable_executability_restrictions" ]
+  visibility = [ ":*" ]
+}
+
+fuchsia_system_package("disable-executability-restrictions") {
+  deps = [
+    ":disable-executability-restrictions-resource",
+    "//build/validate:non_production_tag",
+  ]
+  visibility = [ "//src/sys/pkg:*" ]
+}

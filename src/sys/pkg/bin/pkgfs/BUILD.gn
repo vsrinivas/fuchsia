@@ -61,15 +61,6 @@ fuchsia_package("pkgfs") {
   deps = [ "//src/sys/pkg/bin/pkgfs:pkgsvr" ]
 }
 
-resource("disable-executability-restrictions-resource") {
-  sources = [ "disable_executability_restrictions" ]
-  outputs = [ "data/pkgfs_disable_executability_restrictions" ]
-}
-
-fuchsia_system_package("disable-executability-restrictions") {
-  deps = [ ":disable-executability-restrictions-resource" ]
-}
-
 go_test_packages = [
   "allowlist",
   "index",

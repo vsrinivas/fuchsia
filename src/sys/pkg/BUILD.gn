@@ -111,6 +111,6 @@ group("omaha-client-delayed-start") {
 }
 
 group("pkgfs-disable-executability-restrictions") {
-  public_deps = [ "bin/pkgfs:disable-executability-restrictions" ]
+  public_deps = [ "bin/pkg-cache:disable-executability-restrictions" ]
   deps = [ "//build/validate:non_production_tag" ]
 }
