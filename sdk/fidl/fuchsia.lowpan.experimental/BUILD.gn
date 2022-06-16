@@ -14,6 +14,7 @@ fidl("fuchsia.lowpan.experimental") {
     "joiner_commissioning_params.fidl",
     "legacy.fidl",
     "provisioning_monitor.fidl",
+    "telemetry.fidl",
   ]
 
   public_deps = [

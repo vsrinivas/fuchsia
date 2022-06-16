@@ -1,0 +1,92 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lowpan.experimental;
+
+using fuchsia.lowpan;
+
+/// Protocol for connecting to [`TelemetryProvider`] on a LoWPAN interface.
+@discoverable
+protocol TelemetryProviderConnector {
+    /// Connects to the [`TelemetryProvider`] protocol on the named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request the given channel is closed and an epitaph
+    /// code used to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name was not formatted correctly or
+    ///   otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:TelemetryProvider;
+    });
+};
+
+/// Provides telemetry data for an individual interface to the LoWPAN service.
+protocol TelemetryProvider {
+    /// Returns a snapshot the telemetry information table.
+    GetTelemetry() -> (struct {
+        telemetry Telemetry;
+    });
+};
+
+/// LoWPAN Interface Telemetry Information.
+///
+/// The fields in this table are used for providing low-level telemetry and information about the
+/// LoWPAN interface for debugging and statistics purposes.
+///
+/// All fields are optional.
+type Telemetry = table {
+    /// The current RSSI of the radio.
+    1: rssi fuchsia.lowpan.PowerDbm;
+
+    /// The configured transmit power of the radio.
+    2: tx_power fuchsia.lowpan.PowerDbm;
+
+    /// The current channel index of the radio.
+    3: channel_index fuchsia.lowpan.ChannelIndex;
+
+    /// The partition ID of the currently associated network partition.
+    4: partition_id uint32;
+
+    /// The version string describing the underlying mesh stack.
+    5: stack_version string:256;
+
+    /// The version string describing the underlying radio control firmware.
+    6: rcp_version string:256;
+
+    /// Thread link mode byte.
+    ///
+    /// Only present on Thread networks.
+    ///
+    /// Defined by section 4.5.2 of the Thread 1.1.1 specification ("Mode TLV").
+    7: thread_link_mode uint8;
+
+    /// The router ID of this device in the currently associated network.
+    ///
+    /// Only present on Thread networks.
+    8: thread_router_id uint8;
+
+    /// The current RLOC16 address of this node.
+    ///
+    /// Only present on Thread networks.
+    9: thread_rloc uint16;
+
+    /// The full network data version.
+    ///
+    /// Only present on Thread networks.
+    10: thread_network_data_version uint8;
+
+    /// The stable network data version.
+    ///
+    /// Only present on Thread networks.
+    11: thread_stable_network_data_version uint8;
+
+    /// The weight value for the current leader.
+    ///
+    /// Only present on Thread networks.
+    12: thread_leader_weight uint8;
+};
