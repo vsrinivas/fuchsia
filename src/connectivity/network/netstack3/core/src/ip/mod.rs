@@ -2451,7 +2451,7 @@ mod tests {
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
     use rand::Rng;
-    use specialize_ip_macro::{ip_test, specialize_ip_address};
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
@@ -3159,7 +3159,6 @@ mod tests {
         assert_eq!(message, Icmpv6PacketTooBig::new(1280));
     }
 
-    #[specialize_ip_address]
     fn create_packet_too_big_buf<A: IpAddress>(
         src_ip: A,
         dst_ip: A,
@@ -3168,37 +3167,35 @@ mod tests {
     ) -> Buf<Vec<u8>> {
         let body = body.unwrap_or_else(|| Buf::new(Vec::new(), ..));
 
-        #[ipv4addr]
-        let ret = {
-            let msg = match NonZeroU16::new(mtu) {
-                Some(mtu) => IcmpDestUnreachable::new_for_frag_req(mtu),
-                None => IcmpDestUnreachable::default(),
-            };
+        match [src_ip, dst_ip].into() {
+            IpAddr::V4([src_ip, dst_ip]) => {
+                let msg = match NonZeroU16::new(mtu) {
+                    Some(mtu) => IcmpDestUnreachable::new_for_frag_req(mtu),
+                    None => IcmpDestUnreachable::default(),
+                };
 
-            body.encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
-                dst_ip,
-                src_ip,
-                Icmpv4DestUnreachableCode::FragmentationRequired,
-                msg,
-            ))
-            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, Ipv4Proto::Icmp))
-            .serialize_vec_outer()
-            .unwrap()
-        };
-
-        #[ipv6addr]
-        let ret = body
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
-                dst_ip,
-                src_ip,
-                IcmpUnusedCode,
-                Icmpv6PacketTooBig::new(u32::from(mtu)),
-            ))
-            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, Ipv6Proto::Icmpv6))
-            .serialize_vec_outer()
-            .unwrap();
-
-        ret.into_inner()
+                body.encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
+                    dst_ip,
+                    src_ip,
+                    Icmpv4DestUnreachableCode::FragmentationRequired,
+                    msg,
+                ))
+                .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, Ipv4Proto::Icmp))
+                .serialize_vec_outer()
+                .unwrap()
+            }
+            IpAddr::V6([src_ip, dst_ip]) => body
+                .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
+                    dst_ip,
+                    src_ip,
+                    IcmpUnusedCode,
+                    Icmpv6PacketTooBig::new(u32::from(mtu)),
+                ))
+                .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, Ipv6Proto::Icmpv6))
+                .serialize_vec_outer()
+                .unwrap(),
+        }
+        .into_inner()
     }
 
     #[ip_test]
@@ -3588,15 +3585,6 @@ mod tests {
             + packet_formats::ip::IpExt
             + crate::device::testutil::DeviceTestIpExt<DummyInstant>,
     >() {
-        #[specialize_ip_address]
-        fn get_multicast_addr<A: IpAddress>() -> A {
-            #[ipv4addr]
-            return Ipv4Addr::new([224, 0, 0, 3]);
-
-            #[ipv6addr]
-            return Ipv6Addr::new([0xff11, 0, 0, 0, 0, 0, 0, 1]);
-        }
-
         // Test receiving a packet destined to a multicast IP (and corresponding
         // multicast MAC).
 
@@ -3604,7 +3592,7 @@ mod tests {
         let Ctx { mut sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let device = DeviceId::new_ethernet(0);
-        let multi_addr = get_multicast_addr::<I::Addr>();
+        let multi_addr = I::get_multicast_addr(3).get();
         let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(I::PacketBuilder::new(

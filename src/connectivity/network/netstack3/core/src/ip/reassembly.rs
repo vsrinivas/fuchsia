@@ -40,14 +40,13 @@ use alloc::{
 use core::{cmp::Ordering, convert::TryFrom, marker::PhantomData, time::Duration};
 
 use assert_matches::assert_matches;
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::{Ip, IpAddr, IpAddress};
 use packet::BufferViewMut;
 use packet_formats::{
     ip::{IpExtByteSlice, IpPacket},
     ipv4::{Ipv4Header, Ipv4Packet},
     ipv6::{ext_hdrs::Ipv6ExtensionHeaderData, Ipv6Packet},
 };
-use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::context::{TimerContext, TimerHandler};
@@ -774,20 +773,18 @@ impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
 }
 
 /// Gets the header bytes for a packet.
-#[specialize_ip]
-fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) -> Vec<u8> {
-    #[ipv4]
-    {
-        packet.copy_header_bytes_for_fragment()
-    }
-
-    #[ipv6]
-    {
-        // We are guaranteed not to panic here because we will only panic if
-        // `packet` does not have a fragment extension header. We can only get
-        // here if `packet` is a fragment packet, so we know that `packet` has a
-        // fragment extension header.
-        packet.copy_header_bytes_for_fragment()
+fn get_header<B: ByteSlice, I: Ip + IpExtByteSlice<B>>(
+    packet: &<I as IpExtByteSlice<B>>::Packet,
+) -> Vec<u8> {
+    match packet.as_ip_addr_ref() {
+        IpAddr::V4(packet) => packet.copy_header_bytes_for_fragment(),
+        IpAddr::V6(packet) => {
+            // We are guaranteed not to panic here because we will only panic if
+            // `packet` does not have a fragment extension header. We can only get
+            // here if `packet` is a fragment packet, so we know that `packet` has a
+            // fragment extension header.
+            packet.copy_header_bytes_for_fragment()
+        }
     }
 }
 

@@ -10,7 +10,7 @@ use core::convert::Infallible as Never;
 use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 
-use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use packet::{BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
@@ -213,6 +213,9 @@ pub trait IpPacket<B: ByteSlice, I: IpExt>:
         let meta = self.parse_metadata();
         (src_ip, dst_ip, proto, meta)
     }
+
+    /// Converts a packet reference into a dynamically-typed reference.
+    fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Ipv6Packet<B>>;
 }
 
 impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
@@ -243,6 +246,10 @@ impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
 
     fn version_specific_meta(&self) -> Ipv4OnlyMeta {
         Ipv4OnlyMeta { id: Ipv4Header::id(self) }
+    }
+
+    fn as_ip_addr_ref(&self) -> IpAddr<&'_ Self, &'_ Ipv6Packet<B>> {
+        IpAddr::V4(self)
     }
 }
 
@@ -275,6 +282,9 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     fn version_specific_meta(&self) -> () {
         ()
     }
+    fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Self> {
+        IpAddr::V6(self)
+    }
 }
 
 impl<B: ByteSlice, I: IpExt> IpPacket<B, I> for NeverPacket<I> {
@@ -304,6 +314,10 @@ impl<B: ByteSlice, I: IpExt> IpPacket<B, I> for NeverPacket<I> {
     }
 
     fn version_specific_meta(&self) -> Never {
+        unreachable!()
+    }
+
+    fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Ipv6Packet<B>> {
         unreachable!()
     }
 }

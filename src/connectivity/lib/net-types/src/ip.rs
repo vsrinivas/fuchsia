@@ -155,6 +155,13 @@ impl<A: IpAddress> From<A> for IpAddr {
     }
 }
 
+impl<A: IpAddress, const N: usize> From<[A; N]> for IpAddr<[Ipv4Addr; N], [Ipv6Addr; N]> {
+    #[inline]
+    fn from(addrs: [A; N]) -> Self {
+        A::array_into_ip_addr(addrs)
+    }
+}
+
 #[cfg(feature = "std")]
 impl From<net::IpAddr> for IpAddr {
     #[inline]
@@ -692,6 +699,10 @@ pub trait IpAddress:
 
     #[doc(hidden)]
     fn subnet_into_either(subnet: Subnet<Self>) -> SubnetEither;
+
+    #[doc(hidden)]
+    fn array_into_ip_addr<const N: usize>(addrs: [Self; N])
+        -> IpAddr<[Ipv4Addr; N], [Ipv6Addr; N]>;
 }
 
 impl<A: IpAddress> SpecifiedAddress for A {
@@ -1327,6 +1338,13 @@ impl IpAddress for Ipv4Addr {
     fn subnet_into_either(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
         SubnetEither::V4(subnet)
     }
+
+    #[inline]
+    fn array_into_ip_addr<const N: usize>(
+        addrs: [Self; N],
+    ) -> IpAddr<[Ipv4Addr; N], [Ipv6Addr; N]> {
+        IpAddr::V4(addrs)
+    }
 }
 
 impl From<[u8; 4]> for Ipv4Addr {
@@ -1611,6 +1629,13 @@ impl IpAddress for Ipv6Addr {
 
     fn subnet_into_either(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
         SubnetEither::V6(subnet)
+    }
+
+    #[inline]
+    fn array_into_ip_addr<const N: usize>(
+        addrs: [Self; N],
+    ) -> IpAddr<[Ipv4Addr; N], [Ipv6Addr; N]> {
+        IpAddr::V6(addrs)
     }
 }
 
