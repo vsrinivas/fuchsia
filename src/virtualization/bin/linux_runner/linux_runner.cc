@@ -32,11 +32,17 @@ void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,
                                             StartAndGetLinuxGuestInfoCallback callback) {
   TRACE_DURATION("linux_runner", "LinuxRunner::StartAndGetLinuxGuestInfo");
 
+  if (guest_ == nullptr) {
+    zx_status_t status = Init();
+    if (status != ZX_OK) {
+      callback(fpromise::error(ZX_ERR_INTERNAL));
+    }
+  }
+
   // Linux runner is currently limited to a single environment name.
   if (label != kLinuxEnvironmentName) {
     FX_LOGS(ERROR) << "Invalid Linux environment: " << label;
-    callback(fuchsia::virtualization::LinuxManager_StartAndGetLinuxGuestInfo_Result::WithErr(
-        ZX_ERR_UNAVAILABLE));
+    callback(fpromise::error(ZX_ERR_UNAVAILABLE));
     return;
   }
 

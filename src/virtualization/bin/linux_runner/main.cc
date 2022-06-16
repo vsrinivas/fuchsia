@@ -16,11 +16,6 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   linux_runner::LinuxRunner runner;
-  zx_status_t status = runner.Init();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to start guest: " << status;
-    return -1;
-  }
   loop.Run();
   return 0;
 }
