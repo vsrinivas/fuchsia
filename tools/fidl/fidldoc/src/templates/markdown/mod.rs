@@ -82,7 +82,7 @@ impl MarkdownTemplate<'_> {
         // Register core templates
         for &(name, template, expect) in &[
             ("main", include_str!("main.hbs"), "Failed to include main"),
-            ("interface", include_str!("interface.hbs"), "Failed to include interface"),
+            ("library", include_str!("library.hbs"), "Failed to include library"),
             ("toc", include_str!("toc.hbs"), "Failed to include toc"),
         ] {
             handlebars.register_template_string(name, template).expect(expect);
@@ -140,8 +140,7 @@ impl FidldocTemplate for MarkdownTemplate<'_> {
         Ok(())
     }
 
-    fn render_interface(&self, package: &str, fidl_json: &Value) -> Result<(), Error> {
-        // Create a directory for interface files
+    fn render_library(&self, package: &str, fidl_json: &Value) -> Result<(), Error> {
         let output_dir = self.output_path.join(package);
         fs::create_dir(&output_dir)?;
         info!("Created output directory {}", output_dir.display());
@@ -153,9 +152,8 @@ impl FidldocTemplate for MarkdownTemplate<'_> {
             .with_context(|| format!("Can't create {}", package_index.display()))?;
 
         // Render files
-        let package_content =
-            render_template(&self.handlebars, "interface".to_string(), &fidl_json)
-                .with_context(|| format!("Can't render interface {}", package))?;
+        let package_content = render_template(&self.handlebars, "library".to_string(), &fidl_json)
+            .with_context(|| format!("Can't render library {}", package))?;
         output_file.write_all(package_content.as_bytes())?;
 
         Ok(())

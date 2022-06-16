@@ -20,7 +20,7 @@ if (is_host) {
   common_inputs = [
     "src/templates/markdown/partials/header.hbs",
     "src/templates/markdown/partials/types/filename.hbs",
-    "src/templates/markdown/interface.hbs",
+    "src/templates/markdown/library.hbs",
     "src/templates/markdown/partials/header_dir.hbs",
     "src/templates/markdown/partials/declarations/tables.hbs",
     "src/templates/markdown/partials/declarations/enums.hbs",

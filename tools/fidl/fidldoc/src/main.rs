@@ -144,7 +144,7 @@ fn run(opt: Opt) -> Result<(), Error> {
     fidl_json_map
         .par_iter()
         .try_for_each(|(package, package_fidl_json)| {
-            render_fidl_interface(
+            render_fidl_library(
                 package,
                 package_fidl_json,
                 &table_of_contents,
@@ -190,7 +190,7 @@ fn get_attribute_standalone_arg_value(attribute: &Value) -> Result<String, Error
     }
 }
 
-fn render_fidl_interface(
+fn render_fidl_library(
     package: &String,
     package_fidl_json: &FidlJson,
     table_of_contents: &Vec<TableOfContentsItem>,
@@ -209,7 +209,7 @@ fn render_fidl_interface(
         "bits_declarations": package_fidl_json.bits_declarations,
         "const_declarations": package_fidl_json.const_declarations,
         "enum_declarations": package_fidl_json.enum_declarations,
-        "interface_declarations": package_fidl_json.interface_declarations,
+        "protocol_declarations": package_fidl_json.protocol_declarations,
         "table_declarations": package_fidl_json.table_declarations,
         "struct_declarations": package_fidl_json.struct_declarations,
         "type_alias_declarations": package_fidl_json.type_alias_declarations,
@@ -225,9 +225,9 @@ fn render_fidl_interface(
 
     let template = select_template(&template_type, &output_path)
         .with_context(|| format!("Unable to instantiate template {:?}", template_type));
-    match template?.render_interface(&package, &fidl_doc) {
-        Err(why) => error!("Unable to render interface {}: {:?}", &package, why),
-        Ok(()) => info!("Generated interface documentation for {}", &package),
+    match template?.render_library(&package, &fidl_doc) {
+        Err(why) => error!("Unable to render library {}: {:?}", &package, why),
+        Ok(()) => info!("Generated library documentation for {}", &package),
     }
 
     Ok(())
@@ -388,7 +388,7 @@ mod test {
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
                 enum_declarations: Vec::new(),
-                interface_declarations: Vec::new(),
+                protocol_declarations: Vec::new(),
                 table_declarations: Vec::new(),
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
@@ -423,7 +423,7 @@ mod test {
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
                 enum_declarations: Vec::new(),
-                interface_declarations: Vec::new(),
+                protocol_declarations: Vec::new(),
                 table_declarations: Vec::new(),
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
@@ -442,7 +442,7 @@ mod test {
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
                 enum_declarations: Vec::new(),
-                interface_declarations: Vec::new(),
+                protocol_declarations: Vec::new(),
                 table_declarations: Vec::new(),
                 type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
@@ -566,7 +566,7 @@ mod test {
             bits_declarations: Vec::new(),
             const_declarations: Vec::new(),
             enum_declarations: Vec::new(),
-            interface_declarations: Vec::new(),
+            protocol_declarations: Vec::new(),
             table_declarations: Vec::new(),
             type_alias_declarations: Vec::new(),
             struct_declarations: Vec::new(),
@@ -587,7 +587,7 @@ mod test {
             bits_declarations: Vec::new(),
             const_declarations: Vec::new(),
             enum_declarations: Vec::new(),
-            interface_declarations: Vec::new(),
+            protocol_declarations: Vec::new(),
             table_declarations: Vec::new(),
             type_alias_declarations: Vec::new(),
             struct_declarations: Vec::new(),

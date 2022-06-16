@@ -56,8 +56,7 @@ pub struct FidlJson {
     pub bits_declarations: Vec<Value>,
     pub const_declarations: Vec<Value>,
     pub enum_declarations: Vec<Value>,
-    #[serde(rename = "protocol_declarations")]
-    pub interface_declarations: Vec<Value>,
+    pub protocol_declarations: Vec<Value>,
     pub table_declarations: Vec<Value>,
     pub type_alias_declarations: Vec<Value>,
     pub struct_declarations: Vec<Value>,
@@ -89,8 +88,8 @@ impl FidlJson {
     pub fn resolve_method_payloads(&mut self) {
         // Take note off all types used as transactional message bodies.
         let mut payload_types = HashSet::<String>::new();
-        for interface in self.interface_declarations.iter_mut() {
-            let methods = interface["methods"].as_array_mut().unwrap();
+        for protocol in self.protocol_declarations.iter_mut() {
+            let methods = protocol["methods"].as_array_mut().unwrap();
             for method in methods.iter_mut() {
                 let m = method.as_object_mut().unwrap();
                 let req = m.get("maybe_request_payload");
@@ -168,8 +167,8 @@ impl FidlJson {
         }
 
         // Insert copies of extracted payloads into the method definitions that utilize them.
-        for interface in self.interface_declarations.iter_mut() {
-            let methods = interface["methods"].as_array_mut().unwrap();
+        for protocol in self.protocol_declarations.iter_mut() {
+            let methods = protocol["methods"].as_array_mut().unwrap();
             for method in methods.iter_mut() {
                 let m = method.as_object_mut().unwrap();
                 let req = m.get("maybe_request_payload");
@@ -201,7 +200,7 @@ impl FidlJson {
             bits_declarations,
             const_declarations,
             enum_declarations,
-            interface_declarations,
+            protocol_declarations,
             table_declarations,
             type_alias_declarations,
             struct_declarations,
@@ -213,9 +212,9 @@ impl FidlJson {
         bits_declarations.sort_unstable_by(cmp_name);
         const_declarations.sort_unstable_by(cmp_name);
         enum_declarations.sort_unstable_by(cmp_name);
-        interface_declarations.sort_unstable_by(cmp_name);
-        for interface in interface_declarations.iter_mut() {
-            interface["methods"].as_array_mut().unwrap().sort_unstable_by(cmp_name);
+        protocol_declarations.sort_unstable_by(cmp_name);
+        for protocol in protocol_declarations.iter_mut() {
+            protocol["methods"].as_array_mut().unwrap().sort_unstable_by(cmp_name);
         }
         table_declarations.sort_unstable_by(cmp_name);
         type_alias_declarations.sort_unstable_by(cmp_name);
@@ -246,8 +245,8 @@ impl FidlJsonPackageData {
                 package_fidl_json.const_declarations.append(&mut fidl_json.const_declarations);
                 package_fidl_json.enum_declarations.append(&mut fidl_json.enum_declarations);
                 package_fidl_json
-                    .interface_declarations
-                    .append(&mut fidl_json.interface_declarations);
+                    .protocol_declarations
+                    .append(&mut fidl_json.protocol_declarations);
                 package_fidl_json.struct_declarations.append(&mut fidl_json.struct_declarations);
                 package_fidl_json.table_declarations.append(&mut fidl_json.table_declarations);
                 package_fidl_json
@@ -281,7 +280,7 @@ mod test {
             bits_declarations: serde_json::from_str("[{\"name\": \"ABit\"},{\"name\": \"LastBit\"},{\"name\": \"AnotherBit\"}]").unwrap(),
             const_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/Const\"},{\"name\": \"fuchsia.test/AConst\"}]").unwrap(),
             enum_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/Enum\"},{\"name\": \"fuchsia.test/Third\"},{\"name\": \"fuchsia.test/Second\"}]").unwrap(),
-            interface_declarations: serde_json::from_str("[{\"name\": \"Protocol1\",\"methods\": [{\"name\": \"Method 2\"},{\"name\": \"Method 1\"}]},{\"name\": \"AnotherProtocol\",\"methods\": [{\"name\": \"AMethod\"},{\"name\": \"BMethod\"}]}]").unwrap(),
+            protocol_declarations: serde_json::from_str("[{\"name\": \"Protocol1\",\"methods\": [{\"name\": \"Method 2\"},{\"name\": \"Method 1\"}]},{\"name\": \"AnotherProtocol\",\"methods\": [{\"name\": \"AMethod\"},{\"name\": \"BMethod\"}]}]").unwrap(),
             table_declarations: serde_json::from_str("[{\"name\": \"4\"},{\"name\": \"2A\"},{\"name\": \"11\"},{\"name\": \"zzz\"}]").unwrap(),
             type_alias_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/type\"},{\"name\": \"fuchsia.test/alias\"}]").unwrap(),
             struct_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix1\"},{\"name\": \"fuchsia.test/Struct\"},{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix0\"}]").unwrap(),
