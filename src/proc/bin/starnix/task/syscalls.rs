@@ -41,6 +41,20 @@ pub fn sys_clone(
     Ok(tid)
 }
 
+pub fn sys_vfork(current_task: &CurrentTask) -> Result<pid_t, Errno> {
+    not_implemented!("vfork is not implemented. A normal fork is executed instead.");
+    let mut new_task =
+        current_task.clone_task(SIGCHLD.number() as u64, UserRef::default(), UserRef::default())?;
+    let tid = new_task.id;
+
+    new_task.registers = current_task.registers;
+    new_task.registers.rax = 0;
+
+    execute_task(new_task, |_| {});
+    // TODO: The process must wait for the child to run exec.
+    Ok(tid)
+}
+
 fn read_c_string_vector(
     mm: &MemoryManager,
     user_vector: UserRef<UserCString>,
