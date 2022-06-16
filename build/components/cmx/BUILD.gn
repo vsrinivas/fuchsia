@@ -211,6 +211,7 @@ group("cmx_allowlist") {
     "//src/devices/bin/register-util:*",
     "//src/devices/clock/lib/clocktree/tests:*",
     "//src/devices/lib/bind:*",
+    "//src/devices/radar/bin/radarutil:*",
     "//src/devices/radar/tests/radar-integration-test:*",
     "//src/devices/sysmem/bin/sysmem_connector:*",
     "//src/devices/sysmem/tests/sysmem:*",
