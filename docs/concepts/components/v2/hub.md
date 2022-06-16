@@ -88,7 +88,6 @@ The directory structure of `/hub` looks like:
 ```none
 /hub
 ├── children
-├── deleting
 ├── exec
 ├── component_type
 ├── id
@@ -101,7 +100,6 @@ realm.
 Directories:
 
 -   [`/hub/children`](#hub-children)
--   [`/hub/deleting`](#hub-deleting)
 -   [`/hub/exec`](#hub-exec)
 
 Files:
@@ -125,21 +123,18 @@ The directory structure of `/hub/children` looks like:
 /hub/children
 ├── foo
 |   ├── children
-|   ├── deleting
 |   ├── exec
 |   ├── component_type
 |   ├── id
 |   └── url
 ├── bar
 |   ├── children
-|   ├── deleting
 |   ├── exec
 |   ├── component_type
 |   ├── id
 |   └── url
 └── baz:qux
     ├── children
-    ├── deleting
     ├── component_type
     ├── id
     └── url
@@ -156,44 +151,6 @@ The hub gives a name to each child’s hub directory based on this format:
 
 -   For static instances, the format is `<instance name>`
 -   For dynamic instances, the format is `<collection name>:<instance name>`
-
-### `/hub/deleting` {#hub-deleting}
-
-The directory structure of `/hub/deleting` looks like:
-
-```none
-/hub/deleting
-├── baz:qux:1
-|   ├── children
-|   ├── deleting
-|   ├── component_type
-|   ├── id
-|   └── url
-└── baz:qux:2
-    ├── children
-    ├── deleting
-    ├── exec
-    ├── component_type
-    ├── id
-    └── url
-```
-
-Since deletion is not an atomic process, the deleting directory contains
-information about children that are in the process of being deleted. When a
-child’s deletion is complete, it is removed from this directory and ceases to
-exist in its parent’s hub. The full deletion process is explained later in this
-document.
-
-The hub gives a name to each child’s hub directory based on this format:
-
--   For static instances, the format is `<instance name>:<instance id>`
--   For dynamic instances, the format is `<collection name>:<instance
-    name>:<instance id>`
-
-Unlike the `/hub/children` directory, the instance ID is a part of the format
-for the `/hub/deleting` directory because multiple versions of the same instance
-may be in the process of deletion and the instance ID is used to distinguish
-between them.
 
 ### `/hub/exec` {#hub-exec}
 
@@ -493,7 +450,6 @@ the following:
 ```none
 /hub
 ├── children
-├── deleting
 ├── exec
 |    ├── exposed
 |    ├── in
@@ -540,11 +496,9 @@ After executing this code, the hub changes to the following:
 ├── children
 |    └── coll:bar
 |         ├── children
-|         ├── deleting
 |         ├── component_type => "dynamic"
 |         ├── id => "1"
 |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-├── deleting
 ├── exec
 |    ├── exposed
 |    ├── in
@@ -590,7 +544,6 @@ After executing this code, the hub changes to the following:
 |         ├── children
 |         |    └── baz
 |         |         ├── children
-|         |         ├── deleting
 |         |         ├── exec
 |         |         |    ├── exposed
 |         |         |    ├── in
@@ -601,7 +554,6 @@ After executing this code, the hub changes to the following:
 |         |         ├── component_type => "static"
 |         |         ├── id => "0"
 |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-|         ├── deleting
 |         ├── exec
 |         |    ├── exposed
 |         |    ├── in
@@ -612,7 +564,6 @@ After executing this code, the hub changes to the following:
 |         ├── component_type => "dynamic"
 |         ├── id => "1"
 |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-├── deleting
 ├── exec
 |    ├── exposed
 |    ├── in
@@ -650,65 +601,18 @@ The above code begins the deletion process for `bar`. This process has several
 stages, most of which occur asynchronously. As a result, the hub’s structure
 changes several times.
 
-1.  `bar` is marked for deletion. The hub changes to the following:
-
-    ```none
-    /hub
-    ├── children
-    ├── deleting
-    |    └── coll:bar:1
-    |         ├── children
-    |         |    └── baz
-    |         |         ├── children
-    |         |         ├── deleting
-    |         |         ├── exec
-    |         |         |    ├── exposed
-    |         |         |    ├── in
-    |         |         |    ├── out
-    |         |         |    ├── runtime
-    |         |         |    ├── used
-    |         |         |    └── resolved_url
-    |         |         ├── component_type => "static"
-    |         |         ├── id => "0"
-    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-    |         ├── deleting
-    |         ├── exec
-    |         |    ├── exposed
-    |         |    ├── in
-    |         |    ├── out
-    |         |    ├── runtime
-    |         |    ├── used
-    |         |    └── resolved_url
-    |         ├── component_type => "dynamic"
-    |         ├── id => "1"
-    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-    ├── exec
-    |    ├── exposed
-    |    ├── in
-    |    ├── out
-    |    ├── runtime
-    |    ├── used
-    |    └── resolved_url
-    ├── component_type => "static"
-    ├── id => "0"
-    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-    ```
-
 1.  `baz` is stopped. The hub changes to the following:
 
     ```none
     /hub
     ├── children
-    ├── deleting
     |    └── coll:bar:1
     |         ├── children
     |         |    └── baz
     |         |         ├── children
-    |         |         ├── deleting
     |         |         ├── component_type => "static"
     |         |         ├── id => "0"
     |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-    |         ├── deleting
     |         ├── exec
     |         |    ├── exposed
     |         |    ├── in
@@ -736,43 +640,10 @@ changes several times.
     ```none
     /hub
     ├── children
-    ├── deleting
     |    └── coll:bar
     |         ├── children
     |         |    └── baz
     |         |         ├── children
-    |         |         ├── deleting
-    |         |         ├── component_type => "static"
-    |         |         ├── id => "0"
-    |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
-    |         ├── deleting
-    |         ├── component_type => "dynamic"
-    |         ├── id => "1"
-    |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
-    ├── exec
-    |    ├── exposed
-    |    ├── in
-    |    ├── out
-    |    ├── runtime
-    |    ├── used
-    |    └── resolved_url
-    ├── component_type => "static"
-    ├── id => "0"
-    └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
-    ```
-
-1.  `baz` is marked for deletion. The hub changes to the following:
-
-    ```none
-    /hub
-    ├── children
-    ├── deleting
-    |    └── coll:bar:1
-    |         ├── children
-    |         ├── deleting
-    |         |    └── baz:0
-    |         |         ├── children
-    |         |         ├── deleting
     |         |         ├── component_type => "static"
     |         |         ├── id => "0"
     |         |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/C.cm"
@@ -796,10 +667,8 @@ changes several times.
     ```none
     /hub
     ├── children
-    ├── deleting
     |    └── coll:bar:1
     |         ├── children
-    |         ├── deleting
     |         ├── component_type => "dynamic"
     |         ├── id => "1"
     |         └── url => "fuchsia-pkg://fuchsia.com/example#meta/B.cm"
@@ -820,7 +689,6 @@ changes several times.
     ```none
     /hub
     ├── children
-    ├── deleting
     ├── exec
     |    ├── exposed
     |    ├── in
