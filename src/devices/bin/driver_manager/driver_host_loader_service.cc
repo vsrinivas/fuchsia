@@ -16,6 +16,7 @@ constexpr std::array kDriverAllowlist{
     "libdriver.so",
     "libasync-default.so",
     "libclang_rt.asan.so",
+    "libclang_rt.hwasan.so",
     "libcrypto.so",
     "libc.so",
     "libdriver.so",
