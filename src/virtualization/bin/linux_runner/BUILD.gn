@@ -43,6 +43,8 @@ if (linux_runner_stateful_image_path != "") {
 
 source_set("lib") {
   sources = [
+    "block_devices.cc",
+    "block_devices.h",
     "crash_listener.h",
     "guest.cc",
     "guest.h",
@@ -76,6 +78,7 @@ source_set("lib") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zxc",
   ]
 
   defines = [ "USE_CFV1=0" ]
