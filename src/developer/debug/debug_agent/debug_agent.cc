@@ -151,7 +151,7 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
     process_record.threads.reserve(threads.size());
     for (auto* thread : threads) {
       process_record.threads.emplace_back(
-          thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kNone));
+          thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
     }
 
     reply->processes.emplace_back(std::move(process_record));
