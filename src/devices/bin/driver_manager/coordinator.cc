@@ -787,31 +787,36 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   for (uint32_t type : kItemsToAppend) {
     std::string_view name = zbitl::TypeName(type);
 
-    fsl::SizedVmo payload;
-    if (auto result = items->Get(type, 0); !result.ok()) {
-      return result.status();
-    } else if (!result.value().payload.is_valid()) {
-      // Absence is signified with an empty result value.
-      LOGF(INFO, "No %.*s item (%#xu) present to append to mexec data ZBI",
-           static_cast<int>(name.size()), name.data(), type);
-      continue;
-    } else {
-      payload = {std::move(result.value().payload), result.value().length};
-    }
+    // TODO(fxbug.dev/102804): Use a method that returns all matching items of
+    // a given type instead of guessing possible `extra` values.
+    for (uint32_t extra : std::array{0, 1, 2}) {
+      fsl::SizedVmo payload;
+      if (auto result = items->Get(type, extra); !result.ok()) {
+        return result.status();
+      } else if (!result.value().payload.is_valid()) {
+        // Absence is signified with an empty result value.
+        LOGF(INFO, "No %.*s item (%#xu) present to append to mexec data ZBI",
+             static_cast<int>(name.size()), name.data(), type);
+        continue;
+      } else {
+        payload = {std::move(result.value().payload), result.value().length};
+      }
 
-    std::vector<char> contents;
-    if (!fsl::VectorFromVmo(payload, &contents)) {
-      LOGF(ERROR, "Failed to read contents of %.*s item (%#xu)", static_cast<int>(name.size()),
-           name.data(), type);
-      return ZX_ERR_INTERNAL;
-    }
+      std::vector<char> contents;
+      if (!fsl::VectorFromVmo(payload, &contents)) {
+        LOGF(ERROR, "Failed to read contents of %.*s item (%#xu)", static_cast<int>(name.size()),
+             name.data(), type);
+        return ZX_ERR_INTERNAL;
+      }
 
-    if (auto result = data_image.Append(zbi_header_t{.type = type}, zbitl::AsBytes(contents));
-        result.is_error()) {
-      LOGF(ERROR, "Failed to append %.*s item (%#xu) to mexec data ZBI: %s",
-           static_cast<int>(name.size()), name.data(), type,
-           zbitl::ViewErrorString(result.error_value()).c_str());
-      return ZX_ERR_INTERNAL;
+      if (auto result = data_image.Append(zbi_header_t{.type = type, .extra = extra},
+                                          zbitl::AsBytes(contents));
+          result.is_error()) {
+        LOGF(ERROR, "Failed to append %.*s item (%#xu) to mexec data ZBI: %s",
+             static_cast<int>(name.size()), name.data(), type,
+             zbitl::ViewErrorString(result.error_value()).c_str());
+        return ZX_ERR_INTERNAL;
+      }
     }
   }
 
