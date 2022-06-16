@@ -108,7 +108,7 @@ impl Resolver for QueuedResolver {
         trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
         let resolve_res = self.resolve_with_source(pkg_url, eager_package_manager).await;
         let err_str = match resolve_res {
-            Ok(_) => "no error".to_string(),
+            Ok(_) => "success".to_string(),
             Err(ref e) => e.to_string(),
         };
         let source_str = match resolve_res {
