@@ -1471,7 +1471,10 @@ TEST_P(VulkanImageExtensionTestX, NoValidFormat) {
                                                                         constraints_info, loader_));
 }
 
-INSTANTIATE_TEST_SUITE_P(, VulkanImageExtensionTestX, ::testing::Bool());
+INSTANTIATE_TEST_SUITE_P(, VulkanImageExtensionTestX, ::testing::Bool(),
+                         [](testing::TestParamInfo<bool> info) {
+                           return info.param ? "Linear" : "Tiled";
+                         });
 
 // Check that linear and optimal images are compatible with each other.
 TEST_F(VulkanExtensionTestX, LinearOptimalCompatible) {
