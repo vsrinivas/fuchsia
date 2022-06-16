@@ -15,6 +15,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b613b8e1e3cf911a086f53f03bf286f52fd7a7258e4fa606f0ef220d39d8877"
 dependencies = [
  "generic-array 0.14.5",
+ "rand_core 0.6.3",
 ]
 
 [[package]]
@@ -1300,6 +1301,7 @@ version = "0.1.1"
 name = "fuchsia-third-party"
 version = "0.1.0"
 dependencies = [
+ "aead",
  "aes",
  "aes-gcm",
  "aes-gcm-siv",
