@@ -60,6 +60,8 @@ static void as370_shutdown() {
 static const struct pdev_power_ops as370_power_ops = {
     .reboot = as370_reboot,
     .shutdown = as370_shutdown,
+    .cpu_off = psci_cpu_off,
+    .cpu_on = psci_cpu_on,
 };
 
 void as370_power_init_early() { pdev_register_power(&as370_power_ops); }

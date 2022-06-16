@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_DEV_POWER_H_
 #define ZIRCON_KERNEL_INCLUDE_DEV_POWER_H_
 
+#include <sys/types.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -19,6 +20,8 @@ enum reboot_flags {
 
 void power_reboot(enum reboot_flags flags);
 void power_shutdown(void);
+uint32_t power_cpu_off(void);
+uint32_t power_cpu_on(uint64_t mpid, paddr_t entry);
 
 __END_CDECLS
 

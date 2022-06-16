@@ -17,6 +17,8 @@ __BEGIN_CDECLS
 struct pdev_power_ops {
   void (*reboot)(enum reboot_flags flags);
   void (*shutdown)(void);
+  uint32_t (*cpu_off)(void);
+  uint32_t (*cpu_on)(uint64_t mpid, paddr_t entry);
 };
 
 void pdev_register_power(const struct pdev_power_ops* ops);

@@ -140,16 +140,16 @@ void platform_panic_start(PanicStartHaltOtherCpus option) {
 }
 
 void platform_halt_cpu(void) {
-  uint32_t result = psci_cpu_off();
+  uint32_t result = power_cpu_off();
   // should have never returned
-  panic("psci_cpu_off returned %u\n", result);
+  panic("power_cpu_off returned %u\n", result);
 }
 
 static zx_status_t platform_start_cpu(cpu_num_t cpu_id, uint64_t mpid) {
   // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
   arch::ThreadMemoryBarrier();
 
-  uint32_t ret = psci_cpu_on(mpid, kernel_entry_paddr);
+  uint32_t ret = power_cpu_on(mpid, kernel_entry_paddr);
   dprintf(INFO, "Trying to start cpu %u, mpid %#" PRIx64 " returned: %d\n", cpu_id, mpid, (int)ret);
   if (ret != 0) {
     return ZX_ERR_INTERNAL;
