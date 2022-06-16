@@ -32,7 +32,7 @@
             directory: "config-data",
             from: "parent",
             to: "#input_pipeline",
-            subdir: "input_pipeline",
+            subdir: "input-pipeline",
         },
         {
             directory: "config-data",
