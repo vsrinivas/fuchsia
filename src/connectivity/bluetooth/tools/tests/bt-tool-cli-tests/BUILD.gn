@@ -23,11 +23,14 @@ rustc_library("lib") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("bt-tool-cli-tests") {
-  manifest = "meta/bt-tool-cli-tests.cmx"
-  deps = [
-    ":lib_test",
+fuchsia_test_component("bt-tool-cli-tests-component") {
+  manifest = "meta/bt-tool-cli-tests.cml"
+  deps = [ ":lib_test" ]
+}
 
+fuchsia_test_package("bt-tool-cli-tests") {
+  test_components = [ ":bt-tool-cli-tests-component" ]
+  deps = [
     # include these binaries in our package so we aren't dependent on the /bin ones.
     "//src/connectivity/bluetooth/tools/bt-avrcp-controller:bin",
     "//src/connectivity/bluetooth/tools/bt-snoop-cli:bin",
