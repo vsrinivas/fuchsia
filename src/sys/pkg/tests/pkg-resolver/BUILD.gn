@@ -679,12 +679,6 @@ fuchsia_test_component("eager_updates-component") {
   deps = [ ":eager_updates" ]
 }
 
-renamed_binary("pkgsvr-binary") {
-  dest = "bin/pkgsvr"
-  source = "$root_out_dir/grand_unified_binary"
-  source_deps = [ "//src/go/grand_unified_binary" ]
-}
-
 renamed_binary("pkg_resolver-binary") {
   dest = "bin/pkg_resolver"
   source = "$root_out_dir/grand_swd_binary"
@@ -789,7 +783,6 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     "//src/diagnostics/archivist:archivist-for-embedding",
 
     # binaries that are used at runtime.
-    ":pkgsvr-binary",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",

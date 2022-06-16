@@ -49,7 +49,6 @@ fuchsia_test_package("isolated-ota-integration-tests") {
     "//src/connectivity/network/dns:component-legacy",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
