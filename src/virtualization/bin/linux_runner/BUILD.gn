@@ -181,20 +181,33 @@ executable("linux_runner_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [ "guest_unittest.cc" ]
+  sources = [
+    "block_devices_unittest.cc",
+    "guest_unittest.cc",
+  ]
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.hardware.block.partition",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
+    "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/storage/memfs:cpp",
+    "//src/storage/testing:storage_driver_test_support",
   ]
 }
 
 fuchsia_unittest_package("linux_runner_tests") {
-  deps = [ ":linux_runner_unittests" ]
+  deps = [
+    ":linux_runner_unittests",
+
+    # Use the storage_driver_test_realm to provide access to a ramdisk driver for testing.
+    "//src/storage/testing:storage_driver_test_realm",
+    "//src/storage/testing:storage_test_includes",
+  ]
 }
 
 group("tests") {

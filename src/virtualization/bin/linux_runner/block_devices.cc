@@ -6,7 +6,6 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -24,10 +23,6 @@ constexpr auto kRetryDelay = zx::msec(100);
 
 constexpr const char kBlockPath[] = "/dev/class/block";
 constexpr auto kGuidSize = fuchsia::hardware::block::partition::GUID_LENGTH;
-constexpr const char kGuestPartitionName[] = "guest";
-constexpr std::array<uint8_t, kGuidSize> kGuestPartitionGuid = {
-    0x9a, 0x17, 0x7d, 0x2d, 0x8b, 0x24, 0x4a, 0x4c, 0x87, 0x11, 0x1f, 0x99, 0x05, 0xb7, 0x6e, 0xd1,
-};
 constexpr std::array<uint8_t, kGuidSize> kFvmGuid = GUID_FVM_VALUE;
 constexpr std::array<uint8_t, kGuidSize> kGptFvmGuid = GPT_FVM_TYPE_GUID;
 
@@ -232,15 +227,6 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
       .client = std::move(stateful),
   });
 
-  // Drop access to /dev, in order to prevent any further access.
-  fdio_ns_t* ns;
-  zx_status_t status = fdio_ns_get_installed(&ns);
-  FX_CHECK(status == ZX_OK) << "Failed to get installed namespace";
-  if (fdio_ns_is_bound(ns, "/dev")) {
-    status = fdio_ns_unbind(ns, "/dev");
-    FX_CHECK(status == ZX_OK) << "Failed to unbind '/dev' from the installed namespace";
-  }
-
   // Add the extras partition if it exists.
   auto extras = GetPartition(kExtrasImage);
   if (extras.is_ok()) {
@@ -253,4 +239,15 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
   }
 
   return fitx::success(std::move(devices));
+}
+
+void DropDevNamespace() {
+  // Drop access to /dev, in order to prevent any further access.
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  FX_CHECK(status == ZX_OK) << "Failed to get installed namespace";
+  if (fdio_ns_is_bound(ns, "/dev")) {
+    status = fdio_ns_unbind(ns, "/dev");
+    FX_CHECK(status == ZX_OK) << "Failed to unbind '/dev' from the installed namespace";
+  }
 }

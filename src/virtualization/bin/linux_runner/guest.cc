@@ -222,6 +222,10 @@ void Guest::StartGuest() {
     return;
   }
 
+  // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
+  // release it.
+  DropDevNamespace();
+
   fuchsia::virtualization::GuestConfig cfg;
   cfg.set_virtio_gpu(false);
   cfg.set_block_devices(std::move(block_devices_result.value()));
