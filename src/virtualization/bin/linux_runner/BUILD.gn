@@ -78,7 +78,7 @@ source_set("lib") {
     "//zircon/system/ulib/trace-provider",
   ]
 
-  defines = [ "USE_CFV1=1" ]
+  defines = [ "USE_CFV1=0" ]
   if (linux_runner_volatile_block) {
     defines += [ "USE_VOLATILE_BLOCK" ]
   }
