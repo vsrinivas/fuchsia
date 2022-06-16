@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod availability;
 pub mod capability_source;
 pub mod collection;
 pub mod component_id_index;
@@ -19,6 +20,11 @@ pub mod walk_state;
 
 use {
     crate::{
+        availability::{
+            AvailabilityDirectoryVisitor, AvailabilityEventStreamVisitor,
+            AvailabilityProtocolVisitor, AvailabilityServiceVisitor, AvailabilityState,
+            AvailabilityStorageVisitor,
+        },
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, InternalCapability,
             StorageCapabilitySource,
@@ -39,15 +45,14 @@ use {
     },
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
-        CapabilityDecl, CapabilityName, DirectoryDecl, EventDecl, EventStreamDecl, ExposeDecl,
+        Availability, CapabilityDecl, CapabilityName, DirectoryDecl, EventDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeEventStreamDecl, ExposeProtocolDecl, ExposeResolverDecl,
         ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
         OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl, OfferResolverDecl,
-        OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl, ProtocolDecl,
-        RegistrationDeclCommon, RegistrationSource, ResolverDecl, ResolverRegistration, RunnerDecl,
-        RunnerRegistration, ServiceDecl, SourceName, StorageDecl, StorageDirectorySource, UseDecl,
-        UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl,
-        UseSource, UseStorageDecl,
+        OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl, RegistrationDeclCommon,
+        RegistrationSource, ResolverDecl, ResolverRegistration, RunnerDecl, RunnerRegistration,
+        SourceName, StorageDecl, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl,
+        UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     from_enum::FromEnum,
@@ -271,12 +276,6 @@ where
     }
 }
 
-make_noop_visitor!(ProtocolVisitor, {
-    OfferDecl => OfferProtocolDecl,
-    ExposeDecl => ExposeProtocolDecl,
-    CapabilityDecl => ProtocolDecl,
-});
-
 /// Routes a Protocol capability from `target` to its source, starting from `use_decl`.
 async fn route_protocol<C>(
     use_decl: UseProtocolDecl,
@@ -328,6 +327,7 @@ where
 
             let env_moniker = env_component_instance.abs_moniker();
 
+            let mut availability_visitor = AvailabilityProtocolVisitor::new(&use_decl);
             let source = RoutingStrategy::new()
                 .registration::<DebugRegistration>()
                 .offer::<OfferProtocolDecl>()
@@ -336,7 +336,7 @@ where
                     registration_decl,
                     env_component_instance.clone(),
                     allowed_sources,
-                    &mut ProtocolVisitor,
+                    &mut availability_visitor,
                     mapper,
                 )
                 .await?;
@@ -350,19 +350,21 @@ where
             return Ok(RouteSource::Protocol(source));
         }
         UseSource::Self_ => {
+            let mut availability_visitor = AvailabilityProtocolVisitor::new(&use_decl);
             let allowed_sources = AllowedSourcesBuilder::new().component();
             let source = RoutingStrategy::new()
                 .use_::<UseProtocolDecl>()
-                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor, mapper)
+                .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
                 .await?;
             Ok(RouteSource::Protocol(source))
         }
         _ => {
+            let mut availability_visitor = AvailabilityProtocolVisitor::new(&use_decl);
             let source = RoutingStrategy::new()
                 .use_::<UseProtocolDecl>()
                 .offer::<OfferProtocolDecl>()
                 .expose::<ExposeProtocolDecl>()
-                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor, mapper)
+                .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
                 .await?;
 
             target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
@@ -380,6 +382,8 @@ async fn route_protocol_from_expose<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
+    // This is a noop visitor for exposes
+    let mut availability_visitor = AvailabilityProtocolVisitor::required();
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
         .builtin()
@@ -394,7 +398,7 @@ where
             expose_decl,
             target.clone(),
             allowed_sources,
-            &mut ProtocolVisitor,
+            &mut availability_visitor,
             mapper,
         )
         .await?;
@@ -402,12 +406,6 @@ where
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Protocol(source))
 }
-
-make_noop_visitor!(ServiceVisitor, {
-    OfferDecl => OfferServiceDecl,
-    ExposeDecl => ExposeServiceDecl,
-    CapabilityDecl => ServiceDecl,
-});
 
 async fn route_service<C>(
     use_decl: UseServiceDecl,
@@ -419,20 +417,22 @@ where
 {
     match use_decl.source {
         UseSource::Self_ => {
+            let mut availability_visitor = AvailabilityServiceVisitor::new(&use_decl);
             let allowed_sources = AllowedSourcesBuilder::new().component();
             let source = RoutingStrategy::new()
                 .use_::<UseServiceDecl>()
-                .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor, mapper)
+                .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
                 .await?;
             Ok(RouteSource::Service(source))
         }
         _ => {
+            let mut availability_visitor = AvailabilityServiceVisitor::new(&use_decl);
             let allowed_sources = AllowedSourcesBuilder::new().component().collection();
             let source = RoutingStrategy::new()
                 .use_::<UseServiceDecl>()
                 .offer::<OfferServiceDecl>()
                 .expose::<ExposeServiceDecl>()
-                .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor, mapper)
+                .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
                 .await?;
 
             target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
@@ -449,6 +449,7 @@ async fn route_service_from_expose<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
+    let mut availability_visitor = AvailabilityServiceVisitor::required();
     let allowed_sources = AllowedSourcesBuilder::new().component().collection();
     let source = RoutingStrategy::new()
         .use_::<UseServiceDecl>()
@@ -458,7 +459,7 @@ where
             expose_decl,
             target.clone(),
             allowed_sources,
-            &mut ServiceVisitor,
+            &mut availability_visitor,
             mapper,
         )
         .await?;
@@ -472,13 +473,19 @@ where
 pub struct DirectoryState {
     rights: WalkState<Rights>,
     subdir: PathBuf,
+    availability_state: AvailabilityState,
 }
 
 impl DirectoryState {
-    fn new(operations: fio::Operations, subdir: Option<PathBuf>) -> Self {
+    fn new(
+        operations: fio::Operations,
+        subdir: Option<PathBuf>,
+        availability: &Availability,
+    ) -> Self {
         DirectoryState {
             rights: WalkState::at(operations.into()),
             subdir: subdir.unwrap_or_else(PathBuf::new),
+            availability_state: availability.clone().into(),
         }
     }
 
@@ -486,6 +493,11 @@ impl DirectoryState {
     /// DirectoryState's accumulated subdirectory path.
     pub fn make_relative_path(&self, in_relative_path: String) -> PathBuf {
         self.subdir.clone().attach(in_relative_path)
+    }
+
+    fn advance_with_offer(&mut self, offer: &OfferDirectoryDecl) -> Result<(), RoutingError> {
+        self.availability_state.advance_with_offer(&offer.clone())?;
+        self.advance(offer.rights.clone(), offer.subdir.clone())
     }
 
     fn advance(
@@ -517,7 +529,7 @@ impl OfferVisitor for DirectoryState {
     fn visit(&mut self, offer: &OfferDirectoryDecl) -> Result<(), RoutingError> {
         match offer.source {
             OfferSource::Framework => self.finalize(*READ_WRITE_RIGHTS, offer.subdir.clone()),
-            _ => self.advance(offer.rights.clone(), offer.subdir.clone()),
+            _ => self.advance_with_offer(offer),
         }
     }
 }
@@ -554,15 +566,20 @@ where
 {
     match use_decl.source {
         UseSource::Self_ => {
+            let mut availability_visitor = AvailabilityDirectoryVisitor::new(&use_decl);
             let allowed_sources = AllowedSourcesBuilder::new().component();
             let source = RoutingStrategy::new()
                 .use_::<UseDirectoryDecl>()
-                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor, mapper)
+                .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
                 .await?;
             Ok(RouteSource::Service(source))
         }
         _ => {
-            let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
+            let mut state = DirectoryState::new(
+                use_decl.rights.clone(),
+                use_decl.subdir.clone(),
+                &use_decl.availability.clone(),
+            );
             if let UseSource::Framework = &use_decl.source {
                 state.finalize(*READ_WRITE_RIGHTS, None)?;
             }
@@ -594,7 +611,11 @@ async fn route_directory_from_expose<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    let mut state = DirectoryState { rights: WalkState::new(), subdir: PathBuf::new() };
+    let mut state = DirectoryState {
+        rights: WalkState::new(),
+        subdir: PathBuf::new(),
+        availability_state: Availability::Required.into(),
+    };
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Directory)
         .namespace()
@@ -609,11 +630,6 @@ where
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Directory(source, state))
 }
-
-make_noop_visitor!(StorageVisitor, {
-    OfferDecl => OfferStorageDecl,
-    CapabilityDecl => StorageDecl,
-});
 
 /// Verifies that the given component is in the index if its `storage_id` is StaticInstanceId.
 /// - On success, Ok(()) is returned
@@ -653,11 +669,12 @@ pub async fn route_to_storage_decl<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
+    let mut availability_visitor = AvailabilityStorageVisitor::new(&use_decl);
     let allowed_sources = AllowedSourcesBuilder::new().component();
     let source = RoutingStrategy::new()
         .use_::<UseStorageDecl>()
         .offer::<OfferStorageDecl>()
-        .route(use_decl, target.clone(), allowed_sources, &mut StorageVisitor, mapper)
+        .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
         .await?;
     Ok(source)
 }
@@ -689,7 +706,8 @@ where
     C: ComponentInstanceInterface + 'static,
 {
     // Storage rights are always READ+WRITE.
-    let mut state = DirectoryState::new(*READ_RIGHTS | *WRITE_RIGHTS, None);
+    let mut state =
+        DirectoryState::new(*READ_RIGHTS | *WRITE_RIGHTS, None, &Availability::Required);
     let allowed_sources = AllowedSourcesBuilder::new().component().namespace();
     let source = RoutingStrategy::new()
         .registration::<StorageDeclAsRegistration>()
@@ -810,12 +828,14 @@ where
 /// State accumulated from routing an Event capability to its source.
 struct EventState {
     filter_state: WalkState<EventFilter>,
+    availability_state: AvailabilityState,
 }
 
 impl OfferVisitor for EventState {
     type OfferDecl = OfferEventDecl;
 
     fn visit(&mut self, offer: &OfferEventDecl) -> Result<(), RoutingError> {
+        self.availability_state.advance(&offer.availability)?;
         let event_filter = Some(EventFilter::new(offer.filter.clone()));
         match &offer.source {
             OfferSource::Parent => {
@@ -845,8 +865,10 @@ where
 {
     let allowed_sources =
         AllowedSourcesBuilder::new().framework(InternalCapability::Event).builtin();
-    let mut state =
-        EventState { filter_state: WalkState::at(EventFilter::new(use_decl.filter.clone())) };
+    let mut state = EventState {
+        filter_state: WalkState::at(EventFilter::new(use_decl.filter.clone())),
+        availability_state: AvailabilityState(use_decl.availability.clone().into()),
+    };
 
     let source = RoutingStrategy::new()
         .use_::<UseEventDecl>()
@@ -857,12 +879,6 @@ where
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Event(source))
 }
-
-make_noop_visitor!(EventStreamVisitor, {
-    OfferDecl => OfferEventStreamDecl,
-    ExposeDecl => ExposeEventStreamDecl,
-    CapabilityDecl => EventStreamDecl,
-});
 
 /// Routes an EventStream capability from `target` to its source, starting from `use_decl`.
 async fn route_event_stream<C>(
@@ -876,11 +892,12 @@ where
     let allowed_sources =
         AllowedSourcesBuilder::new().framework(InternalCapability::EventStream).builtin();
 
+    let mut availability_visitor = AvailabilityEventStreamVisitor::new(&use_decl);
     let source = RoutingStrategy::new()
         .use_::<UseEventStreamDecl>()
         .offer::<OfferEventStreamDecl>()
         .expose::<ExposeEventStreamDecl>()
-        .route(use_decl, target.clone(), allowed_sources, &mut EventStreamVisitor, mapper)
+        .route(use_decl, target.clone(), allowed_sources, &mut availability_visitor, mapper)
         .await?;
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::EventStream(source))
@@ -898,6 +915,7 @@ where
 {
     let allowed_sources =
         AllowedSourcesBuilder::new().framework(InternalCapability::EventStream).builtin();
+    let mut availability_visitor = AvailabilityEventStreamVisitor::new(&use_decl);
     let source = RoutingStrategy::new()
         .use_::<UseEventStreamDecl>()
         .offer::<OfferEventStreamDecl>()
@@ -906,7 +924,7 @@ where
             use_decl,
             target.clone(),
             allowed_sources,
-            &mut EventStreamVisitor,
+            &mut availability_visitor,
             mapper,
             route,
         )

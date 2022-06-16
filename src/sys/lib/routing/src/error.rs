@@ -302,13 +302,6 @@ pub enum RoutingError {
     },
 
     #[error(
-        "An `offer from void` declaration was found at `{}` for `{}`, so the route cannot be completed",
-        moniker,
-        capability_id
-    )]
-    OfferFromVoid { moniker: AbsoluteMoniker, capability_id: String },
-
-    #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching collection \
         was found",
         collection,
@@ -445,6 +438,9 @@ pub enum RoutingError {
 
     #[error(transparent)]
     RightsRoutingError(#[from] RightsRoutingError),
+
+    #[error(transparent)]
+    AvailabilityRoutingError(#[from] AvailabilityRoutingError),
 
     #[error(transparent)]
     PolicyError(#[from] PolicyError),
@@ -590,10 +586,6 @@ impl RoutingError {
         }
     }
 
-    pub fn offer_from_void(moniker: &AbsoluteMoniker, capability_id: impl Into<String>) -> Self {
-        Self::OfferFromVoid { moniker: moniker.clone(), capability_id: capability_id.into() }
-    }
-
     pub fn used_expose_not_found(
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
@@ -700,4 +692,17 @@ impl RightsRoutingError {
     pub fn as_zx_status(&self) -> zx::Status {
         zx::Status::UNAVAILABLE
     }
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
+#[derive(Debug, Error, Clone, PartialEq)]
+pub enum AvailabilityRoutingError {
+    #[error("Availability of offer is optional, but target requires the capability")]
+    OptionalOfferToRequiredTarget,
+
+    #[error("Offer uses void source, but target requires the capability")]
+    OfferFromVoidToRequiredTarget,
+
+    #[error("Offer uses void source, so the route cannot be completed")]
+    OfferFromVoidToOptionalTarget,
 }

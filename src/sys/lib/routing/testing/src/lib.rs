@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod availability;
 pub mod component_id_index;
 pub mod policy;
 pub mod rights;
@@ -119,6 +120,7 @@ pub struct ComponentEventRoute {
     pub scope: Option<Vec<String>>,
 }
 
+#[derive(Debug)]
 pub enum CheckUse {
     Protocol {
         path: CapabilityPath,

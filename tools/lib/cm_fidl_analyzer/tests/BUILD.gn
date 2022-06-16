@@ -39,6 +39,7 @@ rustc_test("tests") {
     "//tools/lib/cm_fidl_analyzer",
   ]
   sources = [
+    "src/availability.rs",
     "src/lib.rs",
     "src/rights.rs",
     "src/routing.rs",

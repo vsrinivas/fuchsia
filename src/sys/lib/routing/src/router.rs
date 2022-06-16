@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        availability::AvailabilityServiceVisitor,
         capability_source::{
             AggregateCapability, CapabilitySourceInterface, ComponentCapability, InternalCapability,
         },
@@ -13,11 +14,11 @@ use {
             TopInstanceInterface,
         },
         error::RoutingError,
-        DebugRouteMapper, RegistrationDecl, ServiceVisitor,
+        DebugRouteMapper, RegistrationDecl,
     },
     cm_rust::{
-        name_mappings_to_map, CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl,
-        ExposeDeclCommon, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
+        name_mappings_to_map, Availability, CapabilityDecl, CapabilityDeclCommon, CapabilityName,
+        ExposeDecl, ExposeDeclCommon, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
         OfferDeclCommon, OfferServiceDecl, OfferSource, OfferTarget, RegistrationDeclCommon,
         RegistrationSource, ServiceDecl, UseDecl, UseDeclCommon, UseServiceDecl, UseSource,
     },
@@ -177,6 +178,7 @@ where
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
         M: DebugRouteMapper + 'static,
     {
+        let availability = use_decl.availability().clone();
         match Use::route(use_decl, use_target, &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
             UseResult::FromParent(offers, component) => {
@@ -192,7 +194,7 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component, mapper.clone())
+                    create_aggregate_source(availability, offers, component, mapper.clone())
                 }
             }
             UseResult::FromChild(_use_decl, _component) => {
@@ -314,6 +316,7 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
+        let availability = use_decl.availability().clone();
         match Use::route(use_decl, use_target.clone(), &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
             UseResult::FromParent(offers, component) => {
@@ -329,7 +332,7 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component, mapper.clone())
+                    create_aggregate_source(availability, offers, component, mapper.clone())
                 }
             }
             UseResult::FromChild(use_decl, child_component) => {
@@ -455,7 +458,13 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component, mapper.clone())
+                    // capabilities used in a registgration are always required.
+                    create_aggregate_source(
+                        Availability::Required,
+                        offers,
+                        component,
+                        mapper.clone(),
+                    )
                 }
             }
             RegistrationResult::FromChild(expose, component) => {
@@ -587,13 +596,20 @@ where
                 })
             }
             OfferResult::OfferFromAggregate(offer_decls, aggregation_component) => {
-                create_aggregate_source(offer_decls, aggregation_component, mapper.clone())
+                // TODO(102532): get optional to work with aggregate services
+                create_aggregate_source(
+                    Availability::Required,
+                    offer_decls,
+                    aggregation_component,
+                    mapper.clone(),
+                )
             }
         }
     }
 }
 
 fn create_aggregate_source<C, O, M>(
+    starting_availability: Availability,
     offer_decls: Vec<O>,
     aggregation_component: Arc<C>,
     mapper: M,
@@ -655,7 +671,7 @@ where
             component: aggregation_component.as_weak(),
             offer_decls: offer_service_decls,
             sources: AllowedSourcesBuilder::<ServiceDecl>::new().component().collection(),
-            visitor: ServiceVisitor {},
+            visitor: AvailabilityServiceVisitor(starting_availability.into()),
             mapper,
         }),
     })
@@ -1361,10 +1377,7 @@ where
             route.push(target.clone());
             match offer.source() {
                 OfferSource::Void => {
-                    return Err(RoutingError::offer_from_void(
-                        &target.abs_moniker(),
-                        offer.source_name().clone(),
-                    ));
+                    panic!("an error should have been emitted by the availability walker before we reach this point");
                 }
                 OfferSource::Self_ => {
                     let target_capabilities = target.lock_resolved_state().await?.capabilities();
@@ -1618,15 +1631,13 @@ where
                 ExposeSource::Child(child) => {
                     let child_component = {
                         let child_moniker = ChildMoniker::new(child.clone(), None);
-                        target
-                            .lock_resolved_state()
-                            .await?
-                            .get_child(&child_moniker)
-                            .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
+                        target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
+                            || RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
                                 moniker: target.abs_moniker().clone(),
                                 capability_id: expose.source_name().clone().into(),
-                            })?
+                            },
+                        )?
                     };
                     let child_expose = {
                         let child_exposes = child_component.lock_resolved_state().await?.exposes();

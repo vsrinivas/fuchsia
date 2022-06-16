@@ -5,7 +5,8 @@
 use {
     cm_fidl_validator,
     cm_rust_derive::{
-        CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
+        CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon,
+        OfferDeclCommonNoAvailability, UseDeclCommon,
     },
     cm_types, fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
@@ -306,6 +307,10 @@ impl UseDeclCommon for UseStorageDecl {
     fn source(&self) -> &UseSource {
         &UseSource::Parent
     }
+
+    fn availability(&self) -> &Availability {
+        &self.availability
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -499,7 +504,7 @@ pub struct OfferStorageDecl {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, OfferDeclCommonNoAvailability, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::OfferRunner")]
 pub struct OfferRunnerDecl {
     pub source: OfferSource,
@@ -509,7 +514,7 @@ pub struct OfferRunnerDecl {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, OfferDeclCommonNoAvailability, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::OfferResolver")]
 pub struct OfferResolverDecl {
     pub source: OfferSource,
@@ -583,6 +588,19 @@ impl OfferDeclCommon for OfferDecl {
             OfferDecl::Resolver(o) => o.source(),
             OfferDecl::Event(o) => o.source(),
             OfferDecl::EventStream(o) => o.source(),
+        }
+    }
+
+    fn availability(&self) -> Option<&Availability> {
+        match &self {
+            OfferDecl::Service(o) => o.availability(),
+            OfferDecl::Protocol(o) => o.availability(),
+            OfferDecl::Directory(o) => o.availability(),
+            OfferDecl::Storage(o) => o.availability(),
+            OfferDecl::Runner(o) => o.availability(),
+            OfferDecl::Resolver(o) => o.availability(),
+            OfferDecl::Event(o) => o.availability(),
+            OfferDecl::EventStream(o) => o.availability(),
         }
     }
 }
@@ -1534,6 +1552,7 @@ pub trait SourceName {
 /// The common properties of a [Use](fdecl::Use) declaration.
 pub trait UseDeclCommon: SourceName + Send + Sync {
     fn source(&self) -> &UseSource;
+    fn availability(&self) -> &Availability;
 }
 
 /// The common properties of a Registration-with-environment declaration.
@@ -1548,6 +1567,7 @@ pub trait OfferDeclCommon: SourceName + Send + Sync {
     fn target_name(&self) -> &CapabilityName;
     fn target(&self) -> &OfferTarget;
     fn source(&self) -> &OfferSource;
+    fn availability(&self) -> Option<&Availability>;
 }
 
 /// The common properties of an [Expose](fdecl::Expose) declaration.

@@ -323,6 +323,9 @@ fn use_decl_common_derive_impl(input: syn::DeriveInput) -> TokenStream {
             fn source(&self) -> &UseSource {
                 &self.source
             }
+            fn availability(&self) -> &Availability {
+                &self.availability
+            }
         }
     }
 }
@@ -359,6 +362,10 @@ fn offer_decl_common_derive_impl(input: syn::DeriveInput) -> TokenStream {
             fn target(&self) -> &OfferTarget {
                 &self.target
             }
+
+            fn availability(&self) -> Option<&Availability> {
+                Some(&self.availability)
+            }
         }
     }
 }
@@ -368,6 +375,48 @@ fn offer_decl_common_derive_impl(input: syn::DeriveInput) -> TokenStream {
 #[proc_macro_derive(OfferDeclCommon)]
 pub fn offer_decl_common_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     offer_decl_common_derive_impl(parse_macro_input!(input)).into()
+}
+
+fn offer_decl_common_derive_no_availability_impl(input: syn::DeriveInput) -> TokenStream {
+    let struct_ident = match DeclCommonOpts::from_derive_input(&input) {
+        Ok(opts) => opts.ident,
+        Err(e) => return e.write_errors(),
+    };
+
+    quote! {
+        impl SourceName for #struct_ident {
+            fn source_name(&self) -> &CapabilityName {
+                &self.source_name
+            }
+        }
+
+        impl OfferDeclCommon for #struct_ident {
+            fn target_name(&self) -> &CapabilityName {
+                &self.target_name
+            }
+
+            fn source(&self) -> &OfferSource {
+                &self.source
+            }
+
+            fn target(&self) -> &OfferTarget {
+                &self.target
+            }
+
+            fn availability(&self) -> Option<&Availability> {
+                None
+            }
+        }
+    }
+}
+
+/// A derive-macro that generates an implementation of `OfferDeclCommon`. Use this for
+/// the inner structs of each variant of `OfferDecl` that do not have an `availability` field.
+#[proc_macro_derive(OfferDeclCommonNoAvailability)]
+pub fn offer_decl_common_derive_no_availability(
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    offer_decl_common_derive_no_availability_impl(parse_macro_input!(input)).into()
 }
 
 fn expose_decl_common_derive_impl(input: syn::DeriveInput) -> TokenStream {

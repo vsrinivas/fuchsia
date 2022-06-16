@@ -210,6 +210,7 @@ template("component_manager") {
         "src/model/testing/routing_test_helpers.rs",
         "src/model/testing/test_helpers.rs",
         "src/model/testing/test_hook.rs",
+        "src/model/tests/availability.rs",
         "src/model/tests/lifecycle.rs",
         "src/model/tests/mod.rs",
         "src/model/tests/policy.rs",

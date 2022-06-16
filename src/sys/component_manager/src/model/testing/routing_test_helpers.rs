@@ -1000,10 +1000,10 @@ impl RoutingTestModel for RoutingTest {
                 // not allowed.
                 capability_util::subscribe_to_event_stream(&namespace, expected_res, request).await;
             }
-            routing_test_helpers::CheckUse::EventStream { path, .. } => {
+            CheckUse::EventStream { path, expected_res, .. } => {
                 // Fails if the component did not use the protocol EventSource or if the event is
                 // not allowed.
-                capability_util::subscribe_to_event_stream_v2(&namespace, path).await;
+                capability_util::subscribe_to_event_stream_v2(&namespace, path, expected_res).await;
             }
         }
     }
@@ -1379,7 +1379,11 @@ pub mod capability_util {
         client_end.into_proxy().unwrap()
     }
 
-    pub async fn subscribe_to_event_stream_v2(namespace: &ManagedNamespace, path: CapabilityPath) {
+    pub async fn subscribe_to_event_stream_v2(
+        namespace: &ManagedNamespace,
+        path: CapabilityPath,
+        expected_res: ExpectedResult,
+    ) {
         let event_source_proxy =
             connect_to_svc_in_namespace::<fsys::EventSource2Marker>(namespace, &path).await;
         let (_client_end, stream) =
@@ -1387,7 +1391,27 @@ pub mod capability_util {
         // Bind the future to a variable in order to avoid using `event` across an await.
         let subscribe_future =
             event_source_proxy.subscribe(&mut vec!["test_event"].into_iter(), stream);
-        subscribe_future.await.unwrap().unwrap();
+        let res = subscribe_future.await;
+        match expected_res {
+            ExpectedResult::Ok => assert_matches!(res, Ok(Ok(()))),
+            ExpectedResult::Err(expected_epitaph) => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                let epitaph =
+                    event_source_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed {
+                        status, ..
+                    }) if status == expected_epitaph
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                assert_matches!(event_source_proxy.take_event_stream().next().await, None);
+            }
+        }
     }
 
     /// Verifies that it's possible to subscribe to the given `event` by connecting to an

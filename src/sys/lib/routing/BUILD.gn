@@ -58,6 +58,7 @@ rustc_library("routing") {
   ]
 
   sources = [
+    "src/availability.rs",
     "src/capability_source.rs",
     "src/collection.rs",
     "src/component_id_index.rs",
