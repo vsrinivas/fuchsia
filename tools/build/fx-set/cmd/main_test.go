@@ -448,6 +448,38 @@ func TestFindGNIFile(t *testing.T) {
 		}
 	})
 
+	t.Run("finds file in root products/tests directory", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		path := filepath.Join("products", "tests", "core.gni")
+		createFile(t, checkoutDir, path)
+
+		wantPath := "products/tests/core.gni"
+		gotPath, err := findGNIFile(checkoutDir, filepath.Join("products", "tests"), "core")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wantPath != gotPath {
+			t.Errorf("findGNIFile returned wrong path: want %s, got %s", wantPath, gotPath)
+		}
+	})
+
+	t.Run("file in root products directory shadows root product/tests directory", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		path := filepath.Join("products", "core.gni")
+		createFile(t, checkoutDir, path)
+		shadowedPath := filepath.Join("products", "tests", "core.gni")
+		createFile(t, checkoutDir, shadowedPath)
+
+		wantPath := "products/core.gni"
+		gotPath, err := findGNIFile(checkoutDir, "products", "core")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wantPath != gotPath {
+			t.Errorf("findGNIFile returned wrong path: want %s, got %s", wantPath, gotPath)
+		}
+	})
+
 	t.Run("checks vendor directories first", func(t *testing.T) {
 		checkoutDir := t.TempDir()
 		path := filepath.Join("vendor", "foo", "boards", "core.gni")
@@ -457,6 +489,23 @@ func TestFindGNIFile(t *testing.T) {
 		createFile(t, checkoutDir, "boards", "core.gni")
 
 		gotPath, err := findGNIFile(checkoutDir, "boards", "core")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if path != gotPath {
+			t.Errorf("findGNIFile returned wrong path: want %s, got %s", path, gotPath)
+		}
+	})
+
+	t.Run("checks vendor product directories first", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		path := filepath.Join("vendor", "foo", "products", "tests", "core.gni")
+		createFile(t, checkoutDir, path)
+		// Even if a matching file exists in the root "//products/tests" directory, we
+		// should prefer the file from the vendor directory.
+		createFile(t, checkoutDir, "products", "tests", "core.gni")
+
+		gotPath, err := findGNIFile(checkoutDir, filepath.Join("products", "tests"), "core")
 		if err != nil {
 			t.Fatal(err)
 		}

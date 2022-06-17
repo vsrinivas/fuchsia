@@ -307,6 +307,9 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, args *setArgs) (*fintpb.Static, error) {
 	productPath, err := findGNIFile(checkoutDir, "products", args.product)
 	if err != nil {
+		productPath, err = findGNIFile(checkoutDir, filepath.Join("products", "tests"), args.product)
+	}
+	if err != nil {
 		return nil, fmt.Errorf("no such product %q", args.product)
 	}
 	boardPath, err := findGNIFile(checkoutDir, "boards", args.board)
