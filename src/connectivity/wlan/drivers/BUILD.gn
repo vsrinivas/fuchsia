@@ -6,7 +6,6 @@ group("drivers") {
   testonly = true
   deps = [
     "testing",
-    "third_party",
     "wlan",
     "wlanif",
     "wlanphy",
