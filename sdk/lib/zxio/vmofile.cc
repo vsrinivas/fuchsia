@@ -42,7 +42,10 @@ static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
 
 static zx_status_t zxio_vmofile_close(zxio_t* io) {
   zxio_vmofile_t& file = *reinterpret_cast<zxio_vmofile_t*>(io);
-  zx_status_t status = file.control->Close().status();
+  zx_status_t status = ZX_OK;
+  if (file.control.is_valid()) {
+    status = file.control->Close().status();
+  }
   file.~zxio_vmofile_t();
   return status;
 }
