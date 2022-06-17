@@ -8,6 +8,10 @@
             name: "input-synthesis",
             url: "#meta/input-synthesis-component.cm",
         },
+        {
+            name: "shortcut-manager",
+            url: "#meta/shortcut_manager.cm",
+        },
     ],
     offer: [
         {
@@ -16,7 +20,10 @@
             to: [ "#input-synthesis" ],
         },
         {
-            protocol: [ "fuchsia.ui.input3.KeyEventInjector" ],
+            protocol: [
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
             from: "#text-manager",
             to: [ "#scene-manager" ],
         },
@@ -27,6 +34,16 @@
             ],
             from: "#scene-manager",
             to: [ "#input-synthesis" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.shortcut.Manager" ],
+            from: "#shortcut-manager",
+            to: "#scene-manager",
+        },
+        {
+            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
+            from: "#scenic",
+            to: "#scene-manager",
         },
     ],
     expose: [
