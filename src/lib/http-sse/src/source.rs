@@ -378,6 +378,13 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            // Disable persistence to avoid the warning for not running in the
+            // source code directory (since we're running on a Fuchsia target)
+            failure_persistence: None,
+            .. ProptestConfig::default()
+        })]
+
         #[test]
         fn random_event_serialize_deserialize(
             event in random_event())
