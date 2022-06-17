@@ -79,6 +79,7 @@ driver_bind_rules("sherlock-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
   ]
 }
 

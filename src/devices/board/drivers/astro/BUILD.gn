@@ -166,6 +166,7 @@ driver_bind_rules("ft3x27-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
