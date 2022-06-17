@@ -98,6 +98,7 @@ sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.http
 sdk://fidl/fuchsia.net.interfaces
 sdk://fidl/fuchsia.net.mdns
+sdk://fidl/fuchsia.net.reachability
 sdk://fidl/fuchsia.net.routes
 sdk://fidl/fuchsia.power.clientlevel
 sdk://fidl/fuchsia.power.profile

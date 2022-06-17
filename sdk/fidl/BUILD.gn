@@ -86,6 +86,7 @@ sdk_fidl_targets = [
   "//sdk/fidl/fuchsia.net.http:fuchsia.net.http",
   "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces",
   "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns",
+  "//sdk/fidl/fuchsia.net.reachability:fuchsia.net.reachability",
   "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes",
   "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel",
   "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile",
