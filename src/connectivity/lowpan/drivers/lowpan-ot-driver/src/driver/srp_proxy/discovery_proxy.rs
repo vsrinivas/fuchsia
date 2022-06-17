@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use anyhow::bail;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_net_mdns::*;
 use fuchsia_async::Task;
@@ -24,10 +25,83 @@ const DISCOVERY_PROXY_BUFFER_LEN: usize = 50;
 // allow all addresses to be gathered when resolving a hostname over mDNS.
 const DEFAULT_RESOLVE_DURATION_NS: i64 = std::time::Duration::from_secs(3).as_nanos() as i64;
 
+/// Converts an optional vector of strings to a single DNS-compatible string.
+fn flatten_txt(txt: Option<Vec<Vec<u8>>>) -> Vec<u8> {
+    let mut ret = vec![];
+
+    for mut txt in txt.iter().flat_map(|x| x.iter()).map(Vec::as_slice) {
+        if txt.len() > u8::MAX as usize {
+            // Limit the size of the records to 255 characters.
+            txt = &txt[0..(u8::MAX as usize) + 1];
+        }
+        ret.push(u8::try_from(txt.len()).unwrap());
+        ret.extend_from_slice(txt);
+    }
+
+    ret
+}
+
+/// Converts an iterator over [`HostAddress`]es to a vector of [`ot::Ip6Address`]es.
+fn process_addresses_from_host_addresses<T: IntoIterator<Item = HostAddress>>(
+    addresses: T,
+) -> Vec<ot::Ip6Address> {
+    let mut addresses = addresses
+        .into_iter()
+        .flat_map(|x| {
+            if let fidl_fuchsia_net::IpAddress::Ipv6(addr) = x.address {
+                let addr = ot::Ip6Address::from(addr.addr);
+                if !ipv6addr_is_unicast_link_local(&addr) {
+                    return Some(addr);
+                }
+            }
+            None
+        })
+        .collect::<Vec<_>>();
+    addresses.sort();
+    addresses
+}
+
+/// Converts an iterator over [`fidl_fuchsia_net::SocketAddress`]es to a vector of
+/// [`ot::Ip6Address`]es and a port.
+fn process_addresses_from_socket_addresses<
+    T: IntoIterator<Item = fidl_fuchsia_net::SocketAddress>,
+>(
+    addresses: T,
+) -> (Vec<ot::Ip6Address>, Option<u16>) {
+    let mut ret_port: Option<u16> = None;
+    let mut addresses =
+        addresses
+            .into_iter()
+            .flat_map(|x| {
+                if let fidl_fuchsia_net::SocketAddress::Ipv6(
+                    fidl_fuchsia_net::Ipv6SocketAddress { address, port, .. },
+                ) = x
+                {
+                    let addr = ot::Ip6Address::from(address.addr);
+                    if ret_port.is_none() {
+                        ret_port = Some(port);
+                    } else if ret_port != Some(port) {
+                        warn!(
+                            "mDNS service has multiple ports for the same service, {:?} != {:?}",
+                            ret_port.unwrap(),
+                            port
+                        );
+                    }
+                    if !ipv6addr_is_unicast_link_local(&addr) {
+                        return Some(addr);
+                    }
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+    addresses.sort();
+    (addresses, ret_port)
+}
+
 #[derive(Debug)]
 enum DnssdUpdate {
     Host { host_name: CString, addresses: Vec<ot::Ip6Address>, ttl: u32 },
-    Service(ServiceSubscriberRequest),
+    Service(ServiceSubscriptionListenerRequest),
 }
 
 /// The discovery proxy handles taking unicast DNS requests and converting them to mDNS requests.
@@ -53,8 +127,6 @@ impl DiscoveryProxy {
         // All of the following variables will be moved into the `dnssd_query` callback closure.
         let subscriptions_clone = subscriptions.clone();
         let srp_domain = instance.srp_server_get_domain().to_str()?.to_string();
-        let subscriber = connect_to_protocol::<SubscriberMarker>()?;
-        let hostname_subscriber = connect_to_protocol::<HostNameSubscriberMarker>()?;
 
         instance.dnssd_query_set_callbacks(Some(
             move |subscribed: bool, name_srp_domain: &CStr| {
@@ -76,15 +148,13 @@ impl DiscoveryProxy {
 
                 if !subscribed {
                     Self::dnssd_unsubscribed_from(name_srp_domain, &subscriptions_clone);
-                } else {
-                    Self::dnssd_subscribed_to(
-                        name_local_domain,
-                        name_srp_domain,
-                        &subscriptions_clone,
-                        &update_sender,
-                        &subscriber,
-                        &hostname_subscriber,
-                    );
+                } else if let Err(err) = Self::dnssd_subscribed_to(
+                    name_local_domain,
+                    name_srp_domain,
+                    &subscriptions_clone,
+                    &update_sender,
+                ) {
+                    error!("dnssd_subscribed_to: {:?}", err);
                 }
             },
         ));
@@ -106,16 +176,21 @@ impl DiscoveryProxy {
         name_srp_domain: CString,
         subscriptions: &Arc<Mutex<HashMap<CString, Task<Result>>>>,
         update_sender: &mpsc::Sender<DnssdUpdate>,
-        subscriber: &HostNameSubscriberProxy,
-    ) {
+    ) -> Result<(), anyhow::Error> {
+        let subscriber = match connect_to_protocol::<HostNameSubscriberMarker>() {
+            Ok(subscriber) => subscriber,
+            Err(err) => {
+                bail!("Cannot connect to HostNameSubscriber: {:?}", err);
+            }
+        };
+
         // Trim the `local.` part, trim the trailing dot.
         let name = name_local_domain.trim_end_matches(LOCAL_DOMAIN).trim_end_matches('.');
 
         let (client, server) = match create_endpoints::<HostNameSubscriptionListenerMarker>() {
             Ok(x) => x,
             Err(err) => {
-                error!("create_endpoints::<HostNameSubscriberMarker>: {:?}", err);
-                return;
+                bail!("create_endpoints::<HostNameSubscriberMarker>: {:?}", err);
             }
         };
 
@@ -125,15 +200,13 @@ impl DiscoveryProxy {
         );
 
         if name.len() > MAX_DNSSD_HOST_LEN {
-            error!("Host {:?} is too long (max {} chars)", name, MAX_DNSSD_HOST_LEN);
-            return;
+            bail!("Host {:?} is too long (max {} chars)", name, MAX_DNSSD_HOST_LEN);
         }
 
         if let Err(err) =
             subscriber.subscribe_to_host_name(name, HostNameSubscriptionOptions::EMPTY, client)
         {
-            error!("Unable to subscribe to {:?}({:?}): {:?}", name, name_local_domain, err);
-            return;
+            bail!("Unable to subscribe to {:?}({:?}): {:?}", name, name_local_domain, err);
         }
 
         let stream = server.into_stream().unwrap();
@@ -149,19 +222,7 @@ impl DiscoveryProxy {
                           responder,
                       }: HostNameSubscriptionListenerRequest| {
                     let mut update_sender_clone = update_sender_clone.clone();
-                    let mut addresses = addresses
-                        .into_iter()
-                        .flat_map(|x| {
-                            if let fidl_fuchsia_net::IpAddress::Ipv6(addr) = x.address {
-                                let addr = ot::Ip6Address::from(addr.addr);
-                                if !ipv6addr_is_unicast_link_local(&addr) {
-                                    return Some(addr);
-                                }
-                            }
-                            None
-                        })
-                        .collect::<Vec<_>>();
-                    addresses.sort();
+                    let addresses = process_addresses_from_host_addresses(addresses);
                     let name_srp_domain_copy = name_srp_domain_copy.clone();
                     let dnssd_update = DnssdUpdate::Host {
                         host_name: name_srp_domain_copy,
@@ -181,35 +242,38 @@ impl DiscoveryProxy {
 
         // TODO(fxbug.dev/94368): It is unclear why this step still appears to be necessary,
         //                        but we don't seem to get a response otherwise.
-        match connect_to_protocol::<ResolverMarker>() {
+        match connect_to_protocol::<HostNameResolverMarker>() {
             Ok(resolver) => {
                 let name_srp_domain_copy = name_srp_domain.clone();
                 let mut update_sender_clone = update_sender.clone();
                 let initial_resolution_future = resolver
-                    .resolve_host_name(name, DEFAULT_RESOLVE_DURATION_NS)
+                    .resolve_host_name(
+                        name,
+                        DEFAULT_RESOLVE_DURATION_NS,
+                        HostNameResolutionOptions::EMPTY,
+                    )
                     .map_err(anyhow::Error::from)
-                    .and_then(move |x| async move {
-                        let _ = &x;
-                        if let Some(ipv6_addr_box) = x.1.as_ref() {
-                            let ipv6_addr = ot::Ip6Address::from(ipv6_addr_box.addr);
-                            debug!("Resolved {:?} to {:?}", &name_local_domain, ipv6_addr);
-                            update_sender_clone
-                                .send(DnssdUpdate::Host {
-                                    host_name: name_srp_domain_copy,
-                                    addresses: vec![ipv6_addr],
-                                    ttl: DEFAULT_MDNS_TTL, // TODO(fxbug.dev/94352): Change when available.
-                                })
-                                .await?;
-                        } else {
-                            update_sender_clone
-                                .send(DnssdUpdate::Host {
-                                    host_name: name_srp_domain_copy,
-                                    addresses: vec![],
-                                    ttl: 0,
-                                })
-                                .await?;
+                    .and_then(move |host_addresses| async move {
+                        let addresses =
+                            process_addresses_from_host_addresses(host_addresses.clone());
+
+                        if addresses.is_empty() {
                             warn!("Unable to resolve {:?} to an IPv6 address.", &name_local_domain);
+                            debug!(
+                                "Full list for {:?} was {:?}",
+                                &name_local_domain, host_addresses
+                            );
+                        } else {
+                            debug!("Resolved {:?} to {:?}", &name_local_domain, addresses);
                         }
+
+                        update_sender_clone
+                            .send(DnssdUpdate::Host {
+                                host_name: name_srp_domain_copy,
+                                addresses,
+                                ttl: DEFAULT_MDNS_TTL, // TODO(fxbug.dev/94352): Change when available.
+                            })
+                            .await?;
                         Ok(())
                     })
                     .inspect_err(|err| {
@@ -224,6 +288,8 @@ impl DiscoveryProxy {
         }
 
         subscriptions.lock().insert(name_srp_domain, fasync::Task::spawn(future));
+
+        Ok(())
     }
 
     fn dnssd_subscribed_to_service(
@@ -231,8 +297,14 @@ impl DiscoveryProxy {
         name_srp_domain: CString,
         subscriptions: &Arc<Mutex<HashMap<CString, Task<Result>>>>,
         update_sender: &mpsc::Sender<DnssdUpdate>,
-        subscriber: &SubscriberProxy,
-    ) {
+    ) -> Result<(), anyhow::Error> {
+        let subscriber = match connect_to_protocol::<ServiceSubscriber2Marker>() {
+            Ok(subscriber) => subscriber,
+            Err(err) => {
+                bail!("Cannot connect to SubscriberMarker: {:?}", err);
+            }
+        };
+
         // Trim the `local.` part, keep the trailing dot.
         let service_name = name_local_domain.trim_end_matches(LOCAL_DOMAIN);
 
@@ -241,25 +313,25 @@ impl DiscoveryProxy {
             name_srp_domain, service_name
         );
 
-        let (client, server) = match create_endpoints::<ServiceSubscriberMarker>() {
+        let (client, server) = match create_endpoints::<ServiceSubscriptionListenerMarker>() {
             Ok(x) => x,
             Err(err) => {
-                error!("create_endpoints::<ServiceSubscriberMarker>: {:?}", err);
-                return;
+                bail!("create_endpoints::<ServiceSubscriberMarker>: {:?}", err);
             }
         };
 
         if service_name.len() > MAX_DNSSD_SERVICE_LEN {
-            error!(
+            bail!(
                 "Unable to subscribe to {:?}({:?}): Service too long (max 22 chars)",
-                service_name, name_local_domain
+                service_name,
+                name_local_domain
             );
-            return;
         }
 
-        if let Err(err) = subscriber.subscribe_to_service(service_name, client) {
-            error!("Unable to subscribe to {:?}({:?}): {:?}", service_name, name_local_domain, err);
-            return;
+        if let Err(err) =
+            subscriber.subscribe_to_service(service_name, ServiceSubscriptionOptions::EMPTY, client)
+        {
+            bail!("Unable to subscribe to {:?}({:?}): {:?}", service_name, name_local_domain, err);
         }
 
         let stream = server.into_stream().unwrap();
@@ -267,7 +339,7 @@ impl DiscoveryProxy {
         let update_sender_clone = update_sender.clone();
         let future = stream
             .map_err(anyhow::Error::from)
-            .try_for_each(move |event: ServiceSubscriberRequest| {
+            .try_for_each(move |event: ServiceSubscriptionListenerRequest| {
                 let mut update_sender_clone = update_sender_clone.clone();
                 async move {
                     update_sender_clone
@@ -281,6 +353,8 @@ impl DiscoveryProxy {
             });
 
         subscriptions.lock().insert(name_srp_domain, fasync::Task::spawn(future));
+
+        Ok(())
     }
 
     fn dnssd_subscribed_to_instance(
@@ -288,8 +362,7 @@ impl DiscoveryProxy {
         name_srp_domain: CString,
         subscriptions: &Arc<Mutex<HashMap<CString, Task<Result>>>>,
         update_sender: &mpsc::Sender<DnssdUpdate>,
-        subscriber: &SubscriberProxy,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         // Trim the `local.` part.
         let mut instance_name = name_local_domain.trim_end_matches(LOCAL_DOMAIN);
 
@@ -314,8 +387,7 @@ impl DiscoveryProxy {
             name_srp_domain,
             subscriptions,
             update_sender,
-            subscriber,
-        );
+        )
     }
 
     fn dnssd_subscribed_to(
@@ -323,9 +395,7 @@ impl DiscoveryProxy {
         name_srp_domain: CString,
         subscriptions: &Arc<Mutex<HashMap<CString, Task<Result>>>>,
         update_sender: &mpsc::Sender<DnssdUpdate>,
-        subscriber: &SubscriberProxy,
-        hostname_subscriber: &HostNameSubscriberProxy,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let is_this_a_service =
             name_local_domain.contains("._udp.") || name_local_domain.contains("._tcp.");
         let is_this_an_instance = is_this_a_service && !name_local_domain.starts_with('_');
@@ -336,24 +406,21 @@ impl DiscoveryProxy {
                 name_srp_domain,
                 subscriptions,
                 update_sender,
-                subscriber,
-            );
+            )
         } else if is_this_a_service {
             Self::dnssd_subscribed_to_service(
                 name_local_domain,
                 name_srp_domain,
                 subscriptions,
                 update_sender,
-                subscriber,
-            );
+            )
         } else {
             Self::dnssd_subscribed_to_host(
                 name_local_domain,
                 name_srp_domain,
                 subscriptions,
                 update_sender,
-                hostname_subscriber,
-            );
+            )
         }
     }
 
@@ -364,57 +431,62 @@ impl DiscoveryProxy {
         if let ServiceInstance {
             service: Some(service_name),
             instance: Some(instance_name),
-            ipv6_endpoint: Some(ipv6_endpoint),
-            text,
+            addresses: Some(addresses),
+            text_strings,
             srv_priority: Some(srv_priority),
             srv_weight: Some(srv_weight),
             target: Some(host_name),
             ..
         } = service_instance
         {
-            let sockaddr: ot::SockAddr = ipv6_endpoint.into();
-
-            if net_types::ip::Ipv6Addr::from(sockaddr.addr().octets()).is_unicast_link_local() {
-                // Skip unicast link local since traffic to these
-                // addresses cannot be forwarded.
-                return Ok(());
-            }
             let srp_domain = instance.srp_server_get_domain().to_str()?;
 
             let instance_name_srp =
                 CString::new(format!("{}.{}{}", instance_name, service_name, srp_domain))?;
+
             let service_name_srp = CString::new(format!("{}{}", service_name, srp_domain))?;
+
             let host_name_srp =
                 CString::new(replace_domain(&host_name, LOCAL_DOMAIN, srp_domain)?)?;
 
-            let ttl = DEFAULT_MDNS_TTL; // TODO(fxbug.dev/94352): Change when available.
-            let addresses = [sockaddr.addr()];
+            let (addresses, port) = process_addresses_from_socket_addresses(addresses);
 
-            instance.dnssd_query_handle_discovered_service_instance(
-                service_name_srp.as_c_str(),
-                &addresses,
-                instance_name_srp.as_c_str(),
-                host_name_srp.as_c_str(),
-                sockaddr.port(),
-                srv_priority,
-                ttl,
-                &flatten_txt_strings(text),
-                srv_weight,
-            );
+            if addresses.is_empty() {
+                warn!(
+                    "Unable to resolve {:?} to an IPv6 address for service {:?}.",
+                    host_name, instance_name_srp
+                );
+            } else {
+                debug!(
+                    "Resolved {:?} to {:?} for service {:?}.",
+                    host_name, addresses, instance_name_srp
+                );
 
-            // Also go ahead and treat this as a discovered host.
-            instance.dnssd_query_handle_discovered_host(host_name_srp.as_c_str(), &addresses, ttl);
+                instance.dnssd_query_handle_discovered_service_instance(
+                    service_name_srp.as_c_str(),
+                    &addresses,
+                    instance_name_srp.as_c_str(),
+                    host_name_srp.as_c_str(),
+                    port.unwrap_or(0),
+                    srv_priority,
+                    DEFAULT_MDNS_TTL, // TODO(fxbug.dev/94352): Change when available.
+                    &flatten_txt(text_strings),
+                    srv_weight,
+                );
+            }
+        } else {
+            warn!("Unable to handle discovered service instance: {:?}", service_instance);
         }
         Ok(())
     }
 
-    fn handle_service_subscriber_request(
+    fn handle_service_subscription_listener_request(
         ot_instance: &ot::Instance,
-        service_subscriber_request: ServiceSubscriberRequest,
+        service_subscription_listener_request: ServiceSubscriptionListenerRequest,
     ) -> Result {
-        match service_subscriber_request {
+        match service_subscription_listener_request {
             // A DNS-SD IPv6 service instance has been discovered.
-            ServiceSubscriberRequest::OnInstanceDiscovered {
+            ServiceSubscriptionListenerRequest::OnInstanceDiscovered {
                 instance: service_instance,
                 responder,
             } => {
@@ -423,7 +495,7 @@ impl DiscoveryProxy {
             }
 
             // A DNS-SD IPv6 service instance has changed.
-            ServiceSubscriberRequest::OnInstanceChanged {
+            ServiceSubscriptionListenerRequest::OnInstanceChanged {
                 instance: service_instance,
                 responder,
             } => {
@@ -432,7 +504,7 @@ impl DiscoveryProxy {
             }
 
             // A DNS-SD IPv6 service instance has been lost.
-            ServiceSubscriberRequest::OnInstanceLost {
+            ServiceSubscriptionListenerRequest::OnInstanceLost {
                 instance: service_instance,
                 responder,
                 ..
@@ -444,7 +516,7 @@ impl DiscoveryProxy {
                 responder.send()?;
             }
 
-            ServiceSubscriberRequest::OnQuery { responder, .. } => {
+            ServiceSubscriptionListenerRequest::OnQuery { responder, .. } => {
                 // We don't care about queries.
                 responder.send()?;
             }
@@ -458,12 +530,14 @@ impl DiscoveryProxy {
             match ready {
                 Some(DnssdUpdate::Service(request)) => {
                     debug!("DnssdUpdate::Service: {:?}", request);
-                    if let Err(err) = Self::handle_service_subscriber_request(instance, request) {
-                        error!("handle_service_subscriber_request: {:?}", err);
+                    if let Err(err) =
+                        Self::handle_service_subscription_listener_request(instance, request)
+                    {
+                        error!("handle_service_subscription_listener_request: {:?}", err);
                     }
                 }
                 Some(DnssdUpdate::Host { host_name, addresses, ttl }) => {
-                    debug!("DnssdUpdate::host: {:?}, {:?}, {}", host_name, addresses, ttl);
+                    debug!("DnssdUpdate::Host: {:?}, {:?}, {}", host_name, addresses, ttl);
                     instance.dnssd_query_handle_discovered_host(&host_name, &addresses, ttl);
                 }
                 None => {

@@ -69,7 +69,7 @@
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
                 "fuchsia.net.mdns.ServiceInstancePublisher",
-                "fuchsia.net.mdns.Subscriber",
+                "fuchsia.net.mdns.ServiceSubscriber2",
             ],
             from: "#mdns",
             to: [ "#lowpan-ot-driver" ],

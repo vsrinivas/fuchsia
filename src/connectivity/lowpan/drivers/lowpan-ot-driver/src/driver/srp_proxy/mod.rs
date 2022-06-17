@@ -29,21 +29,6 @@ const MAX_DNSSD_HOST_LEN: usize = 255;
 
 const MAX_DNSSD_INSTANCE_LEN: usize = 63;
 
-/// Converts an optional vector of strings into a DNS-compatible TXT record vector.
-fn flatten_txt_strings(txt: Option<Vec<String>>) -> Vec<u8> {
-    let mut ret = vec![];
-
-    for mut txt in txt.iter().flat_map(|x| x.iter()).map(String::as_bytes) {
-        if txt.len() > u8::MAX as usize {
-            txt = &txt[0..(u8::MAX as usize) + 1];
-        }
-        ret.push(u8::try_from(txt.len()).unwrap());
-        ret.extend_from_slice(txt);
-    }
-
-    ret
-}
-
 fn replace_domain<T: AsRef<str>>(
     hostname: T,
     mut expected_domain: &str,

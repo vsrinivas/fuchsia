@@ -27,7 +27,7 @@
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Resolver",
             "fuchsia.net.mdns.ServiceInstancePublisher",
-            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.net.mdns.ServiceSubscriber2",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
             "fuchsia.posix.socket.Provider"
