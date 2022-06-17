@@ -189,40 +189,40 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	}
 
 	var skippedShards []*testsharder.Shard
-	if flags.skipUnaffected {
+	if flags.affectedOnly {
+		affected := func(t testsharder.Test) bool {
+			return t.Affected
+		}
+		affectedShards, _ := testsharder.PartitionShards(nonMultipliedShards, affected, testsharder.AffectedShardPrefix)
+		shards = affectedShards
+	} else {
 		// Filter out the affected, hermetic shards from the non-multiplied shards.
 		hermeticAndAffected := func(t testsharder.Test) bool {
 			return t.Affected && t.Hermetic()
 		}
 		affectedHermeticShards, unaffectedOrNonhermeticShards := testsharder.PartitionShards(nonMultipliedShards, hermeticAndAffected, testsharder.AffectedShardPrefix)
+		shards = affectedHermeticShards
 
 		// Filter out unaffected hermetic shards from the remaining shards.
 		hermetic := func(t testsharder.Test) bool {
 			return t.Hermetic()
 		}
-		unaffectedHermeticShards, nonhermeticShards := testsharder.PartitionShards(unaffectedOrNonhermeticShards, hermetic, testsharder.UnaffectedShardPrefix)
-
-		// Set up the shards to include:
+		unaffectedHermeticShards, nonhermeticShards := testsharder.PartitionShards(unaffectedOrNonhermeticShards, hermetic, testsharder.HermeticShardPrefix)
+		if flags.skipUnaffected {
+			// Mark the unaffected, hermetic shards skipped, as we don't need to
+			// run them.
+			skippedShards, err = testsharder.MarkShardsSkipped(unaffectedHermeticShards)
+			if err != nil {
+				return err
+			}
+		} else {
+			shards = append(shards, unaffectedHermeticShards...)
+		}
+		// The shards should include:
 		// 1. Affected hermetic shards
-		// 2. Nonhermetic shards
-		shards = affectedHermeticShards
+		// 2. Unaffected hermetic shards (may be skipped)
+		// 3. Nonhermetic shards
 		shards = append(shards, nonhermeticShards...)
-
-		// Mark the unaffected, hermetic shards skipped, as we don't need to
-		// run them.
-		skippedShards, err = testsharder.MarkShardsSkipped(unaffectedHermeticShards)
-		if err != nil {
-			return err
-		}
-	} else {
-		isAffected := func(t testsharder.Test) bool {
-			return t.Affected
-		}
-		affectedShards, unaffectedShards := testsharder.PartitionShards(nonMultipliedShards, isAffected, testsharder.AffectedShardPrefix)
-		shards = affectedShards
-		if !flags.affectedOnly {
-			shards = append(shards, unaffectedShards...)
-		}
 	}
 	// Add the multiplied shards back into the list of shards to run.
 	shards = append(shards, multipliedShards...)

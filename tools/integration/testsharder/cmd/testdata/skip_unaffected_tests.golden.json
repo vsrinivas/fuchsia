@@ -92,7 +92,7 @@
         }
     },
     {
-        "name": "unaffected:AEMU",
+        "name": "hermetic:AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-test#meta/unaffected-hermetic-test.cm",

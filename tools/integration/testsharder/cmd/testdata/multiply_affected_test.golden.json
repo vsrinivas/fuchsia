@@ -1,6 +1,6 @@
 [
     {
-        "name": "affected:AEMU",
+        "name": "AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/affected-test#meta/affected-test.cm",
@@ -18,22 +18,7 @@
                         "value": "0"
                     }
                 ]
-            }
-        ],
-        "environment": {
-            "dimensions": {
-                "device_type": "AEMU"
             },
-            "is_emu": true
-        },
-        "timeout_secs": 0,
-        "summary": {
-            "tests": null
-        }
-    },
-    {
-        "name": "AEMU",
-        "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",
                 "package_url": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",

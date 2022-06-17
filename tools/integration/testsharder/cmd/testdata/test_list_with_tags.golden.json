@@ -1,6 +1,6 @@
 [
     {
-        "name": "AEMU",
+        "name": "hermetic:AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/hermetic-test#meta/hermetic-test.cm",
@@ -21,7 +21,22 @@
                         "value": "0"
                     }
                 ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
             },
+            "is_emu": true
+        },
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "AEMU",
+        "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/nonhermetic-test#meta/nonhermetic-test.cm",
                 "package_url": "fuchsia-pkg://fuchsia.com/nonhermetic-test#meta/nonhermetic-test.cm",

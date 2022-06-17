@@ -64,6 +64,7 @@ if (is_host) {
   # a depfile so it's not necessary to copy-paste these names.
   _golden_tests = [
     "affected tests",
+    "affected nonhermetic tests",
     "mixed device types",
     "hermetic deps",
     "multiply",

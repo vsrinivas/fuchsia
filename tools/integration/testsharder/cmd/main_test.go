@@ -87,11 +87,35 @@ func TestExecute(t *testing.T) {
 		{
 			name: "affected tests",
 			testSpecs: []build.TestSpec{
-				fuchsiaTestSpec("affected"),
+				fuchsiaTestSpec("affected-hermetic"),
+				fuchsiaTestSpec("not-affected"),
+			},
+			testList: []build.TestListEntry{
+				{
+					Name: packageURL("affected-hermetic"),
+					Tags: []build.TestTag{
+						{Key: "hermetic", Value: "true"},
+					},
+				},
+				{
+					Name: packageURL("not-affected"),
+					Tags: []build.TestTag{
+						{Key: "hermetic", Value: "false"},
+					},
+				},
+			},
+			affectedTests: []string{
+				packageURL("affected-hermetic"),
+			},
+		},
+		{
+			name: "affected nonhermetic tests",
+			testSpecs: []build.TestSpec{
+				fuchsiaTestSpec("affected-nonhermetic"),
 				fuchsiaTestSpec("not-affected"),
 			},
 			affectedTests: []string{
-				packageURL("affected"),
+				packageURL("affected-nonhermetic"),
 			},
 		},
 		{

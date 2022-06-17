@@ -1,12 +1,12 @@
 [
     {
-        "name": "affected:AEMU",
+        "name": "AEMU",
         "tests": [
             {
-                "name": "fuchsia-pkg://fuchsia.com/affected-hermetic#meta/affected-hermetic.cm",
-                "package_url": "fuchsia-pkg://fuchsia.com/affected-hermetic#meta/affected-hermetic.cm",
+                "name": "fuchsia-pkg://fuchsia.com/affected-nonhermetic#meta/affected-nonhermetic.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/affected-nonhermetic#meta/affected-nonhermetic.cm",
                 "path": "",
-                "label": "//src/something:affected-hermetic(//build/toolchain/fuchsia:x64)",
+                "label": "//src/something:affected-nonhermetic(//build/toolchain/fuchsia:x64)",
                 "os": "fuchsia",
                 "cpu": "x64",
                 "log_settings": {},
@@ -14,30 +14,11 @@
                 "affected": true,
                 "tags": [
                     {
-                        "key": "hermetic",
-                        "value": "true"
-                    },
-                    {
                         "key": "expected_duration_milliseconds",
                         "value": "0"
                     }
                 ]
-            }
-        ],
-        "environment": {
-            "dimensions": {
-                "device_type": "AEMU"
             },
-            "is_emu": true
-        },
-        "timeout_secs": 0,
-        "summary": {
-            "tests": null
-        }
-    },
-    {
-        "name": "AEMU",
-        "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/not-affected#meta/not-affected.cm",
                 "package_url": "fuchsia-pkg://fuchsia.com/not-affected#meta/not-affected.cm",
@@ -48,10 +29,6 @@
                 "log_settings": {},
                 "runs": 1,
                 "tags": [
-                    {
-                        "key": "hermetic",
-                        "value": "false"
-                    },
                     {
                         "key": "expected_duration_milliseconds",
                         "value": "0"

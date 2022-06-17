@@ -36,14 +36,14 @@ const (
 	// fail if this is exceeded.
 	maxMatchesPerMultiplier = 5
 
-	// The prefix added to the names of shards that run affected tests.
+	// The prefix added to the names of shards that run affected hermetic tests.
 	AffectedShardPrefix = "affected:"
+
+	// The prefix added to the names of shards that run unaffected hermetic tests.
+	HermeticShardPrefix = "hermetic:"
 
 	// The prefix added to the names of shards that run multiplied tests.
 	MultipliedShardPrefix = "multiplied:"
-
-	// The prefix added to the names of shards that run unaffected tests.
-	UnaffectedShardPrefix = "unaffected:"
 
 	// The name of the key of the expected duration test tag.
 	expectedDurationTagKey = "expected_duration_milliseconds"
@@ -400,19 +400,27 @@ func WithTargetDuration(
 		maxShardsPerEnvironment = math.MaxInt64
 	}
 
+	shardsPerEnv := make(map[string][]*Shard)
+	for _, shard := range shards {
+		envName := environmentName(shard.Env)
+		shardsPerEnv[envName] = append(shardsPerEnv[envName], shard)
+	}
+
 	if targetDuration > 0 {
-		for _, shard := range shards {
+		for _, shards := range shardsPerEnv {
 			var shardDuration time.Duration
-			// If any single test is expected to take longer than `targetDuration`,
-			// it's no use creating shards whose entire expected runtimes are
-			// shorter than that one test. So in that case we use the longest test's
-			// expected duration as the target duration.
-			for _, t := range shard.Tests {
-				duration := testDurations.Get(t).MedianDuration
-				if duration > targetDuration {
-					targetDuration = duration
+			for _, shard := range shards {
+				// If any single test is expected to take longer than `targetDuration`,
+				// it's no use creating shards whose entire expected runtimes are
+				// shorter than that one test. So in that case we use the longest test's
+				// expected duration as the target duration.
+				for _, t := range shard.Tests {
+					duration := testDurations.Get(t).MedianDuration
+					if duration > targetDuration {
+						targetDuration = duration
+					}
+					shardDuration += duration * time.Duration(t.minRequiredRuns())
 				}
-				shardDuration += duration * time.Duration(t.minRequiredRuns())
 			}
 			// If any environment would exceed the maximum shard count, then its
 			// shard durations will exceed the specified target duration. So
