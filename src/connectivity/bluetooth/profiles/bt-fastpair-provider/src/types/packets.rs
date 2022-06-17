@@ -114,27 +114,83 @@ pub fn decrypt_key_based_pairing_request(
     }
 }
 
+pub_decodable_enum! {
+    PasskeyType<u8, Error, Packet> {
+        Seeker => 0x02,
+        Provider => 0x03,
+    }
+}
+
+/// Attempts to decrypt and parse the provided `encrypted_request`.
+/// Returns the integer passkey on success, Error otherwise.
+pub fn decrypt_passkey_request(encrypted_request: Vec<u8>, key: &AccountKey) -> Result<u32, Error> {
+    if encrypted_request.len() != 16 {
+        return Err(Error::Packet);
+    }
+
+    let request = encrypted_request.try_into().map_err(|_| Error::Packet)?;
+    let decrypted = key.decrypt(&request);
+
+    let passkey_type = PasskeyType::try_from(decrypted[0])?;
+    match passkey_type {
+        PasskeyType::Seeker => {
+            let mut passkey_bytes = [0; 4];
+            passkey_bytes[1..4].copy_from_slice(&decrypted[1..4]);
+            Ok(u32::from_be_bytes(passkey_bytes))
+        }
+        PasskeyType::Provider => Err(Error::internal("Unexpected Provider passkey")),
+    }
+}
+
+/// Builds and returns an encrypted response to a Key-based Pairing write request. The response is
+/// encrypted using the provided Account `key`.
+/// Defined in Table 1.3 in the GFPS.
+pub fn key_based_pairing_response(key: &AccountKey, local_address: Address) -> Vec<u8> {
+    let mut response = [0; 16];
+    // First byte indicates key-based pairing response.
+    response[0] = 0x01;
+    // Next 6 bytes is the local BR/EDR address.
+    response[1..7].copy_from_slice(local_address.bytes());
+    // Final 9 bytes is a randomly generated salt value.
+    fuchsia_zircon::cprng_draw(&mut response[7..16]);
+    key.encrypt(&response).to_vec()
+}
+
+/// Builds and returns an encrypted response to a Passkey write request. The response is encrypted
+/// using the provided Account `key`.
+/// Defined in Table 2.2 in the GFPS.
+pub fn passkey_response(key: &AccountKey, passkey: u32) -> Vec<u8> {
+    let mut response = [0; 16];
+    // First byte indicates Provider passkey.
+    response[0] = u8::from(&PasskeyType::Provider);
+    // Next 3 bytes is the passkey.
+    response[1..4].copy_from_slice(&passkey.to_be_bytes()[1..4]);
+    // Final 12 bytes is a randomly generated salt value.
+    fuchsia_zircon::cprng_draw(&mut response[4..16]);
+    key.encrypt(&response).to_vec()
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
 
-    use crate::types::keys::tests::{bob_public_key_bytes, example_aes_key};
+    use crate::types::keys::tests::{bob_public_key_bytes, encrypt_message, example_aes_key};
     use assert_matches::assert_matches;
 
     #[test]
-    fn parse_empty_request() {
+    fn parse_empty_key_pairing_request() {
         let result = parse_key_based_pairing_request(vec![]);
         assert_matches!(result, Err(Error::Packet));
     }
 
     #[test]
-    fn parse_request_too_small() {
+    fn parse_key_pairing_request_too_small() {
         let result = parse_key_based_pairing_request(vec![1, 2, 3]);
         assert_matches!(result, Err(Error::Packet));
     }
 
     #[test]
-    fn parse_request_invalid_size() {
+    fn parse_key_pairing_request_invalid_size() {
         let result = parse_key_based_pairing_request(vec![
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
         ]);
@@ -142,7 +198,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn parse_request_no_public_key() {
+    fn parse_key_pairing_request_no_public_key() {
         let buf = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let (parsed, key) = parse_key_based_pairing_request(buf.clone()).expect("can parse");
         assert_eq!(parsed, &buf[..16]);
@@ -150,7 +206,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn parse_request_with_invalid_public_key() {
+    fn parse_key_pairing_request_with_invalid_public_key() {
         // The public key point is valid in size but is not a point on the secp256r1 curve.
         let buf = vec![1u8; 80];
         let result = parse_key_based_pairing_request(buf.clone());
@@ -158,7 +214,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn parse_request_with_valid_public_key() {
+    fn parse_key_pairing_request_with_valid_public_key() {
         let mut buf = vec![1u8; 80];
         buf[16..].copy_from_slice(&bob_public_key_bytes()[..]);
         let (parsed, key) = parse_key_based_pairing_request(buf.clone()).expect("can parse");
@@ -167,7 +223,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn decrypt_invalid_request() {
+    fn decrypt_invalid_key_pairing_request() {
         let key = example_aes_key();
         // Invalidly formatted request.
         let random_request = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -276,5 +332,53 @@ pub(crate) mod tests {
             _salt: vec![0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
+    }
+
+    pub(crate) const PASSKEY_REQUEST: [u8; 16] = [
+        0x02, 0x12, 0x34, 0x56, // Seeker Passkey, Passkey = 0x123456
+        0x0a, 0x0a, 0x0a, 0x0a, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c, 0x0c, 0x0c, 0x0c, // Salt
+    ];
+
+    #[test]
+    fn decrypt_passkey_request_too_small() {
+        let encrypted_buf = vec![1; 10];
+        let result = decrypt_passkey_request(encrypted_buf, &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn decrypt_passkey_request_too_large() {
+        let encrypted_buf = vec![1; 20];
+        let result = decrypt_passkey_request(encrypted_buf, &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn decrypt_passkey_request_not_encrypted() {
+        let result = decrypt_passkey_request(PASSKEY_REQUEST.to_vec(), &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn decrypt_passkey_request_invalid_type() {
+        let mut buf = PASSKEY_REQUEST;
+        buf[0] = 0x04; // Update a standard passkey request with an invalid type.
+        let encrypted_buf = encrypt_message(&buf);
+        let result = decrypt_passkey_request(encrypted_buf.to_vec(), &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+
+        // We only expect to parse the Seeker passkey.
+        buf[0] = u8::from(&PasskeyType::Provider);
+        let encrypted_buf = encrypt_message(&buf);
+        let result = decrypt_passkey_request(encrypted_buf.to_vec(), &example_aes_key());
+        assert_matches!(result, Err(Error::InternalError(_)));
+    }
+
+    #[test]
+    fn decrypt_valid_passkey_request() {
+        let encrypted_buf = encrypt_message(&PASSKEY_REQUEST);
+        let parsed_passkey =
+            decrypt_passkey_request(encrypted_buf.to_vec(), &example_aes_key()).expect("can parse");
+        assert_eq!(parsed_passkey, 0x123456);
     }
 }

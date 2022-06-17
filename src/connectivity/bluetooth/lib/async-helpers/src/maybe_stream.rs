@@ -21,6 +21,14 @@ impl<S: Stream + Unpin> MaybeStream<S> {
         self.0.take()
     }
 
+    pub fn inner_mut(&mut self) -> Option<&mut S> {
+        self.0.as_mut()
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.0.is_some()
+    }
+
     /// Set the current stream.
     ///
     /// This method will not call `poll` on the submitted stream. The caller must ensure

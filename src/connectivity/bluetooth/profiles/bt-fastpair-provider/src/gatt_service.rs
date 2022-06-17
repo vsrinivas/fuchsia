@@ -37,22 +37,22 @@ const MODEL_ID_CHARACTERISTIC_HANDLE: Handle = Handle { value: 1 };
 
 /// Custom characteristic - Key-based pairing.
 const KEY_BASED_PAIRING_CHARACTERISTIC_UUID: &str = "FE2C1234-8366-4814-8EB0-01DE32100BEA";
-/// Fixed Handle assigned to the Model ID characteristic.
+/// Fixed Handle assigned to the Key-based pairing characteristic.
 pub const KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE: Handle = Handle { value: 2 };
 
 /// Custom characteristic - Passkey.
 const PASSKEY_CHARACTERISTIC_UUID: &str = "FE2C1235-8366-4814-8EB0-01DE32100BEA";
-/// Fixed Handle assigned to the Model ID characteristic.
-const PASSKEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 3 };
+/// Fixed Handle assigned to the Passkey characteristic.
+pub const PASSKEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 3 };
 
 /// Custom characteristic - Account Key.
 const ACCOUNT_KEY_CHARACTERISTIC_UUID: &str = "FE2C1236-8366-4814-8EB0-01DE32100BEA";
-/// Fixed Handle assigned to the Model ID characteristic.
+/// Fixed Handle assigned to the Account Key characteristic.
 const ACCOUNT_KEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 4 };
 
 /// Standard characteristic - the firmware revision of the device.
 const FIRMWARE_REVISION_CHARACTERISTIC_UUID: u16 = 0x2A26;
-/// Fixed Handle assigned to the Model ID characteristic.
+/// Fixed Handle assigned to the Firmware Revision characteristic.
 const FIRMWARE_REVISION_CHARACTERISTIC_HANDLE: Handle = Handle { value: 5 };
 
 pub type GattServiceResponder = Box<dyn FnOnce(Result<(), gatt::Error>)>;
@@ -248,6 +248,17 @@ impl GattService {
         let params = ValueChangedParameters {
             peer_ids: Some(vec![id.into()]),
             handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
+            value: Some(value),
+            ..ValueChangedParameters::EMPTY
+        };
+        self.local_service_server.control_handle().send_on_notify_value(params).map_err(Into::into)
+    }
+
+    pub fn notify_passkey(&self, id: PeerId, value: Vec<u8>) -> Result<(), Error> {
+        // TODO(fxbug.dev/96726): Only send request if we have enough credits.
+        let params = ValueChangedParameters {
+            peer_ids: Some(vec![id.into()]),
+            handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
             value: Some(value),
             ..ValueChangedParameters::EMPTY
         };
@@ -726,6 +737,29 @@ pub(crate) mod tests {
             event.into_on_notify_value().expect("notify event");
         assert_eq!(peer_ids, Some(vec![PeerId(123).into()]));
         assert_eq!(handle, Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE));
+        assert_eq!(v, Some(value));
+    }
+
+    #[fuchsia::test]
+    fn passkey_notification() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
+
+        let mut local_service_event_stream = upstream_service_client.take_event_stream();
+        let _ = exec
+            .run_until_stalled(&mut local_service_event_stream.next())
+            .expect_pending("no events");
+
+        // Component makes a request to notify passkey characteristic.
+        let value = [1; 16].to_vec();
+        let _ = gatt_service.notify_passkey(PeerId(123), value.clone()).expect("can notify");
+
+        let event =
+            expect_stream_item(&mut exec, &mut local_service_event_stream).expect("fidl request");
+        let ValueChangedParameters { peer_ids, handle, value: v, .. } =
+            event.into_on_notify_value().expect("notify event");
+        assert_eq!(peer_ids, Some(vec![PeerId(123).into()]));
+        assert_eq!(handle, Some(PASSKEY_CHARACTERISTIC_HANDLE));
         assert_eq!(v, Some(value));
     }
 }
