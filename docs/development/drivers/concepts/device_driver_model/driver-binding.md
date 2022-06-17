@@ -138,7 +138,7 @@ if-statement = "if" , condition , "{" , ( statement )+ , "}" ,
 
 true = "true" , ";" ;
 
-false = "flase" , ";" ;
+false = "false" , ";" ;
 
 compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
