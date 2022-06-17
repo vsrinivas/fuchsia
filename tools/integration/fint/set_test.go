@@ -99,7 +99,7 @@ func TestSet(t *testing.T) {
 	t.Run("populates set_artifacts fields", func(t *testing.T) {
 		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
 		staticSpec.UseGoma = true
-		staticSpec.EnableRbe = true
+		staticSpec.RustRbeEnable = true
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}

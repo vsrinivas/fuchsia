@@ -132,22 +132,18 @@ message Static {
   // Whether to set --export-rust-project GN flag.
   bool export_rust_project = 30;
 
-  // Whether to use rbe for running ninja. Will be ignored (and RBE will not
-  // be used) when building with some experimental toolchain versions.
-  bool enable_rbe = 31;  // Deprecated.  renamed to rust_rbe_enable.
-
   // If true, build Rust targets with RBE/reclient.
-  bool rust_rbe_enable = 37;
+  bool rust_rbe_enable = 31;
 
   // If true, build C++ targets with RBE/reclient.
   // This takes precedence over `use_goma`.
-  bool cxx_rbe_enable = 38;
+  bool cxx_rbe_enable = 32;
 
   // Whether we're performing an incremental build.
-  bool incremental = 32;
+  bool incremental = 33;
 
   // Whether to include the the default ninja target.
-  bool include_default_ninja_target = 33;
+  bool include_default_ninja_target = 34;
 
   // If true, use a temporary directory for the Go cache rather than a
   // deterministic directory within the build directory. This is useful for
@@ -156,7 +152,7 @@ message Static {
   // between builds.
   //
   // Ignored if `enable_go_cache` is set.
-  bool use_temporary_go_cache = 34;
+  bool use_temporary_go_cache = 35;
 
   enum LintTargets {
     // Don't build any lint targets.
@@ -172,10 +168,8 @@ message Static {
   }
 
   // Which language-specific lint targets to include.
-  LintTargets include_lint_targets = 35;
+  LintTargets include_lint_targets = 36;
 
   // Extra args to pass to ninja.
-  repeated string ninja_args = 36;
-
-  // Next tag: 39
+  repeated string ninja_args = 37;
 }
