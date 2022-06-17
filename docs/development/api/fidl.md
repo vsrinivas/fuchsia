@@ -266,7 +266,15 @@ through the data can be represented using a primitive:
 In performance-critical target languages, structs are represented in line, which
 reduces the cost of using structs to name important concepts.
 
-### Use anonynmous types judiciously {#anonymous-types}
+### `zx.time` has a well-defined timebase
+
+The [`zx.time`](/zircon/vdso/zx_common.fidl) type monotonically measures the
+number of nanoseconds from a
+[device-specific timebase](/docs/concepts/kernel/time/monotonic.md).
+Uses of `zx.time` can assume this timebase, and it does not need to be spelled
+out.
+
+### Use anonymous types judiciously {#anonymous-types}
 
 Anonymous types are very useful to describe an API more fluently. In particular,
 anonymous types are well suited for cases where you have a priori knowledge that

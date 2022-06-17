@@ -14,8 +14,9 @@ library zx;
 // zx_status_t and errors.h.
 alias status = int32;
 
-// zx_time_t: absolute time in nanoseconds (generally with respect to the
-// monotonic clock).
+// zx_time_t: absolute monotonic time in nanoseconds, from a device-specific
+// timebase defined here:
+// https://fuchsia.dev/fuchsia-src/concepts/kernel/time/monotonic.md
 alias time = int64;
 
 // zx_duration_t: a duration in nanoseconds.

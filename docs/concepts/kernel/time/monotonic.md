@@ -11,7 +11,7 @@ is always available and it always increases continuously and monotonically.
 Monotonic time is locked to the frequency of the underlying hardware oscillator
 and does not attempt to correct for any errors in that oscillator.
 
-Since monotonic time counts from power on it, is only meaningful in the context
+Since monotonic time counts from power on, it is only meaningful in the context
 of a single power cycle on a single Fuchsia device.
 
 Components may read monotonic time using
