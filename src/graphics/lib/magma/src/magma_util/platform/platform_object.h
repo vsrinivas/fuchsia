@@ -21,6 +21,9 @@ class PlatformObject {
   // memory object.
   virtual uint64_t id() const = 0;
 
+  // Returns an ID that uniquely identifies the underlying object.
+  virtual uint64_t global_id() const = 0;
+
   // on success, duplicate of the underlying handle which is owned by the caller
   virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 

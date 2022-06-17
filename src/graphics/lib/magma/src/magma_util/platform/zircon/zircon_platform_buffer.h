@@ -61,6 +61,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   uint64_t koid() const { return koid_; }
 
   uint64_t id() const override { return local_id_ ? local_id_ : koid_; }
+  uint64_t global_id() const override { return koid_; }
 
   zx_handle_t handle() const { return vmo_.get(); }
 

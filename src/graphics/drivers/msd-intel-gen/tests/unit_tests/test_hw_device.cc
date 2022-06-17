@@ -450,6 +450,7 @@ class TestMsdIntelDevice : public testing::Test {
     void set_local_id(uint64_t id) override {}
 
     uint64_t id() const override { return 1; }
+    uint64_t global_id() const override { return 1; }
 
     bool duplicate_handle(uint32_t* handle_out) const override { return kEnableDeviceThread; }
 

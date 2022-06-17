@@ -97,7 +97,10 @@ magma::Status MagmaSystemContext::ExecuteImmediateCommands(uint64_t commands_siz
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "semaphore id not found 0x%" PRIx64,
                       semaphore_ids[i]);
     msd_semaphores[i] = semaphore->msd_semaphore();
-    TRACE_FLOW_END("gfx", "semaphore", semaphore_ids[i]);
+    // This is used to connect with command submission in
+    // src/ui/scenic/lib/gfx/engine/engine.cc and
+    // src/ui/scenic/lib/flatland/renderer/vk_renderer.cc, so it uses the koid.
+    TRACE_FLOW_END("gfx", "semaphore", semaphore->platform_semaphore()->global_id());
   }
   magma_status_t result = msd_context_execute_immediate_commands(
       msd_ctx(), commands_size, commands, semaphore_count, msd_semaphores.data());
