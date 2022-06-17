@@ -387,7 +387,9 @@ impl<'a> DefaultLogFormatter<'a> {
 
         let mut msg =
             symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
-        let kvps = data.payload_keys_strings().collect::<Vec<_>>().join(" ");
+        let mut kvps = data.payload_keys_strings().collect::<Vec<_>>();
+        kvps.sort();
+        let kvps = kvps.join(" ");
         if !kvps.is_empty() {
             msg.push_str(" ");
         }
@@ -1937,11 +1939,11 @@ mod test {
                         &options,
                         logs_data_builder()
                             .set_message("my message")
-                            .add_key(LogsProperty::Int(LogsField::Other("foo".to_string()), 2i64))
                             .add_key(LogsProperty::String(
                                 LogsField::Other("bar".to_string()),
                                 "baz".to_string()
                             ))
+                            .add_key(LogsProperty::Int(LogsField::Other("foo".to_string()), 2i64))
                             .build(),
                         None
                     ),
