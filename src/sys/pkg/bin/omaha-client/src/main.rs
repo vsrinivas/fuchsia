@@ -57,7 +57,6 @@ async fn main_inner() -> Result<(), Error> {
             .await
             .expect("Unable to read necessary client configuration");
 
-    info!("Omaha app set: {:?}", app_set.get_apps());
     info!("Update config: {:?}", platform_config);
 
     let futures = FuturesUnordered::new();

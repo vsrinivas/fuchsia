@@ -281,10 +281,13 @@ where
             cup_handler,
         } = self;
 
-        let ((), context) = {
+        let context = {
             let storage = storage.lock().await;
             let mut app_set = app_set.lock().await;
-            futures::join!(app_set.load(&*storage), update_check::Context::load(&*storage))
+            let ((), context) =
+                futures::join!(app_set.load(&*storage), update_check::Context::load(&*storage));
+            log::info!("Omaha app set: {:?}", app_set.get_apps());
+            context
         };
 
         let time_source = policy_engine.time_source().clone();
