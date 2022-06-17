@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    core::convert::TryInto,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
 };
@@ -40,131 +39,9 @@ pub fn utc_clock_transformation() -> Option<zx::ClockTransformation> {
     UTC_CLOCK.get().and_then(get_transformation)
 }
 
-/// [Clock transformations](https://fuchsia.dev/fuchsia-src/concepts/kernel/clock_transformations)
-/// can be applied to convert a time from a reference time to a synthetic time. The inverse
-/// transformation can be applied to convert a synthetic time back to the reference time.
-pub trait TransformClock {
-    /// Apply the transformation from reference time to synthetic time.
-    fn apply(self, xform: &zx::ClockTransformation) -> Self;
-    /// Apply the inverse transformation from synthetic time to reference time.
-    fn apply_inverse(self, xform: &zx::ClockTransformation) -> Self;
-}
-
-/// Apply affine transformation to convert the reference time "r" to the synthetic time
-/// "c". All values are widened to i128 before calculations and the end result is converted back to
-/// a i64. If "c" is a larger number than would fit in an i64, the result saturates when cast to
-/// i64.
-fn transform_clock(r: i64, r_offset: i64, c_offset: i64, r_rate: u32, c_rate: u32) -> i64 {
-    let r = r as i128;
-    let r_offset = r_offset as i128;
-    let c_offset = c_offset as i128;
-    let r_rate = r_rate as i128;
-    let c_rate = c_rate as i128;
-    let c = (((r - r_offset) * c_rate) / r_rate) + c_offset;
-    c.try_into().unwrap_or_else(|_| if c.is_positive() { i64::MAX } else { i64::MIN })
-}
-
-impl TransformClock for zx::Time {
-    fn apply(self, xform: &zx::ClockTransformation) -> Self {
-        let c = transform_clock(
-            self.into_nanos(),
-            xform.reference_offset,
-            xform.synthetic_offset,
-            xform.rate.reference_ticks,
-            xform.rate.synthetic_ticks,
-        );
-
-        zx::Time::from_nanos(c)
-    }
-
-    fn apply_inverse(self, xform: &zx::ClockTransformation) -> Self {
-        let r = transform_clock(
-            self.into_nanos(),
-            xform.synthetic_offset,
-            xform.reference_offset,
-            xform.rate.synthetic_ticks,
-            xform.rate.reference_ticks,
-        );
-
-        zx::Time::from_nanos(r as i64)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {super::*, fuchsia_zircon::HandleBased};
-
-    #[test]
-    fn clock_identity_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO;
-        // Identity clock transformation
-        let xform = zx::ClockTransformation {
-            reference_offset: 0,
-            synthetic_offset: 0,
-            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
-        };
-
-        // Transformation roundtrip should be equivalent with the identity transformation.
-        assert_eq!(t_0, t_0.apply(&xform.clone()).apply_inverse(&xform));
-    }
-
-    #[test]
-    fn clock_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO;
-        // Arbitrary clock transformation
-        let xform = zx::ClockTransformation {
-            reference_offset: 196980085208,
-            synthetic_offset: 1616900096031887801,
-            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 999980, reference_ticks: 1000000 },
-        };
-
-        // Transformation roundtrip should be equivalent modulo rounding error.
-        let roundtrip_diff = t_0 - t_0.apply(&xform.clone()).apply_inverse(&xform);
-        assert!(roundtrip_diff.into_nanos().abs() <= 1);
-    }
-
-    #[test]
-    fn clock_trailing_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO;
-        // Arbitrary clock transformation where the synthetic clock is trailing behind the
-        // reference clock.
-        let xform = zx::ClockTransformation {
-            reference_offset: 1616900096031887801,
-            synthetic_offset: 196980085208,
-            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1000000, reference_ticks: 999980 },
-        };
-
-        // Transformation roundtrip should be equivalent modulo rounding error.
-        let roundtrip_diff = t_0 - t_0.apply(&xform.clone()).apply_inverse(&xform);
-        assert!(roundtrip_diff.into_nanos().abs() <= 1);
-    }
-
-    #[test]
-    fn clock_saturating_transformations() {
-        let t_0 = zx::Time::from_nanos(i64::MAX);
-        // Clock transformation which will positively overflow t_0
-        let xform = zx::ClockTransformation {
-            reference_offset: 0,
-            synthetic_offset: 1,
-            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
-        };
-
-        // Applying the transformation will lead to saturation
-        let time = t_0.apply(&xform.clone()).into_nanos();
-        assert_eq!(time, i64::MAX);
-
-        let t_0 = zx::Time::from_nanos(i64::MIN);
-        // Clock transformation which will negatively overflow t_0
-        let xform = zx::ClockTransformation {
-            reference_offset: 1,
-            synthetic_offset: 0,
-            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
-        };
-
-        // Applying the transformation will lead to saturation
-        let time = t_0.apply(&xform.clone()).into_nanos();
-        assert_eq!(time, i64::MIN);
-    }
 
     #[test]
     fn set_and_get_clock() {

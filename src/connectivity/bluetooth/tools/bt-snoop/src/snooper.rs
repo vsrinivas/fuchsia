@@ -19,10 +19,7 @@ use {
     },
 };
 
-use crate::{
-    bounded_queue::{CreatedAt, SizeOf},
-    clock::TransformClock,
-};
+use crate::bounded_queue::{CreatedAt, SizeOf};
 
 /// A wrapper type for the bitmask representing flags in the snoop channel protocol.
 struct HciFlags(u8);
@@ -78,7 +75,7 @@ impl SnoopPacket {
 
     pub fn timestamp_parts(&self, clock_xform: Option<&zx::ClockTransformation>) -> (i64, i32) {
         let nanos = if let Some(xform) = clock_xform {
-            self.timestamp.apply(xform)
+            xform.apply(self.timestamp)
         } else {
             self.timestamp
         }

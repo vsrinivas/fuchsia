@@ -60,64 +60,6 @@ const MAX_WAIT_BREAK_ON_START: Duration = Duration::from_millis(300);
 // TODO(fxbug.dev/43934): For now, set the value to 50us to avoid delaying performance-critical
 // timers in Scenic and other system services.
 const TIMER_SLACK_DURATION: zx::Duration = zx::Duration::from_micros(50);
-/// [Clock transformations](https://fuchsia.dev/fuchsia-src/concepts/kernel/clock_transformations)
-/// can be applied to convert a time from a reference time to a synthetic time.
-pub trait TransformClock {
-    /// Apply the transformation from reference time to synthetic time.
-    fn apply(&self, monotonic_time: i64) -> i64;
-    /// Apply the inverse transformation from synthetic time to reference time.
-    fn apply_inverse(&self, synthetic_time: i64) -> i64;
-}
-
-/// Apply affine transformation to convert the reference time to the synthetic time.
-/// All values are widened to i128 before calculations and the end result is converted back to
-/// a i64. If "synthetic_time" is a larger number than would fit in an i64, the result saturates when cast to
-/// i64.
-fn transform_clock(
-    reference_time: i64,
-    reference_offset: i64,
-    synthetic_offset: i64,
-    reference_ticks: u32,
-    synthetic_ticks: u32,
-) -> i64 {
-    let reference_time = reference_time as i128;
-    let reference_offset = reference_offset as i128;
-    let synthetic_offset = synthetic_offset as i128;
-    let reference_ticks = reference_ticks as i128;
-    let synthetic_ticks = synthetic_ticks as i128;
-    let synthetic_time = (((reference_time - reference_offset) * synthetic_ticks)
-        / reference_ticks)
-        + synthetic_offset;
-    synthetic_time.try_into().unwrap_or_else(|_| {
-        if synthetic_time.is_positive() {
-            i64::MAX
-        } else {
-            i64::MIN
-        }
-    })
-}
-
-impl TransformClock for zx::ClockTransformation {
-    fn apply(&self, reference_time: i64) -> i64 {
-        transform_clock(
-            reference_time,
-            self.reference_offset,
-            self.synthetic_offset,
-            self.rate.reference_ticks,
-            self.rate.synthetic_ticks,
-        )
-    }
-
-    fn apply_inverse(&self, synthetic_time: i64) -> i64 {
-        transform_clock(
-            synthetic_time,
-            self.synthetic_offset,
-            self.reference_offset,
-            self.rate.synthetic_ticks,
-            self.rate.reference_ticks,
-        )
-    }
-}
 
 // Builds and serves the runtime directory
 /// Runs components with ELF binaries.
@@ -502,7 +444,8 @@ impl ElfRunner {
         runtime_dir.add_process_start_time(process_start_time);
 
         if let Some(utc_clock_xform) = utc_clock_xform {
-            let utc_timestamp = utc_clock_xform.apply(process_start_time);
+            let utc_timestamp =
+                utc_clock_xform.apply(Time::from_nanos(process_start_time)).into_nanos();
             let seconds = (utc_timestamp / 1_000_000_000) as i64;
             let nanos = (utc_timestamp % 1_000_000_000) as u32;
             let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(seconds, nanos), Utc);
@@ -891,7 +834,7 @@ mod tests {
 
     #[fuchsia::test]
     fn clock_identity_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO.into_nanos();
+        let t_0 = zx::Time::ZERO;
         // Identity clock transformation
         let xform = zx::ClockTransformation {
             reference_offset: 0,
@@ -908,7 +851,7 @@ mod tests {
 
     #[fuchsia::test]
     fn clock_trivial_transformation() {
-        let t_0 = zx::Time::ZERO.into_nanos();
+        let t_0 = zx::Time::ZERO;
         // Identity clock transformation
         let xform = zx::ClockTransformation {
             reference_offset: 3,
@@ -919,7 +862,7 @@ mod tests {
         let utc_time = xform.apply(t_0);
         let monotonic_time = xform.apply_inverse(utc_time);
         // Verify that the math is correct.
-        assert_eq!(3 * (t_0 - 3) + 2, utc_time);
+        assert_eq!(3 * (t_0.into_nanos() - 3) + 2, utc_time.into_nanos());
 
         // Transformation roundtrip should be equivalent.
         assert_eq!(t_0, monotonic_time);
@@ -927,7 +870,7 @@ mod tests {
 
     #[fuchsia::test]
     fn clock_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO.into_nanos();
+        let t_0 = zx::Time::ZERO;
         // Arbitrary clock transformation
         let xform = zx::ClockTransformation {
             reference_offset: 196980085208,
@@ -939,13 +882,13 @@ mod tests {
         let utc_time = xform.apply(t_0);
         let monotonic_time = xform.apply_inverse(utc_time);
 
-        let roundtrip_diff = (t_0 - monotonic_time).abs();
+        let roundtrip_diff = (t_0.into_nanos() - monotonic_time.into_nanos()).abs();
         assert!(roundtrip_diff <= 1);
     }
 
     #[fuchsia::test]
     fn clock_trailing_transformation_roundtrip() {
-        let t_0 = zx::Time::ZERO.into_nanos();
+        let t_0 = zx::Time::ZERO;
         // Arbitrary clock transformation where the synthetic clock is trailing behind the
         // reference clock.
         let xform = zx::ClockTransformation {
@@ -958,13 +901,13 @@ mod tests {
         let utc_time = xform.apply(t_0);
         let monotonic_time = xform.apply_inverse(utc_time);
 
-        let roundtrip_diff = (t_0 - monotonic_time).abs();
+        let roundtrip_diff = (t_0.into_nanos() - monotonic_time.into_nanos()).abs();
         assert!(roundtrip_diff <= 1);
     }
 
     #[fuchsia::test]
     fn clock_saturating_transformations() {
-        let t_0 = i64::MAX;
+        let t_0 = Time::from_nanos(i64::MAX);
         // Clock transformation which will positively overflow t_0
         let xform = zx::ClockTransformation {
             reference_offset: 0,
@@ -974,9 +917,9 @@ mod tests {
 
         // Applying the transformation will lead to saturation
         let utc_time = xform.apply(t_0);
-        assert_eq!(utc_time, i64::MAX);
+        assert_eq!(utc_time.into_nanos(), i64::MAX);
 
-        let t_0 = i64::MIN;
+        let t_0 = Time::from_nanos(i64::MIN);
         // Clock transformation which will negatively overflow t_0
         let xform = zx::ClockTransformation {
             reference_offset: 1,
@@ -986,7 +929,7 @@ mod tests {
 
         // Applying the transformation will lead to saturation
         let utc_time = xform.apply(t_0);
-        assert_eq!(utc_time, i64::MIN);
+        assert_eq!(utc_time.into_nanos(), i64::MIN);
     }
 
     #[fuchsia::test]
