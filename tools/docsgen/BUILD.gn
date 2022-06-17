@@ -302,12 +302,10 @@ build_api_module("generated_docs") {
   data_keys = [ "generated_docset" ]
   deps = [
     ":dart_sdk_docs($host_toolchain)",
-
-    #":invoke_clidoc($host_toolchain)",
+    ":invoke_clidoc($host_toolchain)",
     ":invoke_cmldoc($host_toolchain)",
-
-    #":invoke_fidldoc($host_toolchain)",
-    #":invoke_helpdoc($host_toolchain)",
+    ":invoke_fidldoc($host_toolchain)",
+    ":invoke_helpdoc($host_toolchain)",
     "//bundles:create_all_drivers_doc",
   ]
 }
