@@ -15,6 +15,7 @@ use {
     fidl_fuchsia_device as fdevice, fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx, AsHandleRef as _, HandleBased as _},
     std::{
+        convert::TryInto as _,
         ffi::{CStr, CString, NulError},
         fs::File,
         marker::PhantomData,
@@ -340,6 +341,20 @@ pub fn spawn(
 #[repr(transparent)]
 pub struct SpawnAction<'a>(fdio_sys::fdio_spawn_action_t, PhantomData<&'a ()>);
 
+// TODO(https://github.com/rust-lang/rust-bindgen/issues/2000): bindgen
+// generates really bad names for these.
+mod fdio_spawn_action {
+    #![allow(dead_code)]
+    #![allow(non_camel_case_types)]
+
+    pub(super) type action_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1;
+    pub(super) type fd_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1__bindgen_ty_1;
+    pub(super) type ns_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1__bindgen_ty_2;
+    pub(super) type h_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1__bindgen_ty_3;
+    pub(super) type name_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1__bindgen_ty_4;
+    pub(super) type dir_t = super::fdio_sys::fdio_spawn_action__bindgen_ty_1__bindgen_ty_5;
+}
+
 impl<'a> SpawnAction<'a> {
     pub const USE_FOR_STDIO: i32 = fdio_sys::FDIO_FLAG_USE_FOR_STDIO as i32;
 
@@ -352,12 +367,9 @@ impl<'a> SpawnAction<'a> {
         // 'a lifetime.
         Self(
             fdio_sys::fdio_spawn_action_t {
-                action_tag: fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD,
-                action_value: fdio_sys::fdio_spawn_action_union_t {
-                    fd: fdio_sys::fdio_spawn_action_fd_t {
-                        local_fd: local_fd.as_raw_fd(),
-                        target_fd,
-                    },
+                action: fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD,
+                __bindgen_anon_1: fdio_spawn_action::action_t {
+                    fd: fdio_spawn_action::fd_t { local_fd: local_fd.as_raw_fd(), target_fd },
                 },
             },
             PhantomData,
@@ -373,12 +385,9 @@ impl<'a> SpawnAction<'a> {
         // When the action is executed, the fd will be transferred.
         Self(
             fdio_sys::fdio_spawn_action_t {
-                action_tag: fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD,
-                action_value: fdio_sys::fdio_spawn_action_union_t {
-                    fd: fdio_sys::fdio_spawn_action_fd_t {
-                        local_fd: local_fd.into_raw_fd(),
-                        target_fd,
-                    },
+                action: fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD,
+                __bindgen_anon_1: fdio_spawn_action::action_t {
+                    fd: fdio_spawn_action::fd_t { local_fd: local_fd.into_raw_fd(), target_fd },
                 },
             },
             PhantomData,
@@ -394,9 +403,9 @@ impl<'a> SpawnAction<'a> {
         // The prefix string must stay valid through the 'a lifetime.
         Self(
             fdio_sys::fdio_spawn_action_t {
-                action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-                action_value: fdio_sys::fdio_spawn_action_union_t {
-                    ns: fdio_sys::fdio_spawn_action_ns_t {
+                action: fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                __bindgen_anon_1: fdio_spawn_action::action_t {
+                    ns: fdio_spawn_action::ns_t {
                         prefix: prefix.as_ptr(),
                         handle: handle.into_raw(),
                     },
@@ -412,12 +421,9 @@ impl<'a> SpawnAction<'a> {
         // The prefix string must stay valid through the 'a lifetime.
         Self(
             fdio_sys::fdio_spawn_action_t {
-                action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
-                action_value: fdio_sys::fdio_spawn_action_union_t {
-                    h: fdio_sys::fdio_spawn_action_h_t {
-                        id: kind.as_raw(),
-                        handle: handle.into_raw(),
-                    },
+                action: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
+                __bindgen_anon_1: fdio_spawn_action::action_t {
+                    h: fdio_spawn_action::h_t { id: kind.as_raw(), handle: handle.into_raw() },
                 },
             },
             PhantomData,
@@ -429,9 +435,9 @@ impl<'a> SpawnAction<'a> {
         // Safety: the `name` pointer must be valid at least as long as `Self`.
         Self(
             fdio_sys::fdio_spawn_action_t {
-                action_tag: fdio_sys::FDIO_SPAWN_ACTION_SET_NAME,
-                action_value: fdio_sys::fdio_spawn_action_union_t {
-                    name: fdio_sys::fdio_spawn_action_name_t { data: name.as_ptr() },
+                action: fdio_sys::FDIO_SPAWN_ACTION_SET_NAME,
+                __bindgen_anon_1: fdio_spawn_action::action_t {
+                    name: fdio_spawn_action::name_t { data: name.as_ptr() },
                 },
             },
             PhantomData,
@@ -439,7 +445,8 @@ impl<'a> SpawnAction<'a> {
     }
 
     fn is_null(&self) -> bool {
-        self.0.action_tag == 0
+        let Self(fdio_sys::fdio_spawn_action_t { action, __bindgen_anon_1: _ }, PhantomData) = self;
+        *action == 0
     }
 
     /// Nullifies the action to prevent the inner contents from being dropped.
@@ -452,7 +459,8 @@ impl<'a> SpawnAction<'a> {
                 && (fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE != 0)
                 && (fdio_sys::FDIO_SPAWN_ACTION_SET_NAME != 0)
         );
-        self.0.action_tag = 0;
+        let Self(fdio_sys::fdio_spawn_action_t { action, __bindgen_anon_1: _ }, PhantomData) = self;
+        *action = 0;
     }
 }
 
@@ -465,14 +473,14 @@ fn spawn_with_actions(
     environ: Option<&[&CStr]>,
     actions: &mut [SpawnAction<'_>],
     spawn_fn: impl FnOnce(
-        zx::sys::zx_handle_t,                   // job
-        u32,                                    // flags
-        *const *const raw::c_char,              // argv
-        *const *const raw::c_char,              // environ
-        usize,                                  // action_count
-        *const fdio_sys::fdio_spawn_action_t,   // actions
-        *mut zx::sys::zx_handle_t,              // process_out,
-        *mut [raw::c_char; ERR_MSG_MAX_LENGTH], // err_msg_out
+        zx::sys::zx_handle_t,                 // job
+        u32,                                  // flags
+        *const *const raw::c_char,            // argv
+        *const *const raw::c_char,            // environ
+        u64,                                  // action_count
+        *const fdio_sys::fdio_spawn_action_t, // actions
+        *mut zx::sys::zx_handle_t,            // process_out,
+        *mut raw::c_char,                     // err_msg_out
     ) -> zx::sys::zx_status_t,
 ) -> Result<zx::Process, (zx::Status, String)> {
     let job = job.raw_handle();
@@ -490,18 +498,19 @@ fn spawn_with_actions(
 
     let status = {
         let environ = environ.as_ref().map_or_else(std::ptr::null, Vec::as_ptr);
-        let process = process.as_mut_ptr();
-        let err_msg = err_msg.as_mut_ptr();
-        spawn_fn(
-            job,
-            flags,
-            argv.as_ptr(),
-            environ,
-            actions.len(),
-            actions.as_ptr() as _,
-            process,
-            err_msg,
-        )
+        match actions.len().try_into() {
+            Ok(action_count) => spawn_fn(
+                job,
+                flags,
+                argv.as_ptr(),
+                environ,
+                action_count,
+                actions.as_ptr() as _,
+                process.as_mut_ptr(),
+                err_msg.as_mut_ptr() as _,
+            ),
+            Err(std::num::TryFromIntError { .. }) => zx::Status::INVALID_ARGS.into_raw(),
+        }
     };
 
     // Statically verify this hasn't been moved out of during the call above;
