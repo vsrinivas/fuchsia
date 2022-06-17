@@ -30,6 +30,7 @@ struct AvdtpFacadeInner {
 
 #[derive(Debug)]
 pub struct AvdtpFacade {
+    initialized: RwLock<bool>,
     inner: RwLock<AvdtpFacadeInner>,
 }
 
@@ -40,6 +41,7 @@ pub struct AvdtpFacade {
 impl AvdtpFacade {
     pub fn new() -> AvdtpFacade {
         AvdtpFacade {
+            initialized: RwLock::new(false),
             inner: RwLock::new(AvdtpFacadeInner {
                 avdtp_service_proxy: None,
                 peer_map: Arc::new(RwLock::new(HashMap::new())),
@@ -103,6 +105,11 @@ impl AvdtpFacade {
         &self,
         initiator_delay: Option<String>,
     ) -> Result<(), Error> {
+        if *self.initialized.read() {
+            return Ok(());
+        }
+        *self.initialized.write() = true;
+
         let tag = "AvdtpFacade::init_avdtp_service_proxy";
         self.inner.write().avdtp_service_proxy =
             Some(self.create_avdtp_service_proxy(initiator_delay).await?);

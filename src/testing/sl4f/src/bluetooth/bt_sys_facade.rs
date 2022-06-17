@@ -69,6 +69,7 @@ struct InnerBluetoothSysFacade {
 
 #[derive(Debug)]
 pub struct BluetoothSysFacade {
+    initialized: RwLock<bool>,
     inner: RwLock<InnerBluetoothSysFacade>,
 }
 
@@ -78,6 +79,7 @@ pub struct BluetoothSysFacade {
 impl BluetoothSysFacade {
     pub fn new() -> BluetoothSysFacade {
         BluetoothSysFacade {
+            initialized: RwLock::new(false),
             inner: RwLock::new(InnerBluetoothSysFacade {
                 access_proxy: None,
                 config_proxy: None,
@@ -94,6 +96,11 @@ impl BluetoothSysFacade {
     }
 
     pub fn init_proxies(&self) -> Result<(), Error> {
+        if *self.initialized.read() {
+            return Ok(());
+        }
+        *self.initialized.write() = true;
+
         let tag = "BluetoothSysFacade::init_proxies";
         let mut inner = self.inner.write();
         let access_proxy = match inner.access_proxy.clone() {
