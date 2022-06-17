@@ -211,7 +211,7 @@ TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
   {
     auto& state = device_state_[slot_id - 1];
     fbl::AutoLock _(&state.transaction_lock());
-    if (state.IsDisconnecting()) {
+    if (!state.IsValid()) {
       return fpromise::make_result_promise(
                  fpromise::result<TRB*, zx_status_t>(fpromise::error(ZX_OK)))
           .box();
@@ -1404,6 +1404,10 @@ zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
   }
   bool success = false;
   sync_completion_t event;
+  {
+    fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
+    device_state_[slot - 1].Disconnect();
+  }
   for (size_t i = 0; i < 32; i++) {
     fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
     {

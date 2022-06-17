@@ -213,6 +213,13 @@ class EventRingHarness : public zxtest::Test {
 
   bool HasCommand() { return !commands_.is_empty(); }
 
+  void InitSlot(uint8_t i) {
+    // Enable SlotID i for testing with arbitrary port 1.
+    auto& state = hci_.GetDeviceState()[i - 1];
+    fbl::AutoLock _(&state.transaction_lock());
+    state.SetDeviceInformation(i, 1, std::nullopt);
+  }
+
  private:
   std::optional<Request> pending_req_;
   std::optional<fit::function<void(usb_xhci::TRB*, size_t*, usb_xhci::TRB**, size_t)>>
@@ -381,6 +388,7 @@ zx_status_t TransferRing::CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* con
 }
 
 TEST_F(EventRingHarness, ShortTransferTest) {
+  InitSlot(1);
   TRB* start = trb();
   TRB trb;
   trb.ptr = kFakeTrb;
@@ -430,6 +438,7 @@ TEST_F(EventRingHarness, ShortTransferTest) {
 }
 
 TEST_F(EventRingHarness, NormalStall) {
+  InitSlot(1);
   TRB* start = trb();
   TRB trb;
   trb.ptr = kFakeTrb;
@@ -458,6 +467,7 @@ TEST_F(EventRingHarness, NormalStall) {
 }
 
 TEST_F(EventRingHarness, BadHubStallOnDtDeviceQualifier) {
+  InitSlot(1);
   TRB* start = trb();
   TRB trb;
   trb.ptr = kFakeTrb;

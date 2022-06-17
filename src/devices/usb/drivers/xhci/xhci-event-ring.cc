@@ -557,7 +557,7 @@ zx_status_t EventRing::HandleIRQ() {
           auto completion = static_cast<TransferEvent*>(erdp_virt_);
           auto state = &hci_->GetDeviceState()[completion->SlotID() - 1];
           fbl::AutoLock l(&state->transaction_lock());
-          if (state->IsDisconnecting()) {
+          if (!state->IsValid()) {
             break;
           }
           std::unique_ptr<TRBContext> context;
