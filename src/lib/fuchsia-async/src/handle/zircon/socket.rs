@@ -104,6 +104,12 @@ impl Socket {
         self.handle
     }
 
+    /// Returns true if the socket currently has a closed signal set.
+    pub fn is_closed(&self) -> bool {
+        let signals = zx::Signals::from_bits_truncate(self.receiver.signals.load(Ordering::SeqCst));
+        signals.contains(zx::Signals::OBJECT_PEER_CLOSED)
+    }
+
     /// Tests if the resource currently has either the provided `signal`
     /// or the OBJECT_PEER_CLOSED signal set.
     ///
@@ -125,6 +131,15 @@ impl Socket {
         }
     }
 
+    /// Clear the socket readable signal, and query it again. Can be used to ensure that at least
+    /// one poll_read_task invoked after this has an accurate signal.
+    ///
+    /// Note that this will result in extra traffic on the signal port. Most users should just
+    /// allow Read to fail.
+    pub fn reacquire_read_signal(&self) -> Result<(), zx::Status> {
+        self.reacquire_signal(Signals::SOCKET_READABLE)
+    }
+
     /// Test whether this socket is ready to be read or not.
     ///
     /// If the socket is *not* readable then the current task is scheduled to
@@ -135,6 +150,15 @@ impl Socket {
     /// Returns `true` if the CLOSED signal was set.
     pub fn poll_read_task(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
         self.poll_signal_or_closed(cx, &self.receiver.read_task, Signals::SOCKET_READABLE)
+    }
+
+    /// Clear the socket writable signal, and query it again. Can be used to ensure that at least
+    /// one poll_write_task invoked after this has an accurate signal.
+    ///
+    /// Note that this will result in extra traffic on the signal port. Most users should just
+    /// allow Write to fail.
+    pub fn reacquire_write_signal(&self) -> Result<(), zx::Status> {
+        self.reacquire_signal(Signals::SOCKET_WRITABLE)
     }
 
     /// Test whether this socket is ready to be written to or not.
@@ -188,6 +212,21 @@ impl Socket {
     /// from the output of `poll_write`.
     pub fn need_write(&self, cx: &mut Context<'_>, clear_closed: bool) -> Result<(), zx::Status> {
         self.need_signal(cx, &self.receiver.write_task, Signals::SOCKET_WRITABLE, clear_closed)
+    }
+
+    // Clears a signal, and schedules a packet requesting an updated signal. Does nothing if
+    // there is already a pending packet querying that signal.
+    fn reacquire_signal(&self, signal: zx::Signals) -> Result<(), zx::Status> {
+        let old = zx::Signals::from_bits_truncate(
+            self.receiver.signals.fetch_and(!signal.bits(), Ordering::SeqCst),
+        );
+
+        // If false, this was already scheduled and fresh signals are already being queried.
+        if old.contains(signal) {
+            self.schedule_packet(signal)
+        } else {
+            Ok(())
+        }
     }
 
     fn schedule_packet(&self, signals: Signals) -> Result<(), zx::Status> {
@@ -371,12 +410,16 @@ impl Stream for DatagramStream<&Socket> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{TestExecutor, Time, TimeoutExt, Timer};
-    use fuchsia_zircon::prelude::*;
-    use futures::future::join;
-    use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
-    use futures::stream::TryStreamExt;
+    use {
+        super::*,
+        crate::{TestExecutor, Time, TimeoutExt, Timer},
+        fuchsia_zircon::prelude::*,
+        futures::{
+            future::join,
+            io::{AsyncReadExt as _, AsyncWriteExt as _},
+            stream::TryStreamExt,
+        },
+    };
 
     #[test]
     fn can_read_write() {
@@ -465,5 +508,82 @@ mod tests {
         };
 
         exec.run_singlethreaded(stream_read_fut);
+    }
+
+    #[test]
+    fn peer_closed_signal_raised() {
+        let mut executor = TestExecutor::new().expect("failed to create exexcutor");
+
+        let (s1, s2) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket stream");
+        let async_s2 = Socket::from_socket(s2).expect("failed to create async socket");
+
+        drop(s1);
+
+        // Dropping s1 raises a closed signal on s2 when the executor next polls the signal port.
+        let mut rx_fut = poll_fn(|cx| async_s2.poll_read_task(cx));
+        if let Poll::Ready(Ok(closed)) = executor.run_until_stalled(&mut rx_fut) {
+            assert!(closed);
+        } else {
+            panic!("Expected future to be ready and Ok");
+        }
+        assert!(async_s2.is_closed());
+    }
+
+    #[test]
+    fn reacquiring_read_signal_ensures_freshness() {
+        let mut executor = TestExecutor::new().expect("failed to create exexcutor");
+
+        let (s1, s2) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket stream");
+        let async_s2 = Socket::from_socket(s2).expect("failed to create async socket");
+
+        // The read signal is optimistically set on socket creation, so even though there is
+        // nothing to read poll_read_task returns Ready.
+        let mut rx_fut = poll_fn(|cx| async_s2.poll_read_task(cx));
+        assert!(!executor.run_until_stalled(&mut rx_fut).is_pending());
+
+        // Reacquire the read signal. The socket now knows that the signal is not actually set,
+        // so returns Pending.
+        async_s2.reacquire_read_signal().expect("failed to reacquire read signal");
+        let mut rx_fut = poll_fn(|cx| async_s2.poll_read_task(cx));
+        assert!(executor.run_until_stalled(&mut rx_fut).is_pending());
+
+        assert_eq!(s1.write(b"hello!").expect("failed to write 6 bytes"), 6);
+
+        // After writing to s1, its peer now has an actual read signal and is Ready.
+        assert!(!executor.run_until_stalled(&mut rx_fut).is_pending());
+    }
+
+    #[test]
+    fn reacquiring_write_signal_ensures_freshness() {
+        let mut executor = TestExecutor::new().expect("failed to create exexcutor");
+
+        let (s1, s2) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket stream");
+
+        // Completely fill the transmit buffer. This socket is no longer writable.
+        let socket_info = s2.info().expect("failed to get socket info");
+        let bytes = vec![0u8; socket_info.tx_buf_max];
+        assert_eq!(socket_info.tx_buf_max, s2.write(&bytes).expect("failed to write to socket"));
+
+        let async_s2 = Socket::from_socket(s2).expect("failed to create async rx socket");
+
+        // The write signal is optimistically set on socket creation, so even though it's not
+        // possible to write poll_write_task returns Ready.
+        let mut tx_fut = poll_fn(|cx| async_s2.poll_write_task(cx));
+        assert!(!executor.run_until_stalled(&mut tx_fut).is_pending());
+
+        // Reacquire the write signal. The socket now knows that the signal is not actually set,
+        // so returns Pending.
+        async_s2.reacquire_write_signal().expect("failed to reacquire write signal");
+        let mut tx_fut = poll_fn(|cx| async_s2.poll_write_task(cx));
+        assert!(executor.run_until_stalled(&mut tx_fut).is_pending());
+
+        let mut buffer = [0u8; 5];
+        assert_eq!(s1.read(&mut buffer).expect("failed to read 5 bytes"), 5);
+
+        // After reading from s1, its peer is now able to write and should have a write signal.
+        assert!(!executor.run_until_stalled(&mut tx_fut).is_pending());
     }
 }
