@@ -458,7 +458,7 @@ mod tests {
             let mut last_mutations_cipher_offset = 0;
             let mut cipher_rolled = false;
             let mut i = 0;
-            while !stop.load(Ordering::SeqCst) {
+            loop {
                 // These can fail if with_failure is true.
                 if let Ok(mut transaction) =
                     fs.clone().new_transaction(&[], Options::default()).await
@@ -470,10 +470,14 @@ mod tests {
                         let _ = transaction.commit().await;
                     }
                 }
+                let done = stop.load(Ordering::SeqCst);
                 let cipher_offset =
                     store.mutations_cipher.lock().unwrap().as_ref().unwrap().offset();
                 if cipher_offset < last_mutations_cipher_offset {
                     cipher_rolled = true;
+                }
+                if done {
+                    break;
                 }
                 last_mutations_cipher_offset = cipher_offset;
             }
