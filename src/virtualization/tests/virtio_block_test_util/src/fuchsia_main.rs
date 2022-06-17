@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fdio::{clone_channel, watch_directory, WatchEvent};
-use fidl_fuchsia_hardware_block::BlockSynchronousProxy;
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::{StreamExt as _, TryStreamExt as _};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::vec;
 use structopt::StructOpt;
-use zx::Status;
 
 const BLOCK_CLASS_PATH: &str = "/dev/class/block/";
 
@@ -38,55 +37,61 @@ enum Command {
 // get blanket access to. To achieve this, we walk all the block devices and
 // look up their corresponding topological path to see if it corresponds to the
 // device we're looking for.
-fn get_class_path_from_topological(topological_path: &PathBuf) -> Result<PathBuf, zx::Status> {
-    let mut class_path = PathBuf::new();
-    let watch_callback = |_: WatchEvent, filename: &Path| -> Result<(), Status> {
-        let mut block_path = PathBuf::from(BLOCK_CLASS_PATH);
-        block_path.push(filename);
-        let block_dev = File::open(&block_path).or(Err(zx::Status::IO))?;
-        let topo_path = PathBuf::from(fdio::device_get_topo_path(&block_dev)?);
-        if topo_path == *topological_path {
-            class_path = block_path.to_path_buf();
-            Err(zx::Status::STOP)
-        } else {
-            Ok(())
-        }
-    };
-
+async fn get_class_path_from_topological(
+    topological_path: String,
+) -> Result<PathBuf, anyhow::Error> {
     // Scan current files in the directory and watch for new ones in case we
     // don't find the block device we're looking for. There's a slim possibility
     // a partition may not yet be available when this tool is executed in a
     // test.
-    let block_dir = File::open(BLOCK_CLASS_PATH)?;
-    match watch_directory(&block_dir, zx::sys::ZX_TIME_INFINITE, watch_callback) {
-        zx::Status::STOP => Ok(class_path),
-        _ => Err(zx::Status::NOT_FOUND),
-    }
+    let block_dir = fuchsia_fs::open_directory_in_namespace(
+        BLOCK_CLASS_PATH,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )?;
+    let watcher = fuchsia_vfs_watcher::Watcher::new(block_dir).await?;
+    watcher
+        .try_filter_map(|fuchsia_vfs_watcher::WatchMessage { event, filename }| {
+            futures::future::ready((|| match event {
+                fuchsia_vfs_watcher::WatchEvent::ADD_FILE
+                | fuchsia_vfs_watcher::WatchEvent::EXISTING => {
+                    let block_path = PathBuf::from(BLOCK_CLASS_PATH).join(filename);
+                    let block_dev = File::open(&block_path)?;
+                    let topo_path = fdio::device_get_topo_path(&block_dev)?;
+                    Ok((topo_path == topological_path).then(|| block_path))
+                }
+                _ => Ok(None),
+            })())
+        })
+        .err_into()
+        .next()
+        .await
+        .unwrap_or(Err(zx::Status::NOT_FOUND).map_err(Into::into))
 }
 
-fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, zx::Status> {
+async fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, anyhow::Error> {
     // The filename is in the format pci-<bus>:<device>.<function>. The function
     // is always zero for virtio block devices.
-    let topo_path =
-        PathBuf::from(format!("/dev/pci-{:02}:{:02}.0/virtio-block/block", pci_bus, pci_device));
+    let topo_path = format!("/dev/pci-{:02}:{:02}.0/virtio-block/block", pci_bus, pci_device);
 
-    let class_path = get_class_path_from_topological(&topo_path)?;
+    let class_path = get_class_path_from_topological(topo_path).await?;
     let file = OpenOptions::new().read(true).write(true).open(&class_path)?;
 
     Ok(file)
 }
 
-fn check(block_dev: &File, block_size: u32, block_count: u64) -> Result<(), zx::Status> {
-    let channel = clone_channel(block_dev)?;
-    let device = BlockSynchronousProxy::new(channel);
-    let (status, maybe_block_info) =
-        device.get_info(zx::Time::INFINITE).map_err(|_| zx::Status::IO)?;
-    let block_info = maybe_block_info.ok_or(zx::Status::ok(status))?;
+async fn check(block_dev: &File, block_size: u32, block_count: u64) -> Result<(), anyhow::Error> {
+    let channel = fdio::clone_channel(block_dev)?;
+    let channel = fasync::Channel::from_channel(channel)?;
+    let device = fidl_fuchsia_hardware_block::BlockProxy::new(channel);
+    let (status, maybe_block_info) = device.get_info().await?;
+    let () = zx::Status::ok(status)?;
+    let block_info = maybe_block_info.ok_or(zx::Status::BAD_STATE)?;
     if block_info.block_size == block_size && block_info.block_count == block_count {
         Ok(())
     } else {
         Err(zx::Status::BAD_STATE)
     }
+    .map_err(Into::into)
 }
 
 fn read_block(
@@ -94,14 +99,12 @@ fn read_block(
     block_size: u32,
     offset: u64,
     expected: u8,
-) -> Result<(), zx::Status> {
+) -> Result<(), anyhow::Error> {
     block_dev.seek(SeekFrom::Start(offset * block_size as u64))?;
     let mut data: Vec<u8> = vec![0; block_size as usize];
     block_dev.read_exact(&mut data)?;
-    if !data.iter().all(|&b| b == expected) {
-        return Err(zx::Status::BAD_STATE);
-    }
-    Ok(())
+    if data.iter().all(|&b| b == expected) { Ok(()) } else { Err(zx::Status::BAD_STATE) }
+        .map_err(Into::into)
 }
 
 fn write_block(
@@ -109,7 +112,7 @@ fn write_block(
     block_size: u32,
     offset: u64,
     value: u8,
-) -> Result<(), zx::Status> {
+) -> Result<(), anyhow::Error> {
     block_dev.seek(SeekFrom::Start(offset * block_size as u64))?;
     let data: Vec<u8> = vec![value; block_size as usize];
     block_dev.write_all(&data)?;
@@ -119,11 +122,12 @@ fn write_block(
     Ok(())
 }
 
-fn main() -> Result<(), zx::Status> {
+#[fuchsia::main]
+async fn main() -> Result<(), anyhow::Error> {
     let config = Config::from_args();
-    let mut block_dev = open_block_device(config.pci_bus, config.pci_device)?;
+    let mut block_dev = open_block_device(config.pci_bus, config.pci_device).await?;
     let result = match config.cmd {
-        Command::Check { block_count } => check(&block_dev, config.block_size, block_count),
+        Command::Check { block_count } => check(&block_dev, config.block_size, block_count).await,
         Command::Read { offset, expected } => {
             read_block(&mut block_dev, config.block_size, offset, expected)
         }
@@ -131,8 +135,13 @@ fn main() -> Result<(), zx::Status> {
             write_block(&mut block_dev, config.block_size, offset, value)
         }
     };
-    if result.is_ok() {
-        println!("PASS");
+    match result.as_ref() {
+        Ok(()) => {
+            println!("PASS")
+        }
+        Err(err) => {
+            println!("FAIL: {:#?}", err)
+        }
     }
     result
 }
