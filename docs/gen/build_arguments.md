@@ -871,7 +871,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:178
+From //build/toolchain/rbe.gni:143
 
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
@@ -896,7 +896,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:170
+From //build/toolchain/rbe.gni:135
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1124,36 +1124,6 @@ From //build/images/custom_signing.gni:21
 **Current value (from the default):** `""`
 
 From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/37ddb9eec895e48acfabfff82796ccd0f558bd15/BUILD.gn#22)
-
-### cxx_rbe_check
-Run one of the more expensive checks, intended for CI.
-All of these require cxx_rbe_enable=true.
-
-One of:
-
-  * "none": No additional check.
-
-  * "determinism":
-      Check of determinism of C++ targets by running locally twice
-      and comparing outputs, failing if any differences are found.
-      Even though this check doesn't involve RBE, it uses the same
-      wrapper script, which knows what output files to expect and
-      compare.
-
-      Build outputs that depend on time are discouraged because they
-      impact caching.
-      If your result depends on the current time, this check will
-      definitely fail.  If it depends on only the date, there is still
-      a nonzero chance of failure, if the rerun falls on the next day.
-
-  * "consistency":
-      Check consistency between local and remote C++ compiles,
-      by running both and comparing results.
-
-
-**Current value (from the default):** `"none"`
-
-From //build/toolchain/rbe.gni:119
 
 ### cxx_rbe_enable
 Set to true to enable distributed compilation of C++ using RBE.
@@ -1507,7 +1477,7 @@ This may affect Rust and C++ compiles.
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:127
+From //build/toolchain/rbe.gni:101
 
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
@@ -3825,7 +3795,7 @@ One of {local,remote}:
 
 **Current value (from the default):** `""`
 
-From //build/toolchain/rbe.gni:145
+From //build/toolchain/rbe.gni:110
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -4803,19 +4773,6 @@ git clone "https://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmp
 **Current value (from the default):** `true`
 
 From //src/media/lib/ffmpeg/BUILD.gn:28
-
-### use_reclient_cxx_experimental
-Set to true to distribute C++ compiles remotely using RBE.
-This takes precedence over `use_goma` in //build/toolchain/goma.gni.
-This feature is experimental and will be likely renamed later.
-
-Requires GN args:
-  `enable_rbe = true`
-
-
-**Current value (from the default):** `false`
-
-From //build/toolchain/rbe.gni:136
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
