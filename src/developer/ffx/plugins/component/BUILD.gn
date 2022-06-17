@@ -12,6 +12,7 @@ ffx_plugin("ffx_component") {
     "data:ffx_component_data",
     "destroy:ffx_component_destroy",
     "doctor:ffx_component_doctor",
+    "explore:ffx_component_explore",
     "graph:ffx_component_graph",
     "knock:ffx_knock",
     "list:ffx_component_list",

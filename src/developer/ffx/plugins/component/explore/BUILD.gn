@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../build/ffx_plugin.gni")
+
+ffx_plugin("ffx_component_explore") {
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.dash:fuchsia.dash-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/lib/moniker",
+    "//third_party/rust_crates:termion",
+  ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
+}

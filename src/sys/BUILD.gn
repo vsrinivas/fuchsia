@@ -37,8 +37,7 @@ group("tests") {
     "test_manager:tests",
     "test_runners:tests",
     "time:tests",
-    "tools/log:tests",
-    "tools/stash_ctl:tests",
+    "tools:tests",
     "universe-resolver:tests",
   ]
 }

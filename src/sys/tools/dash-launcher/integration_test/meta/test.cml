@@ -1,0 +1,54 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/dash_launcher_test",
+    },
+    children: [
+        {
+            name: "dash-launcher",
+            url: "#meta/dash_launcher.cm",
+        },
+        {
+            name: "ptysvc",
+            url: "#meta/ptysvc.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.dash.Launcher",
+            from: "#dash-launcher",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#dash-launcher",
+        },
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: "#ptysvc",
+        },
+        {
+            protocol: "fuchsia.hardware.pty.Device",
+            from: "#ptysvc",
+            to: "#dash-launcher",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+            to: "#dash-launcher",
+        },
+    ],
+}

@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.dash;
+
+using zx;
+using fuchsia.hardware.pty;
+
+/// Standard errors for the Launcher protocol
+type LauncherError = strict enum {
+    /// Launcher encountered an unspecified error
+    INTERNAL = 1;
+    /// Moniker could not be parsed by launcher
+    BAD_MONIKER = 2;
+    /// No instance was found matching the moniker
+    INSTANCE_NOT_FOUND = 3;
+    /// Error occurred using fuchsia.sys2.RealmQuery
+    REALM_QUERY = 4;
+    /// Error occurred using fuchsia.process.Launcher
+    PROCESS_LAUNCHER = 5;
+    /// Error loading dash binary
+    DASH_BINARY = 6;
+    /// Error occured involving the PTY
+    PTY = 7;
+};
+
+@discoverable
+protocol Launcher {
+    /// Launch a dash process scoped to the given moniker, forwarding the given stdio PTY.
+    LaunchWithPty(resource struct {
+        /// The moniker of the component that dash should be scoped to
+        moniker string:MAX;
+        pty client_end:fuchsia.hardware.pty.Device;
+    }) -> (struct {}) error LauncherError;
+
+    /// Launch a dash process scoped to the given moniker, forwarding the given stdio socket.
+    ///
+    /// The dash launcher will implicitly create a PTY and transfer bytes between the PTY and
+    /// the socket.
+    LaunchWithSocket(resource struct {
+        /// The moniker of the component that dash should be scoped to
+        moniker string:MAX;
+        socket zx.handle:SOCKET;
+    }) -> (struct {}) error LauncherError;
+};

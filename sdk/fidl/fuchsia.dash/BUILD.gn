@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.dash") {
+  sdk_category = "internal"
+
+  sources = [ "launcher.fidl" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.pty",
+    "//zircon/vdso/zx",
+  ]
+}
