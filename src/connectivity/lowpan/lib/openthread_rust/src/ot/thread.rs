@@ -123,6 +123,10 @@ pub trait Thread {
     fn get_router_info(&self, router_id: u16) -> Result<RouterInfo>;
 
     /// Functional equivalent of
+    /// [`otsys::otThreadGetIp6Counters`](crate::otsys::otThreadGetIp6Counters).
+    fn get_ip6_counters(&self) -> &IpCounters;
+
+    /// Functional equivalent of
     /// [`otsys::otThreadGetNextNeighborInfo`](crate::otsys::otThreadGetNextNeighborInfo).
     // TODO: Determine if the underlying implementation of
     //       this method has undefined behavior when network data
@@ -227,6 +231,10 @@ impl<T: Thread + Boxable> Thread for ot::Box<T> {
 
     fn get_router_info(&self, router_id: u16) -> Result<RouterInfo> {
         self.as_ref().get_router_info(router_id)
+    }
+
+    fn get_ip6_counters(&self) -> &IpCounters {
+        self.as_ref().get_ip6_counters()
     }
 
     fn iter_next_neighbor_info(
@@ -360,6 +368,10 @@ impl Thread for Instance {
         })
         .into_result()?;
         Ok(ret)
+    }
+
+    fn get_ip6_counters(&self) -> &IpCounters {
+        unsafe { IpCounters::ref_from_ot_ptr(otThreadGetIp6Counters(self.as_ot_ptr())) }.unwrap()
     }
 
     fn iter_next_neighbor_info(
