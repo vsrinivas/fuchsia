@@ -267,20 +267,13 @@ impl EpollFileObject {
         current_task: &CurrentTask,
         pending_list: &mut Vec<ReadyObject>,
         max_events: i32,
-        timeout: i32,
+        timeout: zx::Duration,
     ) -> Result<(), Errno> {
         if !pending_list.is_empty() {
             return Ok(());
         }
 
-        let mut wait_deadline = if timeout == -1 {
-            zx::Time::INFINITE
-        } else if timeout >= 0 {
-            let millis = timeout as i64;
-            zx::Time::after(zx::Duration::from_millis(millis))
-        } else {
-            return error!(EINVAL);
-        };
+        let mut wait_deadline = zx::Time::after(timeout);
 
         // The handlers in the waits cause items to be appended
         // to trigger_list. See the closure in `wait_on_file` to see
@@ -312,7 +305,7 @@ impl EpollFileObject {
         &self,
         current_task: &CurrentTask,
         max_events: i32,
-        timeout: i32,
+        timeout: zx::Duration,
     ) -> Result<Vec<EpollEvent>, Errno> {
         // First we start waiting again on wait objects that have
         // previously been triggered.
@@ -470,7 +463,7 @@ mod tests {
             assert_eq!(bytes_written, test_len);
             WRITE_COUNT.fetch_add(bytes_written as u64, Ordering::Relaxed);
         });
-        let events = epoll_file.wait(&current_task, 10, -1).unwrap();
+        let events = epoll_file.wait(&current_task, 10, zx::Duration::INFINITE).unwrap();
         let _ = thread.join();
         assert_eq!(1, events.len());
         let event = &events[0];
@@ -517,7 +510,7 @@ mod tests {
             )
             .unwrap();
 
-        let events = epoll_file.wait(&current_task, 10, -1).unwrap();
+        let events = epoll_file.wait(&current_task, 10, zx::Duration::INFINITE).unwrap();
         assert_eq!(1, events.len());
         let event = &events[0];
         assert!(FdEvents::from(event.events) & FdEvents::POLLIN);
@@ -580,7 +573,7 @@ mod tests {
             let data = [UserBuffer { address: write_mem, length: std::mem::size_of::<u64>() }];
             assert_eq!(event.write(&current_task, &data).unwrap(), std::mem::size_of::<u64>());
 
-            let events = epoll_file.wait(&current_task, 10, 0).unwrap();
+            let events = epoll_file.wait(&current_task, 10, zx::Duration::from_seconds(0)).unwrap();
 
             if do_cancel {
                 assert_eq!(0, events.len());
@@ -620,13 +613,19 @@ mod tests {
         let data = [UserBuffer { address: write_mem, length: std::mem::size_of::<u64>() }];
         assert_eq!(event.write(&current_task, &data).unwrap(), std::mem::size_of::<u64>());
 
-        assert_eq!(epoll_file.wait(&current_task, 10, 0).unwrap().len(), 1);
+        assert_eq!(
+            epoll_file.wait(&current_task, 10, zx::Duration::from_seconds(0)).unwrap().len(),
+            1
+        );
 
         // Remove the thing
         epoll_file.delete(&current_task, &event).unwrap();
 
         // Wait for new notifications
-        assert_eq!(epoll_file.wait(&current_task, 10, 0).unwrap().len(), 0);
+        assert_eq!(
+            epoll_file.wait(&current_task, 10, zx::Duration::from_seconds(0)).unwrap().len(),
+            0
+        );
         // That shouldn't crash
     }
 }

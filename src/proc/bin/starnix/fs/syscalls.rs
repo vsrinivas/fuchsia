@@ -1324,6 +1324,7 @@ pub fn sys_epoll_pwait(
         return error!(EINVAL);
     }
 
+    let timeout = duration_from_poll_timeout(timeout)?;
     let file = current_task.files.get(epfd)?;
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
 
@@ -1357,6 +1358,7 @@ fn poll(
         return error!(EINVAL);
     }
 
+    let timeout = duration_from_poll_timeout(timeout)?;
     let mut pollfds = vec![pollfd::default(); num_fds as usize];
     let file_object = EpollFileObject::new(current_task.kernel());
     let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();

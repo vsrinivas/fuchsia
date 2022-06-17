@@ -46,6 +46,18 @@ pub fn duration_from_timeval(tv: timeval) -> Result<zx::Duration, Errno> {
     return Ok(zx::Duration::from_seconds(tv.tv_sec) + zx::Duration::from_micros(tv.tv_usec));
 }
 
+pub fn duration_from_poll_timeout(timeout_ms: i32) -> Result<zx::Duration, Errno> {
+    if timeout_ms == -1 {
+        return Ok(zx::Duration::INFINITE);
+    }
+
+    if timeout_ms < 0 {
+        return error!(EINVAL);
+    }
+
+    Ok(zx::Duration::from_millis(timeout_ms.into()))
+}
+
 /// Returns a `zx::Time` for the given `timespec`, treating the `timespec` as an absolute point in
 /// time (i.e., not relative to "now").
 pub fn time_from_timespec(ts: timespec) -> Result<zx::Time, Errno> {
