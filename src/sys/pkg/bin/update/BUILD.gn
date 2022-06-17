@@ -64,7 +64,7 @@ renamed_binary("update-binary") {
 fuchsia_package_with_single_component("update-bin") {
   component_name = "update"
   deps = [ ":update-binary" ]
-  manifest = "meta/update.cmx"
+  manifest = "meta/update.cml"
 }
 
 fuchsia_unittest_package("update-lib-tests") {

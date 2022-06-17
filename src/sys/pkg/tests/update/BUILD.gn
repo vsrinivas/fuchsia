@@ -11,12 +11,16 @@ rustc_test("driver") {
   edition = "2021"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
@@ -27,6 +31,7 @@ rustc_test("driver") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pretty_assertions",
   ]
@@ -36,7 +41,7 @@ rustc_test("driver") {
 
 fuchsia_test_component("update-integration-test-component") {
   component_name = "update-integration-test"
-  manifest = "meta/update-integration-test.cmx"
+  manifest = "meta/update-integration-test.cml"
   deps = [ ":driver" ]
 }
 
@@ -48,7 +53,7 @@ renamed_binary("update-binary") {
 
 fuchsia_component("update-component") {
   component_name = "update"
-  manifest = "//src/sys/pkg/bin/update/meta/update.cmx"
+  manifest = "//src/sys/pkg/bin/update/meta/update.cml"
   deps = [ ":update-binary" ]
 }
 
