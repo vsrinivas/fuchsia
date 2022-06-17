@@ -28,8 +28,6 @@ readonly RAW_LINES="// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Allow non-conventional naming for imports from C/C++.
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-// TODO(https://github.com/rust-lang/rust-bindgen/issues/1651): Remove once bindgen is fixed.
-#![cfg_attr(test, allow(deref_nullptr))]
 
 // This attribute ensures proper linkage. Applying it to an empty block to satisfy
 // linking requirements for later blocks is explicitly suggested by
