@@ -6,13 +6,16 @@
 #define SRC_DEVICES_BOARD_LIB_ACPI_MANAGER_H_
 
 #include <lib/zx/status.h>
+#include <zircon/types.h>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/bus-type.h"
 #include "src/devices/board/lib/acpi/device-builder.h"
+#include "src/devices/board/lib/acpi/power-resource.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace async {
@@ -50,6 +53,9 @@ class Manager {
   // For devices: get the next unique BTI ID.
   uint32_t GetNextBtiId() { return next_bti_++; }
 
+  // Used by a device to inform the manager about the existence of a power resource.
+  const PowerResource* AddPowerResource(ACPI_HANDLE power_resource_handle);
+
   // For internal and unit test use only.
   virtual zx_status_t StartFidlLoop() { return ZX_ERR_NOT_SUPPORTED; }
   DeviceBuilder* LookupDevice(ACPI_HANDLE handle);
@@ -75,6 +81,11 @@ class Manager {
   zx_device_t* acpi_root_;
   std::unordered_map<ACPI_HANDLE, DeviceBuilder> devices_;
   std::unordered_map<ACPI_HANDLE, zx_device_t*> zx_devices_;
+
+  std::mutex power_resource_lock_;
+  std::unordered_map<ACPI_HANDLE, PowerResource> power_resources_
+      __TA_GUARDED(power_resource_lock_);
+
   std::vector<ACPI_HANDLE> device_publish_order_;
   std::unordered_map<BusType, uint32_t> next_bus_ids_;
   bool published_pci_bus_ = false;

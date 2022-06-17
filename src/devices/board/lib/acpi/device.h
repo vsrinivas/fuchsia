@@ -9,7 +9,10 @@
 #include <lib/fpromise/promise.h>
 #include <lib/svc/outgoing.h>
 
+#include <cstdint>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -19,6 +22,7 @@
 #include "src/devices/board/lib/acpi/device-args.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/manager.h"
+#include "src/devices/board/lib/acpi/power-resource.h"
 #include "src/devices/board/lib/acpi/resources.h"
 
 #ifndef __Fuchsia__
@@ -75,6 +79,20 @@ struct DeviceIrqResource {
   uint8_t pin;
 };
 
+struct PowerStateTransitionResponse {
+  PowerStateTransitionResponse(zx_status_t status, uint8_t out_state)
+      : status{status}, out_state{out_state} {}
+  zx_status_t status;
+  uint8_t out_state;
+};
+
+struct DevicePowerState {
+  DevicePowerState(uint8_t state, std::unordered_set<uint8_t> supported_s_states)
+      : state{state}, supported_s_states{std::move(supported_s_states)} {}
+  uint8_t state;
+  std::unordered_set<uint8_t> supported_s_states;
+};
+
 class Device;
 using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
@@ -126,6 +144,12 @@ class Device : public DeviceType,
 
   void RemoveNotifyHandler();
 
+  // Returns a map containing information on D states supported by this device.
+  std::unordered_map<uint8_t, DevicePowerState> GetSupportedPowerStates();
+  // Attempts to transition a device to the given D state. Returns the resulting D state of the
+  // device.
+  PowerStateTransitionResponse TransitionToPowerState(uint8_t requested_state);
+
  private:
   struct HandlerCtx {
     Device* device;
@@ -140,6 +164,15 @@ class Device : public DeviceType,
   ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
   // Set up FIDL outgoing directory and start serving fuchsia.hardware.acpi.Device.
   zx::status<zx::channel> PrepareOutgoing();
+
+  struct PowerStateInfo {
+    std::unordered_set<const PowerResource*> power_resources;
+    bool defines_psx_method = false;
+    std::unordered_set<uint8_t> supported_s_states;
+  };
+
+  zx_status_t InitializePowerManagement();
+  zx::status<PowerStateInfo> GetInfoForState(uint8_t d_state);
 
   acpi::Manager* manager_;
   acpi::Acpi* acpi_;
@@ -157,6 +190,8 @@ class Device : public DeviceType,
   std::vector<DeviceIrqResource> irqs_ __TA_GUARDED(lock_);
 
   bool can_use_global_lock_ = false;
+
+  std::unordered_map<uint8_t, PowerStateInfo> supported_power_states_;
 
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;

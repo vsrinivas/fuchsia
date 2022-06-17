@@ -17,6 +17,7 @@
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/pci.h"
+#include "src/devices/board/lib/acpi/power-resource.h"
 #include "src/devices/board/lib/acpi/util.h"
 
 namespace acpi {
@@ -145,6 +146,21 @@ acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
 #endif
 
   return acpi::ok();
+}
+
+const PowerResource* Manager::AddPowerResource(ACPI_HANDLE power_resource_handle) {
+  std::scoped_lock lock(power_resource_lock_);
+  auto power_resource_entry = power_resources_.find(power_resource_handle);
+  if (power_resource_entry == power_resources_.end()) {
+    PowerResource power_resource = PowerResource(acpi_, power_resource_handle);
+    if (power_resource.Init() != ZX_OK) {
+      return nullptr;
+    }
+
+    power_resource_entry = power_resources_.insert({power_resource_handle, power_resource}).first;
+  }
+
+  return &power_resource_entry->second;
 }
 
 acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {

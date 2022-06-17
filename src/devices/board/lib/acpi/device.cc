@@ -11,19 +11,26 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
 #include <atomic>
+#include <cstdint>
+#include <string>
 
 #include <fbl/auto_lock.h>
+#include <fbl/string_printf.h>
 
+#include "lib/ddk/device.h"
+#include "lib/zx/status.h"
 #include "src/devices/board/drivers/x86/include/errors.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/fidl.h"
 #include "src/devices/board/lib/acpi/global-lock.h"
 #include "src/devices/board/lib/acpi/manager.h"
+#include "src/devices/board/lib/acpi/power-resource.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace acpi {
@@ -171,11 +178,22 @@ void Device::DdkInit(ddk::InitTxn txn) {
     }
   }
 
+  zx_status_t result = InitializePowerManagement();
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "Error initializing power management for ACPI device: %s",
+           zx_status_get_string(result));
+    txn.Reply(result);
+    return;
+  }
+
+  // TODO(fxbug.dev/81684): transition to D state 0.
+
   if (metadata_.empty()) {
     txn.Reply(ZX_OK);
     return;
   }
-  zx_status_t result = ZX_OK;
+
+  result = ZX_OK;
   switch (bus_type_) {
     case BusType::kSpi:
       result = DdkAddMetadata(DEVICE_METADATA_SPI_CHANNELS, metadata_.data(), metadata_.size());
@@ -323,6 +341,102 @@ zx::status<zx::channel> Device::PrepareOutgoing() {
   }
 
   return zx::ok(endpoints->client.TakeChannel());
+}
+
+zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
+  PowerStateInfo power_state_info{};
+
+  // Gather information about what power resources are needed in this D state.
+  std::string method_name = "_PR" + std::to_string(d_state);
+  auto prx = acpi_->EvaluateObject(acpi_handle_, method_name.c_str(), std::nullopt);
+  if (prx.is_ok()) {
+    for (size_t i = 0; i < prx->Package.Count; i++) {
+      ACPI_OBJECT power_resource_reference = prx->Package.Elements[i];
+      const PowerResource* power_resource =
+          manager_->AddPowerResource(power_resource_reference.Reference.Handle);
+
+      if (power_resource == nullptr) {
+        zxlogf(ERROR, "Failed to add power resource");
+        return zx::error(ZX_ERR_INTERNAL);
+      }
+
+      if (power_resource) {
+        power_state_info.power_resources.insert(power_resource);
+      }
+    }
+  }
+
+  // Map from D states to supported S states based on power resource system_levels.
+  uint8_t shallowest_system_level = 4;
+  for (const PowerResource* power_resource : power_state_info.power_resources) {
+    shallowest_system_level = std::min(shallowest_system_level, power_resource->system_level());
+  }
+
+  for (uint8_t s_state = 0; s_state <= shallowest_system_level; ++s_state) {
+    power_state_info.supported_s_states.insert(s_state);
+  }
+
+  // Check whether this D state has a _PSx method defined.
+  method_name = "_PS" + std::to_string(d_state);
+  auto psx = acpi_->GetHandle(acpi_handle_, method_name.c_str());
+  if (psx.is_ok()) {
+    power_state_info.defines_psx_method = true;
+  }
+
+  return zx::ok(power_state_info);
+}
+
+zx_status_t Device::InitializePowerManagement() {
+  for (uint8_t d_state = DEV_POWER_STATE_D0; d_state <= DEV_POWER_STATE_D3HOT; ++d_state) {
+    zx::status<PowerStateInfo> power_state_info = GetInfoForState(d_state);
+
+    if (power_state_info.is_error()) {
+      zxlogf(ERROR, "Failed to get info for D state %d", d_state);
+      return power_state_info.error_value();
+    }
+
+    if (!power_state_info->power_resources.empty() || power_state_info->defines_psx_method) {
+      supported_power_states_.insert({d_state, *power_state_info});
+    }
+  }
+
+  // Call _SxD methods to figure out valid D state to S state mapping.
+  // This removes any mappings which were valid according to power resource system_levels but are
+  // invalid according to the _SxD methods.
+  for (uint8_t s_state = 1; s_state <= 4; ++s_state) {
+    fbl::String method_name = fbl::StringPrintf("_S%dD", s_state);
+    auto sxd = acpi_->EvaluateObject(acpi_handle_, method_name.c_str(), std::nullopt);
+    if (sxd.is_ok()) {
+      for (uint8_t d_state = DEV_POWER_STATE_D0; d_state < static_cast<uint8_t>(sxd->Integer.Value);
+           ++d_state) {
+        auto power_state_entry = supported_power_states_.find(d_state);
+        if (power_state_entry == supported_power_states_.end()) {
+          continue;
+        }
+        PowerStateInfo& power_state = power_state_entry->second;
+
+        power_state.supported_s_states.erase(s_state);
+      }
+    }
+  }
+
+  return ZX_OK;
+}
+
+std::unordered_map<uint8_t, DevicePowerState> Device::GetSupportedPowerStates() {
+  std::unordered_map<uint8_t, DevicePowerState> states;
+
+  for (const auto& power_state : supported_power_states_) {
+    states.insert({power_state.first,
+                   DevicePowerState(power_state.first, power_state.second.supported_s_states)});
+  }
+
+  return states;
+}
+
+PowerStateTransitionResponse Device::TransitionToPowerState(uint8_t requested_state) {
+  // TODO(fxbug.dev/81684): implement.
+  return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, DEV_POWER_STATE_D0);
 }
 
 zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,

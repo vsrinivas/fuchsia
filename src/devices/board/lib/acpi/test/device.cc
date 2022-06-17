@@ -6,6 +6,9 @@
 
 #include <lib/ddk/debug.h>
 
+#include <cstdint>
+#include <string>
+
 #include "src/devices/board/lib/acpi/status.h"
 #include "src/devices/board/lib/acpi/util.h"
 #include "src/devices/lib/acpi/util.h"
@@ -50,6 +53,11 @@ Device* Device::FindByPathInternal(std::string path) {
   if (Device* child = LookupChild(segment)) {
     return child->FindByPathInternal(leftover);
   }
+
+  if (leftover.empty() && methods_.find(std::string(segment)) != methods_.end()) {
+    return this;
+  }
+
   return nullptr;
 }
 
@@ -79,14 +87,18 @@ std::string Device::GetAbsolutePath() {
 }
 
 acpi::status<acpi::UniquePtr<ACPI_OBJECT>> Device::EvaluateObject(
-    std::string pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
-  auto pos = pathname.find('.');
+    std::optional<std::string> pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
+  if (!pathname.has_value()) {
+    return methods_.find(pathname)->second(std::move(args));
+  }
+
+  auto pos = pathname->find('.');
   if (pos != std::string::npos) {
-    Device* d = LookupChild(std::string_view(pathname.data(), pos));
+    Device* d = LookupChild(std::string_view(pathname->data(), pos));
     if (d == nullptr) {
       return acpi::error(AE_NOT_FOUND);
     }
-    return d->EvaluateObject(pathname.substr(pos + 1), std::move(args));
+    return d->EvaluateObject(pathname->substr(pos + 1).c_str(), std::move(args));
   }
 
   if (methods_.find(pathname) != methods_.end()) {
@@ -126,12 +138,14 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> Device::EvaluateObject(
     }
 
     return acpi::ok(std::move(objects));
-  } else if (pathname == "_STA" && sta_.has_value()) {
+  }
+  if (pathname == "_STA" && sta_.has_value()) {
     ACPI_OBJECT* value = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*value)));
     value->Integer.Type = ACPI_TYPE_INTEGER;
     value->Integer.Value = sta_.value();
     return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(value));
-  } else if (pathname == "_GLK" && glk_.has_value()) {
+  }
+  if (pathname == "_GLK" && glk_.has_value()) {
     ACPI_OBJECT* value = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*value)));
     value->Integer.Type = ACPI_TYPE_INTEGER;
     value->Integer.Value = glk_.value();

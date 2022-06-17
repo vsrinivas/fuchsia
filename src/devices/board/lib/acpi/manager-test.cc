@@ -9,6 +9,7 @@
 
 #include <initializer_list>
 #include <map>
+#include <optional>
 
 #include <zxtest/zxtest.h>
 
@@ -417,4 +418,28 @@ TEST_F(AcpiManagerTest, TestDeviceNotEnabled) {
   // If the Manager incorrectly tries to access the device's resources, it will trigger an assert in
   // MockAcpi.
   ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
+}
+
+TEST_F(AcpiManagerTest, TestAddPowerResource) {
+  auto device = std::make_unique<Device>("PRIC");
+
+  device->AddMethodCallback(std::nullopt, [](std::optional<std::vector<ACPI_OBJECT>>) {
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->PowerResource.Type = ACPI_TYPE_POWER;
+    retval->PowerResource.SystemLevel = 3;
+    retval->PowerResource.ResourceOrder = 5;
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  ACPI_HANDLE power_resource_handle = device.get();
+
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::move(device)));
+
+  const acpi::PowerResource* power_resource = manager_.AddPowerResource(power_resource_handle);
+
+  ASSERT_NOT_NULL(power_resource);
+  ASSERT_EQ(power_resource->system_level(), 3);
+  ASSERT_EQ(power_resource->resource_order(), 5);
+  // Make sure adding the same power resource returns the existing entry.
+  ASSERT_EQ(manager_.AddPowerResource(power_resource_handle), power_resource);
 }

@@ -44,8 +44,8 @@ class Device {
     children_.emplace_back(std::move(c));
   }
 
-  void AddMethodCallback(std::string name, EvaluateObjectCallback cb) {
-    methods_.emplace(std::move(name), std::move(cb));
+  void AddMethodCallback(const std::optional<std::string>& name, EvaluateObjectCallback cb) {
+    methods_.emplace(name, std::move(cb));
   }
 
   // Add a resource to this device.
@@ -68,7 +68,7 @@ class Device {
 
   // Equivalent of AcpiEvaluateObject.
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
-      std::string pathname, std::optional<std::vector<ACPI_OBJECT>> args);
+      std::optional<std::string> pathname, std::optional<std::vector<ACPI_OBJECT>> args);
 
   void Notify(uint32_t value) {
     fuchsia_hardware_acpi::wire::NotificationMode mode =
@@ -136,7 +136,7 @@ class Device {
   // _DSD, map of uuid to values.
   std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;
 
-  std::unordered_map<std::string, EvaluateObjectCallback> methods_;
+  std::unordered_map<std::optional<std::string>, EvaluateObjectCallback> methods_;
 
   Acpi::NotifyHandlerCallable notify_handler_ = nullptr;
   void* notify_handler_ctx_ = nullptr;

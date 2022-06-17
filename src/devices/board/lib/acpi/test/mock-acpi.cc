@@ -4,6 +4,8 @@
 
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
 
+#include <optional>
+
 namespace acpi::test {
 acpi::status<> MockAcpi::WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object,
                                        uint32_t max_depth, NamespaceCallable cbk) {
@@ -138,18 +140,24 @@ acpi::status<ACPI_HANDLE> MockAcpi::GetHandle(ACPI_HANDLE parent, const char* pa
 
 acpi::status<acpi::UniquePtr<ACPI_OBJECT>> MockAcpi::EvaluateObject(
     ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
-  if (pathname[0] == '^') {
-    return acpi::error(AE_NOT_IMPLEMENTED);
-  }
   if (object == nullptr) {
     object = ACPI_ROOT_OBJECT;
   }
-  if (pathname[0] == '\\') {
-    object = ACPI_ROOT_OBJECT;
-    pathname++;
+
+  if (pathname != nullptr) {
+    if (pathname[0] == '\\') {
+      object = ACPI_ROOT_OBJECT;
+      pathname++;
+    } else if (pathname[0] == '^') {
+      return acpi::error(AE_NOT_IMPLEMENTED);
+    }
   }
+
   Device* device = ToDevice(object);
 
+  if (pathname == nullptr) {
+    return device->EvaluateObject(std::nullopt, std::move(args));
+  }
   return device->EvaluateObject(pathname, std::move(args));
 }
 

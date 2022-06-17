@@ -68,6 +68,7 @@ source_set("acpi") {
     "fidl.cc",
     "global-lock.cc",
     "manager.cc",
+    "power-resource.cc",
     "resources.cc",
   ]
 
@@ -101,6 +102,8 @@ test("acpi-test") {
     "global-lock.cc",
     "manager-test.cc",
     "manager.cc",
+    "power-resource-test.cc",
+    "power-resource.cc",
     "resources.cc",
     "status-test.cc",
     "util-test.cc",
