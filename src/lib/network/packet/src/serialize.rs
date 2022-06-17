@@ -293,6 +293,17 @@ pub struct Buf<B> {
     range: Range<usize>,
 }
 
+impl Buf<Vec<u8>> {
+    /// Extracts the contained data trimmed to the buffer's range.
+    pub fn into_inner(self) -> Vec<u8> {
+        let Buf { mut buf, range } = self;
+        let len = range.end - range.start;
+        let _ = buf.drain(..range.start);
+        buf.truncate(len);
+        buf
+    }
+}
+
 impl<B: AsRef<[u8]>> Buf<B> {
     /// Constructs a new `Buf`.
     ///
@@ -1760,6 +1771,7 @@ mod tests {
     use super::*;
     use crate::Buffer;
     use std::fmt::Debug;
+    use test_case::test_case;
 
     // DummyPacketBuilder:
     // - Implements PacketBuilder with the stored constraints; it fills the
@@ -1971,6 +1983,15 @@ mod tests {
     #[should_panic]
     fn test_either_unwrap_b_panic() {
         let _: u32 = Either::<u16, u32>::A(5).unwrap_b();
+    }
+
+    #[test_case(Buf::new((0..100).collect(), ..); "entire buf")]
+    #[test_case(Buf::new((0..100).collect(), 0..0); "empty range")]
+    #[test_case(Buf::new((0..100).collect(), ..50); "prefix")]
+    #[test_case(Buf::new((0..100).collect(), 50..); "suffix")]
+    #[test_case(Buf::new((0..100).collect(), 25..75); "middle")]
+    fn test_buf_into_inner(buf: Buf<Vec<u8>>) {
+        assert_eq!(buf.clone().as_ref(), buf.into_inner());
     }
 
     #[test]
