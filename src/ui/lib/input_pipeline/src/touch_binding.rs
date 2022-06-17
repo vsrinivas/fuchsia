@@ -256,6 +256,9 @@ impl TouchBinding {
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
+        fuchsia_trace::duration!("input", "touch-binding-process-report");
+        fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0));
+
         // Input devices can have multiple types so ensure `report` is a TouchInputReport.
         let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
             Some(touch) => touch,
@@ -301,6 +304,8 @@ impl TouchBinding {
 
         let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
+        let trace_id = fuchsia_trace::generate_nonce();
+        fuchsia_trace::flow_begin!("input", "report-to-event", trace_id);
         send_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add => added_contacts.clone(),
@@ -317,6 +322,7 @@ impl TouchBinding {
             device_descriptor,
             event_time,
             input_event_sender,
+            trace_id,
         );
 
         Some(report)
@@ -385,6 +391,7 @@ fn send_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: zx::Time,
     input_event_sender: &mut Sender<input_device::InputEvent>,
+    trace_id: u64,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Touch(TouchEvent {
@@ -394,7 +401,7 @@ fn send_event(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled: Handled::No,
-        trace_id: None,
+        trace_id: Some(trace_id),
     }) {
         Err(e) => fx_log_err!("Failed to send TouchEvent with error: {:?}", e),
         _ => {}
@@ -409,6 +416,7 @@ mod tests {
             self, create_touch_contact, create_touch_event, create_touch_input_report,
         },
         crate::utils::Position,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::StreamExt,
         pretty_assertions::assert_eq,
@@ -601,5 +609,33 @@ mod tests {
             device_descriptor: descriptor,
             device_type: TouchBinding,
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn sent_event_has_trace_id() {
+        let previous_report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
+        let previous_report = create_touch_input_report(vec![], previous_report_time);
+
+        let report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
+        let contact = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(222),
+            position_x: Some(333),
+            position_y: Some(444),
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let report = create_touch_input_report(vec![contact], report_time);
+
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![],
+        });
+        let (mut event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
+        let _: Option<InputReport> = TouchBinding::process_reports(
+            report,
+            Some(previous_report),
+            &descriptor,
+            &mut event_sender,
+        );
+        assert_matches!(event_receiver.try_next(), Ok(Some(InputEvent { trace_id: Some(_), .. })));
     }
 }

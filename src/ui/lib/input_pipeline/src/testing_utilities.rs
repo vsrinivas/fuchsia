@@ -591,7 +591,12 @@ macro_rules! assert_input_report_sequence_generates_events {
         for expected_event in $expected_events {
             let input_event = event_receiver.next().await;
             match input_event {
-                Some(received_event) => {
+                Some(mut received_event) => {
+                    // The trace_id field is set to a nonce value by process_reports(), so a naive
+                    // comparison to an expected event will not match. Here, we set it to None to
+                    // allow comparing against an expected event, but we ensure trace_id is set
+                    // properly with another test.
+                    received_event.trace_id = None;
                     pretty_assertions::assert_eq!(expected_event, received_event)
                 }
                 _ => assert!(false),

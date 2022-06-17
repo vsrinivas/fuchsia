@@ -179,6 +179,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         loop {
             match report_stream.next().await {
                 Some(Ok(Ok(input_reports))) => {
+                    fuchsia_trace::duration!("input", "input-device-process-reports");
                     for report in input_reports {
                         previous_report = process_reports(
                             report,
