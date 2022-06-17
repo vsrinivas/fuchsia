@@ -328,16 +328,15 @@ zx_status_t pipe::recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int
   return status;
 }
 
-zx::status<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags flags,
-                                  uint32_t mode) {
+zx::status<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
+                                fio::wire::OpenFlags flags, uint32_t mode) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
 
-  zx_status_t status =
-      zxio_open_async(&zxio_storage().io, static_cast<uint32_t>(flags), mode, path.data(),
-                      path.length(), endpoints->server.channel().release());
+  zx_status_t status = zxio_open_async(directory, static_cast<uint32_t>(flags), mode, path.data(),
+                                       path.length(), endpoints->server.channel().release());
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -347,6 +346,11 @@ zx::status<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags fl
   }
 
   return remote::create(std::move(endpoints->client));
+}
+
+zx::status<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags flags,
+                                  uint32_t mode) {
+  return open_async(&zxio_storage().io, path, flags, mode);
 }
 
 void remote::wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {

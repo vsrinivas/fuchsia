@@ -89,6 +89,9 @@ struct remote : public zxio {
   ~remote() override = default;
 };
 
+zx::status<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
+                                fuchsia_io::wire::OpenFlags flags, uint32_t mode);
+
 }  // namespace fdio_internal
 
 #endif  // LIB_FDIO_ZXIO_H_

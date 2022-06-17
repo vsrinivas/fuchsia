@@ -137,26 +137,9 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, std::strin
     return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  zx_status_t status =
-      zxio_open_async(vn->Remote(), static_cast<uint32_t>(flags), mode, path.data(), path.length(),
-                      endpoints->server.TakeChannel().release());
-
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  if (flags & fio::wire::OpenFlags::kDescribe) {
-    return fdio::create_with_on_open(std::move(endpoints->client));
-  }
-
-  return fdio_internal::remote::create(std::move(endpoints->client));
+  return fdio_internal::open_async(vn->Remote(), path, flags, mode);
 }
 
 zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, std::string_view path,
