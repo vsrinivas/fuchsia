@@ -7,7 +7,7 @@ use {
     crate::utils::{Position, Size},
     anyhow::{format_err, Error},
     async_trait::async_trait,
-    fidl_fuchsia_input_report as fidl,
+    fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_syslog::fx_log_err,
@@ -47,6 +47,14 @@ pub struct TouchEvent {
     ///
     /// Contacts are grouped based on their current phase (e.g., add, change).
     pub injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
+}
+
+/// [`TouchDeviceType`] indicates the type of touch device. Both Touch Screen and Windows Precision
+/// Touchpad send touch event from driver but need different process inside input pipeline.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TouchDeviceType {
+    TouchScreen,
+    WindowsPrecisionTouchpad,
 }
 
 /// A [`TouchContact`] represents a single contact (e.g., one touch of a multi-touch gesture) related
@@ -120,19 +128,19 @@ pub struct TouchDeviceDescriptor {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContactDeviceDescriptor {
     /// The range of possible x values for this touch contact.
-    pub x_range: fidl::Range,
+    pub x_range: fidl_input_report::Range,
 
     /// The range of possible y values for this touch contact.
-    pub y_range: fidl::Range,
+    pub y_range: fidl_input_report::Range,
 
     /// The range of possible pressure values for this touch contact.
-    pub pressure_range: Option<fidl::Range>,
+    pub pressure_range: Option<fidl_input_report::Range>,
 
     /// The range of possible widths for this touch contact.
-    pub width_range: Option<fidl::Range>,
+    pub width_range: Option<fidl_input_report::Range>,
 
     /// The range of possible heights for this touch contact.
-    pub height_range: Option<fidl::Range>,
+    pub height_range: Option<fidl_input_report::Range>,
 }
 
 /// A [`TouchBinding`] represents a connection to a touch input device.
@@ -147,6 +155,10 @@ pub struct TouchBinding {
 
     /// Holds information about this device.
     device_descriptor: TouchDeviceDescriptor,
+
+    /// Touch device type of the touch device.
+    /// TODO(fxb/99687): following CL will begin use this field and remove the underscore.
+    _touch_device_type: TouchDeviceType,
 }
 
 #[async_trait]
@@ -207,6 +219,7 @@ impl TouchBinding {
     ) -> Result<Self, Error> {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
             device.get_descriptor().await?;
+        let cloned_device_description = device_descriptor.clone();
 
         match device_descriptor.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
@@ -229,6 +242,7 @@ impl TouchBinding {
                         .filter_map(Result::ok)
                         .collect(),
                 },
+                _touch_device_type: get_device_type(device, cloned_device_description).await,
             }),
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
         }
@@ -328,7 +342,7 @@ impl TouchBinding {
         Some(report)
     }
 
-    /// Parses a FIDL contact descriptor into a [`ContactDeviceDescriptor`]
+    /// Parses a fidl_input_report contact descriptor into a [`ContactDeviceDescriptor`]
     ///
     /// # Parameters
     /// - `contact_device_descriptor`: The contact descriptor to parse.
@@ -336,10 +350,10 @@ impl TouchBinding {
     /// # Errors
     /// If the contact description fails to parse because required fields aren't present.
     fn parse_contact_descriptor(
-        contact_device_descriptor: &fidl::ContactInputDescriptor,
+        contact_device_descriptor: &fidl_input_report::ContactInputDescriptor,
     ) -> Result<ContactDeviceDescriptor, Error> {
         match contact_device_descriptor {
-            fidl::ContactInputDescriptor {
+            fidl_input_report::ContactInputDescriptor {
                 position_x: Some(x_axis),
                 position_y: Some(y_axis),
                 pressure: pressure_axis,
@@ -408,6 +422,39 @@ fn send_event(
     }
 }
 
+/// [`get_device_type`] check if the touch device is a touchscreen or Windows Precision Touchpad.
+///
+/// Windows Precision Touchpad reports `MouseCollection` or `WindowsPrecisionTouchpadCollection`
+/// in `TouchFeatureReport`. Fallback all error responses on `get_feature_report` to TouchScreen
+/// because some touch screen does not report this method.
+async fn get_device_type(
+    input_device: &fidl_input_report::InputDeviceProxy,
+    descriptor: fidl_fuchsia_input_report::DeviceDescriptor,
+) -> TouchDeviceType {
+    // TODO(fxbug.dev/102936): input-synthesis does not implement `get_feature_report` yet, check
+    // it is also a mouse to prevent calling `get_feature_report` on synthesis device. Remove when
+    // we fix the bug.
+    if descriptor.mouse.is_none() {
+        return TouchDeviceType::TouchScreen;
+    }
+
+    match input_device.get_feature_report().await {
+        Ok(Ok(fidl_input_report::FeatureReport {
+            touch:
+                Some(fidl_input_report::TouchFeatureReport {
+                    input_mode:
+                        Some(
+                            fidl_input_report::TouchConfigurationInputMode::MouseCollection
+                            | fidl_input_report::TouchConfigurationInputMode::WindowsPrecisionTouchpadCollection,
+                        ),
+                    ..
+                }),
+            ..
+        })) => TouchDeviceType::WindowsPrecisionTouchpad,
+        _ => TouchDeviceType::TouchScreen,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -417,9 +464,11 @@ mod tests {
         },
         crate::utils::Position,
         assert_matches::assert_matches,
+        fidl::endpoints::spawn_stream_handler,
         fuchsia_async as fasync,
         futures::StreamExt,
         pretty_assertions::assert_eq,
+        test_case::test_case,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -637,5 +686,105 @@ mod tests {
             &mut event_sender,
         );
         assert_matches!(event_receiver.try_next(), Ok(Some(InputEvent { trace_id: Some(_), .. })));
+    }
+
+    #[test_case(true, None, TouchDeviceType::TouchScreen; "touch screen")]
+    #[test_case(false, None, TouchDeviceType::TouchScreen; "no mouse descriptor, no touch_input_mode")]
+    #[test_case(false, Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection), TouchDeviceType::TouchScreen; "no mouse descriptor, has touch_input_mode")]
+    #[test_case(true, Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection), TouchDeviceType::WindowsPrecisionTouchpad; "touchpad in mouse mode")]
+    #[test_case(true, Some(fidl_input_report::TouchConfigurationInputMode::WindowsPrecisionTouchpadCollection), TouchDeviceType::WindowsPrecisionTouchpad; "touchpad in touchpad mode")]
+    #[fasync::run_singlethreaded(test)]
+    async fn windows_precision_touchpad(
+        has_mouse_descriptor: bool,
+        touch_input_mode: Option<fidl_input_report::TouchConfigurationInputMode>,
+        expect_touch_device_type: TouchDeviceType,
+    ) {
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
+            match input_device_request {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
+                        mouse: match has_mouse_descriptor {
+                            true => Some(fidl_input_report::MouseDescriptor {
+                                input: Some(fidl_input_report::MouseInputDescriptor {
+                                    movement_x: None,
+                                    movement_y: None,
+                                    position_x: None,
+                                    position_y: None,
+                                    scroll_v: None,
+                                    scroll_h: None,
+                                    buttons: None,
+                                    ..fidl_input_report::MouseInputDescriptor::EMPTY
+                                }),
+                                ..fidl_input_report::MouseDescriptor::EMPTY
+                            }),
+                            false => None,
+                        },
+                        touch: Some(fidl_input_report::TouchDescriptor {
+                            input: Some(fidl_input_report::TouchInputDescriptor {
+                                contacts: Some(vec![fidl_input_report::ContactInputDescriptor {
+                                    position_x: Some(fidl_input_report::Axis {
+                                        range: fidl_input_report::Range { min: 1, max: 2 },
+                                        unit: fidl_input_report::Unit {
+                                            type_: fidl_input_report::UnitType::None,
+                                            exponent: 0,
+                                        },
+                                    }),
+                                    position_y: Some(fidl_input_report::Axis {
+                                        range: fidl_input_report::Range { min: 2, max: 3 },
+                                        unit: fidl_input_report::Unit {
+                                            type_: fidl_input_report::UnitType::Other,
+                                            exponent: 100000,
+                                        },
+                                    }),
+                                    pressure: Some(fidl_input_report::Axis {
+                                        range: fidl_input_report::Range { min: 3, max: 4 },
+                                        unit: fidl_input_report::Unit {
+                                            type_: fidl_input_report::UnitType::Grams,
+                                            exponent: -991,
+                                        },
+                                    }),
+                                    contact_width: Some(fidl_input_report::Axis {
+                                        range: fidl_input_report::Range { min: 5, max: 6 },
+                                        unit: fidl_input_report::Unit {
+                                            type_:
+                                                fidl_input_report::UnitType::EnglishAngularVelocity,
+                                            exponent: 123,
+                                        },
+                                    }),
+                                    contact_height: Some(fidl_input_report::Axis {
+                                        range: fidl_input_report::Range { min: 7, max: 8 },
+                                        unit: fidl_input_report::Unit {
+                                            type_: fidl_input_report::UnitType::Pascals,
+                                            exponent: 100,
+                                        },
+                                    }),
+                                    ..fidl_input_report::ContactInputDescriptor::EMPTY
+                                }]),
+                                ..fidl_input_report::TouchInputDescriptor::EMPTY
+                            }),
+                            ..fidl_input_report::TouchDescriptor::EMPTY
+                        }),
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
+                    });
+                }
+                fidl_input_report::InputDeviceRequest::GetFeatureReport { responder } => {
+                    let _ = responder.send(&mut Ok(fidl_input_report::FeatureReport {
+                        touch: Some(fidl_input_report::TouchFeatureReport {
+                            input_mode: touch_input_mode,
+                            ..fidl_input_report::TouchFeatureReport::EMPTY
+                        }),
+                        ..fidl_input_report::FeatureReport::EMPTY
+                    }));
+                }
+                _ => panic!("InputDevice handler received an unexpected request"),
+            }
+        })
+        .unwrap();
+
+        let (device_event_sender, _) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+
+        let binding = TouchBinding::new(input_device_proxy, 0, device_event_sender).await.unwrap();
+        pretty_assertions::assert_eq!(binding._touch_device_type, expect_touch_device_type);
     }
 }
