@@ -1,0 +1,9 @@
+[book]
+authors = ["Rob Tsuk"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Carnelian"
+
+[build]
+build-dir = "../../../../../../out/mdbook_target/carnelian"

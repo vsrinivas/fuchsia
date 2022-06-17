@@ -674,6 +674,7 @@ impl Text {
 }
 
 /// Struct containing text grid details.
+#[allow(missing_docs)]
 pub struct TextGrid {
     pub scale: Vector2D<f32>,
     pub offset: Vector2D<f32>,

@@ -32,27 +32,33 @@ pub(crate) enum UserInputMessage {
     FlatlandTouchEvents(Vec<fidl_fuchsia_ui_pointer::TouchEvent>),
 }
 
+/// A button on a mouse
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Button(pub u8);
 
 const PRIMARY_BUTTON: u8 = 1;
 
 impl Button {
+    /// Is this the primary button, usually the leftmost button on
+    /// a mouse.
     pub fn is_primary(&self) -> bool {
         self.0 == PRIMARY_BUTTON
     }
 }
 
+/// A set of buttons.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ButtonSet {
     buttons: HashSet<Button>,
 }
 
 impl ButtonSet {
+    /// Create a new set of buttons from input report flags.
     pub fn new(buttons: &HashSet<u8>) -> ButtonSet {
         ButtonSet { buttons: buttons.iter().map(|button| Button(*button)).collect() }
     }
 
+    /// Create a new set of buttons from scenic flags.
     pub fn new_from_flags(flags: u32) -> ButtonSet {
         let buttons: HashSet<u8> = (0..2)
             .filter_map(|index| {
@@ -67,16 +73,22 @@ impl ButtonSet {
         ButtonSet::new(&buttons)
     }
 
+    /// Convenience function for checking if the primary button is down.
     pub fn primary_button_is_down(&self) -> bool {
         self.buttons.contains(&Button(PRIMARY_BUTTON))
     }
 }
 
+/// Keyboard modifier keys.
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct Modifiers {
+    /// A shift key is down.
     pub shift: bool,
+    /// An alt or option key is down.
     pub alt: bool,
+    /// A control key is down.
     pub control: bool,
+    /// A caps lock key is down.
     pub caps_lock: bool,
 }
 
@@ -107,26 +119,36 @@ impl Modifiers {
     }
 }
 
+/// Mouse-related items
 pub mod mouse {
     use super::*;
     use crate::geometry::IntVector;
 
+    /// Phase of a mouse event.
     #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
+        /// A particular button went down.
         Down(Button),
+        /// A particular button came up.
         Up(Button),
+        /// The mouse moved, with or without a change in button state.
         Moved,
+        /// The mouse wheel changed position.
         Wheel(IntVector),
     }
 
+    /// A mouse event.
     #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
+        /// Pressed buttons.
         pub buttons: ButtonSet,
+        /// Event phase.
         pub phase: Phase,
+        /// Location of the mouse cursor during this event.
         pub location: IntPoint,
     }
 
-    pub fn create_event(
+    pub(crate) fn create_event(
         event_time: u64,
         device_id: &DeviceId,
         button_set: &ButtonSet,
@@ -145,26 +167,39 @@ pub mod mouse {
     }
 }
 
+/// Keyboard-related items.
 pub mod keyboard {
     use super::*;
 
+    /// Phase of a keyboard event.
     #[derive(Clone, Copy, Debug, PartialEq)]
     pub enum Phase {
+        /// A key is pressed.
         Pressed,
+        /// A key is released.
         Released,
+        /// A key is no longer pressed without being released.
         Cancelled,
+        /// A key has been held down long enough to start repeating.
         Repeat,
     }
 
+    /// A keyboard event.
     #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
+        /// Event phase.
         pub phase: Phase,
+        /// Unicode code point of the key causing the event, if any.
         pub code_point: Option<u32>,
+        /// USB HID usage of the key causing the event.
         pub hid_usage: u32,
+        /// Modifier keys being pressed or held in addition to the key
+        /// causing the event.
         pub modifiers: Modifiers,
     }
 }
 
+/// Touch-related items.
 pub mod touch {
     use super::*;
 
@@ -190,56 +225,87 @@ pub mod touch {
         }
     }
 
+    /// ID of a touch contact.
     #[derive(Clone, Copy, Debug, Eq, Ord, PartialOrd, PartialEq, Hash)]
     pub struct ContactId(pub u32);
 
+    /// Phase of a touch event.
     #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
+        /// A contact began.
         Down(IntPoint, IntSize),
+        /// A contact moved.
         Moved(IntPoint, IntSize),
+        /// A contact ended.
         Up,
+        /// A contact was removed.
         Remove,
+        /// A contact was cancelled.
         Cancel,
     }
 
+    /// A single contact found in a touch event.
     #[derive(Debug, Clone, PartialEq)]
     pub struct Contact {
+        /// ID of this contact
         pub contact_id: ContactId,
+        /// Phase of this contact
         pub phase: Phase,
     }
 
+    /// A touch event.
     #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
+        /// All the current contact in this event
         pub contacts: Vec<Contact>,
+        /// Buttons in this touch event, possible if the touch comes
+        /// from a stylus with buttons.
         pub buttons: ButtonSet,
     }
 }
 
+/// Pointer event
+///
+/// Carnelian provides a least-common-denominator pointer event that can be created from
+/// either touch events or mouse events.
 pub mod pointer {
     use super::*;
 
+    /// Pointer phase.
     #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
+        /// A pointer has gone down.
         Down(IntPoint),
+        /// A pointer has moved.
         Moved(IntPoint),
+        /// A pointer has come up.
         Up,
+        /// A pointer has been removed without coming up.
         Remove,
+        /// A pointer has been cancelled.
         Cancel,
     }
 
+    /// Pointer ID.
     #[derive(Clone, Debug, Eq, Ord, PartialOrd, PartialEq, Hash)]
     pub enum PointerId {
+        /// ID from a mouse event.
         Mouse(DeviceId),
+        /// ID from a contact in a touch event.
         Contact(touch::ContactId),
     }
 
+    /// Pointer event.
     #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
+        /// Pointer event phase.
         pub phase: Phase,
+        /// Pointer event pointer ID.
         pub pointer_id: PointerId,
     }
 
     impl Event {
+        /// Create a pointer event from a mouse event.
         pub fn new_from_mouse_event(
             device_id: &DeviceId,
             mouse_event: &mouse::Event,
@@ -271,6 +337,7 @@ pub mod pointer {
             .and_then(|phase| Some(Self { phase, pointer_id: PointerId::Mouse(device_id.clone()) }))
         }
 
+        /// Create a pointer event from a single contact in a touch event.
         pub fn new_from_contact(contact: &touch::Contact) -> Self {
             let phase = match contact.phase {
                 touch::Phase::Down(location, ..) => pointer::Phase::Down(location),
@@ -284,37 +351,57 @@ pub mod pointer {
     }
 }
 
+/// Events related to "consumer control" buttons, like volume controls.
+///
+/// These events are separated because they are different devices at the driver
+/// level, but it's not clear this is the right abstraction for Carnelian.
 pub mod consumer_control {
     use super::*;
 
+    /// Phase of a consumer control event.
     #[derive(Debug, PartialEq, Clone, Copy)]
     pub enum Phase {
+        /// Button went down.
         Down,
+        /// Button came up.
         Up,
     }
 
+    /// A consumer control event.
     #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
+        /// Phase of event.
         pub phase: Phase,
+        /// USB HID for key being pressed or released.
         pub button: hid_input_report::ConsumerControlButton,
     }
 }
 
+/// Unique identifier for an input device.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct DeviceId(pub String);
 
+/// Enum of all supported user-input events.
 #[derive(Debug, PartialEq, Clone)]
 pub enum EventType {
+    /// Mouse event.
     Mouse(mouse::Event),
+    /// Keyboard event.
     Keyboard(keyboard::Event),
+    /// Touch event.
     Touch(touch::Event),
+    /// Consumer control event.
     ConsumerControl(consumer_control::Event),
 }
 
+/// Over user-input struct.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Event {
+    /// Time of event.
     pub event_time: u64,
+    /// Id of device producting this event.
     pub device_id: DeviceId,
+    /// The event.
     pub event_type: EventType,
 }
 

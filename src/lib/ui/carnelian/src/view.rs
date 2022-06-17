@@ -66,8 +66,11 @@ pub struct ViewAssistantContext {
     /// being used as the contents of the image specified in
     /// `image_id`.
     pub image_index: u32,
-
+    /// Position of the mouse cursor when running directly on the
+    /// display controller.
     pub mouse_cursor_position: Option<IntPoint>,
+    /// information about the hosting display when running directly on the
+    /// display controller.
     pub display_info: Option<DisplayInfo>,
 
     app_sender: UnboundedSender<MessageInternal>,
@@ -447,7 +450,7 @@ pub(crate) struct ViewDetails {
 /// This struct takes care of all the boilerplate needed for implementing a Fuchsia
 /// view, forwarding the interesting implementation points to a struct implementing
 /// the `ViewAssistant` trait.
-pub struct ViewController {
+pub(crate) struct ViewController {
     key: ViewKey,
     assistant: ViewAssistantPtr,
     metrics: Size,
@@ -459,7 +462,7 @@ pub struct ViewController {
 }
 
 impl ViewController {
-    pub(crate) async fn new_with_strategy(
+    pub async fn new_with_strategy(
         key: ViewKey,
         view_assistant: ViewAssistantPtr,
         strategy: ViewStrategyPtr,
@@ -501,27 +504,27 @@ impl ViewController {
         self.strategy.present(&self.make_view_details());
     }
 
-    pub(crate) fn send_update_message(&mut self) {
+    pub fn send_update_message(&mut self) {
         self.app_sender.unbounded_send(MessageInternal::Render(self.key)).expect("unbounded_send");
     }
 
-    pub(crate) fn ownership_changed(&mut self, owned: bool) {
+    pub fn ownership_changed(&mut self, owned: bool) {
         self.strategy.ownership_changed(owned);
         self.assistant
             .ownership_changed(owned)
             .unwrap_or_else(|e| println!("ownership_changed error: {}", e));
     }
 
-    pub(crate) fn drop_display_resources(&mut self) {
+    pub fn drop_display_resources(&mut self) {
         self.strategy.drop_display_resources();
     }
 
-    pub(crate) fn request_render(&mut self) {
+    pub fn request_render(&mut self) {
         self.render_requested = true;
         self.strategy.render_requested();
     }
 
-    pub(crate) async fn render(&mut self) {
+    pub async fn render(&mut self) {
         if self.render_requested {
             // Recompute our logical size based on the provided physical size and screen metrics.
             self.logical_size = size2(
@@ -536,21 +539,18 @@ impl ViewController {
         }
     }
 
-    pub(crate) fn present_submitted(
+    pub fn present_submitted(
         &mut self,
         info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
     ) {
         self.strategy.present_submitted(&self.make_view_details(), &mut self.assistant, info);
     }
 
-    pub(crate) fn present_done(
-        &mut self,
-        info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
-    ) {
+    pub fn present_done(&mut self, info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo) {
         self.strategy.present_done(&self.make_view_details(), &mut self.assistant, info);
     }
 
-    pub(crate) fn handle_metrics_changed(&mut self, metrics: Size) {
+    pub fn handle_metrics_changed(&mut self, metrics: Size) {
         if self.metrics != metrics {
             instant!(
                 "gfx",
@@ -567,7 +567,7 @@ impl ViewController {
         }
     }
 
-    pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
+    pub fn handle_size_changed(&mut self, new_size: Size) {
         if self.physical_size != new_size {
             instant!(
                 "gfx",
@@ -587,7 +587,7 @@ impl ViewController {
         }
     }
 
-    pub(crate) fn focus(&mut self, focus: bool) {
+    pub fn focus(&mut self, focus: bool) {
         self.strategy.handle_focus(&self.make_view_details(), &mut self.assistant, focus);
     }
 
@@ -604,7 +604,7 @@ impl ViewController {
         Ok(())
     }
 
-    pub(crate) fn handle_user_input_message(
+    pub fn handle_user_input_message(
         &mut self,
         user_input_message: UserInputMessage,
     ) -> Result<(), Error> {
@@ -637,7 +637,7 @@ impl ViewController {
         Ok(())
     }
 
-    pub(crate) fn image_freed(&mut self, image_id: u64, collection_id: u32) {
+    pub fn image_freed(&mut self, image_id: u64, collection_id: u32) {
         self.strategy.image_freed(image_id, collection_id);
     }
 

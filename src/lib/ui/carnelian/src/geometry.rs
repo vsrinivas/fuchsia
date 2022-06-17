@@ -29,6 +29,7 @@ pub type IntVector = euclid::default::Vector2D<IntCoord>;
 pub type UintSize = euclid::default::Size2D<u32>;
 
 /// Replacement for methods removed from Euclid
+#[allow(missing_docs)]
 pub trait Corners {
     fn top_left(&self) -> Point;
     fn top_right(&self) -> Point;
@@ -54,7 +55,7 @@ impl Corners for Rect {
     }
 }
 
-pub trait LimitToBounds {
+pub(crate) trait LimitToBounds {
     fn limit_to_bounds(&self, point: IntPoint) -> IntPoint;
 }
 

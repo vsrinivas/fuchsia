@@ -60,20 +60,27 @@
 //! }
 //! ```
 
+#![deny(missing_docs)]
+
 use std::{
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering},
 };
 
+/// Application related items
 pub mod app;
-/// Color related items
+/// Color-related items
 pub mod color;
-/// Drawing related items
+/// Drawing-related items
 pub mod drawing;
+/// Geometry-related items.
 pub mod geometry;
+/// Input-related items.
 pub mod input;
+/// Extension items related to input.
 pub mod input_ext;
 mod message;
+/// Render-related items.
 pub mod render;
 /// UI item abstraction
 pub mod scene;
@@ -112,5 +119,5 @@ pub use crate::{
     },
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
     message::{make_message, Message},
-    view::{ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey},
+    view::{ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey},
 };

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(unused)]
 use crate::{
     geometry::{IntPoint, IntSize},
     input::*,
@@ -28,7 +29,7 @@ struct TouchDevice {
     buttons: ButtonSet,
 }
 
-pub struct TouchEventResampler {
+pub(crate) struct TouchEventResampler {
     events: VecDeque<Event>,
     touch_devices: BTreeMap<DeviceId, TouchDevice>,
 }

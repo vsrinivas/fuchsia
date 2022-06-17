@@ -92,11 +92,16 @@ const fn startup_delay_default() -> std::time::Duration {
     STARTUP_DELAY_DEFAULT
 }
 
+/// Enum used by Config to control what sort of views
+/// will be used.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ViewMode {
+    /// Choose automatically based on the environment
     Auto,
+    /// Only create views hosted by Scenic.
     Hosted,
+    /// Only create views directly running directly on the display controller.
     Direct,
 }
 
@@ -106,6 +111,7 @@ impl Default for ViewMode {
     }
 }
 
+/// Grab-bag of configuration options for Carnelian apps.
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "keyboard_autorepeat_default")]
@@ -200,13 +206,18 @@ pub(crate) static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
+/// Target of a Any-based message
 #[derive(Debug, Clone, Copy)]
 pub enum MessageTarget {
+    /// target a facet in a view
     Facet(ViewKey, FacetId),
+    /// target the view assistant in a view.
     View(ViewKey),
+    /// targe the application assistant.
     Application,
 }
 
+/// Options when creating a view.
 pub type CreateViewOptions = Box<dyn Any>;
 
 /// Context struct passed to the application assistant creator
@@ -231,12 +242,15 @@ impl AppSender {
             .expect("AppSender::request_render - unbounded_send");
     }
 
+    /// Mode for applications running directly on the display controller.
+    /// Used by Virtcon and the screen saver but not generally useful.
     pub fn set_virtcon_mode(&self, virtcon_mode: VirtconMode) {
         self.sender
             .unbounded_send(MessageInternal::SetVirtconMode(virtcon_mode))
             .expect("AppSender::set_virtcon_mode - unbounded_send");
     }
 
+    /// Request the creation of an additional view.
     pub fn create_additional_view(&self, options: Option<CreateViewOptions>) -> ViewKey {
         let view_key = IdGenerator2::<ViewKey>::next().expect("view_key");
         self.sender
@@ -245,6 +259,8 @@ impl AppSender {
         view_key
     }
 
+    /// Close an additional view. It is a fatal error to attempt to close a view that
+    /// was not created with `create_additional_view()`.
     pub fn close_additional_view(&self, view_key: ViewKey) {
         self.sender
             .unbounded_send(MessageInternal::CloseAdditionalView(view_key))
@@ -321,9 +337,15 @@ pub fn make_app_assistant<T: AppAssistant + Default + 'static>() -> AssistantCre
 
 /// Parameter struction for view creation
 pub struct ViewCreationParameters {
+    /// ViewKey for the new view.
     pub view_key: ViewKey,
+    /// App sender that might be of use to the new view assistant.
     pub app_sender: AppSender,
+    /// Display ID of the hosting display for views running directly
+    /// on the display controller.
     pub display_id: Option<u64>,
+    /// Options passed to `create_additional_view()`, if this view is being created
+    /// by that function and if the caller passed any.
     pub options: Option<Box<dyn Any>>,
 }
 
@@ -399,6 +421,7 @@ pub struct App {
     sender: InternalSender,
 }
 
+#[allow(missing_docs)]
 pub type GammaValues = [f32; 256];
 type BoxedGammaValues = Box<[f32; 256]>;
 
