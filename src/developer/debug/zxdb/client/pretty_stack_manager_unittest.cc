@@ -97,6 +97,13 @@ TEST(PrettyStackManager, StackGlobMatchesAt) {
       "", {PrettyFrameGlob::File("file1.cc"), PrettyFrameGlob::Wildcard(1, 1),
            PrettyFrameGlob::File("file4.cc")});
   EXPECT_EQ(0u, PrettyStackManager::StackGlobMatchesAt(wildcard_too_many, stack, 1));
+
+  // This wildcard allows (but doesn't require) running off the end but requires another entry after
+  // it (that doesn't match in this case) so it won't match.
+  PrettyStackManager::StackGlob wildcard_mismatch_off_end(
+      "", {PrettyFrameGlob::File("file1.cc"), PrettyFrameGlob::Wildcard(1, 8),
+           PrettyFrameGlob::File("NOT_PRESENT.cc")});
+  EXPECT_EQ(0u, PrettyStackManager::StackGlobMatchesAt(wildcard_mismatch_off_end, stack, 0));
 }
 
 TEST(PrettyStackManager, GetMatchAt) {
@@ -148,6 +155,53 @@ TEST(PrettyStackManager, GetMatchAt) {
   EXPECT_TRUE(result);
   EXPECT_EQ(2u, result.match_count);
   EXPECT_EQ("Star Matcher", result.description);
+}
+
+TEST(PrettyStackManager, ProcessStack) {
+  Session session;
+  MockStackDelegate delegate(&session);
+  Stack stack(&delegate);
+  delegate.set_stack(&stack);
+
+  stack.SetFramesForTest(GetTestFrames(), true);
+
+  auto manager = fxl::MakeRefCounted<PrettyStackManager>();
+
+  // These two matchers have the same description, the PrettyStackManager should merge them.
+  std::vector<PrettyStackManager::StackGlob> matchers;
+  std::string matcher_name("Function1/2 Matcher");
+  matchers.push_back(
+      PrettyStackManager::StackGlob(matcher_name, {PrettyFrameGlob::Func("Function1")}));
+  matchers.push_back(
+      PrettyStackManager::StackGlob(matcher_name, {PrettyFrameGlob::Func("Function2")}));
+  manager->SetMatchers(matchers);
+
+  // Should get:
+  //  0-1: "Function1/2 Matcher"
+  //    2: Function3
+  //    3: Function4
+  std::vector<PrettyStackManager::FrameEntry> entries = manager->ProcessStack(stack);
+  ASSERT_EQ(3u, entries.size());
+
+  // The combined Function1/2 match.
+  EXPECT_EQ(0u, entries[0].begin_index);
+  EXPECT_EQ(matcher_name, entries[0].match.description);
+  EXPECT_EQ(2u, entries[0].match.match_count);
+  ASSERT_EQ(2u, entries[0].frames.size());
+  EXPECT_EQ(stack[0], entries[0].frames[0]);
+  EXPECT_EQ(stack[1], entries[0].frames[1]);
+
+  // Function3 (bare).
+  EXPECT_EQ(2u, entries[1].begin_index);
+  EXPECT_FALSE(entries[1].match);
+  ASSERT_EQ(1u, entries[1].frames.size());
+  EXPECT_EQ(stack[2], entries[1].frames[0]);
+
+  // Function4 (bare);
+  EXPECT_EQ(3u, entries[2].begin_index);
+  EXPECT_FALSE(entries[2].match);
+  ASSERT_EQ(1u, entries[2].frames.size());
+  EXPECT_EQ(stack[3], entries[2].frames[0]);
 }
 
 }  // namespace zxdb

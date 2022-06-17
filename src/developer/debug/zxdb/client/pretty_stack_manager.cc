@@ -38,6 +38,10 @@ void PrettyStackManager::LoadDefaultMatchers() {
   matchers.push_back(std::move(cpp_async_loop));
   matchers.push_back(std::move(c_async_loop));
 
+  // Turn off formatting. We want each frame matcher to appear on different lines and clang-format
+  // likes to combine them which makes it more difficult to follow.
+  // clang-format off
+
   // Typical background thread startup.
   StackGlob pthread_startup("pthread startup", {PrettyFrameGlob::Func("start_pthread"),
                                                 PrettyFrameGlob::Func("thread_trampoline")});
@@ -67,7 +71,8 @@ void PrettyStackManager::LoadDefaultMatchers() {
   // fpromise::promise and fit::function occur a lot and generate extremely long and useless names.
   // Matching useful sequences is difficult. But just replacing individual stack entries with
   // a simple string eliminates ~3 lines of template goop and ~3 lines of unnecessary function
-  // parameters. This makes backtraces much easier to read.
+  // parameters. This makes backtraces much easier to read. Duplicate matches will be merged
+  // automatically.
   matchers.push_back(
       StackGlob("fpromise::promise code", {PrettyFrameGlob::File("fit/promise_internal.h")}));
   matchers.push_back(StackGlob("fpromise::promise code", {PrettyFrameGlob::File("fit/promise.h")}));
@@ -89,31 +94,57 @@ void PrettyStackManager::LoadDefaultMatchers() {
            "fuchsia_async::runtime::fuchsia::executor::Executor::run_singlethreaded<*>")});
   matchers.push_back(std::move(rust_async_loop));
 
-  // C startup code (although it is only one frame, it hides several lines of complex useless
-  // parameters in the "backtrace" view). The function name depends on the platform, so just match
-  // the file name.
+  // C startup code. The functions depends on the platform, so just match the file name for most of
+  // them. The number of functions in __libc_start_main has varied between 1 and 2 over time. Since
+  // these aren't likely to be re-used in other places we can have very general matchers here. The
+  // duplicate "libc startup" entries will be merged to produce just one entry.
   PrettyFrameGlob libc_start_main = PrettyFrameGlob::File("__libc_start_main.c");
+  PrettyFrameGlob libc_start = PrettyFrameGlob::Func("_start");
   matchers.push_back(StackGlob("libc startup", {libc_start_main}));
+  matchers.push_back(StackGlob("libc startup", {libc_start}));
 
-  // Rust startup code, debug.
+  // Rust has placeholder symbols in the stack "__rust_begin_short_backtrace" and
+  // "__rust_end_short_backtrace" which are designed to help clean up backtraces.
+  //
+  // Rust uses the "begin" to indicate that the stack now contains "good" stack entries (the startup
+  // code is complete) and then "end" before the internal crash code. But since we're walking the
+  // stack in the opposite direction (most recent first), anything between "end" and "begin" should
+  // be removed.
+  //
+  // This first one matches the "top of stack" crash handing code and later we've got specific
+  // matches for the "bottom of stack" code. Each has an end-point to stop matching to avoid
+  // overmatching. A more general entry would just list "*" followed by the "end" indicator, but
+  // that will be much slower to match against. If we find a more general match is needed, it would
+  // be best to hardcode this rust annotation scheme rather than try to express this with globs.
+  matchers.push_back(StackGlob(
+      "Rust library",
+      {PrettyFrameGlob::Func("abort"),
+       PrettyFrameGlob::Wildcard(0, 16),
+       PrettyFrameGlob::Func("std::sys_common::backtrace::__rust_end_short_backtrace<*>")}));
+
+  // Rust startup code. The "call_once()" in function.rs is present in debug mode but not release.
   matchers.push_back(StackGlob(
       "Rust startup",
-      {PrettyFrameGlob::File("src/libstd/rt.rs"), PrettyFrameGlob::File("src/libstd/rt.rs"),
-       PrettyFrameGlob::Func("std::panicking::try::do_call<*>"),
-       PrettyFrameGlob::Func("std::panicking::try<*>"),
-       PrettyFrameGlob::Func("std::panic::catch_unwind<*>"),
-       PrettyFrameGlob::Func("std::rt::lang_start_internal"),
-       PrettyFrameGlob::Func("std::rt::lang_start<*>"),
-       PrettyFrameGlob::Func("main"),  // C main function
-       libc_start_main}));
+      {PrettyFrameGlob::File("rustlib/src/rust/library/core/src/ops/function.rs"),
+       PrettyFrameGlob::Func("std::sys_common::backtrace::__rust_begin_short_backtrace<*>"),
+       PrettyFrameGlob::Wildcard(0, 16),
+       libc_start}));
+  matchers.push_back(StackGlob(
+      "Rust startup",
+      {PrettyFrameGlob::Func("std::sys_common::backtrace::__rust_begin_short_backtrace<*>"),
+       PrettyFrameGlob::Wildcard(0, 16),
+       libc_start}));
 
-  // Rust startup code, optimized.
-  matchers.push_back(
-      StackGlob("Rust startup", {PrettyFrameGlob::File("src/libstd/rt.rs"),
-                                 PrettyFrameGlob::Func("std::rt::lang_start_internal"),
-                                 PrettyFrameGlob::Func("std::rt::lang_start<*>"),
-                                 PrettyFrameGlob::Func("main"),  // C main function
-                                 libc_start_main}));
+  // Rust new thread code. At least our Rust implementation often adds a bunch of stuff with
+  // Executors and LocalKeys that aren't matched by this. It would be nice to elide those also but I
+  // don't know how stable those symbols are.
+  matchers.push_back(StackGlob(
+      "Rust thread startup",
+      {PrettyFrameGlob::Func("std::sys_common::backtrace::__rust_begin_short_backtrace<*>"),
+       PrettyFrameGlob::Wildcard(0, 16),
+       PrettyFrameGlob::Func("thread_trampoline")}));
+
+  // clang-format on
 
   SetMatchers(std::move(matchers));
 }
@@ -132,16 +163,30 @@ std::vector<PrettyStackManager::FrameEntry> PrettyStackManager::ProcessStack(
     const Stack& stack) const {
   std::vector<FrameEntry> result;
   for (size_t stack_i = 0; stack_i < stack.size(); /* nothing */) {
-    FrameEntry& entry = result.emplace_back();
-    entry.begin_index = stack_i;
-    entry.match = GetMatchAt(stack, stack_i);
+    PrettyStackManager::Match match = GetMatchAt(stack, stack_i);
 
-    if (entry.match) {
-      for (size_t entry_i = 0; entry_i < entry.match.match_count; entry_i++)
-        entry.frames.push_back(stack[stack_i + entry_i]);
-      stack_i += entry.match.match_count;
+    if (match) {
+      // Have a pretty stack entry, construct a FrameEntry for it.
+      FrameEntry* entry = nullptr;
+      if (!result.empty() && result.back().match &&
+          result.back().match.description == match.description) {
+        // This match is the same as the previous one, merge the two by appending our new frames to
+        // the previous entry.
+        entry = &result.back();
+        entry->match.match_count += match.match_count;
+      } else {
+        // Got a new match, the frames go on a new entry.
+        entry = &result.emplace_back();
+        entry->begin_index = stack_i;
+        entry->match = std::move(match);
+      }
+      for (size_t entry_i = 0; entry_i < match.match_count; entry_i++)
+        entry->frames.push_back(stack[stack_i + entry_i]);
+      stack_i += match.match_count;
     } else {
       // No match, append single stack entry.
+      FrameEntry& entry = result.emplace_back();
+      entry.begin_index = stack_i;
       entry.frames.push_back(stack[stack_i]);
       stack_i++;
     }
@@ -159,7 +204,7 @@ size_t PrettyStackManager::StackGlobMatchesAt(const StackGlob& stack_glob, const
   size_t glob_index = 0;
   size_t stack_index = frame_start_index;
 
-  // Number of wildcard positions left to possibly (not not necessarily) skip
+  // Number of wildcard positions left to possibly (but not necessarily) skip
   size_t wildcard_skip = 0;
 
   while (glob_index < stack_glob.frames.size() && stack_index < stack.size()) {
@@ -185,6 +230,8 @@ size_t PrettyStackManager::StackGlobMatchesAt(const StackGlob& stack_glob, const
 
   if (stack_index > stack.size())
     return 0;  // Wildcard minimum is off the end of the stack.
+  if (glob_index < stack_glob.frames.size())
+    return 0;  // Not all frames required by the glob were matched.
 
   // Matched to the bottom of the stack.
   return stack_index - frame_start_index;
