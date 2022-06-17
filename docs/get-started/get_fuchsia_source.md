@@ -12,39 +12,17 @@ The steps are:
 4. [Set up environment variables](#set-up-environment-variables).
 5. [Configure firewall rules (Optional)](#configure-firewall-rules).
 
-## 1. Install prerequisite packages {#install-prerequisite-packages}
 
-Fuchsia requires `curl`, `file`, `unzip`, and `git` to be up to date. The version
-of `git` needs to be 2.28 or higher.
+## 1. Perform a preflight check {#perform-a-preflight-check}
 
-* {Linux}
-
-  Install (or update) the following packages:
-
-  ```posix-terminal
-  sudo apt-get install curl file git unzip
-  ```
-
-* {macOS}
-
-  Install the Xcode command line tools:
-
-  Note: Skip this step if `ffx platform preflight` shows that Xcode tools
-  are already installed on your machine.
-
-  ```posix-terminal
-  xcode-select --install
-  ```
-
-## 2. Perform a preflight check {#perform-a-preflight-check}
-
-Fuchsia provides a preflight check tool (`ffx platform preflight`)
+Fuchsia provides a preflight check tool
+([`ffx platform preflight`][ffx-platform-preflight])
 that examines your machine and informs you of any issues that may
 affect building Fuchsia from source on the machine.
 
-Note: The preflight tool only works for the x64 architecture at the
-moment; Fuchsia is currently not guaranteed to build successfully on other
-host architectures.
+Note: The preflight tool only works for the x64 architecture. Fuchsia
+is currently not guaranteed to build successfully on other host
+architectures, such as Windows and ARM64.
 
 Run the following command:
 
@@ -60,16 +38,40 @@ Run the following command:
   curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
   ```
 
+## 2. Install prerequisite packages {#install-prerequisite-packages}
+
+Fuchsia requires `curl`, `file`, `unzip`, and `git` to be up to date. The version
+of `git` needs to be 2.28 or higher.
+
+* {Linux}
+
+  Install (or update) the following packages:
+
+  ```posix-terminal
+  sudo apt install curl file git unzip
+  ```
+
+* {macOS}
+
+  Install the Xcode command line tools:
+
+  Note: Skip this step if `ffx platform preflight` shows that Xcode tools
+  are already installed on your machine.
+
+  ```posix-terminal
+  xcode-select --install
+  ```
+
 ## 3. Download the Fuchsia source code {#download-the-fuchsia-source-code}
 
 Fuchsia provides a [bootstrap script](/scripts/bootstrap) that creates a
 directory named `fuchsia` and downloads the Fuchsia source code in that
 directory.
 
-Important: Downloading the Fuchsia source code requires about 2 GiB of space
+Downloading the Fuchsia source code requires about 2 GB of space
 on your machine. Depending on your build configuration, you need
-another 80 to 90 GiB of space later when you build Fuchsia. Additionally, 
-the download process uses a substantial amount of memory. It is advisible 
+another 80 to 90 GB of space later when you build Fuchsia. Additionally,
+the download process uses a substantial amount of memory. It is advisible
 to close non-crucial processes during this time.
 
 To download the Fuchsia source, do the following:
@@ -80,12 +82,12 @@ To download the Fuchsia source, do the following:
     the `$HOME` directory as an example.
 
     ```posix-terminal
-    cd ~
+    cd $HOME
     ```
 
 1.  Run the bootstrap script:
 
-    Note: Downloading Fuchsia source can take up to 60 minutes.
+    Note: Downloading the Fuchsia source code can take up to 60 minutes.
 
     ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
@@ -104,7 +106,7 @@ actions:
 *   Add the `.jiri_root/bin` directory to your `PATH`.
 
     The `.jiri_root/bin` directory in the Fuchsia source contains the
-    [`jiri`](https://fuchsia.googlesource.com/jiri){:.external} and
+    [`jiri`](https://fuchsia.googlesource.com/jiri) and
     [`fx`](/docs/development/build/fx.md) tools that are essential to
     Fuchsia workflows. Fuchsia uses the `jiri` tool to manage repositories in
     the Fuchsia project, and the `fx` tool helps configure, build, run, and
@@ -117,8 +119,8 @@ actions:
     [`fx-env.sh`](/scripts/fx-env.sh) script enables a number of
     useful shell functions in your terminal. For instance, it creates the
     `FUCHSIA_DIR` environment variable and provides the `fd` command for
-    navigating directories with auto-completion. For more information, see
-    comments in `fx-env.sh`.
+    navigating directories with auto-completion. (For more information, see
+    comments in `fx-env.sh`.)
 
 Note: If you don't wish to update your shell profile, see
 [Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path)
@@ -127,10 +129,10 @@ in Appendices instead.
 To update your shell profile to configure Fuchsia's environment variables,
 do the following:
 
-1.  Use a text editor to open your `~/.bash_profile` file. In our below example we use 
-    [nano](https://www.nano-editor.org/docs.php)):
+1.  Use a text editor to open your `~/.bash_profile` file (in the example below,
+    we use the [Nano][nano]{:.external} text editor):
 
-    Note: This guide uses a `bash` terminal as an example. If you are
+    Note: This guide uses a `bash` terminal as an example. If you're
     using `zsh`, replace `~/.bash_profile` with `~/.zprofile` in the
     following steps:
 
@@ -169,20 +171,18 @@ do the following:
 
 ## 5. Configure firewall rules (Optional) {#configure-firewall-rules}
 
-Note: This step is not required to build or run Fuchsia, but it's recommended
-to ensure that emulators run smoothly on Linux.
+Note: This step is not required for building or running Fuchsia. But it is
+recommended to ensure that Fuchsia's emulator instances run smoothly on Linux.
 
-If you're planning on running Fuchsia on Linux, it is advised to run the
-following command to ensure that Fuchsia device and emulator traffic is allowed:
+(**Linux only**) If you're planning on running Fuchsia on Linux, it is advised to
+run the following command to allow Fuchsia-specific traffic on the host machine:
 
 ```posix-terminal
 fx setup-ufw
 ```
 
-This script requires `sudo` to run successfully, and will ask for your password
-in order to set the appropriate firewall rules to permit Fuchsia-specific traffic.
-
-For more information on `fx setup-ufw`, see [`setup-ufw`](https://fuchsia.dev/reference/tools/fx/cmd/setup-ufw).
+This script requires `sudo` (which asks for your password) to set the appropriate
+firewall rules. (For more information on this script, see [`setup-ufw`][setup-ufw].)
 
 ## Next steps
 
@@ -248,3 +248,8 @@ Alternatively, run the `fx` tool directly using its path, for example:
 
 In either case, you need `jiri` in your `PATH`.
 
+<!-- Reference links -->
+
+[ffx-platform-preflight]: https://fuchsia.dev/reference/tools/sdk/ffx#preflight
+[nano]: https://www.nano-editor.org/docs.php
+[setup-ufw]: https://fuchsia.dev/reference/tools/fx/cmd/setup-ufw

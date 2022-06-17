@@ -1,6 +1,7 @@
 # Configure and build Fuchsia {#configure-and-build-fuchsia}
 
-This guide provide instructions on how to set up and build Fuchsia.
+This guide provide instructions on how to configure and build Fuchsia
+on a host machine.
 
 The steps are:
 
@@ -11,29 +12,27 @@ The steps are:
 
 ## 1. Prerequisites {#prerequisites}
 
-### Source code {#source-code}
+Before you start, check out the following requirements:
 
-Before you start, complete the
+* [Source code setup](#source-code-setup)
+* [Hardware requirements](#hardware-requirements)
+
+### Source code setup {#source-code-setup}
+
+Complete the
 [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
 guide to download the Fuchsia source code and set up the Fuchsia development
 environment on your machine.
 
 ### Hardware requirements {#hardware-requirements}
 
-Fuchsia can only be built on a machine with one of the following CPU
-architecture and operating system combinations:
+You can build Fuchsia only on a machine with one of the following
+host architectures:
 
 - x86-64 Linux (Debian-based distributions only)
 - x86-64 macOS
 
-Windows and ARM64 Linux are not supported.
-
-ARM64 macOS is not officially supported, but a build may still succeed if
-commands are run in a terminal started with:
-
-```posix-terminal
-arch -x86_64 /bin/zsh
-```
+Note: Windows and ARM64 are not supported.
 
 ## 2. Set your build configuration {#set-your-build-configuration}
 
@@ -43,9 +42,9 @@ build and which architecture to build for.
 To set your Fuchsia build configuration, run the following
 [`fx set`][fx-set-reference] command:
 
-<pre class="prettyprint">
-<code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var></code>
-</pre>
+```posix-terminal
+fx set {{ '<var>' }}PRODUCT{{ '</var>' }}.{{ '<var>' }}BOARD{{ '</var>' }}
+```
 
 Replace the following:
 
@@ -53,8 +52,7 @@ Replace the following:
   `workstation`.
 * `BOARD`: The architecture of the product; for example, `x64` and `qemu-x64`
 
-The example command below sets a build configuration that builds the `core`
-product for the Fuchsia emulator (FEMU):
+The example command below sets a build configuration to `core.qemu-x64`:
 
 ```posix-terminal
 fx set core.qemu-x64
@@ -64,14 +62,13 @@ In this example:
 
   * `core` is a product with the minimum feature set of Fuchsia, including
      common network capabilities.
-  * `qemu-x64` is a board that refers to the x64 architecture on FEMU, which
-     is based on the open source emulator QEMU.
+  * `qemu-x64` is a board that refers to the x64 architecture of the Fuchsia
+    emulator (FEMU), which is based on the open source emulator
+    [QEMU][qemu]{:.external}.
 
-Additionally, the example command below sets your build configuration to build
-Fuchsia's `workstation` product for an `x64` architecture machine or device:
-
-Note: For more information on Workstation, see
-[Build Workstation][build-workstation].
+On the other hand, the example below sets the build configuration to
+`workstation.x64`, which is commonly used to
+[install Fuchsia's Workstation product on a device][build-workstation]:
 
 ```posix-terminal
 fx set workstation.x64
@@ -113,7 +110,7 @@ artifacts from previous builds.
   To use `ccache` on Linux, install the following package:
 
   ```posix-terminal
-  sudo apt-get install ccache
+  sudo apt install ccache
   ```
 * {macOS}
 
@@ -171,3 +168,4 @@ However, if you want to run Fuchsia on a hardware device, see
 [build-workstation]: /docs/development/build/build_workstation.md
 [fx-set-reference]: https://fuchsia.dev/reference/tools/fx/cmd/set
 [fx-build-reference]: https://fuchsia.dev/reference/tools/fx/cmd/build
+[qemu]: https://www.qemu.org/
