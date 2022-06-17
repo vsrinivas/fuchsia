@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <limits>
 #include <mutex>
 

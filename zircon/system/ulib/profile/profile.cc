@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 
 #include "zircon/system/ulib/profile/config.h"

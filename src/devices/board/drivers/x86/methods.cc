@@ -11,6 +11,8 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 #include <acpica/acpi.h>
 #include <acpica/acuuid.h>
 

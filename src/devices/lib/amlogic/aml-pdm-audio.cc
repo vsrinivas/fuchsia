@@ -4,6 +4,7 @@
 
 #include <lib/ddk/debug.h>
 
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <utility>

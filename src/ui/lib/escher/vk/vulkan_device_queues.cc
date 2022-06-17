@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <iterator>
 #include <set>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"

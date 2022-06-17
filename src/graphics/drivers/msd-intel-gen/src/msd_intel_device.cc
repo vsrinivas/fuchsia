@@ -6,6 +6,7 @@
 
 #include <bitset>
 #include <cstdio>
+#include <iterator>
 #include <string>
 
 #include <fbl/string_printf.h>

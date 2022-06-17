@@ -11,6 +11,7 @@
 #include <zircon/syscalls.h>
 
 #include <atomic>
+#include <iterator>
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/performance/bin/cpuperf_provider/categories.h"

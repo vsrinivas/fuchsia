@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 
+#include <iterator>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

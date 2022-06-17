@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_handle.h"
 
+#include <iterator>
+
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/handle_info.h"
 #include "src/developer/debug/zxdb/common/string_util.h"

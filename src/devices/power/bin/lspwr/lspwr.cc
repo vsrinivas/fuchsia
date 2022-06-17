@@ -17,6 +17,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>

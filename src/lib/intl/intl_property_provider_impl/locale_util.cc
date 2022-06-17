@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <iterator>
 #include <ostream>
 #include <unordered_set>
 

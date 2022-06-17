@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <iterator>
 #include <vector>
 
 #include "fuchsia-io-constants.h"

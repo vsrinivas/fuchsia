@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/enum.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <iterator>
 #include <type_traits>
 #include <unordered_set>
 #include <variant>

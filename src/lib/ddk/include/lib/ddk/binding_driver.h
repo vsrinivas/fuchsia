@@ -8,7 +8,7 @@
 #include <lib/ddk/binding_priv.h>
 
 #if !defined(countof) && defined(__cplusplus)
-#include <array>
+#include <iterator>
 #define countof(x) std::size(x)
 #endif
 

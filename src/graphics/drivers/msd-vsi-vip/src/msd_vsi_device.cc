@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iterator>
 #include <thread>
 
 #include <fbl/string_printf.h>

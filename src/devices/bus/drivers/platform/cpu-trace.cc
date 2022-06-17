@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <array>
+#include <iterator>
 
 typedef struct cpu_trace_dev {
   zx_device_t* zxdev;

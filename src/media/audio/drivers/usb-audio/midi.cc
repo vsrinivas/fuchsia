@@ -9,6 +9,7 @@
 #include <zircon/compiler.h>
 
 #include <array>
+#include <iterator>
 
 // Number of bytes in a message nc from 8c to Ec
 static const int CHANNEL_BYTE_LENGTHS[] = {3, 3, 3, 3, 2, 2, 3};
