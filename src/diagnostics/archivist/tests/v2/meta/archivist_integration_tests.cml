@@ -13,10 +13,8 @@
     },
     use: [
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.RealmQuery",
             from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
         },
         {
             protocol: [
