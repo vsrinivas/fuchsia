@@ -246,14 +246,14 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       return true;
     }
     case KTRACE_EVENT(TAG_PAGE_FAULT):
-      return HandlePageFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+      return HandlePageFaultEnter(record->ts, record->d, ToUInt64(record->b, record->a), record->c);
     case KTRACE_EVENT(TAG_PAGE_FAULT_EXIT):
-      return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+      return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->b, record->a), record->c);
     case KTRACE_EVENT(TAG_ACCESS_FAULT):
-      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b),
+      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->b, record->a),
                                     record->c);
     case KTRACE_EVENT(TAG_ACCESS_FAULT_EXIT):
-      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->a, record->b),
+      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->b, record->a),
                                    record->c);
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
       trace_cpu_number_t cpu = record->b & 0xff;
