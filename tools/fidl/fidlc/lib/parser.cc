@@ -1716,11 +1716,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
   auto p = [&](const Token& token) -> std::unique_ptr<Diagnostic> {
-    for (const auto& exit_token : exit_tokens) {
-      if (token.kind() == exit_token) {
-        // signal to ReadToken to stop by returning an error
-        return Diagnostic::MakeError(ErrUnexpectedToken, token.span());
-      }
+    if (exit_tokens.count(token.kind()) > 0) {
+      // signal to ReadToken to stop by returning an error
+      return Diagnostic::MakeError(ErrUnexpectedToken, token.span());
     }
     // nullptr return value indicates -> yes, consume to ReadToken
     return nullptr;
@@ -1862,6 +1860,7 @@ Parser::RecoverResult Parser::RecoverToEndOfParamList() {
 
   static const auto exit_tokens = std::set<Token::Kind>{
       Token::Kind::kRightParen,
+      Token::Kind::kEndOfFile,
   };
   if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;

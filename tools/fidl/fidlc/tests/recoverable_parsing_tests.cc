@@ -186,6 +186,22 @@ protocol Example {
                                       fidl::ErrDocCommentOnParameters);
 }
 
+TEST(ParsingTests, BadRecoverableUnmatchedDelimiterInParamList) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  Method() -> (vector<);
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  EXPECT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[1], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[2], fidl::ErrUnexpectedToken);
+}
+
 TEST(RecoverableParsingTests, BadRecoverToNextServiceMember) {
   TestLibrary library(R"FIDL(
 library example;
