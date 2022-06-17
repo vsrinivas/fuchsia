@@ -23,7 +23,7 @@ use {
             journal::super_block::SuperBlockInstance,
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
-            HandleOptions, LockState, ObjectKey, ObjectStore, ObjectValue, StoreInfo,
+            HandleOptions, ObjectKey, ObjectStore, ObjectValue, StoreInfo,
             MAX_STORE_INFO_SERIALIZED_SIZE,
         },
         serialized_types::VersionedLatest,
@@ -356,21 +356,16 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         let store =
             filesystem.object_manager().store(store_id).context("open_store failed").unwrap();
 
-        match store.lock_state() {
-            LockState::Locked => {
-                if crypt.is_none() {
-                    // We can't check this store.
-                    info!(store_id, "Skipping locked encrypted store");
-                    return Ok(());
-                }
-                store.unlock(crypt.clone().unwrap()).await?;
+        if store.is_locked() {
+            if let Some(crypt) = &crypt {
+                store.unlock(crypt.clone()).await?;
+            } else {
+                // We can't check this store.
+                info!(store_id, "Skipping locked encrypted store");
+                return Ok(());
             }
-            LockState::Unencrypted => crypt = None,
-            LockState::Unlocked(c) => {
-                // Use the crypt associated with the store.
-                crypt = Some(c)
-            }
-            LockState::Unknown => panic!("Unknown lock state; has the journal been replayed yet?"),
+        } else {
+            crypt = store.crypt();
         }
 
         // Manually open the store so we can do our own validation.  Later, we will call open_store

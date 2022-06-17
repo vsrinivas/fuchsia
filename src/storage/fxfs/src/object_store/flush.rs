@@ -40,6 +40,9 @@ pub enum Reason {
 
     /// After unlock and replay of encrypted mutations.
     Unlock,
+
+    /// Just prior to locking a store.
+    Lock,
 }
 
 impl ObjectStore {
@@ -67,7 +70,7 @@ impl ObjectStore {
                     return Ok(self.tree.get_earliest_version());
                 }
             }
-            Reason::Journal => {
+            Reason::Journal | Reason::Lock => {
                 if !object_manager.needs_flush(self.store_object_id) {
                     // Early exit, but still return the earliest version used by a struct in the
                     // tree.
@@ -236,10 +239,10 @@ impl ObjectStore {
             // Append the encrypted mutations.
             let mut buffer = handle.allocate_buffer(MAX_ENCRYPTED_MUTATIONS_SIZE);
             let mut cursor = std::io::Cursor::new(buffer.as_mut_slice());
-            self.encrypted_mutations
+            self.lock_state
                 .lock()
                 .unwrap()
-                .as_ref()
+                .encrypted_mutations()
                 .unwrap()
                 .serialize_with_version(&mut cursor)?;
             let len = cursor.position() as usize;
@@ -350,7 +353,9 @@ impl ObjectStore {
                 if let Some(layers) = new_layers {
                     self.tree.set_layers(layers);
                 }
-                self.encrypted_mutations.lock().unwrap().take();
+                if let Some(m) = self.lock_state.lock().unwrap().encrypted_mutations_mut() {
+                    std::mem::take(m);
+                }
             })
             .await?;
 

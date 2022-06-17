@@ -191,10 +191,6 @@ impl Versioned for EncryptedMutations {
 }
 
 impl EncryptedMutations {
-    fn is_empty(&self) -> bool {
-        self.transactions.is_empty() && self.mutations_key_roll.is_none()
-    }
-
     fn extend(&mut self, other: EncryptedMutations) -> Result<(), Error> {
         ensure!(
             self.mutations_key_roll.is_none() || other.mutations_key_roll.is_none(),
@@ -205,20 +201,6 @@ impl EncryptedMutations {
             self.mutations_key_roll = Some((self.data.len() + offset, key));
         }
         self.data.extend(other.data);
-        Ok(())
-    }
-
-    // Same as extend but with borrowed mutations, so we must copy.
-    fn extend_from(&mut self, other: &EncryptedMutations) -> Result<(), Error> {
-        ensure!(
-            self.mutations_key_roll.is_none() || other.mutations_key_roll.is_none(),
-            FxfsError::Inconsistent
-        );
-        self.transactions.extend_from_slice(&other.transactions);
-        if let Some((offset, key)) = &other.mutations_key_roll {
-            self.mutations_key_roll = Some((self.data.len() + offset, key.clone()));
-        }
-        self.data.extend_from_slice(&other.data);
         Ok(())
     }
 
@@ -335,14 +317,40 @@ impl StoreOrReplayInfo {
     }
 }
 
-#[derive(Clone)]
 pub enum LockState {
-    Locked,
+    Locked(EncryptedMutations),
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
+
+    // The store is encrypted but is now in an unusable state (either due to a failure to unlock, or
+    // a failure to lock).
+    Invalid,
+
     // Before we've read the StoreInfo we might not know whether the store is Locked or Unencrypted.
     // This can happen when lazily opening stores (ObjectManager::lazy_open_store).
     Unknown,
+}
+
+impl LockState {
+    fn encrypted_mutations(&self) -> Option<&EncryptedMutations> {
+        if let LockState::Locked(m) = self {
+            Some(m)
+        } else {
+            None
+        }
+    }
+
+    fn encrypted_mutations_mut(&mut self) -> Option<&mut EncryptedMutations> {
+        if let LockState::Locked(m) = self {
+            Some(m)
+        } else {
+            None
+        }
+    }
+
+    fn is_unlocked(&self) -> bool {
+        matches!(self, LockState::Unlocked(_))
+    }
 }
 
 #[derive(Default)]
@@ -394,9 +402,6 @@ pub struct ObjectStore {
 
     // The cipher to use for encrypted mutations, if this store is encrypted.
     mutations_cipher: Mutex<Option<StreamCipher>>,
-
-    // Encrypted mutations that exist after replaying an encrypted store but before it is unlocked.
-    encrypted_mutations: Mutex<Option<Arc<EncryptedMutations>>>,
 
     // Current lock state of the store.
     lock_state: Mutex<LockState>,
@@ -454,7 +459,6 @@ impl ObjectStore {
             tree: LSMTree::new(merge::merge),
             store_info_handle: OnceCell::new(),
             mutations_cipher: Mutex::new(mutations_cipher),
-            encrypted_mutations: Mutex::new(None),
             lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
             metrics: OnceCell::new(),
@@ -491,7 +495,6 @@ impl ObjectStore {
             tree: LSMTree::new(merge::merge),
             store_info_handle: OnceCell::new(),
             mutations_cipher: Mutex::new(None),
-            encrypted_mutations: Mutex::new(None),
             lock_state: Mutex::new(LockState::Unencrypted),
             trace: AtomicBool::new(false),
             metrics: OnceCell::new(),
@@ -669,7 +672,8 @@ impl ObjectStore {
     /// panic if the store is locked.
     pub fn crypt(&self) -> Option<Arc<dyn Crypt>> {
         match &*self.lock_state.lock().unwrap() {
-            LockState::Locked => panic!("Store is locked"),
+            LockState::Locked(_) => panic!("Store is locked"),
+            LockState::Invalid => None,
             LockState::Unencrypted => None,
             LockState::Unlocked(crypt) => Some(crypt.clone()),
             LockState::Unknown => {
@@ -1044,7 +1048,7 @@ impl ObjectStore {
         };
 
         if encrypted.is_some() {
-            *self.lock_state.lock().unwrap() = LockState::Locked;
+            *self.lock_state.lock().unwrap() = LockState::Locked(encrypted_mutations);
         } else {
             *self.lock_state.lock().unwrap() = LockState::Unencrypted;
         }
@@ -1079,10 +1083,6 @@ impl ObjectStore {
             tree::reservation_amount_from_layer_size(total_size),
         );
 
-        if !encrypted_mutations.is_empty() {
-            *self.encrypted_mutations.lock().unwrap() = Some(Arc::new(encrypted_mutations.into()));
-        }
-
         Ok(())
     }
 
@@ -1115,8 +1115,9 @@ impl ObjectStore {
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
     pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
-        match *self.lock_state.lock().unwrap() {
-            LockState::Locked => {}
+        match &*self.lock_state.lock().unwrap() {
+            LockState::Locked(_) => {}
+            LockState::Invalid => bail!(FxfsError::Inconsistent),
             LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
             LockState::Unlocked(_) => bail!(FxfsError::Internal),
             LockState::Unknown => panic!("Store was unlocked before replay"),
@@ -1182,8 +1183,12 @@ impl ObjectStore {
             }
         };
 
-        if let Some(m) = &*self.encrypted_mutations.lock().unwrap() {
-            mutations.extend_from(m)?;
+        if let LockState::Locked(m) =
+            std::mem::replace(&mut *self.lock_state.lock().unwrap(), LockState::Invalid)
+        {
+            mutations.extend(m)?;
+        } else {
+            unreachable!();
         }
 
         let EncryptedMutations { transactions, mut data, mutations_key_roll } = mutations;
@@ -1225,12 +1230,36 @@ impl ObjectStore {
         Ok(())
     }
 
-    pub fn lock_state(&self) -> LockState {
-        self.lock_state.lock().unwrap().clone()
+    pub fn is_locked(&self) -> bool {
+        matches!(*self.lock_state.lock().unwrap(), LockState::Locked(_))
     }
 
-    pub fn is_locked(&self) -> bool {
-        matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
+    // Locks a store.  This assumes no other concurrent access to the store.  Whilst this can return
+    // an error, the store will be placed into an unusable but safe state (i.e. no lingering
+    // unencrypted data) if an error is encountered.
+    pub async fn lock(&self) -> Result<(), Error> {
+        assert!(self.lock_state.lock().unwrap().is_unlocked());
+
+        // We must flush because we want to discard unencrypted data and we can't easily replay
+        // again later if we try and unlock this store again.
+        let result = self.flush_with_reason(flush::Reason::Lock).await;
+
+        *self.lock_state.lock().unwrap() = if result.is_err() {
+            // Seal the mutable layer so that we dump unencrypted data when we reset the immutable
+            // layers below.
+            self.tree.seal().await;
+            LockState::Invalid
+        } else {
+            // There should have been no concurrent access with the store so there should be nothing
+            // to flush.
+            assert!(!self.filesystem().object_manager().needs_flush(self.store_object_id));
+            LockState::Locked(EncryptedMutations::default())
+        };
+
+        self.tree.reset_immutable_layers();
+
+        result?;
+        Ok(())
     }
 
     // Returns INVALID_OBJECT_ID if the object ID cipher needs to be created or rolled.
@@ -2002,5 +2031,31 @@ mod tests {
         let store = root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
 
         assert_eq!(store.last_object_id.lock().unwrap().id, 2u64 << 32);
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_lock_store() {
+        let fs = test_filesystem().await;
+        let crypt = Arc::new(InsecureCrypt::new());
+
+        let root_volume = root_volume(&fs).await.expect("root_volume failed");
+        let store =
+            root_volume.new_volume("test", Some(crypt.clone())).await.expect("new_volume failed");
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .create_child_file(&mut transaction, "test")
+            .await
+            .expect("create_child_file failed");
+        transaction.commit().await.expect("commit failed");
+        store.lock().await.expect("lock failed");
+
+        store.unlock(crypt).await.expect("unlock failed");
+        root_directory.lookup("test").await.expect("lookup failed").expect("not found");
     }
 }
