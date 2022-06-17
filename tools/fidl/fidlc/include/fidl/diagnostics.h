@@ -186,9 +186,9 @@ constexpr ErrorDef ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
 constexpr ErrorDef<flat::Decl::Kind> ErrInvalidParameterListKind(
-    "'{}' cannot be used as a parameter list");
+    "cannot use {} as a request/response; must use a struct, table, or union");
 constexpr ErrorDef<const flat::Type *> ErrInvalidParameterListType(
-    "'{}' cannot be used as a parameter list");
+    "invalid request/response type '{}'; must use a struct, table, or union");
 constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<std::string_view> ErrEmptyPayloadStructs(

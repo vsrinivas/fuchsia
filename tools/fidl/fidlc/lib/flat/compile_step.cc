@@ -1100,12 +1100,18 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
             ZX_ASSERT(result_union_type->type_decl->kind == Decl::Kind::kUnion);
             const auto* result_union =
                 static_cast<const flat::Union*>(result_union_type->type_decl);
-            const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
-                result_union->members[0].maybe_used->type_ctor->type);
-
+            ZX_ASSERT(!result_union->members.empty());
+            ZX_ASSERT(result_union->members[0].maybe_used);
+            const auto* success_variant_type = result_union->members[0].maybe_used->type_ctor->type;
             if (success_variant_type) {
-              CheckNoDefaultMembers(success_variant_type->type_decl);
-              CheckPayloadDeclKind(method.name, success_variant_type->type_decl, true);
+              if (success_variant_type->kind != Type::Kind::kIdentifier) {
+                Fail(ErrInvalidParameterListType, method.name, success_variant_type);
+              } else {
+                const auto* success_decl =
+                    static_cast<const IdentifierType*>(success_variant_type)->type_decl;
+                CheckNoDefaultMembers(success_decl);
+                CheckPayloadDeclKind(method.name, success_decl, true);
+              }
             }
           } else {
             CheckNoDefaultMembers(decl);

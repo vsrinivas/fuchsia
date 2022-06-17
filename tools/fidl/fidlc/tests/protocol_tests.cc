@@ -915,7 +915,7 @@ protocol MyProtocol {
   });
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListKind);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
@@ -1050,7 +1050,7 @@ protocol MyProtocol {
     MyMethod(handle);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListKind);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle");
 }
 
@@ -1332,6 +1332,72 @@ protocol MyProtocol {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEventErrorSyntaxDeprecated);
+}
+
+TEST(ProtocolTests, BadDisallowedRequestType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod(uint32);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+}
+
+TEST(ProtocolTests, BadInvalidRequestType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod(box);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+}
+
+TEST(ProtocolTests, BadDisallowedResponseType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (uint32);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+}
+
+TEST(ProtocolTests, BadInvalidResponseType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (box);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+}
+
+TEST(ProtocolTests, BadDisallowedSuccessType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (uint32) error uint32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+}
+
+TEST(ProtocolTests, BadInvalidSuccessType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (box) error uint32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 // TODO(fxbug.dev/93542): add bad `:optional` message body tests here.
