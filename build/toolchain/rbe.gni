@@ -92,32 +92,6 @@ declare_args() {
   #   (There are other rewrapper options that are not exposed.)
   cxx_rbe_exec_strategy = "remote"
 
-  # Run one of the more expensive checks, intended for CI.
-  # All of these require cxx_rbe_enable=true.
-  #
-  # One of:
-  #
-  #   * "none": No additional check.
-  #
-  #   * "determinism":
-  #       Check of determinism of C++ targets by running locally twice
-  #       and comparing outputs, failing if any differences are found.
-  #       Even though this check doesn't involve RBE, it uses the same
-  #       wrapper script, which knows what output files to expect and
-  #       compare.
-  #
-  #       Build outputs that depend on time are discouraged because they
-  #       impact caching.
-  #       If your result depends on the current time, this check will
-  #       definitely fail.  If it depends on only the date, there is still
-  #       a nonzero chance of failure, if the rerun falls on the next day.
-  #
-  #   * "consistency":
-  #       Check consistency between local and remote C++ compiles,
-  #       by running both and comparing results.
-  #
-  cxx_rbe_check = "none"
-
   #########################################
   ### DEPRECATED LEGACY variables below ###
   #########################################
@@ -125,15 +99,6 @@ declare_args() {
   # Set to true to enable distributed compilation using RBE.
   # This may affect Rust and C++ compiles.
   enable_rbe = false
-
-  # Set to true to distribute C++ compiles remotely using RBE.
-  # This takes precedence over `use_goma` in //build/toolchain/goma.gni.
-  # This feature is experimental and will be likely renamed later.
-  #
-  # Requires GN args:
-  #   `enable_rbe = true`
-  #
-  use_reclient_cxx_experimental = false
 
   # One of {local,remote}:
   #   * remote: Execute action remotely on cache miss.
