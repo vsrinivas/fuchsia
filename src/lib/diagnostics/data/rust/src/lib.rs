@@ -846,36 +846,45 @@ impl Data<Logs> {
                 LogsProperty::String(LogsField::Msg, _tag) => None,
                 LogsProperty::String(LogsField::FilePath, _tag) => None,
                 LogsProperty::String(LogsField::LineNumber, _tag) => None,
-                LogsProperty::String(LogsField::Other(key), value) => {
-                    Some(format!("{}={}", key.to_string(), value))
+                LogsProperty::String(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={}", key, value)),
+                LogsProperty::Bytes(key @ (LogsField::Other(_) | LogsField::MsgStructured), _) => {
+                    Some(format!("{} = <bytes>", key))
                 }
-                LogsProperty::Bytes(LogsField::Other(key), _) => {
-                    Some(format!("{} = <bytes>", key.to_string()))
-                }
-                LogsProperty::Int(LogsField::Other(key), value) => {
-                    Some(format!("{}={}", key.to_string(), value))
-                }
-                LogsProperty::Uint(LogsField::Other(key), value) => {
-                    Some(format!("{}={}", key.to_string(), value))
-                }
-                LogsProperty::Double(LogsField::Other(key), value) => {
-                    Some(format!("{}={}", key.to_string(), value))
-                }
-                LogsProperty::Bool(LogsField::Other(key), value) => {
-                    Some(format!("{}={}", key.to_string(), value))
-                }
-                LogsProperty::DoubleArray(LogsField::Other(key), value) => {
-                    Some(format!("{}={:?}", key.to_string(), value))
-                }
-                LogsProperty::IntArray(LogsField::Other(key), value) => {
-                    Some(format!("{}={:?}", key.to_string(), value))
-                }
-                LogsProperty::UintArray(LogsField::Other(key), value) => {
-                    Some(format!("{}={:?}", key.to_string(), value))
-                }
-                LogsProperty::StringList(LogsField::Other(key), value) => {
-                    Some(format!("{}={:?}", key.to_string(), value))
-                }
+                LogsProperty::Int(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={}", key, value)),
+                LogsProperty::Uint(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={}", key, value)),
+                LogsProperty::Double(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={}", key, value)),
+                LogsProperty::Bool(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={}", key, value)),
+                LogsProperty::DoubleArray(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={:?}", key, value)),
+                LogsProperty::IntArray(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={:?}", key, value)),
+                LogsProperty::UintArray(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={:?}", key, value)),
+                LogsProperty::StringList(
+                    key @ (LogsField::Other(_) | LogsField::MsgStructured),
+                    value,
+                ) => Some(format!("{}={:?}", key, value)),
                 _ => None,
             }))
         });
@@ -1062,6 +1071,25 @@ pub enum LogsField {
     Args,
     Format,
     Other(String),
+}
+
+impl fmt::Display for LogsField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LogsField::ProcessId => write!(f, "pid"),
+            LogsField::ThreadId => write!(f, "tid"),
+            LogsField::Dropped => write!(f, "num_dropped"),
+            LogsField::Tag => write!(f, "tag"),
+            LogsField::Verbosity => write!(f, "verbosity"),
+            LogsField::Msg => write!(f, "message"),
+            LogsField::MsgStructured => write!(f, "value"),
+            LogsField::FilePath => write!(f, "file_path"),
+            LogsField::LineNumber => write!(f, "line_number"),
+            LogsField::Args => write!(f, "args"),
+            LogsField::Format => write!(f, "format"),
+            LogsField::Other(name) => write!(f, "{}", name),
+        }
+    }
 }
 
 // TODO(fxbug.dev/50519) - ensure that strings reported here align with naming
@@ -1540,10 +1568,11 @@ mod tests {
         .add_tag("foo")
         .add_tag("bar")
         .add_key(LogsProperty::String(LogsField::Other("test".to_string()), "property".to_string()))
+        .add_key(LogsProperty::String(LogsField::MsgStructured, "test".to_string()))
         .build();
 
         assert_eq!(
-            "[00012.345678][123][456][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property",
+            "[00012.345678][123][456][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property value=test",
             format!("{}", data)
         )
     }
