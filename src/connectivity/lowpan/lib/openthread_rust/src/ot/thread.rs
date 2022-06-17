@@ -40,6 +40,10 @@ pub trait Thread {
     fn get_leader_data(&self) -> Result<LeaderData>;
 
     /// Functional equivalent of
+    /// [`otsys::otThreadGetLeaderWeight`](crate::otsys::otThreadGetLeaderWeight).
+    fn get_leader_weight(&self) -> u8;
+
+    /// Functional equivalent of
     /// [`otsys::otThreadGetNetworkKey`](crate::otsys::otThreadGetNetworkKey).
     #[must_use]
     fn get_network_key(&self) -> NetworkKey;
@@ -158,6 +162,11 @@ impl<T: Thread + Boxable> Thread for ot::Box<T> {
     fn get_leader_data(&self) -> Result<LeaderData> {
         self.as_ref().get_leader_data()
     }
+
+    fn get_leader_weight(&self) -> u8 {
+        self.as_ref().get_leader_weight()
+    }
+
     fn get_network_key(&self) -> NetworkKey {
         self.as_ref().get_network_key()
     }
@@ -266,6 +275,10 @@ impl Thread for Instance {
         Error::from(unsafe { otThreadGetLeaderData(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
             .into_result()?;
         Ok(ret)
+    }
+
+    fn get_leader_weight(&self) -> u8 {
+        unsafe { otThreadGetLeaderWeight(self.as_ot_ptr()) }
     }
 
     fn get_network_key(&self) -> NetworkKey {
