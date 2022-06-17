@@ -12,8 +12,6 @@ use futures::{
 };
 use serde_json as json;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
 use std::rc::Rc;
 
 // nodes
@@ -74,8 +72,9 @@ impl PowerManager {
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<(), Error> {
-        let json_data: json::Value =
-            json::from_reader(BufReader::new(File::open(NODE_CONFIG_PATH)?))?;
+        let contents = std::fs::read_to_string(NODE_CONFIG_PATH)?;
+        let json_data: json::Value = serde_json5::from_str(&contents)
+            .context(format!("Failed to parse file {}", NODE_CONFIG_PATH))?;
         self.create_nodes(json_data, service_fs, node_futures).await
     }
 

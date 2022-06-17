@@ -312,7 +312,7 @@ impl CobaltIntHistogram {
 }
 
 // Finds all of the node config files under the test package's "/config/data" directory. The node
-// config files are identified by a suffix of "node_config.json". The function then calls the
+// config files are identified by a suffix of "node_config.json5". The function then calls the
 // provided `test_config_file` function for each found config file, passing the JSON structure in as
 // an argument. The function returns success if each call to `test_config_file` succeeds. Otherwise,
 // the first error encountered is returned.
@@ -321,18 +321,19 @@ pub fn test_each_node_config_file(
     test_config_file: impl Fn(&Vec<serde_json::Value>) -> Result<(), anyhow::Error>,
 ) -> Result<(), anyhow::Error> {
     use anyhow::Context as _;
-    use serde_json as json;
     use std::fs;
-    use std::fs::File;
-    use std::io::BufReader;
 
+    let suffix = "node_config.json5";
     let config_files = fs::read_dir("/config/data")
         .unwrap()
-        .filter(|f| f.as_ref().unwrap().file_name().to_str().unwrap().ends_with("node_config.json"))
+        .filter(|f| f.as_ref().unwrap().file_name().to_str().unwrap().ends_with(suffix))
         .map(|f| {
             let path = f.unwrap().path();
             let file_path = path.to_str().unwrap().to_string();
-            let json = json::from_reader(BufReader::new(File::open(path).unwrap())).unwrap();
+            let contents = std::fs::read_to_string(&file_path).unwrap();
+            let json = serde_json5::from_str(&contents)
+                .expect(&format!("Failed to parse file {}", file_path));
+
             (file_path, json)
         })
         .collect::<Vec<_>>();
