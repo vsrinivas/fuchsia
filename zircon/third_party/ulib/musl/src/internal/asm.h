@@ -32,6 +32,8 @@
 // See __asan_weak_alias in asan_impl.h.
 #if __has_feature(address_sanitizer)
 #define ASAN_WEAK_ALIAS(name) WEAK_ALIAS(name, __asan_##name)
+#elif __has_feature(hwaddress_sanitizer)
+#define ASAN_WEAK_ALIAS(name) WEAK_ALIAS(name, __hwasan_##name)
 #else                          // !__has_feature(address_sanitizer)
 #define ASAN_WEAK_ALIAS(name)  // Don't define __asan_##name.
 #endif                         // __has_feature(address_sanitizer)
