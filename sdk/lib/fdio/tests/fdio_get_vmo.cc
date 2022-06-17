@@ -193,10 +193,11 @@ TEST(GetVMOTest, Remote) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(endpoints.status_value());
 
-  Context context = {};
-  context.is_vmofile = false;
-  context.content_size = 43;
-  context.supports_get_buffer = true;
+  Context context = {
+      .is_vmofile = false,
+      .supports_get_buffer = true,
+      .content_size = 43,
+  };
   create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
@@ -266,10 +267,11 @@ TEST(GetVMOTest, VMOFile) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(endpoints.status_value());
 
-  Context context = {};
-  context.content_size = 43;
-  context.is_vmofile = true;
-  context.supports_seek = true;
+  Context context = {
+      .is_vmofile = true,
+      .supports_seek = true,
+      .content_size = 43,
+  };
   create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
@@ -319,10 +321,11 @@ TEST(MmapFileTest, ProtExecWorks) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(endpoints.status_value());
 
-  Context context = {};
-  context.is_vmofile = false;
-  context.content_size = 43;
-  context.supports_get_buffer = true;
+  Context context = {
+      .is_vmofile = false,
+      .supports_get_buffer = true,
+      .content_size = 43,
+  };
   create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
