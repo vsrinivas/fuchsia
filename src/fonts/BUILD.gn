@@ -135,18 +135,12 @@ fuchsia_component("font_provider_cmx") {
   component_name = "fonts"
   deps = [ ":font_provider" ]
 }
-fuchsia_component("font_provider_cmx_tests") {
-  manifest = "meta/fonts_for_downstream_tests.cmx"
-  component_name = "fonts_for_downstream_tests"
-  deps = [ ":font_provider" ]
-}
 
 fuchsia_package("pkg") {
   package_name = "fonts"
   deps = [
     ":font_provider_cm",
     ":font_provider_cmx",
-    ":font_provider_cmx_tests",
   ]
 }
 
