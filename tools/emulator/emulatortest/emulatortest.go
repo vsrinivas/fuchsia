@@ -68,6 +68,18 @@ func (d *Distribution) TargetCPU() emulator.Arch {
 	return t
 }
 
+// ResizeRawImage reimplements emulator.ResizeRawImage
+//
+// Caller is responsible for cleaning up the image file at the path returned from this method.
+// Terminates the test if an error occurs during resizing.
+func (d *Distribution) ResizeRawImage(imageName, hostPathFvmBinary string) (path string) {
+	var err error
+	if path, err = d.d.ResizeRawImage(imageName, hostPathFvmBinary); err != nil {
+		d.t.Fatal(err)
+	}
+	return
+}
+
 // Instance wraps emulator.Instance.
 type Instance struct {
 	i *emulator.Instance

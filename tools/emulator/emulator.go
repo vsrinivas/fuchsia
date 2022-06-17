@@ -398,6 +398,82 @@ func runZbi(args runZbiArgs) error {
 	return nil
 }
 
+// ResizeRawImage finds a raw FVM image by name in the build's image manifest and generates a fresh
+// image with additional free space using that as a basis. It returns the path to that image file
+// on-disk.
+//
+// NB: Caller is responsible for cleaning up the image file.
+//
+// fshost fails to mount a disk with no free space, and so some raw images cannot be used in tests
+// that try to boot all the way to a running Fuchsia session. This creates and returns the on-disk
+// path to a fresh raw image that's twice the size as the original.
+func (d *Distribution) ResizeRawImage(imageName, hostPathFvmBinary string) (string, error) {
+	blk, err := d.findImageByName(imageName, "blk")
+	if err != nil {
+		return "", err
+	}
+
+	resizedPath, err := func() (string, error) {
+		// Don't want a tempfile, just a safe name. Close the file object as soon as is safe.
+		f, err := ioutil.TempFile("", "resized_fvm.*.blk")
+		if err != nil {
+			return "", err
+		}
+		f.Close()
+		resizedPath := f.Name()
+		{
+			cmd := exec.Command(hostPathFvmBinary, resizedPath, "decompress", "--default", blk.Path)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return resizedPath, err
+			}
+		}
+		info, err := os.Stat(resizedPath)
+		if err != nil {
+			return resizedPath, err
+		}
+		// Upsize the image by 2x, and express the size in KB
+		size := fmt.Sprintf("%dK", (2*info.Size())/1024)
+		{
+			cmd := exec.Command(hostPathFvmBinary, resizedPath, "extend", "--length", size, "--length-is-lowerbound")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return resizedPath, err
+			}
+		}
+		return resizedPath, nil
+	}()
+	if err != nil {
+		os.Remove(resizedPath)
+	}
+	return resizedPath, err
+}
+
+func (d *Distribution) findImageByName(name, typ string) (*build.Image, error) {
+	images, err := d.loadImageManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, image := range images {
+		if image.Name == name && image.Type == typ {
+			return &image, nil
+		}
+	}
+	return nil, fmt.Errorf("Could not find %s of type %s in image manifest.", name, typ)
+}
+
+func tempFilePath(dir, template string) (string, error) {
+	// Don't want a tempfile, just a safe name. Close the file object as soon as is safe.
+	f, err := ioutil.TempFile(dir, template)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close() // So the file object doesn't hang around
+	return f.Name(), nil
+}
+
 // RunNonInteractive runs an instance of the emulator that runs a single command and
 // returns the log that results from doing so.
 //

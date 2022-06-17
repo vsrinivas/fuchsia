@@ -1,0 +1,8 @@
+{
+    "platform": {
+        "additional_serial_log_tags": [
+            "session-manager"
+        ]
+    },
+    "product": {}
+}
