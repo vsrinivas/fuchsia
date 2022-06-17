@@ -38,10 +38,7 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 }
 
 fuchsia_unittest_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
-  manifest = "meta/fidl-fuchsia-pkg-rewrite-ext-tests.cmx"
   deps = [ ":fidl-fuchsia-pkg-rewrite-ext_test" ]
-  test_specs = {
-  }
 }
 
 group("tests") {
