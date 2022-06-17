@@ -37,3 +37,26 @@ exec_script_whitelist = [
 ]
 
 check_system_includes = true
+
+# These arguments override the default values for items in a declare_args block. "gn args" in turn
+# can override these.
+#
+# In general the value for a build arg in a declare_args block should be the default. In some
+# cases, a third party dependency will want different defaults for being built as part of Fuchsia
+# vs. being built standalone. In this case, the Fuchsia defaults should go here. There should be no
+# overrides here for values declared in the main Fuchsia repository.
+#
+# Important note for defining defaults: This file is executed before the BUILDCONFIG.gn file. That
+# file sets up the global variables like "target_os". This means that the default_args can not depend
+# on the platform, architecture, or other build parameters. If you really need that, the other repo
+# should define a flag that toggles on a behavior that implements the additional logic required by
+# Fuchsia to set the variables.
+default_args = {
+  # Specify Pigweed backends for Fuchsia.
+  pw_assert_BACKEND = "//third_party/pigweed/src/pw_assert_basic"
+  pw_assert_basic_HANDLER_BACKEND =
+      "//third_party/pigweed/backends:pw_assert_basic_handler_backend"
+
+  # Some Pigweed module implementations need to be link dependencies to avoid circular dependencies.
+  pw_build_LINK_DEPS = [ "//third_party/pigweed/src/pw_assert:impl" ]
+}

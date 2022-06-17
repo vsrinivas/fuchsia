@@ -909,6 +909,7 @@ foreach(_target_type,
       }
       inputs += [ invoker.script ]
 
+      _args = []
       if (defined(invoker.args)) {
         _args = invoker.args
       }
