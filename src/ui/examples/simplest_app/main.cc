@@ -24,6 +24,7 @@ using namespace simplest_app;
 
 int main(int argc, const char** argv) {
   constexpr char kProcessName[] = "simplest_app";
+  syslog::SetTags({kProcessName});
   zx::process::self()->set_property(ZX_PROP_NAME, kProcessName, sizeof(kProcessName));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -70,6 +71,11 @@ int main(int argc, const char** argv) {
   // Display the newly-created view using root_presenter.
   fuchsia::ui::policy::PresenterPtr root_presenter =
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
+  root_presenter.set_error_handler([&loop](zx_status_t status) {
+    FX_LOGS(ERROR) << "Lost connection to root presenter with error "
+                   << zx_status_get_string(status) << ".";
+    loop.Quit();
+  });
   root_presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();

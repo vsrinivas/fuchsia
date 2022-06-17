@@ -18,6 +18,8 @@ const String _trace2jsonPath = 'runtime_deps/trace2json';
 Future<void> _killProcesses(PerfTestHelper helper) async {
   await helper.sl4fDriver.ssh.run('killall "input-pipeline*"');
   await helper.sl4fDriver.ssh.run('killall "root_presenter*"');
+  await helper.sl4fDriver.ssh.run('killall "cursor*"');
+  await helper.sl4fDriver.ssh.run('killall "scene_manager*"');
   await helper.sl4fDriver.ssh.run('killall "scenic*"');
   await helper.sl4fDriver.ssh.run('killall "basemgr*"');
   await helper.sl4fDriver.ssh.run('killall "flutter*"');
