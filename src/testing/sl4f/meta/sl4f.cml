@@ -7,11 +7,6 @@
         runner: "elf",
         binary: "bin/sl4f",
     },
-    capabilities: [
-        {
-            protocol: [ "fuchsia.testing.sl4f.FacadeProvider" ],
-        },
-    ],
     use: [
         // TODO(https://fxbug.dev/98760): Remove once fixed.
         {
@@ -95,6 +90,7 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.systemmetrics.test.SystemMetricsLogger",
                 "fuchsia.testing.proxy.TcpProxyControl",
+                "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.thermal.test.TemperatureLogger",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
@@ -116,10 +112,6 @@
         },
     ],
     expose: [
-        {
-            protocol: "fuchsia.testing.sl4f.FacadeProvider",
-            from: "self",
-        },
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",

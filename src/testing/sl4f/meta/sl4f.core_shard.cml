@@ -31,14 +31,17 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.testing.sl4f.FacadeProvider",
-                "sl4f.Binder",
-            ],
+            protocol: [ "sl4f.Binder" ],
             from: "#sl4f",
         },
     ],
     offer: [
+        {
+            protocol: [ "fuchsia.testing.sl4f.FacadeProvider" ],
+            from: "self",
+            to: "#sl4f",
+            dependency: "weak_for_migration",
+        },
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",

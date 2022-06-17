@@ -73,6 +73,7 @@
                 // route from trace manager directly. This capability is listed
                 // here as some of the components that need updating are present
                 // in builds where trace_manager's core shard is not included.
+                "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.composition.Allocator",
