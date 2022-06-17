@@ -141,7 +141,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
     SetHttpResponse(response_body_to_use, http_response_code, response_headers_to_use);
     auto response_or = PostStringAndWait("Request");
     ASSERT_TRUE(response_or.ok());
-    auto response = response_or.ConsumeValueOrDie();
+    auto& response = response_or.value();
     EXPECT_EQ(response.response, response_body_to_use);
     EXPECT_EQ(response.http_code, http_response_code);
     if (include_response_headers) {

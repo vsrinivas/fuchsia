@@ -272,11 +272,17 @@ TEST(JSONHelper, CanRead) {
 
   JSONHelper helper(files::JoinPath(kTestDir, "config.json"));
 
-  EXPECT_TRUE(helper.GetString("a_string").ok());
-  EXPECT_EQ(helper.GetString("a_string").ConsumeValueOrDie(), "a value");
+  {
+    auto value = helper.GetString("a_string");
+    EXPECT_TRUE(value.ok());
+    EXPECT_EQ(value.value(), "a value");
+  }
 
-  EXPECT_TRUE(helper.GetBool("a_bool").ok());
-  EXPECT_EQ(helper.GetBool("a_bool").ConsumeValueOrDie(), true);
+  {
+    auto value = helper.GetBool("a_bool");
+    EXPECT_TRUE(value.ok());
+    EXPECT_EQ(value.value(), true);
+  }
 }
 
 }  // namespace cobalt::test
