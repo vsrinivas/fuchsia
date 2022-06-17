@@ -15,18 +15,14 @@ use {
     fidl_fuchsia_device as fdevice, fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx, AsHandleRef as _, HandleBased as _},
     std::{
-        ffi::{CStr, CString, NulError, OsStr},
+        ffi::{CStr, CString, NulError},
         fs::File,
         marker::PhantomData,
         mem::MaybeUninit,
         os::{
             raw,
-            unix::{
-                ffi::OsStrExt as _,
-                io::{AsRawFd, FromRawFd, IntoRawFd, RawFd},
-            },
+            unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd},
         },
-        path::Path,
     },
 };
 
@@ -591,90 +587,6 @@ pub fn spawn_vmo(
             )
         },
     )
-}
-
-/// Events that can occur while watching a directory, including files that already exist prior to
-/// running a Watcher.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum WatchEvent {
-    /// A file was added.
-    AddFile,
-
-    /// A file was removed.
-    RemoveFile,
-
-    /// The Watcher has enumerated all the existing files and has started to wait for new files to
-    /// be added.
-    Idle,
-
-    Unknown(i32),
-}
-
-impl From<raw::c_int> for WatchEvent {
-    fn from(i: raw::c_int) -> WatchEvent {
-        match i {
-            fdio_sys::WATCH_EVENT_ADD_FILE => WatchEvent::AddFile,
-            fdio_sys::WATCH_EVENT_REMOVE_FILE => WatchEvent::RemoveFile,
-            fdio_sys::WATCH_EVENT_IDLE => WatchEvent::Idle,
-            i => WatchEvent::Unknown(i),
-        }
-    }
-}
-
-impl From<WatchEvent> for raw::c_int {
-    fn from(i: WatchEvent) -> raw::c_int {
-        match i {
-            WatchEvent::AddFile => fdio_sys::WATCH_EVENT_ADD_FILE,
-            WatchEvent::RemoveFile => fdio_sys::WATCH_EVENT_REMOVE_FILE,
-            WatchEvent::Idle => fdio_sys::WATCH_EVENT_IDLE,
-            WatchEvent::Unknown(i) => i as raw::c_int,
-        }
-    }
-}
-
-unsafe extern "C" fn watcher_cb<F>(
-    _dirfd: raw::c_int,
-    event: raw::c_int,
-    fn_: *const raw::c_char,
-    watcher: *mut raw::c_void,
-) -> zx::sys::zx_status_t
-where
-    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zx::Status>,
-{
-    let cb: &mut F = &mut *(watcher as *mut F);
-    let filename = OsStr::from_bytes(CStr::from_ptr(fn_).to_bytes());
-    match cb(WatchEvent::from(event), Path::new(filename)) {
-        Ok(()) => zx::sys::ZX_OK,
-        Err(e) => e.into_raw(),
-    }
-}
-
-/// Runs the given callback for each file in the directory and each time a new file is
-/// added to the directory.
-///
-/// If the callback returns an error, the watching stops, and the zx::Status is returned.
-///
-/// This function blocks for the duration of the watch operation. The deadline parameter will stop
-/// the watch at the given (absolute) time and return zx::Status::TIMED_OUT. A deadline of
-/// zx::ZX_TIME_INFINITE will never expire.
-///
-/// The callback may use zx::Status::STOP as a way to signal to the caller that it wants to
-/// stop because it found what it was looking for. Since this error code is not returned by
-/// syscalls or public APIs, the callback does not need to worry about it turning up normally.
-pub fn watch_directory<F>(dir: &File, deadline: zx::sys::zx_time_t, mut f: F) -> zx::Status
-where
-    F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zx::Status>,
-{
-    let cb_ptr: *mut raw::c_void = &mut f as *mut _ as *mut raw::c_void;
-    unsafe {
-        zx::Status::from_raw(fdio_sys::fdio_watch_directory(
-            dir.as_raw_fd(),
-            Some(watcher_cb::<F>),
-            deadline,
-            cb_ptr,
-        ))
-    }
 }
 
 /// Gets a read-only VMO containing the whole contents of the file. This function
