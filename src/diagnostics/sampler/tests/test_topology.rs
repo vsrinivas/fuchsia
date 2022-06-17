@@ -37,7 +37,9 @@ pub async fn create() -> Result<RealmInstance, Error> {
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.cobalt.test.LoggerQuerier"))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.metrics.test.MetricEventLoggerQuerier",
+                ))
                 .from(&mock_cobalt)
                 .to(Ref::parent()),
         )
@@ -55,7 +57,9 @@ pub async fn create() -> Result<RealmInstance, Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.cobalt.test.LoggerQuerier"))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.metrics.test.MetricEventLoggerQuerier",
+                ))
                 .capability(Capability::protocol_by_name(
                     "fuchsia.samplertestcontroller.SamplerTestController",
                 ))

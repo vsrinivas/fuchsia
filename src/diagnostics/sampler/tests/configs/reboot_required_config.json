@@ -5,10 +5,9 @@
                 0,
                 0
             ],
-            "metric_id": 4,
+            "metric_id": 104,
             "metric_type": "Occurrence",
-            "selector": "single_counter:root/samples:counter",
-            "use_legacy_cobalt": true
+            "selector": "single_counter:root/samples:counter"
         }
     ],
     "poll_rate_sec": 3000,

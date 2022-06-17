@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
-use fidl_fuchsia_cobalt_test::LoggerQuerierMarker;
 use fidl_fuchsia_component::BinderMarker;
+use fidl_fuchsia_metrics_test::MetricEventLoggerQuerierMarker;
 use fidl_fuchsia_mockrebootcontroller::MockRebootControllerMarker;
 use fidl_fuchsia_samplertestcontroller::SamplerTestControllerMarker;
 
@@ -23,8 +23,10 @@ async fn event_count_sampler_test() {
         instance.root.connect_to_protocol_at_exposed_dir::<SamplerTestControllerMarker>().unwrap();
     let reboot_controller =
         instance.root.connect_to_protocol_at_exposed_dir::<MockRebootControllerMarker>().unwrap();
-    let logger_querier =
-        instance.root.connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>().unwrap();
+    let logger_querier = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<MetricEventLoggerQuerierMarker>()
+        .unwrap();
     let _sampler_binder = instance
         .root
         .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
@@ -39,15 +41,15 @@ async fn event_count_sampler_test() {
 
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 1, value: 1 }
+        utils::ExpectedEvent { metric_id: 101, value: 1 }
     ));
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 3, value: 20 }
+        utils::ExpectedEvent { metric_id: 103, value: 20 }
     ));
 
     // We want to guarantee a sample takes place before we increment the value again.
@@ -63,7 +65,7 @@ async fn event_count_sampler_test() {
 
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
     test_app_controller.increment_int(1).unwrap();
 
@@ -78,11 +80,11 @@ async fn event_count_sampler_test() {
     // Even though we incremented metric-1 its value stays at 1 since it's being cached.
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 1, value: 1 }
+        utils::ExpectedEvent { metric_id: 101, value: 1 }
     ));
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
 
     // trigger_reboot calls the on_reboot callback that drives sampler shutdown. this
@@ -100,12 +102,12 @@ async fn event_count_sampler_test() {
     // report of its values.
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 4, value: 2 }
+        utils::ExpectedEvent { metric_id: 104, value: 2 }
     ));
     // The integer metric which is always getting undiffed sampling is sampled one last time.
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
 }
 
@@ -119,8 +121,10 @@ async fn reboot_server_crashed_test() {
         instance.root.connect_to_protocol_at_exposed_dir::<SamplerTestControllerMarker>().unwrap();
     let reboot_controller =
         instance.root.connect_to_protocol_at_exposed_dir::<MockRebootControllerMarker>().unwrap();
-    let logger_querier =
-        instance.root.connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>().unwrap();
+    let logger_querier = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<MetricEventLoggerQuerierMarker>()
+        .unwrap();
     let _sampler_binder = instance
         .root
         .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
@@ -139,15 +143,15 @@ async fn reboot_server_crashed_test() {
 
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 1, value: 1 }
+        utils::ExpectedEvent { metric_id: 101, value: 1 }
     ));
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 3, value: 20 }
+        utils::ExpectedEvent { metric_id: 103, value: 20 }
     ));
 
     // We want to guarantee a sample takes place before we increment the value again.
@@ -163,7 +167,7 @@ async fn reboot_server_crashed_test() {
 
     assert!(utils::verify_event_present_once(
         &events,
-        utils::ExpectedEvent { metric_id: 2, value: 10 }
+        utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
 }
 
@@ -206,7 +210,7 @@ async fn sampler_inspect_test() {
                 total_project_samplers_configured: 4 as u64,
                 project_5: {
                     project_sampler_count: 2 as u64,
-                    metrics_configured: 5 as u64,
+                    metrics_configured: 4 as u64,
                     cobalt_logs_sent: AnyProperty,
                 },
                 project_13: {
@@ -262,10 +266,6 @@ async fn sampler_inspect_test() {
                         },
                     "2": {
                         selector: "single_counter:root/samples:integer_2",
-                        upload_count: 0 as u64
-                    },
-                    "3": {
-                        selector: "single_counter:root/samples:integer_3",
                         upload_count: 0 as u64
                     }
                 },

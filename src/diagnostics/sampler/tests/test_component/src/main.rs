@@ -36,7 +36,6 @@ impl TestState {
         integer_property_map.insert(1, ("counter".to_string(), 0));
         integer_property_map.insert(2, ("integer_1".to_string(), 10));
         integer_property_map.insert(3, ("integer_2".to_string(), 20));
-        integer_property_map.insert(4, ("integer_3".to_string(), 30));
         Arc::new(Mutex::new(TestState { integer_property_map, sample_count_callback_opt: None }))
     }
 }
