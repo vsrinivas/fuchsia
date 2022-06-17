@@ -12,6 +12,7 @@ group("tests") {
     ":device_tests_package",
     ":device_unittests_package",
     "virtio_block:tests",
+    "virtio_gpu_rs:tests",
     "virtio_sound:tests",
     "virtio_vsock:tests",
   ]
@@ -30,6 +31,7 @@ group("packages") {
     ":virtio_magma",
     ":virtio_wl",
     "virtio_block",
+    "virtio_gpu_rs",
     "virtio_net",
     "virtio_rng",
     "virtio_sound",
