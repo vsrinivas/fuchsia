@@ -101,9 +101,13 @@ config("compiler") {
     # TODO(mcgrathr): These should all be default in the compiler driver.
     ldflags += [
       "-Wl,-z,combreloc",
-      "-Wl,-z,relro",
       "-Wl,-z,text",
     ]
+
+    # ld.bfd doesn't support -z relro for the targets we use it for.
+    if (!is_gcc || linker == "gold") {
+      ldflags += [ "-Wl,-z,relro" ]
+    }
 
     if (is_gcc) {
       # This is predefined by Clang --target=*-fuchsia.
