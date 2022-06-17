@@ -130,7 +130,10 @@ template("boot_shim") {
   }
 }
 
-shims = [ "motmot" ]
+shims = [
+  "as370",
+  "motmot",
+]
 
 foreach(shim, shims) {
   boot_shim(shim) {
