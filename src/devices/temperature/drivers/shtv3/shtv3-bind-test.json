@@ -3,7 +3,8 @@
         "name": "Match",
         "expected": "match",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.sensirion.platform.BIND_PLATFORM_DEV_VID.SENSIRION",
             "fuchsia.BIND_PLATFORM_DEV_DID": "0x01"
         }
@@ -13,6 +14,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.sensirion.platform.BIND_PLATFORM_DEV_VID.SENSIRION",
             "fuchsia.BIND_PLATFORM_DEV_DID": "0x01"
         }
