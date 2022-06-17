@@ -63,10 +63,11 @@ if (is_host) {
   # TODO(olivernewman): Consider running the test executable locally to generate
   # a depfile so it's not necessary to copy-paste these names.
   _golden_tests = [
-    "affected tests",
     "affected nonhermetic tests",
-    "mixed device types",
+    "affected tests",
     "hermetic deps",
+    "max shards per env",
+    "mixed device types",
     "multiply",
     "multiply affected test",
     "multiply unaffected hermetic tests",

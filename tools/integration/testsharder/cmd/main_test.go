@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -91,18 +92,8 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("not-affected"),
 			},
 			testList: []build.TestListEntry{
-				{
-					Name: packageURL("affected-hermetic"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
-				{
-					Name: packageURL("not-affected"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "false"},
-					},
-				},
+				testListEntry("affected-hermetic", true),
+				testListEntry("not-affected", false),
 			},
 			affectedTests: []string{
 				packageURL("affected-hermetic"),
@@ -154,6 +145,50 @@ func TestExecute(t *testing.T) {
 			},
 		},
 		{
+			name: "max shards per env",
+			flags: testsharderFlags{
+				// Given expected test durations of 4 minutes for each test it's
+				// impossible to satisfy both the target shard duration and the
+				// max shards per environment, so the target shard duration
+				// should effectively be ignored.
+				targetDurationSecs:      int((5 * time.Minute).Seconds()),
+				maxShardsPerEnvironment: 2,
+				skipUnaffected:          true,
+			},
+			testSpecs: []build.TestSpec{
+				fuchsiaTestSpec("affected1"),
+				fuchsiaTestSpec("affected2"),
+				fuchsiaTestSpec("affected3"),
+				fuchsiaTestSpec("affected4"),
+				fuchsiaTestSpec("unaffected1"),
+				fuchsiaTestSpec("unaffected2"),
+				fuchsiaTestSpec("nonhermetic1"),
+				fuchsiaTestSpec("nonhermetic2"),
+			},
+			testDurations: []build.TestDuration{
+				{
+					Name:           "*",
+					MedianDuration: 4 * time.Minute,
+				},
+			},
+			affectedTests: []string{
+				packageURL("affected1"),
+				packageURL("affected2"),
+				packageURL("affected3"),
+				packageURL("affected4"),
+			},
+			testList: []build.TestListEntry{
+				testListEntry("affected1", true),
+				testListEntry("affected2", true),
+				testListEntry("affected3", true),
+				testListEntry("affected4", true),
+				testListEntry("unaffected1", true),
+				testListEntry("unaffected2", true),
+				testListEntry("nonhermetic1", false),
+				testListEntry("nonhermetic2", false),
+			},
+		},
+		{
 			name: "hermetic deps",
 			flags: testsharderFlags{
 				hermeticDeps: true,
@@ -196,18 +231,8 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("nonhermetic-test"),
 			},
 			testList: []build.TestListEntry{
-				{
-					Name: packageURL("hermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
-				{
-					Name: packageURL("nonhermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "false"},
-					},
-				},
+				testListEntry("hermetic-test", true),
+				testListEntry("nonhermetic-test", false),
 			},
 		},
 		{
@@ -222,30 +247,10 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("unaffected-nonhermetic-test"),
 			},
 			testList: []build.TestListEntry{
-				{
-					Name: packageURL("affected-hermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
-				{
-					Name: packageURL("unaffected-hermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
-				{
-					Name: packageURL("affected-nonhermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "false"},
-					},
-				},
-				{
-					Name: packageURL("unaffected-nonhermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "false"},
-					},
-				},
+				testListEntry("affected-hermetic-test", true),
+				testListEntry("unaffected-hermetic-test", true),
+				testListEntry("affected-nonhermetic-test", false),
+				testListEntry("unaffected-nonhermetic-test", false),
 			},
 			affectedTests: []string{
 				fuchsiaTestSpec("affected-hermetic-test").Name,
@@ -263,24 +268,9 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("unaffected-hermetic-multiplied-test"),
 			},
 			testList: []build.TestListEntry{
-				{
-					Name: packageURL("unaffected-hermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
-				{
-					Name: packageURL("unaffected-nonhermetic-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "false"},
-					},
-				},
-				{
-					Name: packageURL("unaffected-hermetic-multiplied-test"),
-					Tags: []build.TestTag{
-						{Key: "hermetic", Value: "true"},
-					},
-				},
+				testListEntry("unaffected-hermetic-test", true),
+				testListEntry("unaffected-nonhermetic-test", false),
+				testListEntry("unaffected-hermetic-multiplied-test", true),
 			},
 			modifiers: []testsharder.TestModifier{
 				{
@@ -424,6 +414,15 @@ func hostTestSpec(basename string) build.TestSpec {
 					OS:  "Linux",
 				},
 			},
+		},
+	}
+}
+
+func testListEntry(basename string, hermetic bool) build.TestListEntry {
+	return build.TestListEntry{
+		Name: packageURL(basename),
+		Tags: []build.TestTag{
+			{Key: "hermetic", Value: strconv.FormatBool(hermetic)},
 		},
 	}
 }
