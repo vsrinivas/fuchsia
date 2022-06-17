@@ -111,7 +111,6 @@ group("tests") {
     _flutter_tester_tests += [
       "//sdk/dart/fuchsia_internationalization_flutter:tests($host_toolchain)",
       "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_unittests($host_toolchain)",
-      "//sdk/dart/fuchsia_inspect_flutter:inspect_flutter_test($host_toolchain)",
     ]
   }
 
@@ -183,7 +182,6 @@ action("dart_sdk_docs") {
     rebase_path("//sdk/dart/fuchsia"),
     rebase_path("//sdk/dart/fuchsia_component_test"),
     rebase_path("//sdk/dart/fuchsia_inspect"),
-    rebase_path("//sdk/dart/fuchsia_inspect_flutter"),
     rebase_path("//sdk/dart/fuchsia_internationalization_flutter"),
     rebase_path("//sdk/dart/fuchsia_logger"),
     rebase_path("//sdk/dart/fuchsia_modular"),

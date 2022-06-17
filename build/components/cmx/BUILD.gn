@@ -41,7 +41,6 @@ group("cmx_allowlist") {
     "//build/dart/tests:*",
     "//examples/benchmark:*",
     "//examples/components/realm_builder:*",
-    "//examples/dart/fuchsia_inspect_flutter/torus15:*",
     "//examples/dart/fuchsia_services/mind_reader/bin/client:*",
     "//examples/dart/fuchsia_services/mind_reader/bin/server:*",
     "//examples/diagnostics/inspect/codelab/dart/client:*",

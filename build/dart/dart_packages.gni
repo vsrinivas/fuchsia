@@ -10,7 +10,6 @@ dart_package_label = {
   fidl = "//sdk/dart/fidl"
   fuchsia = "//sdk/dart/fuchsia"
   fuchsia_inspect = "//sdk/dart/fuchsia_inspect"
-  fuchsia_inspect_flutter = "//sdk/dart/fuchsia_inspect_flutter"
   fuchsia_internationalization_flutter =
       "//sdk/dart/fuchsia_internationalization_flutter"
   fuchsia_logger = "//sdk/dart/fuchsia_logger"
@@ -30,7 +29,6 @@ dart_packages_list = [
   dart_package_label.fidl,
   dart_package_label.fuchsia,
   dart_package_label.fuchsia_inspect,
-  dart_package_label.fuchsia_inspect_flutter,
   dart_package_label.fuchsia_internationalization_flutter,
   dart_package_label.fuchsia_logger,
   dart_package_label.fuchsia_modular,

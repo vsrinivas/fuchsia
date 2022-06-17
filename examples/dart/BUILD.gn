@@ -4,17 +4,6 @@
 
 group("dart") {
   testonly = true
-  public_deps = [
-    "//examples/dart:tests",
-    "//examples/dart/fuchsia_services/mind_reader/bin:mind-reader-dart",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    "//examples/dart/fuchsia_inspect_flutter/torus15",
-    "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-dart-test",
-    "//examples/dart/fuchsia_inspect_flutter/torus15:torus15_flutter_test",
-  ]
+  public_deps =
+      [ "//examples/dart/fuchsia_services/mind_reader/bin:mind-reader-dart" ]
 }
