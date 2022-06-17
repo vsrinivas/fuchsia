@@ -228,6 +228,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.NEWLINE",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input/InputMethodAction.NEXT",
         "value": "5"
     },
@@ -437,6 +442,11 @@
         "kind": "enum/member",
         "name": "fuchsia.ui.input/KeyboardType.DATETIME",
         "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.MULTILINE",
+        "value": "4"
     },
     {
         "kind": "enum/member",

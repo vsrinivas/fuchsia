@@ -4,22 +4,59 @@
 library fuchsia.ui.input;
 using fuchsia.ui.input3;
 
+/// Requests a specific keyboard type from the text editing subsystem.
+///
+/// This is most relevant for virtual keyboards which have some leeway in how
+/// the keyboard is presented to the user, as well as which input is acceptable.
+///
+/// For example, a `NUMBER` keyboard type may only allow decimal numbers to be
+/// entered.  In addition, a virtual keyboard might only show a numeric keypad
+/// for text entry.
 type KeyboardType = flexible enum {
+    /// Single-line text fields only.  Use MULTILINE below for multiline text.
+    @unknown
     TEXT = 0;
+    /// A text field intended for entering numbers only.
     NUMBER = 1;
+    /// A text field for entering phone numbers only (e.g. digits, limited
+    /// punctuation, perhaps some validation).
     PHONE = 2;
+    /// A text field for entering date and time. For example, may have a
+    /// calendar widget on the side, to aid in date time entry.
     DATETIME = 3;
+    /// Multi-line text.
+    @available(added=8)
+    MULTILINE = 4;
 };
 
+/// Determines what happens if the "action" key is pressed on the keyboard,
+/// typically would either be the "Enter" key on a physical keyboard, or an
+/// action button on a virtual keyboard, which is usually placed where Enter
+/// would be, but with a custom label.
 type InputMethodAction = flexible enum {
+    /// The method action was not specified at all.
+    @unknown
     UNSPECIFIED = 0;
+    /// No special action is requested.
     NONE = 1;
+    /// The action is "Go", e.g. execute a command.
     GO = 2;
+    /// The action is to invoke a search.
     SEARCH = 3;
+    /// The action is to invoke "send", e.g. if this is an email or a SMS
+    /// message.
     SEND = 4;
+    /// The action is to move to the next field in the focus sequence.
     NEXT = 5;
+    /// The action is to end the text editing.
     DONE = 6;
+    /// The action is to move to the previous field in the focus sequence.
     PREVIOUS = 7;
+    /// Pressing the action key inserts a new line into the text field. In
+    /// contrast to other values, which all stop editing and invoke a specific
+    /// action.
+    @available(added=8)
+    NEWLINE = 8;
 };
 
 /// The current text, selection, and composing state for editing a run of text.
