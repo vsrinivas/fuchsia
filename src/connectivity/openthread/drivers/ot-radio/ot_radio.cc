@@ -146,7 +146,8 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
     ot_radio_obj_.ReadRadioPacket();
-    if (ot_radio_obj_.interrupt_is_asserted_) {
+    if (ot_radio_obj_.interrupt_asserted_and_pending_) {
+      ot_radio_obj_.interrupt_asserted_and_pending_ = false;
       // signal the event loop thread to handle interrupt
       ot_radio_obj_.InvokeInterruptHandler();
     }
@@ -333,7 +334,7 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
 }
 
 zx_status_t OtRadioDevice::InvokeInterruptHandler() {
-  zxlogf(DEBUG, "ot-radio: InvokeInterruptHandler");
+  zxlogf(INFO, "ot-radio: InvokeInterruptHandler");
   zx_port_packet packet = {PORT_KEY_RADIO_IRQ, ZX_PKT_TYPE_USER, ZX_OK, {}};
   if (!port_.is_valid()) {
     return ZX_ERR_BAD_STATE;
@@ -462,16 +463,18 @@ zx_status_t OtRadioDevice::RadioThread() {
       break;
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
-      zxlogf(DEBUG, "ot-radio: interrupt");
 
       if (!IsInterruptAsserted()) {
         // Interrupt is deasserted. This means we took care of the trigger for interrupt
         // event on port (which is edge triggered as of now) in previous inner loop.
+        zxlogf(DEBUG, "ot-radio: spurious interrupt");
         continue;
       }
 
+      zxlogf(DEBUG, "ot-radio: interrupt");
       uint16_t polling_count = 0;
       const uint16_t kMaxNonDelayPollingCount = 5;
+      bool interrupt_asserted;
       do {
         spinel_framer_->HandleInterrupt();
         ReadRadioPacket();
@@ -484,11 +487,20 @@ zx_status_t OtRadioDevice::RadioThread() {
 
         HandleResetRetry();
 
-        interrupt_is_asserted_ = IsInterruptAsserted();
-      } while (interrupt_is_asserted_ && inbound_allowance_ != 0);
+        interrupt_asserted = IsInterruptAsserted();
+      } while (interrupt_asserted && inbound_allowance_ != 0);
+
+      if (interrupt_asserted) {
+        // This indicates that inbound_allowance_ went to 0.
+        // Set the shared flag to indicate to other thread to InvokeInterrupt when
+        // we get allowance. This is done conditionally to avoid cost of setting
+        // an atomic variable.
+        interrupt_asserted_and_pending_ = true;
+      }
     } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
       fbl::AutoLock lock(&spi_tx_lock_);
       if (spi_tx_queue_.size() > 0) {
+        zxlogf(DEBUG, "ot-radio: transmitting data of size: %ld", spi_tx_queue_.front().size());
         if (ZX_OK != spinel_framer_->SendPacketToRadio(spi_tx_queue_.front().data(),
                                                        spi_tx_queue_.front().size())) {
           lock.release();

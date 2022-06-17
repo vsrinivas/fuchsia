@@ -169,7 +169,7 @@ class OtRadioDevice : public DeviceType {
   std::optional<fidl::ServerBindingRef<fuchsia_lowpan_spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
-  bool interrupt_is_asserted_ = false;
+  std::atomic<bool> interrupt_asserted_and_pending_ = false;
   bool inbound_frame_available_ = false;
   zx::time hard_reset_end_ = zx::time(0);
   std::unique_ptr<std::vector<bool>> pending_tid_;
