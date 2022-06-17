@@ -11,8 +11,8 @@ group("tests") {
     ":display_integration_tests",
     ":flatland_integration_tests",
     ":gfx_integration_tests",
+    ":hardware_env_tests_fxb91950",
     ":observer_integration_tests",
-    ":screen_capture_integration_test",
   ]
 }
 
@@ -398,12 +398,18 @@ fuchsia_test_package("flatland_integration_tests") {
   test_components = [
     ":flatland_touch_integration_test",
     ":flatland_focus_integration_test",
-    ":screen_capture_integration_test",
     ":flatland_mouse_integration_test",
   ]
   test_specs = {
-    # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but
-    # Flatland display compositor currently crashes on aemu, so we skip it for now.
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_test_package("hardware_env_tests_fxb91950") {
+  test_components = [ ":screen_capture_integration_test" ]
+  test_specs = {
+    # TODO(fxbug.dev/91950): Should have the same environments as "flatland_integration_tests"
+    # above, but screen capture does not work on aemu, so we skip it for now.
     environments = magma_libvulkan_hardware_envs
   }
 }
