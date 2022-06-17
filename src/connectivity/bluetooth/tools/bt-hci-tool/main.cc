@@ -77,11 +77,10 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<::bt::hci::HciWrapper> hci_wrapper =
       ::bt::hci::HciWrapper::Create(std::move(dev_wrapper), loop.dispatcher());
 
-  auto transport_result = ::bt::hci::Transport::Create(std::move(hci_wrapper));
-  if (transport_result.is_error()) {
+  auto transport = ::bt::hci::Transport::Create(std::move(hci_wrapper));
+  if (!transport) {
     return EXIT_FAILURE;
   }
-  auto transport = transport_result.take_value();
 
   bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(transport->command_channel(), loop.dispatcher());
