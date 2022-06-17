@@ -337,9 +337,15 @@ constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr ErrorDef<std::string_view> ErrInvalidDiscoverableName(
     "invalid @discoverable name '{}'; must follow the format 'the.library.name.TheProtocolName'");
-constexpr ErrorDef<flat::Name> ErrTableCannotBeSimple("union '{}' is not allowed to be simple");
-constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
-constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple("member '{}' is not simple");
+constexpr ErrorDef<flat::Name> ErrTableCannotBeSimple(
+    "union '{}' is not a simple type, so it cannot be used in "
+    "@for_deprecated_c_bindings");
+constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple(
+    "table '{}' is not a simple type, so it cannot be used in "
+    "@for_deprecated_c_bindings");
+constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple(
+    "member '{}' is not a simple type, so it cannot be used in "
+    "@for_deprecated_c_bindings");
 constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyBytes(
     "too large: only {} bytes allowed, but {} bytes found");
 constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyHandles(
