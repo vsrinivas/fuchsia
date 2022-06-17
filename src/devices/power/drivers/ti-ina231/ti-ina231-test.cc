@@ -59,10 +59,33 @@ class FakeIna231Device : public fake_i2c::FakeI2c {
   uint16_t registers_[8] = {};
 };
 
-TEST(TiIna231Test, GetPowerWatts) {
+class TiIna231Test : public zxtest::Test {
+ public:
+  TiIna231Test() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
+  void SetUp() override {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &fake_i2c_);
+    i2c_client_ = std::move(endpoints->client);
+
+    EXPECT_OK(loop_.StartThread());
+  }
+
+ protected:
+  FakeIna231Device& fake_i2c() { return fake_i2c_; }
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> TakeI2cClient() { return std::move(i2c_client_); }
+
+ private:
+  FakeIna231Device fake_i2c_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_client_;
+  async::Loop loop_;
+};
+
+TEST_F(TiIna231Test, GetPowerWatts) {
   fake_ddk::Bind ddk;
-  FakeIna231Device fake_i2c;
-  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, TakeI2cClient());
 
   constexpr Ina231Metadata kMetadata = {
       .mode = Ina231Metadata::kModeShuntAndBusContinuous,
@@ -74,16 +97,16 @@ TEST(TiIna231Test, GetPowerWatts) {
   };
 
   EXPECT_OK(dut.Init(kMetadata));
-  EXPECT_EQ(fake_i2c.configuration(), 0x4e97);
-  EXPECT_EQ(fake_i2c.calibration(), 2048);
-  EXPECT_EQ(fake_i2c.mask_enable(), 0);
+  EXPECT_EQ(fake_i2c().configuration(), 0x4e97);
+  EXPECT_EQ(fake_i2c().calibration(), 2048);
+  EXPECT_EQ(fake_i2c().mask_enable(), 0);
 
   EXPECT_OK(dut.DdkAdd("ti-ina231"));
 
   fidl::WireSyncClient<power_sensor_fidl::Device> client(std::move(ddk.FidlClient()));
 
   {
-    fake_i2c.set_power(4792);
+    fake_i2c().set_power(4792);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
@@ -91,7 +114,7 @@ TEST(TiIna231Test, GetPowerWatts) {
   }
 
   {
-    fake_i2c.set_power(0);
+    fake_i2c().set_power(0);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
@@ -99,7 +122,7 @@ TEST(TiIna231Test, GetPowerWatts) {
   }
 
   {
-    fake_i2c.set_power(65535);
+    fake_i2c().set_power(65535);
     auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
@@ -107,10 +130,9 @@ TEST(TiIna231Test, GetPowerWatts) {
   }
 }
 
-TEST(TiIna231Test, SetAlertLimit) {
+TEST_F(TiIna231Test, SetAlertLimit) {
   fake_ddk::Bind ddk;
-  FakeIna231Device fake_i2c;
-  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, TakeI2cClient());
 
   constexpr Ina231Metadata kMetadata = {
       .mode = Ina231Metadata::kModeShuntAndBusContinuous,
@@ -123,16 +145,15 @@ TEST(TiIna231Test, SetAlertLimit) {
   };
 
   EXPECT_OK(dut.Init(kMetadata));
-  EXPECT_EQ(fake_i2c.configuration(), 0x4e97);
-  EXPECT_EQ(fake_i2c.calibration(), 2048);
-  EXPECT_EQ(fake_i2c.mask_enable(), 0x1000);
-  EXPECT_EQ(fake_i2c.alert_limit(), 0x2260);
+  EXPECT_EQ(fake_i2c().configuration(), 0x4e97);
+  EXPECT_EQ(fake_i2c().calibration(), 2048);
+  EXPECT_EQ(fake_i2c().mask_enable(), 0x1000);
+  EXPECT_EQ(fake_i2c().alert_limit(), 0x2260);
 }
 
-TEST(TiIna231Test, BanjoClients) {
+TEST_F(TiIna231Test, BanjoClients) {
   fake_ddk::Bind ddk;
-  FakeIna231Device fake_i2c;
-  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, TakeI2cClient());
 
   constexpr Ina231Metadata kMetadata = {
       .mode = Ina231Metadata::kModeShuntAndBusContinuous,
@@ -157,7 +178,7 @@ TEST(TiIna231Test, BanjoClients) {
   fidl::WireSyncClient client2(std::move(*client_end));
   ASSERT_OK(dut.PowerSensorConnectServer(server.TakeChannel()));
 
-  fake_i2c.set_power(4792);
+  fake_i2c().set_power(4792);
 
   {
     auto response = client1->GetPowerWatts();
@@ -174,10 +195,9 @@ TEST(TiIna231Test, BanjoClients) {
   }
 }
 
-TEST(TiIna231Test, GetVoltageVolts) {
+TEST_F(TiIna231Test, GetVoltageVolts) {
   fake_ddk::Bind ddk;
-  FakeIna231Device fake_i2c;
-  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, TakeI2cClient());
 
   constexpr Ina231Metadata kMetadata = {
       .mode = Ina231Metadata::kModeShuntAndBusContinuous,
@@ -189,16 +209,16 @@ TEST(TiIna231Test, GetVoltageVolts) {
   };
 
   EXPECT_OK(dut.Init(kMetadata));
-  EXPECT_EQ(fake_i2c.configuration(), 0x4e97);
-  EXPECT_EQ(fake_i2c.calibration(), 2048);
-  EXPECT_EQ(fake_i2c.mask_enable(), 0);
+  EXPECT_EQ(fake_i2c().configuration(), 0x4e97);
+  EXPECT_EQ(fake_i2c().calibration(), 2048);
+  EXPECT_EQ(fake_i2c().mask_enable(), 0);
 
   EXPECT_OK(dut.DdkAdd("ti-ina231"));
 
   fidl::WireSyncClient<power_sensor_fidl::Device> client(std::move(ddk.FidlClient()));
 
   {
-    fake_i2c.set_bus_voltage(9200);
+    fake_i2c().set_bus_voltage(9200);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
@@ -206,7 +226,7 @@ TEST(TiIna231Test, GetVoltageVolts) {
   }
 
   {
-    fake_i2c.set_bus_voltage(0);
+    fake_i2c().set_bus_voltage(0);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
@@ -214,7 +234,7 @@ TEST(TiIna231Test, GetVoltageVolts) {
   }
 
   {
-    fake_i2c.set_bus_voltage(65535);
+    fake_i2c().set_bus_voltage(65535);
     auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->is_error());
