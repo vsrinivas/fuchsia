@@ -311,6 +311,7 @@ driver_bind_rules("gt6853_touch_bind") {
     "//src/devices/bind/fuchsia.goodix.platform",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
