@@ -49,6 +49,8 @@ test("ti-tca6408a-test-bin") {
     ":common",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 }

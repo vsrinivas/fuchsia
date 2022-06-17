@@ -4,6 +4,8 @@
 
 #include "ti-tca6408a.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake-i2c/fake-i2c.h>
 
@@ -67,12 +69,23 @@ class FakeTiTca6408aDevice : public fake_i2c::FakeI2c {
 
 class TiTca6408aTest : public zxtest::Test {
  public:
-  TiTca6408aTest() : ddk_(MockDevice::FakeRootParent()) {}
+  TiTca6408aTest()
+      : ddk_(MockDevice::FakeRootParent()), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
     constexpr uint32_t kPinIndexOffset = 100;
     ddk_->SetMetadata(DEVICE_METADATA_PRIVATE, &kPinIndexOffset, sizeof(kPinIndexOffset));
-    ddk_->AddProtocol(ZX_PROTOCOL_I2C, fake_i2c_.GetProto()->ops, fake_i2c_.GetProto()->ctx, "i2c");
+    ddk_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
+        [&](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
+                           &fake_i2c_);
+          return ZX_OK;
+        },
+        "i2c");
+
+    EXPECT_OK(loop_.StartThread());
 
     // This TiTca6408a gets released by the MockDevice destructor.
     ASSERT_OK(TiTca6408a::Create(nullptr, ddk_.get()));
@@ -95,6 +108,7 @@ class TiTca6408aTest : public zxtest::Test {
 
  private:
   std::shared_ptr<MockDevice> ddk_;
+  async::Loop loop_;
 };
 
 TEST_F(TiTca6408aTest, ConfigInOut) {
