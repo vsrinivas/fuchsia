@@ -480,9 +480,23 @@ mod tests {
     fn remove_event_time(events: Vec<InputEvent>) -> Vec<InputEvent> {
         events
             .into_iter()
-            .map(|InputEvent { device_event, device_descriptor, event_time: _, handled, trace_id: _ }| {
-                InputEvent { device_event, device_descriptor, event_time: zx::Time::ZERO, handled, trace_id: None }
-            })
+            .map(
+                |InputEvent {
+                     device_event,
+                     device_descriptor,
+                     event_time: _,
+                     handled,
+                     trace_id: _,
+                 }| {
+                    InputEvent {
+                        device_event,
+                        device_descriptor,
+                        event_time: zx::Time::ZERO,
+                        handled,
+                        trace_id: None,
+                    }
+                },
+            )
             .collect()
     }
 
