@@ -91,24 +91,28 @@ class span {
 
   template <size_t N, size_type Extent_ = Extent,
             std::enable_if_t<Extent_ == dynamic_extent || N == Extent_, bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(element_type (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(U (&arr)[N]) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(std::array<U, N>& arr) noexcept : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
   template <typename U, size_t N, size_type Extent_ = Extent,
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  internal::is_qualification_conversion<U, element_type>::value,
                              bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(const std::array<U, N>& arr) noexcept
       : extent_(cpp17::data(arr), cpp17::size(arr)) {}
 
@@ -122,6 +126,7 @@ class span {
   template <typename R, size_type Extent_ = Extent,
             std::enable_if_t<Extent_ == dynamic_extent && internal::is_span_compatible_v<R, T>,
                              bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(R&& r) : extent_(cpp17::data(r), cpp17::size(r)) {
     assert((cpp17::size(r) == size() || extent == dynamic_extent));
   }
@@ -138,6 +143,7 @@ class span {
             std::enable_if_t<(Extent_ == dynamic_extent || N == Extent_) &&
                                  internal::is_qualification_conversion<U, T>::value,
                              bool> = true>
+  // NOLINTNEXTLINE(google-explicit-constructor) Intentionally implicit
   constexpr span(const cpp20::span<U, N>& s) noexcept : extent_(s.data(), s.size()) {
     assert((s.size() == size() || extent == dynamic_extent));
   }
