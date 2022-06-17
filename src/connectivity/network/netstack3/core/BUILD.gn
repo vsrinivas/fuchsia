@@ -58,6 +58,7 @@ lib_sources = [
   "src/transport/tcp/seqnum.rs",
   "src/transport/tcp/socket/demux.rs",
   "src/transport/tcp/socket/icmp.rs",
+  "src/transport/tcp/socket/isn.rs",
   "src/transport/tcp/socket/mod.rs",
   "src/transport/tcp/state.rs",
   "src/transport/udp.rs",
@@ -90,6 +91,7 @@ lib_deps = [
   "//third_party/rust_crates:num",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:rand_xorshift",
+  "//third_party/rust_crates:siphasher",
   "//third_party/rust_crates:smallvec",
   "//third_party/rust_crates:thiserror",
 ]

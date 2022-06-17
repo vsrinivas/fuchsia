@@ -30,15 +30,15 @@ use crate::{
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer, SendPayload},
         segment::Segment,
-        seqnum::{SeqNum, WindowSize},
+        seqnum::WindowSize,
         socket::{
-            Acceptor, Connection, ConnectionId, ListenerId, MaybeListener, TcpIpTransportContext,
-            TcpPosixSocketSpec, TcpSockets,
+            isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
+            SocketAddr, TcpIpTransportContext, TcpPosixSocketSpec, TcpSockets,
         },
         state::{Closed, State},
         Control, UserError,
     },
-    IpDeviceIdContext, IpExt,
+    Instant as _, IpDeviceIdContext, IpExt,
 };
 
 pub(super) trait TcpBufferContext {
@@ -46,16 +46,16 @@ pub(super) trait TcpBufferContext {
     type SendBuffer: SendBuffer;
 }
 
-impl<
-        I: IpExt,
-        B: BufferMut,
-        C: InstantContext,
-        SC: TcpBufferContext
-            + IpDeviceIdContext<I>
-            + AsMut<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
-            + AsRef<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
-            + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
-    > BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext
+impl<I, B, C, SC> BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext
+where
+    I: IpExt,
+    B: BufferMut,
+    C: InstantContext,
+    SC: TcpBufferContext
+        + IpDeviceIdContext<I>
+        + AsMut<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
+        + AsRef<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
+        + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     fn receive_ip_packet(
         sync_ctx: &mut SC,
@@ -171,6 +171,15 @@ impl<
                         }
                     };
 
+                    let isn = generate_isn::<I::Addr>(
+                        now.duration_since(sync_ctx.as_ref().isn_ts),
+                        SocketAddr {
+                            ip: local_ip,
+                            port: local_port,
+                        }, SocketAddr {
+                            ip: remote_ip,
+                            port: remote_port,
+                        }, &sync_ctx.as_ref().secret);
                     let socketmap = &mut sync_ctx.as_mut().socketmap;
                     // TODO(https://fxbug.dev/102135): Inherit the socket
                     // options from the listener.
@@ -186,8 +195,7 @@ impl<
                             },
                             Connection {
                                 acceptor: Some(Acceptor::Pending(ListenerId(listener_id.into()))),
-                                // TODO(https://fxbug.dev/101598): Generate ISN as per RFC 6528.
-                                state: State::Listen(Closed::listen(SeqNum::new(0))),
+                                state: State::Listen(Closed::listen(isn)),
                                 ip_sock,
                             },
                             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.

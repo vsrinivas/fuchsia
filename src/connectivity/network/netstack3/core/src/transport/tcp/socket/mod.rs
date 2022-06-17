@@ -19,6 +19,7 @@
 
 mod demux;
 mod icmp;
+mod isn;
 
 use alloc::{collections::VecDeque, vec::Vec};
 use core::{
@@ -52,8 +53,10 @@ use crate::{
     },
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer},
-        seqnum::SeqNum,
-        socket::demux::{tcp_serialize_segment, TcpBufferContext},
+        socket::{
+            demux::{tcp_serialize_segment, TcpBufferContext},
+            isn::generate_isn,
+        },
         state::{Closed, Initial, State},
     },
     IdMap, Instant, IpDeviceIdContext, IpExt, IpSockCreationError, IpSockSendError,
@@ -61,7 +64,7 @@ use crate::{
 };
 
 /// Socket address includes the ip address and the port number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SocketAddr<A: IpAddress> {
     ip: SpecifiedAddr<A>,
     port: NonZeroU16,
@@ -130,6 +133,15 @@ struct Inactive;
 
 /// Holds all the TCP socket states.
 struct TcpSockets<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> {
+    // Secret used to choose initial sequence numbers. It will be filled by a
+    // CSPRNG upon initialization. RFC suggests an implementation "could"
+    // change the secret key on a regular basis, this is not something we are
+    // considering as Linux doesn't seem to do that either.
+    secret: [u8; 16],
+    // The initial timestamp that will be used to calculate the elapsed time
+    // since the beginning and that information will then be used to generate
+    // ISNs being requested.
+    isn_ts: II,
     inactive: IdMap<Inactive>,
     socketmap: BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>,
 }
@@ -359,7 +371,6 @@ fn connect<I, D, R, S, SC, C>(
     ctx: &mut C,
     id: BoundId,
     remote: SocketAddr<I::Addr>,
-    isn: SeqNum,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -368,6 +379,7 @@ where
     S: SendBuffer,
     C: InstantContext,
     SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
+        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
         + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
 {
     let bound_id = MaybeListenerId::from(id);
@@ -379,6 +391,12 @@ where
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
         .map_err(ConnectError::IpSockCreationError)?;
+    let isn = generate_isn::<I::Addr>(
+        ctx.now().duration_since(sync_ctx.as_ref().isn_ts),
+        SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
+        remote,
+        &sync_ctx.as_ref().secret,
+    );
     let conn_addr = ConnAddr {
         ip: ConnIpAddr {
             local_ip: ip_sock.local_ip().clone(),
@@ -569,6 +587,8 @@ mod tests {
                 sockets: TcpSockets {
                     inactive: IdMap::new(),
                     socketmap: BoundSocketMap::default(),
+                    secret: [0; 16],
+                    isn_ts: DummyInstant::default(),
                 },
                 ip_socket_ctx,
             }
@@ -707,11 +727,9 @@ mod tests {
                 non_sync_ctx,
                 conn,
                 SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-                SeqNum::new(0),
             )
             .expect("failed to connect")
         });
-
         // Step once for the SYN packet to be sent.
         let _: StepResult = net.step(handle_frame, panic_if_any_timer);
         // The listener should create a pending socket.
@@ -836,8 +854,7 @@ mod tests {
                 sync_ctx,
                 non_sync_ctx,
                 conn,
-                SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: NonZeroU16::new(42).unwrap() },
-                SeqNum::new(0),
+                SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
             )
             .expect("failed to connect")
         });
