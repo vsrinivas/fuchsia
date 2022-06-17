@@ -26,6 +26,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -1550,11 +1551,13 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 		reader.lastRead = 0
 
 		s.terminal.mu.Lock()
+		trace.AsyncBegin("net", "fuchsia_posix_socket.streamSocket.transferTx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		n, err := s.ep.Write(&reader, tcpip.WriteOptions{
 			// We must write atomically in order to guarantee all the data fetched
 			// from the zircon socket is consumed by the endpoint.
 			Atomic: true,
 		})
+		trace.AsyncEnd("net", "fuchsia_posix_socket.streamSocket.transferTx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		s.terminal.setLocked(err)
 		s.terminal.mu.Unlock()
 
@@ -1687,7 +1690,9 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 	}
 	for {
 		s.terminal.mu.Lock()
+		trace.AsyncBegin("net", "fuchsia_posix_socket.streamSocket.transferRx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		res, err := s.ep.Read(&writer, tcpip.ReadOptions{})
+		trace.AsyncEnd("net", "fuchsia_posix_socket.streamSocket.transferRx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		s.terminal.setLocked(err)
 		s.terminal.mu.Unlock()
 		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
@@ -2040,7 +2045,9 @@ func (s *synchronousDatagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint
 		W: &b,
 		N: int64(dataLen),
 	}
+	trace.AsyncBegin("net", "fuchsia_posix_socket.synchronousDatagramSocket.ep.Read", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	res, err := s.ep.Read(&dst, opts)
+	trace.AsyncEnd("net", "fuchsia_posix_socket.synchronousDatagramSocket.ep.Read", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
 		err = nil
 	}
@@ -2069,6 +2076,8 @@ func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool
 }
 
 func (s *synchronousDatagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.SynchronousDatagramSocketRecvMsgResult, error) {
+	trace.AsyncBegin("net", "fuchsia_posix_socket.synchronousDatagramSocket.RecvMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
+	defer trace.AsyncEnd("net", "fuchsia_posix_socket.synchronousDatagramSocket.RecvMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	addr, data, truncated, cmsg, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
 	if err != nil {
 		return socket.SynchronousDatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
@@ -2112,10 +2121,12 @@ func (s *synchronousDatagramSocketImpl) RecvMsgDeprecated(ctx fidl.Context, want
 func (s *synchronousDatagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
 	var r bytes.Reader
 	r.Reset(data)
+	trace.AsyncBegin("net", "fuchsia_posix_socket.synchronousDatagramSocket.ep.Write", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	n, err := s.ep.Write(&r, tcpip.WriteOptions{
 		To:              to,
 		ControlMessages: cmsg,
 	})
+	trace.AsyncEnd("net", "fuchsia_posix_socket.synchronousDatagramSocket.ep.Write", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	if err != nil {
 		if err := s.pending.update(); err != nil {
 			panic(err)
@@ -2144,6 +2155,8 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 }
 
 func (s *synchronousDatagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.SynchronousDatagramSocketSendMsgResult, error) {
+	trace.AsyncBegin("net", "fuchsia_posix_socket.synchronousDatagramSocket.SendMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
+	defer trace.AsyncEnd("net", "fuchsia_posix_socket.synchronousDatagramSocket.SendMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	var cmsg tcpip.SendableControlMessages
 	if err := fidlDatagramControlDataToControlMessages(controlData, &cmsg); err != 0 {
 		return socket.SynchronousDatagramSocketSendMsgResultWithErr(err), nil

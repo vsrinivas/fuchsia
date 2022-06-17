@@ -14,12 +14,14 @@ import (
 	"math/bits"
 	"syscall/zx"
 	"syscall/zx/fidl"
+	"unsafe"
 
 	"gen/netstack/link/netdevice"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/network"
@@ -132,6 +134,8 @@ func (p *Port) LinkAddress() tcpip.LinkAddress {
 
 // write writes a list of packets to the device.
 func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, tcpip.Error) {
+	trace.AsyncBegin("net", "netdevice.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
+	defer trace.AsyncEnd("net", "netdevice.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if c.mu.closed {
@@ -360,6 +364,8 @@ func (c *Client) Run(ctx context.Context) {
 	go func() {
 		defer wg.Done()
 		if err := c.handler.RxLoop(func(descriptorIndex *uint16) {
+			trace.AsyncBegin("net", "netdevice.RxLoop.Handler", trace.AsyncID(uintptr(unsafe.Pointer(c))))
+			defer trace.AsyncEnd("net", "netdevice.RxLoop.Handler", trace.AsyncID(uintptr(unsafe.Pointer(c))))
 			descriptor := c.getDescriptor(*descriptorIndex)
 			data := c.getDescriptorData(descriptor)
 			view := make([]byte, len(data))
@@ -389,7 +395,10 @@ func (c *Client) Run(ctx context.Context) {
 							})
 							defer pkt.DecRef()
 
+							id := trace.AsyncID(uintptr(unsafe.Pointer(pkt)))
+							trace.AsyncBegin("net", "netdevice.DeliverNetworkPacket", id)
 							dispatcher.DeliverNetworkPacket(protocolNumber, pkt)
+							trace.AsyncEnd("net", "netdevice.DeliverNetworkPacket", id)
 						}()
 					}
 				} else {

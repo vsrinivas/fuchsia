@@ -12,12 +12,14 @@ import (
 	"fmt"
 	"math"
 	"syscall/zx"
+	"unsafe"
 
 	"gen/netstack/link/eth"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -175,6 +177,8 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 }
 
 func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
+	trace.AsyncBegin("net", "eth.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
+	defer trace.AsyncEnd("net", "eth.Client.write", trace.AsyncID(uintptr(unsafe.Pointer(c))))
 	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt *stack.PacketBuffer) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
@@ -235,6 +239,8 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := c.handler.RxLoop(func(entry *eth.FifoEntry) {
+			trace.AsyncBegin("net", "eth.RxLoop.Handler", trace.AsyncID(uintptr(unsafe.Pointer(c))))
+			defer trace.AsyncEnd("net", "eth.RxLoop.Handler", trace.AsyncID(uintptr(unsafe.Pointer(c))))
 			// Process inbound packet.
 			func() {
 				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
@@ -242,7 +248,10 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				})
 				defer pkt.DecRef()
 
+				id := trace.AsyncID(uintptr(unsafe.Pointer(pkt)))
+				trace.AsyncBegin("net", "eth.DeliverNetworkPacket", id)
 				dispatcher.DeliverNetworkPacket(0, pkt)
+				trace.AsyncEnd("net", "eth.DeliverNetworkPacket", id)
 			}()
 			// This entry is going back to the driver; it can be reused.
 			entry.SetLength(bufferSize)
