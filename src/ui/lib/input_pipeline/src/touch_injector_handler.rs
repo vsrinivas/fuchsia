@@ -245,6 +245,12 @@ impl TouchInjectorHandler {
             pointerinjector::EventPhase::Remove,
         ];
 
+        // Make the trace duration end on the call to injector.inject, not the call's return.
+        // The duration should start before the flow_begin is minted in
+        // create_pointer_sample_event, and it should not include the injector.inject() call's
+        // return from await.
+        fuchsia_trace::duration_begin!("input", "touch-inject-into-scenic");
+
         let mut events: Vec<pointerinjector::Event> = vec![];
         for phase in ordered_phases {
             let contacts: Vec<touch_binding::TouchContact> = touch_event
@@ -267,9 +273,13 @@ impl TouchInjectorHandler {
             self.mutable_state.borrow().injectors.get(&touch_descriptor.device_id).cloned();
         if let Some(injector) = injector {
             let events_to_send = &mut events.into_iter();
-            let _ = injector.inject(events_to_send).await;
+            let fut = injector.inject(events_to_send);
+            // This trace duration ends before awaiting on the returned future.
+            fuchsia_trace::duration_end!("input", "touch-inject-into-scenic");
+            let _ = fut.await;
             Ok(())
         } else {
+            fuchsia_trace::duration_end!("input", "touch-inject-into-scenic");
             Err(anyhow::format_err!(
                 "No injector found for touch device {}.",
                 touch_descriptor.device_id
