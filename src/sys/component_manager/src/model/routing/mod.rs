@@ -25,7 +25,9 @@ use {
         },
     },
     ::routing::{
-        capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+        capability_source::ComponentCapability,
+        component_instance::ComponentInstanceInterface,
+        error::{AvailabilityRoutingError},
         route_capability, route_storage_and_backing_directory,
     },
     cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
@@ -353,9 +355,21 @@ pub async fn report_routing_failure(
         ModelError::RoutingError { err } => err.to_string(),
         _ => err.to_string(),
     };
+    let log_level = match err {
+        // If the route failed because the capability is intentionally not provided, then this
+        // failure is expected and the warn level is unwarranted, so use the debug level in this
+        // case.
+        ModelError::RoutingError {
+            err:
+                RoutingError::AvailabilityRoutingError(
+                    AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                ),
+        } => Level::Debug,
+        _ => Level::Warn,
+    };
     target
         .log(
-            Level::Warn,
+            log_level,
             format!(
                 "Failed to route {} `{}` with target component `{}`: {}\n{}",
                 cap.type_name(),
