@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::arguments::*,
     anyhow::{anyhow, Error},
-    argh::FromArgs,
     fuchsia_async as fasync,
 };
 
@@ -14,127 +14,6 @@ mod list;
 mod serial;
 mod services;
 mod socat;
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Top-level command.
-struct GuestOptions {
-    #[argh(subcommand)]
-    nested: SubCommands,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
-enum SubCommands {
-    Launch(arguments::LaunchArgs),
-    Balloon(BalloonArgs),
-    BalloonStats(BalloonStatsArgs),
-    Serial(SerialArgs),
-    List(ListArgs),
-    Socat(SocatArgs),
-    SocatListen(SocatListenArgs),
-    Vsh(VshArgs),
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Modify the size of a memory balloon. Usage: guest balloon env-id cid num-pages
-#[argh(subcommand, name = "balloon")]
-struct BalloonArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    cid: Option<u32>,
-    #[argh(positional)]
-    /// type of the guest
-    guest_type: arguments::GuestType,
-    #[argh(positional)]
-    /// number of pages guest balloon will have after use.
-    num_pages: u32,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// See the stats of a guest's memory balloon. Usage: guest balloon-stats env-id cid
-#[argh(subcommand, name = "balloon-stats")]
-struct BalloonStatsArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    cid: Option<u32>,
-    #[argh(positional)]
-    /// type of the guest
-    guest_type: arguments::GuestType,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Access the serial output for a guest. Usage: guest serial env-id cid
-#[argh(subcommand, name = "serial")]
-struct SerialArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    cid: Option<u32>,
-    #[argh(positional)]
-    /// type of the guest
-    guest_type: arguments::GuestType,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// List existing guest environments. Usage: guest list
-#[argh(subcommand, name = "list")]
-struct ListArgs {}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Create a socat connection on the specified port. Usage: guest socat env-id port
-#[argh(subcommand, name = "socat")]
-struct SocatArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    env_id: Option<u32>,
-    #[argh(positional)]
-    /// type of the guest
-    guest_type: arguments::GuestType,
-    #[argh(option)]
-    /// port for listeners to connect on.
-    port: u32,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Listen through socat on the specified port. Usage: guest socat-listen env-id host-port
-#[argh(subcommand, name = "socat-listen")]
-struct SocatListenArgs {
-    #[argh(option)]
-    /// environment id of host.
-    env_id: Option<u32>,
-    #[argh(positional)]
-    /// type of the guest
-    guest_type: arguments::GuestType,
-    #[argh(option)]
-    /// port number of host (see `guest socat`)
-    host_port: u32,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [env_id [cid [port]]] [--args <arg>]
-#[argh(subcommand, name = "vsh")]
-struct VshArgs {
-    #[argh(option)]
-    /// optional environment id of host.
-    env_id: Option<u32>,
-    #[argh(option)]
-    /// optional context id of vsh to connect to.
-    cid: Option<u32>,
-    #[argh(option)]
-    /// positional port of a vsh socket to connect to.
-    port: Option<u32>,
-    #[argh(option)]
-    /// list of arguments to run non-interactively on launch.
-    args: Vec<String>,
-}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

@@ -57,6 +57,127 @@ impl GuestType {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
+/// Top-level command.
+pub struct GuestOptions {
+    #[argh(subcommand)]
+    pub nested: SubCommands,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum SubCommands {
+    Launch(LaunchArgs),
+    Balloon(BalloonArgs),
+    BalloonStats(BalloonStatsArgs),
+    Serial(SerialArgs),
+    List(ListArgs),
+    Socat(SocatArgs),
+    SocatListen(SocatListenArgs),
+    Vsh(VshArgs),
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Modify the size of a memory balloon. Usage: guest balloon env-id cid num-pages
+#[argh(subcommand, name = "balloon")]
+pub struct BalloonArgs {
+    #[argh(option)]
+    /// environment id where guest lives.
+    pub env_id: Option<u32>,
+    #[argh(option)]
+    /// context id of guest.
+    pub cid: Option<u32>,
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+    #[argh(positional)]
+    /// number of pages guest balloon will have after use.
+    pub num_pages: u32,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// See the stats of a guest's memory balloon. Usage: guest balloon-stats env-id cid
+#[argh(subcommand, name = "balloon-stats")]
+pub struct BalloonStatsArgs {
+    #[argh(option)]
+    /// environment id where guest lives.
+    pub env_id: Option<u32>,
+    #[argh(option)]
+    /// context id of guest.
+    pub cid: Option<u32>,
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Access the serial output for a guest. Usage: guest serial env-id cid
+#[argh(subcommand, name = "serial")]
+pub struct SerialArgs {
+    #[argh(option)]
+    /// environment id where guest lives.
+    pub env_id: Option<u32>,
+    #[argh(option)]
+    /// context id of guest.
+    pub cid: Option<u32>,
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// List existing guest environments. Usage: guest list
+#[argh(subcommand, name = "list")]
+pub struct ListArgs {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Create a socat connection on the specified port. Usage: guest socat env-id port
+#[argh(subcommand, name = "socat")]
+pub struct SocatArgs {
+    #[argh(option)]
+    /// environment id where guest lives.
+    pub env_id: Option<u32>,
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+    #[argh(option)]
+    /// port for listeners to connect on.
+    pub port: u32,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Listen through socat on the specified port. Usage: guest socat-listen env-id host-port
+#[argh(subcommand, name = "socat-listen")]
+pub struct SocatListenArgs {
+    #[argh(option)]
+    /// environment id of host.
+    pub env_id: Option<u32>,
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+    #[argh(option)]
+    /// port number of host (see `guest socat`)
+    pub host_port: u32,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [env_id [cid [port]]] [--args <arg>]
+#[argh(subcommand, name = "vsh")]
+pub struct VshArgs {
+    #[argh(option)]
+    /// optional environment id of host.
+    pub env_id: Option<u32>,
+    #[argh(option)]
+    /// optional context id of vsh to connect to.
+    pub cid: Option<u32>,
+    #[argh(option)]
+    /// positional port of a vsh socket to connect to.
+    pub port: Option<u32>,
+    #[argh(option)]
+    /// list of arguments to run non-interactively on launch.
+    pub args: Vec<String>,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
 /// Launch a guest image. Usage: guest launch guest_type [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
 #[argh(subcommand, name = "launch")]
 pub struct LaunchArgs {
