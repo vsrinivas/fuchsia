@@ -8,12 +8,7 @@
         binary: "bin/reporter",
     },
     use: [
-        {
-            directory: "hub",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/hub",
-        },
+        { protocol: "fuchsia.sys2.RealmQuery" },
         {
             protocol: [
                 "fidl.examples.routing.echo.Echo",
