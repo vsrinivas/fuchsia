@@ -5,8 +5,8 @@
 group("wlan") {
   testonly = true
   deps = [
+    ":drivers",
     ":packages",
-    "drivers",
   ]
 }
 
