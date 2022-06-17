@@ -307,19 +307,22 @@ impl InputDevice {
                     }
                 }
             }
-            Ok(InputDeviceRequest::SendOutputReport { .. }) => {
-                Some(Err(format_err!("InputDevice does not support SendOutputReport")))
+            Err(e) => {
+                // Fail fast.
+                //
+                // Panic here, since we don't have a good way to report an error from a
+                // background task.  InputDevice::flush() exists, but this is unlikely
+                // to be called in tests, and it may get called way too late, after
+                // an error in this background task already caused some other error.
+                panic!("InputDevice got an error while reading request: {:?}", &e);
             }
-            Ok(InputDeviceRequest::GetFeatureReport { .. }) => {
-                Some(Err(format_err!("InputDevice does not support GetFeatureReport")))
+            _ => {
+                // See the previous branch.
+                panic!(
+                    "InputDevice::handle_device_request does not support this request: {:?}",
+                    &request
+                );
             }
-            Ok(InputDeviceRequest::SetFeatureReport { .. }) => {
-                Some(Err(format_err!("InputDevice does not support SetFeatureReport")))
-            }
-            Ok(InputDeviceRequest::GetInputReport { .. }) => {
-                Some(Err(format_err!("InputDevice does not support GetInputReport")))
-            }
-            Err(e) => Some(Err(anyhow::Error::from(e).context("while reading InputDeviceRequest"))),
         }
     }
 
@@ -1193,55 +1196,6 @@ mod tests {
                 std::mem::drop(input_device_proxy); // Terminate `InputDeviceRequestStream`.
                 assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
             }
-        }
-    }
-
-    // Because `input_synthesis` is a library, unsupported features should yield `Err`s,
-    // rather than panic!()-ing.
-    mod unsupported_fidl_requests {
-        use {
-            super::{utils::make_input_device_proxy_and_struct, *},
-            assert_matches::assert_matches,
-            fidl_fuchsia_input_report::{FeatureReport, OutputReport},
-        };
-
-        #[fasync::run_until_stalled(test)]
-        async fn send_output_report_request_yields_error() -> Result<(), Error> {
-            let (proxy, input_device) = make_input_device_proxy_and_struct();
-            let input_device_server_fut = input_device.flush();
-            let send_output_report_fut = proxy.send_output_report(OutputReport::EMPTY);
-            std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
-            assert_matches!(
-                future::join(input_device_server_fut, send_output_report_fut).await,
-                (_, Err(_))
-            );
-            Ok(())
-        }
-
-        #[fasync::run_until_stalled(test)]
-        async fn get_feature_report_request_yields_error() -> Result<(), Error> {
-            let (proxy, input_device) = make_input_device_proxy_and_struct();
-            let input_device_server_fut = input_device.flush();
-            let get_feature_report_fut = proxy.get_feature_report();
-            std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
-            assert_matches!(
-                future::join(input_device_server_fut, get_feature_report_fut).await,
-                (_, Err(_))
-            );
-            Ok(())
-        }
-
-        #[fasync::run_until_stalled(test)]
-        async fn set_feature_report_request_yields_error() -> Result<(), Error> {
-            let (proxy, input_device) = make_input_device_proxy_and_struct();
-            let input_device_server_fut = input_device.flush();
-            let set_feature_report_fut = proxy.set_feature_report(FeatureReport::EMPTY);
-            std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
-            assert_matches!(
-                future::join(input_device_server_fut, set_feature_report_fut).await,
-                (_, Err(_))
-            );
-            Ok(())
         }
     }
 
