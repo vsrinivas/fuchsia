@@ -781,6 +781,10 @@ Do the following:
    [zxdb]
    ```
 
+   Note: You can re-build and re-run your component as many times as you want, but do not need to
+   restart the debugger or run `attach` again. The debugger will preserve your breakpoints and
+   continue watching for future processes called `hello_world.cm`.
+
 1. In the new terminal, monitor device logs for the `hello_world` component:
 
    ```posix-terminal
