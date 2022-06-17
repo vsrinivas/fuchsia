@@ -66,7 +66,7 @@ class SemanticsManagerProxy : public fuchsia::accessibility::semantics::Semantic
 
 class SemanticsIntegrationTestV2
     : public gtest::RealLoopFixture,
-      public testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
+      public testing::WithParamInterface<ui_testing::UITestManager::Config> {
  public:
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerRef = ChildRef{kSemanticsManager};
@@ -78,6 +78,13 @@ class SemanticsIntegrationTestV2
   void SetUp() override;
 
   virtual void ConfigureRealm() {}
+
+  // Set of UI configurations to run our semantics integration tests against.
+  static std::vector<ui_testing::UITestManager::Config> UIConfigurationsToTest();
+
+  // Returns the expected pixel scale factor observed by the client view with
+  // the given `display_pixel_density`.
+  static float ExpectedPixelScaleForDisplayPixelDensity(float display_pixel_density);
 
  protected:
   sys::ComponentContext* context() { return context_.get(); }
@@ -111,8 +118,12 @@ class SemanticsIntegrationTestV2
   bool PerformAccessibilityAction(zx_koid_t view_ref_koid, uint32_t node_id,
                                   fuchsia::accessibility::semantics::Action action);
 
-  // Waits for the client view's scale factor to be reflected in the root
-  // semantic node's transform.
+  // Waits for the root semantic node's transform to include a scale of 1 /
+  // expected_scale_factor.
+  //
+  // This scale factor is required for hit testing and scrolling, but may not be
+  // present in the first committed version of the semantic tree. So, we should
+  // gate spatial semantics tests on receipt of the correct scale factor.
   void WaitForScaleFactor();
 
  private:

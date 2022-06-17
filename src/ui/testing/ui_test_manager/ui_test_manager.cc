@@ -356,6 +356,12 @@ void UITestManager::RouteConfigData() {
   std::string scene_owner_name = SceneOwnerName(config_);
   if (config_.scene_owner) {
     config_directory_contents.AddFile("display_rotation", std::to_string(config_.display_rotation));
+
+    if (config_.display_pixel_density > 0) {
+      config_directory_contents.AddFile("display_pixel_density",
+                                        std::to_string(config_.display_pixel_density));
+    }
+
     targets.push_back(ChildRef{scene_owner_name});
   }
 

@@ -52,6 +52,7 @@ bool CompareFloat(float f0, float f1, float epsilon = 0.01f) {
 }
 
 }  // namespace
+
 void SemanticsManagerProxy::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {
   FX_CHECK(mock_handles->outgoing()->AddPublicService(
                fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>(
@@ -69,14 +70,43 @@ void SemanticsManagerProxy::RegisterViewForSemantics(
                                                std::move(semantic_tree_request));
 }
 
+std::vector<ui_testing::UITestManager::Config>
+SemanticsIntegrationTestV2::UIConfigurationsToTest() {
+  std::vector<ui_testing::UITestManager::Config> configs;
+
+  // GFX x root presenter
+  {
+    ui_testing::UITestManager::Config config;
+
+    // This value was chosen arbitrarily, and fed through root presenter's
+    // display model logic to compute the corresponding pixel scale.
+    config.display_pixel_density = 4.1668f;
+
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(config);
+  }
+
+  // Gfx x scene manager
+  {
+    ui_testing::UITestManager::Config config;
+
+    // TODO(fxbug.dev/98691): Add a non-trivial display pixel density once scene
+    // manager supports scaling.
+
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(config);
+  }
+
+  return configs;
+}
+
 void SemanticsIntegrationTestV2::SetUp() {
   FX_LOGS(INFO) << "Setting up test fixture";
 
   // Initialize ui test manager.
-  ui_testing::UITestManager::Config config;
-  config.scene_owner = GetParam();
-  config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-  ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
+  ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(GetParam());
 
   // Initialize ui test realm.
   BuildRealm();
@@ -228,18 +258,41 @@ bool SemanticsIntegrationTestV2::PerformAccessibilityAction(
   return *callback_handled;
 }
 
+float SemanticsIntegrationTestV2::ExpectedPixelScaleForDisplayPixelDensity(
+    float display_pixel_density) {
+  // The math to compute the pixel scale is quite complex, so we'll just
+  // hard-code the set of values we use in our tests here.
+  static std::unordered_map<float, float> pixel_density_to_pixel_scale;
+  pixel_density_to_pixel_scale[4.1668f] = 1.2549f;
+
+  // If pixel density is 0, default to a pixel scale of 1.
+  pixel_density_to_pixel_scale[0.f] = 1.f;
+
+  FX_CHECK(pixel_density_to_pixel_scale.count(display_pixel_density));
+
+  return pixel_density_to_pixel_scale[display_pixel_density];
+}
+
 void SemanticsIntegrationTestV2::WaitForScaleFactor() {
   RunLoopUntil([this] {
-    auto scale_factor = ui_test_manager_->ClientViewScaleFactor();
     auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
     if (!node) {
       return false;
     }
 
+    // The root node applies a transform to convert between the client's
+    // allocated and logical coordinate spaces. The scale of this transform is
+    // the inverse of the pixel scale for the view.
+    auto display_pixel_density = GetParam().display_pixel_density;
+    auto expected_root_node_scale =
+        1 / ExpectedPixelScaleForDisplayPixelDensity(display_pixel_density);
+
     // TODO(fxb.dev/93943): Remove accommodation for transform field.
-    return (node->has_transform() && CompareFloat(node->transform().matrix[0], 1 / scale_factor)) ||
+    return (node->has_transform() &&
+            CompareFloat(node->transform().matrix[0], 1 / expected_root_node_scale)) ||
            (node->has_node_to_container_transform() &&
-            CompareFloat(node->node_to_container_transform().matrix[0], 1 / scale_factor));
+            CompareFloat(node->node_to_container_transform().matrix[0],
+                         1 / expected_root_node_scale));
   });
 }
 

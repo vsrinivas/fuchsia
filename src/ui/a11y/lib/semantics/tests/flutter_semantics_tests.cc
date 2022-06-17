@@ -145,10 +145,8 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    FlutterSemanticsTestWithParams, FlutterSemanticsTests,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+INSTANTIATE_TEST_SUITE_P(FlutterSemanticsTestWithParams, FlutterSemanticsTests,
+                         ::testing::ValuesIn(SemanticsIntegrationTestV2::UIConfigurationsToTest()));
 
 // Loads ally-demo flutter app and verifies its semantic tree.
 TEST_P(FlutterSemanticsTests, StaticSemantics) {

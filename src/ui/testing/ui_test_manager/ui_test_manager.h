@@ -228,6 +228,8 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
     int display_rotation = 0;
 
     bool use_flatland = false;
+
+    float display_pixel_density = 0;
   };
 
   explicit UITestManager(Config config);

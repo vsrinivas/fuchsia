@@ -258,11 +258,8 @@ class StaticHtmlTest : public WebSemanticsTest {
   std::string HtmlForTestCase() override { return kStaticHtml; }
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    StaticHtmlTestWithParams, StaticHtmlTest,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
-
+INSTANTIATE_TEST_SUITE_P(StaticHtmlTestWithParams, StaticHtmlTest,
+                         ::testing::ValuesIn(SemanticsIntegrationTestV2::UIConfigurationsToTest()));
 TEST_P(StaticHtmlTest, StaticSemantics) {
   /* The semantic tree for static.html:
    *
@@ -279,39 +276,7 @@ TEST_P(StaticHtmlTest, StaticSemantics) {
   RunLoopUntilNodeExistsWithLabel("Paragraph");
 }
 
-class DynamicHtmlTest : public WebSemanticsTest {
- public:
-  DynamicHtmlTest() = default;
-  ~DynamicHtmlTest() override = default;
-
-  std::string HtmlForTestCase() override { return kDynamicHtml; }
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    DynamicHtmlTestWithParams, DynamicHtmlTest,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
-
-TEST_P(DynamicHtmlTest, PerformAction) {
-  // Find the node with the counter to make sure it still reads 0
-  RunLoopUntilNodeExistsWithLabel("0");
-  // There shouldn't be a node labeled 1 yet
-  EXPECT_FALSE(NodeExistsWithLabel("1"));
-
-  // Trigger the button's default action
-  auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-  auto node = FindNodeWithLabel(root, view_ref_koid(), "Increment");
-  ASSERT_TRUE(node);
-  EXPECT_TRUE(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON);
-  bool callback_handled = PerformAccessibilityAction(
-      view_ref_koid(), node->node_id(), fuchsia::accessibility::semantics::Action::DEFAULT);
-  EXPECT_TRUE(callback_handled);
-
-  RunLoopUntilNodeExistsWithLabel("1");
-}
-
-// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
-TEST_P(DynamicHtmlTest, DISABLED_HitTesting) {
+TEST_P(StaticHtmlTest, HitTesting) {
   FX_LOGS(INFO) << "Wait for scale factor";
   WaitForScaleFactor();
   FX_LOGS(INFO) << "Received scale factor";
@@ -337,6 +302,35 @@ TEST_P(DynamicHtmlTest, DISABLED_HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
+class DynamicHtmlTest : public WebSemanticsTest {
+ public:
+  DynamicHtmlTest() = default;
+  ~DynamicHtmlTest() override = default;
+
+  std::string HtmlForTestCase() override { return kDynamicHtml; }
+};
+
+INSTANTIATE_TEST_SUITE_P(DynamicHtmlTestWithParams, DynamicHtmlTest,
+                         ::testing::ValuesIn(SemanticsIntegrationTestV2::UIConfigurationsToTest()));
+
+TEST_P(DynamicHtmlTest, PerformAction) {
+  // Find the node with the counter to make sure it still reads 0
+  RunLoopUntilNodeExistsWithLabel("0");
+  // There shouldn't be a node labeled 1 yet
+  EXPECT_FALSE(NodeExistsWithLabel("1"));
+
+  // Trigger the button's default action
+  auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+  auto node = FindNodeWithLabel(root, view_ref_koid(), "Increment");
+  ASSERT_TRUE(node);
+  EXPECT_TRUE(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON);
+  bool callback_handled = PerformAccessibilityAction(
+      view_ref_koid(), node->node_id(), fuchsia::accessibility::semantics::Action::DEFAULT);
+  EXPECT_TRUE(callback_handled);
+
+  RunLoopUntilNodeExistsWithLabel("1");
+}
+
 class ScrollingHtmlTest : public WebSemanticsTest {
  public:
   ScrollingHtmlTest() = default;
@@ -345,13 +339,10 @@ class ScrollingHtmlTest : public WebSemanticsTest {
   std::string HtmlForTestCase() override { return kScrollingHtml; }
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    ScrollingHtmlTestWithParams, ScrollingHtmlTest,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+INSTANTIATE_TEST_SUITE_P(ScrollingHtmlTestWithParams, ScrollingHtmlTest,
+                         ::testing::ValuesIn(SemanticsIntegrationTestV2::UIConfigurationsToTest()));
 
-// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
-TEST_P(ScrollingHtmlTest, DISABLED_ScrollToMakeVisible) {
+TEST_P(ScrollingHtmlTest, ScrollToMakeVisible) {
   FX_LOGS(INFO) << "Wait for scale factor";
   WaitForScaleFactor();
   FX_LOGS(INFO) << "Received scale factor";
