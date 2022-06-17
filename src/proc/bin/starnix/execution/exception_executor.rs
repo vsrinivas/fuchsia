@@ -212,10 +212,17 @@ fn run_exception_loop(
             dequeue_signal(current_task);
         }
 
-        if let Some(exit_status) = current_task.read().exit_status.as_ref() {
-            strace!(current_task, "exiting with status {:?}", exit_status);
-            exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
-            return Ok(exit_status.clone());
+        {
+            let task_state = current_task.read();
+            if let Some(exit_status) = task_state.exit_status.as_ref() {
+                let exit_status = exit_status.clone();
+                // `strace!` acquires a read lock on `current_task`'s state, so drop the lock to
+                // avoid re-entrancy.
+                drop(task_state);
+                strace!(current_task, "exiting with status {:?}", exit_status);
+                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
+                return Ok(exit_status);
+            }
         }
 
         // Handle the debug address after the thread is set up to continue, because
