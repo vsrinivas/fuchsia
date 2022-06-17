@@ -195,6 +195,13 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            // Disable persistence to avoid the warning for not running in the
+            // source code directory (since we're running on a Fuchsia target)
+            failure_persistence: None,
+            .. ProptestConfig::default()
+        })]
+
         #[test]
         fn parse_is_inverse_of_display(ref id in "[0-9a-f]{64}") {
             prop_assert_eq!(

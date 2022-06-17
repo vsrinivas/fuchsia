@@ -832,6 +832,13 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            // Disable persistence to avoid the warning for not running in the
+            // source code directory (since we're running on a Fuchsia target)
+            failure_persistence: None,
+            .. ProptestConfig::default()
+        })]
+
         #[test]
         fn blob_mirror_url_from_mirror_url_produces_default_blob_mirror_urls(
             mirror_url in uri_with_adversarial_path()
