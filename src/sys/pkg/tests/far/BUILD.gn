@@ -10,30 +10,29 @@ rustc_test("driver") {
   edition = "2021"
 
   deps = [
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:tempfile",
   ]
 
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("far-component") {
-  testonly = true
-  component_name = "far"
-  manifest = "meta/far.cmx"
-  deps = [ "//src/sys/pkg/bin/far:bin" ]
-}
-
-fuchsia_test_component("far-integration-tests-component") {
+fuchsia_unittest_package("far-integration-tests") {
   component_name = "far-integration-tests"
-  manifest = "meta/far-integration-test.cmx"
-  deps = [ ":driver" ]
-}
-
-fuchsia_test_package("far-integration-tests") {
-  test_components = [ ":far-integration-tests-component" ]
-  deps = [ ":far-component" ]
+  manifest = "meta/far-integration-test.cml"
+  deps = [
+    ":driver",
+    "//src/sys/pkg/bin/far:bin",
+  ]
 }
 
 group("tests") {
