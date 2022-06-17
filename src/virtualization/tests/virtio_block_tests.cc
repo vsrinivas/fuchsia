@@ -267,9 +267,7 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
 template <class T>
 class VirtioBlockGuestTest : public GuestTest<T> {
  public:
-  const std::vector<TestDevice>& TestDevices() const {
-    return this->GetEnclosedGuest().TestDevices();
-  }
+  const std::vector<TestDevice>& TestDevices() { return this->GetEnclosedGuest().TestDevices(); }
 };
 
 using GuestTypes = ::testing::Types<VirtioBlockZirconGuest, VirtioBlockDebianGuest>;

@@ -8,29 +8,32 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
 #include <fbl/type_info.h>
 #include <gtest/gtest.h>
 
-#include "lib/zx/time.h"
 #include "src/virtualization/tests/enclosed_guest.h"
 
 template <class T>
 class GuestTest : public ::testing::Test {
+ public:
+  GuestTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread), enclosed_guest_(loop_) {}
+
  protected:
   void SetUp() override {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-    enclosed_guest_ = std::make_unique<T>(*loop_);
-    ZX_ASSERT(enclosed_guest_->Start(zx::time::infinite()) == ZX_OK);
+    zx_status_t status = GetEnclosedGuest().Start(zx::time::infinite());
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
   }
 
   void TearDown() override {
     FX_LOGS(INFO) << "Teardown Guest: " << fbl::TypeInfo<T>::Name();
-    ZX_ASSERT(enclosed_guest_->Stop(zx::time::infinite()) == ZX_OK);
-    loop_->Quit();
+    zx_status_t status = GetEnclosedGuest().Stop(zx::time::infinite());
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    loop_.Quit();
   }
 
   zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr,
@@ -63,11 +66,11 @@ class GuestTest : public ::testing::Test {
     GetEnclosedGuest().ConnectToBalloon(std::move(balloon_controller));
   }
 
-  T& GetEnclosedGuest() const { return *enclosed_guest_; }
+  T& GetEnclosedGuest() { return enclosed_guest_; }
 
  private:
-  std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<T> enclosed_guest_;
+  async::Loop loop_;
+  T enclosed_guest_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
