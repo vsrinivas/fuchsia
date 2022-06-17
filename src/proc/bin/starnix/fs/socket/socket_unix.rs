@@ -419,7 +419,24 @@ impl SocketOps for UnixSocket {
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        self.lock().read(current_task, user_buffers, socket.socket_type, flags)
+        let info = self.lock().read(current_task, user_buffers, socket.socket_type, flags)?;
+        if info.bytes_read > 0 {
+            let peer = {
+                let inner = self.lock();
+                if let Some(peer) = inner.peer() {
+                    Some(peer.clone())
+                } else {
+                    None
+                }
+            };
+            if let Some(socket) = peer {
+                let unix_socket_peer = socket.downcast_socket::<UnixSocket>();
+                if let Some(socket) = unix_socket_peer {
+                    socket.lock().waiters.notify_events(FdEvents::POLLOUT);
+                }
+            }
+        }
+        Ok(info)
     }
 
     fn write(
@@ -752,9 +769,6 @@ impl UnixSocketInner {
         };
         if info.message_length == 0 && !self.is_shutdown {
             return error!(EAGAIN);
-        }
-        if info.bytes_read > 0 {
-            self.waiters.notify_events(FdEvents::POLLOUT);
         }
 
         Ok(info)

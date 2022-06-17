@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_runtime::duplicate_utc_clock_handle;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 use std::ffi::CString;
@@ -534,6 +535,13 @@ pub fn sys_getrlimit(
     Ok(())
 }
 
+fn realtime_deadline_to_monotonic(deadline: timespec) -> Result<zx::Time, Errno> {
+    let utc_clock = duplicate_utc_clock_handle(zx::Rights::READ).map_err(|_| errno!(EACCES))?;
+    let details = utc_clock.get_details().map_err(|_| errno!(EACCES))?;
+    let utc_time = time_from_timespec(deadline)?;
+    Ok(details.mono_to_synthetic.apply_inverse(utc_time))
+}
+
 pub fn sys_futex(
     current_task: &CurrentTask,
     addr: UserAddress,
@@ -547,17 +555,15 @@ pub fn sys_futex(
     let _is_private = op & FUTEX_PRIVATE_FLAG != 0;
 
     let is_realtime = op & FUTEX_CLOCK_REALTIME != 0;
-    if is_realtime {
-        not_implemented!("futex: Realtime futex are not implemented.");
-        return error!(ENOSYS);
-    }
-
     let cmd = op & (FUTEX_CMD_MASK as u32);
     match cmd {
         FUTEX_WAIT => {
             let deadline = if utime.is_null() {
                 zx::Time::INFINITE
             } else {
+                // In theory, we should adjust this for a realtime
+                // futex when the system gets suspended, but Zircon
+                // does  not give us a way to do this.
                 let duration = current_task.mm.read_object(utime)?;
                 zx::Time::after(duration_from_timespec(duration)?)
             };
@@ -576,11 +582,13 @@ pub fn sys_futex(
             if value3 == 0 {
                 return error!(EINVAL);
             }
+            // The timeout is interpreted differently by WAIT and WAIT_BITSET: WAIT takes a
+            // timeout and WAIT_BITSET takes a deadline.
             let deadline = if utime.is_null() {
                 zx::Time::INFINITE
+            } else if is_realtime {
+                realtime_deadline_to_monotonic(current_task.mm.read_object(utime)?)?
             } else {
-                // The timeout is interpreted differently by WAIT and WAIT_BITSET: WAIT takes a
-                // timeout and WAIT_BITSET takes a deadline.
                 let deadline = current_task.mm.read_object(utime)?;
                 time_from_timespec(deadline)?
             };

@@ -99,6 +99,13 @@ impl SocketType {
             SocketType::SeqPacket => SOCK_SEQPACKET,
         }
     }
+
+    pub fn is_stream(&self) -> bool {
+        match self {
+            SocketType::Stream | SocketType::Raw => true,
+            SocketType::Datagram | SocketType::SeqPacket => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
