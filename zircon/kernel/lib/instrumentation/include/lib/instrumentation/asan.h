@@ -23,8 +23,7 @@
 
 #endif  // __x86_64__
 
-// Alias __NO_ASAN to the more friendly "NO_ASAN".
-#define NO_ASAN __NO_ASAN
+#define NO_ASAN __attribute__((no_sanitize("address")))
 
 #ifndef __ASSEMBLER__
 

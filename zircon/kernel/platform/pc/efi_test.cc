@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/instrumentation/asan.h>
 #include <lib/unittest/unittest.h>
 
 #include <platform/pc.h>
@@ -32,7 +33,7 @@ bool IsEfiExpected(ktl::string_view manufacturer, ktl::string_view product) {
 // Ensure EFI is present on platforms we know should have it.
 //
 // This test aims to prevent EFI support from being silently dropped.
-__NO_ASAN bool TestEfiPresent() {
+NO_ASAN bool TestEfiPresent() {
   BEGIN_TEST;
 
   // Attempt to fetch EFI services.
@@ -51,7 +52,7 @@ __NO_ASAN bool TestEfiPresent() {
   END_TEST;
 }
 
-__NO_ASAN bool TestEfiServices() {
+NO_ASAN bool TestEfiServices() {
   BEGIN_TEST;
 
   // Fetch EFI services.

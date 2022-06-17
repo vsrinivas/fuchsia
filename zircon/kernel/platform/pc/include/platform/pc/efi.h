@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_H_
 #define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_H_
 
+#include <lib/instrumentation/asan.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -32,8 +33,8 @@ zx_status_t InitEfiServices(uint64_t efi_system_table);
 // Returns nullptr if no EFI services are available.
 //
 // WARNING: Users of the pointer returned by this function  must be tagged
-// with the __NO_ASAN attribute to avoid crashes when running under KASAN.
-__NO_ASAN EfiServicesActivation TryActivateEfiServices();
+// with the NO_ASAN attribute to avoid crashes when running under KASAN.
+NO_ASAN EfiServicesActivation TryActivateEfiServices();
 
 // Manages access to "efi_runtime_services" and restoration of the previous
 // address space.

@@ -192,14 +192,6 @@
 #define __NO_SAFESTACK
 #endif
 
-// Indicate the given function or global variable shouldn't be instrumented
-// for ASAN.
-#if defined(__clang__)
-#define __NO_ASAN [[clang::no_sanitize("address")]]
-#else
-#define __NO_ASAN __attribute__((no_sanitize_address))
-#endif
-
 // The given C++ class or struct need not have a unique address when part of
 // a larger struct or class, but can be safely collapsed into a zero-byte
 // object by the compiler.

@@ -12,7 +12,7 @@ efi_guid kZirconVendorGuid = ZIRCON_VENDOR_GUID;
 char16_t kZirconCrashlogEfiVarName[] = ZIRCON_CRASHLOG_EFIVAR;
 }  // namespace
 
-__NO_ASAN void EfiCrashlog::Finalize(zircon_crash_reason_t reason, size_t amt) {
+NO_ASAN void EfiCrashlog::Finalize(zircon_crash_reason_t reason, size_t amt) {
   // Switch into the EFI address space.
   EfiServicesActivation services = TryActivateEfiServices();
   if (!services.valid()) {
