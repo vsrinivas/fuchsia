@@ -40,11 +40,19 @@ void MsdIntelContext::HandleWaitContext::Completer(void* context, magma_status_t
     wait_context->context->WaitComplete(std::move(wait_context), status);
 }
 
-std::vector<std::shared_ptr<magma::PlatformSemaphore>> MsdIntelContext::GetWaitSemaphores() const {
+std::vector<std::shared_ptr<magma::PlatformSemaphore>> MsdIntelContext::GetWaitSemaphores(
+    EngineCommandStreamerId id) const {
+  auto iter = presubmit_map_.find(id);
+  if (iter == presubmit_map_.end())
+    return {};
+
+  const PerEnginePresubmit& presubmit = iter->second;
+
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
-  for (auto& wait_context : wait_set_) {
+  for (auto& wait_context : presubmit.wait_set) {
     semaphores.push_back(wait_context->semaphore);
   }
+
   return semaphores;
 }
 
@@ -136,19 +144,23 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
 
 void MsdIntelContext::Shutdown() {
   auto connection = connection_.lock();
-  for (auto& wait_context : wait_set_) {
-    if (connection && wait_context->cancel_token) {
-      connection->CancelHandleWait(wait_context->cancel_token);
+
+  for (auto& pair : presubmit_map_) {
+    // Cancel all pending wait semaphores.
+    for (auto& wait_context : pair.second.wait_set) {
+      if (connection && wait_context->cancel_token) {
+        connection->CancelHandleWait(wait_context->cancel_token);
+      }
+      wait_context->context = nullptr;
     }
-    wait_context->context = nullptr;
-  }
 
-  // Clear presubmit command buffers so buffer release doesn't see stuck mappings
-  while (presubmit_queue_.size()) {
-    presubmit_queue_.pop();
-  }
+    pair.second.wait_set.clear();
 
-  wait_set_.clear();
+    // Clear presubmit command buffers so buffer release doesn't see stuck mappings
+    while (pair.second.queue.size()) {
+      pair.second.queue.pop();
+    }
+  }
 }
 
 magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) {
@@ -166,23 +178,37 @@ magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer
 }
 
 magma::Status MsdIntelContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
-  presubmit_queue_.push(std::move(batch));
+  EngineCommandStreamerId id = batch->get_command_streamer();
 
-  if (presubmit_queue_.size() == 1)
-    return ProcessPresubmitQueue();
+  auto iter = presubmit_map_.find(id);
+  DASSERT(iter != presubmit_map_.end());
+
+  PerEnginePresubmit& presubmit = iter->second;
+
+  presubmit.queue.push(std::move(batch));
+
+  if (presubmit.queue.size() == 1)
+    return ProcessPresubmitQueue(id);
 
   return MAGMA_STATUS_OK;
 }
 
 void MsdIntelContext::WaitComplete(std::unique_ptr<HandleWaitContext> wait_context,
                                    magma_status_t status) {
+  const EngineCommandStreamerId kEngineId = wait_context->id;
+
   DLOG("WaitComplete semaphore %lu status %d", wait_context->semaphore->id(), status);
 
-  // Remove the wait context from the set as that memory will be freed.
-  for (auto iter = wait_set_.begin(); iter != wait_set_.end(); iter++) {
+  auto iter = presubmit_map_.find(kEngineId);
+  DASSERT(iter != presubmit_map_.end());
+
+  PerEnginePresubmit& presubmit = iter->second;
+
+  for (auto iter = presubmit.wait_set.begin(); iter != presubmit.wait_set.end(); iter++) {
     if (wait_context.get() == *iter) {
       wait_context->completed = true;
-      wait_set_.erase(iter);
+
+      presubmit.wait_set.erase(iter);
 
       wait_context = nullptr;
       break;
@@ -198,41 +224,51 @@ void MsdIntelContext::WaitComplete(std::unique_ptr<HandleWaitContext> wait_conte
   }
 
   // If all semaphores in the wait set have completed, submit the batch.
-  if (wait_set_.empty()) {
-    ProcessPresubmitQueue();
+  if (presubmit.wait_set.empty()) {
+    ProcessPresubmitQueue(kEngineId);
   }
 }
 
 // Used by the connection for stalling on buffer release.
-void MsdIntelContext::UpdateWaitSet() {
-  for (auto iter = wait_set_.begin(); iter != wait_set_.end();) {
+void MsdIntelContext::UpdateWaitSet(EngineCommandStreamerId id) {
+  auto iter = presubmit_map_.find(id);
+  DASSERT(iter != presubmit_map_.end());
+
+  PerEnginePresubmit& presubmit = iter->second;
+
+  for (auto iter = presubmit.wait_set.begin(); iter != presubmit.wait_set.end();) {
     HandleWaitContext* wait_context = *iter;
-    if ((*iter)->semaphore->Wait(0)) {
+
+    if (wait_context->semaphore->Wait(0)) {
       // Semaphore was reset; now mark this context to be skipped when the async completer
       // callback happens
       wait_context->completed = true;
 
-      iter = wait_set_.erase(iter);
+      iter = presubmit.wait_set.erase(iter);
     } else {
       iter++;
     }
   }
 
   // If all semaphores in the wait set have completed, submit the batch.
-  if (wait_set_.empty()) {
-    ProcessPresubmitQueue();
+  if (presubmit.wait_set.empty()) {
+    ProcessPresubmitQueue(id);
   }
 }
 
-magma::Status MsdIntelContext::ProcessPresubmitQueue() {
-  DASSERT(wait_set_.empty());
+magma::Status MsdIntelContext::ProcessPresubmitQueue(EngineCommandStreamerId id) {
+  auto iter = presubmit_map_.find(id);
+  DASSERT(iter != presubmit_map_.end());
 
-  while (presubmit_queue_.size()) {
-    DLOG("presubmit_queue_ size %zu", presubmit_queue_.size());
+  PerEnginePresubmit& presubmit = iter->second;
+  DASSERT(presubmit.wait_set.empty());
+
+  while (presubmit.queue.size()) {
+    DLOG("presubmit_queue_ size %zu", presubmit.queue.size());
 
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
 
-    auto& batch = presubmit_queue_.front();
+    auto& batch = presubmit.queue.front();
 
     if (batch->GetType() == MappedBatch::BatchType::COMMAND_BUFFER) {
       // Takes ownership
@@ -257,13 +293,13 @@ magma::Status MsdIntelContext::ProcessPresubmitQueue() {
       }
 
       connection->SubmitBatch(std::move(batch));
-      presubmit_queue_.pop();
+      presubmit.queue.pop();
 
     } else {
       DLOG("adding waitset with %zu semaphores", semaphores.size());
 
       for (auto& semaphore : semaphores) {
-        AddToWaitset(connection, std::move(semaphore));
+        AddToWaitset(id, connection, std::move(semaphore));
       }
 
       break;
@@ -273,7 +309,8 @@ magma::Status MsdIntelContext::ProcessPresubmitQueue() {
   return MAGMA_STATUS_OK;
 }
 
-void MsdIntelContext::AddToWaitset(std::shared_ptr<MsdIntelConnection> connection,
+void MsdIntelContext::AddToWaitset(EngineCommandStreamerId id,
+                                   std::shared_ptr<MsdIntelConnection> connection,
                                    std::shared_ptr<magma::PlatformSemaphore> semaphore) {
   magma_handle_t handle;
   bool result = semaphore->duplicate_handle(&handle);
@@ -282,9 +319,9 @@ void MsdIntelContext::AddToWaitset(std::shared_ptr<MsdIntelConnection> connectio
     return;
   }
 
-  auto wait_context = std::make_unique<HandleWaitContext>(this, semaphore);
+  auto wait_context = std::make_unique<HandleWaitContext>(this, id, semaphore);
 
-  wait_set_.push_back(wait_context.get());
+  presubmit_map_[id].wait_set.push_back(wait_context.get());
 
   connection->AddHandleWait(HandleWaitContext::Completer, HandleWaitContext::Starter,
                             wait_context.release(), handle);

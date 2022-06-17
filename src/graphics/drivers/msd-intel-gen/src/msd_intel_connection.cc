@@ -185,7 +185,7 @@ void MsdIntelConnection::ReleaseBuffer(
         // for the hardware, so we wait forever (unless there's a stuck command buffer).
         while (true) {
           {
-            auto semaphores = context->GetWaitSemaphores();
+            auto semaphores = context->GetWaitSemaphores(command_streamer);
             semaphores.push_back(event);
 
             TRACE_DURATION("magma", "stall on release");
@@ -194,7 +194,7 @@ void MsdIntelConnection::ReleaseBuffer(
 
             if (status.ok()) {
               // Submits any command buffers if they're ready
-              context->UpdateWaitSet();
+              context->UpdateWaitSet(command_streamer);
 
               if (event->WaitNoReset(0)) {
                 break;
@@ -214,7 +214,7 @@ void MsdIntelConnection::ReleaseBuffer(
 
           // If queue has size > 0 after the stall, there's probably a stuck command buffer that
           // will prevent the pipeline fence batch from ever completing.
-          size_t queue_size = context->GetQueueSize();
+          size_t queue_size = context->GetQueueSize(command_streamer);
 
           if (queue_size) {
             MAGMA_LOG(WARNING,

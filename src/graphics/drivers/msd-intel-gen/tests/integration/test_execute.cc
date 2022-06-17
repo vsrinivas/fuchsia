@@ -611,10 +611,8 @@ TEST_P(TestMemoryWriteEngineInterleavedPresubmitQueueing, ManySemaphore) {
   MemoryWriteEngineInterleavedPresubmitQueueing(GetParam(), /* semaphore_count= */ 3);
 }
 
-// TODO(fxbug.dev/100943) - enable this for > 2 (1 per engine) when per-engine presubmit queuing is
-// supported
 INSTANTIATE_TEST_SUITE_P(MemoryWriteEngineInterleavedPresubmitQueueing,
-                         TestMemoryWriteEngineInterleavedPresubmitQueueing, ::testing::Values(2),
+                         TestMemoryWriteEngineInterleavedPresubmitQueueing, ::testing::Values(2, 4),
                          [](testing::TestParamInfo<uint32_t> info) {
                            return std::to_string(info.param);
                          });
