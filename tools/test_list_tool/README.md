@@ -33,12 +33,14 @@ The valid scopes supported by this tool are:
 | Scope | Heuristic |
 |---|---|
 | host | The test points to a host binary, not a Fuchsia package. |
+| host_shell | The test points to a host shell binary, not a Fuchsia package. |
 | unit | The test runs in a hermetic realm and uses a generated default manifest. |
 | integration | The test runs in a hermetic realm and uses a non-generated custom manifest. |
 | system | The test runs in a non-hermetic realm. |
 | wrapped_legacy | The test uses the legacy_test_runner and wraps a v1 test. These tests are not hermetic. |
 | fuzzer | The test uses the "fuzzer_package" build rule, and it is hermetic. |
 | prebuilt | The test uses the "prebuilt_test_package" build rule and does not run in a non-hermetic realm. |
+| bootfs | The test is an ELF binary executed out of /boot on the device. |
 | unknown | The test uses an unknown build rule (see algorithm below). |
 | uncategorized | The test does not fall into any of the above categories. |
 
@@ -50,33 +52,40 @@ are **host** tests.
    with `host_` and no other tests do. There are some tests for
    Linux that start with `linux_`, and those tests also are scoped
    to the host.
-2. If the build rule that generated the test is not listed in the
+1. Check if the test's name ends with `_host_test.sh`. These are **host_shell** tests.
+   - Justification: Some host test names end with this suffix, and
+   they are executed as shell scripts on the host.
+1. If the build rule that generated the test is not listed in the
 following section , the test type is **unknown**.
    - Justification: We do not want to categorize tests using other
    rules just yet. This leaves us an opportunity to separately
    handle other types of tests without miscategorizing them up
    front.
-3. If the test does not run in `hermetic` or `hermetic-tier-2`
+1. If the test does not run in `hermetic` or `hermetic-tier-2`
 realms it is a **system** test.
    - Justification: These realms enforce hermetic execution of
    tests, and all other tests can change and depend on global system
    state.
-4. If the test used the `fuzzer_package` build rule, it is a **fuzzer** test.
+1. If the test used the `fuzzer_package` build rule, it is a **fuzzer** test.
    - Justification: Fuzzers typically have a mode of execution where
    they complete a single iteration of fuzzing with fixed input to
    ensure the fuzzer setup itself is bug free. These types of tests
    are treated separately from general unit and integration tests
    to track the impact they have on our build.
-5. If the test used the `prebuilt_test_package` build rule, it is a **prebuilt** test.
+1. If the test used the `prebuilt_test_package` build rule, it is a **prebuilt** test.
    - Justification: Prebuilt tests are rolled into this repository
    from an external source and run on the Fuchsia platform defined
    by this repository. We want to track how many tests are doing
    this, and their overall impact on test health.
-6. If the test uses a generated manifest, it is a **unit** test.
+1. If the test used the `bootfs_test` build rule, it is a **bootfs** test.
+   - Justification: Bootfs tests are simply ELF binaries run as
+   processes directly out of `/boot` on the device. We want to track
+   how many tests do this.
+1. If the test uses a generated manifest, it is a **unit** test.
    - Justification: The generated manifest does not provide the
    ability to start additional components or processes, so the
    entire test is contained in a single process.
-7. If the test uses an explicit manifest, it is an **integration** test.
+1. If the test uses an explicit manifest, it is an **integration** test.
    - Justification: The primary reason to use a non-generated
    manifest is to start other components as in the scope of a test.
    Tests that start and communicate between multiple components are

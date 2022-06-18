@@ -48,5 +48,6 @@ template("bootfs_test") {
     deps = _deps
     path = "/boot/test/${invoker.name}"
     forward_variables_from(invoker, [ "environments" ])
+    build_rule = "bootfs_test"
   }
 }
