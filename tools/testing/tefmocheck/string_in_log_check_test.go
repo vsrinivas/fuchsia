@@ -111,6 +111,16 @@ func TestCheck(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			name: "should not match if string in except_block with missing end string",
+			testingOutputs: TestingOutputs{
+				SwarmingOutput: []byte(fmt.Sprintf(
+					"PREFIX ... %s %s %s %s %s",
+					exceptBlock.startString, killerString, exceptBlock.endString,
+					exceptBlock2.startString, killerString,
+				)),
+			},
+		},
+		{
 			name: "should match if swarming task state is in expected states",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString),

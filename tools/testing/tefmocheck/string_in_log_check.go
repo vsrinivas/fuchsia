@@ -31,7 +31,10 @@ type stringInLogCheck struct {
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
 	// ExceptBlocks will cause Check() to return false if the string is only
-	// within these blocks.
+	// within these blocks. The start string and end string should be unique
+	// strings that only appear around the except block. A stray start string
+	// will cause everything after it to be included in the except block even
+	// if the end string is missing.
 	ExceptBlocks []*logBlock
 	// SkipPassedTask will cause Check() to return false if the
 	// Swarming task succeeded.
@@ -105,11 +108,6 @@ func (c *stringInLogCheck) checkBytes(toCheck []byte, start int, end int) bool {
 		foundString := true
 		beforeBlock := toCheck[:index]
 		nextStartIndex := index + len(stringBytes)
-		if nextStartIndex > len(toCheck) {
-			// The string was found at the end of the log, so it won't be included in
-			// any exceptBlocks.
-			return true
-		}
 		afterBlock := toCheck[nextStartIndex:]
 		for _, block := range c.ExceptBlocks {
 			closestStartIndex := bytes.LastIndex(beforeBlock, []byte(block.startString))
@@ -127,6 +125,13 @@ func (c *stringInLogCheck) checkBytes(toCheck []byte, start int, end int) bool {
 				if bytes.Contains(afterBlock, []byte(block.endString)) {
 					foundString = false
 					break
+				} else {
+					// If the end string doesn't appear after the string to check,
+					// it may have been truncated out of the log. In that case, we
+					// assume every occurrence of the string to check between the
+					// start string and the end of the block are included in the
+					// exceptBlock.
+					return false
 				}
 			}
 		}
