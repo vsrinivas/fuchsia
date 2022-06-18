@@ -222,7 +222,7 @@ def main():
                 '-stdlib=libc++',
                 # TODO(fxbug.dev/64336): the following flags are not recognized by CGo.
                 # '-rtlib=compiler-rt',
-                # '-unwindlib=',
+                # '-unwindlib=libunwind',
             ])
 
     for dir in args.include_dir:

@@ -87,8 +87,9 @@ config("clang_defaults") {
     # Use libc++ as the C++ standard library.
     "-stdlib=libc++",
 
-    # Use unwinder provided by the C++ standard library.
-    "-unwindlib=",
+    # Use libunwind as the unwinder.
+    # TODO(fxbug.dev/75410): Re-enable after fxbug.dev/101610.
+    #"-unwindlib=libunwind",
 
     # Use compiler-rt as the compiler runtime.
     "-rtlib=compiler-rt",

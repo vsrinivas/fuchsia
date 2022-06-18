@@ -37,7 +37,9 @@ config("clang_defaults") {
     cflags_cc = [ "-stdlib=libc++" ]
     ldflags = [
       "-stdlib=libc++",
-      "-unwindlib=",
+
+      # TODO(fxbug.dev/75410): Re-enable after fxbug.dev/101610.
+      #"-unwindlib=libunwind",
       "-rtlib=compiler-rt",
     ]
   }
