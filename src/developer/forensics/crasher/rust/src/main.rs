@@ -72,3 +72,16 @@ fn main() {
     }
     println!("crasher: exiting normally ?!!");
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_should_pass() {
+        assert_eq!(0, 0);
+    }
+
+    #[test]
+    fn test_should_fail() {
+        assert_eq!(0, 1);
+    }
+}

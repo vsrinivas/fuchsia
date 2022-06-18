@@ -21,9 +21,14 @@ fuchsia_component("crasher_v2") {
   deps = [ ":crasher_exe" ]
 }
 
+fuchsia_unittest_component("rust_crasher_test") {
+  deps = [ ":crasher_exe_test" ]
+}
+
 rustc_binary("crasher_exe") {
   name = "rust_crasher"
   edition = "2021"
+  with_unit_tests = true
 
   sources = [ "src/main.rs" ]
   deps = [

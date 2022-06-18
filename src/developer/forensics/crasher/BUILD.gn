@@ -4,11 +4,29 @@
 
 import("//build/components.gni")
 
+# To run the crasher, either
+#   * fx shell crasher
+#   * fx shell run fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cmx
+#   * fx shell run fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cmx
+#   * ffx component run --recreate fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm
+#   * ffx component run --recreate fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cm
+#   * ffx test run fuchsia-pkg://fuchsia.com/crasher_test#meta/cpp_crasher_test.cm
+#   * ffx test run fuchsia-pkg://fuchsia.com/crasher_test#meta/rust_crasher_test.cm
+#
+# A kernel crash can be triggered by `k crash*` commands.
+
 fuchsia_package("crasher") {
   deps = [
     "//src/developer/forensics/crasher/cpp:crasher_v1",
     "//src/developer/forensics/crasher/cpp:crasher_v2",
     "//src/developer/forensics/crasher/rust:crasher_v1",
     "//src/developer/forensics/crasher/rust:crasher_v2",
+  ]
+}
+
+fuchsia_unittest_package("crasher_test") {
+  deps = [
+    "//src/developer/forensics/crasher/cpp:cpp_crasher_test",
+    "//src/developer/forensics/crasher/rust:rust_crasher_test",
   ]
 }
