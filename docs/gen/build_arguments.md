@@ -861,43 +861,6 @@ and compare the outputs' contents for reproducibility.
 
 From //build/tracer/tracer.gni:16
 
-### check_rustc_consistency
-Check consistency between local and remote rust compiles.
-This check is slow and expensive and mostly intended for CI.
-
-Requires GN args:
-  `enable_rbe = true`
-
-
-**Current value (from the default):** `false`
-
-From //build/toolchain/rbe.gni:143
-
-### check_rustc_determinism
-Check of determinism of rustc targets by running locally twice
-and comparing outputs, failing if any differences are found.
-Even though this check doesn't involve RBE, it uses the same
-wrapper script, which knows what output files to expect and compare.
-
-Build outputs that depend on time are discouraged because they
-impact caching.
-If your result depends on the current time, this check will
-definitely fail.  If it depends on only the date, there is still
-a nonzero chance of failure, if the rerun falls on the next day.
-
-Requires GN args:
-  `enable_rbe = true`
-    to use the remote wrapper script, even without RBE
-
-Ignores:
-  `rbe_exec_strategy`
-    because RBE is not used
-
-
-**Current value (from the default):** `false`
-
-From //build/toolchain/rbe.gni:135
-
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
 readonly data sections. This check will be run at the end of a full build.
@@ -3783,19 +3746,6 @@ and functions to be instrumented by `profile` variants.  Note that if
 **Current value (from the default):** `[]`
 
 From //build/config/profile/config.gni:20
-
-### rbe_exec_strategy
-One of {local,remote}:
-  * remote: Execute action remotely on cache miss.
-        The remote cache is always updated with this result.
-  * local: Lookup action in the remote cache, but execute action
-        locally on cache miss.  The locally produced result is
-        not uploaded to the remote cache.
-  (There are other rewrapper options that are not exposed.)
-
-**Current value (from the default):** `""`
-
-From //build/toolchain/rbe.gni:110
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
