@@ -23,7 +23,7 @@ type Protocols = resource table {
    10: experimental_device server_end:fuchsia.lowpan.experimental.Device;
    11: experimental_device_extra server_end:fuchsia.lowpan.experimental.DeviceExtra;
    12: meshcop server_end:fuchsia.lowpan.thread.Meshcop;
-   13: experimental_device_test server_end:fuchsia.lowpan.experimental.TelemetryProvider;
+   13: telemetry_provider server_end:fuchsia.lowpan.experimental.TelemetryProvider;
 };
 
 /// Protocol representing a LoWPAN driver instance.
