@@ -582,6 +582,11 @@ pub fn generate_from_manifest<W: io::Write>(mut output: &mut W, opt: &Opt) -> Re
         emitted_metadata.sort();
         let metadata_json = serde_json::to_string_pretty(&emitted_metadata)
             .context("serializing metadata to json")?;
+        std::fs::create_dir_all(
+            metadata_path
+                .parent()
+                .expect("The metadata path must include a valid parent directory"),
+        )?;
         std::fs::write(metadata_path, &metadata_json).context("writing metadata file")?;
     }
 
