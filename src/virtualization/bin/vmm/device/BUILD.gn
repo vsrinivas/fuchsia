@@ -432,8 +432,8 @@ fuchsia_unittest_package("device_tests_package") {
   manifest = "meta/device_tests.cml"
   deps = [
     ":device_tests",
-    ":wrapped_scenic",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
   test_specs = {
     environments = guest_envs
@@ -441,12 +441,6 @@ fuchsia_unittest_package("device_tests_package") {
       max_severity = "ERROR"
     }
   }
-}
-
-fuchsia_component("wrapped_scenic") {
-  testonly = true
-  manifest = "meta/wrapped_scenic.cml"
-  deps = [ "//src/ui/scenic" ]
 }
 
 source_set("qcow_test_data") {

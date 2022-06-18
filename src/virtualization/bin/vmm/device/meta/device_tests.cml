@@ -23,14 +23,14 @@
             url: "fuchsia-pkg://fuchsia.com/device_tests#meta/hdcp.cm",
         },
         {
-            name: "wrapped_scenic",
-            url: "#meta/wrapped_scenic.cm",
+            name: "scenic",
+            url: "#meta/scenic.cm",
         },
     ],
     use: [
         {
             protocol: [ "fuchsia.ui.composition.Allocator" ],
-            from: "#wrapped_scenic",
+            from: "#scenic",
         },
         {
             directory: "dev-gpu",
@@ -47,22 +47,22 @@
         {
             directory: "dev-display-controller",
             from: "parent",
-            to: "#wrapped_scenic",
+            to: "#scenic",
         },
         {
             storage: "tmp",
             from: "parent",
-            to: [ "#wrapped_scenic" ],
+            to: [ "#scenic" ],
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#mock_cobalt",
-            to: "#wrapped_scenic",
+            to: "#scenic",
         },
         {
             protocol: [ "fuchsia.hardware.display.Provider" ],
             from: "#fake_hdcp",
-            to: "#wrapped_scenic",
+            to: "#scenic",
         },
         {
             protocol: [
@@ -82,7 +82,7 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: "#wrapped_scenic",
+            to: "#scenic",
         },
         {
             protocol: [
