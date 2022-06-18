@@ -19,6 +19,7 @@
 #include <zircon/threads.h>
 
 #include <iostream>
+#include <iterator>
 #include <mutex>
 #include <thread>
 

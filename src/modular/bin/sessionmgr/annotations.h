@@ -8,6 +8,7 @@
 #include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 
+#include <iterator>
 #include <vector>
 
 namespace modular::annotations {

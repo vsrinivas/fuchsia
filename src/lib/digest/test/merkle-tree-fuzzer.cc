@@ -4,6 +4,7 @@
 
 #include <zircon/status.h>
 
+#include <iterator>
 #include <vector>
 
 #include <fuzzer/FuzzedDataProvider.h>

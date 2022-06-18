@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 namespace wlan::simulation {

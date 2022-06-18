@@ -8,6 +8,7 @@
 #include <lib/zircon-internal/ktrace.h>
 
 #include <array>
+#include <iterator>
 #include <map>
 #include <string>
 #include <vector>

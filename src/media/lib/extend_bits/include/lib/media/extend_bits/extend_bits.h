@@ -7,6 +7,8 @@
 
 #include <inttypes.h>
 
+#include <iterator>
+
 // Does not require the wrap iterval of to_extend to be a power of 2.
 uint64_t ExtendBitsGeneral(uint64_t nearby_extended, uint64_t to_extend,
                            uint32_t non_extended_modulus);

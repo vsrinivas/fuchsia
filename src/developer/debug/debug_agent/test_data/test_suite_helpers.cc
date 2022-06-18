@@ -17,6 +17,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
+#include <iterator>
 #include <vector>
 
 constexpr uint64_t kPortKey = 0x11232141234;

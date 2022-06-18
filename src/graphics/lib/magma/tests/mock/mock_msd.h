@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_TESTS_MOCK_MOCK_MSD_H_
 #define SRC_GRAPHICS_LIB_MAGMA_TESTS_MOCK_MOCK_MSD_H_
 
+#include <iterator>
 #include <memory>
 #include <vector>
 

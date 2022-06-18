@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
 #include <sstream>
 
 namespace web_runner_tests {

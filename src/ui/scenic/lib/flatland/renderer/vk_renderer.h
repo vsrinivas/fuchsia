@@ -7,6 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 
+#include <iterator>
 #include <set>
 #include <unordered_map>
 

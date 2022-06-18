@@ -6,6 +6,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/fit/defer.h>
 
+#include <iterator>
 #include <utility>
 
 namespace audio::aml_g12 {

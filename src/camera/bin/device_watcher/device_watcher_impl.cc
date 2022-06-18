@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 
 fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(

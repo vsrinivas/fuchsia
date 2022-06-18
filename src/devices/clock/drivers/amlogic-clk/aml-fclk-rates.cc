@@ -5,6 +5,7 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <iterator>
 
 #include "aml-fclk.h"
 

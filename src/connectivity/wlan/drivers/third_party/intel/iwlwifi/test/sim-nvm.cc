@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 extern "C" {
