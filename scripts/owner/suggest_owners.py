@@ -7,7 +7,8 @@ Suggests OWNERS for projects.
 
 For each project in a given jiri manifest file or at a given path, do the
 following:
-1. Check if it has an OWNERS file at the root path. If so, skip.
+1. Check if it has an OWNERS file up the path (or at the root path only when
+   run with `--skip_root_owners_only`). If so, skip.
 2. Find references to the project via `gn refs`. If none, skip.
 3. Find immediate owners for all referrers. If none, for each referrer travel
    one directory up and continue the search. Ignore root owners.
@@ -27,6 +28,9 @@ $ scripts/owner/suggest_owners.py --path third_party/* --all_refs --generate_mis
 
 $ scripts/owner/suggest_owners.py \
     --jiri_manifest integration/third_party/flower --generate_missing --dry_run
+
+$ scripts/owner/suggest_owners.py \
+    --jiri_manifest integration/third_party/flower --skip_root_owners_only
 """
 
 import argparse
@@ -106,23 +110,25 @@ def get_owners(path):
     return {owner for owner in owners if EMAIL.match(owner)}
 
 
-def get_owners_file_path(path):
+def find_owners_file(path, recursive=True):
     # Look for the OWNERS file in the given path.
     owners_path = os.path.join(path, "OWNERS")
     if os.path.exists(owners_path):
         return owners_path
+    if not recursive:
+        return None
     # If not found, search one directory up.
     parent_path = os.path.dirname(path)
     if parent_path and parent_path != path:
-        return get_owners_file_path(parent_path)
-    return ""
+        return find_owners_file(parent_path)
+    return None
 
 
 def generate_owners_file(project_path, refs, owners, dry_run):
     # Find and include the OWNERS files of all references.
     includes = set()
     for ref in refs:
-        path = get_owners_file_path(ref)
+        path = find_owners_file(ref)
         if path:
             includes.add("include /" + path + "\n")
 
@@ -221,6 +227,12 @@ def main():
         "Used in conjunction with `--generate_missing` to print the generated OWNERS file "
         "and git/jiri commands instead of creating the file and running the commands."
     )
+    parser.add_argument(
+        "--skip_root_owners_only",
+        action='store_true',
+        default=False,
+        help="Skips project only if it has an OWNERS files at the root path, and "
+        "not in parent directories.")
     args = parser.parse_args()
     if args.dry_run and not args.generate_missing:
         parser.error(
@@ -243,9 +255,17 @@ def main():
         ]
 
     for project_path in project_paths:
-        if get_owners(project_path):
-            print(f"{project_path} has OWNERS, skipping.")
+        # Skip if the project has OWNERS.
+        if owners_file := find_owners_file(project_path,
+                                           not args.skip_root_owners_only):
+            print(f"{project_path} has owners at {owners_file}, skipping.")
             continue
+
+        # If the path ends in `/src`, use the path without the `/src` ending to
+        # search for references and generate OWNERS file (if configured).
+        if project_path.endswith("/src"):
+            project_path = project_path[:-len("/src")]
+
         # Search for references to any of the project's targets if `--all_refs`
         # is set, or for the top-level targets otherwise.
         refs = get_referencing_paths(
