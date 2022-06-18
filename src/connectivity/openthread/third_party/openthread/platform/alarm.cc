@@ -22,7 +22,7 @@ extern "C" uint32_t otPlatAlarmMilliGetNow(void) { return alarm.GetNowMilliSec()
 
 extern "C" void otPlatAlarmMilliStartAt(otInstance *instance, uint32_t t0, uint32_t dt) {
   alarm.SetMilliSecAlarm(t0 + dt);
-  platformCallbackPostDelayedAlarmTask(instance, ZX_MSEC(dt));
+  platformCallbackPostDelayedAlarmTask(instance, ZX_USEC(alarm.GetRemainingTimeMicroSec()));
 }
 
 extern "C" void otPlatAlarmMilliStop(otInstance *instance) {
@@ -40,7 +40,7 @@ extern "C" void otPlatAlarmMicroStartAt(otInstance *instance, uint32_t t0, uint3
 
   alarm.SetMicroSecAlarm(t0 + dt);
 
-  platformCallbackPostDelayedAlarmTask(instance, ZX_USEC(dt));
+  platformCallbackPostDelayedAlarmTask(instance, ZX_USEC(alarm.GetRemainingTimeMicroSec()));
 }
 
 extern "C" void otPlatAlarmMicroStop(otInstance *instance) {

@@ -14,7 +14,7 @@ uint64_t FuchsiaPlatformAlarm::GetTimeMicroSec(void) {
 uint32_t FuchsiaPlatformAlarm::GetNowMicroSec(void) { return GetTimeMicroSec() * speed_up_factor_; }
 
 uint32_t FuchsiaPlatformAlarm::GetNowMilliSec(void) {
-  return GetNowMicroSec() / kMicroSecondsPerMilliSecond;
+  return (GetTimeMicroSec() * speed_up_factor_) / kMicroSecondsPerMilliSecond;
 }
 
 void FuchsiaPlatformAlarm::SetMilliSecAlarm(uint32_t time_ms) {
