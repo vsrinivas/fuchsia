@@ -32,7 +32,10 @@ This directory contains the following performance tests:
     The microbenchmarks this contains tend to be for low-level operations
     such as Zircon syscalls.
 
-*   `netstack_benchmarks_test` - SL4F wrapper for a benchmark of UDP.
+*   `netstack_benchmarks_test` - SL4F wrapper for benchmarks of TCP, UDP, and
+    ICMP echo sockets. These benchmarks run against Netstack2, Netstack2 with
+    Fast UDP enabled, and a "fake netstack" that does minimal work in order to
+    isolate the API overhead.
 
 *   `netstack_iperf_test` - Tests network stack performance using the
     benchmarking tool `iperf3`.

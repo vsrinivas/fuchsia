@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/network/tests/benchmarks/meta/socket-benchmarks.shard.cml" ],
+    program: {
+        environ: [ "FAKE_NETSTACK=true" ],
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/fake-netstack.cm",
+        },
+    ],
+}

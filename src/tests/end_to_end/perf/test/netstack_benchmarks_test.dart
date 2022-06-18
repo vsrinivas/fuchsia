@@ -29,4 +29,13 @@ void main() {
         commandArgs:
             '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
   }, timeout: Timeout.none);
+
+  test('socket_benchmarks_with_fake_netstack', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponentV2(
+        packageName: 'socket-benchmarks-with-fake-netstack',
+        componentName: 'socket-benchmarks-with-fake-netstack.cm',
+        commandArgs:
+            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+  }, timeout: Timeout.none);
 }

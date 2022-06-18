@@ -264,6 +264,8 @@ bool PingLatency(perftest::RepeatState* state) {
   return true;
 }
 
+constexpr char kFakeNetstackEnvVar[] = "FAKE_NETSTACK";
+
 void RegisterTests() {
   constexpr std::string_view kSingleReadTestNameFmt = "WriteRead/%s/%s/%ld%s";
   enum class Network { kIpv4, kIpv6 };
@@ -310,14 +312,18 @@ void RegisterTests() {
     }
   };
 
-  constexpr size_t kTransferSizesForTcp[] = {
-      1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
-  };
-  for (size_t transfer : kTransferSizesForTcp) {
-    perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(), TcpWriteRead<Ipv4>,
-                           transfer);
-    perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(), TcpWriteRead<Ipv6>,
-                           transfer);
+  // TODO(https://fxbug.dev/101918): remove this caveat once the fake netstack
+  // implements TCP.
+  if (!std::getenv(kFakeNetstackEnvVar)) {
+    constexpr size_t kTransferSizesForTcp[] = {
+        1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
+    };
+    for (size_t transfer : kTransferSizesForTcp) {
+      perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(),
+                             TcpWriteRead<Ipv4>, transfer);
+      perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(),
+                             TcpWriteRead<Ipv6>, transfer);
+    }
   }
 
   // NB: Knowledge encoded at a distance: these datagrams avoid IP fragmentation
@@ -360,12 +366,11 @@ PERFTEST_CTOR(RegisterTests)
 }  // namespace
 
 int main(int argc, char** argv) {
-  constexpr char kTestSuitePrefix[] = "fuchsia.network.socket.loopback";
-  constexpr char kFastUdpEnvVar[] = "FAST_UDP";
-  constexpr char kFastUdpSuiteSuffix[] = ".fastudp";
-  if (std::getenv(kFastUdpEnvVar)) {
-    return perftest::PerfTestMain(argc, argv,
-                                  std::string(kTestSuitePrefix).append(kFastUdpSuiteSuffix).data());
+  std::string test_suite = "fuchsia.network.socket.loopback";
+  if (std::getenv("FAST_UDP")) {
+    test_suite += ".fastudp";
+  } else if (std::getenv(kFakeNetstackEnvVar)) {
+    test_suite += ".fake_netstack";
   }
-  return perftest::PerfTestMain(argc, argv, kTestSuitePrefix);
+  return perftest::PerfTestMain(argc, argv, test_suite.c_str());
 }
