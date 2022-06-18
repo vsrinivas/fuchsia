@@ -24,7 +24,11 @@ SystemLogWriter::SystemLogWriter(const std::string& logs_dir, size_t max_num_fil
                                  LogMessageStore* store)
     : logs_dir_(logs_dir), max_num_files_(max_num_files), file_queue_(), store_(store) {
   FX_CHECK(max_num_files_ > 0);
-  FX_CHECK(files::CreateDirectory(logs_dir));
+  if (!files::CreateDirectory(logs_dir)) {
+    FX_LOGS(WARNING) << "Failed to create logs directory, will re-try on the next block, no logs "
+                        "persisted until then";
+    return;
+  }
 
   std::vector<std::string> current_log_files;
   files::ReadDirContents(logs_dir_, &current_log_files);
@@ -45,6 +49,18 @@ SystemLogWriter::SystemLogWriter(const std::string& logs_dir, size_t max_num_fil
 }
 
 void SystemLogWriter::StartNewFile() {
+  if (!files::IsDirectory(logs_dir_)) {
+    file_queue_.clear();
+
+    if (files::CreateDirectory(logs_dir_)) {
+      FX_LOGS(INFO)
+          << "Re-created logs directory. Disk was most likely full at some earlier point in time";
+    } else {
+      FX_LOGS_FIRST_N(WARNING, 10)
+          << "Still cannot re-create logs directory. Disk still most likely full";
+    }
+  }
+
   const size_t next_file_num = (file_queue_.empty()) ? 0u : file_queue_.back() + 1;
   if (file_queue_.size() >= max_num_files_) {
     TRACE_DURATION("feedback:io", "SystemLogWriter::RemoveFile");

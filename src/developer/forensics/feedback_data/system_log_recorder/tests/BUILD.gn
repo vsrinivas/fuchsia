@@ -101,6 +101,7 @@ executable("writer_unittest_exe") {
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:log_message",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
