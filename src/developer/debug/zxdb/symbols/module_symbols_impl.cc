@@ -562,6 +562,10 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
     }
   }
 
+  if (!lazy_function && !file_line.is_valid()) {
+    return std::nullopt;
+  }
+
   return Location(absolute_address, file_line, column, symbol_context, std::move(lazy_function));
 }
 
