@@ -110,5 +110,6 @@ fuchsia_test_package("scene_manager_tests") {
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 }

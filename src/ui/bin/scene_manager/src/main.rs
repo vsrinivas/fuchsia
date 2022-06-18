@@ -262,7 +262,7 @@ mod tests {
     use fuchsia_scenic as scenic;
     use futures::TryStreamExt;
 
-    const SCENIC_URL: &str = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
+    const SCENIC_URL: &str = "#meta/scenic.cm";
 
     const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
 
@@ -288,7 +288,7 @@ mod tests {
             .await?;
 
         let scenic = builder
-            .add_legacy_child("scenic", SCENIC_URL, ChildOptions::new().eager())
+            .add_child("scenic", SCENIC_URL, ChildOptions::new().eager())
             .await
             .expect("Failed to start scenic");
         builder
