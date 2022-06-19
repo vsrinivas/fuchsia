@@ -9,7 +9,6 @@ group("examples") {
     "components",
     "cowsay",
     "criterion_bench",
-    "dart",
     "diagnostics",
     "drivers",
     "fidl",
