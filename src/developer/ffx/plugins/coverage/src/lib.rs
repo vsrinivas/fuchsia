@@ -45,8 +45,18 @@ pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
         show_binary_id,
     )?;
 
-    show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
-        .context("failed to show coverage")
+    match cmd.export_html {
+        Some(html_export_path) => export_coverage_html(
+            &llvm_cov_bin,
+            &merged_profile,
+            &bin_files,
+            &cmd.src_files,
+            &html_export_path,
+        )
+        .context("failed to export coverage HTML"),
+        None => show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
+            .context("failed to show coverage"),
+    }
 }
 
 /// Merges input `profraws` using llvm-profdata and writes output to `output_path`.
@@ -125,6 +135,16 @@ fn find_debug_file(symbol_index: &SymbolIndex, binary_id: &str) -> Result<PathBu
     }
 }
 
+fn to_llvm_cov_args(bin_files: &[PathBuf]) -> Vec<&str> {
+    bin_files.iter().fold(Vec::new(), |mut acc, val| {
+        if acc.len() > 0 {
+            acc.push("-object");
+        }
+        acc.push(val.to_str().expect("failed to convert path to string"));
+        acc
+    })
+}
+
 /// Calls `llvm-cov show` to display coverage from `merged_profile` for `bin_files`.
 /// `src_files` can be used to filter coverage for selected source files.
 fn show_coverage(
@@ -133,15 +153,39 @@ fn show_coverage(
     bin_files: &[PathBuf],
     src_files: &[PathBuf],
 ) -> Result<()> {
-    let bin_file_args = bin_files.iter().fold(Vec::new(), |mut acc, val| {
-        if acc.len() > 0 {
-            acc.push("-object");
-        }
-        acc.push(val.to_str().expect("failed to convert path to string"));
-        acc
-    });
+    let bin_file_args = to_llvm_cov_args(bin_files);
     let show_cmd = Command::new(llvm_cov_bin)
         .args(["show", "-instr-profile"])
+        .arg(merged_profile)
+        .args(&bin_file_args)
+        .args(src_files)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .context("failed to show coverage")?;
+    match show_cmd.status.code() {
+        Some(0) => Ok(()),
+        Some(code) => Err(anyhow!(
+            "failed to show coverage: status code {}, stderr: {}",
+            code,
+            String::from_utf8_lossy(&show_cmd.stderr)
+        )),
+        None => Err(anyhow!("coverage display terminated by signal unexpectedly")),
+    }
+}
+
+fn export_coverage_html(
+    llvm_cov_bin: &Path,
+    merged_profile: &Path,
+    bin_files: &[PathBuf],
+    src_files: &[PathBuf],
+    html_export_path: &Path,
+) -> Result<()> {
+    let bin_file_args = to_llvm_cov_args(bin_files);
+    let show_cmd = Command::new(llvm_cov_bin)
+        .args(["show", "-format", "html", "-output-dir"])
+        .arg(html_export_path)
+        .arg("-instr-profile")
         .arg(merged_profile)
         .args(&bin_file_args)
         .args(src_files)
@@ -217,6 +261,7 @@ mod tests {
             test_output_dir: PathBuf::from(&test_dir_path),
             clang_dir: PathBuf::from(&test_dir_path),
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+            export_html: None,
             src_files: Vec::new(),
         })
         .await
@@ -231,6 +276,7 @@ mod tests {
             test_output_dir: PathBuf::from(&test_dir_path),
             clang_dir: PathBuf::from(&test_dir_path),
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+            export_html: None,
             src_files: Vec::new(),
         })
         .await
@@ -239,16 +285,31 @@ mod tests {
         File::create(test_bin_dir.join("llvm-cov")).unwrap().write_all(b"#!/bin/sh").unwrap();
         set_permissions(test_bin_dir.join("llvm-cov"), Permissions::from_mode(0o770)).unwrap();
 
+        // Print coverage to stdout.
         assert_matches!(
             coverage(CoverageCommand {
                 test_output_dir: PathBuf::from(&test_dir_path),
                 clang_dir: PathBuf::from(&test_dir_path),
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+                export_html: None,
                 src_files: Vec::new(),
             })
             .await,
             Ok(())
         );
+
+        // Export HTML.
+        assert_matches!(
+            coverage(CoverageCommand {
+                test_output_dir: PathBuf::from(&test_dir_path),
+                clang_dir: PathBuf::from(&test_dir_path),
+                symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+                export_html: Some(PathBuf::from(&test_dir_path)),
+                src_files: Vec::new(),
+            })
+            .await,
+            Ok(())
+        )
     }
 
     #[test]

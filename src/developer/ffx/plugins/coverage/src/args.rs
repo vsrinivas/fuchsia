@@ -21,6 +21,10 @@ pub struct CoverageCommand {
     #[argh(option)]
     pub symbol_index_json: Option<PathBuf>,
 
+    /// path to export HTML reports to
+    #[argh(option)]
+    pub export_html: Option<PathBuf>,
+
     /// paths to source files to show coverage for
     #[argh(positional)]
     pub src_files: Vec<PathBuf>,
