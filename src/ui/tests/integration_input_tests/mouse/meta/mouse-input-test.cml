@@ -22,10 +22,14 @@
     offer: [
         {
             protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",

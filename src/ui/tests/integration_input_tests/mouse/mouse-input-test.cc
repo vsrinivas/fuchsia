@@ -2,10 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/input/report/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/session/scene/cpp/fidl.h>
@@ -31,7 +37,9 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <queue>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -40,6 +48,7 @@
 #include <test/inputsynthesis/cpp/fidl.h>
 #include <test/mouse/cpp/fidl.h>
 
+#include "lib/fidl/cpp/interface_ptr.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
@@ -96,6 +105,11 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
     events_.push(std::move(pointer_data));
   }
 
+  // |test::mouse::ResponseListener|
+  void NotifyWebEngineReady() override { web_engine_ready_ = true; }
+
+  bool IsWebEngineReady() const { return web_engine_ready_; }
+
   // |MockComponent::Start|
   // When the component framework requests for this component to start, this
   // method will be invoked by the realm_builder library.
@@ -109,7 +123,7 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
     mock_handles_.emplace_back(std::move(mock_handles));
   }
 
-  size_t SizeOfEvents() { return events_.size(); }
+  size_t SizeOfEvents() const { return events_.size(); }
 
   test::mouse::PointerData PopEvent() {
     test::mouse::PointerData e = std::move(events_.front());
@@ -117,15 +131,25 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
     return e;
   }
 
+  const test::mouse::PointerData& LastEvent() const { return events_.back(); }
+
+  void ClearEvents() { events_ = {}; }
+
  private:
   // Not owned.
   async_dispatcher_t* dispatcher_ = nullptr;
   fidl::BindingSet<test::mouse::ResponseListener> bindings_;
   std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_;
   std::queue<test::mouse::PointerData> events_;
+  bool web_engine_ready_ = false;
 };
 
 constexpr auto kResponseListener = "response_listener";
+
+struct Position {
+  double x = 0.0;
+  double y = 0.0;
+};
 
 class MouseInputBase : public gtest::RealLoopFixture {
  protected:
@@ -147,13 +171,14 @@ class MouseInputBase : public gtest::RealLoopFixture {
     config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
     config.use_input = true;
     config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
-    config.ui_to_client_services = {
-        fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::composition::Flatland::Name_,
-        fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::input::ImeService::Name_,
-        fuchsia::ui::input3::Keyboard::Name_};
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
+                                    fuchsia::ui::composition::Flatland::Name_,
+                                    fuchsia::ui::composition::Allocator::Name_,
+                                    fuchsia::ui::input::ImeService::Name_,
+                                    fuchsia::ui::input3::Keyboard::Name_,
+                                    fuchsia::accessibility::semantics::SemanticsManager::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
-
-    AssembleRealm(this->GetTestComponents(), this->GetTestRoutes());
+    AssembleRealm(this->GetTestComponents(), this->GetTestV2Components(), this->GetTestRoutes());
 
     // Get the display dimensions.
     FX_LOGS(INFO) << "Waiting for scenic display info";
@@ -176,12 +201,29 @@ class MouseInputBase : public gtest::RealLoopFixture {
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
 
+  // Subclass should implement this method to add v2 components to the test realm
+  // next to the base ones added.
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
+
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
   virtual std::vector<Route> GetTestRoutes() { return {}; }
 
+  // Send a synthesis mouse event.
+  void SendMouseEvent(fidl::InterfacePtr<test::inputsynthesis::Mouse>& input_synthesis,
+                      uint32_t device_id, fuchsia::input::report::MouseInputReport report,
+                      uint64_t ts) {
+    bool injection_initiated = false;
+    input_synthesis->SendInputReport(
+        device_id, std::move(report), ts, [&injection_initiated](auto result) {
+          ASSERT_FALSE(result.is_err()) << "SendInputReport failed " << result.err();
+          injection_initiated = true;
+        });
+    RunLoopUntil([&injection_initiated] { return injection_initiated; });
+  }
+
   // Helper method for checking the test.mouse.ResponseListener response from the client app.
-  void VerifyEvent(test::mouse::PointerData& pointer_data, float expected_x, float expected_y,
+  void VerifyEvent(test::mouse::PointerData& pointer_data, double expected_x, double expected_y,
                    int64_t expected_buttons, const std::string& expected_type,
                    zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time,
                    const std::string& component_name) {
@@ -209,7 +251,7 @@ class MouseInputBase : public gtest::RealLoopFixture {
   }
 
   void VerifyEventLocationOnTheRightOfExpectation(
-      test::mouse::PointerData& pointer_data, float expected_x_min, float expected_y,
+      test::mouse::PointerData& pointer_data, double expected_x_min, double expected_y,
       int64_t expected_buttons, const std::string& expected_type,
       zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time, const std::string& component_name) {
     FX_LOGS(INFO) << "Client received mouse change at (" << pointer_data.local_x() << ", "
@@ -232,6 +274,7 @@ class MouseInputBase : public gtest::RealLoopFixture {
   }
 
   void AssembleRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
+                     const std::vector<std::pair<ChildName, std::string>>& components_v2,
                      const std::vector<Route>& routes) {
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
@@ -242,6 +285,10 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
+      realm_->AddLegacyChild(name, component);
+    }
+
+    for (const auto& [name, component] : components_v2) {
       realm_->AddChild(name, component);
     }
 
@@ -294,7 +341,7 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
 class FlutterInputTest : public MouseInputBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestV2Components() override {
     return {
         std::make_pair(kMouseInputFlutter, kMouseInputFlutterUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
@@ -383,8 +430,8 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
   // If the first mouse event is cursor movement, Flutter first sends an ADD event with updated
   // location.
   VerifyEvent(e,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f + 1,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f + 2,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f + 1,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f + 2,
               /*expected_buttons=*/0,
               /*expected_type=*/"add", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
@@ -421,24 +468,24 @@ TEST_F(FlutterInputTest, FlutterMouseDown) {
 
   // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
   VerifyEvent(event_add,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/0,
               /*expected_type=*/"add", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a DOWN pointer event with the buttons we care about.
   VerifyEvent(event_down,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"down", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a MOVE pointer event with no new information.
   VerifyEvent(event_noop_move,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"move", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
@@ -475,24 +522,24 @@ TEST_F(FlutterInputTest, FlutterMouseDownUp) {
 
   // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
   VerifyEvent(event_add,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/0,
               /*expected_type=*/"add", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a DOWN pointer event with the buttons we care about.
   VerifyEvent(event_down,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"down", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a MOVE pointer event with no new information.
   VerifyEvent(event_noop_move,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"move", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
@@ -514,8 +561,8 @@ TEST_F(FlutterInputTest, FlutterMouseDownUp) {
 
   auto event_up = response_listener_->PopEvent();
   VerifyEvent(event_up,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/0,
               /*expected_type=*/"up", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
@@ -553,24 +600,24 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
 
   // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
   VerifyEvent(event_add,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/0,
               /*expected_type=*/"add", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a DOWN pointer event with the buttons we care about.
   VerifyEvent(event_down,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"down", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
 
   // Then Flutter sends a MOVE pointer event with no new information.
   VerifyEvent(event_noop_move,
-              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
-              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_x=*/static_cast<double>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<double>(display_height()) / 2.f,
               /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
               /*expected_type=*/"move", input_injection_time,
               /*component_name=*/"mouse-input-flutter");
@@ -594,8 +641,8 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
 
   VerifyEventLocationOnTheRightOfExpectation(
       event_move,
-      /*expected_x_min=*/static_cast<float>(display_width()) / 2.f + 1,
-      /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+      /*expected_x_min=*/static_cast<double>(display_width()) / 2.f + 1,
+      /*expected_y=*/static_cast<double>(display_height()) / 2.f,
       /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
       /*expected_type=*/"move", input_injection_time,
       /*component_name=*/"mouse-input-flutter");
@@ -619,11 +666,208 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
 
   VerifyEventLocationOnTheRightOfExpectation(
       event_up,
-      /*expected_x_min=*/static_cast<float>(display_width()) / 2.f + 1,
-      /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+      /*expected_x_min=*/static_cast<double>(display_width()) / 2.f + 1,
+      /*expected_y=*/static_cast<double>(display_height()) / 2.f,
       /*expected_buttons=*/0,
       /*expected_type=*/"up", input_injection_time,
       /*component_name=*/"mouse-input-flutter");
+}
+
+class ChromiumInputTest : public MouseInputBase {
+ protected:
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
+    return {
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
+    };
+  }
+
+  std::vector<std::pair<ChildName, std::string>> GetTestV2Components() override {
+    return {
+        std::make_pair(kMouseInputChromium, kMouseInputChromiumUrl),
+        std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kMockCobalt, kMockCobaltUrl),
+    };
+  }
+
+  std::vector<Route> GetTestRoutes() override {
+    return merge({GetChromiumRoutes(ChildRef{kMouseInputChromium}),
+                  {
+                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                       .source = ChildRef{kMouseInputChromium},
+                       .targets = {ParentRef()}},
+                  }});
+  }
+
+  // Routes needed to setup Chromium client.
+  static std::vector<Route> GetChromiumRoutes(ChildRef target) {
+    return {
+        {.capabilities =
+             {
+                 Protocol{fuchsia::ui::composition::Allocator::Name_},
+                 Protocol{fuchsia::ui::composition::Flatland::Name_},
+                 Protocol{fuchsia::vulkan::loader::Loader::Name_},
+             },
+         .source = ParentRef(),
+         .targets = {target}},
+        {.capabilities = {Protocol{test::mouse::ResponseListener::Name_}},
+         .source = ChildRef{kResponseListener},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+         .source = ChildRef{kMemoryPressureProvider},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::netstack::Netstack::Name_}},
+         .source = ChildRef{kNetstack},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_}},
+         .source = ChildRef{kNetstack},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+         .source = ParentRef(),
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
+         .source = ChildRef{kWebContextProvider},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
+                          Protocol{fuchsia::logger::LogSink::Name_}},
+         .source = ParentRef(),
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+         .source = ChildRef{kMockCobalt},
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kMouseInputChromium}}},
+        {.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::kernel::Stats::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kMemoryPressureProvider}}},
+        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = ParentRef(),
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+         .source = ChildRef{kNetstack},
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
+         .source = ChildRef{kBuildInfoProvider},
+         .targets = {target, ChildRef{kWebContextProvider}}},
+    };
+  }
+
+  // TODO(fxbug.dev/58322): EnsureMouseIsReadyAndGetPosition will send a mouse click
+  // (down and up) and wait for response to ensure the mouse is ready to use. We will retry a mouse
+  // click if we can not get the mouseup response in small timeout. This function returns
+  // the cursor position in WebEngine coordinate system.
+  Position EnsureMouseIsReadyAndGetPosition(
+      fidl::InterfacePtr<test::inputsynthesis::Mouse>& input_synthesis, uint32_t device_id) {
+    for (int retry = 0; retry < kMaxRetry; retry++) {
+      // Mouse down and up.
+      {
+        auto ts = static_cast<uint64_t>(zx::clock::get_monotonic().get());
+        fuchsia::input::report::MouseInputReport report;
+        report.set_pressed_buttons({0});
+        SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+      }
+      {
+        auto ts = static_cast<uint64_t>(zx::clock::get_monotonic().get());
+        fuchsia::input::report::MouseInputReport report;
+        report.set_pressed_buttons({});
+        SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+      }
+
+      RunLoopWithTimeoutOrUntil(
+          [this] {
+            return this->response_listener_->SizeOfEvents() > 0 &&
+                   this->response_listener_->LastEvent().type() == "mouseup";
+          },
+          kFirstEventRetryInterval);
+      if (response_listener_->SizeOfEvents() > 0 &&
+          response_listener_->LastEvent().type() == "mouseup") {
+        Position p;
+        p.x = response_listener_->LastEvent().local_x();
+        p.y = response_listener_->LastEvent().local_y();
+        response_listener_->ClearEvents();
+        return p;
+      }
+    }
+
+    FX_LOGS(FATAL) << "Can not get mouse click in max retries " << kMaxRetry;
+    return Position{};
+  }
+
+  void LaunchWebEngineClient() {
+    LaunchClient();
+    // In WebEngine |is_rendering| only indicated WebEngine is rendering but input tests require JS
+    // loaded (JS event callback registered).
+    RunLoopUntil([this]() { return this->response_listener()->IsWebEngineReady(); });
+
+    RunLoopUntil([this] { return ui_test_manager_->ClientViewIsFocused(); });
+  }
+
+  static constexpr auto kMouseInputChromium = "mouse-input-chromium";
+  static constexpr auto kMouseInputChromiumUrl = "#meta/mouse-input-chromium.cm";
+
+  static constexpr auto kWebContextProvider = "web_context_provider";
+  static constexpr auto kWebContextProviderUrl =
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
+
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
+
+  static constexpr auto kBuildInfoProvider = "build_info_provider";
+  static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
+
+  static constexpr auto kMockCobalt = "cobalt";
+  static constexpr auto kMockCobaltUrl = "#meta/mock_cobalt.cm";
+
+  // The first event to WebEngine may lost, see EnsureMouseIsReadyAndGetPosition. Retry to ensure
+  // WebEngine is ready to process events.
+  static constexpr auto kFirstEventRetryInterval = zx::sec(1);
+
+  // To avoid retry to timeout, limit 10 retries, if still not ready, fail it with meaningful error.
+  static const int kMaxRetry = 10;
+};
+
+TEST_F(ChromiumInputTest, ChromiumMouseMove) {
+  LaunchWebEngineClient();
+
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
+  auto initial_position = EnsureMouseIsReadyAndGetPosition(input_synthesis, device_id);
+
+  double initial_x = initial_position.x;
+  double initial_y = initial_position.y;
+
+  auto input_injection_time = zx::clock::get_monotonic();
+  auto ts = static_cast<uint64_t>(input_injection_time.get());
+  fuchsia::input::report::MouseInputReport report;
+  report.set_movement_x(5);
+  report.set_movement_y(0);
+
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_move = response_listener_->PopEvent();
+
+  VerifyEventLocationOnTheRightOfExpectation(event_move,
+                                             /*expected_x_min=*/initial_x,
+                                             /*expected_y=*/initial_y,
+                                             /*expected_buttons=*/0,
+                                             /*expected_type=*/"mousemove", input_injection_time,
+                                             /*component_name=*/"mouse-input-chromium");
 }
 
 }  // namespace

@@ -24,6 +24,9 @@ type PointerData = table {
 
     /// The type that the client has reported with the pointer data.
     6: type string;
+
+    // The scale factor used. On Chrome, the movement exposed to JS has applied this scale.
+    7: device_scale_factor float64;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.
@@ -33,4 +36,7 @@ protocol ResponseListener {
     Respond(struct {
         pointer_data PointerData;
     });
+
+    /// Notify the test that the WebEngine is ready to process events.
+    NotifyWebEngineReady();
 };
