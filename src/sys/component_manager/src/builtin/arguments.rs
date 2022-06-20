@@ -60,7 +60,7 @@ impl Arguments {
     pub async fn new(parser: &mut Option<ZbiParser>) -> Result<Arc<Self>, Error> {
         let (cmdline_args, image_args) = match parser {
             Some(parser) => {
-                let cmdline_args = match parser.try_get_item(ZbiType::Cmdline) {
+                let cmdline_args = match parser.try_get_item(ZbiType::Cmdline.into_raw(), None) {
                     Ok(result) => {
                         let _ = parser.release_item(ZbiType::Cmdline);
                         Some(result)
@@ -68,7 +68,7 @@ impl Arguments {
                     Err(_) => None,
                 };
 
-                let image_args = match parser.try_get_item(ZbiType::ImageArgs) {
+                let image_args = match parser.try_get_item(ZbiType::ImageArgs.into_raw(), None) {
                     Ok(result) => {
                         let _ = parser.release_item(ZbiType::ImageArgs);
                         Some(result)

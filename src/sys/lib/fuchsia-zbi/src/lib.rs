@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zbi_abi::{is_zbi_type_driver_metadata, ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
+    fuchsia_zbi_abi::{ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     log::info,
@@ -64,6 +64,12 @@ pub enum ZbiParserError {
     #[error("{:?} was not found in the ZBI", zbi_type)]
     ItemNotFound { zbi_type: ZbiType },
 
+    #[error(
+        "{:?} is not being stored by this parser configuration, and will never be present",
+        zbi_type
+    )]
+    ItemNotStored { zbi_type: ZbiType },
+
     #[error("{:?} with an extra value of {} was not found in the ZBI", zbi_type, extra)]
     ItemWithExtraNotFound { zbi_type: ZbiType, extra: u32 },
 
@@ -108,25 +114,6 @@ pub struct ZbiParser {
 }
 
 impl ZbiParser {
-    pub fn get_type(raw_type: u32) -> ZbiType {
-        match raw_type {
-            x if x == ZbiType::Container as u32 => ZbiType::Container,
-            x if x == ZbiType::Cmdline as u32 => ZbiType::Cmdline,
-            x if x == ZbiType::Crashlog as u32 => ZbiType::Crashlog,
-            x if x == ZbiType::KernelDriver as u32 => ZbiType::KernelDriver,
-            x if x == ZbiType::PlatformId as u32 => ZbiType::PlatformId,
-            x if x == ZbiType::StorageBootfsFactory as u32 => ZbiType::StorageBootfsFactory,
-            x if x == ZbiType::StorageRamdisk as u32 => ZbiType::StorageRamdisk,
-            x if x == ZbiType::ImageArgs as u32 => ZbiType::ImageArgs,
-            x if x == ZbiType::SerialNumber as u32 => ZbiType::SerialNumber,
-            x if x == ZbiType::BootloaderFile as u32 => ZbiType::BootloaderFile,
-            x if x == ZbiType::DeviceTree as u32 => ZbiType::DeviceTree,
-            x if x == ZbiType::CpuTopology as u32 => ZbiType::CpuTopology,
-            x if is_zbi_type_driver_metadata(x) => ZbiType::DriverMetadata,
-            _ => ZbiType::Unknown,
-        }
-    }
-
     // ZBI items are padded to 8 byte boundaries.
     pub fn align_zbi_item(length: u32) -> Result<u32, ZbiParserError> {
         let rem = length % ZBI_ALIGNMENT_BYTES;
@@ -170,18 +157,16 @@ impl ZbiParser {
             return Err(ZbiParserError::BadCRC32);
         }
 
-        Ok((ZbiParser::get_type(header.zbi_type.get()), header))
+        Ok((ZbiType::from_raw(header.zbi_type.get()), header))
     }
 
     fn should_store_item(&self, zbi_type: ZbiType) -> bool {
-        if self.items_to_store.len() == 0 {
+        if self.items_to_store.is_empty() {
             // If there isn't a list of items to store, it means store every item found
             // in the ZBI unless the type is unknown.
             zbi_type != ZbiType::Unknown
-        } else if self.items_to_store.contains(&zbi_type) {
-            true
         } else {
-            false
+            self.items_to_store.contains(&zbi_type)
         }
     }
 
@@ -236,22 +221,53 @@ impl ZbiParser {
     /// known items are stored.
     pub fn set_store_item(mut self, zbi_type: ZbiType) -> Self {
         assert!(
-            ZbiParser::get_type(zbi_type as u32) != ZbiType::Unknown,
+            ZbiType::from_raw(zbi_type as u32) != ZbiType::Unknown,
             "You must add a u32 -> ZbiType mapping for any new item you wish to store"
         );
         self.items_to_store.insert(zbi_type);
         self
     }
 
-    /// Try and get one stored item type.
-    pub fn try_get_item(&self, zbi_type: ZbiType) -> Result<Vec<ZbiResult>, ZbiParserError> {
+    /// Try and get one stored item type, optionally restricted by the item's extra. The raw type
+    /// is passed to allow differentiating between different types of driver metadata.
+    pub fn try_get_item(
+        &self,
+        zbi_type_raw: u32,
+        extra: Option<u32>,
+    ) -> Result<Vec<ZbiResult>, ZbiParserError> {
+        let zbi_type = ZbiType::from_raw(zbi_type_raw);
+        if !self.items_to_store.is_empty() && !self.items_to_store.contains(&zbi_type) {
+            // The ZBI parser is only storing select items (and decommitting the rest), but
+            // the requested item is not being stored, and so will never be present.
+            return Err(ZbiParserError::ItemNotStored { zbi_type });
+        }
+
         if !self.items.contains_key(&zbi_type) {
             return Err(ZbiParserError::ItemNotFound { zbi_type });
         }
 
+        let want_item = |item: &ZbiItem| -> bool {
+            // If the ZBI type can't be losslessly converted back to the raw type, this is a
+            // driver metadata subtype and the raw type of the item must match.
+            if zbi_type.into_raw() != zbi_type_raw && item.raw_type != zbi_type_raw {
+                return false;
+            }
+
+            // The extra is a way differentiate user defined "types" of a given ZBI type.
+            if let Some(extra) = extra {
+                if extra != item.extra {
+                    return false;
+                }
+            }
+
+            true
+        };
+
         let mut result: Vec<ZbiResult> = Vec::new();
         for item in &self.items[&zbi_type] {
-            result.push(self.get_zbi_result(zbi_type, &item)?);
+            if want_item(item) {
+                result.push(self.get_zbi_result(zbi_type, &item)?);
+            }
         }
 
         Ok(result)
@@ -265,7 +281,7 @@ impl ZbiParser {
         zbi_type_raw: u32,
         extra: u32,
     ) -> Result<ZbiResult, ZbiParserError> {
-        let zbi_type = ZbiParser::get_type(zbi_type_raw);
+        let zbi_type = ZbiType::from_raw(zbi_type_raw);
         if !self.items.contains_key(&zbi_type) {
             return Err(ZbiParserError::ItemNotFound { zbi_type });
         }
@@ -285,7 +301,7 @@ impl ZbiParser {
     pub fn get_items(&self) -> Result<HashMap<ZbiType, Vec<ZbiResult>>, ZbiParserError> {
         let mut result = HashMap::new();
         for key in self.items.keys() {
-            result.insert(key.clone(), self.try_get_item(key.clone())?);
+            result.insert(key.clone(), self.try_get_item(key.into_raw(), None)?);
         }
         Ok(result)
     }
@@ -473,7 +489,7 @@ mod tests {
     fn check_item_bytes(builder: &ZbiBuilder, parser: &ZbiParser) {
         for (zbi_type, items) in &parser.items {
             let expected = builder.get_bytes(items);
-            let actual = match parser.try_get_item(zbi_type.clone()) {
+            let actual = match parser.try_get_item(zbi_type.into_raw(), None) {
                 Ok(val) => val.iter().map(|result| result.bytes.clone()).collect(),
                 Err(_) => {
                     assert!(false);
@@ -509,7 +525,7 @@ mod tests {
 
         fn simple_header(zbi_type: ZbiType, length: u32) -> zbi_header_t {
             zbi_header_t {
-                zbi_type: U32::<LittleEndian>::new(zbi_type as u32),
+                zbi_type: U32::<LittleEndian>::new(zbi_type.into_raw()),
                 length: U32::<LittleEndian>::new(length),
                 extra: U32::<LittleEndian>::new(if zbi_type == ZbiType::Container {
                     ZBI_CONTAINER_MAGIC
@@ -695,12 +711,12 @@ mod tests {
         let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
 
         let item = parser
-            .try_get_last_matching_item(ZbiType::Crashlog as u32, 0xABCD)
+            .try_get_last_matching_item(ZbiType::Crashlog.into_raw(), 0xABCD)
             .expect("Failed to get item");
         assert_eq!(item.extra, 0xABCD);
 
         assert_eq!(
-            parser.try_get_last_matching_item(ZbiType::Crashlog as u32, 0xDEF).unwrap_err(),
+            parser.try_get_last_matching_item(ZbiType::Crashlog.into_raw(), 0xDEF).unwrap_err(),
             ZbiParserError::ItemWithExtraNotFound { zbi_type: ZbiType::Crashlog, extra: 0xDEF }
         );
     }
@@ -756,7 +772,7 @@ mod tests {
 
         // Extra has been set to zero, while it was 0xABCD in the ZBI.
         let item = parser
-            .try_get_last_matching_item(ZbiType::StorageRamdisk as u32, 0x0)
+            .try_get_last_matching_item(ZbiType::StorageRamdisk.into_raw(), 0x0)
             .expect("Failed to get item");
 
         // Bytes include the header.
@@ -833,23 +849,23 @@ mod tests {
         let mut driver_metadata_header3 = ZbiBuilder::simple_header(ZbiType::Unknown, 0x40);
 
         driver_metadata_header1.zbi_type =
-            U32::<LittleEndian>::new((0xABCD << 8) | ZbiType::DriverMetadata as u32);
+            U32::<LittleEndian>::new((0xABCD << 8) | ZbiType::DriverMetadata.into_raw());
         assert_eq!(
-            ZbiParser::get_type(driver_metadata_header1.zbi_type.get()),
+            ZbiType::from_raw(driver_metadata_header1.zbi_type.get()),
             ZbiType::DriverMetadata
         );
 
         driver_metadata_header2.zbi_type =
-            U32::<LittleEndian>::new((0xDCBA << 8) | ZbiType::DriverMetadata as u32);
+            U32::<LittleEndian>::new((0xDCBA << 8) | ZbiType::DriverMetadata.into_raw());
         assert_eq!(
-            ZbiParser::get_type(driver_metadata_header2.zbi_type.get()),
+            ZbiType::from_raw(driver_metadata_header2.zbi_type.get()),
             ZbiType::DriverMetadata
         );
 
         driver_metadata_header3.zbi_type =
-            U32::<LittleEndian>::new((0xEEEE << 8) | ZbiType::DriverMetadata as u32);
+            U32::<LittleEndian>::new((0xEEEE << 8) | ZbiType::DriverMetadata.into_raw());
         assert_eq!(
-            ZbiParser::get_type(driver_metadata_header3.zbi_type.get()),
+            ZbiType::from_raw(driver_metadata_header3.zbi_type.get()),
             ZbiType::DriverMetadata
         );
 
@@ -910,7 +926,7 @@ mod tests {
         );
 
         assert!(parser.release_item(ZbiType::DriverMetadata).is_ok());
-        assert!(parser.try_get_item(ZbiType::DriverMetadata).is_err());
+        assert!(parser.try_get_item(ZbiType::DriverMetadata.into_raw(), None).is_err());
 
         assert_eq!(
             parser.decommit_ranges,
@@ -975,7 +991,7 @@ mod tests {
         );
         check_item_bytes(&builder, &parser);
 
-        assert!(parser.try_get_item(ZbiType::ImageArgs).is_ok());
+        assert!(parser.try_get_item(ZbiType::ImageArgs.into_raw(), None).is_ok());
 
         let first_image_item = parser.items[&ZbiType::ImageArgs][0];
         let second_image_item = parser.items[&ZbiType::ImageArgs][0];
@@ -994,7 +1010,7 @@ mod tests {
         assert_eq!(bytes, expected_bytes);
 
         // Trying to get the item again results in a failure.
-        assert!(parser.try_get_item(ZbiType::ImageArgs).is_err());
+        assert!(parser.try_get_item(ZbiType::ImageArgs.into_raw(), None).is_err());
 
         assert_eq!(
             parser.decommit_ranges,
@@ -1009,5 +1025,87 @@ mod tests {
 
         // Check bytes for all remaining items to ensure we didn't wipe something unexpectedly.
         check_item_bytes(&builder, &parser);
+    }
+
+    #[fuchsia::test]
+    async fn get_items_of_unstored_type() {
+        let (zbi, _builder) = ZbiBuilder::new()
+            .add_header(ZbiBuilder::simple_header(ZbiType::Container, 0))
+            .add_header(ZbiBuilder::simple_header(ZbiType::Crashlog, 2048))
+            .add_item(2048)
+            .add_header(ZbiBuilder::simple_header(ZbiType::Cmdline, 16384))
+            .add_item(16384)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create zbi");
+
+        let parser = ZbiParser::new(zbi)
+            .set_store_item(ZbiType::Crashlog)
+            .set_store_item(ZbiType::StorageBootfsFactory)
+            .parse()
+            .expect("Failed to parse ZBI");
+
+        let result = parser.try_get_item(ZbiType::Cmdline.into_raw(), None);
+        assert_eq!(
+            result.unwrap_err(),
+            ZbiParserError::ItemNotStored { zbi_type: ZbiType::Cmdline }
+        );
+    }
+
+    #[fuchsia::test]
+    async fn get_items_of_type_and_optional_extra() {
+        let dm1: u32 = (0xABCD << 8) | ZbiType::DriverMetadata.into_raw();
+        let mut dm_header1 = ZbiBuilder::simple_header(ZbiType::Unknown, 0x40);
+        dm_header1.zbi_type = U32::<LittleEndian>::new(dm1);
+
+        let dm2: u32 = (0xDCBA << 8) | ZbiType::DriverMetadata.into_raw();
+        let mut dm2_header1 = ZbiBuilder::simple_header(ZbiType::Unknown, 0x40);
+        dm2_header1.zbi_type = U32::<LittleEndian>::new(dm2);
+        dm2_header1.extra = U32::<LittleEndian>::new(1);
+
+        let mut dm2_header2 = ZbiBuilder::simple_header(ZbiType::Unknown, 0x40);
+        dm2_header2.zbi_type = U32::<LittleEndian>::new(dm2);
+        dm2_header2.extra = U32::<LittleEndian>::new(2);
+
+        // This ZBI contains three driver metadata items, with two of the same type but with
+        // different extras. It also contains a single crashlog item.
+        let (zbi, _builder) = ZbiBuilder::new()
+            .add_header(ZbiBuilder::simple_header(ZbiType::Container, 0))
+            .add_header(ZbiBuilder::simple_header(ZbiType::Crashlog, 0x200))
+            .add_item(0x200)
+            .add_header(dm_header1.clone())
+            .add_item(0x40)
+            .add_header(dm2_header1.clone())
+            .add_item(0x40)
+            .add_header(dm2_header2.clone())
+            .add_item(0x40)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create zbi");
+        let parser = ZbiParser::new(zbi)
+            .set_store_item(ZbiType::Crashlog)
+            .set_store_item(ZbiType::DriverMetadata)
+            .parse()
+            .expect("Failed to parse ZBI");
+
+        // This driver metadata type was not present in the ZBI, but is otherwise valid.
+        let not_present_dm = (0xAAA << 8) | ZbiType::DriverMetadata.into_raw();
+        let result = parser.try_get_item(not_present_dm, None).expect("failed to get item");
+        assert!(result.is_empty());
+
+        // All three driver metadata items.
+        let result = parser
+            .try_get_item(ZbiType::DriverMetadata.into_raw(), None)
+            .expect("failed to get item");
+        assert_eq!(result.len(), 3);
+
+        // Narrow the result down to driver metadata of type 'dm2'.
+        let result = parser.try_get_item(dm2, None).expect("failed to get item");
+        assert_eq!(result.len(), 2);
+
+        // Narrow the result down further to driver metadata of type 'dm2' and extra '2'.
+        let result = parser.try_get_item(dm2, Some(2)).expect("failed to get item");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].extra, 2);
     }
 }

@@ -42,7 +42,7 @@ pub struct FactoryItems {
 
 impl FactoryItems {
     pub fn new(parser: &mut ZbiParser) -> Result<Arc<Self>, Error> {
-        match parser.try_get_item(StorageBootfsFactory) {
+        match parser.try_get_item(StorageBootfsFactory.into_raw(), None) {
             Ok(result) => {
                 parser.release_item(StorageBootfsFactory)?;
                 FactoryItems::from_parsed_zbi(result)

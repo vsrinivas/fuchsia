@@ -31,7 +31,7 @@ impl Items {
         // Bootloader files, if they are present in the ZBI, have special layout aware processing
         // where this service needs to parse their payload to extract the filename which is the
         // key. All other items are just stored unprocessed.
-        let bootloader_files = match zbi_parser.try_get_item(BootloaderFile) {
+        let bootloader_files = match zbi_parser.try_get_item(BootloaderFile.into_raw(), None) {
             Ok(result) => {
                 zbi_parser.release_item(BootloaderFile)?;
                 Items::parse_bootloader_items(result)?

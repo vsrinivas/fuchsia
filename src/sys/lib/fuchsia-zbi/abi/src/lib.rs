@@ -27,7 +27,7 @@ pub const ZBI_ITEM_NO_CRC32: u32 = 0x4a87_e8d6;
 pub const ZBI_ALIGNMENT_BYTES: u32 = 0x8;
 
 pub fn is_zbi_type_driver_metadata(zbi_type_raw: u32) -> bool {
-    (zbi_type_raw & 0xFF) == ZbiType::DriverMetadata as u32
+    (zbi_type_raw & 0xFF) == ZbiType::DriverMetadata.into_raw()
 }
 
 #[repr(u32)]
@@ -54,6 +54,31 @@ pub enum ZbiType {
     Unknown,
 }
 
+impl ZbiType {
+    pub fn from_raw(raw: u32) -> Self {
+        match raw {
+            x if x == ZbiType::Container.into_raw() => ZbiType::Container,
+            x if x == ZbiType::Cmdline.into_raw() => ZbiType::Cmdline,
+            x if x == ZbiType::Crashlog.into_raw() => ZbiType::Crashlog,
+            x if x == ZbiType::KernelDriver.into_raw() => ZbiType::KernelDriver,
+            x if x == ZbiType::PlatformId.into_raw() => ZbiType::PlatformId,
+            x if x == ZbiType::StorageBootfsFactory.into_raw() => ZbiType::StorageBootfsFactory,
+            x if x == ZbiType::StorageRamdisk.into_raw() => ZbiType::StorageRamdisk,
+            x if x == ZbiType::ImageArgs.into_raw() => ZbiType::ImageArgs,
+            x if x == ZbiType::SerialNumber.into_raw() => ZbiType::SerialNumber,
+            x if x == ZbiType::BootloaderFile.into_raw() => ZbiType::BootloaderFile,
+            x if x == ZbiType::DeviceTree.into_raw() => ZbiType::DeviceTree,
+            x if x == ZbiType::CpuTopology.into_raw() => ZbiType::CpuTopology,
+            x if is_zbi_type_driver_metadata(x) => ZbiType::DriverMetadata,
+            _ => ZbiType::Unknown,
+        }
+    }
+
+    pub fn into_raw(self) -> u32 {
+        self as u32
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, FromBytes, AsBytes, Unaligned)]
 pub struct zbi_header_t {
@@ -70,7 +95,7 @@ pub struct zbi_header_t {
 /// Define a container header that describes a container content length of `length`.
 pub fn zbi_container_header(length: u32) -> zbi_header_t {
     zbi_header_t {
-        zbi_type: U32::<LittleEndian>::new(ZbiType::Container as u32),
+        zbi_type: U32::<LittleEndian>::new(ZbiType::Container.into_raw()),
         length: U32::<LittleEndian>::new(length),
         extra: U32::<LittleEndian>::new(ZBI_CONTAINER_MAGIC),
         flags: U32::<LittleEndian>::new(ZBI_FLAG_VERSION),
