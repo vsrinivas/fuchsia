@@ -115,17 +115,23 @@ impl DeviceOps for DevPtsDevice {
             }
             // /dev/tty
             DeviceType::TTY => {
-                let terminal = current_task
+                let controlling_terminal = current_task
                     .thread_group
                     .read()
                     .process_group
                     .session
                     .read()
                     .controlling_terminal
-                    .as_ref()
-                    .map(|ct| Arc::clone(&ct.terminal));
-                if let Some(terminal) = terminal {
-                    Ok(Box::new(DevPtsFile::new(terminal)))
+                    .clone();
+                if let Some(controlling_terminal) = controlling_terminal {
+                    if controlling_terminal.is_main {
+                        Ok(Box::new(DevPtmxFile::new(
+                            self.fs.clone(),
+                            controlling_terminal.terminal,
+                        )))
+                    } else {
+                        Ok(Box::new(DevPtsFile::new(controlling_terminal.terminal)))
+                    }
                 } else {
                     error!(EIO)
                 }
@@ -427,6 +433,12 @@ fn shared_ioctl(
             terminal.write().set_termios(termios);
             Ok(SUCCESS)
         }
+        TCSETSF => {
+            // This should drain the output queue and discard the pending input first.
+            let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
+            terminal.write().set_termios(termios);
+            Ok(SUCCESS)
+        }
         TCSETSW => {
             // TODO(qsr): This should drain the output queue first.
             let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
@@ -574,6 +586,31 @@ mod tests {
         root.component_lookup(b"0").unwrap_err();
 
         std::mem::drop(ptmx);
+    }
+
+    #[::fuchsia::test]
+    fn test_open_tty() {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let devfs = crate::fs::devtmpfs::dev_tmp_fs(&kernel);
+
+        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        set_controlling_terminal(&task, &ptmx, false).expect("set_controlling_terminal");
+        let tty = open_file_with_flags(&task, &devfs, b"tty", OpenFlags::RDWR).expect("tty");
+        // Check that tty is the main terminal by calling the ioctl TIOCGPTN and checking it is
+        // has the same result has on ptmx.
+        assert_eq!(
+            ioctl::<i32>(&task, &tty, TIOCGPTN, &0),
+            ioctl::<i32>(&task, &ptmx, TIOCGPTN, &0)
+        );
+
+        // Detach the controlling terminal.
+        ioctl::<i32>(&task, &ptmx, TIOCNOTTY, &0).expect("detach terminal");
+        let pts = open_file(&task, &fs, b"0").expect("open file");
+        set_controlling_terminal(&task, &pts, false).expect("set_controlling_terminal");
+        let tty = open_file_with_flags(&task, &devfs, b"tty", OpenFlags::RDWR).expect("tty");
+        // TIOCGPTN is not implemented on replica terminals
+        assert!(ioctl::<i32>(&task, &tty, TIOCGPTN, &0).is_err());
     }
 
     #[::fuchsia::test]

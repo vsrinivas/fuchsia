@@ -66,7 +66,7 @@ state_implementation!(Session, SessionMutableState, {
 });
 
 /// The controlling terminal of a session.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ControllingTerminal {
     /// The controlling terminal.
     pub terminal: Arc<Terminal>,

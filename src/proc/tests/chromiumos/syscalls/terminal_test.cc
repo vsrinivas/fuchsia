@@ -8,6 +8,7 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/sysmacros.h>
+#include <termios.h>
 
 #include <gtest/gtest.h>
 
@@ -254,6 +255,26 @@ TEST(Pty, OpenDevTTY) {
       fprintf(stderr, "Unexpected buffer.\n");
       exit(1);
     }
+
+    // Ensure all forked process will exit and not reach back to gtest.
+    exit(0);
+  } else {
+    // Wait for all children to die.
+    ASSERT_EQ(0, reap_children());
+  }
+}
+
+TEST(Pty, ioctl_TCSETSF) {
+  prctl(PR_SET_CHILD_SUBREAPER, 1);
+
+  if (SAFE_SYSCALL(fork()) == 0) {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal();
+
+    struct termios config;
+    SAFE_SYSCALL(ioctl(main_terminal, TCGETS, &config));
+    SAFE_SYSCALL(ioctl(main_terminal, TCSETSF, &config));
 
     // Ensure all forked process will exit and not reach back to gtest.
     exit(0);
