@@ -158,6 +158,18 @@ pub fn sys_nanosleep(
     Ok(())
 }
 
+pub fn sys_time(
+    current_task: &CurrentTask,
+    time_addr: UserRef<__kernel_time_t>,
+) -> Result<__kernel_time_t, Errno> {
+    let time =
+        (utc_time().into_nanos() / zx::Duration::from_seconds(1).into_nanos()) as __kernel_time_t;
+    if !time_addr.is_null() {
+        current_task.mm.write_object(time_addr, &time)?;
+    }
+    Ok(time)
+}
+
 pub fn sys_unknown(ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN pid: {}, syscall({}): {}", ctx.get_pid(), syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
@@ -273,5 +285,24 @@ mod test {
         assert_eq!(sys_nanosleep(&current_task, address.into(), UserRef::default()), Ok(()));
 
         thread.join().expect("join");
+    }
+
+    #[::fuchsia::test]
+    fn test_time() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let time1 = sys_time(&current_task, Default::default()).expect("time");
+        assert!(time1 > 0);
+        let address = map_memory(
+            &current_task,
+            UserAddress::default(),
+            std::mem::size_of::<__kernel_time_t>() as u64,
+        );
+        zx::Duration::from_seconds(2).sleep();
+        let time2 = sys_time(&current_task, address.into()).expect("time");
+        assert!(time2 >= time1 + 2);
+        assert!(time2 < time1 + 10);
+        let time3: __kernel_time_t =
+            current_task.mm.read_object(address.into()).expect("read_object");
+        assert_eq!(time2, time3);
     }
 }

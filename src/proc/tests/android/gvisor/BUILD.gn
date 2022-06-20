@@ -124,7 +124,7 @@ gvisor_tests = [
   "symlink_test",
 
   # "tgkill_test",
-  # "time_test",
+  "time_test",
   "timerfd_test",
   "uidgid_test",
   "unlink_test",

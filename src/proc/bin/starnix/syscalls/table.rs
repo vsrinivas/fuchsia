@@ -205,6 +205,7 @@ pub fn dispatch_syscall(
         statfs[2],
         symlinkat[3],
         tgkill[3],
+        time[1],
         timerfd_create[2],
         timerfd_gettime[2],
         timerfd_settime[4],
