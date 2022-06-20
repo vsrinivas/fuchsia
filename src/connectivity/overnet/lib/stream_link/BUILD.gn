@@ -23,7 +23,6 @@ rustc_library("stream_link") {
 }
 
 fuchsia_unittest_package("overnet-stream-link-tests") {
-  manifest = "meta/stream_link_lib_test.cmx"
   deps = [ ":stream_link_test" ]
 }
 

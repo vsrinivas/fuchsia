@@ -40,7 +40,6 @@ rustc_library("component_id_index") {
 }
 
 fuchsia_unittest_package("component-id-index-tests") {
-  manifest = "meta/component-id-index-tests.cmx"
   deps = [ ":component_id_index_test" ]
   test_specs = {
   }

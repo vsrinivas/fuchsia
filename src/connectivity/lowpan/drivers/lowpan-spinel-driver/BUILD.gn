@@ -105,7 +105,6 @@ fuchsia_package("lowpan-spinel-driver") {
 }
 
 fuchsia_unittest_package("lowpan-spinel-driver-test") {
-  manifest = "meta/lowpan-spinel-driver-test.cmx"
   deps = [ ":bin_test" ]
 }
 

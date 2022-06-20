@@ -33,7 +33,6 @@ rustc_test("quic_test") {
 }
 
 fuchsia_unittest_package("overnet-quic-tests") {
-  manifest = "meta/overnet_quic_lib_test.cmx"
   deps = [
     ":quic_test",
     "//src/connectivity/overnet/overnetstack:certificates",

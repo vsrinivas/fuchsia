@@ -38,7 +38,6 @@ fuchsia_shell_package("stash_ctl") {
 }
 
 fuchsia_unittest_package("stash_ctl_bin_test") {
-  manifest = "meta/stash_ctl_bin_test.cmx"
   deps = [ ":bin_test" ]
 }
 

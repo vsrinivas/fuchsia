@@ -117,7 +117,6 @@ if (current_cpu == "x64") {
 
 fuchsia_unittest_component("cpuperf_provider_tests_component") {
   component_name = "cpuperf_provider_tests"
-  manifest = "meta/cpuperf_provider_tests.cmx"
   deps = [ ":cpuperf_provider_tests_bin" ]
 }
 

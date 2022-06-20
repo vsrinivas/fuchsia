@@ -38,7 +38,6 @@ rustc_test("fidl") {
 }
 
 fuchsia_unittest_package("overnet-fidl-tests") {
-  manifest = "meta/fidl_test.cmx"
   deps = [
     ":fidl",
     "//src/connectivity/overnet/overnetstack:certificates",

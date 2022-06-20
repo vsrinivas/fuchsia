@@ -50,7 +50,6 @@ resource("testdata_golden_root") {
 }
 
 fuchsia_unittest_package("fuchsia-bootfs-tests") {
-  manifest = "meta/fuchsia_bootfs_lib_test.cmx"
   deps = [
     ":fuchsia-bootfs_test",
     ":testdata_bootfs",

@@ -69,7 +69,6 @@ executable("cpuperf_integration_tests_bin") {
 }
 
 fuchsia_unittest_package("cpuperf_tests") {
-  manifest = "meta/cpuperf_tests.cmx"
   deps = [
     ":cpuperf_resources",
     ":cpuperf_tests_bin",

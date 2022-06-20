@@ -1,8 +1,0 @@
-{
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/cm_rust_lib_test"
-    }
-}

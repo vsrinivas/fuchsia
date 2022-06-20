@@ -24,5 +24,4 @@ test("scenic_cpp_unittests") {
 
 fuchsia_unittest_package("scenic_cpp_tests") {
   deps = [ ":scenic_cpp_unittests" ]
-  manifest = "meta/scenic_cpp_unittests.cmx"
 }

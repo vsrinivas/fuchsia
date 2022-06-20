@@ -38,7 +38,6 @@ fuchsia_package_with_single_component("component_test_runner") {
 }
 
 fuchsia_unittest_package("component_test_runner_tests") {
-  manifest = "meta/component_test_runner_bin_test.cmx"
   deps = [ ":bin_test" ]
 }
 

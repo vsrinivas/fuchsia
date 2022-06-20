@@ -28,7 +28,6 @@ rustc_library("udp_link") {
 }
 
 fuchsia_unittest_package("overnet-udp-link-tests") {
-  manifest = "meta/udp_link_lib_test.cmx"
   deps = [ ":udp_link_test" ]
 }
 

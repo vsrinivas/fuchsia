@@ -123,7 +123,6 @@ fuzzers_package("bind-fuzzers") {
 }
 
 fuchsia_unittest_package("bind_tests") {
-  manifest = "meta/bind_tests.cmx"
   deps = [ ":lib_test" ]
   test_specs = {
     environments = basic_envs

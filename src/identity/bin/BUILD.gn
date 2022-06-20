@@ -40,17 +40,14 @@ fuchsia_unittest_component("account_manager_test") {
 
 fuchsia_unittest_component("dev_auth_provider_test") {
   deps = [ "dev_auth_provider:bin_test" ]
-  manifest = "meta/dev_auth_provider_bin_test.cmx"
 }
 
 fuchsia_unittest_component("dev_authenticator_test") {
   deps = [ "dev_authenticator:bin_test" ]
-  manifest = "meta/dev_authenticator_bin_test.cmx"
 }
 
 fuchsia_unittest_component("google_auth_provider_test") {
   deps = [ "google_auth_provider:bin_test" ]
-  manifest = "meta/google_auth_provider_bin_test.cmx"
 }
 
 fuchsia_test_package("identity_bin_unittests") {

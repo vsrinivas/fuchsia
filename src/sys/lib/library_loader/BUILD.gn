@@ -48,7 +48,6 @@ fuchsia_unittest_package("library_loader_tests") {
     ":config_test_foo",
     ":library_loader_test",
   ]
-  manifest = "meta/library_loader_tests.cmx"
   test_specs = {
   }
 }

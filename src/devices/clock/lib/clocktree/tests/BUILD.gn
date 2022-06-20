@@ -25,6 +25,5 @@ executable("test") {
 }
 
 fuchsia_unittest_package("clocktree_test") {
-  manifest = "meta/clocktree_test.cmx"
   deps = [ ":test" ]
 }

@@ -34,7 +34,6 @@ rustc_library("cm_fidl_validator") {
 }
 
 fuchsia_unittest_package("cm_fidl_validator_tests") {
-  manifest = "meta/cm_fidl_validator_tests.cmx"
   deps = [ ":cm_fidl_validator_test" ]
 }
 

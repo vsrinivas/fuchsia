@@ -44,7 +44,6 @@ rustc_library("runner") {
 }
 
 fuchsia_unittest_package("runner_tests") {
-  manifest = "meta/runner_tests.cmx"
   deps = [ ":runner_test" ]
   test_specs = {
   }

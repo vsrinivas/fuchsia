@@ -21,7 +21,6 @@ rustc_library("cm_types") {
 }
 
 fuchsia_unittest_package("cm_types_tests") {
-  manifest = "meta/cm_types_tests.cmx"
   deps = [ ":cm_types_test" ]
   test_specs = {
   }

@@ -51,7 +51,6 @@ fidl("triangle") {
 }
 
 fuchsia_unittest_package("overnet-integration-tests") {
-  manifest = "meta/integration_test.cmx"
   deps = [
     ":integration",
     "//src/connectivity/overnet/overnetstack:certificates",

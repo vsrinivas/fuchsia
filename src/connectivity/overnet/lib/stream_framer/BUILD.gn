@@ -26,7 +26,6 @@ rustc_library("stream_framer") {
 }
 
 fuchsia_unittest_package("overnet-stream-framer-tests") {
-  manifest = "meta/stream_framer_lib_test.cmx"
   deps = [ ":stream_framer_test" ]
 }
 

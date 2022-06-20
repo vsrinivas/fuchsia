@@ -82,6 +82,5 @@ executable("importer_test_app") {
 }
 
 fuchsia_unittest_package("ktrace_provider_tests") {
-  manifest = "meta/importer_tests.cmx"
   deps = [ ":importer_test_app" ]
 }

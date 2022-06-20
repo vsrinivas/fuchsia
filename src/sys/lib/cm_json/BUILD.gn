@@ -31,7 +31,6 @@ rustc_library("cm_json") {
 }
 
 fuchsia_unittest_package("cm_json_tests") {
-  manifest = "meta/cm_json_tests.cmx"
   deps = [ ":cm_json_test" ]
   test_specs = {
   }
