@@ -2,21 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//build/components.gni")
 
-test_package("security-codelab") {
+fuchsia_component("security-codelab-test") {
+  testonly = true
+  manifest = "meta/security-codelab.cml"
+
   deps = [ ":security-codelab-bin" ]
+}
 
-  binaries = [
-    {
-      name = "security-codelab"
-    },
-  ]
-
-  tests = [
-    {
-      name = "security-codelab"
-    },
+fuchsia_test_package("security-codelab") {
+  test_components = [ ":security-codelab-test" ]
+  deps = [
+    "//src/security/codelab/smart_door:smart-door-component",
+    "//src/security/codelab/smart_door:smart-door-config",
+    "//src/security/codelab/smart_door_memory:smart-door-memory-component",
   ]
 }
 

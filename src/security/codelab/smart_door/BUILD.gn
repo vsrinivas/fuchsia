@@ -43,29 +43,32 @@ source_set("lib") {
   ]
 }
 
-fuchsia_package_with_single_component("smart-door") {
-  manifest = "meta/smart-door.cmx"
+fuchsia_component("smart-door-component") {
+  component_name = "smart-door"
+  manifest = "meta/smart-door.cml"
+
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("smart-door") {
   deps = [
-    ":bin",
+    ":smart-door-component",
     ":smart-door-config",
     "//build/validate:non_production_tag",
   ]
 }
 
-config_data("smart-door-config") {
-  for_pkg = "smart-door"
-  outputs = [ "config.json" ]
+resource("smart-door-config") {
+  outputs = [ "data/config.json" ]
   sources = [ "config/config.json" ]
 }
 
-config_data("smart-door-config-for-unittest") {
-  for_pkg = "smart-door-server-unittest"
-  outputs = [ "config.json" ]
+resource("smart-door-config-for-unittest") {
+  outputs = [ "data/config.json" ]
   sources = [ "config/test_config.json" ]
 }
 
 fuchsia_unittest_package("smart-door-server-unittest") {
-  manifest = "meta/smart-door-server-unittest.cmx"
   deps = [
     ":smart-door-config-for-unittest",
     ":smart-door-server-unittest-bin",
@@ -86,9 +89,21 @@ executable("smart-door-server-unittest-bin") {
   ]
 }
 
-fuchsia_unittest_package("smart-door-functional-test") {
-  manifest = "meta/smart-door-functional-test.cmx"
+fuchsia_component("smart-door-test-component") {
+  testonly = true
+  component_name = "smart-door-functional-test"
+  manifest = "meta/smart-door-functional-test.cml"
+
   deps = [ ":smart-door-functional-test-bin" ]
+}
+
+fuchsia_test_package("smart-door-functional-test") {
+  test_components = [ ":smart-door-test-component" ]
+  deps = [
+    ":smart-door-component",
+    ":smart-door-config",
+    "//src/security/codelab/smart_door_memory:smart-door-memory-component",
+  ]
 }
 
 executable("smart-door-functional-test-bin") {

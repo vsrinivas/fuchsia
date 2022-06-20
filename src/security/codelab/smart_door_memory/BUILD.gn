@@ -39,16 +39,22 @@ source_set("lib") {
   ]
 }
 
-fuchsia_package_with_single_component("smart-door-memory") {
-  manifest = "meta/smart-door-memory.cmx"
+fuchsia_component("smart-door-memory-component") {
+  component_name = "smart-door-memory"
+  manifest = "meta/smart-door-memory.cml"
+
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("smart-door-memory") {
   deps = [
-    ":bin",
+    ":smart-door-memory-component",
     "//build/validate:non_production_tag",
   ]
 }
 
 fuchsia_unittest_package("smart-door-memory-server-unittest") {
-  manifest = "meta/smart-door-memory-server-unittest.cmx"
+  manifest = "meta/smart-door-memory-server-unittest.cml"
   deps = [ ":smart-door-memory-server-unittest-bin" ]
 }
 

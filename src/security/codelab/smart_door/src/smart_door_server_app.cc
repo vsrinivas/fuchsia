@@ -109,7 +109,7 @@ bool SmartDoorServer::hexDecode(std::string s, uint8_t* out, size_t out_size) {
 
 bool SmartDoorServer::readToken(std::string* token) {
   json::JSONParser json_parser;
-  auto doc = json_parser.ParseFromFile("/config/data/config.json");
+  auto doc = json_parser.ParseFromFile("/pkg/data/config.json");
   if (json_parser.HasError()) {
     FX_LOGS(ERROR) << "failed to read from config file!" << std::endl;
     return false;
@@ -123,7 +123,7 @@ bool SmartDoorServer::readToken(std::string* token) {
 
 bool SmartDoorServer::readAdminPassphrase(uint8_t* admin_hash, uint8_t* admin_salt) {
   json::JSONParser json_parser;
-  auto doc = json_parser.ParseFromFile("/config/data/config.json");
+  auto doc = json_parser.ParseFromFile("/pkg/data/config.json");
   if (json_parser.HasError()) {
     FX_LOGS(ERROR) << "failed to read from config file!" << std::endl;
     return false;

@@ -416,8 +416,6 @@ group("cmx_allowlist") {
     "//src/recovery/factory-reset-trigger:*",
     "//src/recovery/integration:*",
     "//src/recovery/system:*",
-    "//src/security/codelab/smart_door:*",
-    "//src/security/codelab/smart_door_memory:*",
     "//src/security/fcrypto/test:*",
     "//src/security/kms:*",
     "//src/security/tee_manager:*",
