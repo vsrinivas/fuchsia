@@ -21,8 +21,11 @@ struct BlockMerkleTreeInfo {
   fzl::OwnedVmoMapper blocks;
   // Points into |blocks|, will be offset according to blob format.
   uint8_t* merkle_data = nullptr;
-  uint64_t merkle_tree_size = 0;
   Digest root;
+
+  cpp20::span<const uint8_t> GetMerkleDataBlocks() const {
+    return cpp20::span(static_cast<const uint8_t*>(blocks.start()), blocks.size());
+  }
 };
 
 class TestCorruptionNotifier : public BlobCorruptionNotifier {
@@ -67,8 +70,7 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
     EXPECT_LE(normal_info->merkle_tree_size + start_offset, block_info.blocks.size());
 
     block_info.merkle_data = &static_cast<uint8_t*>(block_info.blocks.start())[start_offset];
-    block_info.merkle_tree_size = normal_info->merkle_tree_size;
-    memcpy(block_info.merkle_data, normal_info->merkle_tree.get(), block_info.merkle_tree_size);
+    memcpy(block_info.merkle_data, normal_info->merkle_tree.get(), normal_info->merkle_tree_size);
 
     block_info.root = normal_info->root;
     return block_info;
@@ -151,7 +153,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
   BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.get(), sz);
 
   auto verifier_or =
-      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+      BlobVerifier::Create(info.root, GetMetrics(), info.GetMerkleDataBlocks(), *layout, &notifier);
   ASSERT_TRUE(verifier_or.is_ok());
   BlobVerifier* verifier = verifier_or.value().get();
 
@@ -188,7 +190,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
   buf.get()[42] = ~(buf.get()[42]);
 
   auto verifier_or =
-      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+      BlobVerifier::Create(info.root, GetMetrics(), info.GetMerkleDataBlocks(), *layout, &notifier);
   ASSERT_TRUE(verifier_or.is_ok());
   BlobVerifier* verifier = verifier_or.value().get();
 
@@ -223,10 +225,10 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
   BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.get(), sz);
 
   // Invert a char in the tree.
-  info.merkle_data[0] = ~(info.merkle_data[0]);
+  info.merkle_data[0] ^= 0xff;
 
   auto verifier_or =
-      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+      BlobVerifier::Create(info.root, GetMetrics(), info.GetMerkleDataBlocks(), *layout, &notifier);
   ASSERT_TRUE(verifier_or.is_ok());
   BlobVerifier* verifier = verifier_or.value().get();
 
@@ -272,7 +274,7 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
   BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.data(), kBlobSize);
 
   auto verifier_or =
-      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, nullptr);
+      BlobVerifier::Create(info.root, GetMetrics(), info.GetMerkleDataBlocks(), *layout, nullptr);
   ASSERT_TRUE(verifier_or.is_ok());
   BlobVerifier* verifier = verifier_or.value().get();
 

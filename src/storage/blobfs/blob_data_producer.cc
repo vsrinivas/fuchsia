@@ -95,7 +95,8 @@ zx::status<DecompressBlobDataProducer> DecompressBlobDataProducer::Create(
   std::unique_ptr<SeekableDecompressor> decompressor;
   const size_t compressed_size = compressor.Size();
   if (zx_status_t status = SeekableChunkedDecompressor::CreateDecompressor(
-          compressor.Data(), compressed_size, compressed_size, &decompressor);
+          cpp20::span(static_cast<const uint8_t*>(compressor.Data()), compressed_size),
+          compressed_size, &decompressor);
       status != ZX_OK) {
     return zx::error(status);
   }

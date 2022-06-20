@@ -7,14 +7,15 @@ import("//build/zircon/zx_library.gni")
 zx_library("buffer") {
   sdk = "source"
   sdk_headers = [
+    "storage/buffer/array_buffer.h",
     "storage/buffer/block_buffer_view.h",
     "storage/buffer/block_buffer.h",
     "storage/buffer/blocking_ring_buffer.h",
     "storage/buffer/owned_vmoid.h",
+    "storage/buffer/resizeable_vmo_buffer.h",
     "storage/buffer/ring_buffer.h",
     "storage/buffer/vmo_buffer.h",
     "storage/buffer/vmoid_registry.h",
-    "storage/buffer/array_buffer.h",
   ]
   sources = [
     "array_buffer.cc",
@@ -26,6 +27,7 @@ zx_library("buffer") {
     sources += [
       "blocking_ring_buffer.cc",
       "owned_vmoid.cc",
+      "resizeable_vmo_buffer.cc",
       "ring_buffer.cc",
       "vmo_buffer.cc",
     ]

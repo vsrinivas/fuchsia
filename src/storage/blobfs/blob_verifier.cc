@@ -21,7 +21,7 @@ BlobVerifier::BlobVerifier(digest::Digest digest, std::shared_ptr<BlobfsMetrics>
 
 zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
     digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
-    fzl::OwnedVmoMapper merkle_data_blocks, const BlobLayout& layout,
+    cpp20::span<const uint8_t> merkle_data_blocks, const BlobLayout& layout,
     const BlobCorruptionNotifier* notifier) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));
   verifier->corruption_notifier_ = notifier;
@@ -34,17 +34,21 @@ zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
   }
 
   size_t actual_merkle_length = verifier->tree_verifier_.GetTreeLength();
-  if (actual_merkle_length > layout.MerkleTreeSize()) {
+  if (actual_merkle_length > layout.MerkleTreeSize() ||
+      layout.MerkleTreeOffsetWithinBlockOffset() + actual_merkle_length >
+          merkle_data_blocks.size()) {
     FX_LOGS(ERROR) << "merkle too small for data";
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
 
-  verifier->merkle_data_blocks_ = std::move(merkle_data_blocks);
-  void* merkle_tree_data = static_cast<uint8_t*>(verifier->merkle_data_blocks_.start()) +
-                           layout.MerkleTreeOffsetWithinBlockOffset();
+  const uint8_t* merkle_tree_data =
+      merkle_data_blocks.begin() + layout.MerkleTreeOffsetWithinBlockOffset();
+  verifier->merkle_data_ = std::make_unique<uint8_t[]>(actual_merkle_length);
+  memcpy(verifier->merkle_data_.get(), merkle_tree_data, actual_merkle_length);
 
-  if (zx_status_t status = verifier->tree_verifier_.SetTree(
-          merkle_tree_data, actual_merkle_length, verifier->digest_.get(), verifier->digest_.len());
+  if (zx_status_t status =
+          verifier->tree_verifier_.SetTree(verifier->merkle_data_.get(), actual_merkle_length,
+                                           verifier->digest_.get(), verifier->digest_.len());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create merkle verifier: " << zx_status_get_string(status);
     return zx::error(status);

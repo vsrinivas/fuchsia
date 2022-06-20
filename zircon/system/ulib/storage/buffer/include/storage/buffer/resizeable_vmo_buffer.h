@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_RESIZEABLE_VMO_BUFFER_H_
-#define SRC_STORAGE_MINFS_RESIZEABLE_VMO_BUFFER_H_
+#ifndef STORAGE_BUFFER_RESIZEABLE_VMO_BUFFER_H_
+#define STORAGE_BUFFER_RESIZEABLE_VMO_BUFFER_H_
 
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/status.h>
@@ -12,7 +12,7 @@
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 
-namespace minfs {
+namespace storage {
 
 // A resizeable VMO buffer. The buffer isn't usable until Attach is called.
 class ResizeableVmoBuffer : public storage::BlockBuffer {
@@ -20,6 +20,9 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   using Handle = vmoid_t;
 
   ResizeableVmoBuffer(uint32_t block_size) : block_size_(block_size) {}
+
+  ResizeableVmoBuffer(ResizeableVmoBuffer&&) = default;
+  ResizeableVmoBuffer& operator=(ResizeableVmoBuffer&&) = delete;
 
   // BlockBuffer interface:
   size_t capacity() const override { return vmo_.size() / block_size_; }
@@ -46,7 +49,7 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   // different handle types should go away and this should no longer be required.
   Handle GetHandle() { return vmoid(); }
 
-  [[nodiscard]] zx::status<> Attach(const char* name, storage::VmoidRegistry* device);
+  zx::status<> Attach(const char* name, storage::VmoidRegistry* device);
   zx::status<> Detach(storage::VmoidRegistry* device);
 
   zx_status_t Zero(size_t index, size_t count) override;
@@ -59,6 +62,6 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   storage::Vmoid vmoid_;
 };
 
-}  // namespace minfs
+}  // namespace storage
 
-#endif  // SRC_STORAGE_MINFS_RESIZEABLE_VMO_BUFFER_H_
+#endif  // STORAGE_BUFFER_RESIZEABLE_VMO_BUFFER_H_

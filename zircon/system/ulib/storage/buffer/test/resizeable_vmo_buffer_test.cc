@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/minfs/resizeable_vmo_buffer.h"
-
 #include <lib/fit/defer.h>
 
 #include <gtest/gtest.h>
+#include <storage/buffer/resizeable_vmo_buffer.h>
 
-namespace minfs {
+namespace storage {
 namespace {
 
 const int kBlockSize = 8192;
@@ -75,4 +74,4 @@ TEST(ResizeableVmoBufferTest, Zero) {
 }
 
 }  // namespace
-}  // namespace minfs
+}  // namespace storage

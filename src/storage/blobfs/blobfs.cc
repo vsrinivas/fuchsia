@@ -300,13 +300,13 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(ERROR) << "Failed to initialize Vnodes: " << zx_status_get_string(status);
     return zx::error(status);
   }
-  zx::status<BlobLoader> loader_or = BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(),
-                                                        fs->GetMetrics(), decompression_connector);
+  zx::status<std::unique_ptr<BlobLoader>> loader_or = BlobLoader::Create(
+      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), decompression_connector);
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
     return loader_or.take_error();
   }
-  fs->loader_ = std::move(loader_or.value());
+  fs->loader_ = *std::move(loader_or);
 
   // At this point, the filesystem is loaded and validated. No errors should be returned after this
   // point.
@@ -895,6 +895,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Reset the PageLoader which owns a VMO that is attached to the block FIFO.
   page_loader_ = nullptr;
+
+  // Reset loader_ which also owns a VMO attached to the block device.
+  loader_.reset();
 
   // Flushes the underlying block device.
   this->Flush();

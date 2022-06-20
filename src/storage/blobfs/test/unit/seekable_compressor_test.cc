@@ -187,9 +187,11 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
   std::unique_ptr<SeekableDecompressor> decompressor;
   switch (algorithm) {
     case CompressionAlgorithm::kChunked: {
-      ASSERT_EQ(SeekableChunkedDecompressor::CreateDecompressor(
-                    compressor->Data(), compressor->Size(), compressor->Size(), &decompressor),
-                ZX_OK);
+      ASSERT_EQ(
+          SeekableChunkedDecompressor::CreateDecompressor(
+              cpp20::span(static_cast<const uint8_t*>(compressor->Data()), compressor->Size()),
+              compressor->Size(), &decompressor),
+          ZX_OK);
       break;
     }
     default:

@@ -6,7 +6,7 @@
 #define SRC_STORAGE_MINFS_RESIZEABLE_BUFFER_H_
 
 #ifdef __Fuchsia__
-#include "src/storage/minfs/resizeable_vmo_buffer.h"
+#include <storage/buffer/resizeable_vmo_buffer.h>
 #else
 #include "src/storage/minfs/resizeable_array_buffer.h"
 #endif
@@ -14,7 +14,7 @@
 namespace minfs {
 
 #ifdef __Fuchsia__
-using ResizeableBufferType = ResizeableVmoBuffer;
+using ResizeableBufferType = storage::ResizeableVmoBuffer;
 #else
 using ResizeableBufferType = ResizeableArrayBuffer;
 #endif

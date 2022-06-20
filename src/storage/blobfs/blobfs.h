@@ -189,7 +189,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // which case it will be impossible to create executable memory mappings.
   const zx::resource& vmex_resource() const { return vmex_resource_; }
 
-  BlobLoader& loader() { return loader_; }
+  BlobLoader& loader() { return *loader_; }
   PageLoader& page_loader() { return *page_loader_; }
 
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
@@ -337,7 +337,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   std::unique_ptr<PageLoader> page_loader_;  // Guaranteed non-null after Create() succeeds.
   std::optional<CachePolicy> pager_backed_cache_policy_;
 
-  BlobLoader loader_;
+  std::unique_ptr<BlobLoader> loader_;
   std::shared_mutex fsck_at_end_of_transaction_mutex_;
 };
 

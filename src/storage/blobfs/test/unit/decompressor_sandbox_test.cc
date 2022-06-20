@@ -151,9 +151,10 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
   CompressData(std::move(compressor), input_data_, &compressed_size);
 
   std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
+  ASSERT_EQ(ZX_OK, SeekableChunkedDecompressor::CreateDecompressor(
+                       cpp20::span(static_cast<const uint8_t*>(compressed_mapper_.start()),
+                                   compressed_size),
+                       compressed_size, &local_decompressor));
 
   size_t total_size = 0;
   size_t iterations = 0;

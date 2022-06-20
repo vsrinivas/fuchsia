@@ -8,10 +8,10 @@
 #include <lib/fit/defer.h>
 
 #include <gtest/gtest.h>
+#include <storage/buffer/resizeable_vmo_buffer.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/bcache.h"
-#include "src/storage/minfs/resizeable_vmo_buffer.h"
 #include "src/storage/minfs/writeback.h"
 
 namespace minfs {
@@ -76,7 +76,7 @@ TEST(LazyReaderTest, ReadSucceeds) {
   ASSERT_TRUE(bcache_or->Writeblk(static_cast<blk_t>(device_range.block()), data).is_ok());
 
   // Now read the data back using the lazy_reader.
-  ResizeableVmoBuffer buffer(kMinfsBlockSize);
+  storage::ResizeableVmoBuffer buffer(kMinfsBlockSize);
   ASSERT_TRUE(buffer.Attach("LazyReaderTest", bcache_or.value().get()).is_ok());
   auto detach =
       fit::defer([&]() { [[maybe_unused]] auto _ = buffer.Detach(bcache_or.value().get()); });
@@ -95,7 +95,7 @@ TEST(LazyReaderTest, UnmappedBlockIsZeroed) {
   auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
   ASSERT_TRUE(bcache_or.is_ok());
 
-  ResizeableVmoBuffer buffer(kMinfsBlockSize);
+  storage::ResizeableVmoBuffer buffer(kMinfsBlockSize);
   ASSERT_TRUE(buffer.Attach("LazyReaderTest", bcache_or.value().get()).is_ok());
   auto detach =
       fit::defer([&]() { [[maybe_unused]] auto _ = buffer.Detach(bcache_or.value().get()); });

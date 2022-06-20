@@ -263,7 +263,6 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
 
 constexpr char kBlobVmoNamePrefix[] = "blob";
 constexpr char kInactiveBlobVmoNamePrefix[] = "inactive-blob";
-constexpr char kBlobMerkleVmoNamePrefix[] = "mrkl";
 
 void FormatVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out,
                    const char* prefix) {
@@ -278,11 +277,6 @@ void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MA
 void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
                                    fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
   FormatVmoName(digest, out, kInactiveBlobVmoNamePrefix);
-}
-
-void FormatBlobMerkleVmoName(const digest::Digest& digest,
-                             fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  FormatVmoName(digest, out, kBlobMerkleVmoNamePrefix);
 }
 
 }  // namespace blobfs

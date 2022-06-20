@@ -7,12 +7,12 @@
 #include <lib/stdcompat/span.h>
 
 #include <gtest/gtest.h>
+#include <storage/buffer/resizeable_vmo_buffer.h>
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"
-#include "src/storage/minfs/resizeable_vmo_buffer.h"
 
 namespace minfs {
 namespace {
@@ -64,7 +64,7 @@ class LazyBufferTest : public testing::Test {
     auto flusher = [this, &mapper](BaseBufferView* view) {
       return buffer_->Flush(
           nullptr, &mapper, view,
-          [this](ResizeableVmoBuffer* buffer, BlockRange range, DeviceBlock device_block) {
+          [this](storage::ResizeableVmoBuffer* buffer, BlockRange range, DeviceBlock device_block) {
             return zx::make_status(
                 bcache_->RunOperation(storage::Operation{.type = storage::OperationType::kWrite,
                                                          .vmo_offset = range.Start(),

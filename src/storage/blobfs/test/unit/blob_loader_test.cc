@@ -154,31 +154,18 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
   // Used to access protected Blob/BlobVerifier members because this class is a friend.
-  const fzl::OwnedVmoMapper& GetBlobMerkleMapper(const Blob* blob) {
+  cpp20::span<const uint8_t> GetBlobMerkleData(const Blob* blob) const {
     std::lock_guard lock(blob->mutex_);
-    return blob->loader_info_.verifier->merkle_data_blocks_;
+    return blob->loader_info_.verifier->merkle_data();
   }
 
-  void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
+  void CheckMerkleTreeContents(cpp20::span<const uint8_t> merkle_data, const BlobInfo& info) {
     std::unique_ptr<MerkleTreeInfo> merkle_tree = CreateMerkleTree(
         info.data.get(), info.size_data, ShouldUseCompactMerkleTreeFormat(blob_layout_format_));
-    ASSERT_TRUE(merkle.vmo().is_valid());
-    ASSERT_GE(merkle.size(), merkle_tree->merkle_tree_size);
-    switch (blob_layout_format_) {
-      case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
-        // In the padded layout the Merkle starts at the start of the vmo.
-        EXPECT_EQ(
-            memcmp(merkle.start(), merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
-            0);
-        break;
-      case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
-        // In the compact layout the Merkle tree is aligned to end at the end of the vmo.
-        EXPECT_EQ(memcmp(static_cast<const uint8_t*>(merkle.start()) +
-                             (merkle.size() - merkle_tree->merkle_tree_size),
-                         merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
-                  0);
-        break;
-    }
+    ASSERT_EQ(merkle_data.size(), merkle_tree->merkle_tree_size);
+    EXPECT_EQ(
+        memcmp(merkle_data.begin(), merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
+        0);
   }
 
  protected:
@@ -202,8 +189,7 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
   // Verify there's no Merkle data for this small blob.
-  const auto& merkle = GetBlobMerkleMapper(blob.get());
-  EXPECT_FALSE(merkle.vmo().is_valid());
+  const auto& merkle = GetBlobMerkleData(blob.get());
   EXPECT_EQ(merkle.size(), 0ul);
 }
 
@@ -218,7 +204,7 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   std::vector<uint8_t> data = LoadBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
-  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
+  CheckMerkleTreeContents(GetBlobMerkleData(blob.get()), *info);
 }
 
 TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
@@ -232,7 +218,7 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   std::vector<uint8_t> data = LoadBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
-  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
+  CheckMerkleTreeContents(GetBlobMerkleData(blob.get()), *info);
 }
 
 TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
