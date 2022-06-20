@@ -19,7 +19,9 @@ use {
     crate::one_or_many::OneOrMany,
     cml_macro::{CheckedVec, OneOrMany, Reference},
     fidl_fuchsia_io as fio,
+    json5format::{FormatOptions, PathOption},
     lazy_static::lazy_static,
+    maplit::{hashmap, hashset},
     reference_doc::ReferenceDoc,
     serde::{de, Deserialize},
     serde_json::{Map, Value},
@@ -2826,6 +2828,77 @@ pub fn alias_or_name(alias: Option<&Name>, name: &Name) -> Name {
 
 pub fn alias_or_path(alias: Option<&Path>, path: &Path) -> Path {
     alias.unwrap_or(path).clone()
+}
+
+pub fn format_cml(buffer: &str, file: &std::path::Path) -> Result<Vec<u8>, Error> {
+    let general_order = PathOption::PropertyNameOrder(vec![
+        "name",
+        "url",
+        "startup",
+        "environment",
+        "durability",
+        "service",
+        "protocol",
+        "directory",
+        "storage",
+        "runner",
+        "resolver",
+        "event",
+        "event_stream",
+        "from",
+        "as",
+        "to",
+        "rights",
+        "path",
+        "subdir",
+        "filter",
+        "dependency",
+        "extends",
+        "runners",
+        "resolvers",
+        "debug",
+    ]);
+    let options = FormatOptions {
+        collapse_containers_of_one: true,
+        sort_array_items: true, // but use options_by_path to turn this off for program args
+        options_by_path: hashmap! {
+            "/*" => hashset! {
+                PathOption::PropertyNameOrder(vec![
+                    "include",
+                    "program",
+                    "children",
+                    "collections",
+                    "capabilities",
+                    "use",
+                    "offer",
+                    "expose",
+                    "environments",
+                    "facets",
+                ])
+            },
+            "/*/program" => hashset! {
+                PathOption::CollapseContainersOfOne(false),
+                PathOption::PropertyNameOrder(vec![
+                    "runner",
+                    "binary",
+                    "args",
+                ]),
+            },
+            "/*/program/*" => hashset! {
+                PathOption::SortArrayItems(false),
+            },
+            "/*/*/*" => hashset! {
+                general_order.clone()
+            },
+            "/*/*/*/*/*" => hashset! {
+                general_order
+            },
+        },
+        ..Default::default()
+    };
+
+    json5format::format(buffer, Some(file.to_string_lossy().to_string()), Some(options))
+        .map_err(|e| Error::json5(e, file))
 }
 
 #[cfg(test)]

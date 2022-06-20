@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error::{Error, Location};
+use crate::error::Error;
 use crate::util;
-use json5format;
-use json5format::{FormatOptions, PathOption};
-use maplit::hashmap;
-use maplit::hashset;
+use cml::format_cml;
 use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use std::fs;
 use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::from_utf8;
 
 /// For `.cml` JSON5 files, format the file to match the default style. (The "pretty" option is
@@ -38,7 +35,7 @@ pub fn format(
         .map_err(|e| Error::internal(format!("Unhandled file path: {:?}", e)))?;
 
     let res = if cml || file_path.ends_with(".cml") {
-        format_cml(buffer, file.as_path())?
+        format_cml(&buffer, &file)?
     } else {
         format_cmx(buffer, pretty)?
     };
@@ -70,98 +67,6 @@ pub fn format_cmx(buffer: String, pretty: bool) -> Result<Vec<u8>, Error> {
         v.serialize(&mut ser)?;
     }
     Ok(res)
-}
-
-pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
-    let general_order = PathOption::PropertyNameOrder(vec![
-        "name",
-        "url",
-        "startup",
-        "environment",
-        "durability",
-        "service",
-        "protocol",
-        "directory",
-        "storage",
-        "runner",
-        "resolver",
-        "event",
-        "event_stream",
-        "from",
-        "as",
-        "to",
-        "rights",
-        "path",
-        "subdir",
-        "filter",
-        "dependency",
-        "extends",
-        "runners",
-        "resolvers",
-        "debug",
-    ]);
-    let options = FormatOptions {
-        collapse_containers_of_one: true,
-        sort_array_items: true, // but use options_by_path to turn this off for program args
-        options_by_path: hashmap! {
-            "/*" => hashset! {
-                PathOption::PropertyNameOrder(vec![
-                    "include",
-                    "program",
-                    "children",
-                    "collections",
-                    "capabilities",
-                    "use",
-                    "offer",
-                    "expose",
-                    "environments",
-                    "facets",
-                ])
-            },
-            "/*/program" => hashset! {
-                PathOption::CollapseContainersOfOne(false),
-                PathOption::PropertyNameOrder(vec![
-                    "runner",
-                    "binary",
-                    "args",
-                ]),
-            },
-            "/*/program/*" => hashset! {
-                PathOption::SortArrayItems(false),
-            },
-            "/*/*/*" => hashset! {
-                general_order.clone()
-            },
-            "/*/*/*/*/*" => hashset! {
-                general_order
-            },
-        },
-        ..Default::default()
-    };
-
-    json5format::format(&buffer, Some(file.to_string_lossy().into_owned()), Some(options)).map_err(
-        |err| match err {
-            json5format::Error::Configuration(errstr) => Error::Internal(errstr),
-            json5format::Error::Parse(location, errstr) => match location {
-                Some(location) => Error::parse(
-                    errstr,
-                    Some(Location { line: location.line, column: location.col }),
-                    Some(file),
-                ),
-                None => Error::parse(errstr, None, Some(file)),
-            },
-            json5format::Error::Internal(location, errstr) => match location {
-                Some(location) => Error::Internal(format!("{}: {}", location, errstr)),
-                None => Error::Internal(errstr),
-            },
-            json5format::Error::TestFailure(location, errstr) => match location {
-                Some(location) => {
-                    Error::Internal(format!("{}: Test failure: {}", location, errstr))
-                }
-                None => Error::Internal(format!("Test failure: {}", errstr)),
-            },
-        },
-    )
 }
 
 #[cfg(test)]

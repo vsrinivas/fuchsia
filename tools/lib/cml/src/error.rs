@@ -85,6 +85,30 @@ impl Error {
     pub fn internal(err: impl Into<String>) -> Self {
         Self::Internal(err.into())
     }
+
+    pub fn json5(err: json5format::Error, file: &Path) -> Self {
+        match err {
+            json5format::Error::Configuration(errstr) => Error::Internal(errstr),
+            json5format::Error::Parse(location, errstr) => match location {
+                Some(location) => Error::parse(
+                    errstr,
+                    Some(Location { line: location.line, column: location.col }),
+                    Some(file),
+                ),
+                None => Error::parse(errstr, None, Some(file)),
+            },
+            json5format::Error::Internal(location, errstr) => match location {
+                Some(location) => Error::Internal(format!("{}: {}", location, errstr)),
+                None => Error::Internal(errstr),
+            },
+            json5format::Error::TestFailure(location, errstr) => match location {
+                Some(location) => {
+                    Error::Internal(format!("{}: Test failure: {}", location, errstr))
+                }
+                None => Error::Internal(format!("Test failure: {}", errstr)),
+            },
+        }
+    }
 }
 
 impl fmt::Display for Error {
