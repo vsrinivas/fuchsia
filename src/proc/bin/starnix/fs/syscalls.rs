@@ -1074,6 +1074,18 @@ pub fn sys_dup(current_task: &CurrentTask, oldfd: FdNumber) -> Result<FdNumber, 
     current_task.files.duplicate(oldfd, None, FdFlags::empty())
 }
 
+pub fn sys_dup2(
+    current_task: &CurrentTask,
+    oldfd: FdNumber,
+    newfd: FdNumber,
+) -> Result<FdNumber, Errno> {
+    if oldfd == newfd {
+        current_task.files.get(oldfd)?;
+        return Ok(newfd);
+    }
+    sys_dup3(current_task, oldfd, newfd, 0)
+}
+
 pub fn sys_dup3(
     current_task: &CurrentTask,
     oldfd: FdNumber,
@@ -1673,6 +1685,19 @@ mod tests {
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
 
         Ok(())
+    }
+
+    #[::fuchsia::test]
+    fn test_sys_dup2() {
+        // Most tests are handled by test_sys_dup3, only test the case where both fds are equals.
+        let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
+        let fd = FdNumber::from_raw(42);
+        assert_eq!(sys_dup2(&current_task, fd, fd), Err(EBADF));
+        let file_handle =
+            current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY).expect("open_file");
+        let files = &current_task.files;
+        let fd = files.add(file_handle).expect("add");
+        assert_eq!(sys_dup2(&current_task, fd, fd), Ok(fd));
     }
 
     #[::fuchsia::test]
