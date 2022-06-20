@@ -17,9 +17,7 @@ namespace blobfs {
 // The |VerificationMetrics| class tracks blobfs metrics related to Merkle verification of blobs,
 // both on blob reads and on blob writes.
 //
-// This class is thread-safe. Blobfs can update these metrics both from the blobfs main thread (when
-// reading blobs that cannot be paged, and when writing new blobs), and the userpager thread (when
-// reading blobs that support paging).
+// This class is thread-safe.
 class VerificationMetrics {
  public:
   VerificationMetrics() = default;
@@ -27,25 +25,26 @@ class VerificationMetrics {
   VerificationMetrics& operator=(const VerificationMetrics&) = delete;
 
   // Increments aggregate information about Merkle verification of blobs since mounting.
-  void Increment(uint64_t data_size, uint64_t merkle_size, fs::Duration duration);
+  void Increment(uint64_t data_size, uint64_t merkle_size, fs::Duration duration)
+      __TA_EXCLUDES(mutex_);
 
   struct Snapshot {
-    uint64_t blobs_verified;
-    uint64_t data_size;
-    uint64_t merkle_size;
-    zx_ticks_t verification_time;
+    uint64_t blobs_verified = {};
+    uint64_t data_size = {};
+    uint64_t merkle_size = {};
+    zx_ticks_t verification_time = {};
   };
 
   // Returns a snapshot of the metrics.
-  Snapshot Get();
+  Snapshot Get() const __TA_EXCLUDES(mutex_);
 
  private:
-  uint64_t blobs_verified_ __TA_GUARDED(mutex_) = 0;
-  uint64_t blobs_verified_total_size_data_ __TA_GUARDED(mutex_) = 0;
-  uint64_t blobs_verified_total_size_merkle_ __TA_GUARDED(mutex_) = 0;
+  uint64_t blobs_verified_ __TA_GUARDED(mutex_) = {};
+  uint64_t blobs_verified_total_size_data_ __TA_GUARDED(mutex_) = {};
+  uint64_t blobs_verified_total_size_merkle_ __TA_GUARDED(mutex_) = {};
   zx::ticks total_verification_time_ticks_ __TA_GUARDED(mutex_) = {};
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 };
 
 }  // namespace blobfs

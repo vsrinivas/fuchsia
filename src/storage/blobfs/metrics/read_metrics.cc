@@ -23,74 +23,65 @@ ReadMetrics::PerCompressionInspect::PerCompressionInspect(inspect::Node node)
       decompress_ticks_node(parent_node.CreateInt("decompress_ticks", {})),
       decompress_bytes_node(parent_node.CreateUint("decompress_bytes", 0)) {}
 
-ReadMetrics::PerCompressionMetrics* ReadMetrics::GetMetrics(CompressionAlgorithm algorithm) {
+ReadMetrics::PerCompressionSnapshot ReadMetrics::GetSnapshot(CompressionAlgorithm algorithm) const {
+  std::lock_guard lock(lock_);
   switch (algorithm) {
     case CompressionAlgorithm::kUncompressed:
-      return &uncompressed_metrics_;
+      return uncompressed_metrics_;
     case CompressionAlgorithm::kChunked:
-      return &chunked_metrics_;
+      return chunked_metrics_;
   }
-
-  return nullptr;
 }
 
-ReadMetrics::PerCompressionInspect* ReadMetrics::GetInspect(CompressionAlgorithm algorithm) {
+ReadMetrics::PerCompressionSnapshot& ReadMetrics::MutableSnapshotLocked(
+    CompressionAlgorithm algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::kUncompressed:
-      return &uncompressed_inspect_;
+      return uncompressed_metrics_;
     case CompressionAlgorithm::kChunked:
-      return &chunked_inspect_;
+      return chunked_metrics_;
   }
+}
 
-  return nullptr;
+ReadMetrics::PerCompressionInspect& ReadMetrics::MutableInspect(CompressionAlgorithm algorithm) {
+  switch (algorithm) {
+    case CompressionAlgorithm::kUncompressed:
+      return uncompressed_inspect_;
+    case CompressionAlgorithm::kChunked:
+      return chunked_inspect_;
+  }
 }
 
 void ReadMetrics::IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t read_size,
                                     fs::Duration read_duration) {
-  if (auto inspect = GetInspect(algorithm)) {
-    inspect->read_ticks_node.Add(read_duration.get());
-    inspect->read_bytes_node.Add(read_size);
-  }
-  // Hold the lock until metrics goes out of scope.
+  PerCompressionInspect& inspect = MutableInspect(algorithm);
+  inspect.read_ticks_node.Add(read_duration.get());
+  inspect.read_bytes_node.Add(read_size);
+
+  // Hold the lock until snapshot goes out of scope.
   std::lock_guard lock(lock_);
-  if (auto metrics = GetMetrics(algorithm)) {
-    metrics->read_ticks += read_duration;
-    metrics->read_bytes += read_size;
-  }
+  PerCompressionSnapshot& snapshot = MutableSnapshotLocked(algorithm);
+  snapshot.read_ticks += read_duration.get();
+  snapshot.read_bytes += read_size;
 }
 
 void ReadMetrics::IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
                                          fs::Duration decompress_duration, bool remote) {
-  if (auto inspect = GetInspect(algorithm)) {
-    inspect->decompress_ticks_node.Add(decompress_duration.get());
-    inspect->decompress_bytes_node.Add(decompressed_size);
-    if (remote) {
-      remote_decompressions_node_.Add(1);
-    }
+  PerCompressionInspect& inspect = MutableInspect(algorithm);
+  inspect.decompress_ticks_node.Add(decompress_duration.get());
+  inspect.decompress_bytes_node.Add(decompressed_size);
+  if (remote) {
+    remote_decompressions_node_.Add(1);
   }
-  // Hold the lock until metrics goes out of scope.
-  std::lock_guard lock(lock_);
-  if (auto metrics = GetMetrics(algorithm)) {
-    metrics->decompress_ticks += decompress_duration;
-    metrics->decompress_bytes += decompressed_size;
-    if (remote) {
-      remote_decompressions_++;
-    }
-  }
-}
 
-ReadMetrics::PerCompressionSnapshot ReadMetrics::GetSnapshot(CompressionAlgorithm algorithm) {
-  // Hold the lock until metrics goes out of scope.
+  // Hold the lock until snapshot goes out of scope.
   std::lock_guard lock(lock_);
-  if (auto metrics = GetMetrics(algorithm)) {
-    return PerCompressionSnapshot{
-        .read_ticks = metrics->read_ticks.get(),
-        .read_bytes = metrics->read_bytes,
-        .decompress_ticks = metrics->decompress_ticks.get(),
-        .decompress_bytes = metrics->decompress_bytes,
-    };
+  PerCompressionSnapshot& snapshot = MutableSnapshotLocked(algorithm);
+  snapshot.decompress_ticks += decompress_duration.get();
+  snapshot.decompress_bytes += decompressed_size;
+  if (remote) {
+    remote_decompressions_++;
   }
-  return PerCompressionSnapshot();
 }
 
 uint64_t ReadMetrics::GetRemoteDecompressions() const {

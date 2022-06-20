@@ -29,8 +29,8 @@ struct CompressionMetrics {
   Properties Attach(inspect::Node& node) const;
 
  private:
-  uint64_t uncompressed_bytes_;
-  uint64_t zstd_chunked_bytes_;
+  uint64_t uncompressed_bytes_ = {};
+  uint64_t zstd_chunked_bytes_ = {};
 };
 
 }  // namespace blobfs

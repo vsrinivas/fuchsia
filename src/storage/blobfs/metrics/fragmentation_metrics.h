@@ -41,12 +41,12 @@ struct FragmentationMetrics {
 // a lot of memory if the filesystem is heavily fragmented, so this is not used in production.
 // |FragmentationMetrics| instead stores these values in histograms, using a fixed amount of memory.
 struct FragmentationStats {
-  uint64_t total_nodes;
-  uint64_t files_in_use;
-  uint64_t extent_containers_in_use;
-  std::map<size_t, uint64_t> extents_per_file;
-  std::map<size_t, uint64_t> free_fragments;
-  std::map<size_t, uint64_t> in_use_fragments;
+  uint64_t total_nodes = {};
+  uint64_t files_in_use = {};
+  uint64_t extent_containers_in_use = {};
+  std::map<size_t, uint64_t> extents_per_file = {};
+  std::map<size_t, uint64_t> free_fragments = {};
+  std::map<size_t, uint64_t> in_use_fragments = {};
 };
 
 }  // namespace blobfs
