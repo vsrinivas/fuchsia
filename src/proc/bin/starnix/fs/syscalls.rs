@@ -1255,6 +1255,135 @@ pub fn sys_timerfd_settime(
     Ok(())
 }
 
+pub fn sys_pselect6(
+    current_task: &mut CurrentTask,
+    nfds: u32,
+    readfds_addr: UserRef<__kernel_fd_set>,
+    writefds_addr: UserRef<__kernel_fd_set>,
+    exceptfds_addr: UserRef<__kernel_fd_set>,
+    timeout_addr: UserRef<timespec>,
+    sigmask_addr: UserRef<pselect6_sigmask>,
+) -> Result<i32, Errno> {
+    const BITS_PER_BYTE: usize = 8;
+
+    fn sizeof<T>(_: &T) -> usize {
+        BITS_PER_BYTE * std::mem::size_of::<T>()
+    }
+    fn is_fd_set(set: &__kernel_fd_set, fd: usize) -> bool {
+        let index = fd / sizeof(&set.fds_bits[0]);
+        let remainder = fd % sizeof(&set.fds_bits[0]);
+        set.fds_bits[index] & (1 << remainder) > 0
+    }
+    fn add_fd_to_set(set: &mut __kernel_fd_set, fd: usize) {
+        let index = fd / sizeof(&set.fds_bits[0]);
+        let remainder = fd % sizeof(&set.fds_bits[0]);
+
+        set.fds_bits[index] = set.fds_bits[index] | (1 << remainder);
+    }
+    let start_time = zx::Time::get_monotonic();
+    let read_fd_set = |addr: UserRef<__kernel_fd_set>| {
+        if addr.is_null() {
+            Ok(Default::default())
+        } else {
+            current_task.mm.read_object(addr)
+        }
+    };
+
+    if nfds as usize >= BITS_PER_BYTE * std::mem::size_of::<__kernel_fd_set>() {
+        return error!(EINVAL);
+    }
+
+    let mut timeout = if timeout_addr.is_null() {
+        zx::Duration::INFINITE
+    } else {
+        let timespec = current_task.mm.read_object(timeout_addr)?;
+        duration_from_timespec(timespec)?
+    };
+
+    let read_events = POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR;
+    let write_events = POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR;
+    let except_events = POLLPRI;
+
+    let readfds = read_fd_set(readfds_addr)?;
+    let writefds = read_fd_set(writefds_addr)?;
+    let exceptfds = read_fd_set(exceptfds_addr)?;
+
+    let sets = &[(read_events, &readfds), (write_events, &writefds), (except_events, &exceptfds)];
+
+    let mut num_fds = 0;
+    let file_object = EpollFileObject::new(current_task.kernel());
+    let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
+    for fd in 0..nfds {
+        let mut aggregated_events = 0;
+        for (events, fds) in sets.iter() {
+            if is_fd_set(fds, fd as usize) {
+                aggregated_events = aggregated_events | events;
+            }
+        }
+        if aggregated_events != 0 {
+            let event = EpollEvent { events: aggregated_events, data: fd as u64 };
+            let file = current_task.files.get(FdNumber::from_raw(fd as i32))?;
+            epoll_file.add(&current_task, &file, &file_object, event)?;
+            num_fds += 1;
+        }
+    }
+
+    let mask = if sigmask_addr.is_null() {
+        current_task.read().signals.mask
+    } else {
+        let sigmask = current_task.mm.read_object(sigmask_addr)?;
+        if sigmask.ss.is_null() {
+            current_task.read().signals.mask
+        } else {
+            if sigmask.ss_len < std::mem::size_of::<sigset_t>() {
+                return error!(EINVAL);
+            }
+            current_task.mm.read_object(sigmask.ss.into())?
+        }
+    };
+    let ready_fds = current_task.wait_with_temporary_mask(mask, |current_task| {
+        epoll_file.wait(current_task, num_fds, timeout)
+    })?;
+    let mut num_fds = 0;
+    let mut readfds: __kernel_fd_set = Default::default();
+    let mut writefds: __kernel_fd_set = Default::default();
+    let mut exceptfds: __kernel_fd_set = Default::default();
+    let mut sets = [
+        (read_events, &mut readfds),
+        (write_events, &mut writefds),
+        (except_events, &mut exceptfds),
+    ];
+
+    for event in &ready_fds {
+        let fd = event.data as usize;
+        sets.iter_mut().for_each(|entry| {
+            let events = entry.0;
+            let fds: &mut __kernel_fd_set = entry.1;
+            if events & event.events > 0 {
+                add_fd_to_set(fds, fd);
+                num_fds += 1;
+            }
+        });
+    }
+
+    let write_fd_set =
+        |addr: UserRef<__kernel_fd_set>, value: __kernel_fd_set| -> Result<(), Errno> {
+            if !addr.is_null() {
+                current_task.mm.write_object(addr, &value)?;
+            }
+            Ok(())
+        };
+    write_fd_set(readfds_addr, readfds)?;
+    write_fd_set(writefds_addr, writefds)?;
+    write_fd_set(exceptfds_addr, exceptfds)?;
+    if !timeout_addr.is_null() {
+        timeout -= zx::Time::get_monotonic() - start_time;
+        timeout = std::cmp::max(timeout, zx::Duration::from_seconds(0));
+        current_task.mm.write_object(timeout_addr, &timespec_from_duration(timeout))?;
+    }
+    Ok(num_fds)
+}
+
 pub fn sys_epoll_create(current_task: &CurrentTask, size: i32) -> Result<FdNumber, Errno> {
     if size < 1 {
         return error!(EINVAL);

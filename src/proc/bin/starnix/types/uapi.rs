@@ -240,3 +240,10 @@ pub struct linger {
 pub const EFD_CLOEXEC: u32 = O_CLOEXEC;
 pub const EFD_NONBLOCK: u32 = O_NONBLOCK;
 pub const EFD_SEMAPHORE: u32 = 1;
+
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct pselect6_sigmask {
+    pub ss: UserAddress,
+    pub ss_len: usize,
+}
