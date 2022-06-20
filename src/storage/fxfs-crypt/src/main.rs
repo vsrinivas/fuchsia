@@ -18,8 +18,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(Services::Crypt).add_fidl_service(Services::CryptManagement);
     fs.take_and_serve_directory_handle()?;
 
-    const USE_LEGACY_STUBBED_CRYPTO: bool = false;
-    let crypt = CryptService::new(USE_LEGACY_STUBBED_CRYPTO);
+    let crypt = CryptService::new();
 
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {

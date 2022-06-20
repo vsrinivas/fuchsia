@@ -8,7 +8,6 @@ use {
         Aes256GcmSiv, Key, Nonce,
     },
     anyhow::{Context, Error},
-    byteorder::{ByteOrder, LittleEndian},
     fidl_fuchsia_fxfs::{
         CryptCreateKeyResult, CryptManagementAddWrappingKeyResult,
         CryptManagementForgetWrappingKeyResult, CryptManagementRequest,
@@ -31,8 +30,6 @@ pub enum Services {
     CryptManagement(CryptManagementRequestStream),
 }
 
-const WRAP_XOR: u64 = 0x012345678abcdef;
-
 #[derive(Default)]
 struct CryptServiceInner {
     ciphers: HashMap<u64, Aes256GcmSiv>,
@@ -41,9 +38,6 @@ struct CryptServiceInner {
 }
 
 pub struct CryptService {
-    // When set, a fake (and insecure) crypto algorithm is used, which ignores the keys provided by
-    // CryptManagement and instead uses a hard-coded "key".
-    use_legacy_stubbed_crypto: bool,
     inner: Mutex<CryptServiceInner>,
 }
 
@@ -54,14 +48,11 @@ fn zero_extended_nonce(val: u64) -> Nonce {
 }
 
 impl CryptService {
-    pub fn new(use_legacy_stubbed_crypto: bool) -> Self {
-        Self { use_legacy_stubbed_crypto, inner: Mutex::new(CryptServiceInner::default()) }
+    pub fn new() -> Self {
+        Self { inner: Mutex::new(CryptServiceInner::default()) }
     }
 
     fn create_key(&self, owner: u64, purpose: KeyPurpose) -> CryptCreateKeyResult {
-        if self.use_legacy_stubbed_crypto {
-            return self.create_key_legacy(owner);
-        }
         let inner = self.inner.lock().unwrap();
         let wrapping_key_id = match purpose {
             KeyPurpose::Data => inner.active_data_key.as_ref(),
@@ -83,45 +74,12 @@ impl CryptService {
         Ok((*wrapping_key_id, wrapped.into(), key.into()))
     }
 
-    fn create_key_legacy(&self, owner: u64) -> CryptCreateKeyResult {
-        let mut key = [0; 32];
-        zx::cprng_draw(&mut key);
-        let mut wrapped = [0; 32];
-        for (i, chunk) in key.chunks_exact(8).enumerate() {
-            LittleEndian::write_u64(
-                &mut wrapped[i * 8..i * 8 + 8],
-                LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner,
-            );
-        }
-        Ok((0, wrapped.into(), key.into()))
-    }
-
     fn unwrap_key(&self, wrapping_key_id: u64, owner: u64, key: Vec<u8>) -> CryptUnwrapKeyResult {
-        if self.use_legacy_stubbed_crypto {
-            return self.unwrap_key_legacy(wrapping_key_id, owner, key);
-        }
         let inner = self.inner.lock().unwrap();
         let cipher = inner.ciphers.get(&wrapping_key_id).ok_or(zx::Status::NOT_FOUND.into_raw())?;
         let nonce = zero_extended_nonce(owner);
 
         cipher.decrypt(&nonce, &key[..]).map_err(|_| zx::Status::IO_DATA_INTEGRITY.into_raw())
-    }
-
-    fn unwrap_key_legacy(
-        &self,
-        wrapping_key_id: u64,
-        owner: u64,
-        key: Vec<u8>,
-    ) -> CryptUnwrapKeyResult {
-        assert_eq!(wrapping_key_id, 0, "Key ID must be 0 for legacy keys.");
-        let mut unwrapped = vec![0; 32];
-        for (chunk, mut unwrapped) in key.chunks_exact(8).zip(unwrapped.chunks_exact_mut(8)) {
-            LittleEndian::write_u64(
-                &mut unwrapped,
-                LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner,
-            );
-        }
-        Ok(unwrapped)
     }
 
     fn add_wrapping_key(
@@ -245,33 +203,8 @@ mod tests {
     use {super::CryptService, fidl_fuchsia_fxfs::KeyPurpose};
 
     #[test]
-    fn wrap_unwrap_legacy_key() {
-        let service = CryptService::new(true);
-        let (wrapping_key_id, wrapped, unwrapped) =
-            service.create_key(0, KeyPurpose::Data).expect("create_key failed");
-        let unwrap_result =
-            service.unwrap_key(wrapping_key_id, 0, wrapped).expect("unwrap_key failed");
-        assert_eq!(unwrap_result, unwrapped);
-    }
-
-    #[test]
-    fn unwrap_legacy_key_wrong_key() {
-        let service = CryptService::new(true);
-        let (wrapping_key_id, mut wrapped, unwrapped) =
-            service.create_key(0, KeyPurpose::Data).expect("create_key failed");
-        for byte in &mut wrapped {
-            *byte ^= 0xff;
-        }
-        // The legacy algorithm has no authentication, so the call will succeed but return the wrong
-        // value.
-        let unwrap_result =
-            service.unwrap_key(wrapping_key_id, 0, wrapped).expect("unwrap_key failed");
-        assert_ne!(unwrap_result, unwrapped);
-    }
-
-    #[test]
     fn wrap_unwrap_key() {
-        let service = CryptService::new(false);
+        let service = CryptService::new();
         let key = vec![0xABu8; 32];
         service.add_wrapping_key(1, key.clone()).expect("add_key failed");
         service.set_active_key(KeyPurpose::Data, 1).expect("set_active_key failed");
@@ -294,7 +227,7 @@ mod tests {
 
     #[test]
     fn unwrap_key_wrong_key() {
-        let service = CryptService::new(false);
+        let service = CryptService::new();
         let key = vec![0xABu8; 32];
         service.add_wrapping_key(0, key.clone()).expect("add_key failed");
         service.set_active_key(KeyPurpose::Data, 0).expect("set_active_key failed");
@@ -309,7 +242,7 @@ mod tests {
 
     #[test]
     fn unwrap_key_wrong_owner() {
-        let service = CryptService::new(false);
+        let service = CryptService::new();
         let key = vec![0xABu8; 32];
         service.add_wrapping_key(0, key.clone()).expect("add_key failed");
         service.set_active_key(KeyPurpose::Data, 0).expect("set_active_key failed");
@@ -321,7 +254,7 @@ mod tests {
 
     #[test]
     fn add_forget_key() {
-        let service = CryptService::new(true);
+        let service = CryptService::new();
         let key = vec![0xABu8; 32];
         service.add_wrapping_key(0, key.clone()).expect("add_key failed");
         service.add_wrapping_key(0, key.clone()).expect_err("add_key should fail on a used slot");
@@ -334,7 +267,7 @@ mod tests {
 
     #[test]
     fn set_active_key() {
-        let service = CryptService::new(true);
+        let service = CryptService::new();
         let key = vec![0xABu8; 32];
 
         service
