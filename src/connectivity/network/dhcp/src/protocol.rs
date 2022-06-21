@@ -611,13 +611,13 @@ struct AddressBuffer<'a> {
     buffer: &'a [u8],
 }
 
-impl<'a> TryInto<Vec<Ipv4Addr>> for AddressBuffer<'a> {
+impl<'a> TryFrom<AddressBuffer<'a>> for Vec<Ipv4Addr> {
     type Error = ProtocolError;
 
-    fn try_into(self) -> Result<Vec<Ipv4Addr>, Self::Error> {
-        self.buffer.chunks_exact(4).try_fold(Vec::new(), |mut addrs, chunk| {
+    fn try_from(ab: AddressBuffer<'a>) -> Result<Vec<Ipv4Addr>, Self::Error> {
+        ab.buffer.chunks_exact(4).try_fold(Vec::new(), |mut addrs, chunk| {
             let bytes = <[u8; 4]>::try_from(chunk)
-                .map_err(|_infallible| ProtocolError::InvalidBufferLength(self.buffer.len()))?;
+                .map_err(|_infallible| ProtocolError::InvalidBufferLength(ab.buffer.len()))?;
             addrs.push(Ipv4Addr::from(bytes));
             Ok(addrs)
         })
@@ -1950,15 +1950,14 @@ fn parse_options<T: Extend<DhcpOption>>(
                     })?;
                 buf = rest;
                 let opt_len = opt_len as usize;
-                let (val, rest) = if buf.len() < opt_len {
+                if buf.len() < opt_len {
                     return Err(ProtocolError::MalformedOption {
                         code: *raw_opt_code,
                         remaining: buf.len(),
                         want: opt_len,
                     });
-                } else {
-                    buf.split_at(opt_len)
                 };
+                let (val, rest) = buf.split_at(opt_len);
                 buf = rest;
 
                 // Ignore unknown option codes, hinted at in RFC 2131 section 3.5:
