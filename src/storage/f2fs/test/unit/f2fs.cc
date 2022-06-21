@@ -223,5 +223,48 @@ TEST(F2fsTest, FsBlock) {
   ASSERT_EQ(memcmp(data_block.GetData().data(), data, kBlockSize), 0);
 }
 
+TEST(F2fsTest, GetFilesystemInfo) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
+
+  std::unique_ptr<F2fs> fs;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
+
+  auto &sb_info = fs->GetSuperblockInfo();
+  auto info_or = fs->GetFilesystemInfo();
+  ASSERT_TRUE(info_or.is_ok());
+  auto info = info_or.value();
+
+  ASSERT_EQ(info.block_size, kBlockSize);
+  ASSERT_EQ(info.max_filename_size, kMaxNameLen);
+  ASSERT_EQ(info.fs_type, VFS_TYPE_F2FS);
+  ASSERT_EQ(info.total_bytes, sb_info.GetUserBlockCount() * kBlockSize);
+  ASSERT_EQ(info.used_bytes, sb_info.GetTotalValidBlockCount() * kBlockSize);
+  ASSERT_EQ(info.total_nodes, sb_info.GetTotalNodeCount());
+  ASSERT_EQ(info.used_nodes, sb_info.GetTotalValidInodeCount());
+  ASSERT_EQ(info.name, "f2fs");
+
+  // Check type conversion
+  block_t tmp_user_block_count = sb_info.GetUserBlockCount();
+  block_t tmp_valid_block_count = sb_info.GetUserBlockCount();
+
+  constexpr uint64_t LARGE_BLOCK_COUNT = 26214400;  // 100GB
+
+  sb_info.SetUserBlockCount(LARGE_BLOCK_COUNT);
+  sb_info.SetTotalValidBlockCount(LARGE_BLOCK_COUNT);
+
+  info_or = fs->GetFilesystemInfo();
+  ASSERT_TRUE(info_or.is_ok());
+  info = info_or.value();
+
+  ASSERT_EQ(info.total_bytes, LARGE_BLOCK_COUNT * kBlockSize);
+  ASSERT_EQ(info.used_bytes, LARGE_BLOCK_COUNT * kBlockSize);
+
+  sb_info.SetUserBlockCount(tmp_user_block_count);
+  sb_info.SetTotalValidBlockCount(tmp_valid_block_count);
+  FileTester::Unmount(std::move(fs), &bc);
+}
+
 }  // namespace
 }  // namespace f2fs

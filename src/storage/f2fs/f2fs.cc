@@ -271,8 +271,9 @@ zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
   info.block_size = kBlockSize;
   info.max_filename_size = kMaxNameLen;
   info.fs_type = VFS_TYPE_F2FS;
-  info.total_bytes = superblock_info_->GetUserBlockCount() * kBlockSize;
-  info.used_bytes = ValidUserBlocks() * kBlockSize;
+  info.total_bytes =
+      safemath::CheckMul<uint64_t>(superblock_info_->GetUserBlockCount(), kBlockSize).ValueOrDie();
+  info.used_bytes = safemath::CheckMul<uint64_t>(ValidUserBlocks(), kBlockSize).ValueOrDie();
   info.total_nodes = superblock_info_->GetTotalNodeCount();
   info.used_nodes = superblock_info_->GetTotalValidInodeCount();
   info.SetFsId(fs_id_);
