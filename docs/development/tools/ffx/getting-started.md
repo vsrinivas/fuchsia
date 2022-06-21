@@ -299,17 +299,6 @@ be streamed to the corresponding descriptor on the host terminal.
 Note: `fx serve` must be running in order to run a package that is not
 [in base or cached](/docs/development/build/build_system/boards_and_products.md#dependency_sets).
 
-Here's an example of running the Dart hello-world component. First, you'll need
-the hello-world package in your universe:
-
-```none
-$ fx set <product>.<board> --with //examples/hello_world && fx build
-...
-$ fx ffx component run-legacy fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-dart.cmx
-Hello, world!
-```
-
-
 ## Resolving connectivity issues
 
 If you're experiencing problems communicating with a target device using `ffx`,

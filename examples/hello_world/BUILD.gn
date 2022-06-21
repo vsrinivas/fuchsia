@@ -16,7 +16,6 @@ group("tests") {
   testonly = true
   deps = [
     "cpp:tests",
-    "dart:tests",
     "rust:tests",
   ]
 }
@@ -25,9 +24,6 @@ fuchsia_package("hello-world") {
   deps = [
     # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-cpp.cm
     "cpp:hello-world-cpp-component",
-
-    # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-dart.cmx
-    "dart:hello-world-dart-component",
 
     # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
     "rust:hello-world-rust-component",
