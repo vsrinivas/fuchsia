@@ -5,7 +5,6 @@
 #![cfg(test)]
 use {
     assert_matches::assert_matches,
-    fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::Proxy,
     fidl_fuchsia_io,
     fidl_fuchsia_paver::Configuration,
@@ -17,11 +16,8 @@ use {
     fidl_fuchsia_update_installer_ext::{self as installer},
     fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs,
-    fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, EventPair, HandleBased, Peered, ProcessInfo},
+    fuchsia_zircon::{self as zx, EventPair, HandleBased, Peered},
     futures::{channel::mpsc, lock::Mutex as AsyncMutex, prelude::*},
-    libc::{STDERR_FILENO, STDOUT_FILENO},
     mock_installer::{
         CapturedRebootControllerRequest, CapturedUpdateInstallerRequest, MockUpdateInstallerService,
     },
@@ -29,12 +25,7 @@ use {
     mock_reboot::{MockRebootService, RebootReason},
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
-    std::{
-        convert::TryInto as _,
-        ffi::{CStr, CString},
-        sync::Arc,
-        time::Duration,
-    },
+    std::{sync::Arc, time::Duration},
 };
 
 const BINARY_PATH: &str = "/pkg/bin/update";
@@ -161,21 +152,6 @@ impl TestEnvBuilder {
     }
 }
 
-struct ProcessOutput {
-    return_code: i64,
-    stderr: Vec<u8>,
-    stdout: Vec<u8>,
-}
-
-impl ProcessOutput {
-    fn exit_status_ok(&self) -> bool {
-        self.return_code == 0
-    }
-    fn exit_status_code(&self) -> i64 {
-        self.return_code
-    }
-}
-
 struct TestEnv {
     update_manager: Arc<MockUpdateManagerService>,
     update_installer: Arc<MockUpdateInstallerService>,
@@ -189,97 +165,6 @@ impl TestEnv {
 
     fn new() -> Self {
         Self::builder().build()
-    }
-
-    async fn run_update_async_output<'a>(
-        &'a mut self,
-        args: Vec<&'a str>,
-    ) -> (fasync::Task<Result<i64, anyhow::Error>>, fasync::Socket, fasync::Socket) {
-        let (stdout_reader, stdout_writer) =
-            zx::Socket::create(zx::SocketOpts::STREAM).expect("create stdout socket");
-        let (stderr_reader, stderr_writer) =
-            zx::Socket::create(zx::SocketOpts::STREAM).expect("create stderr socket");
-        // The reader-ends should not write.
-        let () = stdout_writer.half_close().expect("stdout_reader.half_close");
-        let () = stdout_writer.half_close().expect("stderr_reader.half_close");
-
-        let mut spawn_actions = vec![];
-
-        let path = CString::new(BINARY_PATH).expect("cstring path");
-        let path = path.as_c_str();
-
-        let args: Vec<CString> = std::iter::once(BINARY_PATH)
-            .chain(args.into_iter())
-            .map(|a| {
-                CString::new(a)
-                    .unwrap_or_else(|e| panic!("failed to parse {} to CString: {}", a, e))
-            })
-            .collect();
-        let args: Vec<&CStr> = args.iter().map(|s| s.as_c_str()).collect();
-
-        let (svc_client_end, svc_server_end) = fidl::endpoints::create_endpoints().unwrap();
-        fuchsia_fs::directory::clone_onto_no_describe(&self.svc_proxy, None, svc_server_end)
-            .unwrap();
-        let svc_client_channel = svc_client_end.into_channel();
-
-        let svc_c_str = CString::new("/svc").unwrap();
-        spawn_actions.push(fdio::SpawnAction::add_namespace_entry(
-            &svc_c_str,
-            svc_client_channel.into_handle(),
-        ));
-
-        spawn_actions.push(SpawnAction::add_handle(
-            HandleInfo::new(
-                HandleType::FileDescriptor,
-                STDOUT_FILENO.try_into().expect("STDOUT_FILENO.try_into"),
-            ),
-            stdout_writer.into(),
-        ));
-        spawn_actions.push(SpawnAction::add_handle(
-            HandleInfo::new(
-                HandleType::FileDescriptor,
-                STDERR_FILENO.try_into().expect("STDERR_FILENO.try_into"),
-            ),
-            stderr_writer.into(),
-        ));
-
-        let process = fdio::spawn_etc(
-            &job_default(),
-            SpawnOptions::DEFAULT_LOADER,
-            path,
-            &args[..],
-            None,
-            &mut spawn_actions,
-        )
-        .expect("spawn process");
-
-        let spawned = fasync::Task::spawn(async move {
-            assert_eq!(
-                fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
-                    .await
-                    .expect("wait for process termination"),
-                zx::Signals::PROCESS_TERMINATED
-            );
-            let ProcessInfo { return_code, start_time: _, flags: _ } =
-                process.info().expect("process info");
-            Ok(return_code)
-        });
-        (
-            spawned,
-            fasync::Socket::from_socket(stdout_reader).unwrap(),
-            fasync::Socket::from_socket(stderr_reader).unwrap(),
-        )
-    }
-
-    async fn run_update<'a>(&'a mut self, args: Vec<&'a str>) -> ProcessOutput {
-        let (update, stdout_reader, stderr_reader) = self.run_update_async_output(args).await;
-
-        let drain = |pipe: fasync::Socket| pipe.into_datagram_stream().try_concat().err_into();
-
-        future::try_join3(update, drain(stdout_reader), drain(stderr_reader))
-            .map_ok(|(return_code, stdout, stderr)| ProcessOutput { return_code, stdout, stderr })
-            .await
-            .unwrap()
     }
 
     fn assert_update_manager_called_with(&self, expected_args: Vec<CapturedUpdateManagerRequest>) {
@@ -373,14 +258,14 @@ impl MockUpdateManagerService {
 }
 
 fn assert_output(
-    output: &ProcessOutput,
+    output: &shell_process::ProcessOutput,
     expected_stdout: &str,
     expected_stderr: &str,
     exit_code: i64,
 ) {
-    let actual_stderr = std::str::from_utf8(&output.stderr).unwrap();
-    let actual_stdout = std::str::from_utf8(&output.stdout).unwrap();
-    assert_eq!(output.exit_status_code(), exit_code);
+    let actual_stderr = output.stderr_str();
+    let actual_stdout = output.stdout_str();
+    assert_eq!(output.return_code(), exit_code);
     assert_eq!(actual_stderr, expected_stderr);
     assert_eq!(actual_stdout, expected_stdout);
 }
@@ -402,13 +287,17 @@ fn assert_async_output_not_ready(socket: &mut fasync::Socket) {
 
 #[fasync::run_singlethreaded(test)]
 async fn force_install_fails_on_invalid_pkg_url() {
-    let mut env = TestEnv::new();
-    let output =
-        env.run_update(vec!["force-install", "not-fuchsia-pkg://fuchsia.com/update"]).await;
+    let env = TestEnv::new();
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "not-fuchsia-pkg://fuchsia.com/update"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
-    assert!(!output.exit_status_ok());
+    assert!(!output.is_ok());
 
-    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    let stderr = output.stderr_str();
     assert!(stderr.contains("Error: parsing update package url"), "stderr: {}", stderr);
 
     env.assert_update_installer_called_with(vec![]);
@@ -419,7 +308,7 @@ async fn force_install_fails_on_invalid_pkg_url() {
 #[fasync::run_singlethreaded(test)]
 async fn force_install_reboot() {
     let update_info = installer::UpdateInfo::builder().download_size(1000).build();
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .installer_states(vec![
             installer::State::Prepare,
             installer::State::Fetch(
@@ -441,7 +330,12 @@ async fn force_install_reboot() {
         ])
         .build();
 
-    let output = env.run_update(vec!["force-install", "fuchsia-pkg://fuchsia.com/update"]).await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "fuchsia-pkg://fuchsia.com/update"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
        &output,
@@ -471,7 +365,7 @@ async fn force_install_reboot() {
 #[fasync::run_singlethreaded(test)]
 async fn force_install_no_reboot() {
     let update_info = installer::UpdateInfo::builder().download_size(1000).build();
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .installer_states(vec![
             installer::State::Prepare,
             installer::State::Fetch(
@@ -492,9 +386,12 @@ async fn force_install_no_reboot() {
             installer::State::DeferReboot(installer::UpdateInfoAndProgress::done(update_info)),
         ])
         .build();
-    let output = env
-        .run_update(vec!["force-install", "fuchsia-pkg://fuchsia.com/update", "--reboot", "false"])
-        .await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "fuchsia-pkg://fuchsia.com/update", "--reboot", "false"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -524,13 +421,18 @@ async fn force_install_no_reboot() {
 
 #[fasync::run_singlethreaded(test)]
 async fn force_install_failure_state() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .installer_states(vec![
             installer::State::Prepare,
             installer::State::FailPrepare(installer::PrepareFailureReason::Internal),
         ])
         .build();
-    let output = env.run_update(vec!["force-install", "fuchsia-pkg://fuchsia.com/update"]).await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "fuchsia-pkg://fuchsia.com/update"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -557,8 +459,13 @@ async fn force_install_failure_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn force_install_unexpected_end() {
-    let mut env = TestEnv::builder().installer_states(vec![installer::State::Prepare]).build();
-    let output = env.run_update(vec!["force-install", "fuchsia-pkg://fuchsia.com/update"]).await;
+    let env = TestEnv::builder().installer_states(vec![installer::State::Prepare]).build();
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "fuchsia-pkg://fuchsia.com/update"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -584,14 +491,13 @@ async fn force_install_unexpected_end() {
 
 #[fasync::run_singlethreaded(test)]
 async fn force_install_service_initiated_flag() {
-    let mut env = TestEnv::new();
-    let _output = env
-        .run_update(vec![
-            "force-install",
-            "fuchsia-pkg://fuchsia.com/update",
-            "--service-initiated",
-        ])
-        .await;
+    let env = TestEnv::new();
+    let _output = shell_process::run_process(
+        BINARY_PATH,
+        ["force-install", "fuchsia-pkg://fuchsia.com/update", "--service-initiated"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     env.assert_update_installer_called_with(vec![CapturedUpdateInstallerRequest::StartUpdate {
         url: "fuchsia-pkg://fuchsia.com/update".into(),
@@ -607,8 +513,13 @@ async fn force_install_service_initiated_flag() {
 
 #[fasync::run_singlethreaded(test)]
 async fn check_now_service_initiated_flag() {
-    let mut env = TestEnv::new();
-    let output = env.run_update(vec!["check-now", "--service-initiated"]).await;
+    let env = TestEnv::new();
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["check-now", "--service-initiated"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(&output, "Checking for an update.\n", "", 0);
     env.assert_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
@@ -623,10 +534,11 @@ async fn check_now_service_initiated_flag() {
 
 #[fasync::run_singlethreaded(test)]
 async fn check_now_error_if_throttled() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
     *env.update_manager.check_now_response.lock() =
         Err(fidl_update::CheckNotStartedReason::Throttled);
-    let output = env.run_update(vec!["check-now"]).await;
+    let output =
+        shell_process::run_process(BINARY_PATH, ["check-now"], [("/svc", &env.svc_proxy)]).await;
 
     assert_output(&output, "", "Error: Update check failed to start: Throttled\n", 1);
     env.assert_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
@@ -641,7 +553,7 @@ async fn check_now_error_if_throttled() {
 
 #[fasync::run_singlethreaded(test)]
 async fn check_now_monitor_flag() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .manager_states(vec![
             State::CheckingForUpdates,
             State::InstallingUpdate(InstallingData {
@@ -655,7 +567,12 @@ async fn check_now_monitor_flag() {
             }),
         ])
         .build();
-    let output = env.run_update(vec!["check-now", "--monitor"]).await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["check-now", "--monitor"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -677,10 +594,15 @@ async fn check_now_monitor_flag() {
 
 #[fasync::run_singlethreaded(test)]
 async fn check_now_monitor_error_checking() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .manager_states(vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate])
         .build();
-    let output = env.run_update(vec!["check-now", "--monitor"]).await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["check-now", "--monitor"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -701,7 +623,7 @@ async fn check_now_monitor_error_checking() {
 
 #[fasync::run_singlethreaded(test)]
 async fn check_now_monitor_error_installing() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .manager_states(vec![
             State::CheckingForUpdates,
             State::InstallingUpdate(InstallingData {
@@ -724,7 +646,12 @@ async fn check_now_monitor_error_installing() {
             }),
         ])
         .build();
-    let output = env.run_update(vec!["check-now", "--monitor"]).await;
+    let output = shell_process::run_process(
+        BINARY_PATH,
+        ["check-now", "--monitor"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_output(
         &output,
@@ -747,9 +674,13 @@ async fn check_now_monitor_error_installing() {
 #[fasync::run_singlethreaded(test)]
 async fn monitor_all_update_checks() {
     let (mut sender, receiver) = mpsc::channel(0);
-    let mut env = TestEnv::builder().manager_states_receiver(receiver).build();
-    let (update, mut stdout, mut stderr) =
-        env.run_update_async_output(vec!["monitor-updates"]).await;
+    let env = TestEnv::builder().manager_states_receiver(receiver).build();
+    let (update, mut stdout, mut stderr) = shell_process::run_process_async(
+        BINARY_PATH,
+        ["monitor-updates"],
+        [("/svc", &env.svc_proxy)],
+    )
+    .await;
 
     assert_async_output_not_ready(&mut stdout);
     assert_async_output_not_ready(&mut stderr);
@@ -807,17 +738,19 @@ async fn monitor_all_update_checks() {
     assert_async_output_not_ready(&mut stderr);
 
     drop(sender);
-    assert_eq!(update.await.unwrap(), 0); // exit status OK.
+    assert_eq!(update.await, 0); // exit status OK.
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn wait_for_commit_success() {
     let (p0, p1) = EventPair::create().unwrap();
-    let mut env = TestEnv::builder().commit_status_provider_response(p1).build();
+    let env = TestEnv::builder().commit_status_provider_response(p1).build();
 
     let () = p0.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
 
-    let output = env.run_update(vec!["wait-for-commit"]).await;
+    let output =
+        shell_process::run_process(BINARY_PATH, ["wait-for-commit"], [("/svc", &env.svc_proxy)])
+            .await;
 
     assert_output(
         &output,
@@ -836,7 +769,7 @@ async fn revert_success() {
         Reboot(RebootReason),
     }
     let interactions = Arc::new(Mutex::new(vec![]));
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .paver_service({
             let interactions = Arc::clone(&interactions);
             MockPaverServiceBuilder::new()
@@ -854,7 +787,8 @@ async fn revert_success() {
         })
         .build();
 
-    let output = env.run_update(vec!["revert"]).await;
+    let output =
+        shell_process::run_process(BINARY_PATH, ["revert"], [("/svc", &env.svc_proxy)]).await;
 
     assert_output(&output, "Reverting the update.\n", "", 0);
     assert_eq!(
