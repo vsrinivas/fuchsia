@@ -82,7 +82,6 @@ impl hash::Hash for Color {
 }
 
 impl Color {
-    #[cfg(test)]
     pub const fn to_array(self) -> [f32; 4] {
         [self.r, self.g, self.b, self.a]
     }
@@ -231,6 +230,18 @@ impl hash::Hash for Gradient {
 }
 
 impl Gradient {
+    pub fn r#type(&self) -> GradientType {
+        self.r#type
+    }
+
+    pub fn start(&self) -> Point {
+        self.start
+    }
+
+    pub fn end(&self) -> Point {
+        self.end
+    }
+
     #[inline]
     pub fn colors_with_stops(&self) -> &[(Color, f32)] {
         &self.stops

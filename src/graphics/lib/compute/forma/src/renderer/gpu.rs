@@ -7,7 +7,7 @@ use std::mem;
 use renderer::{Renderer, Timings, TILE_HEIGHT, TILE_WIDTH};
 use rustc_hash::FxHashMap;
 use surpass::{
-    painter::{Color, Fill, Func, Style},
+    painter::{Color, Fill, Func, GradientType, Props},
     rasterizer::Rasterizer,
     Order,
 };
@@ -16,13 +16,98 @@ use crate::{Composition, Layer};
 
 #[derive(Debug, Default)]
 pub struct StyleMap {
-    style_indices: Vec<u32>,
-    styles: Vec<renderer::Style>,
+    // Position of the style in the u32 buffer, by order value.
+    style_offsets: Vec<u32>,
+    styles: Vec<u32>,
+}
+
+#[derive(Default)]
+struct PropHeader {
+    func: u32,
+    is_clipped: u32,
+    fill_rule: u32,
+    fill_type: u32,
+    blend_mode: u32,
+    gradient_stop_count: u32,
+}
+
+impl PropHeader {
+    fn to_bits(&self) -> u32 {
+        fn prepend<const B: u32>(current: u32, value: u32) -> u32 {
+            #[cfg(test)]
+            {
+                assert!((value >> B) == 0, "Unable to store {} with {} bits", value, B);
+                assert!(
+                    (current >> u32::BITS - B) == 0,
+                    "Prepending {} bit would drop the mos significan bits of {}",
+                    B,
+                    value
+                );
+            }
+            (current << B) + value
+        }
+        let header = 0;
+        let header = prepend::<1>(header, self.func);
+        let header = prepend::<1>(header, self.is_clipped);
+        let header = prepend::<1>(header, self.fill_rule);
+        let header = prepend::<2>(header, self.fill_type);
+        let header = prepend::<4>(header, self.blend_mode);
+        let header = prepend::<16>(header, self.gradient_stop_count);
+        header
+    }
 }
 
 impl StyleMap {
+    fn push(&mut self, props: &Props) {
+        let style = match &props.func {
+            Func::Clip(order) => {
+                self.styles.push(
+                    PropHeader { func: 1, fill_rule: props.fill_rule as u32, ..Default::default() }
+                        .to_bits(),
+                );
+                self.styles.push(*order as u32);
+                return;
+            }
+            Func::Draw(style) => style,
+        };
+        self.styles.push(
+            PropHeader {
+                func: 0,
+                fill_rule: props.fill_rule as u32,
+                is_clipped: style.is_clipped as u32,
+                fill_type: match &style.fill {
+                    Fill::Solid(_) => 0,
+                    Fill::Gradient(gradient) => match gradient.r#type() {
+                        GradientType::Linear => 1,
+                        GradientType::Radial => 2,
+                    },
+                    Fill::Texture(_) => 3,
+                },
+                blend_mode: style.blend_mode as u32,
+                gradient_stop_count: match &style.fill {
+                    Fill::Gradient(gradient) => gradient.colors_with_stops().len() as u32,
+                    _ => 0,
+                },
+            }
+            .to_bits(),
+        );
+
+        match &style.fill {
+            Fill::Solid(color) => self.styles.extend(color.to_array().map(f32::to_bits)),
+            Fill::Gradient(gradient) => {
+                self.styles.extend(gradient.start().to_array().map(f32::to_bits));
+                self.styles.extend(gradient.end().to_array().map(f32::to_bits));
+                gradient.colors_with_stops().iter().for_each(|(color, stop)| {
+                    self.styles.extend(color.to_array().map(f32::to_bits));
+                    self.styles.push(stop.to_bits());
+                });
+            }
+            _ => {}
+        }
+    }
+
     pub fn populate(&mut self, layers: &FxHashMap<Order, Layer>) {
-        self.style_indices.clear();
+        self.style_offsets.clear();
         self.styles.clear();
 
         let mut props_set = FxHashMap::default();
@@ -31,45 +116,25 @@ impl StyleMap {
             let order = order.as_u32();
             let props = layer.props();
 
-            if self.style_indices.len() <= order as usize {
-                self.style_indices.resize(order as usize + 1, 0);
+            if self.style_offsets.len() <= order as usize {
+                self.style_offsets.resize(order as usize + 1, 0);
             }
 
-            let styles = &mut self.styles;
-            let index = *props_set.entry(props).or_insert_with(|| {
-                let index = styles.len() as u32;
-
-                styles.push(renderer::Style {
-                    fill_rule: props.fill_rule as u32,
-                    color: match props.func {
-                        Func::Draw(Style { fill: Fill::Solid(color), .. }) => {
-                            renderer::Color { r: color.r, g: color.g, b: color.b, a: color.a }
-                        }
-                        Func::Draw(Style { fill: Fill::Gradient(ref gradient), .. }) => {
-                            let color = gradient.colors_with_stops()[0].0;
-                            renderer::Color { r: color.r, g: color.g, b: color.b, a: color.a }
-                        }
-                        Func::Clip(_) => renderer::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
-                        _ => renderer::Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-                    },
-                    blend_mode: match props.func {
-                        Func::Draw(Style { blend_mode, .. }) => blend_mode as u32,
-                        _ => 0,
-                    },
-                });
-
-                index
+            let offset = *props_set.entry(props).or_insert_with(|| {
+                let offset = self.styles.len() as u32;
+                self.push(props);
+                offset
             });
 
-            self.style_indices[order as usize] = index;
+            self.style_offsets[order as usize] = offset;
         }
     }
 
-    pub fn style_indices(&self) -> &[u32] {
-        &self.style_indices
+    pub fn style_offsets(&self) -> &[u32] {
+        &self.style_offsets
     }
 
-    pub fn styles(&self) -> &[renderer::Style] {
+    pub fn styles(&self) -> &[u32] {
         &self.styles
     }
 }
@@ -139,7 +204,7 @@ impl GpuRenderer {
                 width,
                 height,
                 unsafe { mem::transmute(rasterizer.segments()) },
-                self.style_map.style_indices(),
+                self.style_map.style_offsets(),
                 self.style_map.styles(),
                 renderer::Color {
                     r: clear_color.r,

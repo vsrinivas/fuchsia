@@ -34,6 +34,10 @@ impl Point {
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
+
+    pub fn to_array(self) -> [f32; 2] {
+        [self.x, self.y]
+    }
 }
 
 #[allow(clippy::many_single_char_names)]
