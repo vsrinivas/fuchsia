@@ -113,6 +113,7 @@ enum class Microarchitecture {
   // A 10nm prototype only ever released on the Intel Core i3-8121U.
   kIntelCannonLake,
   kIntelTigerLake,
+  kIntelIceLake,
 
   // Intel Atom family.
   kIntelBonnell,

@@ -564,6 +564,22 @@ static void hsw_reboot_reason(uint64_t reason) {
 }
 
 // Intel microarches
+static const x86_microarch_config_t icelake_config{
+    .x86_microarch = X86_MICROARCH_INTEL_ICELAKE,
+
+    .get_apic_freq = skl_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
+    .disable_c1e = true,
+    .idle_prefer_hlt = false,
+    .idle_states =
+        {
+            .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
+        },
+};
+
 static const x86_microarch_config_t tiger_lake_config{
     .x86_microarch = X86_MICROARCH_INTEL_TIGERLAKE,
     .get_apic_freq = skl_apic_freq,
@@ -910,6 +926,8 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
         return &skylake_x_config;
       case 0x66: /* Cannon Lake U */
         return &cannon_lake_config;
+      case 0x6a: /* Ice Lake-SP */
+        return &icelake_config;
       case 0x8c: /* Tiger Lake UP */
       case 0x8d: /* Tiger Lake H */
         return &tiger_lake_config;

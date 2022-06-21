@@ -93,6 +93,8 @@ std::string_view ToString(Microarchitecture microarch) {
       return "Intel Skylake (server)";
     case Microarchitecture::kIntelCannonLake:
       return "Intel Cannon Lake";
+    case Microarchitecture::kIntelIceLake:
+      return "Intel Ice Lake";
     case Microarchitecture::kIntelTigerLake:
       return "Intel Tiger Lake";
     case Microarchitecture::kIntelBonnell:
@@ -184,6 +186,8 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
               return Microarchitecture::kIntelSkylakeServer;
             case 0x66:  // U.
               return Microarchitecture::kIntelCannonLake;
+            case 0x6a:
+              return Microarchitecture::kIntelIceLake;
             case 0x8c:  // Tiger Lake UP.
             case 0x8d:  // Tiger Lake H.
               return Microarchitecture::kIntelTigerLake;
