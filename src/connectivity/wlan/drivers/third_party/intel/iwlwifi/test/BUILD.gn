@@ -19,6 +19,7 @@ source_set("sim_library") {
     "sim-time-event.cc",
     "sim-trans.cc",
     "single-ap-test.cc",
+    "tkip-test.cc",
     "tlv-fw-builder.cc",
     "tlv-fw-builder.h",
     "wlan-pkt-builder.cc",

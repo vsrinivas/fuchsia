@@ -23,6 +23,7 @@ source_set("platform") {
     "task-internal.cc",
     "task.cc",
     "time.cc",
+    "tkip.c",
   ]
   public = [
     "compiler.h",
@@ -40,6 +41,7 @@ source_set("platform") {
     "task-internal.h",
     "task.h",
     "time.h",
+    "tkip.h",
   ]
   deps = [
     ":driver_inspector",
