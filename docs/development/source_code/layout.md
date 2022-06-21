@@ -158,13 +158,13 @@ tests that live in this directory.
 ### Dependency Structure
 
 In addition to depending on itself, an area can depend only on the top-level
-`build`, `sdk`, and `third_party` directories, as well as the `lib` directories
-of its ancestors:
+`build`, `sdk`, and `third_party` directories, as well as the `lib` directory
+from anywhere in the tree:
 
  * `//build`
  * `//sdk`
  * `//third_party`
- * `(../)+lib/`
+ * `//src/**/lib/`
 
 Targets in an area that are marked testonly in the build system may
 additionally depend on the `testing` directory in that area and ancestors:
