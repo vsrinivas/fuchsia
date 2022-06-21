@@ -32,6 +32,7 @@ product_bootfs_labels += [
   "//products/kernel_cmdline:kernel.oom.behavior--jobkill",
   "//products/kernel_cmdline:netsvc.all-features--true",
   "//products/kernel_cmdline:netsvc.disable--false",
+  "//products/kernel_cmdline:oom.reboot-timeout--low",
 ]
 
 # TODO(fxbug.dev/56988): We shouldn't need runtests, but right now it's used by profile

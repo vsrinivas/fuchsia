@@ -13,6 +13,11 @@ product_system_image_deps += [
   "//src/graphics/lib/magma/tests:test-drivers",
 ]
 
+# core and above are larger products, make sure that we're not using the "low"
+# timeout
+product_bootfs_labels += [ "//products/kernel_cmdline:oom.reboot-timeout--low" ]
+product_bootfs_labels -= [ "//products/kernel_cmdline:oom.reboot-timeout--low" ]
+
 core_realm_package_name = "core"
 core_realm_shards += [
   "//src/developer/remote-control:laboratory-core-shard",

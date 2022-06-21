@@ -194,9 +194,9 @@ system. The length of the wait period is set by the
 `kernel.oom.reboot-timeout-ms` boot option.
 )""")
 
-DEFINE_OPTION("kernel.oom.reboot-timeout-ms", uint32_t, oom_timeout_ms, {8000}, R"""(
+DEFINE_OPTION("kernel.oom.reboot-timeout-ms", uint32_t, oom_timeout_ms, {50000}, R"""(
 This option sets the amount of time the kernel will wait before rebooting the
-system when it encounters an out-of-memory (OOM) situations. This option is
+system when it encounters an out-of-memory (OOM) situation. This option is
 only relevant when `kernel.oom.behavior` is set to `reboot`.
 )""")
 

@@ -190,10 +190,10 @@ system. The length of the wait period is set by the
 `kernel.oom.reboot-timeout-ms` boot option.
 
 ### kernel.oom.reboot-timeout-ms=\<uint32_t>
-**Default:** `0x1f40`
+**Default:** `0xc350`
 
 This option sets the amount of time the kernel will wait before rebooting the
-system when it encounters an out-of-memory (OOM) situations. This option is
+system when it encounters an out-of-memory (OOM) situation. This option is
 only relevant when `kernel.oom.behavior` is set to `reboot`.
 
 ### kernel.mexec-force-high-ramdisk=\<bool>

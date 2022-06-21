@@ -14,7 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
-var cmdlineCommon = []string{"kernel.oom.behavior=reboot"}
+var cmdlineCommon = []string{"kernel.oom.behavior=reboot", "kernel.oom.reboot-timeout-ms=8000"}
 var initMessages []string = []string{
 	// Ensure the kernel OOM system was properly initialized.
 	"memory-pressure: memory availability state - Normal",
