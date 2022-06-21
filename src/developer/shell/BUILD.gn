@@ -58,7 +58,7 @@ distribution_entries_file("fidl_json") {
 
 fuchsia_test_component("josh-tests-component") {
   component_name = "josh_tests_bin"
-  manifest = "meta/josh_tests_bin.cmx"
+  manifest = "meta/josh_tests_bin.cml"
   deps = [ "//src/developer/shell/josh:josh_tests_bin" ]
 }
 
