@@ -283,7 +283,7 @@ notify = "5.0.0-pre.10"
 parking = "2"
 pem = "0.8.3"
 petgraph = "0.5.1"
-proc-macro2 = { version = "1.0.32", features = ["span-locations"] }
+proc-macro2 = { version = "1.0.39", features = ["span-locations"] }
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.10"
@@ -514,7 +514,7 @@ rustflags = []
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
-[gn.package.proc-macro2."1.0.36"]
+[gn.package.proc-macro2."1.0.39"]
 rustflags = ["--cfg=span_locations", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 [gn.package.rand."0.6.5"]
