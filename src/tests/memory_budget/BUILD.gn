@@ -33,6 +33,13 @@ if (is_linux) {
     sources = [ "$root_build_dir/fvm.blk" ]
   }
 
+  host_test_data("vm_config") {
+    visibility = [ ":*" ]
+
+    sources = [ "test_data/vm_config.json" ]
+    outputs = [ "$root_out_dir/test_data/config/{{source_file_part}}" ]
+  }
+
   go_library("lib") {
     testonly = true
 
@@ -47,6 +54,7 @@ if (is_linux) {
     non_go_deps = [
       ":fvm.blk",
       ":host_fvm",
+      ":vm_config",
     ]
   }
 }

@@ -13,6 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
@@ -25,19 +26,27 @@ func TestBoot(t *testing.T) {
 	exDir := execDir(t)
 	testDataPath := filepath.Join(exDir, hostTestDataDir)
 	fvmBinary := filepath.Join(testDataPath, "tools", "fvm")
+	vmConfigPath := filepath.Join(testDataPath, "config", "vm_config.json")
 
 	distro := emulatortest.UnpackFrom(t, testDataPath, emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
 
+	vmConfig := struct {
+		RamSize  string `json:"ram_size"`
+		CpuCount uint32 `json:"cpu_count"`
+	}{}
+	if err := jsonutil.ReadFromFile(vmConfigPath, &vmConfig); err != nil {
+		t.Fatalf("Cannont read VM config %q: %v", vmConfigPath, err)
+	}
 	resized := distro.ResizeRawImage("storage-full", fvmBinary)
 	defer os.Remove(resized)
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
-	device.Hw.Ram = "768M"
-	device.Hw.CpuCount = 2
+	device.Hw.Ram = vmConfig.RamSize
+	device.Hw.CpuCount = vmConfig.CpuCount
 	device.Drive = &fvdpb.Drive{
 		Id:         "maindisk",
 		Image:      resized,
