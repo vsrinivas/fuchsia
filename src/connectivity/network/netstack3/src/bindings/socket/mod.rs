@@ -26,7 +26,7 @@ use crate::bindings::{
 };
 
 // Socket constants defined in FDIO in
-// `//sdk/lib/fdio/private-socket.h`
+// https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fdio/socket.cc
 // TODO(brunodalbo) Come back to this, see if we can have those definitions in a
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
