@@ -45,7 +45,7 @@ impl Registry {
     // Only used for unit tests
     #[cfg(test)]
     pub async fn get_decl_for_url(self: &Arc<Self>, url: &str) -> Option<cm_rust::ComponentDecl> {
-        let url = Url::parse(url).expect("failed to parse URL");
+        let url = Url::parse(url).expect("Failed to parse component URL.");
         let component = self.component_decls.lock().await.get(&url).cloned();
         component.map(|c| c.decl.fidl_into_native())
     }
@@ -66,7 +66,7 @@ impl Registry {
         let url = format!("{}://{}/{}", RESOLVER_SCHEME, *next_unique_component_id_guard, name);
         *next_unique_component_id_guard += 1;
         component_decls_guard.insert(
-            Url::parse(&url).expect("generated invalid URL"),
+            Url::parse(&url).expect("Generated invalid component URL."),
             ResolveableComponent { decl: decl.clone(), package_dir, config_value_replacements },
         );
         Ok(url)
@@ -75,8 +75,8 @@ impl Registry {
     pub fn run_resolver_service(self: &Arc<Self>, stream: fresolution::ResolverRequestStream) {
         let self_ref = self.clone();
         fasync::Task::local(async move {
-            if let Err(e) = self_ref.handle_resolver_request_stream(stream).await {
-                warn!("error encountered while running resolver service: {:?}", e);
+            if let Err(err) = self_ref.handle_resolver_request_stream(stream).await {
+                warn!(%err, "`Resolver` server unexpectedly failed.", );
             }
         })
         .detach();
@@ -97,13 +97,13 @@ impl Registry {
                     Ok(Some(data))
                 } else {
                     return Err(anyhow!(
-                        "Expected package directory for opening config values at {:?}, but none was provided",
+                        "Expected package directory for opening config values at {:?}, but none was provided.",
                         path
                     ));
                 }
             } else {
                 return Err(anyhow!(
-                    "Expected ConfigValueSource::PackagePath, got {:?}",
+                    "Expected ConfigValueSource::PackagePath, got {:?}.",
                     value_source
                 ));
             }
@@ -151,7 +151,7 @@ impl Registry {
                     context: _,
                     responder,
                 } => {
-                    warn!("The RealmBuilder resolver does not resolve relative path component URLs with a context");
+                    warn!("The RealmBuilder resolver does not resolve relative path component URLs with a context.");
                     responder.send(&mut Err(fresolution::ResolverError::InvalidArgs))?;
                 }
             }

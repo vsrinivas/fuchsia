@@ -163,56 +163,124 @@ type Capability = flexible union {
 
 /// A protocol capability
 type Protocol = table {
+    /// The name of the capability. This is usually the name of the FIDL
+    /// protocol, e.g. `fuchsia.logger.LogSink`. If path is not set, the
+    /// protocol will be installed in a target component's namespace at
+    // `/svc/{name}`.
     1: name fuchsia.component.name;
-    2: as fuchsia.component.name; // optional
-    3: type fuchsia.component.decl.DependencyType; // optional
-    4: path string:fuchsia.component.MAX_PATH_LENGTH; // optional
+
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name;
+
+    /// For information on this type, see
+    /// https://fuchsia.dev/go/components/declaration#DependencyType.
+    /// This field is optional and defaults to `STRONG`.
+    3: type fuchsia.component.decl.DependencyType;
+
+    /// Override the path in which the protocol is installed. Instead of
+    /// `/svc/{name}`, this value will be used. Path should begin with a
+    /// leading slash and omit a trailing slash, e.g.
+    /// `/foo/fuchsia.logger.LogSink`. This field is optional.
+    4: path string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
-/// A directory capability
+/// A directory capability.
 type Directory = table {
+    /// The name of the capability. This is not the path of the directory.
+    /// Instead it is a name used for routing.
     1: name fuchsia.component.name;
-    2: as fuchsia.component.name; // optional
-    3: type fuchsia.component.decl.DependencyType; // optional
-    4: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
 
-    // the following fields are required if `to` contains a local component
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name;
+
+    /// For information on this type, see
+    /// https://fuchsia.dev/go/components/declaration#DependencyType.
+    /// This field is optional and defaults to `STRONG`.
+    3: type fuchsia.component.decl.DependencyType;
+
+    /// The subdirectory of this directory to offer instead of the root. For
+    /// example, if you set `bar/baz` as the subdir of `foo`, then `bar/baz`
+    /// will be the root of the target's `foo`. This field is optional.
+    4: subdir string:fuchsia.component.MAX_PATH_LENGTH;
+
+    /// The maximum rights that can be set by a component using this directory.
+    /// This field is required if it is being routed to a local component,
+    /// otherwise, it is optional.
     5: rights fuchsia.io.Rights;
+
+    /// The path in which to install the directory. The path should have a
+    /// leading slash but no trailing slash, e.g. `/config/data`. This field
+    /// is required.
     6: path string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
 /// A storage capability
 type Storage = table {
+    /// The name of the capability. This is not the path of the directory.
+    /// Instead it is a name used for routing.
     1: name fuchsia.component.name;
-    2: as fuchsia.component.name; // optional
 
-    // required if `to` contains a local component
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name;
+
+    /// The path in which to install the directory. The path should have a
+    /// leading slash but no trailing slash, e.g. `/config/data`. This field
+    /// is required.
     3: path fuchsia.component.name;
 };
 
 /// A service capability
 type Service = table {
+    /// The name of the capability. This is usually the name of the FIDL
+    /// service, e.g. `fuchsia.echo.EchoService`. If path is not set, the
+    /// service will be installed in a target component's namespace at
+    // `/svc/{name}`.
     1: name fuchsia.component.name;
-    2: as fuchsia.component.name; // optional
 
-    // required if `to` contains a local component
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name;
+
+    /// Override the path in which the service is installed. Instead of
+    /// `/svc/{name}`, this value will be used. Path should begin with a
+    /// leading slash and omit a trailing slash, e.g.
+    /// `/foo/fuchsia.echo.EchoService`. This field is optional.
     3: path string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
 /// An event capability
 type Event = table {
+    /// The name of the capability.
     1: name fuchsia.component.name;
-    2: as fuchsia.component.name; // optional
+
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name;
+
+    /// A filter to apply on the event.
     3: filter fuchsia.data.Dictionary;
 };
 
-/// Properties that may be set on a child when it is added to a realm
+/// Properties that may be set on a child when it is added to a realm.
 type ChildOptions = table {
+    /// For information on this type, see
+    /// https://fuchsia.dev/go/components/declaration#StartupMode.
+    /// Defaults to `LAZY`.
     1: startup fuchsia.component.decl.StartupMode;
+
+    /// Specify a custom environment for the child to run under.
     2: environment fuchsia.component.name;
+
+    /// For information on this type, see
+    /// https://fuchsia.dev/go/components/declaration#OnTerminate.
+    /// Defaults to `NONE`.
     3: on_terminate fuchsia.component.decl.OnTerminate;
 };
 
+/// Maximum number of entries allowed in one call of `Realm.ReadOnlyDirectory`.
 const MAX_DIRECTORY_ENTRIES uint32 = 1024;
 
 /// The contents of a directory that should be provided by the realm builder
@@ -221,6 +289,7 @@ type DirectoryContents = resource struct {
     entries vector<DirectoryEntry>:MAX_DIRECTORY_ENTRIES;
 };
 
+/// An entry in a directory.
 type DirectoryEntry = resource struct {
     /// The path to the file. Valid examples include `foo.txt` and
     /// `foo/bar.json`.

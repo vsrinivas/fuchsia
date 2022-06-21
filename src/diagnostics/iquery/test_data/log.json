@@ -13,7 +13,7 @@
         "payload": {
             "root": {
                 "message": {
-                    "value": "started"
+                    "value": "Started."
                 }
             }
         },

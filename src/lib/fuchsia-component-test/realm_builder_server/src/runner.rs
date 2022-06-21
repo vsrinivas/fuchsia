@@ -102,8 +102,8 @@ impl Runner {
     pub fn run_runner_service(self: &Arc<Self>, stream: fcrunner::ComponentRunnerRequestStream) {
         let self_ref = self.clone();
         fasync::Task::local(async move {
-            if let Err(e) = self_ref.handle_runner_request_stream(stream).await {
-                warn!("error encountered while running realm builder runner service: {:?}", e);
+            if let Err(err) = self_ref.handle_runner_request_stream(stream).await {
+                warn!(%err, "`ComponentRunner` server unexpectedly failed.");
             }
         })
         .detach();
@@ -116,16 +116,18 @@ impl Runner {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                    let program =
-                        start_info.program.clone().ok_or(format_err!("missing program"))?;
+                    let program = start_info
+                        .program
+                        .clone()
+                        .ok_or(format_err!("`program` is missing from `StartInfo`."))?;
                     if start_info.ns.is_none() {
-                        return Err(format_err!("missing namespace"));
+                        return Err(format_err!("Namespace is missing from `StartInfo`."));
                     }
                     if start_info.outgoing_dir.is_none() {
-                        return Err(format_err!("missing outgoing_dir"));
+                        return Err(format_err!("Outgoing directory is missing from `StartInfo`."));
                     }
                     if start_info.runtime_dir.is_none() {
-                        return Err(format_err!("missing runtime_dir"));
+                        return Err(format_err!("Runtime directory is missing from `StartInfo`."));
                     }
 
                     match extract_local_component_id_or_legacy_url(program)? {
@@ -152,14 +154,17 @@ impl Runner {
         let local_component_proxies_guard = self.local_component_proxies.lock().await;
         let local_component_control_handle_or_runner_proxy = local_component_proxies_guard
             .get(&local_component_id)
-            .ok_or(format_err!("no such local component: {:?}", local_component_id))?
+            .ok_or(format_err!(
+                "Received non-existent local component \"{}\".",
+                local_component_id
+            ))?
             .clone();
 
         match local_component_control_handle_or_runner_proxy {
             ComponentImplementer::RunnerProxy(runner_proxy_placeholder) => {
                 let runner_proxy_placeholder_guard = runner_proxy_placeholder.lock().await;
                 if runner_proxy_placeholder_guard.is_none() {
-                    return Err(format_err!("runner request received for a local component before Builder.Build was called, this should be impossible"));
+                    return Err(format_err!("Runner request received for a local component before Builder.Build was called, this should be impossible."));
                 }
                 let runner_proxy = runner_proxy_placeholder_guard.as_ref().unwrap();
                 if let Some(mut program) = start_info.program.as_mut() {
@@ -167,7 +172,7 @@ impl Runner {
                 }
                 runner_proxy
                     .start(start_info, controller)
-                    .context("failed to send start request for local component to client")?;
+                    .context("Failed to send start request for local component to client.")?;
             }
             ComponentImplementer::Builtin(implementation) => {
                 self.execution_scope.spawn(run_builtin_controller(

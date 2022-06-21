@@ -16,6 +16,7 @@ use {
     std::{
         collections::HashMap,
         convert::TryInto,
+        fmt,
         ops::{Deref, DerefMut},
         path::PathBuf,
         sync::{
@@ -52,7 +53,7 @@ const ALLOWLISTED_PROGRAM_ARGS_KEY: &'static str = "args";
 
 #[fuchsia::main]
 async fn main() {
-    info!("started");
+    info!("Started.");
 
     let mut fs = fserver::ServiceFs::new_local();
     let registry = resolver::Registry::new();
@@ -74,13 +75,13 @@ async fn main() {
             execution_scope_clone.clone(),
         );
         execution_scope_clone.spawn(async move {
-            if let Err(e) = factory.handle_stream(stream).await {
-                error!("error encountered while running realm builder service: {:?}", e);
+            if let Err(err) = factory.handle_stream(stream).await {
+                error!(%err, "Encountered unexpected error.");
             }
         });
     });
 
-    fs.take_and_serve_directory_handle().expect("did not receive directory handle");
+    fs.take_and_serve_directory_handle().expect("Did not receive directory handle.");
 
     join!(execution_scope.wait(), fs.collect::<()>());
 }
@@ -119,16 +120,18 @@ impl RealmBuilderFactory {
                     }
                     let pkg_dir = match pkg_dir_handle
                         .into_proxy()
-                        .context("failed to convert pkg_dir ClientEnd to proxy")
+                        .context("Failed to convert `pkg_dir` ClientEnd to proxy.")
                     {
                         Ok(pkg_dir) => pkg_dir,
-                        Err(e) => {
+                        Err(err) => {
                             responder
                                 .send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
-                            return Err(e);
+                            return Err(err);
                         }
                     };
-                    if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
+                    if let Err(e) = pkg_dir.describe().await.context(
+                        "Invoking `fuchsia.io/Directory.describe` on provided `pkg_dir` failed.",
+                    ) {
                         responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
                         return Err(e);
                     }
@@ -139,9 +142,9 @@ impl RealmBuilderFactory {
                     .await
                     {
                         Ok(realm_node) => realm_node,
-                        Err(e) => {
-                            warn!("unable to load manifest at {:?}: {}", relative_url, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "RealmBuilderFactory.CreateFromRelativeUrl", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                             continue;
                         }
                     };
@@ -161,11 +164,15 @@ impl RealmBuilderFactory {
                 } => {
                     let pkg_dir = pkg_dir_handle
                         .into_proxy()
-                        .context("failed to convert pkg_dir ClientEnd to proxy")?;
-                    if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
+                        .context("Failed to convert `pkg_dir` ClientEnd to proxy.")?;
+                    if let Err(err) = pkg_dir.describe().await.context(
+                        "Invoking `fuchsia.io/Directory.describe` on provided `pkg_dir` failed.",
+                    ) {
+                        warn!(method = "RealmBuilderFactory.Create", message = %err);
                         responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
-                        return Err(e);
+                        continue;
                     }
+
                     self.create_realm_and_builder(
                         RealmNode2::new(),
                         pkg_dir,
@@ -190,7 +197,7 @@ impl RealmBuilderFactory {
 
         let realm_stream = realm_server_end
             .into_stream()
-            .context("failed to convert realm_server_end to stream")?;
+            .context("Failed to convert `realm_server_end` to stream.")?;
 
         let realm_has_been_built = Arc::new(AtomicBool::new(false));
 
@@ -206,14 +213,14 @@ impl RealmBuilderFactory {
         };
 
         self.execution_scope.spawn(async move {
-            if let Err(e) = realm.handle_stream(realm_stream).await {
-                error!("error encountered while handling Realm requests: {:?}", e);
+            if let Err(err) = realm.handle_stream(realm_stream).await {
+                error!(%err, "`Realm` server unexpectedly failed.");
             }
         });
 
         let builder_stream = builder_server_end
             .into_stream()
-            .context("failed to convert builder_server_end to stream")?;
+            .context("Failed to convert `builder_server_end` to stream.")?;
 
         let builder = Builder {
             pkg_dir: Clone::clone(&pkg_dir),
@@ -223,8 +230,8 @@ impl RealmBuilderFactory {
             realm_has_been_built: realm_has_been_built,
         };
         self.execution_scope.spawn(async move {
-            if let Err(e) = builder.handle_stream(builder_stream).await {
-                error!("error encountered while handling Builder requests: {:?}", e);
+            if let Err(err) = builder.handle_stream(builder_stream).await {
+                error!(%err, "`Builder` server unexpectedly failed.");
             }
         });
         Ok(())
@@ -248,9 +255,11 @@ impl Builder {
             match req {
                 ftest::BuilderRequest::Build { runner, responder } => {
                     if self.realm_has_been_built.swap(true, Ordering::Relaxed) {
+                        warn!(method = "Builder.Build", message = %RealmBuilderError::BuildAlreadyCalled);
                         responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
+
                     let runner_proxy = runner
                         .into_proxy()
                         .context("failed to convert runner ClientEnd into proxy")?;
@@ -261,9 +270,9 @@ impl Builder {
                         .await;
                     match res {
                         Ok(url) => responder.send(&mut Ok(url))?,
-                        Err(e) => {
-                            warn!("unable to build the realm the client requested: {}", e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Builder.Build", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -273,7 +282,6 @@ impl Builder {
     }
 }
 
-#[allow(unused)]
 struct Realm {
     pkg_dir: fio::DirectoryProxy,
     realm_node: RealmNode2,
@@ -299,12 +307,9 @@ impl Realm {
                     }
                     match self.add_child(name.clone(), url.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!(
-                                "unable to add child {:?} with url {:?} to realm: {}",
-                                name, url, e
-                            );
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddChild", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -315,12 +320,9 @@ impl Realm {
                     }
                     match self.add_legacy_child(name.clone(), legacy_url.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!(
-                                "unable to add legacy child {:?} with url {:?} to realm: {}",
-                                name, legacy_url, e
-                            );
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddLegacyChild", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -331,9 +333,9 @@ impl Realm {
                     }
                     match self.add_child_from_decl(name.clone(), decl, options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("unable to add child {:?} from decl to realm: {}", name, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddChildFromDecl", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -344,9 +346,9 @@ impl Realm {
                     }
                     match self.add_local_child(name.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("unable to add local child {:?} to realm: {}", name, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddLocalChild", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -357,9 +359,9 @@ impl Realm {
                     }
                     match self.add_child_realm(name.clone(), options, child_realm).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("unable to add child realm {:?}: {}", name, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddChildRealm", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -370,9 +372,9 @@ impl Realm {
                     }
                     match self.get_component_decl(name.clone()).await {
                         Ok(decl) => responder.send(&mut Ok(decl))?,
-                        Err(e) => {
-                            warn!("unable to get component decl for child {:?}: {}", name, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.GetComponentDecl", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -383,9 +385,9 @@ impl Realm {
                     }
                     match self.replace_component_decl(name.clone(), component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("unable to replace component decl for child {:?}: {}", name, e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.ReplaceComponentDecl", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -403,9 +405,9 @@ impl Realm {
                     }
                     match self.replace_realm_decl(component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("unable to replace realm decl: {}", e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.ReplaceRealmDecl", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -418,9 +420,9 @@ impl Realm {
                         Ok(()) => {
                             responder.send(&mut Ok(()))?;
                         }
-                        Err(e) => {
-                            warn!("unable to add route: {}", e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.AddRoute", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -438,9 +440,9 @@ impl Realm {
                         Ok(()) => {
                             responder.send(&mut Ok(()))?;
                         }
-                        Err(e) => {
-                            warn!("unable to add route: {}", e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.ReadOnlyDirectory", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -453,9 +455,9 @@ impl Realm {
                         Ok(()) => {
                             responder.send(&mut Ok(()))?;
                         }
-                        Err(e) => {
-                            warn!("unable to set config value: {:?}", e);
-                            responder.send(&mut Err(e.into()))?;
+                        Err(err) => {
+                            warn!(method = "Realm.ReplaceConfigValue", message = %err);
+                            responder.send(&mut Err(err.into()))?;
                         }
                     }
                 }
@@ -471,8 +473,13 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if is_legacy_url(&url) {
-            return Err(RealmBuilderError::InvalidManifestExtension);
+            return Err(RealmBuilderError::InvalidManifestExtension {
+                name,
+                extension: ManifestExtension::Modern,
+                suggestion: "AddLegacyChild".to_owned(),
+            });
         }
+
         if is_relative_url(&url) {
             let child_realm_node =
                 RealmNode2::load_from_pkg(url, Clone::clone(&self.pkg_dir)).await?;
@@ -489,8 +496,13 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if !is_legacy_url(&legacy_url) {
-            return Err(RealmBuilderError::InvalidManifestExtension);
+            return Err(RealmBuilderError::InvalidManifestExtension {
+                name,
+                extension: ManifestExtension::Legacy,
+                suggestion: "AddChild".to_owned(),
+            });
         }
+
         let child_realm_node = RealmNode2::new_from_decl(
             new_decl_with_program_entries(vec![(runner::LEGACY_URL_KEY.to_string(), legacy_url)]),
             true,
@@ -505,7 +517,7 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(e, component_decl));
+            return Err(RealmBuilderError::InvalidComponentDeclWithName(name, e));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), false);
         self.realm_node.add_child(name, options, child_realm_node).await
@@ -561,15 +573,15 @@ impl Realm {
         async move {
             let child_realm_stream = child_realm_server_end
                 .into_stream()
-                .map_err(RealmBuilderError::InvalidChildRealmHandle)?;
+                .map_err(|e| RealmBuilderError::InvalidChildRealmHandle(name.clone(), e))?;
             self_realm_node.add_child(name, options, child_realm_node).await?;
 
             self_execution_scope.spawn(async move {
                 if let Err(e) = child_realm.handle_stream(child_realm_stream).await {
                     error!(
-                        "error encountered while handling requests for child realm {:?}: {:?}",
+                        "|Realm| server for child \"{}\" unexpectedly failed: {}",
                         child_path.join("/"),
-                        e,
+                        e
                     );
                 }
             });
@@ -615,22 +627,26 @@ impl Realm {
     ) -> Result<(), RealmBuilderError> {
         let child_node = self.realm_node.get_sub_realm(&name).await?;
         let decl = child_node.get_decl().await;
-        let config = decl.config.ok_or(RealmBuilderError::NoConfigSchema)?;
-        cm_fidl_validator::validate_value_spec(&value_spec).map_err(|e| {
-            error!("Error validating value spec for {}: {}", key, e);
-            RealmBuilderError::ConfigValueInvalid
-        })?;
+        let config = decl.config.ok_or(RealmBuilderError::NoConfigSchema(name.clone()))?;
+        cm_fidl_validator::validate_value_spec(&value_spec)
+            .map_err(|e| RealmBuilderError::ConfigValueInvalid(key.clone(), anyhow::anyhow!(e)))?;
         let value_spec = value_spec.fidl_into_native();
         for (index, field) in config.fields.iter().enumerate() {
             if field.key == key {
-                config_encoder::ConfigField::resolve(value_spec.clone(), &field)
-                    .map_err(|_| RealmBuilderError::ConfigValueInvalid)?;
+                config_encoder::ConfigField::resolve(value_spec.clone(), &field).map_err(|e| {
+                    RealmBuilderError::ConfigValueInvalid(name.clone(), anyhow::anyhow!(e))
+                })?;
                 let mut state_guard = child_node.state.lock().await;
                 state_guard.config_value_replacements.insert(index, value_spec);
                 return Ok(());
             }
         }
-        Err(RealmBuilderError::NoSuchConfigField(key))
+
+        Err(RealmBuilderError::NoSuchConfigField {
+            name,
+            key,
+            present: config.fields.iter().map(|f| f.key.clone()).collect::<Vec<_>>(),
+        })
     }
 
     async fn read_only_directory(
@@ -782,7 +798,7 @@ impl RealmNodeState {
             });
         decl.children.get_or_insert(vec![]).extend(child_decls);
         if let Err(e) = cm_fidl_validator::validate(&decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(e, decl));
+            return Err(RealmBuilderError::InvalidComponentDecl(e));
         }
         Ok(())
     }
@@ -899,9 +915,8 @@ impl RealmNode2 {
             let fidl_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
-            cm_fidl_validator::validate(&fidl_decl).map_err(|e| {
-                RealmBuilderError::InvalidComponentDeclWithName(relative_url, e, fidl_decl.clone())
-            })?;
+            cm_fidl_validator::validate(&fidl_decl)
+                .map_err(|e| RealmBuilderError::InvalidComponentDeclWithName(relative_url, e))?;
 
             let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
             self_.component_loaded_from_pkg = true;
@@ -962,20 +977,17 @@ impl RealmNode2 {
 
         let mut state_guard = self.state.lock().await;
         if !contains_child(state_guard.deref(), &from) {
-            return Err(RealmBuilderError::NoSuchSource(from, state_guard.deref().clone()));
+            return Err(RealmBuilderError::NoSuchSource(ref_to_string(&from)));
         }
 
         for capability in capabilities {
             for target in &to {
                 if &from == target {
-                    return Err(RealmBuilderError::SourceAndTargetMatch(from));
+                    return Err(RealmBuilderError::SourceAndTargetMatch(ref_to_string(&from)));
                 }
 
                 if !contains_child(state_guard.deref(), target) {
-                    return Err(RealmBuilderError::NoSuchTarget(
-                        target.clone(),
-                        state_guard.deref().clone(),
-                    ));
+                    return Err(RealmBuilderError::NoSuchTarget(ref_to_string(&target)));
                 }
 
                 if is_parent_ref(&target) {
@@ -1050,15 +1062,7 @@ impl RealmNode2 {
             {
                 Ok(url) => Ok(url),
                 Err(e) => {
-                    warn!(
-                        "manifest validation failed during build step for component {:?}: {:?}",
-                        walked_path, e
-                    );
-                    Err(RealmBuilderError::InvalidComponentDeclWithName(
-                        walked_path.join("/"),
-                        e,
-                        decl,
-                    ))
+                    Err(RealmBuilderError::InvalidComponentDeclWithName(walked_path.join("/"), e))
                 }
             }
         }
@@ -1125,7 +1129,7 @@ fn try_into_source_name(
         .as_ref()
         .ok_or_else(|| {
             RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "capability `name` received was empty"
+                "Required field `name` is empty."
             ))
         })?
         .as_str()
@@ -1138,9 +1142,7 @@ fn try_into_target_name(
     as_: &Option<String>,
 ) -> Result<cm_rust::CapabilityName, RealmBuilderError> {
     let name = name.as_ref().ok_or_else(|| {
-        RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-            "capability `name` received was empty"
-        ))
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!("Required field `name` is empty."))
     })?;
     Ok(as_.as_ref().unwrap_or(name).clone().into())
 }
@@ -1152,17 +1154,12 @@ fn try_into_capability_path(
     input
         .as_ref()
         .ok_or_else(|| {
-            RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "`path` field is required on capability when routing to or from a local component",
-            ))
+            RealmBuilderError::CapabilityInvalid(anyhow::format_err!("The `path` field is not set. This field is required when routing to or from a local component. For more information on the `path` field, see https://fuchsia.dev/go/components/realm-builder-reference#Directory."))
         })?
         .as_str()
         .try_into()
         .map_err(|e| {
-            RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "`path` field in capability is invalid: {:?}",
-                e
-            ))
+            RealmBuilderError::CapabilityInvalid(anyhow::format_err!("The `path` field is invalid: {:?}. All paths must be `/` delimited strings with a leading slash.", e))
         })
 }
 
@@ -1174,14 +1171,13 @@ fn try_into_service_path(
     path: &Option<String>,
 ) -> Result<cm_rust::CapabilityPath, RealmBuilderError> {
     let name = name.as_ref().ok_or_else(|| {
-        RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-            "capability `name` received was empty"
-        ))
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!("Required field `name` is empty. This field must be provided. For more information on the `name` field, see https://fuchsia.dev/go/components/realm-builder-reference#Protocol."))
     })?;
     let path = path.as_ref().cloned().unwrap_or_else(|| format!("/svc/{}", name));
     path.as_str().try_into().map_err(|e| {
         RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-            "unable to create service path: {:?}",
+            "Could not create path for protocol {}. Encountered unexpected error. {:?}",
+            name,
             e
         ))
     })
@@ -1201,14 +1197,14 @@ fn create_capability_decl(
             let source_path = Some(try_into_capability_path(&directory.path)?);
             let rights = directory.rights.ok_or_else(|| RealmBuilderError::CapabilityInvalid(
                 anyhow::format_err!(
-                    "`rights` field is required on directory capabilities when routing to or from a local component",
+                    "The `rights` field is not set. This field is required when routing directory capabilities to or from a local component. Required fields are defined at https://fuchsia.dev/go/components/realm-builder-reference#Directory.",
                 ),
             ))?;
             cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl { name, source_path, rights })
         }
         ftest::Capability::Storage(_) => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "declaring storage capabilities with add_route is unsupported"
+                "Storage capabilities with a source of `self` can not be routed. Please use `GetComponentDecl` and `ReplaceComponentDecl` to declare and route this capability."
             )))?;
         }
         ftest::Capability::Service(service) => {
@@ -1222,7 +1218,7 @@ fn create_capability_decl(
         }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "encountered unsupported capability variant: {:?}",
+                "Encountered unsupported capability variant: {:?}.",
                 capability.clone()
             )));
         }
@@ -1305,7 +1301,7 @@ fn create_offer_decl(
         }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "encountered unsupported capability variant: {:?}",
+                "Encountered unsupported capability variant: {:?}.",
                 capability.clone()
             )));
         }
@@ -1365,10 +1361,10 @@ fn create_expose_decl(
                 subdir,
             })
         }
-        ftest::Capability::Storage(_) => {
+        ftest::Capability::Storage(storage) => {
+            let source_name = try_into_source_name(&storage.name)?;
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "storage capabilities cannot be exposed: {:?}",
-                capability.clone()
+                "Capability \"{}\" can not be exposed because it's not possible to expose storage capabilities. This is most likely a bug from the Realm Builder library. Please file one at https://bugs.fuchsia.dev under the ComponentFramework>SDK component.", source_name
             )));
         }
         ftest::Capability::Service(service) => {
@@ -1384,15 +1380,15 @@ fn create_expose_decl(
                 target_name,
             })
         }
-        ftest::Capability::Event(_) => {
+        ftest::Capability::Event(event) => {
+            let source_name = try_into_source_name(&event.name)?;
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "event capabilities cannot be exposed: {:?}",
-                capability.clone()
+                "Capability \"{}\" can not be exposed because it's not possible to expose event capabilities. This is most likely a bug from the Realm Builder library. Please file one at https://bugs.fuchsia.dev under the ComponentFramework>SDK component.", source_name
             )));
         }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "encountered unsupported capability variant: {:?}",
+                "Encountered unsupported capability variant: {:?}.",
                 capability.clone()
             )));
         }
@@ -1428,7 +1424,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
             let target_path = try_into_capability_path(&directory.path)?;
             let rights = directory.rights.ok_or_else(|| RealmBuilderError::CapabilityInvalid(
                 anyhow::format_err!(
-                    "`rights` field is required on directory capabilities when routing to or from a local component",
+                    "The `rights` field is not set. This field is required when routing directory capabilities to or from a local component.",
                 ),
             ))?;
             let dependency_type = directory
@@ -1491,7 +1487,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
         }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                "encountered unsupported capability variant: {:?}",
+                "Encountered unsupported capability variant: {:?}.",
                 capability.clone()
             )));
         }
@@ -1585,111 +1581,147 @@ fn program_with_entry_removed(
     return program;
 }
 
+#[derive(Debug)]
+enum ManifestExtension {
+    Modern,
+    Legacy,
+}
+
+impl fmt::Display for ManifestExtension {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ext = match &self {
+            ManifestExtension::Modern => ".cm",
+            ManifestExtension::Legacy => ".cmx",
+        };
+
+        write!(f, "{}", ext)
+    }
+}
+
+// Since Rust doesn't allow one to implement out-of-crate traits (fmt::Display
+// for out-of-crate types (fcdecl::Ref), a convenience function is provided.
+// See Rust E0117 for more info.
+fn ref_to_string(ref_: &fcdecl::Ref) -> String {
+    match ref_ {
+        fcdecl::Ref::Child(c) => c.name.to_owned(),
+        fcdecl::Ref::Parent(_) => "<parent>".to_owned(),
+        fcdecl::Ref::Self_(_) => "<self>".to_owned(),
+        fcdecl::Ref::Collection(c) => c.name.to_owned(),
+        fcdecl::Ref::Framework(_) => "<framework>".to_owned(),
+        fcdecl::Ref::Capability(c) => c.name.to_owned(),
+        fcdecl::Ref::Debug(_) => "<debug>".to_owned(),
+        fcdecl::Ref::VoidType(_) => "<void>".to_owned(),
+        _ => unreachable!("Encountered unknown `Ref` variant."),
+    }
+}
+
 #[allow(unused)]
 #[derive(Debug, Error)]
 enum RealmBuilderError {
     /// Child cannot be added to the realm, as there is already a child in the realm with that
     /// name.
-    #[error("unable to add child to the realm because a child already exists with the name {0:?}")]
+    #[error("Unable to add child because one already exists with the name \"{0}\". Child names within a realm must be unique.")]
     ChildAlreadyExists(String),
 
     /// A legacy component URL was given to `AddChild`, or a modern component url was given to
     /// `AddLegacyChild`.
-    #[error("manifest extension was inappropriate for the function, use AddChild for `.cm` URLs and AddLegacyChild for `.cmx` URLs")]
-    InvalidManifestExtension,
+    #[error("Unable to add child \"{name}\" because the component URL is invalid. Only URLs ending with the `{extension}` extension are supported for this method. Use the method `Realm.{suggestion}` instead.")]
+    InvalidManifestExtension { name: String, extension: ManifestExtension, suggestion: String },
 
     /// A component declaration failed validation.
-    #[error("a component manifest failed validation: {0:?}\n{1:#?}")]
-    InvalidComponentDecl(cm_fidl_validator::error::ErrorList, fcdecl::Component),
+    #[error("The constructed component declaration is invalid. Please fix all the listed errors:\n{0}\nFor a reference as to how component declarations are authored, see https://fuchsia.dev/go/components/declaration.")]
+    InvalidComponentDecl(cm_fidl_validator::error::ErrorList),
 
     /// A component declaration failed validation.
-    #[error("the manifest for component {0:?} failed validation: {1:?}\n{2:#?}")]
-    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList, fcdecl::Component),
+    #[error("The component declaration for child \"{0}\" is invalid. Please fix all the listed errors:\n{1}\nFor a reference as to how component declarations are authored, see https://fuchsia.dev/go/components/declaration.")]
+    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList),
 
     /// The referenced child does not exist.
-    #[error("there is no component named {0:?} in this realm")]
+    #[error("No child exists with the name \"{0}\". Before fetching or changing its component declaration, a child must be added to the realm with the `AddChild` group of methods.")]
     NoSuchChild(String),
 
     /// The component declaration for the referenced child cannot be viewed nor manipulated by
     /// RealmBuilder because the child was added to the realm using an URL that was neither a
     /// relative nor a legacy URL.
-    #[error("the component declaration for {0:?} cannot be viewed nor manipulated")]
+    #[error("The component declaration for child {0} cannot be replaced. This occurs for components referenced via absolute URL. If you'd like to mutate a component's decl, add it your test package and reference it via a relative URL: https://fuchsia.dev/go/components/url#relative.")]
     ChildDeclNotVisible(String),
 
     /// The source does not exist.
-    #[error("the source for the route does not exist: {0:?}\namong declared children of: {:#?}")]
-    NoSuchSource(fcdecl::Ref, RealmNodeState),
+    #[error("Source component for capability is invalid. No child exists with the name \"{0}\". Before a component can be set as a source for a capability, it must be added to the realm with the `AddChild` group of methods.")]
+    NoSuchSource(String),
 
     /// A target does not exist.
-    #[error("the target for the route does not exist: {0:?}\namong declared children of: {:#?}")]
-    NoSuchTarget(fcdecl::Ref, RealmNodeState),
+    #[error("Target component for capability is invalid. No child exists with the name '{0}'. Before a component can be set as a source for a capability, it must be added to the realm with the `AddChild` group of methods.")]
+    NoSuchTarget(String),
 
     /// The `capabilities` field is empty.
-    #[error("the \"capabilities\" field is empty")]
+    #[error("The `capabilities` field can not be omitted. It is used to specify what capabilities will be routed. Provide at least one capability to route: https://fuchsia.dev/go/components/realm-builder-reference#Realm.AddRoute.")]
     CapabilitiesEmpty,
 
     /// The `targets` field is empty.
-    #[error("the \"targets\" field is empty")]
+    #[error("The `targets` field can not be omitted. It is used to determine what component(s) to route a capability to. Provide at least one component as a target: https://fuchsia.dev/go/components/realm-builder-reference#Realm.AddRoute.")]
     TargetsEmpty,
 
     /// The `from` value is equal to one of the elements in `to`.
-    #[error("one of the targets is equal to the source: {0:?}")]
-    SourceAndTargetMatch(fcdecl::Ref),
+    #[error("One of the targets of this route is equal to the source {0:?}. Routing a capability to itself is not supported.")]
+    SourceAndTargetMatch(String),
 
     /// The test package does not contain the component declaration referenced by a relative URL.
-    #[error("the test package does not contain this component: {0:?}")]
+    #[error("Component \"{0}\" not found in package. Only components added to the test's package can be referenced by relative URLs. Ensure that this component is included in the test's package.")]
     DeclNotFound(String),
 
     /// Encountered an I/O error when attempting to read a component declaration referenced by a
     /// relative URL from the test package.
-    #[error("failed to read the manifest for {0:?} from the test package: {1:?}")]
+    #[error("Could not read the manifest for component \"{0}\". {1:?}")]
     DeclReadError(String, anyhow::Error),
 
     /// The `Build` function has been called multiple times on this channel.
-    #[error("the build function was called multiple times")]
+    #[error("Build method was called multiple times. This method can only be called once. After it's called, the realm to be constructed can not be changed.")]
     BuildAlreadyCalled,
 
-    #[error("invalid capability received: {0:?}")]
+    #[error("Failed to route capability. {0:?}")]
     CapabilityInvalid(anyhow::Error),
 
     /// The handle the client provided is not usable
-    #[error("unable to use the provided handle: {0:?}")]
-    InvalidChildRealmHandle(fidl::Error),
+    #[error("Handle for child realm \"{0}\" is not usable. {1:?}")]
+    InvalidChildRealmHandle(String, fidl::Error),
 
     /// `ReplaceComponentDecl` was called on a legacy or local component with a program declaration
     /// that did not match the one from the old component declaration. This could render a legacy
     /// or local component non-functional, and is disallowed.
     #[error(
-        "the program section of the manifest for a legacy or local component cannot be changed"
+        "Attempted to change `program` section of immutable child. The `program` section of a legacy or local component cannot be changed. Migrate the referenced child to modern component framework to use this feature."
     )]
     ImmutableProgram,
 
     /// The component does not have a config schema defined. Attempting to
     /// set a config value is not allowed.
-    #[error("component decl does not have a config schema defined")]
-    NoConfigSchema,
+    #[error("Could not replace config value for child \"{0}\". The component does not have a config schema in its declaration. Only components with a config schema can have their config values modified. For more information about the structured configuration feature, see https://fuchsia.dev/go/components/structured-config.")]
+    NoConfigSchema(String),
 
     /// The component's config schema does not have a field with that name.
-    #[error("could not find config field in config schema: {0:?}")]
-    NoSuchConfigField(String),
+    #[error("Could not replace config value for child \"{name}\". No field with the name `{key}` is present in the config schema. The fields present in the schema are: {present:?}.")]
+    NoSuchConfigField { name: String, key: String, present: Vec<String> },
 
     /// A config value is invalid. This may mean a type mismatch or an issue
     /// with constraints like string/vector length.
-    #[error("config value is invalid")]
-    ConfigValueInvalid,
+    #[error(
+        "Could not replace config value for child '{0}'. The value provided is invalid: {1:?}"
+    )]
+    ConfigValueInvalid(String, anyhow::Error),
 }
 
 impl From<RealmBuilderError> for ftest::RealmBuilderError {
     fn from(err: RealmBuilderError) -> Self {
         match err {
             RealmBuilderError::ChildAlreadyExists(_) => Self::ChildAlreadyExists,
-            RealmBuilderError::InvalidManifestExtension => Self::InvalidManifestExtension,
-            RealmBuilderError::InvalidComponentDecl(_, _) => Self::InvalidComponentDecl,
-            RealmBuilderError::InvalidComponentDeclWithName(_, _, _) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidManifestExtension { .. } => Self::InvalidManifestExtension,
+            RealmBuilderError::InvalidComponentDecl(_) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidComponentDeclWithName(_, _) => Self::InvalidComponentDecl,
             RealmBuilderError::NoSuchChild(_) => Self::NoSuchChild,
             RealmBuilderError::ChildDeclNotVisible(_) => Self::ChildDeclNotVisible,
-            RealmBuilderError::NoSuchSource(_, _) => Self::NoSuchSource,
-            RealmBuilderError::NoSuchTarget(_, _) => Self::NoSuchTarget,
+            RealmBuilderError::NoSuchSource(_) => Self::NoSuchSource,
+            RealmBuilderError::NoSuchTarget(_) => Self::NoSuchTarget,
             RealmBuilderError::CapabilitiesEmpty => Self::CapabilitiesEmpty,
             RealmBuilderError::TargetsEmpty => Self::TargetsEmpty,
             RealmBuilderError::SourceAndTargetMatch(_) => Self::SourceAndTargetMatch,
@@ -1697,11 +1729,11 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError {
             RealmBuilderError::DeclReadError(_, _) => Self::DeclReadError,
             RealmBuilderError::BuildAlreadyCalled => Self::BuildAlreadyCalled,
             RealmBuilderError::CapabilityInvalid(_) => Self::CapabilityInvalid,
-            RealmBuilderError::InvalidChildRealmHandle(_) => Self::InvalidChildRealmHandle,
+            RealmBuilderError::InvalidChildRealmHandle(_, _) => Self::InvalidChildRealmHandle,
             RealmBuilderError::ImmutableProgram => Self::ImmutableProgram,
-            RealmBuilderError::NoConfigSchema => Self::NoConfigSchema,
-            RealmBuilderError::NoSuchConfigField(_) => Self::NoSuchConfigField,
-            RealmBuilderError::ConfigValueInvalid => Self::ConfigValueInvalid,
+            RealmBuilderError::NoConfigSchema(_) => Self::NoConfigSchema,
+            RealmBuilderError::NoSuchConfigField { .. } => Self::NoSuchConfigField,
+            RealmBuilderError::ConfigValueInvalid(_, _) => Self::ConfigValueInvalid,
         }
     }
 }
