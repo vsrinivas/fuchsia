@@ -82,7 +82,7 @@ impl CryptService {
         cipher.decrypt(&nonce, &key[..]).map_err(|_| zx::Status::IO_DATA_INTEGRITY.into_raw())
     }
 
-    fn add_wrapping_key(
+    pub fn add_wrapping_key(
         &self,
         wrapping_key_id: u64,
         key: Vec<u8>,
@@ -98,7 +98,7 @@ impl CryptService {
         }
     }
 
-    fn set_active_key(
+    pub fn set_active_key(
         &self,
         purpose: KeyPurpose,
         wrapping_key_id: u64,

@@ -45,7 +45,7 @@ use {
 
 const DEFAULT_VOLUME_NAME: &str = "default";
 
-fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
+pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
 }
 
@@ -92,11 +92,10 @@ impl State {
 impl Component {
     pub fn new() -> Arc<Self> {
         let registry = token_registry::Simple::new();
-        let outgoing_dir = vfs::directory::immutable::simple();
         Arc::new(Self {
             state: Mutex::new(State::PreStart { queued: Vec::new() }),
             scope: ExecutionScope::build().token_registry(registry).new(),
-            outgoing_dir,
+            outgoing_dir: vfs::directory::immutable::simple(),
         })
     }
 
@@ -255,11 +254,9 @@ impl Component {
             OpenOptions { read_only: options.read_only, ..Default::default() },
         )
         .await?;
-        let volumes = Arc::new(VolumesDirectory::new(root_volume(&fs).await?).await?);
+        let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
         // TODO(fxbug.dev/99182): We should eventually not open the default volume.
-        let volume = volumes
-            .open_or_create_volume(DEFAULT_VOLUME_NAME, crypt, /* create_only: */ false)
-            .await?;
+        let volume = volumes.mount_volume(DEFAULT_VOLUME_NAME, crypt).await?;
         let root = volume.root();
         if let Some(migrate_root) = options.migrate_root {
             let scope = volume.volume().scope();
@@ -377,36 +374,20 @@ impl Component {
             match request {
                 VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
                     info!(name = name.as_str(), "Create volume");
-                    let crypt = crypt.map(|crypt| {
-                        Arc::new(RemoteCrypt::new(crypt.into_proxy().unwrap())) as Arc<dyn Crypt>
-                    });
-                    match volumes.open_or_create_volume(&name, crypt, true).await {
-                        Ok(volume) => {
-                            volume.root().clone().open(
-                                volume.volume().scope().clone(),
-                                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                                0,
-                                Path::dot(),
-                                outgoing_directory,
-                            );
-                            responder.send(&mut Ok(())).unwrap_or_else(|e| {
-                                warn!(
-                                    error = e.as_value(),
-                                    "Failed to send volume creation response"
+                    responder
+                        .send(
+                            &mut volumes
+                                .create_and_serve_volume(
+                                    &name,
+                                    crypt,
+                                    outgoing_directory.into_channel().into(),
                                 )
-                            });
-                        }
-                        Err(status) => {
-                            responder
-                                .send_no_shutdown_on_err(&mut Err(status.into_raw()))
-                                .unwrap_or_else(|e| {
-                                    warn!(
-                                        error = e.as_value(),
-                                        "Failed to send volume creation response"
-                                    )
-                                });
-                        }
-                    };
+                                .await
+                                .map_err(map_to_raw_status),
+                        )
+                        .unwrap_or_else(|e| {
+                            warn!(error = e.as_value(), "Failed to send volume creation response")
+                        });
                 }
                 VolumesRequest::Remove { name: _, responder } => {
                     // TODO(fxbug.dev/99182)

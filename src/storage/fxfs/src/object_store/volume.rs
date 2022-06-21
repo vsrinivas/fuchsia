@@ -32,20 +32,6 @@ pub struct RootVolume {
     filesystem: Arc<FxFilesystem>,
 }
 
-pub enum OpenOrCreateResult {
-    Created(Arc<ObjectStore>),
-    Opened(Arc<ObjectStore>),
-}
-
-impl From<OpenOrCreateResult> for Arc<ObjectStore> {
-    fn from(result: OpenOrCreateResult) -> Self {
-        match result {
-            OpenOrCreateResult::Created(store) => store,
-            OpenOrCreateResult::Opened(store) => store,
-        }
-    }
-}
-
 impl RootVolume {
     pub fn volume_directory(&self) -> &Directory<ObjectStore> {
         self.filesystem.object_manager().volume_directory()
@@ -98,12 +84,23 @@ impl RootVolume {
         volume_name: &str,
         crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<ObjectStore>, Error> {
-        let object_id =
+        self.volume_from_id(
             match self.volume_directory().lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
-            };
-        let store = self.filesystem.object_manager().store(object_id)?;
+            },
+            crypt,
+        )
+        .await
+    }
+
+    /// Returns the volume with the given id.  This is not thread-safe.
+    pub async fn volume_from_id(
+        &self,
+        store_object_id: u64,
+        crypt: Option<Arc<dyn Crypt>>,
+    ) -> Result<Arc<ObjectStore>, Error> {
+        let store = self.filesystem.object_manager().store(store_object_id)?;
         store.set_trace(self.filesystem.trace());
         if let Some(crypt) = crypt {
             store.unlock(crypt).await?;
@@ -111,26 +108,6 @@ impl RootVolume {
             bail!(FxfsError::AccessDenied);
         }
         Ok(store)
-    }
-
-    pub async fn open_or_create_volume(
-        &self,
-        volume_name: &str,
-        crypt: Option<Arc<dyn Crypt>>,
-    ) -> Result<OpenOrCreateResult, Error> {
-        let result = match self.volume(volume_name, crypt.clone()).await {
-            Ok(volume) => OpenOrCreateResult::Opened(volume),
-            Err(e) => {
-                let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
-                if let Some(FxfsError::NotFound) = cause {
-                    // Create a new volume with a randomly generated GUID.
-                    OpenOrCreateResult::Created(self.new_volume(volume_name, crypt).await?)
-                } else {
-                    return Err(e);
-                }
-            }
-        };
-        Ok(result)
     }
 
     pub async fn delete_volume(&self, volume_name: &str) -> Result<(), Error> {

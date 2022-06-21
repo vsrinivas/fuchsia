@@ -1119,7 +1119,7 @@ impl ObjectStore {
             LockState::Locked(_) => {}
             LockState::Invalid => bail!(FxfsError::Inconsistent),
             LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
-            LockState::Unlocked(_) => bail!(FxfsError::Internal),
+            LockState::Unlocked(_) => bail!(FxfsError::AlreadyBound),
             LockState::Unknown => panic!("Store was unlocked before replay"),
         }
 

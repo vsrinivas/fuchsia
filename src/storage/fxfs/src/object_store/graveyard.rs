@@ -23,7 +23,10 @@ use {
     anyhow::{Context, Error},
     fuchsia_async::{self as fasync},
     futures::{
-        channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+        channel::{
+            mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+            oneshot,
+        },
         StreamExt,
     },
     std::{
@@ -34,7 +37,7 @@ use {
 
 enum ReaperTask {
     None,
-    Pending(UnboundedReceiver<(u64, u64)>),
+    Pending(UnboundedReceiver<Message>),
     Running(fasync::Task<()>),
 }
 
@@ -46,7 +49,16 @@ enum ReaperTask {
 pub struct Graveyard {
     object_manager: Arc<ObjectManager>,
     reaper_task: Mutex<ReaperTask>,
-    channel: UnboundedSender<(u64, u64)>,
+    channel: UnboundedSender<Message>,
+}
+
+enum Message {
+    // Tombstone the object identified by <store-id>, <object-id>.
+    Tombstone(u64, u64),
+
+    // When the flush message is processed, notifies sender.  This allows the receiver to know
+    // that all preceding tombstone messages have been processed.
+    Flush(oneshot::Sender<()>),
 }
 
 impl Graveyard {
@@ -110,11 +122,18 @@ impl Graveyard {
         }
     }
 
-    async fn reap_task(self: Arc<Self>, mut receiver: UnboundedReceiver<(u64, u64)>) {
+    async fn reap_task(self: Arc<Self>, mut receiver: UnboundedReceiver<Message>) {
         // Wait and process reap requests.
-        while let Some((store_id, object_id)) = receiver.next().await {
-            if let Err(e) = self.tombstone(store_id, object_id).await {
-                error!(error = e.as_value(), store_id, oid = object_id, "Tombstone error");
+        while let Some(message) = receiver.next().await {
+            match message {
+                Message::Tombstone(store_id, object_id) => {
+                    if let Err(e) = self.tombstone(store_id, object_id).await {
+                        error!(error = e.as_value(), store_id, oid = object_id, "Tombstone error");
+                    }
+                }
+                Message::Flush(sender) => {
+                    let _ = sender.send(());
+                }
             }
         }
     }
@@ -142,9 +161,16 @@ impl Graveyard {
         Ok(count)
     }
 
-    // Queues an object for tombstoning.
+    /// Queues an object for tombstoning.
     pub fn queue_tombstone(&self, store_id: u64, object_id: u64) {
-        let _ = self.channel.unbounded_send((store_id, object_id));
+        let _ = self.channel.unbounded_send(Message::Tombstone(store_id, object_id));
+    }
+
+    /// Waits for all preceding queued tombstones to finish.
+    pub async fn flush(&self) {
+        let (sender, receiver) = oneshot::channel::<()>();
+        self.channel.unbounded_send(Message::Flush(sender)).unwrap();
+        receiver.await.unwrap();
     }
 
     async fn tombstone(&self, store_id: u64, object_id: u64) -> Result<(), Error> {

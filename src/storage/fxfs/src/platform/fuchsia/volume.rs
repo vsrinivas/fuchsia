@@ -104,6 +104,20 @@ impl FxVolume {
     pub async fn terminate(&self) {
         self.scope.shutdown();
         self.scope.wait().await;
+        self.store.filesystem().graveyard().flush().await;
+        let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
+        if let Some((task, terminate)) = task {
+            let _ = terminate.send(());
+            task.await;
+        }
+        self.flush_all_files().await;
+        if self.store.crypt().is_some() {
+            if let Err(e) = self.store.lock().await {
+                // The store will be left in a safe state and there won't be data-loss unless
+                // there's an issue flushing the journal later.
+                warn!(error = e.as_value(), "Locking store error");
+            }
+        }
         let sync_status = self
             .store
             .filesystem()
@@ -113,18 +127,12 @@ impl FxVolume {
             error!(error = e.as_value(), "Failed to sync filesystem; data may be lost");
         }
         self.pager.terminate().await;
-        let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
-        if let Some((task, terminate)) = task {
-            let _ = terminate.send(());
-            task.await;
-        }
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
-    /// the object from the object store, installing the returned node into the cache and returns the
-    /// newly created FxNode backed by the loaded object.
-    /// |parent| is only set on the node if the node was not present in the cache.  Otherwise, it is
-    /// ignored.
+    /// the object from the object store, installing the returned node into the cache and returns
+    /// the newly created FxNode backed by the loaded object.  |parent| is only set on the node if
+    /// the node was not present in the cache.  Otherwise, it is ignored.
     pub async fn get_or_load_node(
         self: &Arc<Self>,
         object_id: u64,
@@ -214,26 +222,25 @@ impl FxVolume {
             ) {
                 break;
             }
-            let files = self.cache.files();
-            let mut flushed = 0;
-            for file in files {
-                if let Err(e) = file.flush().await {
-                    warn!(
-                        store_id = self.store.store_object_id(),
-                        oid = file.object_id(),
-                        error = e.as_value(),
-                        "Failed to flush",
-                    )
-                }
-                flushed += 1;
-            }
-            debug!(
-                store_id = self.store.store_object_id(),
-                file_count = flushed,
-                "FxVolume flushed"
-            );
+            self.flush_all_files().await;
         }
         debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task end");
+    }
+
+    async fn flush_all_files(&self) {
+        let mut flushed = 0;
+        for file in self.cache.files() {
+            if let Err(e) = file.flush().await {
+                warn!(
+                    store_id = self.store.store_object_id(),
+                    oid = file.object_id(),
+                    error = e.as_value(),
+                    "Failed to flush",
+                )
+            }
+            flushed += 1;
+        }
+        debug!(store_id = self.store.store_object_id(), file_count = flushed, "FxVolume flushed");
     }
 }
 

@@ -171,6 +171,14 @@ impl Clone for ExecutionScope {
     }
 }
 
+impl PartialEq for ExecutionScope {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::as_ptr(&self.executor) == Arc::as_ptr(&other.executor)
+    }
+}
+
+impl Eq for ExecutionScope {}
+
 pub struct ExecutionScopeParams {
     token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,

@@ -71,7 +71,7 @@ pub async fn open_volume(
     crypt: Arc<dyn Crypt>,
 ) -> Result<Arc<ObjectStore>, Error> {
     let root_volume = root_volume(fs).await?;
-    root_volume.open_or_create_volume(DEFAULT_VOLUME, Some(crypt)).await.map(|v| v.into())
+    root_volume.volume(DEFAULT_VOLUME, Some(crypt)).await.map(|v| v.into())
 }
 
 /// Walks a directory path from a given root.

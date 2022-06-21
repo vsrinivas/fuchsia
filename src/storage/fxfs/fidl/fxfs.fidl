@@ -73,14 +73,20 @@ protocol CryptManagement {
     }) -> (struct {}) error zx.status;
 };
 
+type MountOptions = resource struct {
+    /// An optional connection to a crypt client (for encrypted volumes).
+    crypt client_end:<Crypt, optional>;
+};
+
 protocol Volume {
-    /// Mounts the volume.  If the volume is encrypted, `crypt` should provide all key access for
-    /// the given volume.  `outgoing_directory` will contain the root and other services exposed by
-    /// the volume.  To lock the volume, call fuchsia.fs.Admin.Shutdown on the returned handle.
+    /// Mounts the volume.  If the volume is encrypted, `options.crypt` should provide all key
+    /// access for the given volume.  `outgoing_directory` will contain the root and other services
+    /// exposed by the volume.  To lock the volume, call fuchsia.fs.Admin.Shutdown on the returned
+    /// handle.
     // TODO(fxbug.dev/99182): Try to share options with fuchsia.fs_startup StartOptions.
     Mount(resource struct {
-        crypt client_end:<Crypt, optional>;
-        outgoing_directory server_end:fuchsia.io.Node;
+        outgoing_directory server_end:fuchsia.io.Directory;
+        options MountOptions;
     }) -> (struct {}) error zx.status;
 };
 
