@@ -46,7 +46,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 	nodename := "TestEmulatorWorksWithFfx-Nodename"
 
 	// Note: To run this test locally on linux, you must create the TAP interface:
-	// $ sudo ip tuntap add mode tap qemu
+	// $ sudo ip tuntap add mode tap qemu; sudo ip link set dev qemu up
 	// The qemu tap interface is assumed to exist on infra.
 	netdevs := []*fvdpb.Netdev{{
 		Id:   "qemu",
