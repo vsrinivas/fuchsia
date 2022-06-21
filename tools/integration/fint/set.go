@@ -258,8 +258,8 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 	}
 
 	vars["use_goma"] = staticSpec.UseGoma
-	// TODO(fangism): separate RBE values in staticSpec
 	vars["rust_rbe_enable"] = staticSpec.RustRbeEnable
+	vars["cxx_rbe_enable"] = staticSpec.CxxRbeEnable
 
 	if staticSpec.Product != "" {
 		basename := filepath.Base(staticSpec.Product)

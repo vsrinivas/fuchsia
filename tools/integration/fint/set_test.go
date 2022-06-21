@@ -96,10 +96,10 @@ func TestSet(t *testing.T) {
 		}
 	})
 
-	t.Run("populates set_artifacts fields", func(t *testing.T) {
+	t.Run("populates set_artifacts fields (Rust)", func(t *testing.T) {
 		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
 		staticSpec.UseGoma = true
-		staticSpec.RustRbeEnable = true
+		staticSpec.RustRbeEnable = true // This turns on RBE.
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}
@@ -113,6 +113,25 @@ func TestSet(t *testing.T) {
 		}
 		if !artifacts.UseGoma {
 			t.Errorf("Expected setImpl to set use_goma")
+		}
+		if !artifacts.EnableRbe {
+			t.Errorf("Expected setImpl to set enable_rbe")
+		}
+	})
+
+	t.Run("populates set_artifacts fields (C++)", func(t *testing.T) {
+		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
+		staticSpec.CxxRbeEnable = true // This turns on RBE.
+		runner := &fakeSubprocessRunner{
+			mockStdout: []byte("some stdout"),
+		}
+		artifacts, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		if err != nil {
+			t.Fatalf("Unexpected error from setImpl: %s", err)
+		}
+		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.ArtifactDir) {
+			t.Errorf("Expected setImpl to set a gn_trace_path in the artifact dir (%q) but got: %q",
+				contextSpec.ArtifactDir, artifacts.GnTracePath)
 		}
 		if !artifacts.EnableRbe {
 			t.Errorf("Expected setImpl to set enable_rbe")
