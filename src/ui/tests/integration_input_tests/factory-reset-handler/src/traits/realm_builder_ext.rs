@@ -5,7 +5,7 @@
 use {
     crate::traits::test_realm_component::TestRealmComponent,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fuchsia_component_test::{Capability, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, DirectoryContents, RealmBuilder, Ref, Route},
 };
 
 /// Ergonomic extension of RealmBuilder.
@@ -41,6 +41,15 @@ pub(crate) trait RealmBuilderExt {
         &self,
         source: &(dyn TestRealmComponent + Sync),
         destination: &(dyn TestRealmComponent + Sync),
+    );
+
+    /// Routes a read-only directory with the specified `directory_contents` to the given
+    /// `destination` component.
+    async fn route_read_only_directory(
+        &self,
+        directory_name: String,
+        destination: &(dyn TestRealmComponent + Sync),
+        directory_contents: DirectoryContents,
     );
 }
 
@@ -97,6 +106,22 @@ impl RealmBuilderExt for RealmBuilder {
                 .capability(Capability::protocol::<D>())
                 .from(source.ref_())
                 .to(destination.ref_()),
+        )
+        .await
+        .unwrap();
+    }
+
+    async fn route_read_only_directory(
+        &self,
+        directory_name: String,
+        destination: &(dyn TestRealmComponent + Sync),
+        directory_contents: DirectoryContents,
+    ) {
+        RealmBuilder::read_only_directory(
+            &self,
+            directory_name,
+            vec![destination.ref_()],
+            directory_contents,
         )
         .await
         .unwrap();

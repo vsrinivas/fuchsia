@@ -13,7 +13,7 @@ use {
         traits::realm_builder_ext::RealmBuilderExt as _,
     },
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_component_test::{RealmBuilder, RealmInstance},
+    fuchsia_component_test::{DirectoryContents, RealmBuilder, RealmInstance},
     futures::StreamExt,
     input_synthesis::{modern_backend, synthesizer},
 };
@@ -30,14 +30,10 @@ async fn assemble_realm(
     let b = RealmBuilder::new().await.expect("Failed to create RealmBuilder");
 
     // Declare packaged components.
-    let scenic_test_realm = PackagedComponent::new_from_modern_url(
-        "scenic-test-realm",
-        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic_only.cm",
-    );
-    let input_pipeline = PackagedComponent::new_from_legacy_url(
-        "input_pipeline",
-        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/input-pipeline.cmx",
-    );
+    let scenic_test_realm =
+        PackagedComponent::new_from_modern_url("scenic-test-realm", "#meta/scenic_only.cm");
+    let input_pipeline =
+        PackagedComponent::new_from_modern_url("input_pipeline", "#meta/input-pipeline.cm");
 
     // Add packaged components and mocks to the test realm.
     b.add(&scenic_test_realm).await;
@@ -79,6 +75,16 @@ async fn assemble_realm(
     // Allow tests to inject input reports into the input pipeline.
     b.route_to_parent::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>(&input_pipeline)
         .await;
+
+    // Route required config files to input pipeline.
+    b.route_read_only_directory(
+        String::from("config-data"),
+        &input_pipeline,
+        DirectoryContents::new()
+            .add_file("chirp-start-tone.wav", "")
+            .add_file("ignore_real_devices", ""),
+    )
+    .await;
 
     // Create the test realm.
     b.build().await.expect("Failed to create realm")

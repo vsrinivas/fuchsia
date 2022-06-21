@@ -8,7 +8,6 @@ use {
 };
 
 enum LegacyOrModernUrl {
-    LegacyUrl(String),
     ModernUrl(String),
 }
 
@@ -19,13 +18,6 @@ pub(crate) struct PackagedComponent {
 }
 
 impl PackagedComponent {
-    pub(crate) fn new_from_legacy_url(
-        name: impl Into<String>,
-        legacy_url: impl Into<String>,
-    ) -> Self {
-        Self { name: name.into(), source: LegacyOrModernUrl::LegacyUrl(legacy_url.into()) }
-    }
-
     pub(crate) fn new_from_modern_url(
         name: impl Into<String>,
         modern_url: impl Into<String>,
@@ -42,9 +34,6 @@ impl TestRealmComponent for PackagedComponent {
 
     async fn add_to_builder(&self, builder: &RealmBuilder) {
         match &self.source {
-            LegacyOrModernUrl::LegacyUrl(url) => {
-                builder.add_legacy_child(&self.name, url, ChildOptions::new()).await.unwrap();
-            }
             LegacyOrModernUrl::ModernUrl(url) => {
                 builder.add_child(&self.name, url, ChildOptions::new()).await.unwrap();
             }
