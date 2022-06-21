@@ -913,6 +913,19 @@ TEST_F(FlatlandTest, SetHitRegionsErrorTest) {
     flatland->SetHitRegions(kId, {region});
     PRESENT(flatland, /*expect_success=*/true);
   }
+
+  // Consecutive SetRootTransforms with the same transform should work.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    fuchsia::math::RectF rect = {0, 0, 0, 0};
+    fuchsia::ui::composition::HitRegion region = {rect, interaction};
+
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {region});
+    PRESENT(flatland, /*expect_success=*/true);
+  }
 }
 
 TEST_F(FlatlandTest, SetDebugNameAddsPrefixToLogs) {
@@ -2137,14 +2150,19 @@ TEST_F(FlatlandTest, ViewportClippingPersistsAcrossInstances) {
   EXPECT_EQ(child_root_clip.height, kViewportHeight);
 }
 
-TEST_F(FlatlandTest, DefaultHitRegionsExist) {
+TEST_F(FlatlandTest, DefaultHitRegionsExist_OnlyForCurrentRoot) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
   const auto session_id = flatland->GetSessionId();
 
   const TransformId kId1 = {1};
   const TransformHandle handle1 = TransformHandle(session_id, 1);
 
+  const TransformId kId2 = {2};
+  const TransformHandle handle2 = TransformHandle(session_id, 2);
+
   flatland->CreateTransform(kId1);
+  flatland->CreateTransform(kId2);
+
   flatland->SetRootTransform(kId1);
 
   PRESENT(flatland, true);
@@ -2154,11 +2172,9 @@ TEST_F(FlatlandTest, DefaultHitRegionsExist) {
 
     EXPECT_EQ(hit_regions.size(), 1u);
     EXPECT_EQ(hit_regions[handle1].size(), 1u);
+    EXPECT_EQ(hit_regions[handle2].size(), 0u);
   }
 
-  const TransformId kId2 = {2};
-  const TransformHandle handle2 = TransformHandle(session_id, 2);
-  flatland->CreateTransform(kId2);
   flatland->SetRootTransform(kId2);
 
   PRESENT(flatland, true);
@@ -2168,6 +2184,7 @@ TEST_F(FlatlandTest, DefaultHitRegionsExist) {
     auto& hit_regions = uber_struct->local_hit_regions_map;
 
     EXPECT_EQ(hit_regions.size(), 1u);
+    EXPECT_EQ(hit_regions[handle1].size(), 0u);
     EXPECT_EQ(hit_regions[handle2].size(), 1u);
   }
 }
@@ -2195,12 +2212,12 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
     auto hit_region = hit_regions[handle1][0];
 
     auto rect = hit_region.region;
-    fuchsia::math::RectF expected_rect = {0, 0, FLT_MAX, FLT_MAX};
+    fuchsia::math::RectF expected_rect = {FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX};
     ExpectRectFEquals(rect, expected_rect);
     EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
   }
 
-  // Overwrite the default hit region with our own, even though it is for a different transform.
+  // Add a hit region to a different transform - this should not overwrite the default one.
   const TransformId kId2 = {2};
   const TransformHandle handle2 = TransformHandle(session_id, 2);
 
@@ -2214,20 +2231,32 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
     auto uber_struct = GetUberStruct(flatland.get());
     auto& hit_regions = uber_struct->local_hit_regions_map;
 
-    EXPECT_EQ(hit_regions.size(), 1u);
+    EXPECT_EQ(hit_regions.size(), 2u);
+    EXPECT_EQ(hit_regions[handle1].size(), 1u);
     EXPECT_EQ(hit_regions[handle2].size(), 1u);
 
-    auto hit_region = hit_regions[handle2][0];
+    {
+      auto hit_region = hit_regions[handle1][0];
 
-    auto rect = hit_region.region;
-    fuchsia::math::RectF expected_rect = {0, 1, 2, 3};
-    ExpectRectFEquals(rect, expected_rect);
-    EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
+      auto rect = hit_region.region;
+      fuchsia::math::RectF expected_rect = {FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX};
+      ExpectRectFEquals(rect, expected_rect);
+      EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
+    }
+
+    {
+      auto hit_region = hit_regions[handle2][0];
+
+      auto rect = hit_region.region;
+      fuchsia::math::RectF expected_rect = {0, 1, 2, 3};
+      ExpectRectFEquals(rect, expected_rect);
+      EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
+    }
   }
 
-  // Overwrite the region we set.
+  // Overwrite the default hit region.
   flatland->SetHitRegions(
-      kId2, {{{1, 2, 3, 4}, fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
+      kId1, {{{1, 2, 3, 4}, fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
 
   PRESENT(flatland, true);
 
@@ -2235,10 +2264,10 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
     auto uber_struct = GetUberStruct(flatland.get());
     auto& hit_regions = uber_struct->local_hit_regions_map;
 
-    EXPECT_EQ(hit_regions.size(), 1u);
-    EXPECT_EQ(hit_regions[handle2].size(), 1u);
+    EXPECT_EQ(hit_regions.size(), 2u);
+    EXPECT_EQ(hit_regions[handle1].size(), 1u);
 
-    auto hit_region = hit_regions[handle2][0];
+    auto hit_region = hit_regions[handle1][0];
 
     auto rect = hit_region.region;
     fuchsia::math::RectF expected_rect = {1, 2, 3, 4};
@@ -2248,7 +2277,7 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
   }
 }
 
-TEST_F(FlatlandTest, SetRootTransformAfterSetHitRegions_DoesNotAddAHitRegion) {
+TEST_F(FlatlandTest, SetRootTransformAfterSetHitRegions_DoesNotChangeHitRegion) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
   const auto session_id = flatland->GetSessionId();
 
@@ -2319,6 +2348,36 @@ TEST_F(FlatlandTest, MultipleTransformsWithHitRegions) {
     EXPECT_EQ(hit_region2.hit_test,
               fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE);
   }
+}
+
+TEST_F(FlatlandTest, ManuallyAddedMaximalHitRegionPersists) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+  const auto session_id = flatland->GetSessionId();
+
+  const TransformId kId1 = {1};
+  const TransformHandle handle1 = TransformHandle(session_id, 1);
+
+  flatland->CreateTransform(kId1);
+  flatland->SetHitRegions(kId1, {{{FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX},
+                                  fuchsia::ui::composition::HitTestInteraction::DEFAULT}});
+  PRESENT(flatland, true);
+
+  flatland->SetRootTransform(kId1);
+  PRESENT(flatland, true);
+
+  flatland->SetRootTransform({0});
+  PRESENT(flatland, true);
+
+  auto uber_struct = GetUberStruct(flatland.get());
+  auto& hit_regions = uber_struct->local_hit_regions_map;
+
+  EXPECT_EQ(hit_regions.size(), 1u);
+  EXPECT_EQ(hit_regions[handle1].size(), 1u);
+  auto hit_region1 = hit_regions[handle1][0];
+
+  auto rect = hit_region1.region;
+  fuchsia::math::RectF expected_rect = {FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX};
+  ExpectRectFEquals(rect, expected_rect);
 }
 
 TEST_F(FlatlandTest, ChildViewWatcherFailsIdCollision) {

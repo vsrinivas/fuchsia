@@ -615,6 +615,24 @@ protocol Flatland {
     /// There is only ever one Root. Since 0 is not a valid transform id (see [`CreateTransform`]),
     /// calling SetRootTransform(0) clears the current Root, destroying any previously released
     /// objects that are not referenced by the new root.
+    ///
+    /// Setting the root transform installs a full screen hit region on the root transform. Clients
+    /// may remove this hit region if they don't want users to be able to interact with the root
+    /// transform's content. For additional details on hit regions, see the [`SetHitRegions`]
+    /// documentation.
+    ///
+    /// Default hit region rules
+    ///
+    ///   A default hit region follows these rules:
+    ///   - When [`SetRootTransform`](T) is called, T receives a maximal hit region, covering the
+    ///   entire view.
+    ///   - If [`SetHitRegions`] is called on T, either before or after [`SetRootTransform`](T),
+    ///   then no default hit region is active and the client specified hit regions are used.
+    ///   - If a transform is no longer the root transform, i.e., [`SetRootTransform`](U) is
+    ///   called, then the original transform no longer has its default hit region.
+    ///   - Clients can remove or modify the root transform's hit regions the same way they would
+    ///   reset any other transform's hit regions, by calling [`SetHitRegions`] with the appropriate
+    ///   vector.
     SetRootTransform(struct {
         transform_id TransformId;
     });
@@ -630,6 +648,11 @@ protocol Flatland {
     /// rules given below dictate which hit region has interacted with the hit test. Only Transforms
     /// that transitively connect to the root Transform have their hit regions interact with a hit
     /// test.
+    ///
+    /// To reset a Transform to "no hit testing": send an empty vector.
+    ///
+    /// Note that root transforms get a default hit region installed by Flatland. For more details,
+    /// see the [`SetRootTransform`] documentation.
     ///
     /// Precedence rules
     ///   Within a Transform, if multiple hit regions overlap, the hit test examines each
@@ -649,8 +672,6 @@ protocol Flatland {
     ///   reverse "render order" of views, where a user expects to interact with the View that is
     ///   visible, or front-most. For example, if a child View owns Content that is rendered over
     ///   the parent View, the user expects to interact with the child's Content.
-    ///
-    /// To reset a Transform to "no hit testing": send an empty vector.
     SetHitRegions(struct {
         transform_id TransformId;
         regions vector<HitRegion>:MAX_HIT_REGION_COUNT;

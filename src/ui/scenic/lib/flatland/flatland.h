@@ -303,6 +303,12 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // it a fixed attachment point for cross-instance Links.
   const TransformHandle local_root_;
 
+  // The transform from the last call to SetRootTransform(). Unlike |local_root_|, this can change
+  // over time.
+  //
+  // Initialize to an invalid handle.
+  TransformHandle root_transform_ = TransformHandle(0, 0);
+
   // A mapping from user-generated ID to the TransformHandle that owns that piece of Content.
   // Attaching Content to a Transform consists of setting one of these "Content Handles" as the
   // priority child of the Transform.
@@ -379,12 +385,6 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // parts of the transform are user-interactive.
   std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>>
       hit_regions_;
-
-  // TODO(fxbug.dev/93005) Remove this once clients are responsible for setting their own hit
-  // regions.
-  //
-  // This becomes false once the client calls SetHitRegions() with any valid arguments.
-  bool has_default_hit_region_ = true;
 
   // A map of content (image) transform handles to ImageSampleRegion structs which are used
   // to determine the portion of an image that is actually used for rendering.

@@ -31,6 +31,11 @@ class TransformHandle {
   TransformHandle(InstanceId instance_id, uint64_t transform_id)
       : instance_id_(instance_id), transform_id_(transform_id) {}
 
+  TransformHandle(const TransformHandle& other) {
+    instance_id_ = other.instance_id_;
+    transform_id_ = other.transform_id_;
+  }
+
   bool operator==(const TransformHandle& rhs) const {
     return instance_id_ == rhs.instance_id_ && transform_id_ == rhs.transform_id_;
   }
@@ -41,6 +46,7 @@ class TransformHandle {
     return instance_id_ < rhs.instance_id_ ||
            (instance_id_ == rhs.instance_id_ && transform_id_ < rhs.transform_id_);
   }
+
   InstanceId GetInstanceId() const { return instance_id_; }
   uint64_t GetTransformId() const { return transform_id_; }
 
