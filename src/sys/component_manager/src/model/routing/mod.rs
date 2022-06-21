@@ -371,7 +371,7 @@ pub async fn report_routing_failure(
         .log(
             log_level,
             format!(
-                "Failed to route {} `{}` with target component `{}`: {}\n{}",
+                "Failed to route {} `{}` to target component `{}`: {}\n{}",
                 cap.type_name(),
                 cap.source_id(),
                 &target.abs_moniker,

@@ -28,9 +28,11 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "fidl.test.components.Trigger",
-            "target component `/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent`",
-            "`offer from parent` declaration was found at `/routing-tests/offers-to-children-unavailable`",
-            "no matching `offer` declaration was found in the parent",
+            "target component \
+            `/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent`",
+            "`/routing-tests/offers-to-children-unavailable` tried to offer \
+            `fidl.test.components.Trigger` from its parent",
+            "but the parent does not offer",
         ]],
     );
     treasure.insert(
@@ -39,9 +41,8 @@ async fn main() {
             "Failed to route",
             "`fidl.test.components.Trigger`",
             "target component `/routing-tests/child`",
-            "`use from parent`",
-            "at `/routing-tests/child`",
-            "no matching `offer` declaration was found in the parent",
+            "`/routing-tests/child` tried to use `fidl.test.components.Trigger` from its parent",
+            "but the parent does not offer",
         ]],
     );
     treasure.insert(
@@ -49,12 +50,13 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
-            "target component `/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling`",
-            "`offer from #child-that-doesnt-expose` declaration was found",
-            "no matching `expose` declaration",
-        ]]
+            "target component \
+            `/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling`",
+            "`/routing-tests/offers-to-children-unavailable` tried to offer",
+            "from its child `#child-that-doesnt-expose`",
+            "`#child-that-doesnt-expose` does not expose `fidl.test.components.Trigger`",
+        ]],
     );
-
     treasure.insert(
         "routing-tests/offers-to-children-unavailable/child-open-unrequested".to_string(),
         vec![vec![

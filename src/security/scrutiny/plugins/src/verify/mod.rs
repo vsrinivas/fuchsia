@@ -1115,7 +1115,7 @@ mod tests {
                                             }
                                         }
                                     },
-                                    "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                                    "message": "`/child` tried to use `bad_dir` from its parent, but the parent does not offer that capability. Note, use clauses in CML default to using from parent."
                                 },
                                 "using_node": "/child",
                             },
@@ -1146,7 +1146,7 @@ mod tests {
                                             }
                                         }
                                     },
-                                    "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                                    "message": "`/` tried to offer `protocol` from `#missing_child`, but no such child was found."
                                 },
                                 "using_node": "/child",
                             },
@@ -1192,7 +1192,7 @@ mod tests {
                                       }
                                   }
                               },
-                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                              "message": "`/child` tried to use `bad_dir` from its parent, but the parent does not offer that capability. Note, use clauses in CML default to using from parent."
                           },
                           "using_node": "/child",
                       },
@@ -1269,7 +1269,7 @@ mod tests {
                                     }
                                 }
                             },
-                            "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                            "message": "`/` tried to offer `protocol` from `#missing_child`, but no such child was found."
                         },
                         "using_node": "/child",
                     },
@@ -1315,7 +1315,7 @@ mod tests {
                                       }
                                   }
                               },
-                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                              "message": "`/child` tried to use `bad_dir` from its parent, but the parent does not offer that capability. Note, use clauses in CML default to using from parent."
                           },
                           "using_node": "/child",
                       },
@@ -1341,7 +1341,7 @@ mod tests {
                                           }
                                       }
                                   },
-                                  "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                                  "message": "`/` tried to offer `protocol` from `#missing_child`, but no such child was found."
                               }
                           }
                       ]
@@ -1386,7 +1386,7 @@ mod tests {
                                       }
                                   }
                               },
-                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                              "message": "`/child` tried to use `bad_dir` from its parent, but the parent does not offer that capability. Note, use clauses in CML default to using from parent."
                           },
                           "using_node": "/child",
                       }
