@@ -82,8 +82,8 @@ where
                     return Ok(());
                 }
             };
-        let local_port = packet.src_port();
-        let remote_port = packet.dst_port();
+        let local_port = packet.dst_port();
+        let remote_port = packet.src_port();
         let incoming = match Segment::try_from(packet) {
             Ok(segment) => segment,
             Err(err) => {
@@ -364,8 +364,8 @@ where
     let mut builder = TcpSegmentBuilder::new(
         *local_ip,
         *remote_ip,
-        remote_port,
         local_port,
+        remote_port,
         seq.into(),
         ack.map(Into::into),
         u16::try_from(u32::from(wnd)).unwrap_or(u16::MAX),
