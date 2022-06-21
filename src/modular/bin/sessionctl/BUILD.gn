@@ -74,6 +74,5 @@ executable("sessionctl_unittest") {
 }
 
 fuchsia_unittest_package("sessionctl_unittests") {
-  manifest = "meta/sessionctl_unittest.cmx"
   deps = [ ":sessionctl_unittest" ]
 }
