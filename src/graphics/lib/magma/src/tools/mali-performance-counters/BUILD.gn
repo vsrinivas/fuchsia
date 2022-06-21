@@ -51,7 +51,7 @@ fuchsia_component("mali-performance-counters-test-cmp") {
   testonly = true
   component_name = "mali-performance-counters-test"
   deps = [ ":mali-performance-counters-test-bin" ]
-  manifest = "meta/mali_performance_counters_test.cmx"
+  manifest = "meta/mali_performance_counters_test.cml"
 }
 
 fuchsia_test_package("mali-performance-counters-test") {
