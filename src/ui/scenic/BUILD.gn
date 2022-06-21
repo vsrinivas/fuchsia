@@ -234,7 +234,7 @@ fuchsia_unittest_package("scenic_unittests") {
   manifest = "meta/scenic_unittests.cml"
   deps = [
            "lib/scenic/tests:unittests",
-           "//src/lib/fake-clock/svc:svc_v2",
+           "//src/lib/fake-clock/svc",
          ] + scenic_test_deps
   test_specs = {
     log_settings = {

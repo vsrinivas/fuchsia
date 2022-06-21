@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/testing/environments.gni")
-import("//tools/cmc/build/expect_includes.gni")
 
 config("rust-link-fake-time") {
   _dir = rebase_path(get_label_info(":lib($shlib_toolchain)", "root_out_dir"),
@@ -27,7 +26,6 @@ shared_library("lib") {
   sources = [ "fake_clock.cc" ]
 
   deps = [
-    ":fake_clock_lib_includes",
     "//sdk/lib/fdio",
     "//src/lib/fake-clock/fidl:fidl_llcpp",
     "//src/lib/fake-clock/named-timer:named-timer-headers",
@@ -39,13 +37,6 @@ shared_library("lib") {
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
   public_configs = [ "//src/lib/fake-clock/lib:rust-link-fake-time" ]
-}
-
-expect_includes("fake_clock_lib_includes") {
-  includes = [
-    "client.shard.cmx",
-    "client.shard.cml",
-  ]
 }
 
 executable("test_bin") {
@@ -69,7 +60,7 @@ executable("test_bin") {
 fuchsia_component("test_component") {
   testonly = true
   component_name = "fake_clock_lib_test"
-  manifest = "meta/fake_clock_lib_test.cmx"
+  manifest = "meta/fake_clock_lib_test.cml"
   deps = [ ":test_bin" ]
 }
 

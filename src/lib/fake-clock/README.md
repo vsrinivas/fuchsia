@@ -61,7 +61,7 @@ executable("bin_with_fake_time") {
 fuchsia_component("component_with_fake_time") {
     testonly = true
     component_name = "component_with_fake_time"
-    manifest "meta/component_with_fake_time.cmx"
+    manifest "meta/component_with_fake_time.cml"
     deps = [":bin_with_fake_time"]
 }
 ```
@@ -70,7 +70,7 @@ Include the fake-clock shard in the manifest for each component with fake time.
 ```
     ...
     "include": [
-        "//src/lib/fake-clock/lib/client.shard.cmx"
+        "//src/lib/fake-clock/lib/client.shard.cml"
     ],
 ```
 

@@ -36,14 +36,14 @@ rustc_binary("fake_clock_svc") {
 fuchsia_component("svc") {
   testonly = true
   component_name = "fake_clock"
-  manifest = "meta/fake_clock.cmx"
+  manifest = "meta/fake_clock.cml"
   deps = [ ":fake_clock_svc" ]
 }
 
-fuchsia_component("svc_v2") {
+fuchsia_component("svc_legacy") {
   testonly = true
   component_name = "fake_clock"
-  manifest = "meta/fake_clock.cml"
+  manifest = "meta/fake_clock.cmx"
   deps = [ ":fake_clock_svc" ]
 }
 

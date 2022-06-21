@@ -71,7 +71,7 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/dns:component_with_fake_time",
 
     # the DNS resolver under test uses the fake clock.
-    "//src/lib/fake-clock/svc:svc_v2",
+    "//src/lib/fake-clock/svc",
 
     # netcfg integration with netstack is tested.
     ":netcfg-netemul-config",

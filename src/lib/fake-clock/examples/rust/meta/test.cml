@@ -5,15 +5,15 @@
     children: [
         {
             name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust-v2#meta/rust_integ_test_v2_driver.cm",
+            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust#meta/rust_integ_test_driver.cm",
         },
         {
             name: "example",
-            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust-v2#meta/rust_example_v2.cm",
+            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust#meta/rust_example.cm",
         },
         {
             name: "fake_clock",
-            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust-v2#meta/fake_clock.cm",
+            url: "fuchsia-pkg://fuchsia.com/fake-clock-rust#meta/fake_clock.cm",
         },
     ],
     offer: [
