@@ -53,29 +53,29 @@ if (target_cpu == "x64") {
 
   fuchsia_test_component("mesa_unit_tests_component") {
     deps = [ "//third_party/mesa/tests:mesa_unit_tests" ]
-    manifest = "meta/mesa_unit_tests.cmx"
+    manifest = "meta/mesa_unit_tests.cml"
   }
 
   fuchsia_test_component("state_pool_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool" ]
-    manifest = "meta/state_pool.cmx"
+    manifest = "meta/state_pool.cml"
   }
 
   fuchsia_test_component("state_pool_free_list_only_component") {
     deps = [
       "//third_party/mesa/src/intel/vulkan/tests:state_pool_free_list_only",
     ]
-    manifest = "meta/state_pool_free_list_only.cmx"
+    manifest = "meta/state_pool_free_list_only.cml"
   }
 
   fuchsia_test_component("state_pool_no_free_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:state_pool_no_free" ]
-    manifest = "meta/state_pool_no_free.cmx"
+    manifest = "meta/state_pool_no_free.cml"
   }
 
   fuchsia_test_component("block_pool_no_free_component") {
     deps = [ "//third_party/mesa/src/intel/vulkan/tests:block_pool_no_free" ]
-    manifest = "meta/block_pool_no_free.cmx"
+    manifest = "meta/block_pool_no_free.cml"
   }
 
   fuchsia_test_package("mesa_unit_tests") {
@@ -90,7 +90,7 @@ if (target_cpu == "x64") {
 
   fuchsia_test_component("mesa_integration_tests_component") {
     deps = [ "//third_party/mesa:tests" ]
-    manifest = "meta/mesa_integration_tests.cmx"
+    manifest = "meta/mesa_integration_tests.cml"
   }
 
   fuchsia_test_package("mesa_integration_tests") {

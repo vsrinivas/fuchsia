@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml", // Needed for dev-gpu
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/mesa_integration_tests",
+    },
+    use: [
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+    ],
+}

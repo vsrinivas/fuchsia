@@ -262,7 +262,6 @@ group("cmx_allowlist") {
     "//src/fonts/tests/smoke:*",
     "//src/graphics/display/bin/display-factory-test:*",
     "//src/graphics/display/lib/edid:*",
-    "//src/graphics/drivers/intel-gen/icd:*",
     "//src/graphics/drivers/msd-arm-mali/tests:*",
     "//src/graphics/drivers/msd-intel-gen/tests:*",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration:*",
