@@ -892,14 +892,23 @@ impl ReservationVmar {
         // (base+len) represents the full address space, assuming this is used with a root VMAR and
         // length extends to the end of the address space, including a region the kernel reserves
         // at the start of the space.
-        let reserve_size = util::page_end((info.base + info.len) / 2) - info.base;
-        let (reserve_vmar, reserve_base) =
-            vmar.allocate(0, reserve_size, zx::VmarFlags::SPECIFIC).map_err(|s| {
-                ProcessBuilderError::GenericStatus("Failed to allocate reservation VMAR", s)
-            })?;
-        assert_eq!(reserve_base, info.base, "Reservation VMAR allocated at wrong address");
+        // TODO(fxbug.dev/25042): Clean up address space reservation to avoid unnecessary
+        // reservations, which should also avoid the "fake" reservation in the else-clause.
+        if let Some(reserve_size) =
+            util::page_end((info.base + info.len) / 2).checked_sub(info.base)
+        {
+            let (reserve_vmar, reserve_base) =
+                vmar.allocate(0, reserve_size, zx::VmarFlags::SPECIFIC).map_err(|s| {
+                    ProcessBuilderError::GenericStatus("Failed to allocate reservation VMAR", s)
+                })?;
+            assert_eq!(reserve_base, info.base, "Reservation VMAR allocated at wrong address");
 
-        Ok(ReservationVmar(Some(reserve_vmar)))
+            Ok(ReservationVmar(Some(reserve_vmar)))
+        } else {
+            // The VMAR does not intersect the "bottom half," so return a success but without an
+            // actual reservation.
+            Ok(ReservationVmar(None))
+        }
     }
 
     /// Destroy the reservation. The reservation is also automatically destroyed when
