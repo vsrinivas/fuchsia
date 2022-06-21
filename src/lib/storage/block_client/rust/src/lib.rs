@@ -64,8 +64,8 @@ fn op_code_str(op_code: u32) -> &'static str {
     }
 }
 
+#[derive(Default, zerocopy::AsBytes, zerocopy::FromBytes)]
 #[repr(C)]
-#[derive(Default)]
 pub struct BlockFifoRequest {
     pub op_code: u32,
     pub request_id: u32,
@@ -77,8 +77,8 @@ pub struct BlockFifoRequest {
     pub trace_flow_id: u64,
 }
 
+#[derive(Default, zerocopy::AsBytes, zerocopy::FromBytes)]
 #[repr(C)]
-#[derive(Default)]
 pub struct BlockFifoResponse {
     pub status: i32,
     pub request_id: u32,
@@ -89,9 +89,6 @@ pub struct BlockFifoResponse {
     pub reserved3: u64,
     pub reserved4: u64,
 }
-
-unsafe impl fasync::FifoEntry for BlockFifoRequest {}
-unsafe impl fasync::FifoEntry for BlockFifoResponse {}
 
 // Generates a trace ID that will be unique across the system (as long as |request_id| isn't
 // reused within this process).

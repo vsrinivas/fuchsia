@@ -28,6 +28,7 @@ rustc_library("rust") {
     "//src/lib/fidl_table_validation",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
+    "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",

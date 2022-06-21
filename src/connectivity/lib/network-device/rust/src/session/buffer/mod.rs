@@ -500,7 +500,6 @@ impl<K: AllocKind> DerefMut for DescRefMut<'_, K> {
 /// with struct literal syntax.
 mod types {
     use super::{netdev, AllocKind, Error, Result};
-    use fuchsia_async::FifoEntry;
     use std::convert::{TryFrom, TryInto as _};
     use std::fmt::Debug;
     use std::num::TryFromIntError;
@@ -516,9 +515,25 @@ mod types {
     ///
     /// Also since DESCID_NO_NEXT(u16::MAX) is used to signal the end of a free
     /// list, there should be no [`DescId`] holding that value.
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, zerocopy::FromBytes)]
     #[repr(transparent)]
     pub(in crate::session) struct DescId<K: AllocKind>(u16, std::marker::PhantomData<K>);
+
+    // TODO(https://fxbug.dev/84475): Replace this with a derive once type
+    // parameters are supported.
+    //
+    // SAFETY: Safe because `DescId` is transparently a u16. Body contains a
+    // statement guaranteeing this is valid.
+    unsafe impl<K: AllocKind> zerocopy::AsBytes for DescId<K> {
+        fn only_derive_is_allowed_to_implement_this_trait()
+        where
+            Self: Sized,
+        {
+            struct ImplsAsBytes<F: zerocopy::AsBytes>(F);
+            let Self(x, _) = Self(0, std::marker::PhantomData);
+            let _ = ImplsAsBytes(x);
+        }
+    }
 
     impl<K: AllocKind> Debug for DescId<K> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -532,10 +547,6 @@ mod types {
     /// big deal to scrafice one value in the value space, we can't have that
     /// many descriptors anyway.
     pub(super) const DESCID_NO_NEXT: u16 = u16::MAX;
-
-    // `DescId` is a `u16` which can be represented by arbitrary bit patterns.
-    // It is safe to mark it as `FifoEntry`.
-    unsafe impl<K: AllocKind> FifoEntry for DescId<K> {}
 
     impl<K: AllocKind> DescId<K> {
         // Safety: The caller needs to make sure there is no other DescId's having

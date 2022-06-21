@@ -14,17 +14,17 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
+    zerocopy::{AsBytes, FromBytes},
 };
 
 /// Marker trait for types that can be read/written with a `Fifo`. Unsafe
 /// because not all types may be represented by arbitrary bit patterns.
 ///
-/// # Safety
-///
-/// `FifoEntry` must only be implemented for types that may be represented by
-/// arbitrary bit patterns. Typically `repr(C)` or `repr(transparent)` are
-/// minimum requirements for safely implementing this trait.
-pub unsafe trait FifoEntry {}
+/// An implementation is provided for all types that implement
+/// [`AsBytes`] and [`FromBytes`].
+pub trait FifoEntry: AsBytes + FromBytes {}
+
+impl<O: AsBytes + FromBytes> FifoEntry for O {}
 
 /// A buffer used to write `T` into [`Fifo`] objects.
 ///
@@ -74,7 +74,7 @@ unsafe impl<T: FifoEntry> FifoWriteBuffer<T> for [T] {
 
     fn as_bytes_ptr(&self) -> *const u8 {
         // SAFETY: Guaranteed by bounds on T.
-        self.as_ptr() as _
+        self.as_bytes().as_ptr()
     }
 }
 
@@ -85,7 +85,7 @@ unsafe impl<T: FifoEntry> FifoReadBuffer<T> for [T] {
 
     fn as_bytes_ptr_mut(&mut self) -> *mut u8 {
         // SAFETY: Guaranteed by bounds on T.
-        self.as_mut_ptr() as _
+        self.as_bytes_mut().as_mut_ptr()
     }
 }
 
@@ -96,7 +96,7 @@ unsafe impl<T: FifoEntry> FifoWriteBuffer<T> for T {
 
     fn as_bytes_ptr(&self) -> *const u8 {
         // SAFETY: Guaranteed by bounds on T.
-        self as *const T as _
+        self.as_bytes().as_ptr()
     }
 }
 
@@ -107,7 +107,7 @@ unsafe impl<T: FifoEntry> FifoReadBuffer<T> for T {
 
     fn as_bytes_ptr_mut(&mut self) -> *mut u8 {
         // SAFETY: Guaranteed by bounds on T.
-        self as *mut T as _
+        self.as_bytes_mut().as_mut_ptr()
     }
 }
 
@@ -503,20 +503,18 @@ mod tests {
     use futures::future::try_join;
     use futures::prelude::*;
 
-    #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
+    #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, AsBytes, FromBytes)]
     #[repr(C)]
     struct entry {
         a: u32,
         b: u32,
     }
-    unsafe impl FifoEntry for entry {}
 
-    #[derive(Clone, Debug, PartialEq, Eq, Default)]
+    #[derive(Clone, Debug, PartialEq, Eq, Default, AsBytes, FromBytes)]
     #[repr(C)]
     struct wrong_entry {
         a: u16,
     }
-    unsafe impl FifoEntry for wrong_entry {}
 
     #[test]
     fn can_read_write() {

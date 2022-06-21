@@ -9,16 +9,14 @@ use shared_buffer::SharedBuffer;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+#[derive(Debug, zerocopy::AsBytes, zerocopy::FromBytes)]
 #[repr(C)]
-#[derive(Debug)]
 pub struct FifoEntry {
     pub offset: u32,
     pub length: u16,
     pub flags: u16,
     cookie: u64,
 }
-
-unsafe impl fuchsia_async::FifoEntry for FifoEntry {}
 
 impl From<sys::eth_fifo_entry> for FifoEntry {
     fn from(sys::eth_fifo_entry { offset, length, flags, cookie }: sys::eth_fifo_entry) -> Self {
