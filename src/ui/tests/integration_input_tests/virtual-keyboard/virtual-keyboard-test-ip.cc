@@ -417,6 +417,11 @@ class WebEngineTest : public VirtualKeyboardBase {
         {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
          .source = ChildRef{kBuildInfoProvider},
          .targets = {target, ChildRef{kWebContextProvider}}},
+        {
+            .capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+            .source = ParentRef(),
+            .targets = {ChildRef{kWebContextProvider}},
+        },
     };
   }
 
