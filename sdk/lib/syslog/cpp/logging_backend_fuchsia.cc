@@ -341,9 +341,6 @@ class LogState {
 
   syslog::LogSeverity min_severity() const { return min_severity_; }
 
-  template <typename T>
-  void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                const char* msg, const char* condition, const T& value) const;
   const std::string* tags() const { return tags_; }
   size_t tag_count() const { return num_tags_; }
   // Allowed to be const because descriptor_ is mutable
@@ -386,7 +383,6 @@ class LogState {
   std::optional<async::Executor> executor_;
   std::atomic<syslog::LogSeverity> min_severity_;
   const syslog::LogSeverity default_severity_;
-  zx_koid_t pid_;
   mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
   std::string tag_str_;
@@ -790,8 +786,7 @@ LogState::LogState(const syslog::LogSettings& in_settings,
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
       executor_(loop_.dispatcher()),
       min_severity_(in_settings.min_log_level),
-      default_severity_(in_settings.min_log_level),
-      pid_(pid) {
+      default_severity_(in_settings.min_log_level) {
   syslog::LogSettings settings = in_settings;
   interest_listener_dispatcher_ =
       static_cast<async_dispatcher_t*>(settings.single_threaded_dispatcher);
@@ -813,41 +808,6 @@ LogState::LogState(const syslog::LogSettings& in_settings,
   tag_str_ = tag_str.str();
   provided_log_sink_ = in_settings.log_sink;
   Connect();
-}
-
-template <typename T>
-void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                        const char* msg, const char* condition, const T& value) const {
-  zx_time_t time = zx_clock_get_monotonic();
-
-  // Cached getter for a stringified version of the log message, so we stringify at most once.
-  auto msg_str = [as_str = std::string(), condition, msg, &value]() mutable -> const std::string& {
-    if (as_str.empty()) {
-      as_str = FullMessageString(condition, msg, value);
-    }
-
-    return as_str;
-  };
-
-  if (cpp17::holds_alternative<std::ofstream>(descriptor_)) {
-    auto& file = cpp17::get<std::ofstream>(descriptor_);
-    if (WriteLogToFile(&file, time, pid_, tid, severity, file_name, line, nullptr, condition,
-                       msg_str())) {
-      return;
-    }
-  } else if (cpp17::holds_alternative<zx::socket>(descriptor_)) {
-    auto& socket = cpp17::get<zx::socket>(descriptor_);
-    std::string message;
-    if (msg) {
-      message.assign(msg);
-    }
-    if (WriteLogToSocket(&socket, time, pid_, tid, severity, file_name, line, message, condition,
-                         value)) {
-      return;
-    }
-  }
-
-  std::cerr << msg_str() << std::endl;
 }
 
 void SetLogSettings(const syslog::LogSettings& settings) {
