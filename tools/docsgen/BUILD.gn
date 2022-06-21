@@ -157,6 +157,7 @@ compiled_action("invoke_clidoc") {
   args = [
     "-o",
     rebase_path("docs/reference/tools/sdk-docs", root_build_dir),
+    "--quiet",
 
     # TODO (https://fxbug.dev/86553) to rename tarball-dir.
     "--tarball-dir",
@@ -224,13 +225,18 @@ action("invoke_helpdoc") {
       },
     ]
   }
-  outputs = [ "$target_out_dir/$helpdoc_tarfile" ]
+  outputs = [
+    "$target_out_dir/$helpdoc_tarfile",
+    "$target_gen_dir/helpdoc.log",
+  ]
 
   args = [
     "--out-path",
     rebase_path("$target_out_dir/$helpdoc_tarfile", root_build_dir),
     "--src-dir",
     rebase_path("//", root_build_dir),
+    "--log-to-file",
+    rebase_path("$target_gen_dir/helpdoc.log", root_build_dir),
   ]
 
   deps = [ ":${_helpdoc_script_target}" ]

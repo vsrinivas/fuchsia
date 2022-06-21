@@ -14,9 +14,11 @@ import os
 import subprocess
 
 
-def run_fx_helpdoc(src_dir, out_path):
+def run_fx_helpdoc(src_dir, out_path, log_to_file=None):
     fx_bin = os.path.join(src_dir, "scripts/fx")
-    gen_helpdocs = subprocess.run([fx_bin, "helpdoc", "--archive", out_path])
+    if log_to_file:
+        log_to_file = open(log_to_file, 'w')
+    gen_helpdocs = subprocess.run([fx_bin, "helpdoc", "--archive", out_path], stdout=log_to_file)
 
     if gen_helpdocs.returncode:
         print(gen_helpdocs.stderr)
@@ -39,11 +41,17 @@ def main():
         type=str,
         required=True,
         help='Home location of Fuchsia relative to build')
+    parser.add_argument(
+        '-l',
+        '--log-to-file',
+        type=str,
+        help='File for logging stdout.')
 
     args = parser.parse_args()
     run_fx_helpdoc(
         args.src_dir,
         args.out_path,
+        args.log_to_file
     )
 
 
