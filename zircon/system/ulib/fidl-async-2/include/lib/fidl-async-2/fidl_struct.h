@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 #define LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 
-#include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/wire_natural_conversions.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <zircon/assert.h>
 
@@ -40,7 +40,7 @@ class FidlStruct {
   enum NullType { Null };
 
   // For request structs, the request handler is expected to close all the
-  // handles, but the incoming struct itself isn't owned by the hander, and
+  // handles, but the incoming struct itself isn't owned by the handler, and
   // the incoming struct is const, which conflicts with managing handles by
   // zeroing a handle field when the handle is closed.  So for now, we always
   // copy the incoming struct, own the copy, and close the handles via the
@@ -205,9 +205,8 @@ class FidlStruct {
  private:
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
-      if (fidl::DeprecatedCTypeTraits<FidlLlcppStruct>::kType != nullptr) {
-        fidl_close_handles(fidl::DeprecatedCTypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
-      }
+      // Move handles into the owned natural type, then discard the value.
+      (void)fidl::ToNatural(std::move(*ptr_));
     }
     if (to_copy_and_own_handles) {
       storage_ = *to_copy_and_own_handles;

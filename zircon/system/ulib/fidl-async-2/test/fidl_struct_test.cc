@@ -4,7 +4,7 @@
 
 #include "lib/fidl-async-2/fidl_struct.h"
 
-#include <fidl/fidl.types.test/cpp/wire.h>
+#include <fidl/fidl.types.test/cpp/fidl.h>
 #include <fidl/types/test/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -47,31 +47,6 @@ TEST(FidlStruct, CopyableStruct) {
   EXPECT_EQ(kNewFieldValue, Struct::BorrowAsLlcpp(ps)->x);
   EXPECT_EQ(kNewFieldValue, Struct::BorrowAsLlcpp(cps)->x);
   EXPECT_EQ(kNewFieldValue, s.TakeAsLlcpp().x);
-  // TakeAsLlcpp() moved it out.
-  EXPECT_FALSE(!!s);
-}
-
-TEST(FidlStruct, MoveOnlyStruct) {
-  zx::event event;
-  zx::event::create(0, &event);
-  zx::handle h(event.release());
-  int32_t new_field_value = h.get();
-  using Struct = FidlStruct<fidl_types_test_MoveOnlyStruct, wire::MoveOnlyStruct>;
-  Struct s(Struct::Default);
-  const Struct& sc = s;
-  EXPECT_EQ(ZX_HANDLE_INVALID, s->h);
-  s->h = h.release();
-  EXPECT_EQ(new_field_value, s->h);
-  static_assert(!HasCopyAsLlcpp<Struct>::value);
-  EXPECT_EQ(new_field_value, s.BorrowAsLlcpp().h);
-  EXPECT_EQ(new_field_value, sc.BorrowAsLlcpp().h);
-  fidl_types_test_MoveOnlyStruct* ps = s.get();
-  const fidl_types_test_MoveOnlyStruct* cps = s.get();
-  EXPECT_EQ(new_field_value, ps->h);
-  EXPECT_EQ(new_field_value, cps->h);
-  EXPECT_EQ(new_field_value, Struct::BorrowAsLlcpp(ps)->h);
-  EXPECT_EQ(new_field_value, Struct::BorrowAsLlcpp(cps)->h);
-  EXPECT_EQ(new_field_value, s.TakeAsLlcpp().h);
   // TakeAsLlcpp() moved it out.
   EXPECT_FALSE(!!s);
 }

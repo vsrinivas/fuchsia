@@ -10,8 +10,8 @@ zx_library("sysmem-version") {
   sources = [ "sysmem-version.cc" ]
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp",
     "//zircon/system/ulib/fidl-async-2",
   ]
   deps = [ "//zircon/system/ulib/fidl" ]
