@@ -141,7 +141,7 @@ protocol TestDevice {
     });
 };
 
-type ObjectType = strict enum {
+type ObjectType = flexible enum : uint32 {
     /// A sync object backed by a Zircon event.
     EVENT = 10;
     /// A memory object backeed by a Zircon VMO.

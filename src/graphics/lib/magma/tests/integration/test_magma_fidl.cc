@@ -209,6 +209,15 @@ TEST_F(TestMagmaFidl, GetIcdList) {
   EXPECT_TRUE(wire_result.ok());
 }
 
+TEST_F(TestMagmaFidl, ImportObjectInvalidType) {
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
+  constexpr auto kInvalidObjectType = fuchsia_gpu_magma::ObjectType(1000);
+  auto wire_result = primary_->ImportObject(std::move(vmo), kInvalidObjectType);
+  EXPECT_TRUE(wire_result.ok());
+  EXPECT_TRUE(CheckForUnbind());
+}
+
 TEST_F(TestMagmaFidl, ImportReleaseBuffer) {
   uint64_t buffer_id;
 
