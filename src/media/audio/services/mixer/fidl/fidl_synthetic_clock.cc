@@ -77,7 +77,9 @@ void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
 
   std::unordered_set<std::shared_ptr<FidlSyntheticClock>> servers;
   if (request->has_control()) {
-    servers.insert(FidlSyntheticClock::Create(dispatcher(), std::move(request->control()), clock));
+    auto server = FidlSyntheticClock::Create(dispatcher(), std::move(request->control()), clock);
+    servers.insert(server);
+    AddChildServer(server);
   }
 
   clocks_[clock->koid()] = {
@@ -145,8 +147,9 @@ void FidlSyntheticClockRealm::ObserveClock(ObserveClockRequestView request,
 
   // ObserveClock does not give permission to adjust.
   auto clock = std::make_shared<::media_audio::UnadjustableClockWrapper>(it->second.clock);
-  it->second.servers.insert(
-      FidlSyntheticClock::Create(dispatcher(), std::move(request->observe()), clock));
+  auto server = FidlSyntheticClock::Create(dispatcher(), std::move(request->observe()), clock);
+  it->second.servers.insert(server);
+  AddChildServer(server);
 
   fidl::Arena arena;
   completer.ReplySuccess(

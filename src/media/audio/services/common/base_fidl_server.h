@@ -8,9 +8,30 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 #include <zircon/types.h>
 
+#include <map>
+
 namespace media_audio {
+
+namespace internal {
+// Base class for BaseFidlServer. This is an implementation detail. Don't use directly.
+class BaseFidlServerUntyped {
+ public:
+  ~BaseFidlServerUntyped() = default;
+
+  // These are public so that BaseFidlServer<A> can wait for children of type BaseFidlServer<B>.
+  // BaseFidlServer will hide them from subclasses of BaseFidlServer.
+  bool WaitForShutdownOfThisServer(zx::duration timeout) {
+    return shutdown_complete_.Wait(timeout) == ZX_OK;
+  }
+  void SetShutdownComplete() { shutdown_complete_.Signal(); }
+
+ private:
+  ::libsync::Completion shutdown_complete_;
+};
+}  // namespace internal
 
 // Base class for FIDL servers. Example of use:
 //
@@ -38,9 +59,9 @@ namespace media_audio {
 // As shown above, subclasses should be created via a `Create` static method that calls
 // into `BaseFidlServer::Create`.
 template <typename ServerT, typename ProtocolT>
-class BaseFidlServer : public fidl::WireServer<ProtocolT> {
+class BaseFidlServer : public fidl::WireServer<ProtocolT>, public internal::BaseFidlServerUntyped {
  public:
-  ~BaseFidlServer() = default;
+  using Protocol = ProtocolT;
 
   // Returns the dispatcher used by this server. Never null.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
@@ -50,11 +71,25 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT> {
   // no-ops.
   void Shutdown(zx_status_t epitaph = ZX_ERR_CANCELED) { binding_->Close(epitaph); }
 
-  // Waits until the server has shut down. This is a blocking call that can be invoked from any
-  // thread. This is primarily intended for unit tests. Returns false if the server does not
-  // shutdown before the given timeout has expired.
+  // Waits until the server and all its children have shut down. This does not actually shut down
+  // any servers -- shutdown must be triggered separately. A server can be shutdown either via an
+  // explicit call to `Shutdown` or by closing the client channel, both of which trigger shutdown
+  // asynchronously. This is a blocking call that can be invoked from any thread. This is primarily
+  // intended for tests.
+  //
+  // Returns false if the server(s) do not shutdown before the given timeout has expired.
   bool WaitForShutdown(zx::duration timeout = zx::duration::infinite()) {
-    return shutdown_complete_.Wait(timeout) == ZX_OK;
+    auto deadline = zx::clock::get_monotonic() + timeout;
+    for (auto [p, weak_child] : children_) {
+      if (auto child = weak_child.lock(); child) {
+        auto timeout = deadline - zx::clock::get_monotonic();
+        if (!child->WaitForShutdownOfThisServer(timeout)) {
+          return false;
+        }
+      }
+    }
+    timeout = deadline - zx::clock::get_monotonic();
+    return WaitForShutdownOfThisServer(timeout);
   }
 
  protected:
@@ -78,7 +113,7 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT> {
     auto on_unbound = [](ServerT* server, fidl::UnbindInfo info,
                          fidl::ServerEnd<ProtocolT> server_end) {
       server->OnShutdown(info);
-      server->shutdown_complete_.Signal();
+      server->SetShutdownComplete();
     };
 
     // Passing `server` (a shared_ptr) to BindServer ensures that the `server` object
@@ -99,10 +134,31 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT> {
     }
   }
 
+  // Adds a child server. The child is held as a weak_ptr so it will be automatically
+  // garbage collected after it is destroyed.
+  void AddChildServer(const std::shared_ptr<internal::BaseFidlServerUntyped>& server) {
+    GarbageCollectChildren();  // avoid unbounded growth
+    children_[server.get()] = server;
+  }
+
  private:
+  using BaseFidlServerUntyped::SetShutdownComplete;
+  using BaseFidlServerUntyped::WaitForShutdownOfThisServer;
+
+  void GarbageCollectChildren() {
+    for (auto it = children_.begin(); it != children_.end();) {
+      if (it->second.expired()) {
+        it = children_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
   async_dispatcher_t* dispatcher_;
   std::optional<fidl::ServerBindingRef<ProtocolT>> binding_;
-  ::libsync::Completion shutdown_complete_;
+  std::map<internal::BaseFidlServerUntyped*, std::weak_ptr<internal::BaseFidlServerUntyped>>
+      children_;
 };
 
 }  // namespace media_audio

@@ -11,6 +11,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/services/common/testing/test_server_and_client.h"
+
 namespace media_audio {
 namespace {
 
@@ -27,25 +29,18 @@ class FidlSyntheticClockTest : public ::testing::Test {
  public:
   void SetUp() {
     loop_.StartThread("fidl_thread");
-    auto [client, server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClockRealm>();
-    realm_ = FidlSyntheticClockRealm::Create(loop_.dispatcher(), std::move(server));
-    realm_client_ = std::move(client);
+    realm_wrapper_ =
+        std::make_unique<TestServerAndClient<FidlSyntheticClockRealm>>(loop_.dispatcher());
   }
 
   void TearDown() {
-    // Close the client and wait until the server shuts down.
-    realm_client_ = fidl::WireSyncClient<fuchsia_audio_mixer::SyntheticClockRealm>();
-    ASSERT_TRUE(realm_->WaitForShutdown(zx::sec(5)));
+    // Close the realm connection and wait for the server to shutdown.
+    realm_wrapper_.reset();
   }
 
-  template <typename Protocol>
-  static std::pair<fidl::WireSyncClient<Protocol>, fidl::ServerEnd<Protocol>> CreateClientOrDie() {
-    auto endpoints = fidl::CreateEndpoints<Protocol>();
-    if (!endpoints.is_ok()) {
-      FX_PLOGS(FATAL, endpoints.status_value()) << "fidl::CreateEndpoints failed";
-    }
-    return std::make_pair(fidl::BindSyncClient(std::move(endpoints->client)),
-                          std::move(endpoints->server));
+  FidlSyntheticClockRealm& realm_server() { return realm_wrapper_->server(); }
+  fidl::WireSyncClient<fuchsia_audio_mixer::SyntheticClockRealm>& realm_client() {
+    return realm_wrapper_->client();
   }
 
   static bool IsConnectionAlive(
@@ -57,15 +52,14 @@ class FidlSyntheticClockTest : public ::testing::Test {
 
  protected:
   fidl::Arena<> arena_;
-  std::shared_ptr<FidlSyntheticClockRealm> realm_;
-  fidl::WireSyncClient<fuchsia_audio_mixer::SyntheticClockRealm> realm_client_;
 
  private:
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::unique_ptr<TestServerAndClient<FidlSyntheticClockRealm>> realm_wrapper_;
 };
 
 TEST_F(FidlSyntheticClockTest, CreateClockZxClockIsNotReadable) {
-  auto result = realm_client_->CreateClock(
+  auto result = realm_client()->CreateClock(
       fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
           .name(fidl::StringView::FromExternal("clock"))
           .domain(Clock::kExternalDomain)
@@ -89,7 +83,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
   zx::clock zx_clock;
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -108,7 +102,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t0(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
   EXPECT_EQ(clock_t0, realm_t0);
@@ -124,7 +118,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
     ASSERT_FALSE(result->is_error()) << result->error_value();
   }
   {
-    auto result = realm_client_->AdvanceBy(
+    auto result = realm_client()->AdvanceBy(
         fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByRequest::Builder(arena_)
             .duration(zx::msec(100).to_nsecs())
             .Build());
@@ -139,7 +133,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t1(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
 
@@ -150,7 +144,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
   auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(std::move(zx_clock))
             .observe(std::move(observe_server))
@@ -172,7 +166,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
   zx::clock zx_clock;
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -188,7 +182,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
   auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(std::move(zx_clock))
             .observe(std::move(observe_server))
@@ -204,14 +198,14 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t0(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
   EXPECT_EQ(observe_t0, realm_t0);
 
   // Advance the realm by 100ms.
   {
-    auto result = realm_client_->AdvanceBy(
+    auto result = realm_client()->AdvanceBy(
         fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByRequest::Builder(arena_)
             .duration(zx::msec(100).to_nsecs())
             .Build());
@@ -226,7 +220,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t1(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
 
@@ -235,13 +229,13 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
 }
 
 TEST_F(FidlSyntheticClockTest, CreateGraphControlled) {
-  auto zx_clock = realm_->CreateGraphControlled();
+  auto zx_clock = realm_server().CreateGraphControlled();
 
   // Get an observer.
   auto [observe_client, observe_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(std::move(zx_clock))
             .observe(std::move(observe_server))
@@ -257,14 +251,14 @@ TEST_F(FidlSyntheticClockTest, CreateGraphControlled) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t0(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
   EXPECT_EQ(observe_t0, realm_t0);
 
   // Advance the realm by 100ms.
   {
-    auto result = realm_client_->AdvanceBy(
+    auto result = realm_client()->AdvanceBy(
         fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByRequest::Builder(arena_)
             .duration(zx::msec(100).to_nsecs())
             .Build());
@@ -279,7 +273,7 @@ TEST_F(FidlSyntheticClockTest, CreateGraphControlled) {
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
           ->now());
   const zx::time realm_t1(
-      realm_client_
+      realm_client()
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
           ->now());
 
@@ -292,7 +286,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
   zx::clock zx_clock;
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -312,7 +306,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
     zx::clock zx_clock_dup;
     ASSERT_EQ(zx_clock.duplicate(ZX_RIGHT_SAME_RIGHTS, &zx_clock_dup), ZX_OK);
 
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(std::move(zx_clock_dup))
             .observe(std::move(observe_server))
@@ -324,7 +318,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
 
   // Forgetting the clock should drop both connections.
   {
-    auto result = realm_client_->ForgetClock(
+    auto result = realm_client()->ForgetClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockRequest::Builder(arena_)
             .handle(std::move(zx_clock))
             .Build());
@@ -348,11 +342,11 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
 }
 
 TEST_F(FidlSyntheticClockTest, Find) {
-  zx::clock zx_clock1 = realm_->CreateGraphControlled();
+  zx::clock zx_clock1 = realm_server().CreateGraphControlled();
   zx::clock zx_clock2;
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -368,14 +362,14 @@ TEST_F(FidlSyntheticClockTest, Find) {
   const auto koid1 = ClockRegistry::ZxClockToKoid(zx_clock1).value();
   const auto koid2 = ClockRegistry::ZxClockToKoid(zx_clock2).value();
 
-  auto clock1 = realm_->FindOrCreate(std::move(zx_clock1), "unused", 42);
+  auto clock1 = realm_server().FindOrCreate(std::move(zx_clock1), "unused", 42);
   ASSERT_NE(clock1.get(), nullptr);
   EXPECT_EQ(clock1->name(), "GraphControlled0");
   EXPECT_EQ(clock1->domain(), Clock::kExternalDomain);
   EXPECT_EQ(clock1->adjustable(), true);
   EXPECT_EQ(clock1->koid(), koid1);
 
-  auto clock2 = realm_->FindOrCreate(std::move(zx_clock2), "unused", 42);
+  auto clock2 = realm_server().FindOrCreate(std::move(zx_clock2), "unused", 42);
   ASSERT_NE(clock2.get(), nullptr);
   EXPECT_EQ(clock2->name(), "clock");
   EXPECT_EQ(clock2->domain(), Clock::kExternalDomain);
@@ -387,7 +381,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnUnadjustableClock) {
   auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -416,7 +410,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
   auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -468,7 +462,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
 
   // Fail because `domain` is missing.
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .adjustable(true)
@@ -481,7 +475,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
 
   // Fail because `adjustable` is missing.
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kExternalDomain)
@@ -494,7 +488,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
 
   // Fail because kMonotonicDomain is not adjustable.
   {
-    auto result = realm_client_->CreateClock(
+    auto result = realm_client()->CreateClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
             .name(fidl::StringView::FromExternal("clock"))
             .domain(Clock::kMonotonicDomain)
@@ -510,7 +504,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
 TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
   // Fail because `handle` is missing.
   {
-    auto result = realm_client_->ForgetClock(
+    auto result = realm_client()->ForgetClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockRequest::Builder(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -520,7 +514,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
 
   // Fail because `handle` is unknown.
   {
-    auto result = realm_client_->ForgetClock(
+    auto result = realm_client()->ForgetClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockRequest::Builder(arena_)
             .handle(CreateArbitraryZxClock())
             .Build());
@@ -537,7 +531,7 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
     auto [observe_client, observe_server] =
         CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .observe(std::move(observe_server))
             .Build());
@@ -549,7 +543,7 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
 
   // Fail because `observe` is missing.
   {
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(CreateArbitraryZxClock())
             .Build());
@@ -564,7 +558,7 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
     auto [observe_client, observe_server] =
         CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
-    auto result = realm_client_->ObserveClock(
+    auto result = realm_client()->ObserveClock(
         fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockRequest::Builder(arena_)
             .handle(CreateArbitraryZxClock())
             .observe(std::move(observe_server))
@@ -579,7 +573,7 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
 TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
   // Fails because the duration is negative.
   {
-    auto result = realm_client_->AdvanceBy(
+    auto result = realm_client()->AdvanceBy(
         fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByRequest::Builder(arena_)
             .duration(-1)
             .Build());
@@ -591,7 +585,7 @@ TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
 
   // Fails because the duration is zero.
   {
-    auto result = realm_client_->AdvanceBy(
+    auto result = realm_client()->AdvanceBy(
         fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByRequest::Builder(arena_)
             .duration(0)
             .Build());
