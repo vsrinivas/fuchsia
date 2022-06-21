@@ -21,12 +21,12 @@ executable("codec_impl_unit_tests_bin") {
   deps = [
     ":codec_impl_tests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners/gtest:death_test",
     "//third_party/googletest:gtest",
   ]
 }
 
 fuchsia_unittest_package("codec_impl_unit_tests") {
-  manifest = "meta/codec_impl_unit_tests.cmx"
   deps = [ ":codec_impl_unit_tests_bin" ]
 
   test_specs = {
