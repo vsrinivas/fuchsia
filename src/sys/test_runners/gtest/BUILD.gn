@@ -108,3 +108,17 @@ group("tests") {
     "tests",
   ]
 }
+
+# Depend on this if your test uses ASSERT_DEATH or EXPECT_DEATH
+# and your test component's cml is generated.
+group("death_test") {
+  testonly = true
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "//src/sys/test_runners/gtest/death_test.shard.cml" ]
+      },
+    ]
+  }
+}

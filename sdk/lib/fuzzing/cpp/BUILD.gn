@@ -40,11 +40,11 @@ test("fuzzing_traits_unittests") {
   deps = [
     ":traits",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners/gtest:death_test",
   ]
 }
 
 fuchsia_unittest_package("fuzzing_traits_tests") {
-  manifest = "meta/fuzzing_traits_unittests.cmx"
   deps = [ ":fuzzing_traits_unittests" ]
 }
 
