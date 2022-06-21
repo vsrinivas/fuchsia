@@ -1,3 +1,6 @@
-adamlesinski@google.com
-adamperry@google.com
+xbhatnag@google.com
 yaneury@google.com
+
+include /src/sys/component_manager/OWNERS
+
+# COMPONENT: ComponentFramework>Tools
