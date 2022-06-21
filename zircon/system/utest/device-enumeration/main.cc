@@ -174,7 +174,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/platform-passthrough/vim3",
       "sys/platform/00:00:1b/sysmem",
       "sys/platform/05:06:1/aml-axg-gpio",
-      "sys/platform/05:00:14/clocks",
+      "sys/platform/05:06:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
       "dwmac/dwmac/eth_phy/phy_null_device",
@@ -218,7 +218,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       // GPIO
       "gpio-expander/ti-tca6408a/gpio-107",
 
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-24/vim3-mcu",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-24-fidl/vim3-mcu",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
