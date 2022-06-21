@@ -203,6 +203,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(const wlan_key_config_t* key_co
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+
   CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return ap_mvm_sta_->SetKey(key_config);
 }

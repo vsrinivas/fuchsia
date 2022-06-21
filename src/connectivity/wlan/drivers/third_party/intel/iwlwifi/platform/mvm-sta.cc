@@ -144,10 +144,34 @@ zx_status_t MvmSta::SetKey(const struct wlan_key_config* key_config) {
       malloc(sizeof(ieee80211_key_conf) + key_config->key_len)));
   memset(key_conf.get(), 0, sizeof(*key_conf) + key_config->key_len);
   key_conf->cipher = key_config->cipher_type;
+  key_conf->key_type = key_config->key_type;
   key_conf->keyidx = key_config->key_idx;
   key_conf->keylen = key_config->key_len;
   key_conf->rx_seq = key_config->rsc;
-  memcpy(key_conf->key, key_config->key, key_conf->keylen);
+
+  if (key_conf->cipher == CIPHER_SUITE_TYPE_TKIP) {
+    // A special trick for TKIP group key: Swap the latest 2 8-byte (MIC-KEY-TX and MIC-KEY-RX).
+    //
+    // MLME copies the whole 32-byte from the AP packet which the "TX" means "AP TX". So when we
+    // write to the firmware, it is acually the "firmware RX".
+    //
+    // IEEE 802.11-2007 8.6.2 Mapping GTK to TKIP keys
+    //
+    // See 8.5.1.3 for the definition of the EAPOL temporal key derived from GTK.
+    // A STA shall use bits 0–127 of the temporal key as the input to the TKIP Phase 1 and Phase 2
+    // mixing functions.
+    // A STA shall use bits 128–191 of the temporal key as the Michael key for MSDUs from the
+    // Authenticator’s STA to the Supplicant’s STA.
+    // A STA shall use bits 192–255 of the temporal key as the Michael key for MSDUs from the
+    // Supplicant’s STA to the Authenticator’s STA.
+    //
+    memcpy(&key_conf->key[0], &key_config->key[0], 16);   // TK (Temporal Key)
+    memcpy(&key_conf->key[16], &key_config->key[24], 8);  // AP TX ==> FW RX
+    memcpy(&key_conf->key[24], &key_config->key[16], 8);  // AP RX ==> FW TX, which is not used in
+                                                          // TKIP group key.
+  } else {
+    memcpy(key_conf->key, key_config->key, key_conf->keylen);
+  }
 
   if ((status = iwl_mvm_mac_add_key(iwl_mvm_sta_->mvmvif, iwl_mvm_sta_.get(), key_conf.get())) !=
       ZX_OK) {

@@ -943,6 +943,35 @@ TEST_F(MacInterfaceTest, SetKeysSupportConfigs) {
   ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
+// Test setting TKIP. Mainly for group key (backward-compatible for many APs).
+TEST_F(MacInterfaceTest, SetKeysTKIP) {
+  constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+
+  constexpr size_t key_len = 32;
+  char keybuf[sizeof(wlan_key_config_t) + key_len] = {};
+  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
+  key_config->key_len = key_len;
+  memcpy(key_config->cipher_oui, kIeeeOui, 3);
+
+  // TKIP Pairwise: althought we support it but not recommended (deprecated protocol).
+  key_config->cipher_type = CIPHER_SUITE_TYPE_TKIP;
+  key_config->key_type = WLAN_KEY_TYPE_PAIRWISE;
+  key_config->key_idx = 0;
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
+
+  // TKIP Group key: supported for backward compatible. Unfortunately many APs still use this.
+  key_config->cipher_type = CIPHER_SUITE_TYPE_TKIP;
+  key_config->key_type = WLAN_KEY_TYPE_IGTK;
+  key_config->key_idx = 1;
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
+
+  ASSERT_EQ(ZX_OK, ClearAssoc());
+}
+
 TEST_F(MacInterfaceTest, TxPktTooLong) {
   SetChannel(&kChannel);
   ConfigureBss(&kBssConfig);

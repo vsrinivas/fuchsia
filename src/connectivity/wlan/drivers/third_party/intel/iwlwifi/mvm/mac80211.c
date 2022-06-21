@@ -3143,6 +3143,8 @@ zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
       break;
     case CIPHER_SUITE_TYPE_BIP_CMAC_128:
       break;
+    case CIPHER_SUITE_TYPE_TKIP:
+      break;
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

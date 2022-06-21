@@ -41,6 +41,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/tkip.h"
 
 static zx_status_t iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
@@ -3090,10 +3091,7 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   uint32_t status;
   uint16_t keyidx;
   int size;
-
-  // This feature path requires support for setting a TX packet number, which we do not have at the
-  // moment in Fuchsia.
-  ZX_DEBUG_ASSERT(!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TKIP_MIC_KEYS));
+  bool new_api = fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TKIP_MIC_KEYS);
 
   if (sta_id == IWL_MVM_INVALID_STA) {
     return ZX_ERR_INVALID_ARGS;
@@ -3104,10 +3102,27 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   key_flags |= cpu_to_le16(STA_KEY_FLG_WEP_KEY_MAP);
 
   switch (key->cipher) {
+    case CIPHER_SUITE_TYPE_TKIP:
+      // This feature path requires support for setting a TX packet number, which we do not have at
+      // the moment in Fuchsia.
+      if (new_api) {
+        IWL_ERR(mvm, "Fuchsia doesn't support TKIP TX\n");
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      key_flags |= cpu_to_le16(STA_KEY_FLG_TKIP);
+      u.cmd_v1.tkip_rx_tsc_byte2 = tkip_iv32;
+      for (int i = 0; i < 5; i++) {
+        u.cmd_v1.tkip_rx_ttak[i] = cpu_to_le16(tkip_p1k[i]);
+      }
+      memcpy(u.cmd.common.key, key->key, key->keylen);
+      break;
+
     case CIPHER_SUITE_TYPE_CCMP_128:
       key_flags |= cpu_to_le16(STA_KEY_FLG_CCM);
       memcpy(u.cmd.common.key, key->key, key->keylen);
       break;
+
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -3123,7 +3138,14 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   u.cmd.common.key_flags = key_flags;
   u.cmd.common.sta_id = sta_id;
 
-  size = sizeof(u.cmd_v1);
+  if (new_api) {
+#if 0  // NEEDS_PORTING
+    u.cmd.transmit_seq_cnt = cpu_to_le64(pn);
+#endif
+    size = sizeof(u.cmd);
+  } else {
+    size = sizeof(u.cmd_v1);
+  }
 
   status = ADD_STA_SUCCESS;
   if (cmd_flags & CMD_ASYNC) {
@@ -3246,6 +3268,15 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
     case CIPHER_SUITE_TYPE_CCMP_128:
       ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, 0, NULL, 0, key_offset, mfp);
       break;
+    case CIPHER_SUITE_TYPE_TKIP: {
+      uint32_t tkip_iv32 = keyconf->rx_seq >> 16;  // IV32 is the highest 16-bit of 48-bit Rx seq.
+      uint16_t tkip_p1k[TKIP_P1K_SIZE];
+
+      ieee80211_get_tkip_rx_p1k(keyconf, mvmsta->addr, tkip_p1k);
+      ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, tkip_iv32, tkip_p1k, 0, key_offset,
+                                 mfp);
+      break;
+    }
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

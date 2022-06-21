@@ -285,34 +285,44 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
       *crypt_len = fuchsia_wlan_ieee80211_CCMP_HDR_LEN;
       return ZX_OK;
 
-#if 0   // NEEDS_PORTING
     case IWL_RX_MPDU_STATUS_SEC_TKIP:
-        /* Don't drop the frame and decrypt it in SW */
-        if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_DEPRECATE_TTAK) &&
-            !(status & IWL_RX_MPDU_RES_STATUS_TTAK_OK)) {
-            return 0;
-        }
+      /* Don't drop the frame and decrypt it in SW */
+      if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_DEPRECATE_TTAK) &&
+          !(status & IWL_RX_MPDU_RES_STATUS_TTAK_OK)) {
+        return ZX_OK;
+      }
 
+#if 0   // NEEDS_PORTING
         if (mvm->trans->cfg->gen2 && !(status & RX_MPDU_RES_STATUS_MIC_OK)) {
             stats->flag |= RX_FLAG_MMIC_ERROR;
         }
+#endif  // NEEDS_PORTING
 
-        *crypt_len = IEEE80211_TKIP_IV_LEN;
-    /* fall through if TTAK OK */
+      *crypt_len = 8;  // IEEE80211_TKIP_IV_LEN;
+
+      /* fall through if TTAK OK */
+      __attribute__((fallthrough));
+
     case IWL_RX_MPDU_STATUS_SEC_WEP:
-        if (!(status & IWL_RX_MPDU_STATUS_ICV_OK)) { return -1; }
+      if (!(status & IWL_RX_MPDU_STATUS_ICV_OK)) {
+        return ZX_ERR_IO_DATA_INTEGRITY;
+      }
 
-        stats->flag |= RX_FLAG_DECRYPTED;
-        if ((status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_WEP) {
-            *crypt_len = IEEE80211_WEP_IV_LEN;
-        }
+      stats->flag |= RX_FLAG_DECRYPTED;
+      if ((status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_WEP) {
+        *crypt_len = 4;  // IEEE80211_WEP_IV_LEN;
+      }
 
+#if 0   // NEEDS_PORTING
         if (pkt_flags & FH_RSCSR_RADA_EN) {
             stats->flag |= RX_FLAG_ICV_STRIPPED;
             if (mvm->trans->cfg->gen2) { stats->flag |= RX_FLAG_MMIC_STRIPPED; }
         }
+#endif  // NEEDS_PORTING
 
-        return 0;
+      return ZX_OK;
+
+#if 0   // NEEDS_PORTING
     case IWL_RX_MPDU_STATUS_SEC_EXT_ENC:
         if (!(status & IWL_RX_MPDU_STATUS_MIC_OK)) { return -1; }
         stats->flag |= RX_FLAG_DECRYPTED;
@@ -325,7 +335,7 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
       }
   }
 
-  return 0;
+  return ZX_OK;
 }
 
 #if 0  // NEEDS_PORTING

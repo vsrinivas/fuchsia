@@ -128,6 +128,37 @@ static zx_status_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm,
       *crypt_len = fuchsia_wlan_ieee80211_CCMP_HDR_LEN;
       return ZX_OK;
 
+    case RX_MPDU_RES_STATUS_SEC_TKIP_ENC:
+      /* Don't drop the frame and decrypt it in SW */
+      if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_DEPRECATE_TTAK) &&
+          !(rx_pkt_status & RX_MPDU_RES_STATUS_TTAK_OK)) {
+        return ZX_OK;
+      }
+      *crypt_len = 8;  // IEEE80211_TKIP_IV_LEN;
+
+      /* fall through if TTAK OK */
+      __attribute__((fallthrough));
+
+    case RX_MPDU_RES_STATUS_SEC_WEP_ENC:
+      if (!(rx_pkt_status & RX_MPDU_RES_STATUS_ICV_OK)) {
+        return ZX_ERR_IO_DATA_INTEGRITY;
+      }
+
+#if 0   // NEEDS_PORTING
+    stats->flag |= RX_FLAG_DECRYPTED;
+#endif  // NEEDS_PORTING
+      if ((rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) == RX_MPDU_RES_STATUS_SEC_WEP_ENC)
+        *crypt_len = 4;  // IEEE80211_WEP_IV_LEN;
+      return ZX_OK;
+
+#if 0   // NEEDS_PORTING
+  case RX_MPDU_RES_STATUS_SEC_EXT_ENC:
+    if (!(rx_pkt_status & RX_MPDU_RES_STATUS_MIC_OK))
+      return -1;
+    stats->flag |= RX_FLAG_DECRYPTED;
+    return 0;
+#endif  // NEEDS_PORTING
+
     default:
       /* Expected in monitor (not having the keys) */
       if (!mvm->monitor_on) {
