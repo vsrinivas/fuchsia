@@ -28,11 +28,11 @@ group("tools-only") {
 fuchsia_component("magma-info-cmp") {
   component_name = "magma-info"
   deps = [ ":magma-info-bin" ]
-  manifest = "meta/magma-info.cmx"
+  manifest = "meta/magma-info.cml"
 }
 
-fuchsia_package("magma-info") {
-  deps = [ ":magma-info-cmp" ]
+fuchsia_shell_package("magma-info") {
+  deps = [ ":magma-info-bin" ]
 }
 
 fuchsia_test_package("magma-info-test") {
@@ -50,8 +50,6 @@ executable("magma-info-bin") {
     "$magma_build_root/include:magma",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/zircon/lib/zircon",
   ]
