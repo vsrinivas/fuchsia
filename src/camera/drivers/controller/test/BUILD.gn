@@ -55,6 +55,6 @@ executable("controller_unittest_bin") {
 }
 
 fuchsia_unittest_package("controller_unittest") {
-  manifest = "meta/controller_unittest.cmx"
+  manifest = "meta/controller_unittest.cml"
   deps = [ ":controller_unittest_bin" ]
 }
