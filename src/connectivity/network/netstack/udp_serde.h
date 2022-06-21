@@ -24,8 +24,8 @@ extern "C" {
 #endif
 
 typedef struct Buffer {
-  unsigned char* buf;
-  uint64_t buf_size;
+  uint8_t* buf;
+  size_t buf_size;
 } Buffer;
 
 typedef enum IpAddrType { Ipv4, Ipv6 } IpAddrType;
