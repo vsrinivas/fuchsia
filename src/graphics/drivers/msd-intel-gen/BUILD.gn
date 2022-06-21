@@ -156,12 +156,10 @@ fuchsia_driver_package("msd-intel-gen") {
 fuchsia_driver_package("msd-intel-gen-test") {
   testonly = true
   driver_components = [ ":msd_intel_test" ]
+  deps = [ "//src/graphics/lib/magma/tests/unit_tests:test_firmware" ]
 }
 
 group("test-driver") {
   testonly = true
-  deps = [
-    ":msd-intel-gen-test",
-    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
-  ]
+  deps = [ ":msd-intel-gen-test" ]
 }

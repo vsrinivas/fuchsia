@@ -99,12 +99,10 @@ fuchsia_driver_package("msd-arm-mali") {
 fuchsia_driver_package("msd-arm-mali-test") {
   testonly = true
   driver_components = [ ":msd_arm_test" ]
+  deps = [ "//src/graphics/lib/magma/tests/unit_tests:test_firmware" ]
 }
 
 group("test-driver") {
   testonly = true
-  deps = [
-    ":msd-arm-mali-test",
-    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
-  ]
+  deps = [ ":msd-arm-mali-test" ]
 }

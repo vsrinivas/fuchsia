@@ -11,11 +11,6 @@ resource("test_firmware") {
   outputs = [ "lib/firmware/test_firmware.txt" ]
 }
 
-fuchsia_system_package("testing_firmware_file") {
-  testonly = true
-  deps = [ ":test_firmware" ]
-}
-
 executable("unit_tests") {
   testonly = true
   output_name = "magma_unit_tests"
