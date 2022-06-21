@@ -9,6 +9,10 @@ use crate::prelude_internal::*;
 /// [1]: https://openthread.io/reference/group/radio-operation
 pub trait Radio {
     /// Functional equivalent of
+    /// [`otsys::otPlatRadioGetCoexMetrics`](crate::otsys::otPlatRadioGetCoexMetrics).
+    fn get_coex_metrics(&self) -> Result<RadioCoexMetrics>;
+
+    /// Functional equivalent of
     /// [`otsys::otPlatRadioGetRssi`](crate::otsys::otPlatRadioGetRssi).
     fn get_rssi(&self) -> Decibels;
 
@@ -22,6 +26,10 @@ pub trait Radio {
 }
 
 impl<T: Radio + Boxable> Radio for ot::Box<T> {
+    fn get_coex_metrics(&self) -> Result<RadioCoexMetrics> {
+        self.as_ref().get_coex_metrics()
+    }
+
     fn get_rssi(&self) -> Decibels {
         self.as_ref().get_rssi()
     }
@@ -36,6 +44,13 @@ impl<T: Radio + Boxable> Radio for ot::Box<T> {
 }
 
 impl Radio for Instance {
+    fn get_coex_metrics(&self) -> Result<RadioCoexMetrics> {
+        let mut ret = RadioCoexMetrics::default();
+        Error::from(unsafe { otPlatRadioGetCoexMetrics(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
+            .into_result()?;
+        Ok(ret)
+    }
+
     fn get_rssi(&self) -> Decibels {
         unsafe { otPlatRadioGetRssi(self.as_ot_ptr()) }
     }

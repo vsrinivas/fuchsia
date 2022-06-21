@@ -76,6 +76,7 @@ rustc_library("openthread") {
     "src/ot/types/network_key.rs",
     "src/ot/types/network_name.rs",
     "src/ot/types/operational_dataset.rs",
+    "src/ot/types/radio_coex_metrics.rs",
     "src/ot/types/radio_region.rs",
     "src/ot/types/route_preference.rs",
     "src/ot/types/router_info.rs",
