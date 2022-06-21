@@ -40,6 +40,10 @@
   api_primary: 'dpursell@google.com'
   api_secondary: ''
 
+- name: 'Foreign ABI Compatibility'
+  api_primary: 'lindkvist@google.com'
+  api_secondary: ''
+
 - name: 'HCI'
   api_primary: 'neelsa@google.com'
   api_secondary: 'jaeheon@google.com'

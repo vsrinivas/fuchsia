@@ -15,6 +15,7 @@
 - Experiences
 - FIDL
 - Firmware
+- Foreign ABI Compatibility
 - General
 - Governance
 - HCI
@@ -23,7 +24,6 @@
 - Media
 - Metrics
 - Netstack
-- PosixCompat
 - Power
 - Recovery
 - Security

@@ -12,6 +12,17 @@ Due to lack of support for variable include, we use a switch of sorts to render
 each area's description.
 -->
 
+{% if area.name == "Foreign ABI Compatibility" %}
+The set of APIs used to run and interact with programs compiled for other operating systems.
+
+Currently this covers the Starnix (Linux binary compatibility) APIs, for example:
+
+* [fuchsia.starnix.developer](/sdk/fidl/fuchsia.starnix.developer/) contains protocols for starting
+  a component containing an unmodified Linux binary.
+* [Manager](/sdk/fidl/fuchsia.starnix.developer/developer.fidl) allows developers to connect their
+  development machine to a shell component running on a Fuchsia device.
+{% endif %} <!-- Foreign ABI Compatibility -->
+
 {% if area.name == "Bluetooth" %}
 The set of APIs for managing and communicating via Bluetooth.  This includes
 both connecting peer devices, searching for devices, advertising the local
