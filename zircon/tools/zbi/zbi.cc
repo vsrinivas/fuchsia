@@ -1422,7 +1422,8 @@ class Item final {
       snprintf(buf, sizeof(buf), "%03u.%08x", n, zbi_type);
       path = buf;
     }
-    return path.replace_extension((raw && info.extension) ? info.extension : ".zbi");
+    path += (raw && info.extension) ? info.extension : ".zbi";
+    return path;
   }
 
   static void PrintTypeUsage(FILE* out) {
