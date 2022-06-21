@@ -71,27 +71,27 @@ Until the contest ends:
 When the contest ends, the gesture arena either
 * if all recognizers bowed out: discards all the buffered events
 * otherwise:
-  1. passes ownership of the buffered events to the winning recognizer,
-     accepting in response `MouseEvent`s to be propagated downstream
-  2. passes future events to the winning recognizer, and accepts
-     from the recognizer `MouseEvent`s to be propagated downstream,
+  1. passes ownership of the buffered events to the `Winner` object from
+     the winning recognizer, accepting in response `MouseEvent`s to be
+     propagated downstream
+  2. passes future events to the `Winner` object from the winning recognizer,
+     and accepts from the recognizer `MouseEvent`s to be propagated downstream,
      continuing until the recognizer declares that the gesture has ended
 
-When the winning recognizer declares that the gesture has ended, the
-gesture arena discards the recognizer (note that all other recognizers have
-already been discarded at this point), and starts a new contest.
+When the `Winner` declares that the gesture has ended, the gesture arena
+discards the recognizer (note that all other recognizers have already
+been discarded at this point), and starts a new contest.
 
-The new contest may begin immediately, if the winning recognizer did not
-consume the last event. This might happen, for example, if the user swipes
-across the touchpad, then presses the button down.
+The new contest may begin immediately, if the `Winner` did not consume the
+last event. This might happen, for example, if the user swipes across the
+touchpad, then presses the button down.
 
-In this case, the motion recognizer would report the button down as unconsumed,
-so that the button down can be interpreted by the one-finger-drag or
-two-finger-drag recognizers.
+In this case, the motion recognizer (specifically: `motion::Winner`) would
+report the button down as unconsumed, so that the button down can be
+interpreted by the one-finger-drag or two-finger-drag recognizers.
 
-If the winning recognizer consumes the event when declaring the gesture
-complete, then the gesture arena waits for a new event before starting a new
-contest.
+If the `Winner` consumes the event when declaring the gesture complete,
+then the gesture arena waits for a new event before starting a new contest.
 
 # Notes
 
