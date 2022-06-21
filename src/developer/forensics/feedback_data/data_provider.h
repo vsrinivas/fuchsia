@@ -66,6 +66,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
  private:
   ::fpromise::promise<feedback::Annotations> GetAnnotations(const zx::duration timeout);
   ::fpromise::promise<feedback::Attachments> GetAttachments(const zx::duration timeout);
+  void GetSnapshotInternal(zx::duration timeout,
+                           fit::callback<void(feedback::Annotations, fsl::SizedVmo)> callback);
 
   bool ServeArchive(fsl::SizedVmo archive, zx::channel server_end);
 

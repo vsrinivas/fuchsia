@@ -19,6 +19,7 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/encode.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/image_conversion.h"
@@ -112,36 +113,54 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
     channel = std::move(*params.mutable_response_channel());
   }
 
+  GetSnapshotInternal(timeout, [this, callback = std::move(callback), channel = std::move(channel)](
+                                   const feedback::Annotations& annotations,
+                                   fsl::SizedVmo archive) mutable {
+    Snapshot snapshot;
+
+    // Add the annotations to the FIDL object and as file in the snapshot itself.
+    if (auto fidl = feedback::Encode<fuchsia::feedback::Annotations>(annotations);
+        fidl.has_annotations()) {
+      snapshot.set_annotations(fidl.annotations());
+    }
+
+    if (archive.vmo().is_valid()) {
+      if (channel) {
+        ServeArchive(std::move(archive), std::move(channel.value()));
+      } else {
+        snapshot.set_archive({.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+      }
+    }
+
+    callback(std::move(snapshot));
+  });
+}
+
+void DataProvider::GetSnapshotInternal(
+    zx::duration timeout, fit::callback<void(feedback::Annotations, fsl::SizedVmo)> callback) {
   const uint64_t timer_id = cobalt_->StartTimer();
+
   auto join = ::fpromise::join_promises(GetAnnotations(timeout), GetAttachments(timeout));
   using result_t = decltype(join)::value_type;
 
   auto promise =
-      join.and_then([this, channel = std::move(channel)](result_t& results) mutable {
+      join.and_then([this](result_t& results) mutable {
             FX_CHECK(std::get<0>(results).is_ok()) << "Impossible annotation collection failure";
             FX_CHECK(std::get<1>(results).is_ok()) << "Impossible attachment collection failure";
 
             const auto& annotations = std::get<0>(results).value();
             const auto& attachments = std::get<1>(results).value();
-
-            Snapshot snapshot;
             std::map<std::string, std::string> snapshot_files;
 
-            // Add the annotations to the FIDL object and as file in the snapshot itself.
+            // Add the annotations to |snapshot_files|
             if (const auto& result = std::get<0>(results); result.is_ok()) {
-              const auto& annotations = result.value();
-
-              if (auto fidl = feedback::Encode<fuchsia::feedback::Annotations>(annotations);
-                  fidl.has_annotations()) {
-                snapshot.set_annotations(std::move(fidl.annotations()));
-              }
-
               auto file = feedback::Encode<std::string>(annotations);
               snapshot_files[kAttachmentAnnotations] = std::move(file);
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }
 
+            // Add the attachments to |snapshot_files|
             if (const auto& result = std::get<1>(results); result.is_ok()) {
               for (const auto& [key, value] : result.value()) {
                 if (value.HasValue()) {
@@ -156,32 +175,28 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                 metadata_.MakeMetadata(annotations, attachments, uuid::Generate(),
                                        annotation_manager_->IsMissingNonPlatformAnnotations());
 
+            fsl::SizedVmo archive;
+
             // We bundle the attachments into a single archive.
             if (!snapshot_files.empty()) {
-              fsl::SizedVmo archive;
               std::map<std::string, ArchiveFileStats> file_size_stats;
               if (Archive(snapshot_files, &archive, &file_size_stats)) {
                 inspect_data_budget_->UpdateBudget(file_size_stats);
-                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
-                if (channel) {
-                  ServeArchive(std::move(archive), std::move(channel.value()));
-                } else {
-                  snapshot.set_archive(
-                      {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
-                }
+                cobalt_->LogCount(SnapshotVersion::kCobalt, archive.size());
               }
             }
-
-            return ::fpromise::ok(std::move(snapshot));
+            return ::fpromise::ok(std::pair(annotations, std::move(archive)));
           })
-          .then([this, callback = std::move(callback),
-                 timer_id](::fpromise::result<Snapshot>& result) {
+          .then([this, timer_id, callback = std::move(callback)](
+                    ::fpromise::result<std::pair<feedback::Annotations, fsl::SizedVmo>>&
+                        result) mutable {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
-              callback(Snapshot());
+              callback(feedback::Annotations(), fsl::SizedVmo());
             } else {
               cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kSuccess, timer_id);
-              callback(result.take_value());
+              auto& [annotations, vmo] = result.value();
+              callback(annotations, std::move(vmo));
             }
           });
 
