@@ -26,4 +26,6 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
 
 void DropDevNamespace();
 
+zx::status<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value = 0);
+
 #endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_BLOCK_DEVICES_H_

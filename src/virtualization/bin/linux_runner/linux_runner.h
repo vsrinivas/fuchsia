@@ -26,6 +26,7 @@ class LinuxRunner : public fuchsia::virtualization::LinuxManager {
   // |fuchsia::virtualization::LinuxManager|
   void StartAndGetLinuxGuestInfo(std::string label,
                                  StartAndGetLinuxGuestInfoCallback callback) override;
+  void WipeData(WipeDataCallback callback) override;
 
   void OnGuestInfoChanged(GuestInfo info);
 

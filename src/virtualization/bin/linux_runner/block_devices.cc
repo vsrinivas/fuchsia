@@ -16,6 +16,10 @@
 #include <lib/trace/event.h>
 #include <zircon/hw/gpt.h>
 
+#include <fbl/unique_fd.h>
+
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
+
 namespace {
 
 constexpr size_t kNumRetries = 5;
@@ -250,4 +254,49 @@ void DropDevNamespace() {
     status = fdio_ns_unbind(ns, "/dev");
     FX_CHECK(status == ZX_OK) << "Failed to unbind '/dev' from the installed namespace";
   }
+}
+
+zx::status<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
+  auto dir = opendir(kBlockPath);
+  if (dir == nullptr) {
+    FX_LOGS(ERROR) << "Failed to open directory '" << kBlockPath << "'";
+    return zx::error(ZX_ERR_IO);
+  }
+  auto defer = fit::defer([dir] { closedir(dir); });
+
+  auto partitions = FindPartitions(dir);
+  if (partitions.is_error()) {
+    FX_LOGS(ERROR) << "Failed to find partition";
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  auto& [volume, manager] = *partitions;
+  if (!volume) {
+    FX_LOGS(ERROR) << "Failed to find volume";
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+
+  // The block_client API operats on file descriptors and not channels. This just creates a
+  // compatible fd from the volume handle.
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_fd_create(volume.TakeChannel().release(), fd.reset_and_get_address());
+  if (status != ZX_OK || fd.get() < 0) {
+    FX_LOGS(ERROR) << "Failed to create fd";
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  // For devices that support TRIM, there is a more efficient path we could take. Since we expect
+  // to move the stateful partition to fxfs before too long we keep this logic simple and don't
+  // attempt to optimize for devices that support TRIM.
+  constexpr size_t kWipeBufferSize = 65536;  // 64 KiB write buffer
+  uint8_t bytes[kWipeBufferSize];
+  memset(&bytes, value, kWipeBufferSize);
+  for (size_t offset = 0; offset < bytes_to_zero; offset += kWipeBufferSize) {
+    status = block_client::SingleWriteBytes(
+        fd.get(), bytes, std::min(bytes_to_zero - offset, kWipeBufferSize), offset);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to write bytes";
+      return zx::error(ZX_ERR_IO);
+    }
+  }
+  return zx::ok();
 }

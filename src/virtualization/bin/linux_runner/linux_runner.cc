@@ -8,10 +8,13 @@
 
 #include <memory>
 
+#include "src/virtualization/bin/linux_runner/block_devices.h"
+
 namespace linux_runner {
 
 constexpr std::string_view kLinuxEnvironmentName("termina");
 constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
+constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;                // 1 MiB
 
 LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
@@ -64,6 +67,22 @@ void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,
         std::move(response)));
   } else {
     callbacks_.push_back(std::move(callback));
+  }
+}
+
+void LinuxRunner::WipeData(WipeDataCallback callback) {
+  if (guest_) {
+    callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithErr(ZX_ERR_BAD_STATE));
+    return;
+  }
+  // We zero out some bytes at the beginning of the partition to corrupt any filesystem data-
+  // structures stored there.
+  zx::status<> status = WipeStatefulPartition(kBytesToWipe);
+  if (status.is_error()) {
+    callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithErr(status.status_value()));
+  } else {
+    callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithResponse(
+        fuchsia::virtualization::LinuxManager_WipeData_Response()));
   }
 }
 
