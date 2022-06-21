@@ -233,7 +233,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
       if (from_addr_span.size() != to_addr.size()) {
         return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
       }
-      copy_into(to_addr, cpp20::span<uint8_t>(from_addr.buf, from_addr.buf_size));
+      copy_into(to_addr, from_addr_span);
       ipv4_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
     } break;
