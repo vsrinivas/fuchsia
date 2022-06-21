@@ -1983,3 +1983,107 @@ TEST(CompositeDirOfferTest, WorkingOffer) {
                          new_offer->directory().target_name().size());
   ASSERT_EQ(new_target, std::string(kServiceName).append("-parent_node"));
 }
+
+TEST(CompositeServiceOfferTest, WorkingOffer) {
+  const std::string_view kServiceName = "fuchsia.service";
+  fidl::Arena<> arena;
+  auto service = fcd::wire::OfferService::Builder(arena);
+  service.source_name(arena, kServiceName);
+  service.target_name(arena, kServiceName);
+
+  fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 2);
+  mappings[0].source_name = fidl::StringView(arena, "instance-1");
+  mappings[0].target_name = fidl::StringView(arena, "default");
+
+  mappings[1].source_name = fidl::StringView(arena, "instance-1");
+  mappings[1].target_name = fidl::StringView(arena, "instance-2");
+  service.renamed_instances(mappings);
+
+  fidl::VectorView<fidl::StringView> filters(arena, 2);
+  filters[0] = fidl::StringView(arena, "default");
+  filters[1] = fidl::StringView(arena, "instance-2");
+  service.source_instance_filter(filters);
+
+  auto offer = fcd::wire::Offer::WithService(arena, service.Build());
+  auto new_offer = CreateCompositeServiceOffer(arena, offer, "parent_node", false);
+  ASSERT_TRUE(new_offer);
+
+  ASSERT_EQ(2ul, new_offer->service().renamed_instances().count());
+  // Check that the default instance got renamed.
+  ASSERT_EQ(std::string("instance-1"),
+            std::string(new_offer->service().renamed_instances()[0].source_name.get()));
+  ASSERT_EQ(std::string("parent_node"),
+            std::string(new_offer->service().renamed_instances()[0].target_name.get()));
+
+  // Check that a non-default instance stayed the same.
+  ASSERT_EQ(std::string("instance-1"),
+            std::string(new_offer->service().renamed_instances()[1].source_name.get()));
+  ASSERT_EQ(std::string("instance-2"),
+            std::string(new_offer->service().renamed_instances()[1].target_name.get()));
+
+  ASSERT_EQ(2ul, new_offer->service().source_instance_filter().count());
+  // Check that the default filter got renamed.
+  ASSERT_EQ(std::string("parent_node"),
+            std::string(new_offer->service().source_instance_filter()[0].get()));
+
+  // Check that a non-default filter stayed the same.
+  ASSERT_EQ(std::string("instance-2"),
+            std::string(new_offer->service().source_instance_filter()[1].get()));
+}
+
+TEST(CompositeServiceOfferTest, WorkingOfferPrimary) {
+  const std::string_view kServiceName = "fuchsia.service";
+  fidl::Arena<> arena;
+  auto service = fcd::wire::OfferService::Builder(arena);
+  service.source_name(arena, kServiceName);
+  service.target_name(arena, kServiceName);
+
+  fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 2);
+  mappings[0].source_name = fidl::StringView(arena, "instance-1");
+  mappings[0].target_name = fidl::StringView(arena, "default");
+
+  mappings[1].source_name = fidl::StringView(arena, "instance-1");
+  mappings[1].target_name = fidl::StringView(arena, "instance-2");
+  service.renamed_instances(mappings);
+
+  fidl::VectorView<fidl::StringView> filters(arena, 2);
+  filters[0] = fidl::StringView(arena, "default");
+  filters[1] = fidl::StringView(arena, "instance-2");
+  service.source_instance_filter(filters);
+
+  auto offer = fcd::wire::Offer::WithService(arena, service.Build());
+  auto new_offer = CreateCompositeServiceOffer(arena, offer, "parent_node", true);
+  ASSERT_TRUE(new_offer);
+
+  ASSERT_EQ(3ul, new_offer->service().renamed_instances().count());
+  // Check that the default instance stayed the same (because we're primary).
+  ASSERT_EQ(std::string("instance-1"),
+            std::string(new_offer->service().renamed_instances()[0].source_name.get()));
+  ASSERT_EQ(std::string("default"),
+            std::string(new_offer->service().renamed_instances()[0].target_name.get()));
+
+  // Check that the default instance got renamed.
+  ASSERT_EQ(std::string("instance-1"),
+            std::string(new_offer->service().renamed_instances()[1].source_name.get()));
+  ASSERT_EQ(std::string("parent_node"),
+            std::string(new_offer->service().renamed_instances()[1].target_name.get()));
+
+  // Check that a non-default instance stayed the same.
+  ASSERT_EQ(std::string("instance-1"),
+            std::string(new_offer->service().renamed_instances()[2].source_name.get()));
+  ASSERT_EQ(std::string("instance-2"),
+            std::string(new_offer->service().renamed_instances()[2].target_name.get()));
+
+  ASSERT_EQ(3ul, new_offer->service().source_instance_filter().count());
+  // Check that the default filter stayed the same (because we're primary).
+  EXPECT_EQ(std::string("default"),
+            std::string(new_offer->service().source_instance_filter()[0].get()));
+
+  // Check that the default filter got renamed.
+  EXPECT_EQ(std::string("parent_node"),
+            std::string(new_offer->service().source_instance_filter()[1].get()));
+
+  // Check that a non-default filter stayed the same.
+  EXPECT_EQ(std::string("instance-2"),
+            std::string(new_offer->service().source_instance_filter()[2].get()));
+}

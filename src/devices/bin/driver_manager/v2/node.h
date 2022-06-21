@@ -21,6 +21,11 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
     fidl::AnyArena& arena, fuchsia_component_decl::wire::Offer& offer,
     std::string_view parents_name);
 
+// This function creates a composite offer based on a service offer.
+std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeServiceOffer(
+    fidl::AnyArena& arena, fuchsia_component_decl::wire::Offer& offer,
+    std::string_view parents_name, bool primary_parent);
+
 // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
 // stop encoding and decoding messages as a workaround.
 template <typename T>

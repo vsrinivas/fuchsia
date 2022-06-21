@@ -58,6 +58,10 @@ fidl::StringView CollectionName(Collection collection) {
   }
 }
 
+bool IsDefaultOffer(std::string_view target_name) {
+  return std::string_view("default").compare(target_name) == 0;
+}
+
 Node* PrimaryParent(const std::vector<Node*>& parents) {
   return parents.empty() ? nullptr : parents[0];
 }
@@ -114,6 +118,101 @@ std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
     dir.target(offer.directory().target());
   }
   return fdecl::wire::Offer::WithDirectory(arena, dir.Build());
+}
+
+std::optional<fdecl::wire::Offer> CreateCompositeServiceOffer(fidl::AnyArena& arena,
+                                                              fdecl::wire::Offer& offer,
+                                                              std::string_view parents_name,
+                                                              bool primary_parent) {
+  if (!offer.is_service() || !offer.service().has_source_instance_filter() ||
+      !offer.service().has_renamed_instances()) {
+    return std::nullopt;
+  }
+
+  size_t new_instance_count = offer.service().renamed_instances().count();
+  if (primary_parent) {
+    for (auto& instance : offer.service().renamed_instances()) {
+      if (IsDefaultOffer(instance.target_name.get())) {
+        new_instance_count++;
+      }
+    }
+  }
+
+  size_t new_filter_count = offer.service().source_instance_filter().count();
+  if (primary_parent) {
+    for (auto& filter : offer.service().source_instance_filter()) {
+      if (IsDefaultOffer(filter.get())) {
+        new_filter_count++;
+      }
+    }
+  }
+
+  // We have to create a new offer so we aren't manipulating our parent's offer.
+  auto service = fdecl::wire::OfferService::Builder(arena);
+  if (offer.service().has_source_name()) {
+    service.source_name(offer.service().source_name());
+  }
+  if (offer.service().has_target_name()) {
+    service.target_name(offer.service().target_name());
+  }
+  if (offer.service().has_source()) {
+    service.source(offer.service().source());
+  }
+  if (offer.service().has_target()) {
+    service.target(offer.service().target());
+  }
+
+  size_t index = 0;
+  fidl::VectorView<fdecl::wire::NameMapping> mappings(arena, new_instance_count);
+  for (auto instance : offer.service().renamed_instances()) {
+    // The instance is not "default", so copy it over.
+    if (!IsDefaultOffer(instance.target_name.get())) {
+      mappings[index].source_name = fidl::StringView(arena, instance.source_name.get());
+      mappings[index].target_name = fidl::StringView(arena, instance.target_name.get());
+      index++;
+      continue;
+    }
+
+    // We are the primary parent, so add the "default" offer.
+    if (primary_parent) {
+      mappings[index].source_name = fidl::StringView(arena, instance.source_name.get());
+      mappings[index].target_name = fidl::StringView(arena, instance.target_name.get());
+      index++;
+    }
+
+    // Rename the instance to match the parent's name.
+    mappings[index].source_name = fidl::StringView(arena, instance.source_name.get());
+    mappings[index].target_name = fidl::StringView(arena, parents_name);
+    index++;
+  }
+  ZX_ASSERT(index == new_instance_count);
+
+  index = 0;
+  fidl::VectorView<fidl::StringView> filters(arena, new_instance_count);
+  for (auto filter : offer.service().source_instance_filter()) {
+    // The filter is not "default", so copy it over.
+    if (!IsDefaultOffer(filter.get())) {
+      filters[index] = fidl::StringView(arena, filter.get());
+      index++;
+      continue;
+    }
+
+    // We are the primary parent, so add the "default" filter.
+    if (primary_parent) {
+      filters[index] = fidl::StringView(arena, "default");
+      index++;
+    }
+
+    // Rename the filter to match the parent's name.
+    filters[index] = fidl::StringView(arena, parents_name);
+    index++;
+  }
+  ZX_ASSERT(index == new_filter_count);
+
+  service.renamed_instances(mappings);
+  service.source_instance_filter(filters);
+
+  return fdecl::wire::Offer::WithService(arena, service.Build());
 }
 
 BindResultTracker::BindResultTracker(size_t expected_result_count,
@@ -267,6 +366,17 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
           }
         }
       }
+
+      // If we are a composite node, then we route 'service' directories based on the parent's name.
+      if (is_composite && offer.is_service()) {
+        auto new_offer = CreateCompositeServiceOffer(arena, offer, parents_names_[parent_index],
+                                                     parent_index == 0);
+        if (new_offer) {
+          node_offers.push_back(*new_offer);
+        }
+        continue;
+      }
+
       node_offers.push_back(offer);
     }
     parent_index++;

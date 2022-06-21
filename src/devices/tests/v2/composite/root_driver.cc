@@ -97,29 +97,41 @@ class RootDriver {
       return zx::error(serve_status);
     }
 
-    auto status = outgoing_.AddDirectory(std::move(endpoints->client), ft::Service::Name);
-    if (status.is_error()) {
-      return status.take_error();
+    // Add service "left".
+    {
+      component::ServiceHandler handler;
+      ft::Service::Handler service(&handler);
+      auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
+        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher_, std::move(server_end),
+                                                       &this->left_server_);
+      };
+      zx::status<> status = service.add_device(std::move(device));
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
+      }
+      status = outgoing_.AddService<ft::Service>(std::move(handler), kLeftName);
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
+      }
     }
-    // Add left service instance.
-    auto left_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    left_dir->AddEntry("device",
-                       fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<ft::Device> server) {
-                         fidl::BindServer<fidl::WireServer<ft::Device>>(
-                             dispatcher_, std::move(server), &this->left_server_);
-                         return ZX_OK;
-                       }));
-    service_dir_->AddEntry(kLeftName, left_dir);
 
-    // Add right service instance.
-    auto right_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    right_dir->AddEntry(
-        "device", fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<ft::Device> server) {
-          fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher_, std::move(server),
-                                                         &this->right_server_);
-          return ZX_OK;
-        }));
-    service_dir_->AddEntry(kRightName, right_dir);
+    // Add service "right".
+    {
+      component::ServiceHandler handler;
+      ft::Service::Handler service(&handler);
+      auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
+        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher_, std::move(server_end),
+                                                       &this->right_server_);
+      };
+      zx::status<> status = service.add_device(std::move(device));
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
+      }
+      status = outgoing_.AddService<ft::Service>(std::move(handler), kRightName);
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
+      }
+    }
 
     // Start the driver.
     auto task = AddChild(kLeftName, bind_fuchsia_test::BIND_PROTOCOL_DEVICE, left_controller_)
@@ -144,14 +156,22 @@ class RootDriver {
     fdf::wire::NodeAddArgs args(arena);
 
     // Set the offers of the node.
-    auto service = fcd::wire::OfferDirectory::Builder(arena);
+    auto service = fcd::wire::OfferService::Builder(arena);
     service.source_name(arena, ft::Service::Name);
-    service.target_name(arena, std::string(ft::Service::Name) + "-default");
-    service.rights(fuchsia_io::wire::kRwStarDir);
-    service.subdir(arena, name);
-    service.dependency_type(fcd::wire::DependencyType::kStrong);
+    service.target_name(arena, ft::Service::Name);
+
+    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
+    mappings[0].source_name = fidl::StringView(arena, name);
+    mappings[0].target_name = fidl::StringView(arena, "default");
+    service.renamed_instances(mappings);
+
+    auto instance_filter = fidl::VectorView<fidl::StringView>(arena, 1);
+    instance_filter[0] = fidl::StringView(arena, "default");
+    service.source_instance_filter(instance_filter);
+
     auto offers = fidl::VectorView<fcd::wire::Offer>(arena, 1);
-    offers[0] = fcd::wire::Offer::WithDirectory(arena, service.Build());
+
+    offers[0] = fcd::wire::Offer::WithService(arena, service.Build());
     args.set_offers(arena, offers);
 
     args.set_name(arena, fidl::StringView::FromExternal(name))

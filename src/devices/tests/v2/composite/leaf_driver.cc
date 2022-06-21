@@ -72,7 +72,7 @@ class LeafDriver {
 
   result<void, zx_status_t> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {
     // Check the left device.
-    auto number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/left/device");
+    auto number = ConnectToDeviceAndGetNumber("/svc/fuchsia.composite.test.Service/left/device");
     if (number.is_error()) {
       __UNUSED auto result = waiter->Ack(number.error_value());
       return ok();
@@ -84,7 +84,7 @@ class LeafDriver {
     }
 
     // Check the right device.
-    number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/right/device");
+    number = ConnectToDeviceAndGetNumber("/svc/fuchsia.composite.test.Service/right/device");
     if (number.is_error()) {
       __UNUSED auto result = waiter->Ack(number.error_value());
       return ok();
@@ -96,7 +96,7 @@ class LeafDriver {
     }
 
     // Check the default device (which is the left device).
-    number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/default/device");
+    number = ConnectToDeviceAndGetNumber("/svc/fuchsia.composite.test.Service/default/device");
     if (number.is_error()) {
       __UNUSED auto result = waiter->Ack(number.error_value());
       return ok();
