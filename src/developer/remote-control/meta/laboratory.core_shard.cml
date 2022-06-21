@@ -41,6 +41,11 @@
             to: "#ffx-laboratory",
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#ffx-laboratory",
+        },
+        {
             storage: "laboratory-data",
             from: "self",
             as: "data",

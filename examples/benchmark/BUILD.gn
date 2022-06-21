@@ -20,6 +20,6 @@ executable("benchmark_example") {
 }
 
 fuchsia_package_with_single_component("benchmark") {
-  manifest = "meta/benchmark.cmx"
+  manifest = "meta/benchmark.cml"
   deps = [ ":benchmark_example" ]
 }
