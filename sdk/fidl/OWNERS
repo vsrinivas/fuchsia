@@ -1,13 +1,15 @@
+# Fuchsia API Council members.
 abarth@google.com
 abdulla@google.com
 brunodalbo@google.com
 camrdale@google.com
 chaselatta@google.com
 cja@google.com
-computerdruid@google.com
 cpu@google.com
 crjohns@google.com
+csuter@google.com
 dalesat@google.com
+dpursell@google.com
 dschuyler@google.com
 geb@google.com
 ianloic@google.com
@@ -16,10 +18,13 @@ jamuraa@google.com
 jbauman@google.com
 jocelyndang@google.com
 jsankey@google.com
+kevinwells@google.com
 lindkvist@google.com
 mcgrathr@google.com
 neelsa@google.com
-qsr@google.com
 silberst@google.com
 wez@google.com
 ypomortsev@google.com
+
+# TODO(fxbug.dev/63462): Remove once Rust SDK work is complete.
+computerdruid@google.com
