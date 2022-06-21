@@ -62,7 +62,6 @@ fuchsia_unittest_package("memfs-inotify-test-pkg") {
 }
 
 fuchsia_unittest_package("memfs-tests") {
-  manifest = "memfs-unit-test.cmx"
   deps = [ ":memfs-test" ]
 }
 
