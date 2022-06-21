@@ -2817,7 +2817,7 @@ int main(int argc, char** argv) {
     fclose(f);
   }
 
-  if (outfile) {
+  if (outfile && !extract) {
     Item::WriteZBI(&writer, "boot.zbi", items);
   } else if (list_contents || verbose || extract) {
     if (list_contents || verbose) {
