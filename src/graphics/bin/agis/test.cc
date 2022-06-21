@@ -46,7 +46,7 @@ uint64_t TimeMS() {
 class AgisTest : public testing::Test {
  protected:
   void SetUp() override {
-    num_connections_ = 0;
+    num_vtcs_ = 0;
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
 
     std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
@@ -105,16 +105,16 @@ class AgisTest : public testing::Test {
         });
   }
 
-  void Connections() {
+  void Vtcs() {
     outstanding++;
-    observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
-      fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
+    observer_->Vtcs([&](fuchsia::gpu::agis::Observer_Vtcs_Result result) {
+      fuchsia::gpu::agis::Observer_Vtcs_Response response(std::move(result.response()));
       std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
       for (auto &vtc : vtcs) {
-        FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%lu\" \"%s\"", vtc.process_koid(),
+        FX_LOGF(INFO, "agis-test", "AgisTest::Vtc \"%lu\" \"%s\"", vtc.process_koid(),
                 vtc.process_name().c_str());
       }
-      num_connections_ = vtcs.size();
+      num_vtcs_ = vtcs.size();
       outstanding--;
     });
   }
@@ -122,11 +122,11 @@ class AgisTest : public testing::Test {
   std::unique_ptr<async::Loop> loop_;
   fuchsia::gpu::agis::ComponentRegistryPtr component_registry_;
   fuchsia::gpu::agis::ObserverPtr observer_;
-  size_t num_connections_;
+  size_t num_vtcs_;
   zx_koid_t process_koid_;
   std::string process_name_;
 
-  // |time_ms| is used as the unique connection ID throughout all tests.
+  // |time_ms| is used as the unique vtc ID throughout all tests.
   uint64_t time_ms_;
 };
 
@@ -152,34 +152,34 @@ TEST_F(AgisTest, Unregister) {
       });
 }
 
-TEST_F(AgisTest, Connections) {
+TEST_F(AgisTest, Vtcs) {
   Register(time_ms_, process_koid_, process_name_);
   Register(time_ms_ + 1, process_koid_, process_name_ + "+1");
   LoopWait();
-  Connections();
+  Vtcs();
   LoopWait();
-  EXPECT_EQ(num_connections_, 2ul);
+  EXPECT_EQ(num_vtcs_, 2ul);
   Unregister(time_ms_);
   Unregister(time_ms_ + 1);
   LoopWait();
-  Connections();
+  Vtcs();
   LoopWait();
-  EXPECT_EQ(num_connections_, 0ul);
+  EXPECT_EQ(num_vtcs_, 0ul);
 }
 
-TEST_F(AgisTest, MaxConnections) {
+TEST_F(AgisTest, MaxVtcs) {
   uint32_t i = 0;
-  for (i = 0; i < fuchsia::gpu::agis::MAX_CONNECTIONS; i++) {
+  for (i = 0; i < fuchsia::gpu::agis::MAX_VTCS; i++) {
     Register(time_ms_ + i, process_koid_, process_name_ + "+" + std::to_string(i));
   }
   outstanding++;
-  component_registry_->Register(
-      time_ms_ + i, process_koid_, process_name_ + "+" + std::to_string(i),
-      [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
-        EXPECT_EQ(result.err(), fuchsia::gpu::agis::Error::CONNECTIONS_EXCEEDED);
-        outstanding--;
-      });
-  for (i = 0; i < fuchsia::gpu::agis::MAX_CONNECTIONS; i++) {
+  component_registry_->Register(time_ms_ + i, process_koid_,
+                                process_name_ + "+" + std::to_string(i),
+                                [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+                                  EXPECT_EQ(result.err(), fuchsia::gpu::agis::Error::VTCS_EXCEEDED);
+                                  outstanding--;
+                                });
+  for (i = 0; i < fuchsia::gpu::agis::MAX_VTCS; i++) {
     Unregister(time_ms_ + i);
   }
 }
@@ -204,8 +204,8 @@ TEST_F(AgisTest, UsableSocket) {
   zx::socket agi_socket;
   std::string process_name;
   zx_koid_t process_koid;
-  observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
-    fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
+  observer_->Vtcs([&](fuchsia::gpu::agis::Observer_Vtcs_Result result) {
+    fuchsia::gpu::agis::Observer_Vtcs_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
     EXPECT_EQ(vtcs.size(), 1ul);
@@ -278,8 +278,8 @@ TEST(AgisDisconnect, Main) {
       }
     });
     disconnect_outstanding = true;
-    observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
-      fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
+    observer->Vtcs([&](fuchsia::gpu::agis::Observer_Vtcs_Result result) {
+      fuchsia::gpu::agis::Observer_Vtcs_Response response(std::move(result.response()));
       EXPECT_FALSE(result.err());
       std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
       EXPECT_EQ(vtcs.size(), 1ul);
@@ -310,7 +310,7 @@ TEST(AgisDisconnect, Main) {
   bool found = true;
   while (found) {
     disconnect_outstanding = true;
-    observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
+    observer->Vtcs([&](fuchsia::gpu::agis::Observer_Vtcs_Result result) {
       EXPECT_FALSE(result.err());
       auto vtcs(result.response().ResultValue_());
       bool component_found = false;

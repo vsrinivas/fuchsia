@@ -23,12 +23,12 @@ struct Vtc {
 }
 
 #[derive(PartialEq)]
-struct ConnectionsResult {
+struct VtcsResult {
     json: serde_json::Value,
     agi_sockets: Vec<fidl::Socket>,
 }
 
-impl std::fmt::Display for ConnectionsResult {
+impl std::fmt::Display for VtcsResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.json)
     }
@@ -66,7 +66,7 @@ pub async fn agis(
 async fn component_registry_register(
     component_registry: ComponentRegistryProxy,
     op: RegisterOp,
-) -> Result<ConnectionsResult, anyhow::Error> {
+) -> Result<VtcsResult, anyhow::Error> {
     if op.process_name.is_empty() {
         return Err(anyhow!(ffx_error!("The \"register\" command requires a process name")));
     }
@@ -77,9 +77,8 @@ async fn component_registry_register(
             let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
             let vtc =
                 Vtc { process_koid: op.process_koid, process_name: op.process_name, agi_socket: s };
-            let connections_result =
-                ConnectionsResult { json: serde_json::to_value(&vtc)?, agi_sockets: vec![] };
-            return Ok(connections_result);
+            let vtcs_result = VtcsResult { json: serde_json::to_value(&vtc)?, agi_sockets: vec![] };
+            return Ok(vtcs_result);
         }
         Err(e) => {
             return Err(anyhow!(ffx_error!("The \"register\" command failed with error: {:?}", e)))
@@ -90,13 +89,12 @@ async fn component_registry_register(
 async fn component_registry_unregister(
     component_registry: ComponentRegistryProxy,
     op: UnregisterOp,
-) -> Result<ConnectionsResult, anyhow::Error> {
+) -> Result<VtcsResult, anyhow::Error> {
     let result = component_registry.unregister(op.id).await?;
     match result {
         Ok(_) => {
-            let connections_result =
-                ConnectionsResult { json: serde_json::json!([{}]), agi_sockets: vec![] };
-            return Ok(connections_result);
+            let vtcs_result = VtcsResult { json: serde_json::json!([{}]), agi_sockets: vec![] };
+            return Ok(vtcs_result);
         }
         Err(e) => {
             return Err(anyhow!(ffx_error!(
@@ -107,8 +105,8 @@ async fn component_registry_unregister(
     }
 }
 
-async fn observer_connections(observer: ObserverProxy) -> Result<ConnectionsResult, anyhow::Error> {
-    let result = observer.connections().await?;
+async fn observer_vtcs(observer: ObserverProxy) -> Result<VtcsResult, anyhow::Error> {
+    let result = observer.vtcs().await?;
     match result {
         Ok(_fidl_vtcs) => {
             let mut vtcs = vec![];
@@ -123,15 +121,12 @@ async fn observer_connections(observer: ObserverProxy) -> Result<ConnectionsResu
                 });
                 agi_sockets.push(vtc.agi_socket);
             }
-            let connections_result =
-                ConnectionsResult { json: serde_json::to_value(&vtcs)?, agi_sockets: agi_sockets };
-            return Ok(connections_result);
+            let vtcs_result =
+                VtcsResult { json: serde_json::to_value(&vtcs)?, agi_sockets: agi_sockets };
+            return Ok(vtcs_result);
         }
         Err(e) => {
-            return Err(anyhow!(ffx_error!(
-                "The \"connections\" command failed with error: {:?}",
-                e
-            )))
+            return Err(anyhow!(ffx_error!("The \"vtcs\" command failed with error: {:?}", e)))
         }
     }
 }
@@ -140,23 +135,23 @@ async fn agis_impl(
     component_registry: ComponentRegistryProxy,
     observer: ObserverProxy,
     cmd: AgisCommand,
-) -> Result<ConnectionsResult, anyhow::Error> {
+) -> Result<VtcsResult, anyhow::Error> {
     match cmd.operation {
         Operation::Register(op) => component_registry_register(component_registry, op).await,
         Operation::Unregister(op) => component_registry_unregister(component_registry, op).await,
-        Operation::Connections(_) => observer_connections(observer).await,
+        Operation::Vtcs(_) => observer_vtcs(observer).await,
     }
 }
 
 #[cfg(test)]
 mod test {
     use {
-        super::*, ffx_agis_args::ConnectionsOp, fidl_fuchsia_gpu_agis::ComponentRegistryRequest,
+        super::*, ffx_agis_args::VtcsOp, fidl_fuchsia_gpu_agis::ComponentRegistryRequest,
         fidl_fuchsia_gpu_agis::ObserverRequest,
     };
 
     const PROCESS_KOID: u64 = 999;
-    const PROCESS_NAME: &str = "agis-connections-test";
+    const PROCESS_NAME: &str = "agis-vtcs-test";
 
     fn fake_component_registry() -> ComponentRegistryProxy {
         let callback = move |req| {
@@ -177,7 +172,7 @@ mod test {
     fn fake_observer() -> ObserverProxy {
         let callback = move |req| {
             match req {
-                ObserverRequest::Connections { responder, .. } => {
+                ObserverRequest::Vtcs { responder, .. } => {
                     let mut vtcs = vec![];
                     // Create an arbitrary, valid socket for use as the |agi_socket|.
                     let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
@@ -234,8 +229,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    pub async fn connections() {
-        let cmd = AgisCommand { operation: Operation::Connections(ConnectionsOp {}) };
+    pub async fn vtcs() {
+        let cmd = AgisCommand { operation: Operation::Vtcs(VtcsOp {}) };
         let component_registry = fake_component_registry();
         let observer = fake_observer();
         let result = agis_impl(component_registry, observer, cmd).await;

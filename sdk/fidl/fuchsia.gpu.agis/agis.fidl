@@ -19,20 +19,20 @@ type Vtc = resource table {
     3: agi_socket zx.handle:SOCKET;
 };
 
-/// Max connections that may be registered.
+/// Max vtcs that may be registered.
 /// ZX_CHANNEL_MAX_MESSAGE_BYTES = 64KiB.  At an approximate message size
-/// of 50B, rounding up to 64B, we easily fit 512 connections in a message
+/// of 50B, rounding up to 64B, we easily fit 512 vtcs in a message
 /// with ample headroom for message size growth.
 ///
-/// The number of connections is determined by developers, rather than users.
-/// The typical expected connection count is 1 considering a developer
+/// The number of vtcs is determined by developers, rather than users.
+/// The typical expected vtc count is 1 considering a developer
 /// performing Vulkan tracing on 1 component at a time.
-const MAX_CONNECTIONS uint32 = 512;
+const MAX_VTCS uint32 = 512;
 
 type Error = flexible enum {
     NOT_FOUND = 1;
     ALREADY_REGISTERED = 2;
-    CONNECTIONS_EXCEEDED = 3;
+    VTCS_EXCEEDED = 3;
     INTERNAL_ERROR = 4;
 };
 
@@ -43,7 +43,7 @@ protocol ComponentRegistry {
     /// Register a process as traceable and retrieve its bound socket.
     /// For AGI, gapii will be the only client of this Register interface.
     Register(struct {
-        /// Client assigned unique ID for the connection.
+        /// Client assigned unique ID for the vtc.
         id uint64;
 
         /// Process koid.
@@ -62,12 +62,12 @@ protocol ComponentRegistry {
 };
 
 /// The AGIS Observer protocol provides the interface to retrieve registered
-/// Vulkan traceable components aka "connections".
+/// Vulkan Traceable Components.
 @discoverable
 protocol Observer {
     /// Retrieve registered components.
-    /// For AGI, gapis will be the only client of this Connections interface.
-    Connections() -> (resource struct {
-        vtcs vector<Vtc>:MAX_CONNECTIONS;
+    /// For AGI, gapis will be the only client of this Vtcs interface.
+    Vtcs() -> (resource struct {
+        vtcs vector<Vtc>:MAX_VTCS;
     }) error Error;
 };

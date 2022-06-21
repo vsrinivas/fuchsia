@@ -17,7 +17,7 @@ pub struct AgisCommand {
 pub enum Operation {
     Register(RegisterOp),
     Unregister(UnregisterOp),
-    Connections(ConnectionsOp),
+    Vtcs(VtcsOp),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -40,5 +40,5 @@ pub struct UnregisterOp {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "connections", description = "list all connected processes")]
-pub struct ConnectionsOp {}
+#[argh(subcommand, name = "vtcs", description = "list all vulkan traceable components")]
+pub struct VtcsOp {}

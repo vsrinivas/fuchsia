@@ -50,9 +50,9 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
       return;
     }
 
-    // Test if the connection map is full.
-    if (registry.size() == fuchsia::gpu::agis::MAX_CONNECTIONS) {
-      result.set_err(fuchsia::gpu::agis::Error::CONNECTIONS_EXCEEDED);
+    // Test if the vtc map is full.
+    if (registry.size() == fuchsia::gpu::agis::MAX_VTCS) {
+      result.set_err(fuchsia::gpu::agis::Error::VTCS_EXCEEDED);
       callback(std::move(result));
       return;
     }
@@ -100,26 +100,25 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
 
 class ObserverImpl final : public fuchsia::gpu::agis::Observer {
  public:
-  void Connections(ConnectionsCallback callback) override {
-    fuchsia::gpu::agis::Observer_Connections_Result result;
-    std::vector<fuchsia::gpu::agis::Vtc> connections;
+  void Vtcs(VtcsCallback callback) override {
+    fuchsia::gpu::agis::Observer_Vtcs_Result result;
+    std::vector<fuchsia::gpu::agis::Vtc> vtcs;
     for (const auto &element : registry) {
-      auto connection = ::fuchsia::gpu::agis::Vtc::New();
-      connection->set_process_koid(element.second.process_koid);
-      connection->set_process_name(element.second.process_name);
+      auto vtc = ::fuchsia::gpu::agis::Vtc::New();
+      vtc->set_process_koid(element.second.process_koid);
+      vtc->set_process_name(element.second.process_name);
       zx::socket agi_socket_clone;
       zx_status_t status =
           element.second.agi_socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &agi_socket_clone);
       if (status != ZX_OK) {
-        FX_LOGF(ERROR, "agis",
-                "ComponentRegistryImpl::Connections socket duplicate failed with %ull", status);
+        FX_LOGF(ERROR, "agis", "ObserverImpl::Vtcs socket duplicate failed with %ull", status);
         result.set_err(fuchsia::gpu::agis::Error::INTERNAL_ERROR);
         callback(std::move(result));
       }
-      connection->set_agi_socket(std::move(agi_socket_clone));
-      connections.emplace_back(std::move(*connection));
+      vtc->set_agi_socket(std::move(agi_socket_clone));
+      vtcs.emplace_back(std::move(*vtc));
     }
-    fuchsia::gpu::agis::Observer_Connections_Response response(std::move(connections));
+    fuchsia::gpu::agis::Observer_Vtcs_Response response(std::move(vtcs));
     result.set_response(std::move(response));
     callback(std::move(result));
   }
