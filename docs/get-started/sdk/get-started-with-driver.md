@@ -169,9 +169,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ bazel build --config=fuchsia_x64 //src/qemu_edu
    ...
-   INFO: Elapsed time: 119.450s, Critical Path: 23.60s
-   INFO: 713 processes: 449 internal, 264 linux-sandbox.
-   INFO: Build completed successfully, 713 total actions
+   INFO: Elapsed time: 131.746s, Critical Path: 26.89s
+   INFO: 722 processes: 454 internal, 268 linux-sandbox.
+   INFO: Build completed successfully, 722 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -188,16 +188,16 @@ Do the following:
    ffx:
      abi-revision: 0xA56735A6690E09D8
      api-level: 8
-     build-version: 2022-05-11T14:03:19+00:00
-     integration-commit-hash: 89d2e94c4ce66fe7abe0350bbf5b4440ff4719e6
-     integration-commit-time: Wed, 11 May 2022 14:03:19 +0000
+     build-version: 2022-06-09T20:02:48+00:00
+     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
+     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
 
    daemon:
      abi-revision: 0xA56735A6690E09D8
      api-level: 8
-     build-version: 2022-05-11T14:03:19+00:00
-     integration-commit-hash: 89d2e94c4ce66fe7abe0350bbf5b4440ff4719e6
-     integration-commit-time: Wed, 11 May 2022 14:03:19 +0000
+     build-version: 2022-06-09T20:02:48+00:00
+     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
+     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command
@@ -374,14 +374,14 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
-   INFO: Analyzed target //src/qemu_edu:pkg.component (7 packages loaded, 164 targets configured).
+   INFO: Analyzed target //src/qemu_edu:pkg.component (6 packages loaded, 162 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/pkg.component_run_component.sh
-   INFO: Elapsed time: 1.353s, Critical Path: 0.60s
-   INFO: 6 processes: 1 internal, 4 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 6 total actions
-   INFO: Build completed successfully, 6 total actions
+   INFO: Elapsed time: 1.660s, Critical Path: 0.49s
+   INFO: 21 processes: 12 internal, 8 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 21 total actions
+   INFO: Build completed successfully, 21 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -579,12 +579,10 @@ Do the following:
        fuchsia-boot:///#meta/zxcrypt.cm
        fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
 
-   Driver Host: 7623
+   Driver Host: 7820
        fuchsia-boot:///#meta/intel-rtc.cm
 
-   Driver Host: 7669
-       fuchsia-boot:///#meta/hid-input-report.cm
-       fuchsia-boot:///#meta/hid.cm
+   Driver Host: 7903
        fuchsia-boot:///#meta/pc-ps2.cm
 
    Driver Host: 50125
@@ -613,7 +611,7 @@ Do the following:
 3. Attach the debugger to the `qemu_edu` driver host:
 
    <pre class="devsite-click-to-copy">
-   <span class="no-select">[zxdb] </span>attach &lt;PID&gt;
+   <span class="no-select">[zxdb] </span>attach <var>PID</var>
    </pre>
 
    Replace `PID` with the PID of the `qemu_edu` driver host identified
@@ -628,6 +626,8 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] attach 50125
    Attached Process 1 state=Running koid=50125 name=driver_host2.cm
+   Downloading symbols...
+   Symbol downloading complete. 7 succeeded, 0 failed.
    [zxdb]
    ```
 
