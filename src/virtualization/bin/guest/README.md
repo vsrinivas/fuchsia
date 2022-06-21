@@ -243,3 +243,17 @@ run until it accepts one connection, at which point a session will begin between
 server (see `socat`). Once this connection closes, the server is shut down and the process exits.
 
 ![socat_listen_diagram](doc/socat-listen.png)
+
+### Wipe
+
+The `wipe` command allows for clearing any stateful data associated with the guest. Currently
+this command only supports termina.
+
+The VM must not already be running when this command is issued.
+
+#### Arguments
+
+**Example**: `guest wipe termina`
+
+**Positional Arguments**
+- `guest_type`: The guest to clear. Currently this must be `termina`.

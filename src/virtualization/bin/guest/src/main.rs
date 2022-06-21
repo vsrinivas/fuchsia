@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 use {
     crate::arguments::*,
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
+    fidl_fuchsia_virtualization::LinuxManagerMarker,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 mod arguments;
@@ -14,6 +16,7 @@ mod list;
 mod serial;
 mod services;
 mod socat;
+mod wipe;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -94,6 +97,17 @@ async fn main() -> Result<(), Error> {
                 println!("{}", output);
             }
             Ok(())
+        }
+        SubCommands::Wipe(args) => {
+            if args.guest_type != GuestType::Termina {
+                return Err(anyhow!(
+                    "Wipe is not supported for '{}'. Only 'termina' is supported",
+                    args.guest_type
+                ));
+            }
+            let linux_manager = connect_to_protocol::<LinuxManagerMarker>()
+                .context("Failed to connect to LinuxManager")?;
+            wipe::handle_wipe(linux_manager).await
         }
         SubCommands::Socat(socat_args) => {
             let vsock_endpoint = if cfg!(feature = "USE_CFV1") {

@@ -74,6 +74,7 @@ pub enum SubCommands {
     Socat(SocatArgs),
     SocatListen(SocatListenArgs),
     Vsh(VshArgs),
+    Wipe(WipeArgs),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -175,6 +176,15 @@ pub struct VshArgs {
     #[argh(option)]
     /// list of arguments to run non-interactively on launch.
     pub args: Vec<String>,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Clears the stateful data for the target guest. Currently only termina is supported.
+#[argh(subcommand, name = "wipe")]
+pub struct WipeArgs {
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
