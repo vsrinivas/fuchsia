@@ -6,6 +6,7 @@ import("//build/component/component_id_index.gni")
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/images/fvm.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 source_set("lib") {
   sources = [
@@ -252,6 +253,10 @@ config_data("appmgr_scheme_config") {
   for_pkg = "appmgr"
   sources = [ "scheme_map.config" ]
   outputs = [ "scheme_map/default.config" ]
+}
+
+core_shard("appmgr_core_shard") {
+  shard_file = "meta/appmgr.core_shard.cml"
 }
 
 # Supply a component ID index to appmgr. This index contains component ID

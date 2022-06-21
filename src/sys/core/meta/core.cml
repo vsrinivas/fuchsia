@@ -4,10 +4,6 @@
 
 // Realm that acts as a container for general system components.
 {
-    include: [
-        "//src/sys/appmgr/meta/appmgr.core_shard.cml",
-        "//src/sys/core/meta/core_proxy.shard.cml",
-    ],
     children: [
         {
             name: "device_settings",
@@ -225,24 +221,11 @@
         // included as part of the build process. See restricted-storage.core_shard.cml or
         // unrestricted-storage.core_shard.cml
     ],
-
-    // Protocols offered from `self` are routed from the v1 sys realm.
     offer: [
         {
             protocol: "fuchsia.component.resolution.Resolver",
             from: "parent",
             to: [ "#universe-resolver" ],
-        },
-        {
-            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
-            from: "self",
-            to: [ "#hwinfo" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            storage: "data",
-            from: "self",
-            to: "#device_settings",
         },
         {
             protocol: [ "fuchsia.kernel.DebugResource" ],
@@ -507,16 +490,6 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "self",
-            to: "#starnix_manager",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [ "fuchsia.ui.input3.Keyboard" ],
             from: "#text_manager",
             to: "#starnix_manager",
@@ -540,15 +513,6 @@
         },
         {
             protocol: [
-                "fuchsia.hwinfo.Device",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "self",
-            to: "#remote-control",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
             ],
@@ -559,12 +523,6 @@
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#network",
             to: "#remote-control",
-        },
-        {
-            protocol: [ "fuchsia.sys.internal.CrashIntrospect" ],
-            from: "self",
-            to: "#exceptions",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [
@@ -680,12 +638,6 @@
                 "#session-manager",
             ],
             subdir: "class/input-report",
-        },
-        {
-            protocol: "fuchsia.ui.display.internal.DisplayPower",
-            from: "self",
-            to: "#brightness_manager",
-            dependency: "weak",
         },
         {
             directory: "dev",
@@ -855,29 +807,6 @@
         },
         {
             protocol: [
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.intl.TimeZones",
-                "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.ProfileProvider",
-                "fuchsia.sys.Launcher",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.display.internal.DisplayPower",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.lifecycle.LifecycleController",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.Presenter",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
-            from: "self",
-            to: "#session-manager",
-        },
-        {
-            protocol: [
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
@@ -909,18 +838,6 @@
             storage: "cache",
             from: "self",
             to: "#diagnostics-persistence",
-        },
-        {
-            protocol: [ "fuchsia.media.Audio" ],
-            from: "self",
-            to: [
-                "#debian-guest-manager",
-                "#session-manager",
-                "#soundplayer",
-                "#termina-guest-manager",
-                "#zircon-guest-manager",
-            ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.vulkan.loader.Loader" ],
@@ -988,12 +905,6 @@
             to: "#bluetooth-core",
         },
         {
-            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
-            from: "self",
-            to: "#bluetooth-core",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
@@ -1016,12 +927,6 @@
                 "#sampler",
                 "#session-manager",
             ],
-        },
-        {
-            protocol: [ "fuchsia.settings.Privacy" ],
-            from: "self",
-            to: "#cobalt",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [
@@ -1059,18 +964,6 @@
             ],
             from: "#hwinfo",
             to: "#feedback",
-        },
-        {
-            protocol: [
-                "fuchsia.feedback.DeviceIdProvider",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.settings.Privacy",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.update.channelcontrol.ChannelControl",
-            ],
-            from: "self",
-            to: "#feedback",
-            dependency: "weak_for_migration",
         },
         {
             storage: [
@@ -1120,20 +1013,6 @@
                 "#termina-guest-manager",
                 "#zircon-guest-manager",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.policy.Presenter",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "self",
-            to: [
-                "#debian-guest-manager",
-                "#termina-guest-manager",
-                "#zircon-guest-manager",
-            ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.net.virtualization.Control" ],

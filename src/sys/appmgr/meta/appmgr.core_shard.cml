@@ -28,9 +28,7 @@
                 "fuchsia.factory.AlphaFactoryStoreProvider",
                 "fuchsia.factory.CastCredentialsFactoryStoreProvider",
                 "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.PlayReadyFactoryStoreProvider",
                 "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.factory.WidevineFactoryStoreProvider",
                 "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
@@ -62,19 +60,12 @@
                 "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
-                "fuchsia.sysmem.Allocator",
 
-                // TODO(fxbug.dev/93338): delete this when tee_manager migrated to CFv2
+                // TODO(fxbug.dev/93338): delete fuchsia.tee.* below when tee_manager migrated to CFv2
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
                 "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
                 "fuchsia.tee.DeviceInfo",
-
-                // TODO(fxbug.dev/90444): Remove this after external components
-                // that route the tracing capability from /core are updated to
-                // route from trace manager directly. This capability is listed
-                // here as some of the components that need updating are present
-                // in builds where trace_manager's core shard is not included.
                 "fuchsia.testing.sl4f.FacadeProvider",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
@@ -409,6 +400,121 @@
             from: "parent",
             to: "#appmgr",
             rights: [ "rx*" ],
+        },
+        {
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            from: "self",
+            to: [ "#hwinfo" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#device_settings",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: "#starnix_manager",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Device",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "self",
+            to: "#remote-control",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.sys.internal.CrashIntrospect" ],
+            from: "self",
+            to: "#exceptions",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.ui.display.internal.DisplayPower",
+            from: "self",
+            to: "#brightness_manager",
+            dependency: "weak",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.intl.TimeZones",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.display.internal.DisplayPower",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.lifecycle.LifecycleController",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "self",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "self",
+            to: [
+                "#debian-guest-manager",
+                "#session-manager",
+                "#soundplayer",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "self",
+            to: "#bluetooth-core",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.settings.Privacy" ],
+            from: "self",
+            to: "#cobalt",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.DeviceIdProvider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
+            from: "self",
+            to: "#feedback",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: [
+                "#debian-guest-manager",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+            dependency: "weak_for_migration",
         },
     ],
     expose: [

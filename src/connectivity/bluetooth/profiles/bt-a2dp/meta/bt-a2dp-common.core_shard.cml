@@ -22,12 +22,16 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.settings.Audio",
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "self",
             to: [ "#bt-a2dp" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#bt-a2dp",
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],

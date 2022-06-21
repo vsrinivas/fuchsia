@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/appmgr/core_shards.gni")
+
 product_build = true
 
 bootfs_only = true
@@ -42,6 +44,10 @@ product_bootfs_labels += [ "//src/testing/runtests" ]
 # Component manager configuration.
 product_bootfs_labels +=
     [ "//src/sys/component_manager:component_manager_bootfs_config" ]
+
+# TODO(fxbug.dev/102390): deprecate appmgr from bringup.
+# Try to move up to minimal.gni or "higher" / specific product configurations.
+core_realm_shards = appmgr_core_shards
 
 meta_package_labels = []
 

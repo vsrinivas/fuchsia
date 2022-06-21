@@ -4,6 +4,7 @@
 
 import("//build/assembly/assembled_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
+import("//src/sys/appmgr/core_shards.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -24,6 +25,9 @@ template("assemble_network_conformance_system") {
       # Need ssh to test the system
       "//src/developer/sshd-host:core_shard",
     ]
+
+    # TODO(fxbug.dev/102390): deprecate appmgr from this product config
+    deps += appmgr_core_shards
 
     package_name = core_name
     restrict_persistent_storage = false

@@ -6,6 +6,7 @@ import("//build/assembly/assembled_system.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/appmgr/core_shards.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -77,6 +78,9 @@ _core_realm_deps = [
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/ui/bin/brightness_manager:auto-brightness_core_shard",
 ]
+
+# TODO(fxbug.dev/102390): deprecate appmgr from this product config
+_core_realm_deps += appmgr_core_shards
 
 core_realm("core") {
   package_name = core_name

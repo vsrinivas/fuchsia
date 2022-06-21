@@ -24,6 +24,14 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
+
+                // TODO(fxbug.dev/103037): delete fuchsia.factory.* capabilities
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.ui.input.InputDeviceRegistry", // test-only
             ],
@@ -166,12 +174,6 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
-                "fuchsia.factory.AlphaFactoryStoreProvider", // #appmgr
-                "fuchsia.factory.CastCredentialsFactoryStoreProvider", // #appmgr
-                "fuchsia.factory.MiscFactoryStoreProvider", // #appmgr
-                "fuchsia.factory.PlayReadyFactoryStoreProvider", // #appmgr
-                "fuchsia.factory.WeaveFactoryStoreProvider", // #appmgr
-                "fuchsia.factory.WidevineFactoryStoreProvider", // #appmgr
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.lowpan.device.Lookup", // #appmgr
                 "fuchsia.media.ProfileProvider", // #appmgr
@@ -198,7 +200,7 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: "#data_proxy",
         },
@@ -206,6 +208,23 @@
             protocol: "fuchsia.testing.proxy.TcpProxyControl",
             from: "#data_proxy",
             to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
+            ],
+
+            // TODO(fxbug.dev/103037): route from "#factory_store_providers"
+            from: "self",
+            to: "#sl4f",
+
+            // TODO(fxbug.dev/103037): delete "weak_for_migration"
+            dependency: "weak_for_migration",
         },
 
         // TODO(https://fxbug.dev/98760): Remove once fixed.
