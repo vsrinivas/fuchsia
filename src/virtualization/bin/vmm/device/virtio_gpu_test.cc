@@ -15,13 +15,18 @@
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr uint16_t kNumQueues = 2;
-static constexpr uint16_t kQueueSize = 16;
+namespace {
 
-static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
-static constexpr size_t kPixelSizeInBytes = 4;
-static constexpr uint32_t kResourceId = 0;
-static constexpr uint32_t kScanoutId = 0;
+constexpr uint16_t kNumQueues = 2;
+constexpr uint16_t kQueueSize = 16;
+
+constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
+constexpr size_t kPixelSizeInBytes = 4;
+constexpr uint32_t kResourceId = 0;
+constexpr uint32_t kScanoutId = 0;
+
+constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+constexpr auto kRustComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu_rs#meta/virtio_gpu_rs.cm";
 
 class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase,
                    public component_testing::LocalComponent {
@@ -49,7 +54,13 @@ class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase,
   std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
-class VirtioGpuTest : public TestWithDevice {
+struct VirtioGpuTestParam {
+  std::string test_name;
+  std::string component_url;
+};
+
+class VirtioGpuTest : public TestWithDevice,
+                      public ::testing::WithParamInterface<VirtioGpuTestParam> {
  protected:
   VirtioGpuTest()
       : control_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -64,12 +75,11 @@ class VirtioGpuTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
     constexpr auto kComponentName = "virtio_gpu";
     constexpr auto kFakeScenic = "fake_scenic";
 
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddChild(kComponentName, GetParam().component_url);
     realm_builder.AddLocalChild(kFakeScenic, &scenic_fake_);
 
     realm_builder
@@ -117,8 +127,14 @@ class VirtioGpuTest : public TestWithDevice {
     status = gpu_->Ready(0);
     ASSERT_EQ(ZX_OK, status);
 
-    RunLoopUntil([&] { return scenic_fake_.HasStarted(); });
+    // The rust component doesn't yet attempt to connect to Scenic, so we don't wait for the
+    // connection to happen.
+    if (!IsRustComponent()) {
+      RunLoopUntil([&] { return scenic_fake_.HasStarted(); });
+    }
   }
+
+  bool IsRustComponent() { return GetParam().component_url == kRustComponentUrl; }
 
   template <typename T>
   zx_status_t SendRequest(const T& request, virtio_gpu_ctrl_hdr_t** response) {
@@ -189,7 +205,12 @@ class VirtioGpuTest : public TestWithDevice {
   std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
-TEST_F(VirtioGpuTest, GetDisplayInfo) {
+TEST_P(VirtioGpuTest, GetDisplayInfo) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_gpu_ctrl_hdr_t request = {
       .type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
   };
@@ -212,19 +233,34 @@ TEST_F(VirtioGpuTest, GetDisplayInfo) {
   EXPECT_EQ(response->pmodes[0].r.height, kGpuStartupHeight);
 }
 
-TEST_F(VirtioGpuTest, SetScanout) {
+TEST_P(VirtioGpuTest, SetScanout) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   ResourceCreate2d();
   ResourceAttachBacking();
   SetScanout(kResourceId, VIRTIO_GPU_RESP_OK_NODATA);
 }
 
-TEST_F(VirtioGpuTest, SetScanoutWithInvalidResourceId) {
+TEST_P(VirtioGpuTest, SetScanoutWithInvalidResourceId) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   ResourceCreate2d();
   ResourceAttachBacking();
   SetScanout(UINT32_MAX, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
 }
 
-TEST_F(VirtioGpuTest, CreateLargeResource) {
+TEST_P(VirtioGpuTest, CreateLargeResource) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_gpu_ctrl_hdr_t* response;
   ASSERT_EQ(SendRequest(
                 virtio_gpu_resource_create_2d_t{
@@ -237,7 +273,12 @@ TEST_F(VirtioGpuTest, CreateLargeResource) {
   EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY);
 }
 
-TEST_F(VirtioGpuTest, InvalidTransferToHostParams) {
+TEST_P(VirtioGpuTest, InvalidTransferToHostParams) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   ResourceCreate2d();
 
   // Select a x/y/width/height values that overflow in a way that (x+width)
@@ -264,3 +305,11 @@ TEST_F(VirtioGpuTest, InvalidTransferToHostParams) {
       ZX_OK);
   EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
 }
+
+INSTANTIATE_TEST_SUITE_P(VirtioGpuComponentsTest, VirtioGpuTest,
+                         testing::Values(VirtioGpuTestParam{"cpp", kCppComponentUrl},
+                                         VirtioGpuTestParam{"rust", kRustComponentUrl}),
+                         [](const testing::TestParamInfo<VirtioGpuTestParam>& info) {
+                           return info.param.test_name;
+                         });
+}  // namespace
