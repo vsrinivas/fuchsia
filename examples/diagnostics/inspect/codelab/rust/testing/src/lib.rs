@@ -6,8 +6,7 @@ use anyhow::Error;
 use fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy};
 use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route};
 
-const FIZZBUZZ_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/fizzbuzz.cm";
+const FIZZBUZZ_URL: &'static str = "#meta/fizzbuzz.cm";
 
 pub struct TestOptions {
     pub include_fizzbuzz: bool,
@@ -27,14 +26,7 @@ impl IntegrationTest {
     pub async fn start(part: usize, options: TestOptions) -> Result<Self, Error> {
         let builder = RealmBuilder::new().await?;
         let reverser = builder
-            .add_child(
-                "reverser",
-                format!(
-                    "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/part_{}.cm",
-                    part
-                ),
-                ChildOptions::new(),
-            )
+            .add_child("reverser", format!("#meta/part_{}.cm", part), ChildOptions::new())
             .await?;
         if options.include_fizzbuzz {
             let fizzbuzz = builder.add_child("fizzbuzz", FIZZBUZZ_URL, ChildOptions::new()).await?;

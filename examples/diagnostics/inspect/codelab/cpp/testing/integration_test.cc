@@ -11,12 +11,8 @@
 namespace codelab::testing {
 
 namespace {
-constexpr char fizzbuzz_url[] =
-    "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab_integration_tests#meta/"
-    "fizzbuzz.cm";
-constexpr char reverser_url[] =
-    "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab_integration_tests#meta/"
-    "part_5.cm";
+constexpr char fizzbuzz_url[] = "#meta/fizzbuzz.cm";
+constexpr char reverser_url[] = "#meta/part_5.cm";
 }  // namespace
 
 fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestOptions options) {
