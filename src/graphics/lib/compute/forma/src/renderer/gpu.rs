@@ -169,6 +169,30 @@ impl GpuRenderer {
         height: u32,
         clear_color: Color,
     ) -> Option<Timings> {
+        let frame = surface.get_current_texture().unwrap();
+        let timings = self.render_to_texture(
+            composition,
+            device,
+            queue,
+            &frame.texture,
+            width,
+            height,
+            clear_color,
+        );
+        frame.present();
+        timings
+    }
+
+    pub fn render_to_texture(
+        &mut self,
+        composition: &mut Composition,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        texture: &wgpu::Texture,
+        width: u32,
+        height: u32,
+        clear_color: Color,
+    ) -> Option<Timings> {
         composition.compact_geom();
         composition.shared_state.borrow_mut().props_interner.compact();
 
@@ -200,7 +224,7 @@ impl GpuRenderer {
             .render(
                 device,
                 queue,
-                surface,
+                texture,
                 width,
                 height,
                 unsafe { mem::transmute(rasterizer.segments()) },
