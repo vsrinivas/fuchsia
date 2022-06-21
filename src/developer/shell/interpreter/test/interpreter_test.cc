@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "fidl/fuchsia.shell/cpp/wire.h"
-#include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/default.h"
 #include "zircon/status.h"
 
@@ -42,19 +40,7 @@ fuchsia_shell::wire::ExecuteResult InterpreterTestContext::GetResult() const {
 
 InterpreterTest::InterpreterTest()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
-  ::fidl::InterfaceHandle<fuchsia::io::Directory> directory;
-
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "fuchsia-pkg://fuchsia.com/shell_server#meta/shell_server.cmx";
-  launch_info.directory_request = directory.NewRequest().TakeChannel();
-
-  fuchsia::sys::LauncherPtr launcher;
-  context_->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-
-  shell_provider_ = std::make_unique<sys::ServiceDirectory>(std::move(directory));
-}
+      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 void InterpreterTest::Finish(FinishAction action) {
   std::vector<std::string> no_errors;
@@ -240,15 +226,14 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
 }
 
 void InterpreterTest::SetUp() {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
-  shell_ = fidl::WireSyncClient<fuchsia_shell::Shell>(std::move(endpoints->client));
-
   // Reset context ids.
   last_context_id_ = 0;
   // Resets the global error stream for the test (to be able to run multiple tests).
   global_error_stream_.str() = "";
 
   // Creates a new connection to the server.
-  ASSERT_EQ(ZX_OK, shell_provider_->Connect("fuchsia.shell.Shell",
-                                            std::move(endpoints->server.channel())));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
+  shell_ = fidl::WireSyncClient<fuchsia_shell::Shell>(std::move(endpoints->client));
+  ASSERT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.shell.Shell",
+                                        endpoints->server.channel().release()));
 }

@@ -66,7 +66,6 @@ class InterpreterTest : public ::testing::Test {
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  std::unique_ptr<sys::ServiceDirectory> shell_provider_;
   fidl::WireSyncClient<fuchsia_shell::Shell> shell_;
 
   uint64_t last_context_id_ = 0;
