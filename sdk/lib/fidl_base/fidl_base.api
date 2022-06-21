@@ -1,5 +1,5 @@
 {
-  "pkg/fidl_base/include/lib/fidl/coding.h": "7bf00533b217438d03540ad046514df3",
+  "pkg/fidl_base/include/lib/fidl/coding.h": "0b5fb9d21f7e65d838baab805c165e8d",
   "pkg/fidl_base/include/lib/fidl/cpp/transaction_header.h": "6424b60d1af296669983a90abc918d3d",
   "pkg/fidl_base/include/lib/fidl/cpp/wire_format_metadata.h": "8883ce53a48eb97e3b1d03ff96dfde14",
   "pkg/fidl_base/include/lib/fidl/internal.h": "9580d159d2971ebdd649351edb002439",

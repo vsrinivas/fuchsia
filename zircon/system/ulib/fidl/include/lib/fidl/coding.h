@@ -92,23 +92,6 @@ bool fidl_validate_string(const char* data, uint64_t size);
 // Note: This function does not write a trailing NUL.
 size_t fidl_format_type_name(const fidl_type_t* type, char* buffer, size_t capacity);
 
-// The following functions are only available under Fuchsia.
-
-#ifdef __Fuchsia__
-
-// Traverses a decoded FIDL message starting at |value|, closing all handles within it. If the
-// message is non-contiguous in memory, the function will follow pointers and close handles in any
-// scattered out-of-line objects.
-//
-// Handle values in |value| are replaced with ZX_HANDLE_INVALID.
-//
-// This method expects non-transactional messages. If callers want to call this function on
-// transacational inputs, they must first perform |::fidl::internal::fidl_exclude_header_bytes| on
-// the input |bytes| and |num_bytes| values to trim the header bytes.
-zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
-
-#endif
-
 __END_CDECLS
 
 #ifdef __cplusplus

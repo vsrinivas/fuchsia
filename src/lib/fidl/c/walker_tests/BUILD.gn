@@ -97,10 +97,7 @@ if (is_fuchsia) {
     # this must match the requested binary in run_with_handle_policy_tests.cc
     output_name = "fidl-handle-policy-test-app"
     testonly = true
-    sources = [
-      "fidl_coded_types.cc",
-      "handle_closing_tests.cc",
-    ]
+    sources = [ "fidl_coded_types.cc" ]
     public_deps = [
       "//sdk/lib/fit",
       "//zircon/system/ulib/fidl",

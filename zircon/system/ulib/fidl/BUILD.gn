@@ -86,10 +86,7 @@ sdk_source_set("fidl") {
 
   public = [ "include/lib/fidl/epitaph.h" ]
 
-  sources = [
-    "epitaph.c",
-    "handle_closing.cc",
-  ]
+  sources = [ "epitaph.c" ]
 
   deps = [ ":fidl_base" ]
 
