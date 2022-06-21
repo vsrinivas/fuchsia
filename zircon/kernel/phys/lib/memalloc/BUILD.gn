@@ -80,8 +80,10 @@ if (!is_kernel) {
 
   fuchsia_unittest_package("memalloc-test-package") {
     package_name = "memalloc-tests"
-    manifest = "meta/memalloc-test.cmx"
-    deps = [ ":memalloc-test" ]
+    deps = [
+      ":memalloc-test",
+      "//src/sys/test_runners:tmp_storage",
+    ]
   }
 
   fuzzer_package("memalloc-fuzzers") {
