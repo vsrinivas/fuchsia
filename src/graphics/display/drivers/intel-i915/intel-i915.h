@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
 
@@ -86,11 +87,11 @@ class Controller : public DeviceType,
                                                uint32_t index);
   void DisplayControllerImplReleaseImage(image_t* image);
   uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config,
-                                                   size_t display_count,
+                                                   size_t display_config_count,
                                                    uint32_t** layer_cfg_result,
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                               size_t display_count,
+                                               size_t display_config_count,
                                                const config_stamp_t* config_stamp);
   void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
                                    size_t raw_eld_count);
@@ -183,13 +184,15 @@ class Controller : public DeviceType,
                              size_t removed_count) __TA_REQUIRES(display_lock_);
 
   // Gets the layer_t* config for the given pipe/plane. Return false if there is no layer.
-  bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane, const display_config_t** configs,
-                     size_t display_count, const layer_t** layer_out) __TA_REQUIRES(display_lock_);
+  bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
+                     cpp20::span<const display_config_t*> configs, const layer_t** layer_out)
+      __TA_REQUIRES(display_lock_);
+
   uint16_t CalculateBuffersPerPipe(size_t display_count);
   // Returns false if no allocation is possible. When that happens,
   // plane 0 of the failing displays will be set to UINT16_MAX.
   bool CalculateMinimumAllocations(
-      const display_config_t** display_configs, size_t display_count,
+      cpp20::span<const display_config_t*> display_configs,
       uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount])
       __TA_REQUIRES(display_lock_);
   // Updates plane_buffers_ based pipe_buffers_ and the given parameters
@@ -203,17 +206,17 @@ class Controller : public DeviceType,
   void DoPipeBufferReallocation(buffer_allocation_t active_allocation[registers::kPipeCount])
       __TA_REQUIRES(display_lock_);
   // Reallocates plane buffers based on the given layer config.
-  void ReallocatePlaneBuffers(const display_config_t** display_configs, size_t display_count,
+  void ReallocatePlaneBuffers(cpp20::span<const display_config_t*> display_configs,
                               bool reallocate_pipes) __TA_REQUIRES(display_lock_);
 
   // Validates that a basic layer configuration can be supported for the
   // given modes of the displays.
-  bool CheckDisplayLimits(const display_config_t** display_configs, size_t display_count,
+  bool CheckDisplayLimits(cpp20::span<const display_config_t*> display_configs,
                           uint32_t** layer_cfg_results) __TA_REQUIRES(display_lock_);
 
-  bool CalculatePipeAllocation(const display_config_t** display_config, size_t display_count,
+  bool CalculatePipeAllocation(cpp20::span<const display_config_t*> display_configs,
                                uint64_t alloc[registers::kPipeCount]) __TA_REQUIRES(display_lock_);
-  bool ReallocatePipes(const display_config_t** display_config, size_t display_count)
+  bool ReallocatePipes(cpp20::span<const display_config_t*> display_configs)
       __TA_REQUIRES(display_lock_);
 
   zx_device_t* zx_gpu_dev_ = nullptr;

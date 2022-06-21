@@ -33,6 +33,7 @@
 
 #include <fbl/vector.h>
 
+#include "fuchsia/hardware/display/controller/c/banjo.h"
 #include "src/graphics/display/drivers/intel-i915/clock/cdclk.h"
 #include "src/graphics/display/drivers/intel-i915/ddi.h"
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
@@ -118,14 +119,12 @@ static i2c_impl_protocol_ops_t i2c_ops = {
     .transact = transact,
 };
 
-const display_config_t* find_config(uint64_t display_id, const display_config_t** display_configs,
-                                    size_t display_count) {
-  for (size_t i = 0; i < display_count; i++) {
-    if (display_configs[i]->display_id == display_id) {
-      return display_configs[i];
-    }
-  }
-  return nullptr;
+const display_config_t* find_config(uint64_t display_id,
+                                    cpp20::span<const display_config_t*> display_configs) {
+  auto found =
+      std::find_if(display_configs.begin(), display_configs.end(),
+                   [display_id](const display_config_t* c) { return c->display_id == display_id; });
+  return found != display_configs.end() ? *found : nullptr;
 }
 
 static void get_posttransform_width(const layer_t& layer, uint32_t* width, uint32_t* height) {
@@ -861,15 +860,14 @@ const std::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
 }
 
 bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
-                               const display_config_t** configs, size_t display_count,
+                               cpp20::span<const display_config_t*> configs,
                                const layer_t** layer_out) {
   if (!pipes_[pipe].in_use()) {
     return false;
   }
   uint64_t disp_id = pipes_[pipe].attached_display_id();
 
-  for (unsigned i = 0; i < display_count; i++) {
-    const display_config_t* config = configs[i];
+  for (const display_config_t* config : configs) {
     if (config->display_id != disp_id) {
       continue;
     }
@@ -904,7 +902,7 @@ uint16_t Controller::CalculateBuffersPerPipe(size_t display_count) {
 }
 
 bool Controller::CalculateMinimumAllocations(
-    const display_config_t** display_configs, size_t display_count,
+    cpp20::span<const display_config_t*> display_configs,
     uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount]) {
   // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
   // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
@@ -915,7 +913,7 @@ bool Controller::CalculateMinimumAllocations(
 
     for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
       const layer_t* layer;
-      if (!GetPlaneLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+      if (!GetPlaneLayer(pipe, plane_num, display_configs, &layer)) {
         min_allocs[pipe_num][plane_num] = 0;
         continue;
       }
@@ -953,7 +951,7 @@ bool Controller::CalculateMinimumAllocations(
       total += min_allocs[pipe_num][plane_num];
     }
 
-    if (total && total > CalculateBuffersPerPipe(display_count)) {
+    if (total && total > CalculateBuffersPerPipe(display_configs.size())) {
       min_allocs[pipe_num][0] = UINT16_MAX;
       success = false;
     }
@@ -1058,15 +1056,15 @@ void Controller::UpdateAllocations(
   }
 }
 
-void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
-                                        size_t display_count, bool reallocate_pipes) {
-  if (display_count == 0) {
+void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> display_configs,
+                                        bool reallocate_pipes) {
+  if (display_configs.empty()) {
     // Deal with reallocation later, when there are actually displays
     return;
   }
 
   uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount];
-  if (!CalculateMinimumAllocations(display_configs, display_count, min_allocs)) {
+  if (!CalculateMinimumAllocations(display_configs, min_allocs)) {
     // The allocation should have been checked, so this shouldn't fail
     ZX_ASSERT(false);
   }
@@ -1077,7 +1075,7 @@ void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
     registers::Pipe pipe = registers::kPipes[pipe_num];
     for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
       const layer_t* layer;
-      if (!GetPlaneLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+      if (!GetPlaneLayer(pipe, plane_num, display_configs, &layer)) {
         data_rate[pipe_num][plane_num] = 0;
       } else if (layer->type == LAYER_TYPE_PRIMARY) {
         const primary_layer_t* primary = &layer->cfg.primary;
@@ -1109,7 +1107,7 @@ void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
     // when progressively updating the allocation.
     memcpy(active_allocation, pipe_buffers_, sizeof(active_allocation));
 
-    uint16_t buffers_per_pipe = CalculateBuffersPerPipe(display_count);
+    uint16_t buffers_per_pipe = CalculateBuffersPerPipe(display_configs.size());
     int active_pipes = 0;
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
       if (pipes_[pipe_num].in_use()) {
@@ -1197,9 +1195,9 @@ void Controller::DoPipeBufferReallocation(
   }
 }
 
-bool Controller::CheckDisplayLimits(const display_config_t** display_configs, size_t display_count,
+bool Controller::CheckDisplayLimits(cpp20::span<const display_config_t*> display_configs,
                                     uint32_t** layer_cfg_results) {
-  for (unsigned i = 0; i < display_count; i++) {
+  for (unsigned i = 0; i < display_configs.size(); i++) {
     const display_config_t* config = display_configs[i];
 
     // The intel display controller doesn't support these flags
@@ -1287,25 +1285,26 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs, si
 }
 
 uint32_t Controller::DisplayControllerImplCheckConfiguration(
-    const display_config_t** display_config, size_t display_count, uint32_t** layer_cfg_result,
-    size_t* layer_cfg_result_count) {
+    const display_config_t** display_config, size_t display_config_count,
+    uint32_t** layer_cfg_result, size_t* layer_cfg_result_count) {
   fbl::AutoLock lock(&display_lock_);
 
-  if (display_count == 0) {
+  cpp20::span display_configs(display_config, display_config_count);
+  if (display_configs.empty()) {
     // All displays off is supported
     return CONFIG_DISPLAY_OK;
   }
 
   uint64_t pipe_alloc[registers::kPipeCount];
-  if (!CalculatePipeAllocation(display_config, display_count, pipe_alloc)) {
+  if (!CalculatePipeAllocation(display_configs, pipe_alloc)) {
     return CONFIG_DISPLAY_TOO_MANY;
   }
 
-  if (!CheckDisplayLimits(display_config, display_count, layer_cfg_result)) {
+  if (!CheckDisplayLimits(display_configs, layer_cfg_result)) {
     return CONFIG_DISPLAY_UNSUPPORTED_MODES;
   }
 
-  for (unsigned i = 0; i < display_count; i++) {
+  for (unsigned i = 0; i < display_configs.size(); i++) {
     auto* config = display_config[i];
     DisplayDevice* display = nullptr;
     for (auto& d : display_devices_) {
@@ -1451,7 +1450,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
   // CalculateMinimumAllocations ignores layers after kImagePlaneCount. That's fine, since
   // that case already fails from an earlier check.
   uint16_t arr[registers::kPipeCount][registers::kImagePlaneCount];
-  if (!CalculateMinimumAllocations(display_config, display_count, arr)) {
+  if (!CalculateMinimumAllocations(display_configs, arr)) {
     // Find any displays whose allocation fails and set the return code. Overwrite
     // any previous errors, since they get solved by the merge.
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
@@ -1460,7 +1459,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
       }
       ZX_ASSERT(pipes_[pipe_num].in_use());  // If the allocation failed, it should be in use
       uint64_t display_id = pipes_[pipe_num].attached_display_id();
-      for (unsigned i = 0; i < display_count; i++) {
+      for (unsigned i = 0; i < display_config_count; i++) {
         if (display_config[i]->display_id != display_id) {
           continue;
         }
@@ -1476,27 +1475,26 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
   return CONFIG_DISPLAY_OK;
 }
 
-bool Controller::CalculatePipeAllocation(const display_config_t** display_config,
-                                         size_t display_count,
+bool Controller::CalculatePipeAllocation(cpp20::span<const display_config_t*> display_configs,
                                          uint64_t alloc[registers::kPipeCount]) {
-  if (display_count > registers::kPipeCount) {
+  if (display_configs.size() > registers::kPipeCount) {
     return false;
   }
   memset(alloc, 0, sizeof(uint64_t) * registers::kPipeCount);
   // Keep any allocated pipes on the same display
-  for (unsigned i = 0; i < display_count; i++) {
-    DisplayDevice* display = FindDevice(display_config[i]->display_id);
+  for (const display_config_t* config : display_configs) {
+    DisplayDevice* display = FindDevice(config->display_id);
     if (display != nullptr && display->pipe() != nullptr) {
-      alloc[display->pipe()->pipe()] = display_config[i]->display_id;
+      alloc[display->pipe()->pipe()] = config->display_id;
     }
   }
   // Give unallocated pipes to displays that need them
-  for (unsigned i = 0; i < display_count; i++) {
-    DisplayDevice* display = FindDevice(display_config[i]->display_id);
+  for (const display_config_t* config : display_configs) {
+    DisplayDevice* display = FindDevice(config->display_id);
     if (display != nullptr && display->pipe() == nullptr) {
       for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         if (!alloc[pipe_num]) {
-          alloc[pipe_num] = display_config[i]->display_id;
+          alloc[pipe_num] = config->display_id;
           break;
         }
       }
@@ -1505,15 +1503,15 @@ bool Controller::CalculatePipeAllocation(const display_config_t** display_config
   return true;
 }
 
-bool Controller::ReallocatePipes(const display_config_t** display_config, size_t display_count) {
-  if (display_count == 0) {
+bool Controller::ReallocatePipes(cpp20::span<const display_config_t*> display_configs) {
+  if (display_configs.empty()) {
     // If we were given an empty config, just wait until there's
     // a real config before doing anything.
     return false;
   }
 
   uint64_t pipe_alloc[registers::kPipeCount];
-  if (!CalculatePipeAllocation(display_config, display_count, pipe_alloc)) {
+  if (!CalculatePipeAllocation(display_configs, pipe_alloc)) {
     // Reallocations should only happen for validated configurations, so the
     // pipe allocation should always succeed.
     ZX_ASSERT(false);
@@ -1523,7 +1521,7 @@ bool Controller::ReallocatePipes(const display_config_t** display_config, size_t
   bool pipe_change = false;
   for (unsigned i = 0; i < display_devices_.size(); i++) {
     auto& display = display_devices_[i];
-    const display_config_t* config = find_config(display->id(), display_config, display_count);
+    const display_config_t* config = find_config(display->id(), display_configs);
 
     Pipe* pipe = nullptr;
     if (config) {
@@ -1576,18 +1574,19 @@ void Controller::DisplayControllerImplSetEld(uint64_t display_id, const uint8_t*
 }
 
 void Controller::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                                         size_t display_count,
+                                                         size_t display_config_count,
                                                          const config_stamp_t* config_stamp) {
   fbl::AutoLock lock(&display_lock_);
   uint64_t fake_vsync_display_ids[display_devices_.size() + 1];
   size_t fake_vsync_size = 0;
 
-  bool pipe_change = ReallocatePipes(display_config, display_count);
-  ReallocatePlaneBuffers(display_config, display_count, pipe_change);
+  cpp20::span display_configs(display_config, display_config_count);
+  bool pipe_change = ReallocatePipes(display_configs);
+  ReallocatePlaneBuffers(display_configs, pipe_change);
 
   for (unsigned i = 0; i < display_devices_.size(); i++) {
     auto& display = display_devices_[i];
-    const display_config_t* config = find_config(display->id(), display_config, display_count);
+    const display_config_t* config = find_config(display->id(), display_configs);
 
     if (config != nullptr) {
       display->ApplyConfiguration(config, config_stamp);
