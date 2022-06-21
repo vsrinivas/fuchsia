@@ -227,6 +227,7 @@ struct magma_exec_resource {
 
 struct magma_exec_command_buffer {
   uint32_t resource_index;
+  uint32_t unused;
   uint64_t start_offset;
 } __attribute__((__aligned__(8)));
 
