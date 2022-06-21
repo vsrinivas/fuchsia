@@ -5,115 +5,24 @@
 #![cfg(test)]
 
 use {
-    fdio::{SpawnAction, SpawnOptions},
-    fidl::endpoints::Proxy,
     fuchsia_async as fasync,
-    fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, ProcessInfo},
-    futures::prelude::*,
-    libc::{STDERR_FILENO, STDOUT_FILENO},
-    std::{
-        convert::TryInto,
-        ffi::{CStr, CString},
-        fs::File,
-        path::Path,
-    },
+    shell_process::ProcessOutput,
+    std::{fs::File, path::Path},
     tempfile::TempDir,
 };
 
-struct ProcessOutput {
-    return_code: i64,
-    stdout: Vec<u8>,
-    stderr: Vec<u8>,
-}
-
 async fn run_far_tool(args: Vec<&str>, injected_dir: Option<&Path>) -> ProcessOutput {
     const BINARY_PATH: &str = "/pkg/bin/far";
-
-    let (stdout_reader, stdout_writer) =
-        zx::Socket::create(zx::SocketOpts::STREAM).expect("create stdout socket");
-    let (stderr_reader, stderr_writer) =
-        zx::Socket::create(zx::SocketOpts::STREAM).expect("create stderr socket");
-    // The reader-ends should not write.
-    let () = stdout_writer.half_close().expect("stdout_reader.half_close");
-    let () = stdout_writer.half_close().expect("stderr_reader.half_close");
-
-    let mut spawn_actions = vec![];
-
-    let path = CString::new(BINARY_PATH).expect("cstring path");
-    let path = path.as_c_str();
-
-    let args: Vec<CString> = std::iter::once(BINARY_PATH)
-        .chain(args.into_iter())
-        .map(|a| {
-            CString::new(a).unwrap_or_else(|e| panic!("failed to parse {} to CString: {}", a, e))
-        })
-        .collect();
-    let args: Vec<&CStr> = args.iter().map(|s| s.as_c_str()).collect();
-
-    let namespace_path = CString::new("/injected-dir").unwrap();
     if let Some(path) = injected_dir {
-        let dir_channel = fuchsia_fs::directory::open_in_namespace(
+        let directory_proxy = fuchsia_fs::directory::open_in_namespace(
             path.to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
-        .unwrap()
-        .into_channel()
-        .unwrap()
-        .into_zx_channel();
-        spawn_actions
-            .push(fdio::SpawnAction::add_namespace_entry(&namespace_path, dir_channel.into()));
+        .unwrap();
+        let proxies = vec![("/injected-dir", &directory_proxy)];
+        return shell_process::run_process(BINARY_PATH, args, proxies).await;
     }
-
-    spawn_actions.push(SpawnAction::add_handle(
-        HandleInfo::new(
-            HandleType::FileDescriptor,
-            STDOUT_FILENO.try_into().expect("STDOUT_FILENO.try_into"),
-        ),
-        stdout_writer.into(),
-    ));
-    spawn_actions.push(SpawnAction::add_handle(
-        HandleInfo::new(
-            HandleType::FileDescriptor,
-            STDERR_FILENO.try_into().expect("STDERR_FILENO.try_into"),
-        ),
-        stderr_writer.into(),
-    ));
-
-    let process = fdio::spawn_etc(
-        &job_default(),
-        SpawnOptions::DEFAULT_LOADER,
-        path,
-        &args[..],
-        None,
-        &mut spawn_actions,
-    )
-    .expect("spawn process");
-
-    let wait_for_process = async move {
-        assert_eq!(
-            fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
-                .await
-                .expect("wait for process termination"),
-            zx::Signals::PROCESS_TERMINATED
-        );
-        let ProcessInfo { return_code, start_time: _, flags: _ } =
-            process.info().expect("process info");
-        return_code
-    };
-    let stdout = fasync::Socket::from_socket(stdout_reader).unwrap();
-    let stderr = fasync::Socket::from_socket(stderr_reader).unwrap();
-
-    let drain = |pipe: fasync::Socket| pipe.into_datagram_stream().try_concat().err_into();
-
-    future::try_join3(
-        wait_for_process.map(Result::<_, anyhow::Error>::Ok),
-        drain(stdout),
-        drain(stderr),
-    )
-    .map_ok(|(return_code, stdout, stderr)| ProcessOutput { return_code, stdout, stderr })
-    .await
-    .unwrap()
+    shell_process::run_process(BINARY_PATH, args, vec![]).await
 }
 
 async fn assert_far_fails_to_open_missing_archive_file(
