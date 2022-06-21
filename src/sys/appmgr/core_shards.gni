@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Core shards that are required for including appmgr in a product.
+  # TODO(shayba): populate this after tqrev.dev/544025 lands
+  appmgr_core_shards = []
+}
