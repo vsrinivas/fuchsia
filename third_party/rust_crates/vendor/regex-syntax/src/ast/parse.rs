@@ -7,10 +7,10 @@ use std::cell::{Cell, RefCell};
 use std::mem;
 use std::result;
 
-use ast::{self, Ast, Position, Span};
-use either::Either;
+use crate::ast::{self, Ast, Position, Span};
+use crate::either::Either;
 
-use is_meta_character;
+use crate::is_meta_character;
 
 type Result<T> = result::Result<T, ast::Error>;
 
@@ -58,10 +58,10 @@ impl Primitive {
     /// then return an error.
     fn into_class_set_item<P: Borrow<Parser>>(
         self,
-        p: &ParserI<P>,
+        p: &ParserI<'_, P>,
     ) -> Result<ast::ClassSetItem> {
         use self::Primitive::*;
-        use ast::ClassSetItem;
+        use crate::ast::ClassSetItem;
 
         match self {
             Literal(lit) => Ok(ClassSetItem::Literal(lit)),
@@ -79,7 +79,7 @@ impl Primitive {
     /// dot), then return an error.
     fn into_class_literal<P: Borrow<Parser>>(
         self,
-        p: &ParserI<P>,
+        p: &ParserI<'_, P>,
     ) -> Result<ast::Literal> {
         use self::Primitive::*;
 
@@ -98,12 +98,13 @@ fn is_hex(c: char) -> bool {
 /// Returns true if the given character is a valid in a capture group name.
 ///
 /// If `first` is true, then `c` is treated as the first character in the
-/// group name (which is not allowed to be a digit).
+/// group name (which must be alphabetic or underscore).
 fn is_capture_char(c: char, first: bool) -> bool {
     c == '_'
-        || (!first && c >= '0' && c <= '9')
-        || (c >= 'a' && c <= 'z')
-        || (c >= 'A' && c <= 'Z')
+        || (!first
+            && (('0' <= c && c <= '9') || c == '.' || c == '[' || c == ']'))
+        || ('A' <= c && c <= 'Z')
+        || ('a' <= c && c <= 'z')
 }
 
 /// A builder for a regular expression parser.
@@ -166,7 +167,7 @@ impl ParserBuilder {
     /// they should impose a limit on the length, in bytes, of the concrete
     /// pattern string. In particular, this is viable since this parser
     /// implementation will limit itself to heap space proportional to the
-    /// lenth of the pattern string.
+    /// length of the pattern string.
     ///
     /// Note that a nest limit of `0` will return a nest limit error for most
     /// patterns but not all. For example, a nest limit of `0` permits `a` but
@@ -235,7 +236,7 @@ pub struct Parser {
     /// supported.
     octal: bool,
     /// The initial setting for `ignore_whitespace` as provided by
-    /// Th`ParserBuilder`. is is used when reseting the parser's state.
+    /// `ParserBuilder`. It is used when resetting the parser's state.
     initial_ignore_whitespace: bool,
     /// Whether whitespace should be ignored. When enabled, comments are
     /// also permitted.
@@ -1022,7 +1023,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// The given `kind` should correspond to the operator observed by the
     /// caller.
     ///
-    /// This assumes that the paser is currently positioned at the repetition
+    /// This assumes that the parser is currently positioned at the repetition
     /// operator and advances the parser to the first character after the
     /// operator. (Note that the operator may include a single additional `?`,
     /// which makes the operator ungreedy.)
@@ -1077,7 +1078,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// corresponds to the {m,n} syntax, and does not include the ?, * or +
     /// operators.
     ///
-    /// This assumes that the paser is currently positioned at the opening `{`
+    /// This assumes that the parser is currently positioned at the opening `{`
     /// and advances the parser to the first character after the operator.
     /// (Note that the operator may include a single additional `?`, which
     /// makes the operator ungreedy.)
@@ -2136,7 +2137,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
 /// A type that traverses a fully parsed Ast and checks whether its depth
 /// exceeds the specified nesting limit. If it does, then an error is returned.
 #[derive(Debug)]
-struct NestLimiter<'p, 's: 'p, P: 'p + 's> {
+struct NestLimiter<'p, 's, P> {
     /// The parser that is checking the nest limit.
     p: &'p ParserI<'s, P>,
     /// The current depth while walking an Ast.
@@ -2311,7 +2312,7 @@ mod tests {
     use std::ops::Range;
 
     use super::{Parser, ParserBuilder, ParserI, Primitive};
-    use ast::{self, Ast, Position, Span};
+    use crate::ast::{self, Ast, Position, Span};
 
     // Our own assert_eq, which has slightly better formatting (but honestly
     // still kind of crappy).
@@ -2356,21 +2357,24 @@ mod tests {
         str.to_string()
     }
 
-    fn parser(pattern: &str) -> ParserI<Parser> {
+    fn parser(pattern: &str) -> ParserI<'_, Parser> {
         ParserI::new(Parser::new(), pattern)
     }
 
-    fn parser_octal(pattern: &str) -> ParserI<Parser> {
+    fn parser_octal(pattern: &str) -> ParserI<'_, Parser> {
         let parser = ParserBuilder::new().octal(true).build();
         ParserI::new(parser, pattern)
     }
 
-    fn parser_nest_limit(pattern: &str, nest_limit: u32) -> ParserI<Parser> {
+    fn parser_nest_limit(
+        pattern: &str,
+        nest_limit: u32,
+    ) -> ParserI<'_, Parser> {
         let p = ParserBuilder::new().nest_limit(nest_limit).build();
         ParserI::new(p, pattern)
     }
 
-    fn parser_ignore_whitespace(pattern: &str) -> ParserI<Parser> {
+    fn parser_ignore_whitespace(pattern: &str) -> ParserI<'_, Parser> {
         let p = ParserBuilder::new().ignore_whitespace(true).build();
         ParserI::new(p, pattern)
     }
@@ -3848,6 +3852,45 @@ bar
                     index: 1,
                 }),
                 ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a_1>z)").parse(),
+            Ok(Ast::Group(ast::Group {
+                span: span(0..10),
+                kind: ast::GroupKind::CaptureName(ast::CaptureName {
+                    span: span(4..7),
+                    name: s("a_1"),
+                    index: 1,
+                }),
+                ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a.1>z)").parse(),
+            Ok(Ast::Group(ast::Group {
+                span: span(0..10),
+                kind: ast::GroupKind::CaptureName(ast::CaptureName {
+                    span: span(4..7),
+                    name: s("a.1"),
+                    index: 1,
+                }),
+                ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a[1]>z)").parse(),
+            Ok(Ast::Group(ast::Group {
+                span: span(0..11),
+                kind: ast::GroupKind::CaptureName(ast::CaptureName {
+                    span: span(4..8),
+                    name: s("a[1]"),
+                    index: 1,
+                }),
+                ast: Box::new(lit('z', 9)),
             }))
         );
 

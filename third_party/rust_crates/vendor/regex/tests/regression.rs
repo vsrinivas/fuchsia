@@ -210,3 +210,13 @@ matiter!(
     (4, 7),
     (12, 15)
 );
+
+// See: https://github.com/rust-lang/regex/issues/659
+//
+// Note that 'Ј' is not 'j', but cyrillic Je
+// https://en.wikipedia.org/wiki/Je_(Cyrillic)
+ismatch!(empty_group_match, r"()Ј01", "zЈ01", true);
+matiter!(empty_group_find, r"()Ј01", "zЈ01", (1, 5));
+
+// See: https://github.com/rust-lang/regex/issues/862
+mat!(non_greedy_question_literal, r"ab??", "ab", Some((0, 1)));

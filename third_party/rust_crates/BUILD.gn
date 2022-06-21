@@ -413,7 +413,7 @@ group("itoa") {
 }
 
 group("json5format") {
-  public_deps = [ ":json5format-v0_2_4" ]
+  public_deps = [ ":json5format-v0_2_6" ]
 }
 
 group("lazy_static") {
@@ -660,11 +660,11 @@ group("rayon") {
 }
 
 group("regex") {
-  public_deps = [ ":regex-v1_3_5" ]
+  public_deps = [ ":regex-v1_5_6" ]
 }
 
 group("regex-syntax") {
-  public_deps = [ ":regex-syntax-v0_6_17" ]
+  public_deps = [ ":regex-syntax-v0_6_26" ]
 }
 
 group("ring") {
@@ -1243,10 +1243,10 @@ rust_library("aes-gcm-siv-v0_10_3") {
   visibility = [ ":*" ]
 }
 
-rust_library("aho-corasick-v0_7_10") {
+rust_library("aho-corasick-v0_7_18") {
   crate_name = "aho_corasick"
   crate_root = "//third_party/rust_crates/ask2patch/aho-corasick/src/lib.rs"
-  output_name = "aho_corasick-4442fbca81319248"
+  output_name = "aho_corasick-753ae8ca48505855"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1259,9 +1259,9 @@ rust_library("aho-corasick-v0_7_10") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=4442fbca81319248",
-    "-Cextra-filename=-4442fbca81319248",
+    "--edition=2018",
+    "-Cmetadata=753ae8ca48505855",
+    "-Cextra-filename=-753ae8ca48505855",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -5996,10 +5996,10 @@ rust_library("js-sys-v0_3_39") {
   visibility = [ ":*" ]
 }
 
-rust_library("json5format-v0_2_4") {
+rust_library("json5format-v0_2_6") {
   crate_name = "json5format"
   crate_root = "//third_party/rust_crates/vendor/json5format/src/lib.rs"
-  output_name = "json5format-363d6357de7e4c70"
+  output_name = "json5format-daa5df659ed21ae8"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -6007,15 +6007,15 @@ rust_library("json5format-v0_2_4") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=363d6357de7e4c70",
-    "-Cextra-filename=-363d6357de7e4c70",
+    "-Cmetadata=daa5df659ed21ae8",
+    "-Cextra-filename=-daa5df659ed21ae8",
   ]
 
   visibility = [ ":*" ]
@@ -6656,7 +6656,7 @@ rust_library("nom-v5_0_0") {
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":memchr-v2_4_0" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
 
   rustenv = []
 
@@ -7598,7 +7598,7 @@ rust_library("pem-v0_8_3") {
   deps = []
   deps += [ ":base64-v0_13_0" ]
   deps += [ ":once_cell-v1_5_2" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
 
   rustenv = []
 
@@ -8167,7 +8167,7 @@ rust_library("predicates-v1_0_7") {
   deps += [ ":float-cmp-v0_8_0" ]
   deps += [ ":normalize-line-endings-v0_3_0" ]
   deps += [ ":predicates-core-v1_0_2" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
 
   rustenv = []
 
@@ -8419,7 +8419,7 @@ rust_library("proptest-v0_9_3") {
   deps += [ ":rand-v0_6_5" ]
   deps += [ ":rand_chacha-v0_1_1" ]
   deps += [ ":rand_xorshift-v0_1_1" ]
-  deps += [ ":regex-syntax-v0_6_17" ]
+  deps += [ ":regex-syntax-v0_6_26" ]
   deps += [ ":rusty-fork-v0_2_1" ]
   deps += [ ":tempfile-v3_2_0" ]
 
@@ -8541,7 +8541,7 @@ rust_library("publicsuffix-v1_5_2") {
   deps += [ ":error-chain-v0_12_0" ]
   deps += [ ":idna-v0_1_5" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
   deps += [ ":url-v1_7_2" ]
 
   rustenv = []
@@ -9292,28 +9292,27 @@ rust_library("redox_termios-v0_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("regex-v1_3_5") {
+rust_library("regex-v1_5_6") {
   crate_name = "regex"
   crate_root = "//third_party/rust_crates/vendor/regex/src/lib.rs"
-  output_name = "regex-be3eec66bf66867d"
+  output_name = "regex-e72e542a1818b59b"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":aho-corasick-v0_7_10" ]
+  deps += [ ":aho-corasick-v0_7_18" ]
   deps += [ ":memchr-v2_4_0" ]
-  deps += [ ":regex-syntax-v0_6_17" ]
-  deps += [ ":thread_local-v1_0_1" ]
+  deps += [ ":regex-syntax-v0_6_26" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=be3eec66bf66867d",
-    "-Cextra-filename=-be3eec66bf66867d",
+    "--edition=2018",
+    "-Cmetadata=e72e542a1818b59b",
+    "-Cextra-filename=-e72e542a1818b59b",
     "--cfg=feature=\"aho-corasick\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"memchr\"",
@@ -9323,7 +9322,6 @@ rust_library("regex-v1_3_5") {
     "--cfg=feature=\"perf-inline\"",
     "--cfg=feature=\"perf-literal\"",
     "--cfg=feature=\"std\"",
-    "--cfg=feature=\"thread_local\"",
     "--cfg=feature=\"unicode\"",
     "--cfg=feature=\"unicode-age\"",
     "--cfg=feature=\"unicode-bool\"",
@@ -9361,10 +9359,10 @@ rust_library("regex-automata-v0_1_9") {
   visibility = [ ":*" ]
 }
 
-rust_library("regex-syntax-v0_6_17") {
+rust_library("regex-syntax-v0_6_26") {
   crate_name = "regex_syntax"
   crate_root = "//third_party/rust_crates/vendor/regex-syntax/src/lib.rs"
-  output_name = "regex_syntax-579ced0738b0164d"
+  output_name = "regex_syntax-49dcde6b7db9cfdf"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -9376,9 +9374,9 @@ rust_library("regex-syntax-v0_6_17") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=579ced0738b0164d",
-    "-Cextra-filename=-579ced0738b0164d",
+    "--edition=2018",
+    "-Cmetadata=49dcde6b7db9cfdf",
+    "-Cextra-filename=-49dcde6b7db9cfdf",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"unicode\"",
     "--cfg=feature=\"unicode-age\"",
@@ -13095,7 +13093,7 @@ rust_library("valico-v2_4_2") {
   deps += [ ":jsonway-v2_0_0" ]
   deps += [ ":phf-v0_7_24" ]
   deps += [ ":publicsuffix-v1_5_2" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":regex-v1_5_6" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
   deps += [ ":url-v1_7_2" ]

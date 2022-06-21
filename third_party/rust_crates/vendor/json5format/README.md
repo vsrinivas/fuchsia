@@ -15,7 +15,7 @@ The [`json5format` library](https://crates.io/crates/json5format) includes APIs 
 The `json5format` package also bundles an [example command line tool, `formatjson5`,](https://github.com/google/json5format/blob/master/examples/formatjson5.rs) that formats JSON5 documents using a basic style with some customizations available through command line options:
 
 ```
-$ cargo build
+$ cargo build --example formatjson5
 $ ./target/debug/examples/formatjson5 --help
 
 formatjson5 [FLAGS] [OPTIONS] [files]...

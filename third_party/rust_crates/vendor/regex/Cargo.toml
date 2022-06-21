@@ -3,26 +3,33 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
+edition = "2018"
 name = "regex"
-version = "1.3.5"
+version = "1.5.6"
 authors = ["The Rust Project Developers"]
-exclude = ["/scripts/*", "/.github/*"]
+exclude = [
+    "/scripts/*",
+    "/.github/*",
+]
 autotests = false
-description = "An implementation of regular expressions for Rust. This implementation uses\nfinite automata and guarantees linear time matching on all inputs.\n"
+description = """
+An implementation of regular expressions for Rust. This implementation uses
+finite automata and guarantees linear time matching on all inputs.
+"""
 homepage = "https://github.com/rust-lang/regex"
 documentation = "https://docs.rs/regex"
 readme = "README.md"
 categories = ["text-processing"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang/regex"
+
 [profile.bench]
 debug = true
 
@@ -71,44 +78,66 @@ path = "tests/test_backtrack_bytes.rs"
 [[test]]
 name = "crates-regex"
 path = "tests/test_crates_regex.rs"
+
 [dependencies.aho-corasick]
-version = "0.7.6"
+version = "0.7.18"
 optional = true
 
 [dependencies.memchr]
-version = "2.2.1"
+version = "2.4.0"
 optional = true
 
 [dependencies.regex-syntax]
-version = "0.6.17"
+version = "0.6.26"
 default-features = false
-
-[dependencies.thread_local]
-version = "1"
-optional = true
-[dev-dependencies.doc-comment]
-version = "0.3"
 
 [dev-dependencies.lazy_static]
 version = "1"
 
 [dev-dependencies.quickcheck]
-version = "0.8"
+version = "1.0.3"
 default-features = false
 
 [dev-dependencies.rand]
-version = "0.6.5"
+version = "0.8.3"
+features = [
+    "getrandom",
+    "small_rng",
+]
+default-features = false
 
 [features]
-default = ["std", "perf", "unicode"]
+default = [
+    "std",
+    "perf",
+    "unicode",
+    "regex-syntax/default",
+]
 pattern = []
-perf = ["perf-cache", "perf-dfa", "perf-inline", "perf-literal"]
-perf-cache = ["thread_local"]
+perf = [
+    "perf-cache",
+    "perf-dfa",
+    "perf-inline",
+    "perf-literal",
+]
+perf-cache = []
 perf-dfa = []
 perf-inline = []
-perf-literal = ["aho-corasick", "memchr"]
+perf-literal = [
+    "aho-corasick",
+    "memchr",
+]
 std = []
-unicode = ["unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"]
+unicode = [
+    "unicode-age",
+    "unicode-bool",
+    "unicode-case",
+    "unicode-gencat",
+    "unicode-perl",
+    "unicode-script",
+    "unicode-segment",
+    "regex-syntax/unicode",
+]
 unicode-age = ["regex-syntax/unicode-age"]
 unicode-bool = ["regex-syntax/unicode-bool"]
 unicode-case = ["regex-syntax/unicode-case"]

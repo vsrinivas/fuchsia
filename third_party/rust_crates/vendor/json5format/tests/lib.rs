@@ -109,6 +109,19 @@ fn test_format_simple_objects() {
 }
 
 #[test]
+fn test_format_exponential() {
+    test_format(FormatTest {
+        input: r##"{ "exponential": 3.14e-8 }"##,
+        expected: r##"{
+    exponential: 3.14e-8,
+}
+"##,
+        ..Default::default()
+    })
+    .unwrap()
+}
+
+#[test]
 fn test_last_scope_is_array() {
     test_format(FormatTest {
         input: r##"{
@@ -744,9 +757,17 @@ fn test_parse_error_bad_non_string_primitive() {
         true,
         false,
 
+        0,
+        0.,
+        0.0,
+        0.000,
+        .0,
+        .000,
         12345,
+        12345.00000,
         12345.67890,
         12345.,
+        0.678900,
         .67890,
         1234e5678,
         1234E5678,
@@ -754,6 +775,12 @@ fn test_parse_error_bad_non_string_primitive() {
         1234E+5678,
         1234e-5678,
         1234E-5678,
+        12.34e5678,
+        1234.E5678,
+        .1234e+5678,
+        12.34E+5678,
+        1234.e-5678,
+        .1234E-5678,
         0xabc123ef,
         0Xabc123EF,
         NaN,
@@ -769,6 +796,12 @@ fn test_parse_error_bad_non_string_primitive() {
         -1234E+5678,
         -1234e-5678,
         -1234E-5678,
+        -12.34e5678,
+        -1234.E5678,
+        -.1234e+5678,
+        -12.34E+5678,
+        -1234.e-5678,
+        -.1234E-5678,
         -0xabc123ef,
         -0Xabc123EF,
         -NaN,
@@ -789,14 +822,41 @@ fn test_parse_error_bad_non_string_primitive() {
         +NaN,
         +Infinity,
 
-        123def,
         0x123def,
+        123def,
     ]
 }
 "##,
         error: Some(
-            "Parse error: 52:9: Unexpected token:
+            "Parse error: 73:9: Unexpected token:
         123def,
+        ^",
+        ),
+        ..Default::default()
+    })
+    .unwrap();
+}
+
+#[test]
+fn test_parse_error_leading_zero() {
+    test_format(FormatTest {
+        input: r##"{
+    non_string_literals: [
+        0,
+        0.,
+        0.0,
+        0.000,
+        .0,
+        .000,
+        +0.678900,
+        -0.678900,
+        -01.67890,
+    ]
+}
+"##,
+        error: Some(
+            "Parse error: 11:9: Unexpected token:
+        -01.67890,
         ^",
         ),
         ..Default::default()

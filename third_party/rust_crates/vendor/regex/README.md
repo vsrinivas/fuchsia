@@ -8,8 +8,8 @@ Much of the syntax and implementation is inspired
 by [RE2](https://github.com/google/re2).
 
 [![Build status](https://github.com/rust-lang/regex/workflows/ci/badge.svg)](https://github.com/rust-lang/regex/actions)
-[![](https://meritbadge.herokuapp.com/regex)](https://crates.io/crates/regex)
-[![Rust](https://img.shields.io/badge/rust-1.28.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
+[![Crates.io](https://img.shields.io/crates/v/regex.svg)](https://crates.io/crates/regex)
+[![Rust](https://img.shields.io/badge/rust-1.41.1%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
 
 ### Documentation
 
@@ -27,13 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-regex = "1"
-```
-
-and this to your crate root (if you're using Rust 2015):
-
-```rust
-extern crate regex;
+regex = "1.5"
 ```
 
 Here's a simple example that matches a date in YYYY-MM-DD format and prints the
@@ -228,7 +222,7 @@ The full set of features one can disable are
 
 ### Minimum Rust version policy
 
-This crate's minimum supported `rustc` version is `1.28.0`.
+This crate's minimum supported `rustc` version is `1.41.1`.
 
 The current **tentative** policy is that the minimum Rust version required
 to use this crate can be increased in minor version updates. For example, if
@@ -245,12 +239,12 @@ supported version of Rust.
 This project is licensed under either of
 
  * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   http://www.apache.org/licenses/LICENSE-2.0)
+   https://www.apache.org/licenses/LICENSE-2.0)
  * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   http://opensource.org/licenses/MIT)
+   https://opensource.org/licenses/MIT)
 
 at your option.
 
 The data in `regex-syntax/src/unicode_tables/` is licensed under the Unicode
 License Agreement
-([LICENSE-UNICODE](http://www.unicode.org/copyright.html#License)).
+([LICENSE-UNICODE](https://www.unicode.org/copyright.html#License)).

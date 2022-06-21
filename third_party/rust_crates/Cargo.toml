@@ -115,7 +115,7 @@ indexmap = "1.7.0"
 iota = "0.2.2"
 itertools = "0.10"
 itoa = "0.4"
-json5format = "0.2.4"
+json5format = "0.2.6"
 lazy_static = "1.4"
 libc = { version = "0.2.116", features = ["extra_traits"] }
 libm = "0.2.1"

@@ -65,9 +65,18 @@ lazy_static! {
                 (?:(?:
                     NaN|
                     Infinity|
-                    (?:0[xX][0-9a-fA-F]+)|     # hexadecimal notation
-                    (?:[0-9]+[eE][+-]?[0-9]+)| # exponent notation
-                    (?:[0-9]*\.[0-9]+)         # decimal notation
+
+                    # hexadecimal notation
+                    (?:0[xX][0-9a-fA-F]+)|
+
+                    # decimal exponent notation
+                    (?:(?:0|(?:[1-9][0-9]*))?\.[0-9]+[eE][+-]?[0-9]+)|
+
+                    # integer exponent notation with optional trailing decimal point
+                    (?:(?:0|(?:[1-9][0-9]*))\.?[eE][+-]?[0-9]+)|
+
+                    # decimal notation
+                    (?:(?:0|(?:[1-9][0-9]*))?\.[0-9]+)
                 )\b)|
 
                 # Capture integers, with an optional trailing decimal point.
@@ -79,7 +88,7 @@ lazy_static! {
                 # character.)
 
                 (?:
-                    [0-9]+(?:\.|\b)
+                    (?:0|(?:[1-9][0-9]*))(?:\.|\b)
                 )
             ))
         )"#;
@@ -776,10 +785,10 @@ impl<'parser> Parser<'parser> {
         min_context_len: usize,
         ellipsis: &str,
     ) -> ParserErrorContext {
-        // `indicator_start` is a 0-based char position
-        let indicator_start = self.column_number - 1;
-
         let error_line_len = self.current_line.chars().count();
+
+        // `indicator_start` is a 0-based char position
+        let indicator_start = std::cmp::min(self.column_number - 1, error_line_len);
 
         let indicator_len = if self.line_number == self.next_line_number {
             std::cmp::max(
@@ -858,10 +867,16 @@ fn trim_error_line_and_indicator(
 
     assert!(max_error_line_len > ellipsis_len);
     assert!(max_error_line_len < error_line_len);
-    assert!(indicator_start <= error_line_len);
+    assert!(
+        indicator_start <= error_line_len,
+        "Error because indicator_start={} > error_line_len={}\n{}",
+        indicator_start,
+        error_line_len,
+        error_line
+    );
     assert!(
         indicator_len == 1 || (indicator_start + indicator_len) <= error_line_len,
-        "indicator_start={}, indicator_len={}, error_line_len={}\n{}",
+        "Error because indicator_start={}, indicator_len={}, error_line_len={}\n{}",
         indicator_start,
         indicator_len,
         error_line_len,
@@ -1722,7 +1737,7 @@ expected_indicator:    {}
             non_string_primitive in
                 concat!(
                     r#"(null|true|false)|([-+]?(NaN|Infinity|(0[xX][0-9a-fA-F]+)"#,
-                    r#"|([0-9]+[eE][+-]?[0-9]+)|([0-9]*\.[0-9]+)|([0-9]+\.?)))"#
+                    r#"|((0|([1-9][0-9]*))?\.[0-9]+[eE][+-]?[0-9]+)|((0|([1-9][0-9]*))?\.[0-9]+)|((0|([1-9][0-9]*))\.?)))"#
                 ),
             ends_non_string_primitive in r#"(|([\s,\]\}]\PC*))"#,
         ) {

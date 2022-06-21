@@ -4,8 +4,8 @@ use std::cmp;
 use std::collections::BTreeMap;
 use std::fmt;
 
-use packed::pattern::{PatternID, Patterns};
-use packed::teddy::Teddy;
+use crate::packed::pattern::{PatternID, Patterns};
+use crate::packed::teddy::Teddy;
 
 /// A builder for constructing a Teddy matcher.
 ///
@@ -73,7 +73,7 @@ impl Builder {
     }
 
     fn build_imp(&self, patterns: &Patterns) -> Option<Teddy> {
-        use packed::teddy::runtime;
+        use crate::packed::teddy::runtime;
 
         // Most of the logic here is just about selecting the optimal settings,
         // or perhaps even rejecting construction altogether. The choices
@@ -296,7 +296,7 @@ impl<'p> Compiler<'p> {
 }
 
 impl<'p> fmt::Debug for Compiler<'p> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buckets = vec![vec![]; self.buckets.len()];
         for (i, bucket) in self.buckets.iter().enumerate() {
             for &patid in bucket {
@@ -400,7 +400,7 @@ impl Mask {
 }
 
 impl fmt::Debug for Mask {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (mut parts_lo, mut parts_hi) = (vec![], vec![]);
         for i in 0..32 {
             parts_lo.push(format!("{:02}: {:08b}", i, self.lo[i]));

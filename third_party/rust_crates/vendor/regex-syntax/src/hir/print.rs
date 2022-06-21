@@ -4,9 +4,9 @@ This module provides a regular expression printer for `Hir`.
 
 use std::fmt;
 
-use hir::visitor::{self, Visitor};
-use hir::{self, Hir, HirKind};
-use is_meta_character;
+use crate::hir::visitor::{self, Visitor};
+use crate::hir::{self, Hir, HirKind};
+use crate::is_meta_character;
 
 /// A builder for constructing a printer.
 ///
@@ -65,17 +65,16 @@ impl Printer {
     /// here are a `fmt::Formatter` (which is available in `fmt::Display`
     /// implementations) or a `&mut String`.
     pub fn print<W: fmt::Write>(&mut self, hir: &Hir, wtr: W) -> fmt::Result {
-        visitor::visit(hir, Writer { printer: self, wtr: wtr })
+        visitor::visit(hir, Writer { wtr })
     }
 }
 
 #[derive(Debug)]
-struct Writer<'p, W> {
-    printer: &'p mut Printer,
+struct Writer<W> {
     wtr: W,
 }
 
-impl<'p, W: fmt::Write> Visitor for Writer<'p, W> {
+impl<W: fmt::Write> Visitor for Writer<W> {
     type Output = ();
     type Err = fmt::Error;
 
@@ -209,7 +208,7 @@ impl<'p, W: fmt::Write> Visitor for Writer<'p, W> {
     }
 }
 
-impl<'p, W: fmt::Write> Writer<'p, W> {
+impl<W: fmt::Write> Writer<W> {
     fn write_literal_char(&mut self, c: char) -> fmt::Result {
         if is_meta_character(c) {
             self.wtr.write_str("\\")?;
@@ -239,7 +238,7 @@ impl<'p, W: fmt::Write> Writer<'p, W> {
 #[cfg(test)]
 mod tests {
     use super::Printer;
-    use ParserBuilder;
+    use crate::ParserBuilder;
 
     fn roundtrip(given: &str, expected: &str) {
         roundtrip_with(|b| b, given, expected);

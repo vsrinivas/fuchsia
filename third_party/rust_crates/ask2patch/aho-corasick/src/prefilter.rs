@@ -5,9 +5,9 @@ use std::u8;
 
 use memchr::{memchr, memchr2, memchr3};
 
-use ahocorasick::MatchKind;
-use packed;
-use Match;
+use crate::ahocorasick::MatchKind;
+use crate::packed;
+use crate::Match;
 
 /// A candidate is the result of running a prefilter on a haystack at a
 /// particular position. The result is either no match, a confirmed match or
@@ -79,6 +79,17 @@ pub trait Prefilter:
     /// positive will result in incorrect searches.
     fn reports_false_positives(&self) -> bool {
         true
+    }
+
+    /// Returns true if and only if this prefilter may look for a non-starting
+    /// position of a match.
+    ///
+    /// This is useful in a streaming context where prefilters that don't look
+    /// for a starting position of a match can be quite difficult to deal with.
+    ///
+    /// This returns false by default.
+    fn looks_for_non_start_of_match(&self) -> bool {
+        false
     }
 }
 
@@ -191,6 +202,17 @@ impl PrefilterState {
         }
     }
 
+    /// Create a prefilter state that always disables the prefilter.
+    pub fn disabled() -> PrefilterState {
+        PrefilterState {
+            skips: 0,
+            skipped: 0,
+            max_match_len: 0,
+            inert: true,
+            last_scan_at: 0,
+        }
+    }
+
     /// Update this state with the number of bytes skipped on the last
     /// invocation of the prefilter.
     #[inline]
@@ -285,6 +307,7 @@ impl Builder {
     /// All patterns added to an Aho-Corasick automaton should be added to this
     /// builder before attempting to construct the prefilter.
     pub fn build(&self) -> Option<PrefilterObj> {
+        // match (self.start_bytes.build(), self.rare_bytes.build()) {
         match (self.start_bytes.build(), self.rare_bytes.build()) {
             // If we could build both start and rare prefilters, then there are
             // a few cases in which we'd want to use the start-byte prefilter
@@ -412,7 +435,7 @@ impl ByteSet {
 }
 
 impl fmt::Debug for ByteSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut bytes = vec![];
         for b in 0..=255 {
             if self.contains(b) {
@@ -448,7 +471,7 @@ impl RareByteOffsets {
 }
 
 impl fmt::Debug for RareByteOffsets {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut offsets = vec![];
         for off in self.set.iter() {
             if off.max > 0 {
@@ -663,6 +686,33 @@ impl Prefilter for RareBytesOne {
     fn heap_bytes(&self) -> usize {
         0
     }
+
+    fn looks_for_non_start_of_match(&self) -> bool {
+        // TODO: It should be possible to use a rare byte prefilter in a
+        // streaming context. The main problem is that we usually assume that
+        // if a prefilter has scanned some text and not found anything, then no
+        // match *starts* in that text. This doesn't matter in non-streaming
+        // contexts, but in a streaming context, if we're looking for a byte
+        // that doesn't start at the beginning of a match and don't find it,
+        // then it's still possible for a match to start at the end of the
+        // current buffer content. In order to fix this, the streaming searcher
+        // would need to become aware of prefilters that do this and use the
+        // appropriate offset in various places. It is quite a delicate change
+        // and probably shouldn't be attempted until streaming search has a
+        // better testing strategy. In particular, we'd really like to be able
+        // to vary the buffer size to force strange cases that occur at the
+        // edge of the buffer. If we make the buffer size minimal, then these
+        // cases occur more frequently and easier.
+        //
+        // This is also a bummer because this means that if the prefilter
+        // builder chose a rare byte prefilter, then a streaming search won't
+        // use any prefilter at all because the builder doesn't know how it's
+        // going to be used. Assuming we don't make streaming search aware of
+        // these special types of prefilters as described above, we could fix
+        // this by building a "backup" prefilter that could be used when the
+        // rare byte prefilter could not. But that's a bandaide. Sigh.
+        true
+    }
 }
 
 /// A prefilter for scanning for two "rare" bytes.
@@ -696,6 +746,11 @@ impl Prefilter for RareBytesTwo {
 
     fn heap_bytes(&self) -> usize {
         0
+    }
+
+    fn looks_for_non_start_of_match(&self) -> bool {
+        // TODO: See Prefilter impl for RareBytesOne.
+        true
     }
 }
 
@@ -731,6 +786,11 @@ impl Prefilter for RareBytesThree {
 
     fn heap_bytes(&self) -> usize {
         0
+    }
+
+    fn looks_for_non_start_of_match(&self) -> bool {
+        // TODO: See Prefilter impl for RareBytesOne.
+        true
     }
 }
 
@@ -972,7 +1032,7 @@ pub fn opposite_ascii_case(b: u8) -> u8 {
 /// Return the frequency rank of the given byte. The higher the rank, the more
 /// common the byte (heuristically speaking).
 fn freq_rank(b: u8) -> u8 {
-    use byte_frequencies::BYTE_FREQUENCIES;
+    use crate::byte_frequencies::BYTE_FREQUENCIES;
     BYTE_FREQUENCIES[b as usize]
 }
 

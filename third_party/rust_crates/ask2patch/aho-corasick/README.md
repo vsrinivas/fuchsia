@@ -5,8 +5,8 @@ acceleration in some cases. This library provides multiple pattern
 search principally through an implementation of the
 [Aho-Corasick algorithm](https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm),
 which builds a finite state machine for executing searches in linear time.
-Features include case insensitive matching, overlapping matches and search &
-replace in streams.
+Features include case insensitive matching, overlapping matches, fast searching
+via SIMD and optional full DFA construction and search & replace in streams.
 
 [![Build status](https://github.com/BurntSushi/aho-corasick/workflows/ci/badge.svg)](https://github.com/BurntSushi/aho-corasick/actions)
 [![](http://meritbadge.herokuapp.com/aho-corasick)](https://crates.io/crates/aho-corasick)
@@ -26,12 +26,6 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 aho-corasick = "0.7"
-```
-
-and this to your crate root (if you're using Rust 2015):
-
-```rust
-extern crate aho_corasick;
 ```
 
 
@@ -103,7 +97,8 @@ let rdr = "The quick brown fox.";
 let mut wtr = vec![];
 
 let ac = AhoCorasick::new(patterns);
-ac.stream_replace_all(rdr.as_bytes(), &mut wtr, replace_with)?;
+ac.stream_replace_all(rdr.as_bytes(), &mut wtr, replace_with)
+    .expect("stream_replace_all failed");
 assert_eq!(b"The slow grey sloth.".to_vec(), wtr);
 ```
 
@@ -161,7 +156,7 @@ expression alternation. See `MatchKind` in the docs for more details.
 
 ### Minimum Rust version policy
 
-This crate's minimum supported `rustc` version is `1.28.0`.
+This crate's minimum supported `rustc` version is `1.41.1`.
 
 The current policy is that the minimum Rust version required to use this crate
 can be increased in minor version updates. For example, if `crate 1.0` requires
