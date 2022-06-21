@@ -83,7 +83,9 @@ template("virtual_device_specification") {
           model = "hda"
         }
         inputs = {
-          pointing_device = "mouse"
+          # Touch is the default to avoid issues with mouse capture
+          # especially with cloudtops.
+          pointing_device = "touch"
         }
         window_size = emu_window_size
         memory = {
