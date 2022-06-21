@@ -115,7 +115,7 @@ template("clang_toolchain") {
     # Configure Rust remote builds.
     _rustc_wrapper = ""
     _rust_concurrent_jobs = ""
-    if (enable_rbe || rust_rbe_enable) {
+    if (rust_rbe_enable) {
       assert(
           rust_rbe_check == "none" || rust_rbe_check == "consistency" ||
               rust_rbe_check == "determinism",

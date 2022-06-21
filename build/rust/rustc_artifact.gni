@@ -156,12 +156,11 @@ template("rustc_artifact") {
     not_needed([ "_clippy_name" ])
   }
 
-  _enable_rust_rbe = enable_rbe || rust_rbe_enable
-  _use_rbe = _enable_rust_rbe
+  _use_rbe = rust_rbe_enable
   if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
     _use_rbe = false
   }
-  if (_enable_rust_rbe && !_use_rbe) {
+  if (rust_rbe_enable && !_use_rbe) {
     # Disable RBE for this target through a fake rustflag,
     # that is intercepted by rustc-remote-wrapper.sh.
     _rustflags += [ "--remote-disable" ]
@@ -213,7 +212,7 @@ template("rustc_artifact") {
     crate_name = _crate_name
 
     rustflags = []
-    if (_enable_rust_rbe) {
+    if (rust_rbe_enable) {
       rustflags +=
           [ "--remote-flag=--label='" +
             get_label_info(":$_target_name", "label_with_toolchain") + "'" ]

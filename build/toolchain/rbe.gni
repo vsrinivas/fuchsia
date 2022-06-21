@@ -91,12 +91,4 @@ declare_args() {
   #         not uploaded to the remote cache.
   #   (There are other rewrapper options that are not exposed.)
   cxx_rbe_exec_strategy = "remote"
-
-  #########################################
-  ### DEPRECATED LEGACY variables below ###
-  #########################################
-
-  # Set to true to enable distributed compilation using RBE.
-  # This may affect Rust and C++ compiles.
-  enable_rbe = false
 }
