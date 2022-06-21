@@ -132,8 +132,6 @@ if (toolchain_environment == "physmem" ||
       "sysreg.cc",
       "thread.cc",
       "uarch.cc",
-      "user_copy.S",
-      "user_copy_c.cc",
       "uspace_entry.S",
     ]
     deps = [
@@ -141,6 +139,7 @@ if (toolchain_environment == "physmem" ||
       ":dev-init",
       ":tests",
       "code-patches:headers",
+      "user-copy",
       "//sdk/lib/fit",
       "//zircon/kernel/dev/coresight",
       "//zircon/kernel/dev/interrupt/arm_gic/common",
