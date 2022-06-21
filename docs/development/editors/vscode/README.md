@@ -1,4 +1,4 @@
-# Using VS Code with Fuchsia
+# Contributing to Fuchsia with VS Code
 
 These guides describe configurations and recommendations for Fuchsia development with VS Code.
 
