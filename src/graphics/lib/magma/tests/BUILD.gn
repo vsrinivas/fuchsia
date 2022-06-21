@@ -85,7 +85,7 @@ group("l1") {
 }
 
 fuchsia_unittest_package("magma_nonhardware_tests") {
-  manifest = "meta/magma_unit_tests.cmx"
+  manifest = "meta/magma_nonhardware_tests.cml"
   deps = [ "unit_tests" ]
   test_specs = {
     log_settings = {
