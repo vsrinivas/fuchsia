@@ -117,6 +117,7 @@ impl EngineBuilder {
     pub async fn build(mut self) -> Result<Box<dyn EmulatorEngine>> {
         // Set up the instance directory, now that we have enough information.
         let name = &self.emulator_configuration.runtime.name;
+        self.emulator_configuration.runtime.engine_type = self.engine_type;
         self.emulator_configuration.runtime.instance_directory =
             get_instance_dir(&self.ffx_config, name, true).await?;
 

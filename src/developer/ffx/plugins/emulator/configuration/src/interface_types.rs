@@ -211,6 +211,10 @@ pub struct RuntimeConfig {
     /// Optional path to a Tap upscript file, which is passed to the emulator when Tap networking
     /// is enabled.
     pub upscript: Option<PathBuf>,
+
+    /// Engine type name. Added here to be accessible in the configuration template processing.
+    #[serde(default)]
+    pub engine_type: EngineType,
 }
 
 // TODO(fxbug.dev/99291): The following is a temporary measure to ensure older emulators can still
