@@ -1,0 +1,84 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio_services_mixer_mix_unittests" ]
+}
+
+source_set("mix") {
+  visibility = [
+    "./*",
+    "//src/media/audio/services/mixer/fidl/*",
+  ]
+
+  sources = [
+    "custom_stage.cc",
+    "custom_stage.h",
+    "detached_thread.cc",
+    "detached_thread.h",
+    "mix_job_context.h",
+    "mix_job_subtask.cc",
+    "mix_job_subtask.h",
+    "mix_thread.cc",
+    "mix_thread.h",
+    "packet_queue_producer_stage.cc",
+    "packet_queue_producer_stage.h",
+    "packet_view.cc",
+    "packet_view.h",
+    "pipeline_stage.cc",
+    "pipeline_stage.h",
+    "producer_stage.h",
+    "ptr_decls.h",
+    "reusable_buffer.cc",
+    "reusable_buffer.h",
+    "ring_buffer_producer_stage.cc",
+    "ring_buffer_producer_stage.h",
+    "silence_padding_stage.cc",
+    "silence_padding_stage.h",
+    "thread.h",
+  ]
+
+  public_deps = [
+    "//src/media/audio/services/mixer/common",
+    "//zircon/system/ulib/fzl",
+  ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+executable("mix_unittests") {
+  output_name = "audio_services_mixer_mix_unittests"
+  testonly = true
+
+  sources = [
+    "custom_stage_unittest.cc",
+    "packet_queue_producer_stage_unittest.cc",
+    "packet_view_unittest.cc",
+    "pipeline_stage_unittest.cc",
+    "reusable_buffer_unittest.cc",
+    "ring_buffer_producer_stage_unittest.cc",
+    "silence_padding_stage_unittest.cc",
+  ]
+
+  deps = [
+    ":mix",
+    "//sdk/fidl/fuchsia.audio.effects",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/media/audio/services/mixer/mix/testing",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_package("audio_services_mixer_mix_unittests") {
+  deps = [ ":mix_unittests" ]
+}

@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio_services_mixer_fidl_unittests" ]
+}
+
+source_set("fidl") {
+  visibility = [
+    "./*",
+    "//src/media/audio/services/mixer:*",
+  ]
+
+  sources = [
+    "clock_registry.cc",
+    "clock_registry.h",
+    "fidl_graph.cc",
+    "fidl_graph.h",
+    "fidl_graph_creator.cc",
+    "fidl_graph_creator.h",
+    "fidl_synthetic_clock.cc",
+    "fidl_synthetic_clock.h",
+    "node.cc",
+    "node.h",
+    "ptr_decls.h",
+    "reachability.cc",
+    "reachability.h",
+    "real_clock_registry.cc",
+    "real_clock_registry.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_llcpp",
+    "//sdk/fidl/fuchsia.media2:fuchsia.media2_llcpp",
+    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_llcpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/fit-promise",
+    "//src/media/audio/services/common",
+    "//src/media/audio/services/mixer/common",
+    "//src/media/audio/services/mixer/mix",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/trace",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+  ]
+}
+
+executable("fidl_unittests") {
+  output_name = "audio_services_mixer_fidl_unittests"
+  testonly = true
+
+  sources = [
+    "fidl_synthetic_clock_unittest.cc",
+    "node_unittest.cc",
+    "reachability_unittest.cc",
+    "real_clock_registry_unittest.cc",
+  ]
+
+  deps = [
+    ":fidl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/services/mixer/fidl/testing",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+  ]
+}
+
+fuchsia_unittest_package("audio_services_mixer_fidl_unittests") {
+  deps = [ ":fidl_unittests" ]
+}

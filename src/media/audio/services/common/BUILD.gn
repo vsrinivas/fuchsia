@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio_services_common_unittests" ]
+}
+
+source_set("common") {
+  visibility = [ "../*" ]
+
+  sources = [ "base_fidl_server.h" ]
+
+  public_deps = [
+    "//sdk/lib/fidl/llcpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/trace",
+  ]
+}
+
+executable("common_unittests") {
+  output_name = "audio_services_common_unittests"
+  testonly = true
+
+  sources = [ "base_fidl_server_unittest.cc" ]
+
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+  ]
+}
+
+fuchsia_unittest_package("audio_services_common_unittests") {
+  deps = [ ":common_unittests" ]
+}

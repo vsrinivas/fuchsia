@@ -33,7 +33,7 @@ group("tests") {
     "examples:tests",
     "lib:tests",
     "lib/audio_test_devmgr",
-    "mixer_service:tests",
+    "services:tests",
     "tools:tests",
     "//src/power/testing/thermal-test-control",
   ]
