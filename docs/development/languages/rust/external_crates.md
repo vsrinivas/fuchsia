@@ -313,6 +313,25 @@ A member of the Rust on Fuchsia team is currently responsible for running the
 tool on a regular cadence. See [https://fxbug.dev/73348](https://fxbug.dev/73348)
 to track the process of automating updates to OWNERS files.
 
+## Overriding locally
+
+It can be useful to override a third party crate if you're contributing upstream
+and want to run in-tree builds or tests. That can be achieved with the following
+steps.
+
+1. Clone (or symlink) the upstream repository under
+   `third_party/rust_crates/forks/<my_crate>`.
+1. Add the override to the `[patch.crates-io]` section in
+   `third_party/rust_crates/Cargo.toml`.
+
+```
+[patch.crates-io]
+my_crate = { path = "forks/<my_crate>" }
+```
+1. You must make sure that the version under the crate's `Cargo.toml` matches
+   all references to that crate in `third_party/rust_crates/Cargo.toml`.
+1. Run `fx update-rustc-third-party`.
+
 ## Troubleshooting
 ### Broken Config
 After running `fx update-rustc-third-party`, if you encounter an error like
