@@ -85,8 +85,10 @@
             "virtio-mouse-pci",
         {{/if}}
         {{#if (eq device.pointing_device "touch")}}
-            "-device",
-            "virtio_input_multi_touch_pci_1",
+            {{#if (eq runtime.engine_type "femu")}}
+              "-device",
+              "virtio_input_multi_touch_pci_1",
+            {{/if}}
         {{/if}}
         {{#if (eq device.audio.model "none")}}
             "-no-audio",
