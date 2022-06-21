@@ -6,7 +6,9 @@ import("//products/minimal.gni")
 
 include_shell_commands_package = true
 
-product_system_image_deps += [
+product_system_image_deps = [
+  "//src/connectivity/bluetooth:core-system",
+
   # Test drivers will only be loaded as tests require. They should be removed from production
   # products that have limited storage.
   # TODO(fxbug.dev/3150): Move to a regular package.
@@ -20,6 +22,9 @@ product_bootfs_labels -= [ "//products/kernel_cmdline:oom.reboot-timeout--low" ]
 
 core_realm_package_name = "core"
 core_realm_shards += [
+  "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
+  "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
   "//src/developer/remote-control:laboratory-core-shard",
   "//src/devices/bin/driver_playground:driver-playground-core-shard",
   "//src/developer/sshd-host:core_shard",
@@ -40,6 +45,8 @@ legacy_base_package_labels += [
   # TODO(https://fxbug.dev/85742): Remove this target once out-of-tree
   # integration tests inject components from network-legacy-deprecated.
   "//src/connectivity/network:integration-test-deps",
+  "//src/connectivity/bluetooth:core",
+  "//src/connectivity/wlan:packages",
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/media/audio/bundles:audio_config",
   "//src/settings/service:setui_service",

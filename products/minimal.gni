@@ -23,8 +23,6 @@ product_bootfs_labels +=
 # Core scheduler profiles.
 product_bootfs_labels += [ "//src/sys/core:bootfs" ]
 
-product_system_image_deps = [ "//src/connectivity/bluetooth:core-system" ]
-
 core_realm_package_name = "core-minimal"
 core_realm_shards += [
   # TODO(fxbug.dev/102772)
@@ -32,9 +30,6 @@ core_realm_shards += [
   # config. This will require some refactoring of core shards.
   "//src/developer/tracing/bin/trace_manager:trace_manager_core_shard",
   "//src/connectivity/network:virtualization-core-shard",
-  "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
-  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
-  "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/debug/debug_agent:core_shard",
   "//src/developer/memory/mem:core_shard",
@@ -63,7 +58,6 @@ legacy_base_package_labels += [
   "//src/cobalt/bin/app:cobalt_registry",
   "//src/cobalt/bin/app:config",
   "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
-  "//src/connectivity/bluetooth:core",
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/network/netcfg:config-default",
@@ -78,7 +72,6 @@ legacy_base_package_labels += [
   # reference v1 components.
   "//src/connectivity/network:network-legacy-deprecated",
 
-  "//src/connectivity/wlan:packages",
   "//src/developer/build_info:build-info-service",
   "//src/developer/forensics:pkg",
   "//src/developer/forensics/snapshot:pkg",
