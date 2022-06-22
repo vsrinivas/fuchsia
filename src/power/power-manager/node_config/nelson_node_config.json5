@@ -1,124 +1,124 @@
 [
   {
-    "type": "DriverManagerHandler",
-    "name": "driver_manager_handler",
-    "config": {}
+    type: "DriverManagerHandler",
+    name: "driver_manager_handler",
+    config: {}
   },
   {
-    "type": "ShutdownWatcher",
-    "name": "shutdown_watcher"
+    type: "ShutdownWatcher",
+    name: "shutdown_watcher"
   },
   {
-    "type": "SystemShutdownHandler",
-    "name": "sys_shutdown",
-    "config": {
-      "shutdown_timeout_s": 3600
+    type: "SystemShutdownHandler",
+    name: "sys_shutdown",
+    config: {
+      shutdown_timeout_s: 3600
     },
-    "dependencies": {
-      "driver_manager_handler_node": "driver_manager_handler",
-      "shutdown_watcher_node": "shutdown_watcher"
+    dependencies: {
+      driver_manager_handler_node: "driver_manager_handler",
+      shutdown_watcher_node: "shutdown_watcher"
     }
   },
   {
-    "type": "TemperatureHandler",
-    "name": "soc_pll_thermal",
-    "config": {
-      "driver_path": "/dev/aml-thermal-pll/thermal",
-      "cache_duration_ms": 50
+    type: "TemperatureHandler",
+    name: "soc_pll_thermal",
+    config: {
+      driver_path: "/dev/aml-thermal-pll/thermal",
+      cache_duration_ms: 50
     }
   },
   {
-    "type": "TemperatureHandler",
-    "name": "thermistor_thread",
-    "config": {
-      "driver_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-thread",
-      "cache_duration_ms": 50
+    type: "TemperatureHandler",
+    name: "thermistor_thread",
+    config: {
+      driver_path: "/dev/sys/platform/03:0a:27/thermistor-device/therm-thread",
+      cache_duration_ms: 50
     }
   },
   {
-    "type": "TemperatureHandler",
-    "name": "thermistor_audio",
-    "config": {
-      "driver_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-audio",
-      "cache_duration_ms": 50
+    type: "TemperatureHandler",
+    name: "thermistor_audio",
+    config: {
+      driver_path: "/dev/sys/platform/03:0a:27/thermistor-device/therm-audio",
+      cache_duration_ms: 50
     }
   },
   {
-    "type": "CrashReportHandler",
-    "name": "crash_handler"
+    type: "CrashReportHandler",
+    name: "crash_handler"
   },
   {
-    "type": "PlatformMetrics",
-    "name": "platform_metrics",
-    "config": {
-      "cpu_temperature_poll_interval_s": 1,
-      "throttle_debounce_timeout_s": 60
+    type: "PlatformMetrics",
+    name: "platform_metrics",
+    config: {
+      cpu_temperature_poll_interval_s: 1,
+      throttle_debounce_timeout_s: 60
     },
-    "dependencies": {
-      "cpu_temperature_handler_node": "soc_pll_thermal",
-      "crash_report_handler_node": "crash_handler"
+    dependencies: {
+      cpu_temperature_handler_node: "soc_pll_thermal",
+      crash_report_handler_node: "crash_handler"
     }
   },
   {
-    "type": "SystemProfileHandler",
-    "name": "system_profile_handler"
+    type: "SystemProfileHandler",
+    name: "system_profile_handler"
   },
   {
-    "type": "ActivityHandler",
-    "name": "activity_handler",
-    "dependencies": {
-      "system_profile_handler_node": "system_profile_handler"
+    type: "ActivityHandler",
+    name: "activity_handler",
+    dependencies: {
+      system_profile_handler_node: "system_profile_handler"
     }
   },
   {
-    "type": "InputSettingsHandler",
-    "name": "input_settings_handler",
-    "dependencies": {
-      "system_profile_handler_node": "system_profile_handler"
+    type: "InputSettingsHandler",
+    name: "input_settings_handler",
+    dependencies: {
+      system_profile_handler_node: "system_profile_handler"
     }
   },
   {
-    "type": "ThermalStateHandler",
-    "name": "thermal_state_handler",
-    "dependencies": {
-      "platform_metrics_node": "platform_metrics"
+    type: "ThermalStateHandler",
+    name: "thermal_state_handler",
+    dependencies: {
+      platform_metrics_node: "platform_metrics"
     }
   },
   {
-    "type": "ThermalLoadDriver",
-    "name": "thermal_load_driver",
-    "config": {
-      "temperature_input_configs": [
+    type: "ThermalLoadDriver",
+    name: "thermal_load_driver",
+    config: {
+      temperature_input_configs: [
         {
-          "temperature_handler_node_name": "soc_pll_thermal",
-          "onset_temperature_c": 77.0,
-          "reboot_temperature_c": 97.0,
-          "poll_interval_s": 1,
-          "filter_time_constant_s": 5
+          temperature_handler_node_name: "soc_pll_thermal",
+          onset_temperature_c: 77.0,
+          reboot_temperature_c: 97.0,
+          poll_interval_s: 1,
+          filter_time_constant_s: 5
         },
         {
-          "temperature_handler_node_name": "thermistor_thread",
-          "onset_temperature_c": 55.0,
-          "reboot_temperature_c": 75.0,
-          "poll_interval_s": 1,
-          "filter_time_constant_s": 5
+          temperature_handler_node_name: "thermistor_thread",
+          onset_temperature_c: 55.0,
+          reboot_temperature_c: 75.0,
+          poll_interval_s: 1,
+          filter_time_constant_s: 5
         },
         {
-          "temperature_handler_node_name": "thermistor_audio",
-          "onset_temperature_c": 60.0,
-          "reboot_temperature_c": 80.0,
-          "poll_interval_s": 1,
-          "filter_time_constant_s": 5
+          temperature_handler_node_name: "thermistor_audio",
+          onset_temperature_c: 60.0,
+          reboot_temperature_c: 80.0,
+          poll_interval_s: 1,
+          filter_time_constant_s: 5
         }
       ]
     },
-    "dependencies": {
-      "platform_metrics_node": "platform_metrics",
-      "system_shutdown_node": "sys_shutdown",
-      "thermal_load_notify_nodes": [
+    dependencies: {
+      platform_metrics_node: "platform_metrics",
+      system_shutdown_node: "sys_shutdown",
+      thermal_load_notify_nodes: [
         "thermal_state_handler"
       ],
-      "temperature_handler_node_names": [
+      temperature_handler_node_names: [
         "soc_pll_thermal",
         "thermistor_thread",
         "thermistor_audio"
@@ -126,7 +126,7 @@
     }
   },
   {
-    "type": "SystemPowerModeHandler",
-    "name": "system_power_mode_handler"
+    type: "SystemPowerModeHandler",
+    name: "system_power_mode_handler"
   }
 ]

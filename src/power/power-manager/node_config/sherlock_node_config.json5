@@ -1,322 +1,324 @@
 [
   {
-    "type": "DriverManagerHandler",
-    "name": "driver_manager_handler",
-    "config": {}
+    type: "DriverManagerHandler",
+    name: "driver_manager_handler",
+    config: {}
   },
   {
-    "type": "ShutdownWatcher",
-    "name": "shutdown_watcher"
+    type: "ShutdownWatcher",
+    name: "shutdown_watcher"
   },
   {
-    "type": "SystemShutdownHandler",
-    "name": "sys_shutdown",
-    "config": {
-      "shutdown_timeout_s": 3600
+    type: "SystemShutdownHandler",
+    name: "sys_shutdown",
+    config: {
+      shutdown_timeout_s: 3600
     },
-    "dependencies": {
-      "driver_manager_handler_node": "driver_manager_handler",
-      "shutdown_watcher_node": "shutdown_watcher"
+    dependencies: {
+      driver_manager_handler_node: "driver_manager_handler",
+      shutdown_watcher_node: "shutdown_watcher"
     }
   },
   {
-    "type": "SyscallHandler",
-    "name": "syscall_handler"
+    type: "SyscallHandler",
+    name: "syscall_handler"
   },
   {
-    "type": "CrashReportHandler",
-    "name": "crash_handler"
+    type: "CrashReportHandler",
+    name: "crash_handler"
   },
   {
-    "type": "CpuStatsHandler",
-    "name": "cpu_stats",
-    "config": {
-      "cpu_load_cache_duration_ms": 100
+    type: "CpuStatsHandler",
+    name: "cpu_stats",
+    config: {
+      cpu_load_cache_duration_ms: 100
     }
   },
   {
-    "type": "CpuDeviceHandler",
-    "name": "big_cluster_handler",
-    "config": {
-      "driver_path": "/dev/class/cpu-ctrl/000"
+    type: "CpuDeviceHandler",
+    name: "big_cluster_handler",
+    config: {
+      driver_path: "/dev/class/cpu-ctrl/000"
     }
   },
   {
-    "type": "CpuDeviceHandler",
-    "name": "little_cluster_handler",
-    "config": {
-      "driver_path": "/dev/class/cpu-ctrl/001"
+    type: "CpuDeviceHandler",
+    name: "little_cluster_handler",
+    config: {
+      driver_path: "/dev/class/cpu-ctrl/001"
     }
   },
   {
-    "type": "CpuManager",
-    "name": "cpu_manager",
-    "config": {
-      "clusters": [
+    type: "CpuManager",
+    name: "cpu_manager",
+    config: {
+      clusters: [
         {
-          "name": "big_cluster",
-          "cluster_index": 0,
-          "handler": "big_cluster_handler",
-          "logical_cpu_numbers": [
+          name: "big_cluster",
+          cluster_index: 0,
+          handler: "big_cluster_handler",
+          logical_cpu_numbers: [
             2,
             3,
             4,
             5
           ],
-          "normperfs_per_ghz": 0.5241090146750524
+          normperfs_per_ghz: 0.5241090146750524
         },
         {
-          "name": "little_cluster",
-          "cluster_index": 1,
-          "handler": "little_cluster_handler",
-          "logical_cpu_numbers": [
+          name: "little_cluster",
+          cluster_index: 1,
+          handler: "little_cluster_handler",
+          logical_cpu_numbers: [
             0,
             1
           ],
-          "normperfs_per_ghz": 0.23551734203752356
+          normperfs_per_ghz: 0.23551734203752356
         }
       ],
-      "thermal_states": [
+      thermal_states: [
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             0,
             0
           ],
-          "min_performance_normperfs": 0.0,
-          "static_power_w": 0.15,
-          "dynamic_power_per_normperf_w": 1.24
+          min_performance_normperfs: 0.0,
+          static_power_w: 0.15,
+          dynamic_power_per_normperf_w: 1.24
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             0,
             1
           ],
-          "min_performance_normperfs": 1.76,
-          "static_power_w": 0.13,
-          "dynamic_power_per_normperf_w": 1.221
+          min_performance_normperfs: 1.76,
+          static_power_w: 0.13,
+          dynamic_power_per_normperf_w: 1.221
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             1,
             0
           ],
-          "min_performance_normperfs": 0.0,
-          "static_power_w": 0.07,
-          "dynamic_power_per_normperf_w": 0.844
+          min_performance_normperfs: 0.0,
+          static_power_w: 0.07,
+          dynamic_power_per_normperf_w: 0.844
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             1,
             1
           ],
-          "min_performance_normperfs": 1.68,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.815
+          min_performance_normperfs: 1.68,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.815
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             1,
             3
           ],
-          "min_performance_normperfs": 4.32,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.81
+          min_performance_normperfs: 4.32,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.81
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             2,
             0
           ],
-          "min_performance_normperfs": 0.73,
-          "static_power_w": 0.07,
-          "dynamic_power_per_normperf_w": 0.772
+          min_performance_normperfs: 0.73,
+          static_power_w: 0.07,
+          dynamic_power_per_normperf_w: 0.772
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             2,
             1
           ],
-          "min_performance_normperfs": 1.6,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.74
+          min_performance_normperfs: 1.6,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.74
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             2,
             3
           ],
-          "min_performance_normperfs": 4.12,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.733
+          min_performance_normperfs: 4.12,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.733
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             3,
             0
           ],
-          "min_performance_normperfs": 0.36,
-          "static_power_w": 0.07,
-          "dynamic_power_per_normperf_w": 0.695
+          min_performance_normperfs: 0.36,
+          static_power_w: 0.07,
+          dynamic_power_per_normperf_w: 0.695
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             3,
             2
           ],
-          "min_performance_normperfs": 0.85,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.655
+          min_performance_normperfs: 0.85,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.655
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             4,
             0
           ],
-          "min_performance_normperfs": 3.87,
-          "static_power_w": 0.07,
-          "dynamic_power_per_normperf_w": 0.643
+          min_performance_normperfs: 3.87,
+          static_power_w: 0.07,
+          dynamic_power_per_normperf_w: 0.643
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             4,
             1
           ],
-          "min_performance_normperfs": 3.61,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.604
+          min_performance_normperfs: 3.61,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.604
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             4,
             4
           ],
-          "min_performance_normperfs": 0.13,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.593
+          min_performance_normperfs: 0.13,
+          static_power_w: 0.05,
+          dynamic_power_per_normperf_w: 0.593
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             5,
             1
           ],
-          "min_performance_normperfs": 0.0,
-          "static_power_w": 0.0,
-          "dynamic_power_per_normperf_w": 0.571
+          min_performance_normperfs: 0.0,
+          static_power_w: 0.0,
+          dynamic_power_per_normperf_w: 0.571
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             5,
             4
           ],
-          "min_performance_normperfs": 3.19,
-          "static_power_w": 0.0,
-          "dynamic_power_per_normperf_w": 0.556
+          min_performance_normperfs: 3.19,
+          static_power_w: 0.0,
+          dynamic_power_per_normperf_w: 0.556
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             6,
             2
           ],
-          "min_performance_normperfs": 2.87,
-          "static_power_w": 0.0,
-          "dynamic_power_per_normperf_w": 0.554
+          min_performance_normperfs: 2.87,
+          static_power_w: 0.0,
+          dynamic_power_per_normperf_w: 0.554
         },
         {
-          "cluster_pstates": [
+          cluster_pstates: [
             6,
             4
           ],
-          "min_performance_normperfs": 1.97,
-          "static_power_w": 0.0,
-          "dynamic_power_per_normperf_w": 0.544
+          min_performance_normperfs: 1.97,
+          static_power_w: 0.0,
+          dynamic_power_per_normperf_w: 0.544
         }
       ]
     },
-    "dependencies": {
-      "cpu_device_handlers": [
+    dependencies: {
+      cpu_device_handlers: [
         "big_cluster_handler",
         "little_cluster_handler"
       ],
-      "cpu_stats_handler": "cpu_stats",
-      "syscall_handler": "syscall_handler"
+      cpu_stats_handler: "cpu_stats",
+      syscall_handler: "syscall_handler"
     }
   },
   {
-    "type": "TemperatureHandler",
-    "name": "temperature_soc_pll",
-    "config": {
-      "driver_path": "/dev/aml-thermal-pll/thermal",
-      "cache_duration_ms": 50
+    type: "TemperatureHandler",
+    name: "temperature_soc_pll",
+    config: {
+      driver_path: "/dev/aml-thermal-pll/thermal",
+      cache_duration_ms: 50
     }
   },
   {
-    "type": "PlatformMetrics",
-    "name": "platform_metrics",
-    "config": {
-      "cpu_temperature_poll_interval_s": 1,
-      "throttle_debounce_timeout_s": 60
+    type: "PlatformMetrics",
+    name: "platform_metrics",
+    config: {
+      cpu_temperature_poll_interval_s: 1,
+      throttle_debounce_timeout_s: 60
     },
-    "dependencies": {
-      "cpu_temperature_handler_node": "temperature_soc_pll",
-      "crash_report_handler_node": "crash_handler"
+    dependencies: {
+      cpu_temperature_handler_node: "temperature_soc_pll",
+      crash_report_handler_node: "crash_handler"
     }
   },
   {
-    "type": "ThermalStateHandler",
-    "name": "thermal_state_handler",
-    "dependencies": {
-      "platform_metrics_node": "platform_metrics"
+    type: "ThermalStateHandler",
+    name: "thermal_state_handler",
+    dependencies: {
+      platform_metrics_node: "platform_metrics"
     }
   },
   {
-    "type": "ThermalLoadDriver",
-    "name": "thermal_load_driver",
-    "config": {
-      "temperature_input_configs": [
+    // Calculates thermal load used to trigger audio limiting trip points. The reboot threshold
+    // is much less than that of thermal_policy and is not expected to be reached.
+    type: "ThermalLoadDriver",
+    name: "thermal_load_driver",
+    config: {
+      temperature_input_configs: [
         {
-          "temperature_handler_node_name": "temperature_soc_pll",
-          "onset_temperature_c": 70.0,
-          "reboot_temperature_c": 120.0,
-          "poll_interval_s": 1,
-          "filter_time_constant_s": 5
+          temperature_handler_node_name: "temperature_soc_pll",
+          onset_temperature_c: 70.0,
+          reboot_temperature_c: 120.0,
+          poll_interval_s: 1,
+          filter_time_constant_s: 5
         }
       ]
     },
-    "dependencies": {
-      "system_shutdown_node": "sys_shutdown",
-      "thermal_load_notify_nodes": [
+    dependencies: {
+      system_shutdown_node: "sys_shutdown",
+      thermal_load_notify_nodes: [
         "thermal_state_handler"
       ],
-      "temperature_handler_node_names": [
+      temperature_handler_node_names: [
         "temperature_soc_pll"
       ],
-      "platform_metrics_node": "platform_metrics"
+      platform_metrics_node: "platform_metrics"
     }
   },
   {
-    "type": "ThermalPolicy",
-    "name": "thermal_policy",
-    "dependencies": {
-      "temperature_handler_node": "temperature_soc_pll",
-      "cpu_control_nodes": [
+    type: "ThermalPolicy",
+    name: "thermal_policy",
+    dependencies: {
+      temperature_handler_node: "temperature_soc_pll",
+      cpu_control_nodes: [
         "cpu_manager"
       ],
-      "system_power_handler_node": "sys_shutdown",
-      "thermal_load_notify_nodes": [],
-      "platform_metrics_node": "platform_metrics"
+      system_power_handler_node: "sys_shutdown",
+      thermal_load_notify_nodes: [],
+      platform_metrics_node: "platform_metrics"
     },
-    "config": {
-      "controller_params": {
-        "sample_interval": 1.0,
-        "filter_time_constant": 5.0,
-        "target_temperature": 94.0,
-        "e_integral_min": -39.37,
-        "e_integral_max": 0.0,
-        "sustainable_power": 6.22,
-        "proportional_gain": 0.0,
-        "integral_gain": 0.158
+    config: {
+      controller_params: {
+        sample_interval: 1.0,
+        filter_time_constant: 5.0,
+        target_temperature: 94.0,
+        e_integral_min: -39.37,
+        e_integral_max: 0.0,
+        sustainable_power: 6.22,
+        proportional_gain: 0.0,
+        integral_gain: 0.158
       },
-      "thermal_shutdown_temperature": 100.0
+      thermal_shutdown_temperature: 100.0
     }
   }
 ]

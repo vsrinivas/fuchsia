@@ -1,29 +1,29 @@
 [
   {
-    "type": "DriverManagerHandler",
-    "name": "driver_manager_handler",
-    "config": {}
+    type: "DriverManagerHandler",
+    name: "driver_manager_handler",
+    config: {}
   },
   {
-    "type": "ShutdownWatcher",
-    "name": "shutdown_watcher"
+    type: "ShutdownWatcher",
+    name: "shutdown_watcher"
   },
   {
-    "type": "SystemShutdownHandler",
-    "name": "sys_shutdown",
-    "config": {
-      "shutdown_timeout_s": 3600
+    type: "SystemShutdownHandler",
+    name: "sys_shutdown",
+    config: {
+      shutdown_timeout_s: 3600
     },
-    "dependencies": {
-      "driver_manager_handler_node": "driver_manager_handler",
-      "shutdown_watcher_node": "shutdown_watcher"
+    dependencies: {
+      driver_manager_handler_node: "driver_manager_handler",
+      shutdown_watcher_node: "shutdown_watcher"
     }
   },
   {
-    "type": "LidShutdown",
-    "name": "lid_shutdown",
-    "dependencies": {
-      "system_shutdown_node": "sys_shutdown"
+    type: "LidShutdown",
+    name: "lid_shutdown",
+    dependencies: {
+      system_shutdown_node: "sys_shutdown"
     }
   }
 ]
