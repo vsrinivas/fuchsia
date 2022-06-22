@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/test.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 proto_library("emulator_proto") {
@@ -30,7 +31,7 @@ source_set("light_eq") {
   ]
 }
 
-executable("test_bin") {
+test("brightness_test") {
   testonly = true
 
   sources = [ "brightness_test/brightness_test.cc" ]
@@ -39,15 +40,9 @@ executable("test_bin") {
     ":emulator_proto",
     ":light_eq",
     "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/async:async-cpp",
+    "//third_party/googletest:gtest",
+    "//third_party/grpc:grpc++",
   ]
-}
-
-fuchsia_unittest_package("brightness_test") {
-  deps = [ ":test_bin" ]
 }
 
 group("tests") {
