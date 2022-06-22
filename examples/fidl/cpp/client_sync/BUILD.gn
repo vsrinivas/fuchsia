@@ -25,29 +25,15 @@ fuchsia_component("echo-client") {
 }
 
 # Unified C++ sync client and server example package
-fuchsia_package("echo-cpp-sync-client") {
+fuchsia_package("echo-cpp-client-sync") {
   deps = [
     ":echo-client",
+    "//examples/fidl/cpp/server:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//src/lib/fidl/cpp/examples/server:echo-server",
-  ]
-}
-
-# Unified C++ sync client and server example integration test package
-fuchsia_package("echo-cpp-sync-client-test") {
-  testonly = true
-  deps = [
-    ":echo-client",
-    "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/echo-realm:fidl_examples_test",
-    "//src/lib/fidl/cpp/examples/server:echo-server",
   ]
 }
 
 group("client_sync") {
   testonly = true
-  deps = [
-    ":echo-cpp-sync-client",
-    ":echo-cpp-sync-client-test",
-  ]
+  deps = [ ":echo-cpp-client-sync" ]
 }

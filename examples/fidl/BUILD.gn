@@ -7,6 +7,7 @@ group("fidl") {
   deps = [
     ":tests",
     "c:all",
+    "cpp:all",
     "dart:all",
     "go:all",
     "hlcpp:all",
@@ -18,6 +19,7 @@ group("fidl") {
 group("tests") {
   testonly = true
   deps = [
+    "cpp:tests",
     "dart:tests",
     "echo-realm:tests",
     "go:tests",

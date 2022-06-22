@@ -33,33 +33,11 @@ fuchsia_component("fidl_examples_test") {
   deps = [ ":bin" ]
 }
 
-# This registers the "fidl_examples_test" component with the
-# "echo-cpp-client-test" test package. It is a workaround for a GN limitation:
-# https://fuchsia.dev/fuchsia-src/development/components/build#test-packages
-#
-# TODO(fxbug.dev/60240): Remove this when the unified C++ bindings graduate
-# from its own examples directory.
-fuchsia_test("echo-cpp-client-test") {
-  package = "//src/lib/fidl/cpp/examples/client:echo-cpp-client-test"
-  component = ":fidl_examples_test"
-}
-
-# This registers the "fidl_examples_test" component with the
-# "echo-cpp-sync-client-test" test package. It is a workaround for a GN limitation:
-# https://fuchsia.dev/fuchsia-src/development/components/build#test-packages
-#
-# TODO(fxbug.dev/60240): Remove this when the unified C++ bindings graduate
-# from its own examples directory.
-fuchsia_test("echo-cpp-sync-client-test") {
-  package = "//src/lib/fidl/cpp/examples/client_sync:echo-cpp-sync-client-test"
-  component = ":fidl_examples_test"
-}
-
 group("tests") {
   testonly = true
   deps = [
+    ":echo-cpp-client-sync-test",
     ":echo-cpp-client-test",
-    ":echo-cpp-sync-client-test",
     ":echo-go-client-test",
     ":echo-hlcpp-client-sync-test",
     ":echo-hlcpp-client-test",
@@ -142,6 +120,25 @@ fuchsia_test_package("echo-service-hlcpp-test") {
     "//examples/fidl/echo-realm:echo_realm",
     "//examples/fidl/hlcpp/services/client:echo-client",
     "//examples/fidl/hlcpp/services/server:echo-server",
+  ]
+}
+
+# Unified C++ bindings natural types example integration test packages
+fuchsia_test_package("echo-cpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/cpp/client:echo-client",
+    "//examples/fidl/cpp/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+fuchsia_test_package("echo-cpp-client-sync-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/cpp/client_sync:echo-client",
+    "//examples/fidl/cpp/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
   ]
 }
 
