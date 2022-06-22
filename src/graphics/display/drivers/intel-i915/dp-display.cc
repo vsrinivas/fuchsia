@@ -1027,13 +1027,18 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
   *m_out = static_cast<uint32_t>(static_cast<uint64_t>(x) * *n_out / y);
 }
 
+bool IsEdp(i915::Controller* controller, registers::Ddi ddi) {
+  return controller && controller->igd_opregion().IsEdp(ddi);
+}
+
 }  // namespace
 
 namespace i915 {
 
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpcdChannel* dp_aux,
                      inspect::Node* parent_node)
-    : DisplayDevice(controller, id, ddi), dp_aux_(dp_aux) {
+    : DisplayDevice(controller, id, ddi, IsEdp(controller, ddi) ? Type::kEdp : Type::kDp),
+      dp_aux_(dp_aux) {
   ZX_ASSERT(dp_aux);
   inspect_node_ = parent_node->CreateChild(fbl::StringPrintf("dp-display-%lu", id));
   dp_lane_count_inspect_ = inspect_node_.CreateUint("dp_lane_count", 0);
@@ -1080,8 +1085,8 @@ bool DpDisplay::Query() {
 
   uint8_t last = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
   zxlogf(INFO, "Found %s monitor (max link rate: %d MHz, lane count: %d)",
-         (controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP"),
-         capabilities_->supported_link_rates_mbps()[last], dp_lane_count_);
+         (type() == Type::kEdp ? "eDP" : "DP"), capabilities_->supported_link_rates_mbps()[last],
+         dp_lane_count_);
 
   return true;
 }
@@ -1089,8 +1094,7 @@ bool DpDisplay::Query() {
 bool DpDisplay::InitDdi() {
   ZX_ASSERT(capabilities_);
 
-  bool is_edp = controller()->igd_opregion().IsEdp(ddi());
-  if (is_edp) {
+  if (type() == Type::kEdp) {
     auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
     auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
 
@@ -1156,7 +1160,7 @@ bool DpDisplay::InitDdi() {
       .dp_bit_rate_mhz = dp_link_rate_mhz_,
   };
 
-  DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), is_edp, state);
+  DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), type() == Type::kEdp, state);
   if (dpll == nullptr) {
     zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi());
     return false;
@@ -1314,7 +1318,7 @@ bool DpDisplay::InitBacklightHw() {
 }
 
 bool DpDisplay::SetBacklightOn(bool on) {
-  if (!controller()->igd_opregion().IsEdp(ddi())) {
+  if (type() != Type::kEdp) {
     return true;
   }
 
@@ -1341,7 +1345,7 @@ bool DpDisplay::SetBacklightOn(bool on) {
 
 bool DpDisplay::IsBacklightOn() {
   // If there is no embedded display, return false.
-  if (!controller()->igd_opregion().IsEdp(ddi())) {
+  if (type() != Type::kEdp) {
     return false;
   }
 
@@ -1361,7 +1365,7 @@ bool DpDisplay::IsBacklightOn() {
 }
 
 bool DpDisplay::SetBacklightBrightness(double val) {
-  if (!controller()->igd_opregion().IsEdp(ddi())) {
+  if (type() != Type::kEdp) {
     return true;
   }
 
@@ -1454,7 +1458,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
   return false;
 }
 
-bool DpDisplay::HasBacklight() { return controller()->igd_opregion().IsEdp(ddi()); }
+bool DpDisplay::HasBacklight() { return type() == Type::kEdp; }
 
 namespace FidlBacklight = fuchsia_hardware_backlight;
 

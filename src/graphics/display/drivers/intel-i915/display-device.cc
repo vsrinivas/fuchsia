@@ -40,8 +40,8 @@ static zx_protocol_device_t backlight_ops = {};
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, registers::Ddi ddi)
-    : controller_(controller), id_(id), ddi_(ddi) {}
+DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, registers::Ddi ddi, Type type)
+    : controller_(controller), id_(id), ddi_(ddi), type_(type) {}
 
 DisplayDevice::~DisplayDevice() {
   if (pipe_) {
@@ -135,7 +135,7 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
     pipe_->Detach();
   }
   if (pipe) {
-    pipe->AttachToDisplay(id_, controller()->igd_opregion().IsEdp(ddi()));
+    pipe->AttachToDisplay(id_, type() == Type::kEdp);
 
     if (info_.h_addressable) {
       PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());

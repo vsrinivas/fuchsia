@@ -663,7 +663,10 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count
     zxlogf(WARNING, "%lu displays could not be added", added_count - added_actual);
   }
   for (unsigned i = 0; i < added_actual; i++) {
-    added[i]->set_is_hdmi(added_info[i].is_hdmi_out);
+    if (added[i]->type() == DisplayDevice::Type::kHdmi) {
+      added[i]->set_type(added_info[i].is_hdmi_out ? DisplayDevice::Type::kHdmi
+                                                   : DisplayDevice::Type::kDvi);
+    }
   }
 }
 

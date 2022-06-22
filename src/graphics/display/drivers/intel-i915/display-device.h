@@ -37,7 +37,14 @@ typedef struct display_ref {
 
 class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
  public:
-  DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
+  enum class Type {
+    kEdp,
+    kDp,
+    kHdmi,
+    kDvi,
+  };
+
+  DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi, Type type);
   virtual ~DisplayDevice();
 
   bool AttachPipe(Pipe* pipe);
@@ -83,8 +90,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
 
   Pipe* pipe() const { return pipe_; }
 
-  bool is_hdmi() const { return is_hdmi_; }
-  void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
+  Type type() const { return type_; }
+  void set_type(Type type) { type_ = type; }
 
   virtual bool HasBacklight() { return false; }
   virtual zx_status_t SetBacklightState(bool power, double brightness) {
@@ -153,7 +160,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
 
   bool inited_ = false;
   display_mode_t info_ = {};
-  bool is_hdmi_ = false;
+
+  Type type_;
 
   zx_device_t* backlight_device_ = nullptr;
   display_ref_t* display_ref_ = nullptr;

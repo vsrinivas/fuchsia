@@ -487,8 +487,11 @@ static bool calculate_params(uint32_t symbol_clock_khz, uint16_t* dco_int, uint1
 
 namespace i915 {
 
+// On DisplayDevice creation we cannot determine whether it is an HDMI
+// display; this will be updated when intel-i915 Controller gets EDID
+// information for this device (before Init()).
 HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
-    : DisplayDevice(controller, id, ddi) {}
+    : DisplayDevice(controller, id, ddi, /* type */ Type::kHdmi) {}
 
 bool HdmiDisplay::Query() {
   // HDMI isn't supported on these DDIs
@@ -582,13 +585,17 @@ bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, registers::Pipe
 
 bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe pipe,
                                      registers::Trans trans) {
+  ZX_DEBUG_ASSERT(type() == DisplayDevice::Type::kHdmi || type() == DisplayDevice::Type::kDvi);
+
   registers::TranscoderRegs trans_regs(trans);
 
   auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
   ddi_func.set_trans_ddi_function_enable(1);
   ddi_func.set_ddi_select(ddi());
-  ddi_func.set_trans_ddi_mode_select(is_hdmi() ? ddi_func.kModeHdmi : ddi_func.kModeDvi);
-  ddi_func.set_bits_per_color(ddi_func.k8bbc);
+  ddi_func.set_trans_ddi_mode_select(type() == DisplayDevice::Type::kHdmi
+                                         ? registers::TransDdiFuncControl::kModeHdmi
+                                         : registers::TransDdiFuncControl::kModeDvi);
+  ddi_func.set_bits_per_color(registers::TransDdiFuncControl::k8bbc);
   ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1 |
                              (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
   ddi_func.set_port_sync_mode_enable(0);
@@ -651,7 +658,7 @@ bool HdmiDisplay::CheckPixelRate(uint64_t pixel_rate) {
   // Pixel rates of 300M/165M pixels per second for HDMI/DVI. The Intel docs state
   // that the maximum link bit rate of an HDMI port is 3GHz, not 3.4GHz that would
   // be expected  based on the HDMI spec.
-  if ((is_hdmi() ? 300000000 : 165000000) < pixel_rate) {
+  if ((type() == DisplayDevice::Type::kHdmi ? 300000000 : 165000000) < pixel_rate) {
     return false;
   }
 
