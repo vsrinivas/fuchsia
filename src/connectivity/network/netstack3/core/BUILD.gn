@@ -137,6 +137,7 @@ config("benchmark") {
 
 rustc_library("netstack3-core-benchmarks") {
   name = "netstack3_core_benchmarks"
+  edition = "2021"
   testonly = true
   with_unit_tests = true
   sources = lib_sources

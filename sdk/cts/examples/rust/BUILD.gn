@@ -7,6 +7,7 @@ import("//sdk/cts/build/cts.gni")
 cts_rustc_test("bin") {
   name = "cts_hello_world_rust"
   source_root = "src/main.rs"
+  edition = "2021"
 
   deps = [ "//src/lib/fuchsia-async" ]
   sources = [ "src/main.rs" ]

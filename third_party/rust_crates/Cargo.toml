@@ -362,8 +362,6 @@ serde_json5 = { path = "mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
 
 [gn.config]
 remove_cfgs = [
-  # Fuchsia defaults targets to 2018 edition. third_party can be any version
-  "//build/config/rust:edition_2018",
   # Fuchsia forces targets to comply with 2018 idioms. third_party can ignore this
   "//build/config/rust:2018_idioms",
 ]

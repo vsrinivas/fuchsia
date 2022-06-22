@@ -9,6 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("empty_bin") {
   source_root = "empty_bin.rs"
   sources = [ "empty_bin.rs" ]
+  edition = "2018"
   visibility = [ ":*" ]
 }
 
@@ -77,6 +78,7 @@ if (is_host) {
   }
 
   rustc_test("structured_config_repackaging_test") {
+    edition = "2018"
     disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
     sources = [ "repackaging.rs" ]
     source_root = "repackaging.rs"

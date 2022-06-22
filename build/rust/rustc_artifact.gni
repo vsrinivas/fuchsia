@@ -20,10 +20,9 @@ import("//build/toolchain/rbe.gni")
 #   crate_root
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #
-#   edition (optional)
-#     Edition of the Rust language to be used. Defaults to "2018"
-#     See https://doc.rust-lang.org/edition-guide/editions/index.html for more
-#     info on rust editions.
+#   edition
+#     Edition of the Rust language to be used. See
+#     https://doc.rust-lang.org/edition-guide/editions/index.html for more info on rust editions.
 #
 #   enforce_source_listing (optional)
 #     When true, enforces that any source files used by the Rust compiler are
@@ -117,16 +116,12 @@ template("rustc_artifact") {
     _rustflags += invoker.rustflags
   }
 
+  assert(
+      defined(invoker.edition),
+      "Rust targets must set an edition. For new rust targets use: `edition = \"2021\"`")
   _configs = invoker.configs
-
-  if (defined(invoker.edition)) {
-    # in-tree default is 2018 edition
-    if (invoker.edition != "2018") {
-      _edition = invoker.edition
-      _configs -= [ "//build/config/rust:edition_2018" ]
-      _configs += [ "//build/config/rust:edition_${_edition}" ]
-    }
-  }
+  _edition = invoker.edition
+  _configs += [ "//build/config/rust:edition_${_edition}" ]
 
   _target_name = "$target_name.actual"
   _clippy_name = "$target_name.clippy"

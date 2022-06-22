@@ -16,10 +16,9 @@ import("//build/rust/rustc_test.gni")
 #   version
 #     Semver version of the crate as seen on crates.io.
 #
-#   edition (optional)
-#     Edition of the Rust language to be used. Defaults to "2018"
-#     See https://doc.rust-lang.org/edition-guide/editions/index.html for more
-#     info on rust editions.
+#   edition
+#     Edition of the Rust language to be used. See
+#     https://doc.rust-lang.org/edition-guide/editions/index.html for more info on rust editions.
 #
 #   configs (optional)
 #     A list of config labels applying to this target.

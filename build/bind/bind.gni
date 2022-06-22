@@ -640,6 +640,7 @@ template("_bind_library_rust") {
                              "testonly",
                              "visibility",
                            ])
+    edition = "2018"
     name = crate_name
     output_dir = crate_output_directory
     non_rust_deps = [ ":${rust_file_gen_target}" ]

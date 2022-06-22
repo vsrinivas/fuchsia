@@ -42,10 +42,7 @@ if (is_fuchsia) {
     crate_name = "nix"
     crate_root = "//third_party/rust_crates/vendor/nix/src/lib.rs"
     output_name = "nix-212f6cb0e58efa58"
-    configs -= [
-      "//build/config/rust:edition_2018",
-      "//build/config/rust:2018_idioms",
-    ]
+    configs -= [ "//build/config/rust:2018_idioms" ]
 
     deps = []
     deps += [ "../..:bitflags" ]

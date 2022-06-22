@@ -63,6 +63,7 @@ rustc_library("lib") {
 
 # The static library can be imported into C++.
 rustc_staticlib("libodu") {
+  edition = "2021"
   name = "odu"
   version = odu_version
 
@@ -71,6 +72,7 @@ rustc_staticlib("libodu") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   name = "odu"
   version = "0.1.0"
 

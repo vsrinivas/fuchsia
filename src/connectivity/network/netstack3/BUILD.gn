@@ -116,6 +116,7 @@ fuchsia_unittest_package("netstack3-tests") {
 rustc_binary("netstack3-benchmarks") {
   name = "netstack3_benchmarks"
   testonly = true
+  edition = "2018"
   sources = [ "bench/main.rs" ]
   source_root = "bench/main.rs"
   deps = [

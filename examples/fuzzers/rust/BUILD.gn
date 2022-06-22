@@ -43,6 +43,7 @@ rustc_library("helper") {
 }
 
 rustc_fuzzer("toy_example_same_name") {
+  edition = "2021"
   deps = [ ":helper" ]
 
   sources = [ "src/lib.rs" ]

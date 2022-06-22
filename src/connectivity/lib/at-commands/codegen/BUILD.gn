@@ -55,6 +55,7 @@ group("tests") {
 }
 
 rustc_test("codegen_parser_tests") {
+  edition = "2018"
   source_root = "src/parser_tests.rs"
   deps = [ ":codegen_lib" ]
   sources = [ "src/parser_tests.rs" ]

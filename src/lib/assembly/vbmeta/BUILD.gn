@@ -128,6 +128,7 @@ if (is_host) {
 
   rustc_test("integration_test") {
     disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+    edition = "2018"
     source_root = "tests/integration_test.rs"
     sources = [ "tests/integration_test.rs" ]
     deps = [

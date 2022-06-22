@@ -103,6 +103,7 @@ if (is_host) {
 
   rustc_test("test") {
     source_root = "src/lib.rs"
+    edition = "2018"
     deps = [
       ":copy_host_tools($host_toolchain)",
       ":testdata($host_toolchain)",

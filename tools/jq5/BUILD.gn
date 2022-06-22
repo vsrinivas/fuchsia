@@ -27,6 +27,7 @@ rustc_binary("jq5") {
 
 rustc_test("jq5_bin_test") {
   disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+  edition = "2018"
   deps = [
     ":jq_for_test",
     "//src/lib/fuchsia-async",

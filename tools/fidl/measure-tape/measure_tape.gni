@@ -104,6 +104,7 @@ template("measure_tape") {
                                "testonly",
                                "visibility",
                              ])
+      edition = "2018"
       deps = [
         "//src/lib/fidl/rust/fidl",
         "//src/lib/zircon/rust:fuchsia-zircon-types",
