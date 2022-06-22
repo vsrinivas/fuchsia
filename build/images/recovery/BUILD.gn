@@ -107,6 +107,7 @@ recovery_packages = [
   "//src/connectivity/wlan/wlandevicemonitor",
   "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
   "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/recovery/factory_reset",
   "//src/recovery/system:system_recovery",
   "//src/recovery/system:config",
   "//src/security/root_ssl_certificates",
