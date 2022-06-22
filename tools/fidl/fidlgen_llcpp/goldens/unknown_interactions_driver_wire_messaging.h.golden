@@ -17,6 +17,3332 @@
 
 #endif  // __Fuchsia__
 
+namespace test_unknowninteractions {
+class UnknownInteractionsDriverProtocol;
+
+class UnknownInteractionsClosedDriverProtocol;
+
+class UnknownInteractionsAjarDriverProtocol;
+
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
+
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
+
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
+}  // namespace test_unknowninteractions
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final {
+  static constexpr uint64_t value = 6982839851953080288lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> final {
+  static constexpr uint64_t value = 1083620022582160398lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final {
+  static constexpr uint64_t value = 1481114722667499972lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final {
+  static constexpr uint64_t value = 8222960355260037542lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final {
+  static constexpr uint64_t value = 2929398860738426482lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final {
+  static constexpr uint64_t value = 5583489590753947170lu;
+};
+
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final {
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final {
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse {
+  using Result = test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult;
+
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse{.result = std::move(result)} {}
+  WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(result)) {
+    _InitHeader();
+  }
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final {
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final : public ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse {
+  using Result = test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult;
+
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse{.result = std::move(result)} {}
+  WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(result)) {
+    _InitHeader();
+  }
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final {
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse {
+  using Result = test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult;
+
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse{.result = std::move(result)} {}
+  WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(result)) {
+    _InitHeader();
+  }
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>;
+
+  using ApplicationError = int32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>;
+
+  using ApplicationError = int32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, result) == 0);
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, result) == 0);
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, result) == 0);
+#ifdef __Fuchsia__
+}  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>> {};
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>> {};
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>> {};
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>> {};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>* request);
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>* request);
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> decoded_;
+  ::fdf::Arena arena_;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok();
+    }
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok();
+      }
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ::fitx::result<int32_t>* Unwrap() {
+    return &result_.value();
+  }
+  const ::fitx::result<int32_t>* Unwrap() const {
+    return &result_.value();
+  }
+
+  ::fitx::result<int32_t>& value() { return *Unwrap(); }
+  const ::fitx::result<int32_t>& value() const { return *Unwrap(); }
+
+  ::fitx::result<int32_t>* operator->() { return &value(); }
+  const ::fitx::result<int32_t>* operator->() const { return &value(); }
+
+  ::fitx::result<int32_t>& operator*() { return value(); }
+  const ::fitx::result<int32_t>& operator*() const { return value(); }
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> decoded_;
+  ::fdf::Arena arena_;
+  std::optional<::fitx::result<int32_t>> result_ = std::nullopt;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> decoded_;
+  ::fdf::Arena arena_;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok();
+    }
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok();
+      }
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ::fitx::result<int32_t>* Unwrap() {
+    return &result_.value();
+  }
+  const ::fitx::result<int32_t>* Unwrap() const {
+    return &result_.value();
+  }
+
+  ::fitx::result<int32_t>& value() { return *Unwrap(); }
+  const ::fitx::result<int32_t>& value() const { return *Unwrap(); }
+
+  ::fitx::result<int32_t>* operator->() { return &value(); }
+  const ::fitx::result<int32_t>* operator->() const { return &value(); }
+
+  ::fitx::result<int32_t>& operator*() { return value(); }
+  const ::fitx::result<int32_t>& operator*() const { return value(); }
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> decoded_;
+  ::fdf::Arena arena_;
+  std::optional<::fitx::result<int32_t>> result_ = std::nullopt;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteractionsDriverProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol>> {
+ public:
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> FlexibleTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> FlexibleTwoWayErr() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(_client_end(), _arena(), &_request);
+  }
+
+ private:
+  ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply();
+
+ private:
+  void MakeReply();
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply(::fitx::result<int32_t> result);
+  void ReplySuccess();
+  void ReplyError(int32_t error);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult result);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply(::fitx::result<int32_t> result);
+  void ReplySuccess();
+  void ReplyError(int32_t error);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult result);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
+template <>
+class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+
+  using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>;
+  using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>;
+
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer) = 0;
+
+  using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>;
+  using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>;
+
+  virtual void FlexibleOneWay(
+      FlexibleOneWayRequestView request, fdf::Arena& arena, FlexibleOneWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>;
+  using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>;
+
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
+  using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
+
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) = 0;
+
+  using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
+  using FlexibleTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
+
+  virtual void FlexibleTwoWay(
+      FlexibleTwoWayRequestView request, fdf::Arena& arena, FlexibleTwoWayCompleter::Sync& completer) = 0;
+
+  using FlexibleTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
+  using FlexibleTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
+
+  virtual void FlexibleTwoWayErr(
+      FlexibleTwoWayErrRequestView request, fdf::Arena& arena, FlexibleTwoWayErrCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+namespace test_unknowninteractions {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
+}  // namespace test_unknowninteractions
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final {
+  static constexpr uint64_t value = 9111839835597799810lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final {
+  static constexpr uint64_t value = 2815690661228737027lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final {
+  static constexpr uint64_t value = 4350840352076287137lu;
+};
+
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final {
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final {
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse {
+  using Result = test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult;
+
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse{.result = std::move(result)} {}
+  WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(result)) {
+    _InitHeader();
+  }
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>;
+
+  using ApplicationError = int32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, result) == 0);
+#ifdef __Fuchsia__
+}  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>> {};
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>> {};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>* request);
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> decoded_;
+  ::fdf::Arena arena_;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok();
+    }
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok();
+      }
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ::fitx::result<int32_t>* Unwrap() {
+    return &result_.value();
+  }
+  const ::fitx::result<int32_t>* Unwrap() const {
+    return &result_.value();
+  }
+
+  ::fitx::result<int32_t>& value() { return *Unwrap(); }
+  const ::fitx::result<int32_t>& value() const { return *Unwrap(); }
+
+  ::fitx::result<int32_t>* operator->() { return &value(); }
+  const ::fitx::result<int32_t>* operator->() const { return &value(); }
+
+  ::fitx::result<int32_t>& operator*() { return value(); }
+  const ::fitx::result<int32_t>& operator*() const { return value(); }
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> decoded_;
+  ::fdf::Arena arena_;
+  std::optional<::fitx::result<int32_t>> result_ = std::nullopt;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>> {
+ public:
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(_client_end(), _arena(), &_request);
+  }
+
+ private:
+  ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply();
+
+ private:
+  void MakeReply();
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply(::fitx::result<int32_t> result);
+  void ReplySuccess();
+  void ReplyError(int32_t error);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult result);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
+template <>
+class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+
+  using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>;
+  using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>;
+
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>;
+  using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>;
+
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
+  using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
+
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+namespace test_unknowninteractions {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
+}  // namespace test_unknowninteractions
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final {
+  static constexpr uint64_t value = 200845620698173917lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> final {
+  static constexpr uint64_t value = 3790953144423004126lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final {
+  static constexpr uint64_t value = 523076268125513549lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final {
+  static constexpr uint64_t value = 7057260423103547829lu;
+};
+
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final {
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final {
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final {
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() {
+    _InitHeader();
+  }
+  using ResponseType = ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <>
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse {
+  using Result = test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult;
+
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse(std::move(base)) {}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse{.result = std::move(result)} {}
+  WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position, recursion_depth);
+  }
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> body;
+  explicit TransactionalResponse(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult result)
+      : body(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(result)) {
+    _InitHeader();
+  }
+  TransactionalResponse() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+  }
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>;
+
+  using ApplicationError = int32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr bool kHasResponseBody = false;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(sizeof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>) == TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, result) == 0);
+#ifdef __Fuchsia__
+}  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>> {};
+template <>
+struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> final
+    : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>> {};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>* request);
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>* request);
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> decoded_;
+  ::fdf::Arena arena_;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fidl::Status {
+ public:
+  explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* request);
+  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* response)
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok();
+    }
+  }
+
+  explicit WireUnownedResult(
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.ok()) {
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok();
+      }
+    }
+  }
+
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ::fitx::result<int32_t>* Unwrap() {
+    return &result_.value();
+  }
+  const ::fitx::result<int32_t>* Unwrap() const {
+    return &result_.value();
+  }
+
+  ::fitx::result<int32_t>& value() { return *Unwrap(); }
+  const ::fitx::result<int32_t>& value() const { return *Unwrap(); }
+
+  ::fitx::result<int32_t>* operator->() { return &value(); }
+  const ::fitx::result<int32_t>* operator->() const { return &value(); }
+
+  ::fitx::result<int32_t>& operator*() { return value(); }
+  const ::fitx::result<int32_t>& operator*() const { return value(); }
+  fdf::Arena& arena() {
+    ZX_ASSERT(ok());
+    return arena_;
+  }
+
+ private:
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> decoded_;
+  ::fdf::Arena arena_;
+  std::optional<::fitx::result<int32_t>> result_ = std::nullopt;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>> {
+ public:
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(_client_end(), _arena(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> _request{};
+    return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(_client_end(), _arena(), &_request);
+  }
+
+ private:
+  ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply();
+
+ private:
+  void MakeReply();
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+template <>
+class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
+ public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  void Reply(::fitx::result<int32_t> result);
+  void ReplySuccess();
+  void ReplyError(int32_t error);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult result);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase, public ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned, bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
+template <>
+class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+
+  using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>;
+  using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>;
+
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer) = 0;
+
+  using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>;
+  using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>;
+
+  virtual void FlexibleOneWay(
+      FlexibleOneWayRequestView request, fdf::Arena& arena, FlexibleOneWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>;
+  using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>;
+
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) = 0;
+
+  using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
+  using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
+
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fdf::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Status StrictOneWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Status FlexibleOneWay();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> FlexibleTwoWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> FlexibleTwoWayErr();
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::Status StrictOneWay();
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::Status FlexibleOneWay();
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> FlexibleTwoWay();
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> FlexibleTwoWayErr();
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fdf::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Status StrictOneWay();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::Status StrictOneWay();
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fdf::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Status StrictOneWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Status FlexibleOneWay();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::Status StrictOneWay();
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fidl::Status FlexibleOneWay();
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> StrictTwoWay();
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+  ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> StrictTwoWayErr();
+};
+namespace fidl {
+#endif  // __Fuchsia__
 
 }  // namespace fidl

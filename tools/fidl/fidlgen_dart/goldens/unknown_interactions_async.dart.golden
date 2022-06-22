@@ -39,38 +39,856 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
-enum ExampleFlexibleTwoWayResultTag {
+enum UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag {
   response, // 0x1
-  transportErr, // 0x3
+  err, // 0x2
 }
 
-const Map<int, ExampleFlexibleTwoWayResultTag>
-    _ExampleFlexibleTwoWayResultTag_map = {
-  1: ExampleFlexibleTwoWayResultTag.response,
-  3: ExampleFlexibleTwoWayResultTag.transportErr,
+const Map<int, UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag.err,
 };
 
-class ExampleFlexibleTwoWayResult extends $fidl.Union {
-  const ExampleFlexibleTwoWayResult.withResponse(
-      ExampleFlexibleTwoWayResponse value)
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse value)
       : _ordinal = 1,
         _data = value;
 
-  const ExampleFlexibleTwoWayResult.withTransportErr(int value)
-      : _ordinal = 3,
+  const UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult.withErr(
+      int value)
+      : _ordinal = 2,
         _data = value;
 
-  ExampleFlexibleTwoWayResult._(int ordinal, Object data)
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult._(
+      int ordinal, Object data)
       : _ordinal = ordinal,
         _data = data;
 
   final int _ordinal;
   final _data;
 
-  ExampleFlexibleTwoWayResultTag get $tag =>
-      _ExampleFlexibleTwoWayResultTag_map[_ordinal]!;
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag_map[
+          _ordinal]!;
 
-  ExampleFlexibleTwoWayResponse? get response {
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .UnionType<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsAjarProtocolFlexibleEventErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsAjarProtocolFlexibleEventErrResultTag>
+    _UnknownInteractionsAjarProtocolFlexibleEventErrResultTag_map = {
+  1: UnknownInteractionsAjarProtocolFlexibleEventErrResultTag.response,
+  2: UnknownInteractionsAjarProtocolFlexibleEventErrResultTag.err,
+};
+
+class UnknownInteractionsAjarProtocolFlexibleEventErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsAjarProtocolFlexibleEventErrResult.withResponse(
+      UnknownInteractionsAjarProtocolFlexibleEventErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsAjarProtocolFlexibleEventErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsAjarProtocolFlexibleEventErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsAjarProtocolFlexibleEventErrResultTag get $tag =>
+      _UnknownInteractionsAjarProtocolFlexibleEventErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsAjarProtocolFlexibleEventErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsAjarProtocolFlexibleEventErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsAjarProtocolFlexibleEventErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsAjarProtocolFlexibleEventErrResult>
+    kUnknownInteractionsAjarProtocol_FlexibleEventErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsAjarProtocolFlexibleEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_FlexibleEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolFlexibleEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsAjarProtocolFlexibleEventErrResult>
+    kUnknownInteractionsAjarProtocol_FlexibleEventErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsAjarProtocolFlexibleEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_FlexibleEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolFlexibleEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsAjarProtocolStrictEventErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsAjarProtocolStrictEventErrResultTag>
+    _UnknownInteractionsAjarProtocolStrictEventErrResultTag_map = {
+  1: UnknownInteractionsAjarProtocolStrictEventErrResultTag.response,
+  2: UnknownInteractionsAjarProtocolStrictEventErrResultTag.err,
+};
+
+class UnknownInteractionsAjarProtocolStrictEventErrResult extends $fidl.Union {
+  const UnknownInteractionsAjarProtocolStrictEventErrResult.withResponse(
+      UnknownInteractionsAjarProtocolStrictEventErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsAjarProtocolStrictEventErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsAjarProtocolStrictEventErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsAjarProtocolStrictEventErrResultTag get $tag =>
+      _UnknownInteractionsAjarProtocolStrictEventErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsAjarProtocolStrictEventErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsAjarProtocolStrictEventErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsAjarProtocolStrictEventErrResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsAjarProtocolStrictEventErrResult>
+    kUnknownInteractionsAjarProtocol_StrictEventErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsAjarProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .NullableUnionType<UnknownInteractionsAjarProtocolStrictEventErrResult>
+    kUnknownInteractionsAjarProtocol_StrictEventErr_Result_OptType = $fidl
+        .NullableUnionType<UnknownInteractionsAjarProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag.err,
+};
+
+class UnknownInteractionsAjarProtocolStrictTwoWayErrResult extends $fidl.Union {
+  const UnknownInteractionsAjarProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsAjarProtocolStrictTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsAjarProtocolStrictTwoWayErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsAjarProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsAjarProtocolStrictTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsAjarProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsAjarProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .NullableUnionType<UnknownInteractionsAjarProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsAjarProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsAjarProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag.err,
+};
+
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult.withErr(
+      int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag_map[
+          _ordinal]!;
+
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .UnionType<UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<
+        UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsClosedProtocolStrictEventErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsClosedProtocolStrictEventErrResultTag>
+    _UnknownInteractionsClosedProtocolStrictEventErrResultTag_map = {
+  1: UnknownInteractionsClosedProtocolStrictEventErrResultTag.response,
+  2: UnknownInteractionsClosedProtocolStrictEventErrResultTag.err,
+};
+
+class UnknownInteractionsClosedProtocolStrictEventErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsClosedProtocolStrictEventErrResult.withResponse(
+      UnknownInteractionsClosedProtocolStrictEventErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsClosedProtocolStrictEventErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsClosedProtocolStrictEventErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsClosedProtocolStrictEventErrResultTag get $tag =>
+      _UnknownInteractionsClosedProtocolStrictEventErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsClosedProtocolStrictEventErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsClosedProtocolStrictEventErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsClosedProtocolStrictEventErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsClosedProtocolStrictEventErrResult>
+    kUnknownInteractionsClosedProtocol_StrictEventErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsClosedProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsClosedProtocolStrictEventErrResult>
+    kUnknownInteractionsClosedProtocol_StrictEventErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsClosedProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag.err,
+};
+
+class UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsClosedProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsClosedProtocolStrictTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsClosedProtocolStrictTwoWayErrResult.withErr(
+      int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsClosedProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsClosedProtocolStrictTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsClosedProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsClosedProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsClosedProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsClosedProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsClosedProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+  transportErr, // 0x3
+}
+
+const Map<int, UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag>
+    _UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag_map = {
+  1: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag.response,
+  2: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag.err,
+  3: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag.transportErr,
+};
+
+class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult.withResponse(
+      UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult.withErr(
+      int value)
+      : _ordinal = 2,
+        _data = value;
+
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult.withTransportErr(
+      int value)
+      : _ordinal = 3,
+        _data = value;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag_map[
+          _ordinal]!;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get transportErr {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag {
+  response, // 0x1
+  transportErr, // 0x3
+}
+
+const Map<int, UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag>
+    _UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag_map = {
+  1: UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag.response,
+  3: UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag.transportErr,
+};
+
+class UnknownInteractionsDriverProtocolFlexibleTwoWayResult
+    extends $fidl.Union {
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayResult.withResponse(
+      UnknownInteractionsDriverProtocolFlexibleTwoWayResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayResult.withTransportErr(
+      int value)
+      : _ordinal = 3,
+        _data = value;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag get $tag =>
+      _UnknownInteractionsDriverProtocolFlexibleTwoWayResultTag_map[_ordinal]!;
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResponse? get response {
     if (_ordinal != 1) {
       return null;
     }
@@ -100,53 +918,647 @@ class ExampleFlexibleTwoWayResult extends $fidl.Union {
   @override
   Object get $data => _data;
 
-  static ExampleFlexibleTwoWayResult _ctor(int ordinal, Object data) {
-    return ExampleFlexibleTwoWayResult._(ordinal, data);
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsDriverProtocolFlexibleTwoWayResult._(
+        ordinal, data);
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.UnionType<ExampleFlexibleTwoWayResult>
-    kExample_FlexibleTwoWay_Result_Type =
-    $fidl.UnionType<ExampleFlexibleTwoWayResult>(
+const $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayResult>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Result_Type =
+    $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
-    1: kExample_FlexibleTwoWay_Response_Type,
+    1: kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Response_Type,
     3: $fidl.Int32Type(),
   },
-  ctor: ExampleFlexibleTwoWayResult._ctor,
+  ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
   resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.NullableUnionType<ExampleFlexibleTwoWayResult>
-    kExample_FlexibleTwoWay_Result_OptType =
-    $fidl.NullableUnionType<ExampleFlexibleTwoWayResult>(
+const $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolFlexibleTwoWayResult>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
-    1: kExample_FlexibleTwoWay_Response_Type,
+    1: kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Response_Type,
     3: $fidl.Int32Type(),
   },
-  ctor: ExampleFlexibleTwoWayResult._ctor,
+  ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
   resource: false,
 );
 
-class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
-  const ExampleFlexibleTwoWayResponse({
+enum UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag.err,
+};
+
+class UnknownInteractionsDriverProtocolStrictTwoWayErrResult
+    extends $fidl.Union {
+  const UnknownInteractionsDriverProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsDriverProtocolStrictTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsDriverProtocolStrictTwoWayErrResult.withErr(
+      int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResult._(
+      int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsDriverProtocolStrictTwoWayErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsDriverProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsDriverProtocolStrictTwoWayErrResult._(
+        ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<
+        UnknownInteractionsDriverProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsDriverProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsProtocolFlexibleEventErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsProtocolFlexibleEventErrResultTag>
+    _UnknownInteractionsProtocolFlexibleEventErrResultTag_map = {
+  1: UnknownInteractionsProtocolFlexibleEventErrResultTag.response,
+  2: UnknownInteractionsProtocolFlexibleEventErrResultTag.err,
+};
+
+class UnknownInteractionsProtocolFlexibleEventErrResult extends $fidl.Union {
+  const UnknownInteractionsProtocolFlexibleEventErrResult.withResponse(
+      UnknownInteractionsProtocolFlexibleEventErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsProtocolFlexibleEventErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsProtocolFlexibleEventErrResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsProtocolFlexibleEventErrResultTag get $tag =>
+      _UnknownInteractionsProtocolFlexibleEventErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsProtocolFlexibleEventErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsProtocolFlexibleEventErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsProtocolFlexibleEventErrResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsProtocolFlexibleEventErrResult>
+    kUnknownInteractionsProtocol_FlexibleEventErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsProtocolFlexibleEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleEventErrResult>
+    kUnknownInteractionsProtocol_FlexibleEventErr_Result_OptType =
+    $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsProtocolFlexibleTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+  transportErr, // 0x3
+}
+
+const Map<int, UnknownInteractionsProtocolFlexibleTwoWayErrResultTag>
+    _UnknownInteractionsProtocolFlexibleTwoWayErrResultTag_map = {
+  1: UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.response,
+  2: UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.err,
+  3: UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.transportErr,
+};
+
+class UnknownInteractionsProtocolFlexibleTwoWayErrResult extends $fidl.Union {
+  const UnknownInteractionsProtocolFlexibleTwoWayErrResult.withResponse(
+      UnknownInteractionsProtocolFlexibleTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsProtocolFlexibleTwoWayErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  const UnknownInteractionsProtocolFlexibleTwoWayErrResult.withTransportErr(
+      int value)
+      : _ordinal = 3,
+        _data = value;
+
+  UnknownInteractionsProtocolFlexibleTwoWayErrResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsProtocolFlexibleTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsProtocolFlexibleTwoWayErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsProtocolFlexibleTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get transportErr {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsProtocolFlexibleTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsProtocolFlexibleTwoWayErrResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>
+    kUnknownInteractionsProtocol_FlexibleTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>
+    kUnknownInteractionsProtocol_FlexibleTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsProtocolFlexibleTwoWayResultTag {
+  response, // 0x1
+  transportErr, // 0x3
+}
+
+const Map<int, UnknownInteractionsProtocolFlexibleTwoWayResultTag>
+    _UnknownInteractionsProtocolFlexibleTwoWayResultTag_map = {
+  1: UnknownInteractionsProtocolFlexibleTwoWayResultTag.response,
+  3: UnknownInteractionsProtocolFlexibleTwoWayResultTag.transportErr,
+};
+
+class UnknownInteractionsProtocolFlexibleTwoWayResult extends $fidl.Union {
+  const UnknownInteractionsProtocolFlexibleTwoWayResult.withResponse(
+      UnknownInteractionsProtocolFlexibleTwoWayResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsProtocolFlexibleTwoWayResult.withTransportErr(
+      int value)
+      : _ordinal = 3,
+        _data = value;
+
+  UnknownInteractionsProtocolFlexibleTwoWayResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsProtocolFlexibleTwoWayResultTag get $tag =>
+      _UnknownInteractionsProtocolFlexibleTwoWayResultTag_map[_ordinal]!;
+
+  UnknownInteractionsProtocolFlexibleTwoWayResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get transportErr {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsProtocolFlexibleTwoWayResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsProtocolFlexibleTwoWayResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>
+    kUnknownInteractionsProtocol_FlexibleTwoWay_Result_Type =
+    $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleTwoWay_Response_Type,
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleTwoWayResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>
+    kUnknownInteractionsProtocol_FlexibleTwoWay_Result_OptType =
+    $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_FlexibleTwoWay_Response_Type,
+    3: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolFlexibleTwoWayResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsProtocolStrictEventErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsProtocolStrictEventErrResultTag>
+    _UnknownInteractionsProtocolStrictEventErrResultTag_map = {
+  1: UnknownInteractionsProtocolStrictEventErrResultTag.response,
+  2: UnknownInteractionsProtocolStrictEventErrResultTag.err,
+};
+
+class UnknownInteractionsProtocolStrictEventErrResult extends $fidl.Union {
+  const UnknownInteractionsProtocolStrictEventErrResult.withResponse(
+      UnknownInteractionsProtocolStrictEventErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsProtocolStrictEventErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsProtocolStrictEventErrResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsProtocolStrictEventErrResultTag get $tag =>
+      _UnknownInteractionsProtocolStrictEventErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsProtocolStrictEventErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsProtocolStrictEventErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsProtocolStrictEventErrResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsProtocolStrictEventErrResult>
+    kUnknownInteractionsProtocol_StrictEventErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnknownInteractionsProtocolStrictEventErrResult>
+    kUnknownInteractionsProtocol_StrictEventErr_Result_OptType =
+    $fidl.NullableUnionType<UnknownInteractionsProtocolStrictEventErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_StrictEventErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolStrictEventErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+enum UnknownInteractionsProtocolStrictTwoWayErrResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, UnknownInteractionsProtocolStrictTwoWayErrResultTag>
+    _UnknownInteractionsProtocolStrictTwoWayErrResultTag_map = {
+  1: UnknownInteractionsProtocolStrictTwoWayErrResultTag.response,
+  2: UnknownInteractionsProtocolStrictTwoWayErrResultTag.err,
+};
+
+class UnknownInteractionsProtocolStrictTwoWayErrResult extends $fidl.Union {
+  const UnknownInteractionsProtocolStrictTwoWayErrResult.withResponse(
+      UnknownInteractionsProtocolStrictTwoWayErrResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const UnknownInteractionsProtocolStrictTwoWayErrResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  UnknownInteractionsProtocolStrictTwoWayErrResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnknownInteractionsProtocolStrictTwoWayErrResultTag get $tag =>
+      _UnknownInteractionsProtocolStrictTwoWayErrResultTag_map[_ordinal]!;
+
+  UnknownInteractionsProtocolStrictTwoWayErrResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnknownInteractionsProtocolStrictTwoWayErrResult _ctor(
+      int ordinal, Object data) {
+    return UnknownInteractionsProtocolStrictTwoWayErrResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnknownInteractionsProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsProtocol_StrictTwoWayErr_Result_Type =
+    $fidl.UnionType<UnknownInteractionsProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnknownInteractionsProtocolStrictTwoWayErrResult>
+    kUnknownInteractionsProtocol_StrictTwoWayErr_Result_OptType =
+    $fidl.NullableUnionType<UnknownInteractionsProtocolStrictTwoWayErrResult>(
+  members: <int, $fidl.FidlType>{
+    1: kUnknownInteractionsProtocol_StrictTwoWayErr_Response_Type,
+    2: $fidl.Int32Type(),
+  },
+  ctor: UnknownInteractionsProtocolStrictTwoWayErrResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse({
     this.reserved: 0x0,
   });
-  ExampleFlexibleTwoWayResponse.clone(
-    ExampleFlexibleTwoWayResponse $orig, {
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse $orig, {
     int? reserved,
   }) : this(
           reserved: reserved ?? $orig.reserved,
         );
 
-  ExampleFlexibleTwoWayResponse $cloneWith({
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse $cloneWith({
     int? reserved,
   }) {
-    return ExampleFlexibleTwoWayResponse(
+    return UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse(
       reserved: reserved ?? this.reserved,
     );
   }
@@ -167,13 +1579,13 @@ class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
     $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
-  static ExampleFlexibleTwoWayResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset, int $depth) {
+  static UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
+      _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
-        return ExampleFlexibleTwoWayResponse(
+        return UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse(
             reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
@@ -183,88 +1595,965 @@ class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<ExampleFlexibleTwoWayResponse>
-    kExample_FlexibleTwoWay_Response_Type =
-    $fidl.StructType<ExampleFlexibleTwoWayResponse>(
+const $fidl.StructType<
+        UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<
+            UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse>(
         inlineSize: 1,
-        structDecode: ExampleFlexibleTwoWayResponse._structDecode);
+        structDecode:
+            UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
+                ._structDecode);
+
+class UnknownInteractionsAjarProtocolFlexibleEventErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsAjarProtocolFlexibleEventErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsAjarProtocolFlexibleEventErrResponse.clone(
+    UnknownInteractionsAjarProtocolFlexibleEventErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsAjarProtocolFlexibleEventErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsAjarProtocolFlexibleEventErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsAjarProtocolFlexibleEventErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsAjarProtocolFlexibleEventErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsAjarProtocolFlexibleEventErrResponse>
+    kUnknownInteractionsAjarProtocol_FlexibleEventErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsAjarProtocolFlexibleEventErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsAjarProtocolFlexibleEventErrResponse
+            ._structDecode);
+
+class UnknownInteractionsAjarProtocolStrictEventErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsAjarProtocolStrictEventErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsAjarProtocolStrictEventErrResponse.clone(
+    UnknownInteractionsAjarProtocolStrictEventErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsAjarProtocolStrictEventErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsAjarProtocolStrictEventErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsAjarProtocolStrictEventErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsAjarProtocolStrictEventErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsAjarProtocolStrictEventErrResponse>
+    kUnknownInteractionsAjarProtocol_StrictEventErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsAjarProtocolStrictEventErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsAjarProtocolStrictEventErrResponse
+            ._structDecode);
+
+class UnknownInteractionsAjarProtocolStrictTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsAjarProtocolStrictTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsAjarProtocolStrictTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsAjarProtocolStrictTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsAjarProtocolStrictTwoWayErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsAjarProtocolStrictTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsAjarProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsAjarProtocolStrictTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsAjarProtocolStrictTwoWayErrResponse
+            ._structDecode);
+
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
+      _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<
+        UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<
+            UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
+                ._structDecode);
+
+class UnknownInteractionsClosedProtocolStrictEventErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsClosedProtocolStrictEventErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsClosedProtocolStrictEventErrResponse.clone(
+    UnknownInteractionsClosedProtocolStrictEventErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsClosedProtocolStrictEventErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsClosedProtocolStrictEventErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsClosedProtocolStrictEventErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsClosedProtocolStrictEventErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsClosedProtocolStrictEventErrResponse>
+    kUnknownInteractionsClosedProtocol_StrictEventErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsClosedProtocolStrictEventErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsClosedProtocolStrictEventErrResponse
+            ._structDecode);
+
+class UnknownInteractionsClosedProtocolStrictTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsClosedProtocolStrictTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsClosedProtocolStrictTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsClosedProtocolStrictTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsClosedProtocolStrictTwoWayErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsClosedProtocolStrictTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsClosedProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsClosedProtocolStrictTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsClosedProtocolStrictTwoWayErrResponse
+            ._structDecode);
+
+class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse.clone(
+    UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
+      _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl
+        .StructType<UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response_Type = $fidl
+        .StructType<UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse>(
+            inlineSize: 1,
+            structDecode:
+                UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
+                    ._structDecode);
+
+class UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsDriverProtocolFlexibleTwoWayResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResponse.clone(
+    UnknownInteractionsDriverProtocolFlexibleTwoWayResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsDriverProtocolFlexibleTwoWayResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsDriverProtocolFlexibleTwoWayResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsDriverProtocolFlexibleTwoWayResponse>
+    kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Response_Type =
+    $fidl.StructType<UnknownInteractionsDriverProtocolFlexibleTwoWayResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
+            ._structDecode);
+
+class UnknownInteractionsDriverProtocolStrictTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsDriverProtocolStrictTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsDriverProtocolStrictTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsDriverProtocolStrictTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsDriverProtocolStrictTwoWayErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsDriverProtocolStrictTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsDriverProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsDriverProtocolStrictTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode: UnknownInteractionsDriverProtocolStrictTwoWayErrResponse
+            ._structDecode);
+
+class UnknownInteractionsProtocolFlexibleEventErrResponse extends $fidl.Struct {
+  const UnknownInteractionsProtocolFlexibleEventErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsProtocolFlexibleEventErrResponse.clone(
+    UnknownInteractionsProtocolFlexibleEventErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsProtocolFlexibleEventErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsProtocolFlexibleEventErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsProtocolFlexibleEventErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsProtocolFlexibleEventErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsProtocolFlexibleEventErrResponse>
+    kUnknownInteractionsProtocol_FlexibleEventErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsProtocolFlexibleEventErrResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsProtocolFlexibleEventErrResponse._structDecode);
+
+class UnknownInteractionsProtocolFlexibleTwoWayErrResponse
+    extends $fidl.Struct {
+  const UnknownInteractionsProtocolFlexibleTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsProtocolFlexibleTwoWayErrResponse.clone(
+    UnknownInteractionsProtocolFlexibleTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsProtocolFlexibleTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsProtocolFlexibleTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsProtocolFlexibleTwoWayErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsProtocolFlexibleTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayErrResponse>
+    kUnknownInteractionsProtocol_FlexibleTwoWayErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsProtocolFlexibleTwoWayErrResponse._structDecode);
+
+class UnknownInteractionsProtocolFlexibleTwoWayResponse extends $fidl.Struct {
+  const UnknownInteractionsProtocolFlexibleTwoWayResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsProtocolFlexibleTwoWayResponse.clone(
+    UnknownInteractionsProtocolFlexibleTwoWayResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsProtocolFlexibleTwoWayResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsProtocolFlexibleTwoWayResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsProtocolFlexibleTwoWayResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsProtocolFlexibleTwoWayResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayResponse>
+    kUnknownInteractionsProtocol_FlexibleTwoWay_Response_Type =
+    $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsProtocolFlexibleTwoWayResponse._structDecode);
+
+class UnknownInteractionsProtocolStrictEventErrResponse extends $fidl.Struct {
+  const UnknownInteractionsProtocolStrictEventErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsProtocolStrictEventErrResponse.clone(
+    UnknownInteractionsProtocolStrictEventErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsProtocolStrictEventErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsProtocolStrictEventErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsProtocolStrictEventErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsProtocolStrictEventErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsProtocolStrictEventErrResponse>
+    kUnknownInteractionsProtocol_StrictEventErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsProtocolStrictEventErrResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsProtocolStrictEventErrResponse._structDecode);
+
+class UnknownInteractionsProtocolStrictTwoWayErrResponse extends $fidl.Struct {
+  const UnknownInteractionsProtocolStrictTwoWayErrResponse({
+    this.reserved: 0x0,
+  });
+  UnknownInteractionsProtocolStrictTwoWayErrResponse.clone(
+    UnknownInteractionsProtocolStrictTwoWayErrResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  UnknownInteractionsProtocolStrictTwoWayErrResponse $cloneWith({
+    int? reserved,
+  }) {
+    return UnknownInteractionsProtocolStrictTwoWayErrResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+  }
+
+  static UnknownInteractionsProtocolStrictTwoWayErrResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return UnknownInteractionsProtocolStrictTwoWayErrResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<UnknownInteractionsProtocolStrictTwoWayErrResponse>
+    kUnknownInteractionsProtocol_StrictTwoWayErr_Response_Type =
+    $fidl.StructType<UnknownInteractionsProtocolStrictTwoWayErrResponse>(
+        inlineSize: 1,
+        structDecode:
+            UnknownInteractionsProtocolStrictTwoWayErrResponse._structDecode);
 
 // strictOneWay: ()
-const int _kExample_StrictOneWay_Ordinal = 0x1f9937f425c8491a;
-const $fidl.MethodType _kExample_StrictOneWay_Type = $fidl.MethodType(
+const int _kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal =
+    0xd4663d6b2b5048b;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_StrictOneWay_Type =
+    $fidl.MethodType(
   request: [],
   response: [],
-  name: r"Example.StrictOneWay",
+  name: r"UnknownInteractionsAjarProtocol.StrictOneWay",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 0,
 );
 // flexibleOneWay: ()
-const int _kExample_FlexibleOneWay_Ordinal = 0x200d2009e52a95b8;
-const $fidl.MethodType _kExample_FlexibleOneWay_Type = $fidl.MethodType(
+const int _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal =
+    0x2275b8171ae4834f;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Type =
+    $fidl.MethodType(
   request: [],
   response: [],
-  name: r"Example.FlexibleOneWay",
+  name: r"UnknownInteractionsAjarProtocol.FlexibleOneWay",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 0,
 );
 // strictTwoWay: () -> ()
-const int _kExample_StrictTwoWay_Ordinal = 0x3ee105dfeda54985;
-const $fidl.MethodType _kExample_StrictTwoWay_Type = $fidl.MethodType(
+const int _kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal =
+    0x50e66d328336038;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type =
+    $fidl.MethodType(
   request: [],
   response: [],
-  name: r"Example.StrictTwoWay",
+  name: r"UnknownInteractionsAjarProtocol.StrictTwoWay",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 0,
 );
-// flexibleTwoWay: () -> ()
-const int _kExample_FlexibleTwoWay_Ordinal = 0x7ddf3a4404acfa2c;
-const $fidl.MethodType _kExample_FlexibleTwoWay_Type = $fidl.MethodType(
+// strictTwoWayErr: () -> ()
+const int _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal =
+    0x5b47637577c69006;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type =
+    $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<ExampleFlexibleTwoWayResult>(
-        type: kExample_FlexibleTwoWay_Result_Type, offset: 0),
+    $fidl.MemberType<UnknownInteractionsAjarProtocolStrictTwoWayErrResult>(
+        type: kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Result_Type,
+        offset: 0),
   ],
-  name: r"Example.FlexibleTwoWay",
+  name: r"UnknownInteractionsAjarProtocol.StrictTwoWayErr",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 16,
 );
 // strictEvent:  -> ()
-const int _kExample_StrictEvent_Ordinal = 0x28d6af569779dfe5;
-const $fidl.MethodType _kExample_StrictEvent_Type = $fidl.MethodType(
+const int _kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal =
+    0x6022ae999e9dc2b0;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_StrictEvent_Type =
+    $fidl.MethodType(
   request: [],
   response: [],
-  name: r"Example.StrictEvent",
+  name: r"UnknownInteractionsAjarProtocol.StrictEvent",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 0,
+);
+// strictEventErr:  -> ()
+const int _kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal =
+    0x715bfcab27f735ed;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_StrictEventErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsAjarProtocolStrictEventErrResult>(
+        type: kUnknownInteractionsAjarProtocol_StrictEventErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsAjarProtocol.StrictEventErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
 );
 // flexibleEvent:  -> ()
-const int _kExample_FlexibleEvent_Ordinal = 0x1ca93992b923103a;
-const $fidl.MethodType _kExample_FlexibleEvent_Type = $fidl.MethodType(
+const int _kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal =
+    0x11c9ba570ce71df3;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_FlexibleEvent_Type =
+    $fidl.MethodType(
   request: [],
   response: [],
-  name: r"Example.FlexibleEvent",
+  name: r"UnknownInteractionsAjarProtocol.FlexibleEvent",
   requestInlineSizeV2: 0,
   responseInlineSizeV2: 0,
 );
+// flexibleEventErr:  -> ()
+const int _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal =
+    0x4fbe0d51e074e5bc;
+const $fidl.MethodType _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsAjarProtocolFlexibleEventErrResult>(
+        type: kUnknownInteractionsAjarProtocol_FlexibleEventErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsAjarProtocol.FlexibleEventErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
 
-abstract class Example {
-  $fidl.ServiceData? get $serviceData => ExampleData();
+abstract class UnknownInteractionsAjarProtocol {
+  $fidl.ServiceData? get $serviceData => UnknownInteractionsAjarProtocolData();
   $async.Future<void> strictOneWay();
   $async.Future<void> flexibleOneWay();
   $async.Future<void> strictTwoWay();
-  $async.Future<void> flexibleTwoWay();
+  $async.Future<void> strictTwoWayErr();
   $async.Stream<void>? get strictEvent;
+  $async.Stream<void>? get strictEventErr;
   $async.Stream<void>? get flexibleEvent;
+  $async.Stream<void>? get flexibleEventErr;
 }
 
-abstract class ExampleServer extends Example {
+abstract class UnknownInteractionsAjarProtocolServer
+    extends UnknownInteractionsAjarProtocol {
   $async.Future<void> $unknownOneWay(int ordinal);
-  $async.Future<void> $unknownTwoWay(int ordinal);
 }
 
 // TODO: Remove ServiceData for non-service
-class ExampleData implements $fidl.ServiceData<Example> {
-  const ExampleData();
+class UnknownInteractionsAjarProtocolData
+    implements $fidl.ServiceData<UnknownInteractionsAjarProtocol> {
+  const UnknownInteractionsAjarProtocolData();
 
   @override
   String getName() {
@@ -273,17 +2562,22 @@ class ExampleData implements $fidl.ServiceData<Example> {
 
   @override
   $fidl.AsyncBinding getBinding() {
-    return ExampleBinding();
+    return UnknownInteractionsAjarProtocolBinding();
   }
 }
 
-class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
-  ExampleProxy()
-      : super($fidl.AsyncProxyController<Example>($interfaceName: r'Example')) {
+class UnknownInteractionsAjarProtocolProxy
+    extends $fidl.AsyncProxy<UnknownInteractionsAjarProtocol>
+    implements UnknownInteractionsAjarProtocol {
+  UnknownInteractionsAjarProtocolProxy()
+      : super($fidl.AsyncProxyController<UnknownInteractionsAjarProtocol>(
+            $interfaceName: r'UnknownInteractionsAjarProtocol')) {
     ctrl.onResponse = _handleResponse;
     ctrl.whenClosed.then((_) {
       _strictEventEventStreamController.close();
+      _strictEventErrEventStreamController.close();
       _flexibleEventEventStreamController.close();
+      _flexibleEventErrEventStreamController.close();
       _$unknownEventStreamController.close();
     }, onError: (_) {});
   }
@@ -292,36 +2586,89 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
-      case _kExample_StrictEvent_Ordinal:
-        final String _name = _kExample_StrictEvent_Type.name;
+      case _kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictEvent_Type.name;
         $fidl.performCtrlWithExceptionHandling(
             _name, ctrl, 'event', _strictEventEventStreamController.addError,
             () {
           final List<$fidl.MemberType> $types =
-              _kExample_StrictEvent_Type.response!;
+              _kUnknownInteractionsAjarProtocol_StrictEvent_Type.response!;
           // ignore: prefer_const_declarations
           final $response = null;
 
           _strictEventEventStreamController.add($response);
         });
         break;
-      case _kExample_FlexibleEvent_Ordinal:
-        final String _name = _kExample_FlexibleEvent_Type.name;
+      case _kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictEventErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventErrEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_StrictEventErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsAjarProtocolStrictEventErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_StrictEventErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsAjarProtocolStrictEventErrResultTag.response) {
+            _strictEventErrEventStreamController.add(null);
+          } else {
+            _strictEventErrEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      case _kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_FlexibleEvent_Type.name;
         $fidl.performCtrlWithExceptionHandling(
             _name, ctrl, 'event', _flexibleEventEventStreamController.addError,
             () {
           final List<$fidl.MemberType> $types =
-              _kExample_FlexibleEvent_Type.response!;
+              _kUnknownInteractionsAjarProtocol_FlexibleEvent_Type.response!;
           // ignore: prefer_const_declarations
           final $response = null;
 
           _flexibleEventEventStreamController.add($response);
         });
         break;
+      case _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _flexibleEventErrEventStreamController.addError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsAjarProtocolFlexibleEventErrResult
+              $response = $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsAjarProtocolFlexibleEventErrResultTag
+                  .response) {
+            _flexibleEventErrEventStreamController.add(null);
+          } else {
+            _flexibleEventErrEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
+        break;
       default:
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
-            const String _name = "Example [UnknownEvent]";
+            const String _name =
+                "UnknownInteractionsAjarProtocol [UnknownEvent]";
             $fidl.performCtrlWithExceptionHandling(
                 _name, ctrl, 'event', _$unknownEventStreamController.addError,
                 () {
@@ -350,33 +2697,1315 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
       return;
     }
     switch ($message.ordinal) {
-      case _kExample_StrictTwoWay_Ordinal:
-        final String _name = _kExample_StrictTwoWay_Type.name;
+      case _kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type.name;
         $fidl.performCtrlWithExceptionHandling(
             _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
-              _kExample_StrictTwoWay_Type.response!;
+              _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type.response!;
           // ignore: prefer_const_declarations
           final $response = null;
 
           $completer.complete($response);
         });
         break;
-      case _kExample_FlexibleTwoWay_Ordinal:
-        final String _name = _kExample_FlexibleTwoWay_Type.name;
+      case _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type.name;
         $fidl.performCtrlWithExceptionHandling(
             _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
-              _kExample_FlexibleTwoWay_Type.response!;
+              _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type.response!;
           // ignore: prefer_const_declarations
-          final ExampleFlexibleTwoWayResult $response = $fidl.decodeMessage(
-              $message,
-              _kExample_FlexibleTwoWay_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final UnknownInteractionsAjarProtocolStrictTwoWayErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
-          if ($response.$tag == ExampleFlexibleTwoWayResultTag.response) {
+          if ($response.$tag ==
+              UnknownInteractionsAjarProtocolStrictTwoWayErrResultTag
+                  .response) {
             $completer.complete(null);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> strictOneWay() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<void> flexibleOneWay() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
+        0,
+        $fidl.CallStrictness.flexible);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<void> strictTwoWay() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> strictTwoWayErr() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  final _strictEventEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get strictEvent =>
+      _strictEventEventStreamController.stream;
+
+  final _strictEventErrEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get strictEventErr =>
+      _strictEventErrEventStreamController.stream;
+
+  final _flexibleEventEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get flexibleEvent =>
+      _flexibleEventEventStreamController.stream;
+
+  final _flexibleEventErrEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get flexibleEventErr =>
+      _flexibleEventErrEventStreamController.stream;
+
+  final _$unknownEventStreamController =
+      $async.StreamController<$fidl.UnknownEvent>.broadcast();
+  @override
+  $async.Stream<$fidl.UnknownEvent> get $unknownEvents =>
+      _$unknownEventStreamController.stream;
+}
+
+class UnknownInteractionsAjarProtocolBinding
+    extends $fidl.AsyncBinding<UnknownInteractionsAjarProtocolServer> {
+  UnknownInteractionsAjarProtocolBinding()
+      : super(r"UnknownInteractionsAjarProtocol") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _strictEvent_stream = impl.strictEvent;
+        if (_strictEvent_stream != null) {
+          $subscriptions.add(_strictEvent_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsAjarProtocol_StrictEvent_Type.response!;
+
+            sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsAjarProtocol_StrictEvent_Type.name,
+                _e,
+                close);
+          }));
+        }
+        final _strictEventErr_stream = impl.strictEventErr;
+        if (_strictEventErr_stream != null) {
+          $subscriptions.add(_strictEventErr_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData: (void
+                      $responseValue,
+                  $async.EventSink<
+                          UnknownInteractionsAjarProtocolStrictEventErrResult>
+                      $sink) {
+            $sink.add(UnknownInteractionsAjarProtocolStrictEventErrResult
+                .withResponse(
+                    UnknownInteractionsAjarProtocolStrictEventErrResponse()));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          UnknownInteractionsAjarProtocolStrictEventErrResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  UnknownInteractionsAjarProtocolStrictEventErrResult.withErr(
+                      $error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsAjarProtocol_StrictEventErr_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsAjarProtocol_StrictEventErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsAjarProtocol_StrictEventErr_Type.name,
+                _e,
+                close);
+          }));
+        }
+        final _flexibleEvent_stream = impl.flexibleEvent;
+        if (_flexibleEvent_stream != null) {
+          $subscriptions.add(_flexibleEvent_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal,
+                0,
+                $fidl.CallStrictness.flexible);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsAjarProtocol_FlexibleEvent_Type.response!;
+
+            sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsAjarProtocol_FlexibleEvent_Type.name,
+                _e,
+                close);
+          }));
+        }
+        final _flexibleEventErr_stream = impl.flexibleEventErr;
+        if (_flexibleEventErr_stream != null) {
+          $subscriptions.add(_flexibleEventErr_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData: (void
+                      $responseValue,
+                  $async.EventSink<
+                          UnknownInteractionsAjarProtocolFlexibleEventErrResult>
+                      $sink) {
+            $sink.add(UnknownInteractionsAjarProtocolFlexibleEventErrResult
+                .withResponse(
+                    UnknownInteractionsAjarProtocolFlexibleEventErrResponse()));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          UnknownInteractionsAjarProtocolFlexibleEventErrResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  UnknownInteractionsAjarProtocolFlexibleEventErrResult.withErr(
+                      $error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal,
+                0,
+                $fidl.CallStrictness.flexible);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type
+                    .response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsAjarProtocol_FlexibleEventErr_Type.name,
+                _e,
+                close);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictOneWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_StrictOneWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_StrictOneWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictOneWay();
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_FlexibleOneWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.flexibleOneWay();
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_StrictTwoWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictTwoWay();
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictTwoWayErr();
+          });
+          $future.then(($responseValue) {
+            return UnknownInteractionsAjarProtocolStrictTwoWayErrResult
+                .withResponse(
+                    UnknownInteractionsAjarProtocolStrictTwoWayErrResponse());
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return UnknownInteractionsAjarProtocolStrictTwoWayErrResult
+                  .withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type
+                    .response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        switch ($message.strictness) {
+          case $fidl.CallStrictness.flexible:
+            if ($message.txid == 0) {
+              impl!.$unknownOneWay($message.ordinal).catchError((_e) {
+                $fidl.handleException("unknown one-way", _e, close);
+              });
+              break;
+            } else {
+              continue $flexibleTwoWay;
+            }
+          $flexibleTwoWay:
+          case $fidl.CallStrictness.strict:
+            throw $fidl.FidlError(
+                r'Unexpected message name for UnknownInteractionsAjarProtocolBinding');
+        }
+        break;
+    }
+  }
+}
+
+// strictOneWay: ()
+const int _kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal =
+    0x59282385962da24;
+const $fidl.MethodType _kUnknownInteractionsClosedProtocol_StrictOneWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsClosedProtocol.StrictOneWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictTwoWay: () -> ()
+const int _kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal =
+    0x5eda305d6b22f1f7;
+const $fidl.MethodType _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsClosedProtocol.StrictTwoWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictTwoWayErr: () -> ()
+const int _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal =
+    0x4fa35d5433db4d3a;
+const $fidl.MethodType
+    _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsClosedProtocolStrictTwoWayErrResult>(
+        type: kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsClosedProtocol.StrictTwoWayErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+// strictEvent:  -> ()
+const int _kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal =
+    0xa8ee6ee302f693b;
+const $fidl.MethodType _kUnknownInteractionsClosedProtocol_StrictEvent_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsClosedProtocol.StrictEvent",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictEventErr:  -> ()
+const int _kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal =
+    0x12b105b1430a1201;
+const $fidl.MethodType _kUnknownInteractionsClosedProtocol_StrictEventErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsClosedProtocolStrictEventErrResult>(
+        type: kUnknownInteractionsClosedProtocol_StrictEventErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsClosedProtocol.StrictEventErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+
+abstract class UnknownInteractionsClosedProtocol {
+  $fidl.ServiceData? get $serviceData =>
+      UnknownInteractionsClosedProtocolData();
+  $async.Future<void> strictOneWay();
+  $async.Future<void> strictTwoWay();
+  $async.Future<void> strictTwoWayErr();
+  $async.Stream<void>? get strictEvent;
+  $async.Stream<void>? get strictEventErr;
+} // TODO: Remove ServiceData for non-service
+
+class UnknownInteractionsClosedProtocolData
+    implements $fidl.ServiceData<UnknownInteractionsClosedProtocol> {
+  const UnknownInteractionsClosedProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return UnknownInteractionsClosedProtocolBinding();
+  }
+}
+
+class UnknownInteractionsClosedProtocolProxy
+    extends $fidl.AsyncProxy<UnknownInteractionsClosedProtocol>
+    implements UnknownInteractionsClosedProtocol {
+  UnknownInteractionsClosedProtocolProxy()
+      : super($fidl.AsyncProxyController<UnknownInteractionsClosedProtocol>(
+            $interfaceName: r'UnknownInteractionsClosedProtocol')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _strictEventEventStreamController.close();
+      _strictEventErrEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictEvent_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictEvent_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _strictEventEventStreamController.add($response);
+        });
+        break;
+      case _kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictEventErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventErrEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictEventErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsClosedProtocolStrictEventErrResult
+              $response = $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsClosedProtocol_StrictEventErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsClosedProtocolStrictEventErrResultTag
+                  .response) {
+            _strictEventErrEventStreamController.add(null);
+          } else {
+            _strictEventErrEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          $completer.complete($response);
+        });
+        break;
+      case _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type
+                  .response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+              $response = $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsClosedProtocolStrictTwoWayErrResultTag
+                  .response) {
+            $completer.complete(null);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> strictOneWay() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<void> strictTwoWay() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> strictTwoWayErr() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  final _strictEventEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get strictEvent =>
+      _strictEventEventStreamController.stream;
+
+  final _strictEventErrEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get strictEventErr =>
+      _strictEventErrEventStreamController.stream;
+}
+
+class UnknownInteractionsClosedProtocolBinding
+    extends $fidl.AsyncBinding<UnknownInteractionsClosedProtocol> {
+  UnknownInteractionsClosedProtocolBinding()
+      : super(r"UnknownInteractionsClosedProtocol") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _strictEvent_stream = impl.strictEvent;
+        if (_strictEvent_stream != null) {
+          $subscriptions.add(_strictEvent_stream.listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsClosedProtocol_StrictEvent_Type.response!;
+
+            sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsClosedProtocol_StrictEvent_Type.name,
+                _e,
+                close);
+          }));
+        }
+        final _strictEventErr_stream = impl.strictEventErr;
+        if (_strictEventErr_stream != null) {
+          $subscriptions.add(_strictEventErr_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData: (void
+                      $responseValue,
+                  $async.EventSink<
+                          UnknownInteractionsClosedProtocolStrictEventErrResult>
+                      $sink) {
+            $sink.add(UnknownInteractionsClosedProtocolStrictEventErrResult
+                .withResponse(
+                    UnknownInteractionsClosedProtocolStrictEventErrResponse()));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          UnknownInteractionsClosedProtocolStrictEventErrResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  UnknownInteractionsClosedProtocolStrictEventErrResult.withErr(
+                      $error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsClosedProtocol_StrictEventErr_Type
+                    .response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsClosedProtocol_StrictEventErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsClosedProtocol_StrictEventErr_Type.name,
+                _e,
+                close);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictOneWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictOneWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsClosedProtocol_StrictOneWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictOneWay();
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsClosedProtocol_StrictTwoWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictTwoWay();
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictTwoWayErr();
+          });
+          $future.then(($responseValue) {
+            return UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+                .withResponse(
+                    UnknownInteractionsClosedProtocolStrictTwoWayErrResponse());
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+                  .withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type
+                    .response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for UnknownInteractionsClosedProtocolBinding');
+    }
+  }
+}
+
+// strictOneWay: ()
+const int _kUnknownInteractionsProtocol_StrictOneWay_Ordinal =
+    0x4e7273b964d117a6;
+const $fidl.MethodType _kUnknownInteractionsProtocol_StrictOneWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsProtocol.StrictOneWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// flexibleOneWay: ()
+const int _kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal =
+    0x818bb3a7a910446;
+const $fidl.MethodType _kUnknownInteractionsProtocol_FlexibleOneWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsProtocol.FlexibleOneWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictTwoWay: () -> ()
+const int _kUnknownInteractionsProtocol_StrictTwoWay_Ordinal =
+    0x734c996b0f37b942;
+const $fidl.MethodType _kUnknownInteractionsProtocol_StrictTwoWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsProtocol.StrictTwoWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictTwoWayErr: () -> ()
+const int _kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal =
+    0x6d1c6002c51bb967;
+const $fidl.MethodType _kUnknownInteractionsProtocol_StrictTwoWayErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsProtocolStrictTwoWayErrResult>(
+        type: kUnknownInteractionsProtocol_StrictTwoWayErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsProtocol.StrictTwoWayErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+// flexibleTwoWay: () -> ()
+const int _kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal =
+    0x4a5bb3397008b7c;
+const $fidl.MethodType _kUnknownInteractionsProtocol_FlexibleTwoWay_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsProtocolFlexibleTwoWayResult>(
+        type: kUnknownInteractionsProtocol_FlexibleTwoWay_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsProtocol.FlexibleTwoWay",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+// flexibleTwoWayErr: () -> ()
+const int _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal =
+    0x61240f878cc37c07;
+const $fidl.MethodType _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>(
+        type: kUnknownInteractionsProtocol_FlexibleTwoWayErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsProtocol.FlexibleTwoWayErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+// strictEvent:  -> ()
+const int _kUnknownInteractionsProtocol_StrictEvent_Ordinal = 0x9842669255c4fc1;
+const $fidl.MethodType _kUnknownInteractionsProtocol_StrictEvent_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsProtocol.StrictEvent",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// strictEventErr:  -> ()
+const int _kUnknownInteractionsProtocol_StrictEventErr_Ordinal =
+    0x3d956048f723bc6d;
+const $fidl.MethodType _kUnknownInteractionsProtocol_StrictEventErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsProtocolStrictEventErrResult>(
+        type: kUnknownInteractionsProtocol_StrictEventErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsProtocol.StrictEventErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+// flexibleEvent:  -> ()
+const int _kUnknownInteractionsProtocol_FlexibleEvent_Ordinal =
+    0x61bb1fab7d767866;
+const $fidl.MethodType _kUnknownInteractionsProtocol_FlexibleEvent_Type =
+    $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"UnknownInteractionsProtocol.FlexibleEvent",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 0,
+);
+// flexibleEventErr:  -> ()
+const int _kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal =
+    0x4bda3e6fb22bb5a9;
+const $fidl.MethodType _kUnknownInteractionsProtocol_FlexibleEventErr_Type =
+    $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<UnknownInteractionsProtocolFlexibleEventErrResult>(
+        type: kUnknownInteractionsProtocol_FlexibleEventErr_Result_Type,
+        offset: 0),
+  ],
+  name: r"UnknownInteractionsProtocol.FlexibleEventErr",
+  requestInlineSizeV2: 0,
+  responseInlineSizeV2: 16,
+);
+
+abstract class UnknownInteractionsProtocol {
+  $fidl.ServiceData? get $serviceData => UnknownInteractionsProtocolData();
+  $async.Future<void> strictOneWay();
+  $async.Future<void> flexibleOneWay();
+  $async.Future<void> strictTwoWay();
+  $async.Future<void> strictTwoWayErr();
+  $async.Future<void> flexibleTwoWay();
+  $async.Future<void> flexibleTwoWayErr();
+  $async.Stream<void>? get strictEvent;
+  $async.Stream<void>? get strictEventErr;
+  $async.Stream<void>? get flexibleEvent;
+  $async.Stream<void>? get flexibleEventErr;
+}
+
+abstract class UnknownInteractionsProtocolServer
+    extends UnknownInteractionsProtocol {
+  $async.Future<void> $unknownOneWay(int ordinal);
+  $async.Future<void> $unknownTwoWay(int ordinal);
+}
+
+// TODO: Remove ServiceData for non-service
+class UnknownInteractionsProtocolData
+    implements $fidl.ServiceData<UnknownInteractionsProtocol> {
+  const UnknownInteractionsProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return UnknownInteractionsProtocolBinding();
+  }
+}
+
+class UnknownInteractionsProtocolProxy
+    extends $fidl.AsyncProxy<UnknownInteractionsProtocol>
+    implements UnknownInteractionsProtocol {
+  UnknownInteractionsProtocolProxy()
+      : super($fidl.AsyncProxyController<UnknownInteractionsProtocol>(
+            $interfaceName: r'UnknownInteractionsProtocol')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _strictEventEventStreamController.close();
+      _strictEventErrEventStreamController.close();
+      _flexibleEventEventStreamController.close();
+      _flexibleEventErrEventStreamController.close();
+      _$unknownEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsProtocol_StrictEvent_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictEvent_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_StrictEvent_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _strictEventEventStreamController.add($response);
+        });
+        break;
+      case _kUnknownInteractionsProtocol_StrictEventErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictEventErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventErrEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_StrictEventErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsProtocolStrictEventErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsProtocol_StrictEventErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsProtocolStrictEventErrResultTag.response) {
+            _strictEventErrEventStreamController.add(null);
+          } else {
+            _strictEventErrEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleEvent_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleEvent_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _flexibleEventEventStreamController.addError,
+            () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleEvent_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _flexibleEventEventStreamController.add($response);
+        });
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleEventErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _flexibleEventErrEventStreamController.addError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleEventErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsProtocolFlexibleEventErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsProtocol_FlexibleEventErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsProtocolFlexibleEventErrResultTag.response) {
+            _flexibleEventErrEventStreamController.add(null);
+          } else {
+            _flexibleEventErrEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      default:
+        switch ($message.strictness) {
+          case $fidl.CallStrictness.flexible:
+            const String _name = "UnknownInteractionsProtocol [UnknownEvent]";
+            $fidl.performCtrlWithExceptionHandling(
+                _name, ctrl, 'event', _$unknownEventStreamController.addError,
+                () {
+              _$unknownEventStreamController
+                  .add($fidl.UnknownEvent($message.ordinal));
+            });
+            break;
+          case $fidl.CallStrictness.strict:
+            ctrl.proxyError($fidl.FidlError(
+                'Unexpected message ordinal: ${$message.ordinal}'));
+            break;
+        }
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kUnknownInteractionsProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictTwoWay_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_StrictTwoWay_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          $completer.complete($response);
+        });
+        break;
+      case _kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictTwoWayErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_StrictTwoWayErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsProtocolStrictTwoWayErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsProtocol_StrictTwoWayErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsProtocolStrictTwoWayErrResultTag.response) {
+            $completer.complete(null);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        });
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleTwoWay_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleTwoWay_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsProtocolFlexibleTwoWayResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsProtocol_FlexibleTwoWay_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsProtocolFlexibleTwoWayResultTag.response) {
+            $completer.complete(null);
+          } else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
+            $completer.completeError(const $fidl.UnknownMethodException());
+          } else {
+            $completer.completeError($fidl.FidlUnrecognizedTransportErrorError(
+                $response.transportErr!));
+          }
+        });
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type.name;
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type.response!;
+          // ignore: prefer_const_declarations
+          final UnknownInteractionsProtocolFlexibleTwoWayErrResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.response) {
+            $completer.complete(null);
+          } else if ($response.$tag ==
+              UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.err) {
+            $completer.completeError($fidl.MethodException($response.err));
           } else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
             $completer.completeError(const $fidl.UnknownMethodException());
           } else {
@@ -402,7 +4031,9 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExample_StrictOneWay_Ordinal, 0, $fidl.CallStrictness.strict);
+        _kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -418,7 +4049,9 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExample_FlexibleOneWay_Ordinal, 0, $fidl.CallStrictness.flexible);
+        _kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
+        0,
+        $fidl.CallStrictness.flexible);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -434,7 +4067,27 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExample_StrictTwoWay_Ordinal, 0, $fidl.CallStrictness.strict);
+        _kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> strictTwoWayErr() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -450,7 +4103,27 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExample_FlexibleTwoWay_Ordinal, 0, $fidl.CallStrictness.flexible);
+        _kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
+        0,
+        $fidl.CallStrictness.flexible);
+    final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> flexibleTwoWayErr() {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(
+        _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
+        0,
+        $fidl.CallStrictness.flexible);
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -462,11 +4135,23 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
   $async.Stream<void> get strictEvent =>
       _strictEventEventStreamController.stream;
 
+  final _strictEventErrEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get strictEventErr =>
+      _strictEventErrEventStreamController.stream;
+
   final _flexibleEventEventStreamController =
       $async.StreamController<void>.broadcast();
   @override
   $async.Stream<void> get flexibleEvent =>
       _flexibleEventEventStreamController.stream;
+
+  final _flexibleEventErrEventStreamController =
+      $async.StreamController<void>.broadcast();
+  @override
+  $async.Stream<void> get flexibleEventErr =>
+      _flexibleEventErrEventStreamController.stream;
 
   final _$unknownEventStreamController =
       $async.StreamController<$fidl.UnknownEvent>.broadcast();
@@ -475,8 +4160,9 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
       _$unknownEventStreamController.stream;
 }
 
-class ExampleBinding extends $fidl.AsyncBinding<ExampleServer> {
-  ExampleBinding() : super(r"Example") {
+class UnknownInteractionsProtocolBinding
+    extends $fidl.AsyncBinding<UnknownInteractionsProtocolServer> {
+  UnknownInteractionsProtocolBinding() : super(r"UnknownInteractionsProtocol") {
     final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
     void $unsubscribe() {
       for (final $sub in $subscriptions) {
@@ -494,16 +4180,68 @@ class ExampleBinding extends $fidl.AsyncBinding<ExampleServer> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kExample_StrictEvent_Ordinal, 0, $fidl.CallStrictness.strict);
+                _kUnknownInteractionsProtocol_StrictEvent_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
-                _kExample_StrictEvent_Type.response!;
+                _kUnknownInteractionsProtocol_StrictEvent_Type.response!;
 
             sendMessage($encoder.message);
           },
               // TODO: was ignoring errors intentional here? For methods, the
               // channel gets closed on error.
               onError: (_e) {
-            $fidl.handleException(_kExample_StrictEvent_Type.name, _e, close);
+            $fidl.handleException(
+                _kUnknownInteractionsProtocol_StrictEvent_Type.name, _e, close);
+          }));
+        }
+        final _strictEventErr_stream = impl.strictEventErr;
+        if (_strictEventErr_stream != null) {
+          $subscriptions.add(_strictEventErr_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData:
+                  (void $responseValue,
+                      $async.EventSink<
+                              UnknownInteractionsProtocolStrictEventErrResult>
+                          $sink) {
+            $sink.add(
+                UnknownInteractionsProtocolStrictEventErrResult.withResponse(
+                    UnknownInteractionsProtocolStrictEventErrResponse()));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          UnknownInteractionsProtocolStrictEventErrResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(UnknownInteractionsProtocolStrictEventErrResult.withErr(
+                  $error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_StrictEventErr_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsProtocol_StrictEventErr_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsProtocol_StrictEventErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsProtocol_StrictEventErr_Type.name,
+                _e,
+                close);
           }));
         }
         final _flexibleEvent_stream = impl.flexibleEvent;
@@ -511,17 +4249,72 @@ class ExampleBinding extends $fidl.AsyncBinding<ExampleServer> {
           $subscriptions.add(_flexibleEvent_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kExample_FlexibleEvent_Ordinal, 0,
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_FlexibleEvent_Ordinal,
+                0,
                 $fidl.CallStrictness.flexible);
             final List<$fidl.MemberType> $types =
-                _kExample_FlexibleEvent_Type.response!;
+                _kUnknownInteractionsProtocol_FlexibleEvent_Type.response!;
 
             sendMessage($encoder.message);
           },
               // TODO: was ignoring errors intentional here? For methods, the
               // channel gets closed on error.
               onError: (_e) {
-            $fidl.handleException(_kExample_FlexibleEvent_Type.name, _e, close);
+            $fidl.handleException(
+                _kUnknownInteractionsProtocol_FlexibleEvent_Type.name,
+                _e,
+                close);
+          }));
+        }
+        final _flexibleEventErr_stream = impl.flexibleEventErr;
+        if (_flexibleEventErr_stream != null) {
+          $subscriptions.add(_flexibleEventErr_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData:
+                  (void $responseValue,
+                      $async.EventSink<
+                              UnknownInteractionsProtocolFlexibleEventErrResult>
+                          $sink) {
+            $sink.add(
+                UnknownInteractionsProtocolFlexibleEventErrResult.withResponse(
+                    UnknownInteractionsProtocolFlexibleEventErrResponse()));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          UnknownInteractionsProtocolFlexibleEventErrResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  UnknownInteractionsProtocolFlexibleEventErrResult.withErr(
+                      $error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal,
+                0,
+                $fidl.CallStrictness.flexible);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsProtocol_FlexibleEventErr_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsProtocol_FlexibleEventErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kUnknownInteractionsProtocol_FlexibleEventErr_Type.name,
+                _e,
+                close);
           }));
         }
       }
@@ -533,90 +4326,198 @@ class ExampleBinding extends $fidl.AsyncBinding<ExampleServer> {
   void handleMessage(
       $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
-      case _kExample_StrictOneWay_Ordinal:
-        final String _name = _kExample_StrictOneWay_Type.name;
+      case _kUnknownInteractionsProtocol_StrictOneWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictOneWay_Type.name;
         $fidl.performWithExceptionHandling(_name, () {
           final List<$fidl.MemberType> $types =
-              _kExample_StrictOneWay_Type.request!;
+              _kUnknownInteractionsProtocol_StrictOneWay_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
                   $message,
-                  _kExample_StrictOneWay_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
+                  _kUnknownInteractionsProtocol_StrictOneWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
             return _impl.strictOneWay();
           });
         }, close);
         break;
-      case _kExample_FlexibleOneWay_Ordinal:
-        final String _name = _kExample_FlexibleOneWay_Type.name;
+      case _kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleOneWay_Type.name;
         $fidl.performWithExceptionHandling(_name, () {
           final List<$fidl.MemberType> $types =
-              _kExample_FlexibleOneWay_Type.request!;
+              _kUnknownInteractionsProtocol_FlexibleOneWay_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
                   $message,
-                  _kExample_FlexibleOneWay_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
+                  _kUnknownInteractionsProtocol_FlexibleOneWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
             return _impl.flexibleOneWay();
           });
         }, close);
         break;
-      case _kExample_StrictTwoWay_Ordinal:
-        final String _name = _kExample_StrictTwoWay_Type.name;
+      case _kUnknownInteractionsProtocol_StrictTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictTwoWay_Type.name;
         $fidl.performWithExceptionHandling(_name, () {
           final List<$fidl.MemberType> $types =
-              _kExample_StrictTwoWay_Type.request!;
+              _kUnknownInteractionsProtocol_StrictTwoWay_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
                   $message,
-                  _kExample_StrictTwoWay_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
+                  _kUnknownInteractionsProtocol_StrictTwoWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
             return _impl.strictTwoWay();
           });
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kExample_StrictTwoWay_Ordinal,
-                $message.txid, $fidl.CallStrictness.strict);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             $respond($encoder.message);
           }, onError: (_e) {
             $fidl.handleException(_name, _e, close);
           });
         }, close);
         break;
-      case _kExample_FlexibleTwoWay_Ordinal:
-        final String _name = _kExample_FlexibleTwoWay_Type.name;
+      case _kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_StrictTwoWayErr_Type.name;
         $fidl.performWithExceptionHandling(_name, () {
           final List<$fidl.MemberType> $types =
-              _kExample_FlexibleTwoWay_Type.request!;
+              _kUnknownInteractionsProtocol_StrictTwoWayErr_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
           final $async.Future<void> $future = $fidl
               .decodeMessageWithCallback<$async.Future<void>>(
                   $message,
-                  _kExample_FlexibleTwoWay_Type.requestInlineSize(
-                      $message.wireFormat), ($fidl.Decoder decoder) {
-            return _impl.flexibleTwoWay();
+                  _kUnknownInteractionsProtocol_StrictTwoWayErr_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.strictTwoWayErr();
           });
           $future.then(($responseValue) {
-            return ExampleFlexibleTwoWayResult.withResponse(
-                ExampleFlexibleTwoWayResponse());
+            return UnknownInteractionsProtocolStrictTwoWayErrResult
+                .withResponse(
+                    UnknownInteractionsProtocolStrictTwoWayErrResponse());
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return UnknownInteractionsProtocolStrictTwoWayErrResult.withErr(
+                  $error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kExample_FlexibleTwoWay_Ordinal,
-                $message.txid, $fidl.CallStrictness.flexible);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
-                _kExample_FlexibleTwoWay_Type.response!;
+                _kUnknownInteractionsProtocol_StrictTwoWayErr_Type.response!;
             $fidl.encodeMessage(
                 $encoder,
-                _kExample_FlexibleTwoWay_Type
+                _kUnknownInteractionsProtocol_StrictTwoWayErr_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleTwoWay_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleTwoWay_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsProtocol_FlexibleTwoWay_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.flexibleTwoWay();
+          });
+          $future.then(($responseValue) {
+            return UnknownInteractionsProtocolFlexibleTwoWayResult.withResponse(
+                UnknownInteractionsProtocolFlexibleTwoWayResponse());
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.flexible);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsProtocol_FlexibleTwoWay_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsProtocol_FlexibleTwoWay_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal:
+        final String _name =
+            _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type
+                      .requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.flexibleTwoWayErr();
+          });
+          $future.then(($responseValue) {
+            return UnknownInteractionsProtocolFlexibleTwoWayErrResult
+                .withResponse(
+                    UnknownInteractionsProtocolFlexibleTwoWayErrResponse());
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return UnknownInteractionsProtocolFlexibleTwoWayErrResult.withErr(
+                  $error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
+            $encoder.encodeMessageHeader(
+                _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.flexible);
+            final List<$fidl.MemberType> $types =
+                _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kUnknownInteractionsProtocol_FlexibleTwoWayErr_Type
                     .responseInlineSize($encoder.wireFormat),
                 $types[0],
                 $response);
@@ -646,7 +4547,7 @@ class ExampleBinding extends $fidl.AsyncBinding<ExampleServer> {
             break;
           case $fidl.CallStrictness.strict:
             throw $fidl.FidlError(
-                r'Unexpected message name for ExampleBinding');
+                r'Unexpected message name for UnknownInteractionsProtocolBinding');
         }
         break;
     }

@@ -7,23 +7,56 @@
   "experimental_resource_declarations": [],
   "protocol_declarations": [
     {
-      "name": "test.unknowninteractions/Example",
+      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol",
       "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-        "line": 7,
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 57,
         "column": 15,
-        "length": 7
+        "length": 37
       },
-      "openness": "open",
+      "maybe_attributes": [
+        {
+          "name": "transport",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "Driver",
+                "expression": "\"Driver\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Driver",
+                  "expression": "\"Driver\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+                "line": 56,
+                "column": 12,
+                "length": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 56,
+            "column": 1,
+            "length": 20
+          }
+        }
+      ],
+      "openness": "ajar",
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2276912608357927194,
+          "ordinal": 200845620698173917,
           "name": "StrictOneWay",
           "strict": true,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 8,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 58,
             "column": 12,
             "length": 12
           },
@@ -33,12 +66,12 @@
           "has_error": false
         },
         {
-          "ordinal": 2309537410782500280,
+          "ordinal": 3790953144423004126,
           "name": "FlexibleOneWay",
           "strict": false,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 9,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 59,
             "column": 14,
             "length": 14
           },
@@ -48,12 +81,12 @@
           "has_error": false
         },
         {
-          "ordinal": 4530909159434307973,
+          "ordinal": 523076268125513549,
           "name": "StrictTwoWay",
           "strict": true,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 11,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 61,
             "column": 12,
             "length": 12
           },
@@ -63,12 +96,1237 @@
           "has_error": false
         },
         {
-          "ordinal": 9070032238358100524,
+          "ordinal": 7057260423103547829,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 62,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 22,
+        "column": 15,
+        "length": 31
+      },
+      "openness": "ajar",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 956561744635167883,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 23,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 2483093178939638607,
+          "name": "FlexibleOneWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 24,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 364341676962177080,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 26,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 6577335136969723910,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 27,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 6927291151663612592,
+          "name": "StrictEvent",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 29,
+            "column": 15,
+            "length": 11
+          },
+          "has_request": false,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 8168400161206646253,
+          "name": "StrictEventErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 30,
+            "column": 15,
+            "length": 14
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 1281760452005010931,
+          "name": "FlexibleEvent",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 31,
+            "column": 17,
+            "length": 13
+          },
+          "has_request": false,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 5746044819880601020,
+          "name": "FlexibleEventErr",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 32,
+            "column": 17,
+            "length": 16
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 66,
+        "column": 17,
+        "length": 39
+      },
+      "maybe_attributes": [
+        {
+          "name": "transport",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "Driver",
+                "expression": "\"Driver\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Driver",
+                  "expression": "\"Driver\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+                "line": 65,
+                "column": 12,
+                "length": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 65,
+            "column": 1,
+            "length": 20
+          }
+        }
+      ],
+      "openness": "closed",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 9111839835597799810,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 67,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 2815690661228737027,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 69,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 4350840352076287137,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 70,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 35,
+        "column": 17,
+        "length": 33
+      },
+      "openness": "closed",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 401526495318825508,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 36,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 6834828562275693047,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 38,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 5738532966428790074,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 39,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 760799297757210939,
+          "name": "StrictEvent",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 41,
+            "column": 15,
+            "length": 11
+          },
+          "has_request": false,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 1346864022452572673,
+          "name": "StrictEventErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 42,
+            "column": 15,
+            "length": 14
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 46,
+        "column": 15,
+        "length": 33
+      },
+      "maybe_attributes": [
+        {
+          "name": "transport",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "Driver",
+                "expression": "\"Driver\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Driver",
+                  "expression": "\"Driver\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+                "line": 45,
+                "column": 12,
+                "length": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 45,
+            "column": 1,
+            "length": 20
+          }
+        }
+      ],
+      "openness": "open",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 6982839851953080288,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 47,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 1083620022582160398,
+          "name": "FlexibleOneWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 48,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 1481114722667499972,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 50,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 8222960355260037542,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 51,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 2929398860738426482,
           "name": "FlexibleTwoWay",
           "strict": false,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 12,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 52,
             "column": 14,
             "length": 14
           },
@@ -76,7 +1334,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -103,7 +1361,7 @@
           "has_error": false,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/Example_FlexibleTwoWay_Result",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -128,7 +1386,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/Example_FlexibleTwoWay_Response",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -153,12 +1411,502 @@
           }
         },
         {
-          "ordinal": 2942732192976592869,
+          "ordinal": 5583489590753947170,
+          "name": "FlexibleTwoWayErr",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 53,
+            "column": 14,
+            "length": 17
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 7,
+        "column": 15,
+        "length": 27
+      },
+      "openness": "open",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 5652707722400962470,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 8,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 583422011583300678,
+          "name": "FlexibleOneWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 9,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 8308184097687583042,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 11,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 7862264614495172967,
+          "name": "StrictTwoWayErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 12,
+            "column": 12,
+            "length": 15
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 334879577560091516,
+          "name": "FlexibleTwoWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 13,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": false,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 6999736795697216519,
+          "name": "FlexibleTwoWayErr",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 14,
+            "column": 14,
+            "length": 17
+          },
+          "has_request": true,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 685715276307386305,
           "name": "StrictEvent",
           "strict": true,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 14,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 16,
             "column": 15,
             "length": 11
           },
@@ -168,12 +1916,126 @@
           "has_error": false
         },
         {
-          "ordinal": 2065245206460174394,
+          "ordinal": 4437558874343717997,
+          "name": "StrictEventErr",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 17,
+            "column": 15,
+            "length": 14
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
+        },
+        {
+          "ordinal": 7042257263728687206,
           "name": "FlexibleEvent",
           "strict": false,
           "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-            "line": 15,
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 18,
             "column": 17,
             "length": 13
           },
@@ -181,6 +2043,120 @@
           "has_response": true,
           "is_composed": false,
           "has_error": false
+        },
+        {
+          "ordinal": 5465749747219019177,
+          "name": "FlexibleEventErr",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "line": 19,
+            "column": 17,
+            "length": 16
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          }
         }
       ]
     }
@@ -188,15 +2164,913 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse",
       "naming_context": [
-        "Example",
+        "UnknownInteractionsAjarDriverProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 62,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 66,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsAjarDriverProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 62,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "FlexibleEventErr",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 32,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 36,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrRequest",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictEventErr",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 30,
+        "column": 29,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 31,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 27,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 26,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "FlexibleEventErr",
+        "Request",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 32,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictEventErr",
+        "Request",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 30,
+        "column": 30,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 27,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsClosedDriverProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 70,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 71,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsClosedDriverProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 70,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictEventErr",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 42,
+        "column": 29,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 46,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 39,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 41,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictEventErr",
+        "Request",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 42,
+        "column": 30,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 39,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "FlexibleTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 53,
+        "column": 37,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 61,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
         "FlexibleTwoWay",
         "Response"
       ],
       "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-        "line": 12,
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 52,
         "column": 34,
         "length": 11
       },
@@ -204,7 +3078,595 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/Example_FlexibleTwoWay_Result",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 56,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 51,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 51,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "FlexibleTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 53,
+        "column": 38,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "FlexibleTwoWay",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 52,
+        "column": 35,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 51,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleEventErr",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 19,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 21,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 14,
+        "column": 37,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 11,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTopResponse",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleTwoWay",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 13,
+        "column": 34,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 6,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrRequest",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictEventErr",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 17,
+        "column": 29,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_envelope": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 16,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictTwoWayErr",
+        "Response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 12,
+        "column": 33,
+        "length": 11
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -267,18 +3729,170 @@
       }
     },
     {
-      "name": "test.unknowninteractions/Example_FlexibleTwoWay_Response",
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response",
       "naming_context": [
-        "Example",
+        "UnknownInteractionsProtocol",
+        "FlexibleEventErr",
+        "Request",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 19,
+        "column": 34,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 14,
+        "column": 38,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
         "FlexibleTwoWay",
         "Response",
         "result",
         "response"
       ],
       "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-        "line": 12,
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 13,
         "column": 35,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictEventErr",
+        "Request",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 17,
+        "column": 30,
+        "length": 9
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 12,
+        "column": 34,
         "length": 9
       },
       "members": [],
@@ -309,17 +3923,17 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "test.unknowninteractions/Example_FlexibleTwoWay_Result",
+      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result",
       "naming_context": [
-        "Example",
-        "FlexibleTwoWay",
+        "UnknownInteractionsAjarDriverProtocol",
+        "StrictTwoWayErr",
         "Response",
         "result"
       ],
       "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
-        "line": 12,
-        "column": 34,
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 62,
+        "column": 33,
         "length": 11
       },
       "maybe_attributes": [
@@ -335,7 +3949,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/Example_FlexibleTwoWay_Response",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -360,17 +3974,854 @@
           },
           "location": {
             "filename": "generated",
-            "line": 2,
+            "line": 67,
             "column": 1,
             "length": 8
           }
         },
         {
           "ordinal": 2,
-          "reserved": true,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
           "location": {
             "filename": "generated",
-            "line": 3,
+            "line": 68,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Result",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "FlexibleEventErr",
+        "Request",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 32,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 37,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 38,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Result",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictEventErr",
+        "Request",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 30,
+        "column": 29,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 32,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 33,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsAjarProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 27,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 27,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 28,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsClosedDriverProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 70,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 72,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 73,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Result",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictEventErr",
+        "Request",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 42,
+        "column": 29,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 47,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 48,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsClosedProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 39,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 42,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 43,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "FlexibleTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 53,
+        "column": 37,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 62,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 63,
             "column": 1,
             "length": 3
           }
@@ -405,9 +4856,876 @@
           },
           "location": {
             "filename": "generated",
-            "line": 4,
+            "line": 64,
             "column": 1,
             "length": 13
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "FlexibleTwoWay",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 52,
+        "column": 34,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 57,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "generated",
+            "line": 58,
+            "column": 1,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "name": "transport_err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 59,
+            "column": 1,
+            "length": 13
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsDriverProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 51,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 52,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 53,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Result",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleEventErr",
+        "Request",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 19,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 22,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 23,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 14,
+        "column": 37,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 12,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 13,
+            "column": 1,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "name": "transport_err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 14,
+            "column": 1,
+            "length": 13
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "FlexibleTwoWay",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 13,
+        "column": 34,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 7,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "generated",
+            "line": 8,
+            "column": 1,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "name": "transport_err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 9,
+            "column": 1,
+            "length": 13
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Result",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictEventErr",
+        "Request",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 17,
+        "column": 29,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 17,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 18,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_envelope": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result",
+      "naming_context": [
+        "UnknownInteractionsProtocol",
+        "StrictTwoWayErr",
+        "Response",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "line": 12,
+        "column": 33,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 2,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "generated",
+            "line": 3,
+            "column": 1,
+            "length": 3
           }
         }
       ],
@@ -437,15 +5755,109 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.unknowninteractions/Example_FlexibleTwoWay_Response",
-    "test.unknowninteractions/Example_FlexibleTwoWay_Result",
-    "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse",
-    "test.unknowninteractions/Example"
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Result",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrRequest",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTopResponse",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Result",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest",
+    "test.unknowninteractions/UnknownInteractionsProtocol",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Result",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Result",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrRequest",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Result",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol"
   ],
   "declarations": {
-    "test.unknowninteractions/Example": "protocol",
-    "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse": "struct",
-    "test.unknowninteractions/Example_FlexibleTwoWay_Response": "struct",
-    "test.unknowninteractions/Example_FlexibleTwoWay_Result": "union"
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsProtocol": "protocol",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrRequest": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrRequest": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Result": "union",
+    "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result": "union"
   }
 }

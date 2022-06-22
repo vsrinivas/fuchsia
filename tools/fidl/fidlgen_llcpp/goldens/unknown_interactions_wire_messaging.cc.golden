@@ -5,38 +5,62 @@
 #include <memory>
 
 namespace test_unknowninteractions {
-[[maybe_unused]] constexpr uint64_t kExample_StrictOneWay_Ordinal = 2276912608357927194lu;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_StrictOneWay_Ordinal = 5652707722400962470lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr uint64_t kExample_FlexibleOneWay_Ordinal = 2309537410782500280lu;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal = 583422011583300678lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
-[[maybe_unused]] constexpr uint64_t kExample_StrictTwoWay_Ordinal = 4530909159434307973lu;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWay_Ordinal = 8308184097687583042lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-[[maybe_unused]] constexpr uint64_t kExample_FlexibleTwoWay_Ordinal = 9070032238358100524lu;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal = 7862264614495172967lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-extern "C" const fidl_type_t test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
 
-[[maybe_unused]] constexpr uint64_t kExample_StrictEvent_Ordinal = 2942732192976592869lu;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal = 334879577560091516lu;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
-[[maybe_unused]] constexpr uint64_t kExample_FlexibleEvent_Ordinal = 2065245206460174394lu;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
 
-[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal = 6999736795697216519lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_StrictEvent_Ordinal = 685715276307386305lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_StrictEventErr_Ordinal = 4437558874343717997lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEvent_Ordinal = 7042257263728687206lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal = 5465749747219019177lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>::WireResult(
-    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>* request) {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
@@ -47,8 +71,8 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::StrictOneWay>();
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
@@ -58,7 +82,7 @@ namespace test_unknowninteractions {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>> request_message(
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
@@ -69,11 +93,11 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>::WireResult(
-    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>* request) {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
@@ -84,8 +108,8 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleOneWay>();
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
@@ -95,7 +119,7 @@ namespace test_unknowninteractions {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>> request_message(
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
@@ -106,15 +130,15 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>::WireResult(
-    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>* request, std::optional<zx::time> deadline) {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> decoded{
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
           deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
@@ -128,8 +152,8 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::StrictTwoWay>();
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
@@ -137,17 +161,17 @@ namespace test_unknowninteractions {
   }
   uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>> request_message(
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>> decoded{
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded{
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
@@ -161,15 +185,86 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>::WireResult(
-    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>* request, std::optional<zx::time> deadline) {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> decoded{
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded{
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
           deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
@@ -183,8 +278,8 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
-::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleTwoWay>();
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
@@ -192,17 +287,17 @@ namespace test_unknowninteractions {
   }
   uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::MessageDirection::kSending>();
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> request_message(
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> decoded{
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded{
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
@@ -214,127 +309,262 @@ namespace test_unknowninteractions {
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
 }  // namespace test_unknowninteractions
 #ifdef __Fuchsia__
 
-::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::Example>::StrictOneWay() {
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictOneWay() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay> _request_object{};
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
       ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::Example>::FlexibleOneWay() {
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleOneWay() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay> _request_object{};
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
       ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 
-::fidl::internal::WireThenable<::test_unknowninteractions::Example::StrictTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() {
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> _request{};
-  return ::fidl::internal::WireThenable<::test_unknowninteractions::Example::StrictTwoWay>{
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWay() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>{
       _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 
-::fidl::internal::WireThenable<::test_unknowninteractions::Example::FlexibleTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() {
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> _request{};
-  return ::fidl::internal::WireThenable<::test_unknowninteractions::Example::FlexibleTwoWay>{
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayErr() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>{
       _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
-::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::Example>::StrictOneWay() {
-  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::StrictOneWay>();
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWay() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayErr() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay> _request{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>> _request_message(
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::Example>::FlexibleOneWay() {
-  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleOneWay>();
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay> _request{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>> _request_message(
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() {
-  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::StrictTwoWay>();
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> _request{};
-  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::StrictTwoWay>{
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>{
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
 }
-::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::FlexibleTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() {
-  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleTwoWay>();
-  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> _request{};
-  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::Example::FlexibleTwoWay>{
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>{
       _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
 }
 
-::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
-fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Example>::StrictTwoWay() {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWay() {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay> _request{};
-        return ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
 
-::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
-fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Example>::FlexibleTwoWay() {
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayErr() {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay> _request{};
-        return ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-::fidl::Status fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_unknowninteractions::Example> event_storage;
-  fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example> dispatcher{this};
+::fidl::Status fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_unknowninteractions::UnknownInteractionsProtocol> event_storage;
+  fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
 ::fidl::Status
-fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example>::DispatchEvent(
+fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::DispatchEvent(
     ::fidl::IncomingMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
-    case ::test_unknowninteractions::kExample_StrictEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>> decoded{std::move(msg)};
+    case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> decoded{std::move(msg)};
       if (!decoded.ok()) {
         return decoded;
       }
       if (event_handler()) {
-        ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent> empty_event;
+        ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> empty_event;
         auto* primary = &empty_event;
         event_handler()->StrictEvent(primary);
       }
       return ::fidl::Status::Ok();
     }
-    case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>> decoded{std::move(msg)};
+    case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> decoded{std::move(msg)};
       if (!decoded.ok()) {
         return decoded;
       }
       if (event_handler()) {
-        ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent> empty_event;
+        auto* primary = &decoded.PrimaryObject()->body;
+        event_handler()->StrictEventErr(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> empty_event;
         auto* primary = &empty_event;
         event_handler()->FlexibleEvent(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        auto* primary = &decoded.PrimaryObject()->body;
+        event_handler()->FlexibleEventErr(primary);
       }
       return ::fidl::Status::Ok();
     }
@@ -346,101 +576,125 @@ fidl::internal::WireEventDispatcher<::test_unknowninteractions::Example>::Dispat
 
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example>::entries_[] = {
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_[] = {
     {
-        ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay> empty_request;
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> empty_request;
           auto* primary = &empty_request;
-          ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::StrictOneWay>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::Example>*>(interface)->StrictOneWay(
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictOneWay(
               primary, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
-        ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay> empty_request;
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> empty_request;
           auto* primary = &empty_request;
-          ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::FlexibleOneWay>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::Example>*>(interface)->FlexibleOneWay(
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleOneWay(
               primary, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
-        ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay> empty_request;
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> empty_request;
           auto* primary = &empty_request;
-          ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::StrictTwoWay>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::Example>*>(interface)->StrictTwoWay(
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWay(
               primary, completer);
           return ::fidl::Status::Ok();
         },
     },
     {
-        ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay> empty_request;
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> empty_request;
           auto* primary = &empty_request;
-          ::fidl::internal::WireCompleter<::test_unknowninteractions::Example::FlexibleTwoWay>::Sync completer(txn);
-          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::Example>*>(interface)->FlexibleTwoWay(
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayErr(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayErr(
               primary, completer);
           return ::fidl::Status::Ok();
         },
     },
 };
 
-const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example>::entries_end_ =
-    &entries_[4];
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_end_ =
+    &entries_[6];
 
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example>::TryDispatch(
-    ::fidl::WireServer<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage& msg,
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::TryDispatch(
+    ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example>::Dispatch(::fidl::WireServer<::test_unknowninteractions::Example>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
 }
-void fidl::WireServer<::test_unknowninteractions::Example>::dispatch_message(
+void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Example>::Dispatch(this, std::move(msg), storage_view, txn);
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::Reply() {
   return MakeReply();
 }
 
-void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::MakeReply() {
-  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay> _response{};
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::Reply() {
   return MakeReply();
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::MakeReply() {
-  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay> _response{};
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::Example::StrictTwoWay>();
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -448,7 +702,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example
     return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
   }
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
       _response_message(
           _allocation->data, _buffer_size, &_response);
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -457,28 +711,42 @@ void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
-  return MakeReply(result);
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
 }
 
-void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
-  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay> _response{result};
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
-  return MakeReply(result);
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
-  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay> _response{result};
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleTwoWay>();
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -486,7 +754,53 @@ void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example
     return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
   }
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport>
       _response_message(
           _allocation->data, _buffer_size, &_response);
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -494,50 +808,134 @@ void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example
 }
 #endif  // __Fuchsia__
 
-void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictOneWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_StrictOneWay_Ordinal, ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags);
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
 }
 
-void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleOneWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags);
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::StrictTwoWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags);
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
 }
 
-void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal, ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags);
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithErr(std::move(error)));
 }
 
-void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::Example::FlexibleTwoWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags);
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
 }
 
-void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags);
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_StrictEvent_Ordinal, ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags);
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
 }
 
-void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>::_InitHeader() {
-  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal, ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags);
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
 
-fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example>::StrictEvent() {
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent> _response{};
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::Example>::StrictEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::Example::StrictEvent>();
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -545,48 +943,48 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent> _response{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::Example>::StrictEvent() {
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent> _response{};
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Status{_message};
 }
 
-fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::Example>::StrictEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::Example::StrictEvent>();
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent> _response{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
       _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Status{_message};
 }
 
-fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent> _response{};
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleEvent>();
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -594,32 +992,1518 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent> _response{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent> _response{};
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Status{_message};
 }
 
-fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::Example>::FlexibleEvent() {
-  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleEvent>();
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent> _response{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::Example::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+#endif  // __Fuchsia__
+
+namespace test_unknowninteractions {
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal = 401526495318825508lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal = 6834828562275693047lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal = 5738532966428790074lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal = 760799297757210939lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal = 1346864022452572673lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWay() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayErr() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>> _request_message(
+      _allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_unknowninteractions::UnknownInteractionsClosedProtocol> event_storage;
+  fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+::fidl::Status
+fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  switch (msg.header()->ordinal) {
+    case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> empty_event;
+        auto* primary = &empty_event;
+        event_handler()->StrictEvent(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        auto* primary = &decoded.PrimaryObject()->body;
+        event_handler()->StrictEventErr(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    default:
+      return ::fidl::Status::UnknownOrdinal();
+  }
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_[] = {
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictOneWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayErr(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_end_ =
+    &entries_[3];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::TryDispatch(
+    ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags);
+}
+
+#ifdef __Fuchsia__
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+#endif  // __Fuchsia__
+
+namespace test_unknowninteractions {
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal = 956561744635167883lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal = 2483093178939638607lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal = 364341676962177080lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal = 6577335136969723910lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal = 6927291151663612592lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal = 8168400161206646253lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal = 1281760452005010931lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal = 5746044819880601020lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::WireResult(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client.handle(), handle_storage.view(bytes_.view()),
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    SetStatus(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> request_message(
+      request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(
+          client_end.handle(),
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> _request_object{};
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWay() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+
+::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayErr() {
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>> _request_message(
+      _allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>> _request_message(
+      _allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _request{};
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size, &_request};
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+
+::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _request{};
+        return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
+      });
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_unknowninteractions::UnknownInteractionsAjarProtocol> event_storage;
+  fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+::fidl::Status
+fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  switch (msg.header()->ordinal) {
+    case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> empty_event;
+        auto* primary = &empty_event;
+        event_handler()->StrictEvent(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        auto* primary = &decoded.PrimaryObject()->body;
+        event_handler()->StrictEventErr(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> empty_event;
+        auto* primary = &empty_event;
+        event_handler()->FlexibleEvent(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal: {
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return decoded;
+      }
+      if (event_handler()) {
+        auto* primary = &decoded.PrimaryObject()->body;
+        event_handler()->FlexibleEventErr(primary);
+      }
+      return ::fidl::Status::Ok();
+    }
+    default:
+      return ::fidl::Status::UnknownOrdinal();
+  }
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_[] = {
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictOneWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->FlexibleOneWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWay(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayErr(
+              primary, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_end_ =
+    &entries_[4];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::TryDispatch(
+    ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message{
+          ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport>
+      _response_message(
+          _allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags);
+}
+
+#ifdef __Fuchsia__
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    _inner().HandleSendError(_allocation.error_value());
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message(
+      _allocation->data, _buffer_size, &_response);
+  return _inner().SendEvent(_response_message.GetOutgoingMessage());
+}
+
+fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result};
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
+  _message.Write(_transport());
+  return ::fidl::Status{_message};
+}
+
+fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message(
       _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());

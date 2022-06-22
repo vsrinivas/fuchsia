@@ -1,0 +1,71 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.unknowninteractions;
+
+open protocol UnknownInteractionsProtocol {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+
+    strict -> StrictEvent();
+    strict -> StrictEventErr(struct {}) error int32;
+    flexible -> FlexibleEvent();
+    flexible -> FlexibleEventErr(struct {}) error int32;
+};
+
+ajar protocol UnknownInteractionsAjarProtocol {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+
+    strict -> StrictEvent();
+    strict -> StrictEventErr(struct {}) error int32;
+    flexible -> FlexibleEvent();
+    flexible -> FlexibleEventErr(struct {}) error int32;
+};
+
+closed protocol UnknownInteractionsClosedProtocol {
+    strict StrictOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+
+    strict -> StrictEvent();
+    strict -> StrictEventErr(struct {}) error int32;
+};
+
+@transport("Driver")
+open protocol UnknownInteractionsDriverProtocol {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+};
+
+@transport("Driver")
+ajar protocol UnknownInteractionsAjarDriverProtocol {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+};
+
+@transport("Driver")
+closed protocol UnknownInteractionsClosedDriverProtocol {
+    strict StrictOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+};

@@ -22,12 +22,13 @@ import './fidl_async.dart';
 // ignore_for_file: library_prefixes
 // ignore_for_file: unused_shown_name
 
-class Example$TestBase extends ExampleServer {
+class UnknownInteractionsAjarProtocol$TestBase
+    extends UnknownInteractionsAjarProtocolServer {
   @override
   $async.Future<void> strictOneWay() {
     return $async.Future.error(
         UnimplementedError(
-            r'strictOneWay not implemented on Example test base. Please implement.'),
+            r'strictOneWay not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -35,7 +36,7 @@ class Example$TestBase extends ExampleServer {
   $async.Future<void> flexibleOneWay() {
     return $async.Future.error(
         UnimplementedError(
-            r'flexibleOneWay not implemented on Example test base. Please implement.'),
+            r'flexibleOneWay not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -43,15 +44,15 @@ class Example$TestBase extends ExampleServer {
   $async.Future<void> strictTwoWay() {
     return $async.Future.error(
         UnimplementedError(
-            r'strictTwoWay not implemented on Example test base. Please implement.'),
+            r'strictTwoWay not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
   @override
-  $async.Future<void> flexibleTwoWay() {
+  $async.Future<void> strictTwoWayErr() {
     return $async.Future.error(
         UnimplementedError(
-            r'flexibleTwoWay not implemented on Example test base. Please implement.'),
+            r'strictTwoWayErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -59,7 +60,15 @@ class Example$TestBase extends ExampleServer {
   $async.Stream<void> get strictEvent {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
-            r'strictEvent not implemented on Example test base. Please implement.'),
+            r'strictEvent not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get strictEventErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current));
   }
 
@@ -67,21 +76,162 @@ class Example$TestBase extends ExampleServer {
   $async.Stream<void> get flexibleEvent {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
-            r'flexibleEvent not implemented on Example test base. Please implement.'),
+            r'flexibleEvent not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get flexibleEventErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current));
   }
 
   $async.Future<void> $unknownOneWay(int ordinal) {
     return $async.Future.error(
         UnimplementedError(
-            r'$unknownOneWay not implemented on Example test base. Please implement.'),
+            r'$unknownOneWay not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+}
+
+class UnknownInteractionsClosedProtocol$TestBase
+    extends UnknownInteractionsClosedProtocol {
+  @override
+  $async.Future<void> strictOneWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictOneWay not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> strictTwoWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWay not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> strictTwoWayErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<void> get strictEvent {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEvent not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get strictEventErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+}
+
+class UnknownInteractionsProtocol$TestBase
+    extends UnknownInteractionsProtocolServer {
+  @override
+  $async.Future<void> strictOneWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictOneWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> flexibleOneWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleOneWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> strictTwoWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> strictTwoWayErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> flexibleTwoWay() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<void> flexibleTwoWayErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<void> get strictEvent {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEvent not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get strictEventErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get flexibleEvent {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEvent not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<void> get flexibleEventErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  $async.Future<void> $unknownOneWay(int ordinal) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'$unknownOneWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
   $async.Future<void> $unknownTwoWay(int ordinal) {
     return $async.Future.error(
         UnimplementedError(
-            r'$unknownTwoWay not implemented on Example test base. Please implement.'),
+            r'$unknownTwoWay not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current);
   }
 }

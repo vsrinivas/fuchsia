@@ -443,6 +443,9 @@ type Protocol struct {
 	// Name is the Golang name of the protocol.
 	Name string
 
+	// Openness of this protocol.
+	Openness fidlgen.Openness
+
 	// ProxyName is the name of the proxy type for this FIDL protocol.
 	ProxyName string
 
@@ -1190,6 +1193,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
 		Attributes:           val.Attributes,
 		Name:                 c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix),
+		Openness:             val.Openness,
 		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+TransitionalBaseSuffix),
 		ProxyName:            c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+ProxySuffix),
 		ProxyType:            proxyType,

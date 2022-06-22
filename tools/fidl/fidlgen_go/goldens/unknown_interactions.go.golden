@@ -6,50 +6,857 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
-type ExampleFlexibleTwoWayResponse struct {
+type UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
 
-var _mExampleFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(ExampleFlexibleTwoWayResponse{})
+var _mUnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse{})
 
-func (msg *ExampleFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
-	return _mExampleFlexibleTwoWayResponse
+func (msg *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
 }
 
-type exampleWithCtxFlexibleTwoWayResponse struct {
-	_      struct{}                    `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result ExampleFlexibleTwoWayResult `fidl_offset_v2:"0"`
+type UnknownInteractionsAjarProtocolFlexibleEventErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
 
-var _mexampleWithCtxFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(exampleWithCtxFlexibleTwoWayResponse{})
+var _mUnknownInteractionsAjarProtocolFlexibleEventErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolFlexibleEventErrResponse{})
 
-func (msg *exampleWithCtxFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
-	return _mexampleWithCtxFlexibleTwoWayResponse
+func (msg *UnknownInteractionsAjarProtocolFlexibleEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolFlexibleEventErrResponse
 }
 
-type I_exampleFlexibleTwoWayResultTag uint64
+type UnknownInteractionsAjarProtocolStrictEventErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsAjarProtocolStrictEventErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolStrictEventErrResponse{})
+
+func (msg *UnknownInteractionsAjarProtocolStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolStrictEventErrResponse
+}
+
+type UnknownInteractionsAjarProtocolStrictTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsAjarProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolStrictTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsAjarProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolStrictTwoWayErrResponse
+}
+
+type UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
+}
+
+type UnknownInteractionsClosedProtocolStrictEventErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsClosedProtocolStrictEventErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedProtocolStrictEventErrResponse{})
+
+func (msg *UnknownInteractionsClosedProtocolStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedProtocolStrictEventErrResponse
+}
+
+type UnknownInteractionsClosedProtocolStrictTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsClosedProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedProtocolStrictTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsClosedProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedProtocolStrictTwoWayErrResponse
+}
+
+type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
+}
+
+type UnknownInteractionsDriverProtocolFlexibleTwoWayResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsDriverProtocolFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayResponse{})
+
+func (msg *UnknownInteractionsDriverProtocolFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolFlexibleTwoWayResponse
+}
+
+type UnknownInteractionsDriverProtocolStrictTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsDriverProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolStrictTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsDriverProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolStrictTwoWayErrResponse
+}
+
+type UnknownInteractionsProtocolFlexibleEventErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleEventErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleEventErrResponse{})
+
+func (msg *UnknownInteractionsProtocolFlexibleEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleEventErrResponse
+}
+
+type UnknownInteractionsProtocolFlexibleTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsProtocolFlexibleTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleTwoWayErrResponse
+}
+
+type UnknownInteractionsProtocolFlexibleTwoWayResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayResponse{})
+
+func (msg *UnknownInteractionsProtocolFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleTwoWayResponse
+}
+
+type UnknownInteractionsProtocolStrictEventErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsProtocolStrictEventErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolStrictEventErrResponse{})
+
+func (msg *UnknownInteractionsProtocolStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolStrictEventErrResponse
+}
+
+type UnknownInteractionsProtocolStrictTwoWayErrResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mUnknownInteractionsProtocolStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolStrictTwoWayErrResponse{})
+
+func (msg *UnknownInteractionsProtocolStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolStrictTwoWayErrResponse
+}
+
+type unknownInteractionsAjarDriverProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                                   `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsAjarDriverProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsAjarDriverProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsAjarDriverProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsAjarDriverProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsAjarProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                             `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsAjarProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsAjarProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsAjarProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsAjarProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsAjarProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsAjarProtocolWithCtxStrictEventErrResponse struct {
+	_      struct{}                                            `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsAjarProtocolStrictEventErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsAjarProtocolWithCtxStrictEventErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsAjarProtocolWithCtxStrictEventErrResponse{})
+
+func (msg *unknownInteractionsAjarProtocolWithCtxStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsAjarProtocolWithCtxStrictEventErrResponse
+}
+
+type unknownInteractionsAjarProtocolWithCtxFlexibleEventErrResponse struct {
+	_      struct{}                                              `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsAjarProtocolFlexibleEventErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsAjarProtocolWithCtxFlexibleEventErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsAjarProtocolWithCtxFlexibleEventErrResponse{})
+
+func (msg *unknownInteractionsAjarProtocolWithCtxFlexibleEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsAjarProtocolWithCtxFlexibleEventErrResponse
+}
+
+type unknownInteractionsClosedDriverProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                                     `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsClosedDriverProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsClosedDriverProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsClosedDriverProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsClosedDriverProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                               `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsClosedProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsClosedProtocolWithCtxStrictEventErrResponse struct {
+	_      struct{}                                              `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsClosedProtocolStrictEventErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsClosedProtocolWithCtxStrictEventErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsClosedProtocolWithCtxStrictEventErrResponse{})
+
+func (msg *unknownInteractionsClosedProtocolWithCtxStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsClosedProtocolWithCtxStrictEventErrResponse
+}
+
+type unknownInteractionsDriverProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                               `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsDriverProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsDriverProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsDriverProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsDriverProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsDriverProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayResponse struct {
+	_      struct{}                                              `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsDriverProtocolFlexibleTwoWayResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsDriverProtocolWithCtxFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayResponse{})
+
+func (msg *unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsDriverProtocolWithCtxFlexibleTwoWayResponse
+}
+
+type unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayErrResponse struct {
+	_      struct{}                                                 `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsDriverProtocolWithCtxFlexibleTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayErrResponse{})
+
+func (msg *unknownInteractionsDriverProtocolWithCtxFlexibleTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsDriverProtocolWithCtxFlexibleTwoWayErrResponse
+}
+
+type unknownInteractionsProtocolWithCtxStrictTwoWayErrResponse struct {
+	_      struct{}                                         `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsProtocolStrictTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsProtocolWithCtxStrictTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsProtocolWithCtxStrictTwoWayErrResponse{})
+
+func (msg *unknownInteractionsProtocolWithCtxStrictTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsProtocolWithCtxStrictTwoWayErrResponse
+}
+
+type unknownInteractionsProtocolWithCtxFlexibleTwoWayResponse struct {
+	_      struct{}                                        `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsProtocolFlexibleTwoWayResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsProtocolWithCtxFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(unknownInteractionsProtocolWithCtxFlexibleTwoWayResponse{})
+
+func (msg *unknownInteractionsProtocolWithCtxFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsProtocolWithCtxFlexibleTwoWayResponse
+}
+
+type unknownInteractionsProtocolWithCtxFlexibleTwoWayErrResponse struct {
+	_      struct{}                                           `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsProtocolFlexibleTwoWayErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsProtocolWithCtxFlexibleTwoWayErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsProtocolWithCtxFlexibleTwoWayErrResponse{})
+
+func (msg *unknownInteractionsProtocolWithCtxFlexibleTwoWayErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsProtocolWithCtxFlexibleTwoWayErrResponse
+}
+
+type unknownInteractionsProtocolWithCtxStrictEventErrResponse struct {
+	_      struct{}                                        `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsProtocolStrictEventErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsProtocolWithCtxStrictEventErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsProtocolWithCtxStrictEventErrResponse{})
+
+func (msg *unknownInteractionsProtocolWithCtxStrictEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsProtocolWithCtxStrictEventErrResponse
+}
+
+type unknownInteractionsProtocolWithCtxFlexibleEventErrResponse struct {
+	_      struct{}                                          `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result UnknownInteractionsProtocolFlexibleEventErrResult `fidl_offset_v2:"0"`
+}
+
+var _munknownInteractionsProtocolWithCtxFlexibleEventErrResponse = _bindings.CreateLazyMarshaler(unknownInteractionsProtocolWithCtxFlexibleEventErrResponse{})
+
+func (msg *unknownInteractionsProtocolWithCtxFlexibleEventErrResponse) Marshaler() _bindings.Marshaler {
+	return _munknownInteractionsProtocolWithCtxFlexibleEventErrResponse
+}
+
+type I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag uint64
 
 const (
-	ExampleFlexibleTwoWayResultResponse     = 1 // 0x00000001
-	ExampleFlexibleTwoWayResultTransportErr = 3 // 0x00000003
+	UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
 )
 
-type ExampleFlexibleTwoWayResult struct {
-	I_exampleFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	Response                         ExampleFlexibleTwoWayResponse `fidl_ordinal:"1"`
-	TransportErr                     int32                         `fidl_ordinal:"3"`
+type UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                        UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                             int32                                                        `fidl_ordinal:"2"`
 }
 
-var _mExampleFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(ExampleFlexibleTwoWayResult{})
+var _mUnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult{})
 
-func (msg *ExampleFlexibleTwoWayResult) Marshaler() _bindings.Marshaler {
-	return _mExampleFlexibleTwoWayResult
+func (msg *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult
 }
 
-func (_m *ExampleFlexibleTwoWayResult) reset() {
-	switch _m.I_exampleFlexibleTwoWayResultTag {
+func (_m *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag {
 	case 1:
-		var _zeroed ExampleFlexibleTwoWayResponse
+		var _zeroed UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse) UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag uint64
+
+const (
+	UnknownInteractionsAjarProtocolFlexibleEventErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsAjarProtocolFlexibleEventErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsAjarProtocolFlexibleEventErrResult struct {
+	I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                   UnknownInteractionsAjarProtocolFlexibleEventErrResponse `fidl_ordinal:"1"`
+	Err                                                        int32                                                   `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsAjarProtocolFlexibleEventErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolFlexibleEventErrResult{})
+
+func (msg *UnknownInteractionsAjarProtocolFlexibleEventErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolFlexibleEventErrResult
+}
+
+func (_m *UnknownInteractionsAjarProtocolFlexibleEventErrResult) reset() {
+	switch _m.I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsAjarProtocolFlexibleEventErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsAjarProtocolFlexibleEventErrResult) Which() I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag {
+	return _m.I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag
+}
+
+func (_m *UnknownInteractionsAjarProtocolFlexibleEventErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag)
+}
+
+func (_m *UnknownInteractionsAjarProtocolFlexibleEventErrResult) SetResponse(response UnknownInteractionsAjarProtocolFlexibleEventErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag = UnknownInteractionsAjarProtocolFlexibleEventErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsAjarProtocolFlexibleEventErrResultWithResponse(response UnknownInteractionsAjarProtocolFlexibleEventErrResponse) UnknownInteractionsAjarProtocolFlexibleEventErrResult {
+	var _u UnknownInteractionsAjarProtocolFlexibleEventErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsAjarProtocolFlexibleEventErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolFlexibleEventErrResultTag = UnknownInteractionsAjarProtocolFlexibleEventErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsAjarProtocolFlexibleEventErrResultWithErr(err int32) UnknownInteractionsAjarProtocolFlexibleEventErrResult {
+	var _u UnknownInteractionsAjarProtocolFlexibleEventErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsAjarProtocolStrictEventErrResultTag uint64
+
+const (
+	UnknownInteractionsAjarProtocolStrictEventErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsAjarProtocolStrictEventErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsAjarProtocolStrictEventErrResult struct {
+	I_unknownInteractionsAjarProtocolStrictEventErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                 UnknownInteractionsAjarProtocolStrictEventErrResponse `fidl_ordinal:"1"`
+	Err                                                      int32                                                 `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsAjarProtocolStrictEventErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolStrictEventErrResult{})
+
+func (msg *UnknownInteractionsAjarProtocolStrictEventErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolStrictEventErrResult
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictEventErrResult) reset() {
+	switch _m.I_unknownInteractionsAjarProtocolStrictEventErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsAjarProtocolStrictEventErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictEventErrResult) Which() I_unknownInteractionsAjarProtocolStrictEventErrResultTag {
+	return _m.I_unknownInteractionsAjarProtocolStrictEventErrResultTag
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictEventErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsAjarProtocolStrictEventErrResultTag)
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictEventErrResult) SetResponse(response UnknownInteractionsAjarProtocolStrictEventErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolStrictEventErrResultTag = UnknownInteractionsAjarProtocolStrictEventErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsAjarProtocolStrictEventErrResultWithResponse(response UnknownInteractionsAjarProtocolStrictEventErrResponse) UnknownInteractionsAjarProtocolStrictEventErrResult {
+	var _u UnknownInteractionsAjarProtocolStrictEventErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictEventErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolStrictEventErrResultTag = UnknownInteractionsAjarProtocolStrictEventErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsAjarProtocolStrictEventErrResultWithErr(err int32) UnknownInteractionsAjarProtocolStrictEventErrResult {
+	var _u UnknownInteractionsAjarProtocolStrictEventErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsAjarProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsAjarProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsAjarProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                  UnknownInteractionsAjarProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                       int32                                                  `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsAjarProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsAjarProtocolStrictTwoWayErrResult{})
+
+func (msg *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsAjarProtocolStrictTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsAjarProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsAjarProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag = UnknownInteractionsAjarProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsAjarProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsAjarProtocolStrictTwoWayErrResponse) UnknownInteractionsAjarProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsAjarProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsAjarProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsAjarProtocolStrictTwoWayErrResultTag = UnknownInteractionsAjarProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsAjarProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsAjarProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsAjarProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                          UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                               int32                                                          `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult{})
+
+func (msg *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse) UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsClosedProtocolStrictEventErrResultTag uint64
+
+const (
+	UnknownInteractionsClosedProtocolStrictEventErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsClosedProtocolStrictEventErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsClosedProtocolStrictEventErrResult struct {
+	I_unknownInteractionsClosedProtocolStrictEventErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                   UnknownInteractionsClosedProtocolStrictEventErrResponse `fidl_ordinal:"1"`
+	Err                                                        int32                                                   `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsClosedProtocolStrictEventErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedProtocolStrictEventErrResult{})
+
+func (msg *UnknownInteractionsClosedProtocolStrictEventErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedProtocolStrictEventErrResult
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictEventErrResult) reset() {
+	switch _m.I_unknownInteractionsClosedProtocolStrictEventErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsClosedProtocolStrictEventErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictEventErrResult) Which() I_unknownInteractionsClosedProtocolStrictEventErrResultTag {
+	return _m.I_unknownInteractionsClosedProtocolStrictEventErrResultTag
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictEventErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsClosedProtocolStrictEventErrResultTag)
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictEventErrResult) SetResponse(response UnknownInteractionsClosedProtocolStrictEventErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedProtocolStrictEventErrResultTag = UnknownInteractionsClosedProtocolStrictEventErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsClosedProtocolStrictEventErrResultWithResponse(response UnknownInteractionsClosedProtocolStrictEventErrResponse) UnknownInteractionsClosedProtocolStrictEventErrResult {
+	var _u UnknownInteractionsClosedProtocolStrictEventErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictEventErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedProtocolStrictEventErrResultTag = UnknownInteractionsClosedProtocolStrictEventErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsClosedProtocolStrictEventErrResultWithErr(err int32) UnknownInteractionsClosedProtocolStrictEventErrResult {
+	var _u UnknownInteractionsClosedProtocolStrictEventErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsClosedProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsClosedProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsClosedProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                    UnknownInteractionsClosedProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                         int32                                                    `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsClosedProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsClosedProtocolStrictTwoWayErrResult{})
+
+func (msg *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsClosedProtocolStrictTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsClosedProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsClosedProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag = UnknownInteractionsClosedProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsClosedProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsClosedProtocolStrictTwoWayErrResponse) UnknownInteractionsClosedProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsClosedProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsClosedProtocolStrictTwoWayErrResultTag = UnknownInteractionsClosedProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsClosedProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsClosedProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsClosedProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultResponse     = 1 // 0x00000001
+	UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultErr          = 2 // 0x00000002
+	UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTransportErr = 3 // 0x00000003
+)
+
+type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult struct {
+	I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                      UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                           int32                                                      `fidl_ordinal:"2"`
+	TransportErr                                                  int32                                                      `fidl_ordinal:"3"`
+}
+
+var _mUnknownInteractionsDriverProtocolFlexibleTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult{})
+
+func (msg *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	case 3:
+		var _zeroed int32
+		_m.TransportErr = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) Which() I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag {
+	return _m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) SetResponse(response UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithResponse(response UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse) UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithErr(err int32) UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr int32) {
+	_m.reset()
+	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTransportErr
+	_m.TransportErr = transportErr
+}
+
+func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
+	_u.SetTransportErr(transportErr)
+	return _u
+}
+
+type I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag uint64
+
+const (
+	UnknownInteractionsDriverProtocolFlexibleTwoWayResultResponse     = 1 // 0x00000001
+	UnknownInteractionsDriverProtocolFlexibleTwoWayResultTransportErr = 3 // 0x00000003
+)
+
+type UnknownInteractionsDriverProtocolFlexibleTwoWayResult struct {
+	I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                   UnknownInteractionsDriverProtocolFlexibleTwoWayResponse `fidl_ordinal:"1"`
+	TransportErr                                               int32                                                   `fidl_ordinal:"3"`
+}
+
+var _mUnknownInteractionsDriverProtocolFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayResult{})
+
+func (msg *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolFlexibleTwoWayResult
+}
+
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) reset() {
+	switch _m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
 		_m.Response = _zeroed
 	case 3:
 		var _zeroed int32
@@ -57,133 +864,587 @@ func (_m *ExampleFlexibleTwoWayResult) reset() {
 	}
 }
 
-func (_m *ExampleFlexibleTwoWayResult) Which() I_exampleFlexibleTwoWayResultTag {
-	return _m.I_exampleFlexibleTwoWayResultTag
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) Which() I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag {
+	return _m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag
 }
 
-func (_m *ExampleFlexibleTwoWayResult) Ordinal() uint64 {
-	return uint64(_m.I_exampleFlexibleTwoWayResultTag)
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag)
 }
 
-func (_m *ExampleFlexibleTwoWayResult) SetResponse(response ExampleFlexibleTwoWayResponse) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) SetResponse(response UnknownInteractionsDriverProtocolFlexibleTwoWayResponse) {
 	_m.reset()
-	_m.I_exampleFlexibleTwoWayResultTag = ExampleFlexibleTwoWayResultResponse
+	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayResultResponse
 	_m.Response = response
 }
 
-func ExampleFlexibleTwoWayResultWithResponse(response ExampleFlexibleTwoWayResponse) ExampleFlexibleTwoWayResult {
-	var _u ExampleFlexibleTwoWayResult
+func UnknownInteractionsDriverProtocolFlexibleTwoWayResultWithResponse(response UnknownInteractionsDriverProtocolFlexibleTwoWayResponse) UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
+	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayResult
 	_u.SetResponse(response)
 	return _u
 }
 
-func (_m *ExampleFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
 	_m.reset()
-	_m.I_exampleFlexibleTwoWayResultTag = ExampleFlexibleTwoWayResultTransportErr
+	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func ExampleFlexibleTwoWayResultWithTransportErr(transportErr int32) ExampleFlexibleTwoWayResult {
-	var _u ExampleFlexibleTwoWayResult
+func UnknownInteractionsDriverProtocolFlexibleTwoWayResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
+	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayResult
 	_u.SetTransportErr(transportErr)
 	return _u
 }
 
+type I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag uint64
+
 const (
-	ExampleStrictOneWayOrdinal   uint64 = 0x1f9937f425c8491a
-	ExampleFlexibleOneWayOrdinal uint64 = 0x200d2009e52a95b8
-	ExampleStrictTwoWayOrdinal   uint64 = 0x3ee105dfeda54985
-	ExampleFlexibleTwoWayOrdinal uint64 = 0x7ddf3a4404acfa2c
-	ExampleStrictEventOrdinal    uint64 = 0x28d6af569779dfe5
-	ExampleFlexibleEventOrdinal  uint64 = 0x1ca93992b923103a
+	UnknownInteractionsDriverProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsDriverProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
 )
 
-type ExampleWithCtxInterface _bindings.ChannelProxy
+type UnknownInteractionsDriverProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                    UnknownInteractionsDriverProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                         int32                                                    `fidl_ordinal:"2"`
+}
 
-func (p *ExampleWithCtxInterface) StrictOneWay(ctx_ _bindings.Context) error {
+var _mUnknownInteractionsDriverProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolStrictTwoWayErrResult{})
+
+func (msg *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsDriverProtocolStrictTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsDriverProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsDriverProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsDriverProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsDriverProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsDriverProtocolStrictTwoWayErrResponse) UnknownInteractionsDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsDriverProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsDriverProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsDriverProtocolStrictTwoWayErrResultTag = UnknownInteractionsDriverProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsDriverProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsDriverProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsDriverProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsProtocolFlexibleEventErrResultTag uint64
+
+const (
+	UnknownInteractionsProtocolFlexibleEventErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsProtocolFlexibleEventErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsProtocolFlexibleEventErrResult struct {
+	I_unknownInteractionsProtocolFlexibleEventErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                               UnknownInteractionsProtocolFlexibleEventErrResponse `fidl_ordinal:"1"`
+	Err                                                    int32                                               `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleEventErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleEventErrResult{})
+
+func (msg *UnknownInteractionsProtocolFlexibleEventErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleEventErrResult
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleEventErrResult) reset() {
+	switch _m.I_unknownInteractionsProtocolFlexibleEventErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsProtocolFlexibleEventErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleEventErrResult) Which() I_unknownInteractionsProtocolFlexibleEventErrResultTag {
+	return _m.I_unknownInteractionsProtocolFlexibleEventErrResultTag
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleEventErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsProtocolFlexibleEventErrResultTag)
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleEventErrResult) SetResponse(response UnknownInteractionsProtocolFlexibleEventErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleEventErrResultTag = UnknownInteractionsProtocolFlexibleEventErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsProtocolFlexibleEventErrResultWithResponse(response UnknownInteractionsProtocolFlexibleEventErrResponse) UnknownInteractionsProtocolFlexibleEventErrResult {
+	var _u UnknownInteractionsProtocolFlexibleEventErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleEventErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleEventErrResultTag = UnknownInteractionsProtocolFlexibleEventErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsProtocolFlexibleEventErrResultWithErr(err int32) UnknownInteractionsProtocolFlexibleEventErrResult {
+	var _u UnknownInteractionsProtocolFlexibleEventErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsProtocolFlexibleTwoWayErrResultResponse     = 1 // 0x00000001
+	UnknownInteractionsProtocolFlexibleTwoWayErrResultErr          = 2 // 0x00000002
+	UnknownInteractionsProtocolFlexibleTwoWayErrResultTransportErr = 3 // 0x00000003
+)
+
+type UnknownInteractionsProtocolFlexibleTwoWayErrResult struct {
+	I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                                UnknownInteractionsProtocolFlexibleTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                     int32                                                `fidl_ordinal:"2"`
+	TransportErr                                            int32                                                `fidl_ordinal:"3"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayErrResult{})
+
+func (msg *UnknownInteractionsProtocolFlexibleTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	case 3:
+		var _zeroed int32
+		_m.TransportErr = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) Which() I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag {
+	return _m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) SetResponse(response UnknownInteractionsProtocolFlexibleTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithResponse(response UnknownInteractionsProtocolFlexibleTwoWayErrResponse) UnknownInteractionsProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsProtocolFlexibleTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithErr(err int32) UnknownInteractionsProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsProtocolFlexibleTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayErrResultTransportErr
+	_m.TransportErr = transportErr
+}
+
+func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayErrResult {
+	var _u UnknownInteractionsProtocolFlexibleTwoWayErrResult
+	_u.SetTransportErr(transportErr)
+	return _u
+}
+
+type I_unknownInteractionsProtocolFlexibleTwoWayResultTag uint64
+
+const (
+	UnknownInteractionsProtocolFlexibleTwoWayResultResponse     = 1 // 0x00000001
+	UnknownInteractionsProtocolFlexibleTwoWayResultTransportErr = 3 // 0x00000003
+)
+
+type UnknownInteractionsProtocolFlexibleTwoWayResult struct {
+	I_unknownInteractionsProtocolFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                             UnknownInteractionsProtocolFlexibleTwoWayResponse `fidl_ordinal:"1"`
+	TransportErr                                         int32                                             `fidl_ordinal:"3"`
+}
+
+var _mUnknownInteractionsProtocolFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayResult{})
+
+func (msg *UnknownInteractionsProtocolFlexibleTwoWayResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolFlexibleTwoWayResult
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) reset() {
+	switch _m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayResponse
+		_m.Response = _zeroed
+	case 3:
+		var _zeroed int32
+		_m.TransportErr = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) Which() I_unknownInteractionsProtocolFlexibleTwoWayResultTag {
+	return _m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag)
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) SetResponse(response UnknownInteractionsProtocolFlexibleTwoWayResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag = UnknownInteractionsProtocolFlexibleTwoWayResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsProtocolFlexibleTwoWayResultWithResponse(response UnknownInteractionsProtocolFlexibleTwoWayResponse) UnknownInteractionsProtocolFlexibleTwoWayResult {
+	var _u UnknownInteractionsProtocolFlexibleTwoWayResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag = UnknownInteractionsProtocolFlexibleTwoWayResultTransportErr
+	_m.TransportErr = transportErr
+}
+
+func UnknownInteractionsProtocolFlexibleTwoWayResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayResult {
+	var _u UnknownInteractionsProtocolFlexibleTwoWayResult
+	_u.SetTransportErr(transportErr)
+	return _u
+}
+
+type I_unknownInteractionsProtocolStrictEventErrResultTag uint64
+
+const (
+	UnknownInteractionsProtocolStrictEventErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsProtocolStrictEventErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsProtocolStrictEventErrResult struct {
+	I_unknownInteractionsProtocolStrictEventErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                             UnknownInteractionsProtocolStrictEventErrResponse `fidl_ordinal:"1"`
+	Err                                                  int32                                             `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsProtocolStrictEventErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolStrictEventErrResult{})
+
+func (msg *UnknownInteractionsProtocolStrictEventErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolStrictEventErrResult
+}
+
+func (_m *UnknownInteractionsProtocolStrictEventErrResult) reset() {
+	switch _m.I_unknownInteractionsProtocolStrictEventErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsProtocolStrictEventErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsProtocolStrictEventErrResult) Which() I_unknownInteractionsProtocolStrictEventErrResultTag {
+	return _m.I_unknownInteractionsProtocolStrictEventErrResultTag
+}
+
+func (_m *UnknownInteractionsProtocolStrictEventErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsProtocolStrictEventErrResultTag)
+}
+
+func (_m *UnknownInteractionsProtocolStrictEventErrResult) SetResponse(response UnknownInteractionsProtocolStrictEventErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolStrictEventErrResultTag = UnknownInteractionsProtocolStrictEventErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsProtocolStrictEventErrResultWithResponse(response UnknownInteractionsProtocolStrictEventErrResponse) UnknownInteractionsProtocolStrictEventErrResult {
+	var _u UnknownInteractionsProtocolStrictEventErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolStrictEventErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolStrictEventErrResultTag = UnknownInteractionsProtocolStrictEventErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsProtocolStrictEventErrResultWithErr(err int32) UnknownInteractionsProtocolStrictEventErrResult {
+	var _u UnknownInteractionsProtocolStrictEventErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+type I_unknownInteractionsProtocolStrictTwoWayErrResultTag uint64
+
+const (
+	UnknownInteractionsProtocolStrictTwoWayErrResultResponse = 1 // 0x00000001
+	UnknownInteractionsProtocolStrictTwoWayErrResultErr      = 2 // 0x00000002
+)
+
+type UnknownInteractionsProtocolStrictTwoWayErrResult struct {
+	I_unknownInteractionsProtocolStrictTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                                              UnknownInteractionsProtocolStrictTwoWayErrResponse `fidl_ordinal:"1"`
+	Err                                                   int32                                              `fidl_ordinal:"2"`
+}
+
+var _mUnknownInteractionsProtocolStrictTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolStrictTwoWayErrResult{})
+
+func (msg *UnknownInteractionsProtocolStrictTwoWayErrResult) Marshaler() _bindings.Marshaler {
+	return _mUnknownInteractionsProtocolStrictTwoWayErrResult
+}
+
+func (_m *UnknownInteractionsProtocolStrictTwoWayErrResult) reset() {
+	switch _m.I_unknownInteractionsProtocolStrictTwoWayErrResultTag {
+	case 1:
+		var _zeroed UnknownInteractionsProtocolStrictTwoWayErrResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.Err = _zeroed
+	}
+}
+
+func (_m *UnknownInteractionsProtocolStrictTwoWayErrResult) Which() I_unknownInteractionsProtocolStrictTwoWayErrResultTag {
+	return _m.I_unknownInteractionsProtocolStrictTwoWayErrResultTag
+}
+
+func (_m *UnknownInteractionsProtocolStrictTwoWayErrResult) Ordinal() uint64 {
+	return uint64(_m.I_unknownInteractionsProtocolStrictTwoWayErrResultTag)
+}
+
+func (_m *UnknownInteractionsProtocolStrictTwoWayErrResult) SetResponse(response UnknownInteractionsProtocolStrictTwoWayErrResponse) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolStrictTwoWayErrResultTag = UnknownInteractionsProtocolStrictTwoWayErrResultResponse
+	_m.Response = response
+}
+
+func UnknownInteractionsProtocolStrictTwoWayErrResultWithResponse(response UnknownInteractionsProtocolStrictTwoWayErrResponse) UnknownInteractionsProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsProtocolStrictTwoWayErrResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *UnknownInteractionsProtocolStrictTwoWayErrResult) SetErr(err int32) {
+	_m.reset()
+	_m.I_unknownInteractionsProtocolStrictTwoWayErrResultTag = UnknownInteractionsProtocolStrictTwoWayErrResultErr
+	_m.Err = err
+}
+
+func UnknownInteractionsProtocolStrictTwoWayErrResultWithErr(err int32) UnknownInteractionsProtocolStrictTwoWayErrResult {
+	var _u UnknownInteractionsProtocolStrictTwoWayErrResult
+	_u.SetErr(err)
+	return _u
+}
+
+const (
+	UnknownInteractionsAjarProtocolStrictOneWayOrdinal     uint64 = 0xd4663d6b2b5048b
+	UnknownInteractionsAjarProtocolFlexibleOneWayOrdinal   uint64 = 0x2275b8171ae4834f
+	UnknownInteractionsAjarProtocolStrictTwoWayOrdinal     uint64 = 0x50e66d328336038
+	UnknownInteractionsAjarProtocolStrictTwoWayErrOrdinal  uint64 = 0x5b47637577c69006
+	UnknownInteractionsAjarProtocolStrictEventOrdinal      uint64 = 0x6022ae999e9dc2b0
+	UnknownInteractionsAjarProtocolStrictEventErrOrdinal   uint64 = 0x715bfcab27f735ed
+	UnknownInteractionsAjarProtocolFlexibleEventOrdinal    uint64 = 0x11c9ba570ce71df3
+	UnknownInteractionsAjarProtocolFlexibleEventErrOrdinal uint64 = 0x4fbe0d51e074e5bc
+)
+
+// Bindings for this protocol have not been generated because it is an
+// ajar protocol. If bindings for ajar protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsAjarProtocolWithCtxInterface struct{}
+
+// Bindings for this protocol have not been generated because it is an
+// ajar protocol. If bindings for ajar protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsAjarProtocolWithCtx interface{}
+type UnknownInteractionsAjarProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewUnknownInteractionsAjarProtocolWithCtxInterfaceRequest() (UnknownInteractionsAjarProtocolWithCtxInterfaceRequest, *UnknownInteractionsAjarProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return UnknownInteractionsAjarProtocolWithCtxInterfaceRequest(req), (*UnknownInteractionsAjarProtocolWithCtxInterface)(cli), err
+}
+
+// Bindings for this protocol have not been generated because it is an
+// ajar protocol. If bindings for ajar protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsAjarProtocolWithCtxStub struct{}
+
+// Bindings for this protocol have not been generated because it is an
+// ajar protocol. If bindings for ajar protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsAjarProtocolEventProxy struct{}
+
+const (
+	UnknownInteractionsClosedProtocolStrictOneWayOrdinal    uint64 = 0x59282385962da24
+	UnknownInteractionsClosedProtocolStrictTwoWayOrdinal    uint64 = 0x5eda305d6b22f1f7
+	UnknownInteractionsClosedProtocolStrictTwoWayErrOrdinal uint64 = 0x4fa35d5433db4d3a
+	UnknownInteractionsClosedProtocolStrictEventOrdinal     uint64 = 0xa8ee6ee302f693b
+	UnknownInteractionsClosedProtocolStrictEventErrOrdinal  uint64 = 0x12b105b1430a1201
+)
+
+type UnknownInteractionsClosedProtocolWithCtxInterface _bindings.ChannelProxy
+
+func (p *UnknownInteractionsClosedProtocolWithCtxInterface) StrictOneWay(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleStrictOneWayOrdinal, req_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(UnknownInteractionsClosedProtocolStrictOneWayOrdinal, req_)
 	return err_
 }
 
-func (p *ExampleWithCtxInterface) FlexibleOneWay(ctx_ _bindings.Context) error {
-	var req_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleFlexibleOneWayOrdinal, req_)
-	return err_
-}
-
-func (p *ExampleWithCtxInterface) StrictTwoWay(ctx_ _bindings.Context) error {
+func (p *UnknownInteractionsClosedProtocolWithCtxInterface) StrictTwoWay(ctx_ _bindings.Context) error {
 	var req_ _bindings.Message
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleStrictTwoWayOrdinal, req_, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(UnknownInteractionsClosedProtocolStrictTwoWayOrdinal, req_, resp_)
 	return err_
 }
 
-func (p *ExampleWithCtxInterface) FlexibleTwoWay(ctx_ _bindings.Context) (ExampleFlexibleTwoWayResult, error) {
+func (p *UnknownInteractionsClosedProtocolWithCtxInterface) StrictTwoWayErr(ctx_ _bindings.Context) (UnknownInteractionsClosedProtocolStrictTwoWayErrResult, error) {
 	var req_ _bindings.Message
-	resp_ := &exampleWithCtxFlexibleTwoWayResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleFlexibleTwoWayOrdinal, req_, resp_)
+	resp_ := &unknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(UnknownInteractionsClosedProtocolStrictTwoWayErrOrdinal, req_, resp_)
 	return (*resp_).Result, err_
 }
 
-func (p *ExampleWithCtxInterface) ExpectStrictEvent(ctx_ _bindings.Context) error {
+func (p *UnknownInteractionsClosedProtocolWithCtxInterface) ExpectStrictEvent(ctx_ _bindings.Context) error {
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(ExampleStrictEventOrdinal, resp_)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(UnknownInteractionsClosedProtocolStrictEventOrdinal, resp_)
 	return err_
 }
 
-func (p *ExampleWithCtxInterface) ExpectFlexibleEvent(ctx_ _bindings.Context) error {
-	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(ExampleFlexibleEventOrdinal, resp_)
-	return err_
+func (p *UnknownInteractionsClosedProtocolWithCtxInterface) ExpectStrictEventErr(ctx_ _bindings.Context) (UnknownInteractionsClosedProtocolStrictEventErrResult, error) {
+	resp_ := &unknownInteractionsClosedProtocolWithCtxStrictEventErrResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(UnknownInteractionsClosedProtocolStrictEventErrOrdinal, resp_)
+	return (*resp_).Result, err_
 }
 
-type ExampleWithCtx interface {
+type UnknownInteractionsClosedProtocolWithCtx interface {
 	StrictOneWay(ctx_ _bindings.Context) error
-	FlexibleOneWay(ctx_ _bindings.Context) error
 	StrictTwoWay(ctx_ _bindings.Context) error
-	FlexibleTwoWay(ctx_ _bindings.Context) (ExampleFlexibleTwoWayResult, error)
+	StrictTwoWayErr(ctx_ _bindings.Context) (UnknownInteractionsClosedProtocolStrictTwoWayErrResult, error)
 }
 
-type ExampleWithCtxTransitionalBase struct{}
+type UnknownInteractionsClosedProtocolWithCtxTransitionalBase struct{}
 
-type ExampleWithCtxInterfaceRequest _bindings.InterfaceRequest
+type UnknownInteractionsClosedProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
 
-func NewExampleWithCtxInterfaceRequest() (ExampleWithCtxInterfaceRequest, *ExampleWithCtxInterface, error) {
+func NewUnknownInteractionsClosedProtocolWithCtxInterfaceRequest() (UnknownInteractionsClosedProtocolWithCtxInterfaceRequest, *UnknownInteractionsClosedProtocolWithCtxInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
-	return ExampleWithCtxInterfaceRequest(req), (*ExampleWithCtxInterface)(cli), err
+	return UnknownInteractionsClosedProtocolWithCtxInterfaceRequest(req), (*UnknownInteractionsClosedProtocolWithCtxInterface)(cli), err
 }
 
-type ExampleWithCtxStub struct {
-	Impl ExampleWithCtx
+type UnknownInteractionsClosedProtocolWithCtxStub struct {
+	Impl UnknownInteractionsClosedProtocolWithCtx
 }
 
-func (s_ *ExampleWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+func (s_ *UnknownInteractionsClosedProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ExampleStrictOneWayOrdinal:
+	case UnknownInteractionsClosedProtocolStrictOneWayOrdinal:
 		err_ := s_.Impl.StrictOneWay(args_.Ctx)
 		return nil, false, err_
-	case ExampleFlexibleOneWayOrdinal:
-		err_ := s_.Impl.FlexibleOneWay(args_.Ctx)
-		return nil, false, err_
-	case ExampleStrictTwoWayOrdinal:
+	case UnknownInteractionsClosedProtocolStrictTwoWayOrdinal:
 		err_ := s_.Impl.StrictTwoWay(args_.Ctx)
 		return nil, true, err_
-	case ExampleFlexibleTwoWayOrdinal:
-		result, err_ := s_.Impl.FlexibleTwoWay(args_.Ctx)
-		out_ := &exampleWithCtxFlexibleTwoWayResponse{Result: result}
+	case UnknownInteractionsClosedProtocolStrictTwoWayErrOrdinal:
+		result, err_ := s_.Impl.StrictTwoWayErr(args_.Ctx)
+		out_ := &unknownInteractionsClosedProtocolWithCtxStrictTwoWayErrResponse{Result: result}
 		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type ExampleEventProxy _bindings.ChannelProxy
+type UnknownInteractionsClosedProtocolEventProxy _bindings.ChannelProxy
 
-func (p *ExampleEventProxy) StrictEvent() error {
+func (p *UnknownInteractionsClosedProtocolEventProxy) StrictEvent() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(ExampleStrictEventOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(UnknownInteractionsClosedProtocolStrictEventOrdinal, event_)
 }
-func (p *ExampleEventProxy) FlexibleEvent() error {
-	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(ExampleFlexibleEventOrdinal, event_)
+func (p *UnknownInteractionsClosedProtocolEventProxy) StrictEventErr(result UnknownInteractionsClosedProtocolStrictEventErrResult) error {
+	event_ := &unknownInteractionsClosedProtocolWithCtxStrictEventErrResponse{Result: result}
+	return ((*_bindings.ChannelProxy)(p)).Send(UnknownInteractionsClosedProtocolStrictEventErrOrdinal, event_)
 }
+
+const (
+	UnknownInteractionsProtocolStrictOneWayOrdinal      uint64 = 0x4e7273b964d117a6
+	UnknownInteractionsProtocolFlexibleOneWayOrdinal    uint64 = 0x818bb3a7a910446
+	UnknownInteractionsProtocolStrictTwoWayOrdinal      uint64 = 0x734c996b0f37b942
+	UnknownInteractionsProtocolStrictTwoWayErrOrdinal   uint64 = 0x6d1c6002c51bb967
+	UnknownInteractionsProtocolFlexibleTwoWayOrdinal    uint64 = 0x4a5bb3397008b7c
+	UnknownInteractionsProtocolFlexibleTwoWayErrOrdinal uint64 = 0x61240f878cc37c07
+	UnknownInteractionsProtocolStrictEventOrdinal       uint64 = 0x9842669255c4fc1
+	UnknownInteractionsProtocolStrictEventErrOrdinal    uint64 = 0x3d956048f723bc6d
+	UnknownInteractionsProtocolFlexibleEventOrdinal     uint64 = 0x61bb1fab7d767866
+	UnknownInteractionsProtocolFlexibleEventErrOrdinal  uint64 = 0x4bda3e6fb22bb5a9
+)
+
+// Bindings for this protocol have not been generated because it is an
+// open protocol. If bindings for open protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsProtocolWithCtxInterface struct{}
+
+// Bindings for this protocol have not been generated because it is an
+// open protocol. If bindings for open protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsProtocolWithCtx interface{}
+type UnknownInteractionsProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewUnknownInteractionsProtocolWithCtxInterfaceRequest() (UnknownInteractionsProtocolWithCtxInterfaceRequest, *UnknownInteractionsProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return UnknownInteractionsProtocolWithCtxInterfaceRequest(req), (*UnknownInteractionsProtocolWithCtxInterface)(cli), err
+}
+
+// Bindings for this protocol have not been generated because it is an
+// open protocol. If bindings for open protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsProtocolWithCtxStub struct{}
+
+// Bindings for this protocol have not been generated because it is an
+// open protocol. If bindings for open protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type UnknownInteractionsProtocolEventProxy struct{}

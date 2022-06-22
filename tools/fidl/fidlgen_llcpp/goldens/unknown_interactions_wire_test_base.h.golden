@@ -7,9 +7,9 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_unknowninteractions::Example> : public ::fidl::WireServer<::test_unknowninteractions::Example> {
+class WireTestBase<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol> {
  public:
-  virtual ~WireTestBase<::test_unknowninteractions::Example>() = default;
+  virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void StrictOneWay(
       StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
@@ -23,22 +23,110 @@ class WireTestBase<::test_unknowninteractions::Example> : public ::fidl::WireSer
       StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWay", completer);
   }
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayErr", completer);
+  }
   virtual void FlexibleTwoWay(
       FlexibleTwoWayRequestView request, FlexibleTwoWayCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWay", completer);
   }
+  virtual void FlexibleTwoWayErr(
+      FlexibleTwoWayErrRequestView request, FlexibleTwoWayErrCompleter::Sync& completer) override {
+    NotImplemented_("FlexibleTwoWayErr", completer);
+  }
 };
 
 template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::Example> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::Example> {
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
  public:
-  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::Example>() = default;
+  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>* event) override {
+  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>* event) override {
     NotImplemented_("StrictEvent");
   }
-  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>* event) override {
+  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>* event) override {
+    NotImplemented_("StrictEventErr");
+  }
+  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>* event) override {
     NotImplemented_("FlexibleEvent");
+  }
+  virtual void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>* event) override {
+    NotImplemented_("FlexibleEventErr");
+  }
+};
+
+template <>
+class WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
+ public:
+  virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictOneWay", completer);
+  }
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWay", completer);
+  }
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayErr", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) override {
+    NotImplemented_("StrictEvent");
+  }
+  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>* event) override {
+    NotImplemented_("StrictEventErr");
+  }
+};
+
+template <>
+class WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
+ public:
+  virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictOneWay", completer);
+  }
+  virtual void FlexibleOneWay(
+      FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer) override {
+    NotImplemented_("FlexibleOneWay", completer);
+  }
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWay", completer);
+  }
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayErr", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>* event) override {
+    NotImplemented_("StrictEvent");
+  }
+  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>* event) override {
+    NotImplemented_("StrictEventErr");
+  }
+  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>* event) override {
+    NotImplemented_("FlexibleEvent");
+  }
+  virtual void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>* event) override {
+    NotImplemented_("FlexibleEventErr");
   }
 };
 }  // namespace testing

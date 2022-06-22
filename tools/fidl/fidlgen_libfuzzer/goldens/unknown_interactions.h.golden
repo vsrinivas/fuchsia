@@ -13,22 +13,64 @@
 
 namespace fuzzing {
 
-using Example_FlexibleTwoWay_Response = ::test::unknowninteractions::Example_FlexibleTwoWay_Response;
-using Example_FlexibleTwoWay_Result = ::test::unknowninteractions::Example_FlexibleTwoWay_Result;
-using ExampleFlexibleTwoWayTopResponse = ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse;
+using UnknownInteractionsProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
+using UnknownInteractionsProtocol_StrictEventErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Response;
+using UnknownInteractionsProtocol_StrictEventErr_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Result;
+using UnknownInteractionsProtocolStrictEventErrRequest = ::test::unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
+using UnknownInteractionsProtocol_FlexibleTwoWay_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response;
+using UnknownInteractionsProtocol_FlexibleTwoWay_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result;
+using UnknownInteractionsProtocolFlexibleTwoWayTopResponse = ::test::unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
+using UnknownInteractionsProtocol_FlexibleTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response;
+using UnknownInteractionsProtocol_FlexibleTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result;
+using UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
+using UnknownInteractionsProtocol_FlexibleEventErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Response;
+using UnknownInteractionsProtocol_FlexibleEventErr_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Result;
+using UnknownInteractionsProtocolFlexibleEventErrRequest = ::test::unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
+using UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse;
+using UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response;
+using UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result;
+using UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse;
+using UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response;
+using UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result;
+using UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse;
+using UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
+using UnknownInteractionsClosedProtocol_StrictEventErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Response;
+using UnknownInteractionsClosedProtocol_StrictEventErr_Result = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Result;
+using UnknownInteractionsClosedProtocolStrictEventErrRequest = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
+using UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse;
+using UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
+using UnknownInteractionsAjarProtocol_StrictEventErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Response;
+using UnknownInteractionsAjarProtocol_StrictEventErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Result;
+using UnknownInteractionsAjarProtocolStrictEventErrRequest = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
+using UnknownInteractionsAjarProtocol_FlexibleEventErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Response;
+using UnknownInteractionsAjarProtocol_FlexibleEventErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Result;
+using UnknownInteractionsAjarProtocolFlexibleEventErrRequest = ::test::unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
+using UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response;
+using UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result;
+using UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse;
 
 template <>
-struct MinSize<Example_FlexibleTwoWay_Response> {
+struct MinSize<UnknownInteractionsProtocol_StrictTwoWayErr_Response> {
   operator size_t() {
     return MinSize<uint8_t>();
   }
 };
 template <>
-struct Allocate<Example_FlexibleTwoWay_Response> {
-  Example_FlexibleTwoWay_Response operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Example_FlexibleTwoWay_Response>());
-    Example_FlexibleTwoWay_Response out;
-    const size_t slack_per_member = (*size - MinSize<Example_FlexibleTwoWay_Response>()) / 1;
+struct Allocate<UnknownInteractionsProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocol_StrictTwoWayErr_Response>()) / 1;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);
@@ -36,27 +78,165 @@ struct Allocate<Example_FlexibleTwoWay_Response> {
   }
 };
 template <>
-struct MinSize<Example_FlexibleTwoWay_Result> {
+struct MinSize<UnknownInteractionsProtocol_StrictTwoWayErr_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::unknowninteractions::Example_FlexibleTwoWay_Response>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
 template <>
-struct Allocate<Example_FlexibleTwoWay_Result> {
+struct Allocate<UnknownInteractionsProtocol_StrictTwoWayErr_Result> {
   static_assert(2 > 0, "xunion must have at least one member");
 
-  Example_FlexibleTwoWay_Result operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Example_FlexibleTwoWay_Result>());
+  UnknownInteractionsProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_StrictTwoWayErr_Result>());
 
     uint8_t selector;
     ZX_ASSERT(src->CopyBytes(&selector, 1));
     (*size)++;
 
-    Example_FlexibleTwoWay_Result out;
+    UnknownInteractionsProtocol_StrictTwoWayErr_Result out;
     switch (selector % 2) {
       case 0: {
-        out.set_response(Allocate<::test::unknowninteractions::Example_FlexibleTwoWay_Response>{}(src, size));
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_StrictEventErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_StrictEventErr_Response> {
+  UnknownInteractionsProtocol_StrictEventErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_StrictEventErr_Response>());
+    UnknownInteractionsProtocol_StrictEventErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocol_StrictEventErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_StrictEventErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_StrictEventErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsProtocol_StrictEventErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_StrictEventErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsProtocol_StrictEventErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocolStrictEventErrRequest> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocolStrictEventErrRequest> {
+  UnknownInteractionsProtocolStrictEventErrRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolStrictEventErrRequest>());
+    UnknownInteractionsProtocolStrictEventErrRequest out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolStrictEventErrRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWay_Response> {
+  UnknownInteractionsProtocol_FlexibleTwoWay_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Response>());
+    UnknownInteractionsProtocol_FlexibleTwoWay_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWay_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsProtocol_FlexibleTwoWay_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsProtocol_FlexibleTwoWay_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response>{}(src, size));
         break;
       }
       case 1: {
@@ -69,20 +249,856 @@ struct Allocate<Example_FlexibleTwoWay_Result> {
   }
 };
 template <>
-struct MinSize<ExampleFlexibleTwoWayTopResponse> {
+struct MinSize<UnknownInteractionsProtocolFlexibleTwoWayTopResponse> {
   operator size_t() {
-    return MinSize<::test::unknowninteractions::Example_FlexibleTwoWay_Result>();
+    return MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result>();
   }
 };
 template <>
-struct Allocate<ExampleFlexibleTwoWayTopResponse> {
-  ExampleFlexibleTwoWayTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleFlexibleTwoWayTopResponse>());
-    ExampleFlexibleTwoWayTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<ExampleFlexibleTwoWayTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsProtocolFlexibleTwoWayTopResponse> {
+  UnknownInteractionsProtocolFlexibleTwoWayTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolFlexibleTwoWayTopResponse>());
+    UnknownInteractionsProtocolFlexibleTwoWayTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolFlexibleTwoWayTopResponse>()) / 1;
     size_t out_size;
-    out_size = MinSize<::test::unknowninteractions::Example_FlexibleTwoWay_Result>() + slack_per_member;
-    out.result = Allocate<::test::unknowninteractions::Example_FlexibleTwoWay_Result>{}(src, &out_size);
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response> {
+  UnknownInteractionsProtocol_FlexibleTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>());
+    UnknownInteractionsProtocol_FlexibleTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 3 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWayErr_Result> {
+  static_assert(3 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsProtocol_FlexibleTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsProtocol_FlexibleTwoWayErr_Result out;
+    switch (selector % 3) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+      case 2: {
+        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse> {
+  UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse>());
+    UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleEventErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleEventErr_Response> {
+  UnknownInteractionsProtocol_FlexibleEventErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleEventErr_Response>());
+    UnknownInteractionsProtocol_FlexibleEventErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocol_FlexibleEventErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocol_FlexibleEventErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocol_FlexibleEventErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsProtocol_FlexibleEventErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocol_FlexibleEventErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsProtocol_FlexibleEventErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsProtocolFlexibleEventErrRequest> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsProtocolFlexibleEventErrRequest> {
+  UnknownInteractionsProtocolFlexibleEventErrRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolFlexibleEventErrRequest>());
+    UnknownInteractionsProtocolFlexibleEventErrRequest out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolFlexibleEventErrRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response> {
+  UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>());
+    UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse> {
+  UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse>());
+    UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response> {
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>());
+    UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 3 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result> {
+  static_assert(3 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result out;
+    switch (selector % 3) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+      case 2: {
+        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse> {
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse>());
+    UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocol_StrictEventErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocol_StrictEventErr_Response> {
+  UnknownInteractionsClosedProtocol_StrictEventErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocol_StrictEventErr_Response>());
+    UnknownInteractionsClosedProtocol_StrictEventErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocol_StrictEventErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocol_StrictEventErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocol_StrictEventErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsClosedProtocol_StrictEventErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocol_StrictEventErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsClosedProtocol_StrictEventErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedProtocolStrictEventErrRequest> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedProtocolStrictEventErrRequest> {
+  UnknownInteractionsClosedProtocolStrictEventErrRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocolStrictEventErrRequest>());
+    UnknownInteractionsClosedProtocolStrictEventErrRequest out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocolStrictEventErrRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_StrictEventErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_StrictEventErr_Response> {
+  UnknownInteractionsAjarProtocol_StrictEventErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_StrictEventErr_Response>());
+    UnknownInteractionsAjarProtocol_StrictEventErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocol_StrictEventErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_StrictEventErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_StrictEventErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsAjarProtocol_StrictEventErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_StrictEventErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsAjarProtocol_StrictEventErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocolStrictEventErrRequest> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocolStrictEventErrRequest> {
+  UnknownInteractionsAjarProtocolStrictEventErrRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocolStrictEventErrRequest>());
+    UnknownInteractionsAjarProtocolStrictEventErrRequest out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocolStrictEventErrRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response> {
+  UnknownInteractionsAjarProtocol_FlexibleEventErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response>());
+    UnknownInteractionsAjarProtocol_FlexibleEventErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocol_FlexibleEventErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocol_FlexibleEventErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsAjarProtocol_FlexibleEventErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocol_FlexibleEventErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsAjarProtocol_FlexibleEventErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarProtocolFlexibleEventErrRequest> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarProtocolFlexibleEventErrRequest> {
+  UnknownInteractionsAjarProtocolFlexibleEventErrRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocolFlexibleEventErrRequest>());
+    UnknownInteractionsAjarProtocolFlexibleEventErrRequest out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocolFlexibleEventErrRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventErr_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response> {
+  UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response>());
+    UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response>(), MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse> {
+  operator size_t() {
+    return MinSize<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result>();
+  }
+};
+template <>
+struct Allocate<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse> {
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse>());
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result>() + slack_per_member;
+    out.result = Allocate<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result>{}(src, &out_size);
     return out;
   }
 };

@@ -6,8 +6,8 @@
 
 namespace test_unknowninteractions {
 
-class Example final {
-  Example() = delete;
+class UnknownInteractionsProtocol final {
+  UnknownInteractionsProtocol() = delete;
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
@@ -15,7 +15,7 @@ class Example final {
     StrictOneWay() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -23,7 +23,7 @@ class Example final {
     FlexibleOneWay() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -31,7 +31,15 @@ class Example final {
     StrictTwoWay() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -39,7 +47,15 @@ class Example final {
     FlexibleTwoWay() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayErr final {
+    FlexibleTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -47,7 +63,15 @@ class Example final {
     StrictEvent() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventErr final {
+    StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
@@ -55,8 +79,259 @@ class Example final {
     FlexibleEvent() = delete;
 
    public:
-    using Protocol = ::test_unknowninteractions::Example;
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
     static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventErr final {
+    FlexibleEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class UnknownInteractionsDriverProtocol final {
+  UnknownInteractionsDriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class FlexibleOneWay final {
+    FlexibleOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWay final {
+    FlexibleTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayErr final {
+    FlexibleTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class UnknownInteractionsClosedProtocol final {
+  UnknownInteractionsClosedProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEvent final {
+    StrictEvent() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventErr final {
+    StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class UnknownInteractionsClosedDriverProtocol final {
+  UnknownInteractionsClosedDriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class UnknownInteractionsAjarProtocol final {
+  UnknownInteractionsAjarProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class FlexibleOneWay final {
+    FlexibleOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEvent final {
+    StrictEvent() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventErr final {
+    StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEvent final {
+    FlexibleEvent() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventErr final {
+    FlexibleEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+};
+
+class UnknownInteractionsAjarDriverProtocol final {
+  UnknownInteractionsAjarDriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class FlexibleOneWay final {
+    FlexibleOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };

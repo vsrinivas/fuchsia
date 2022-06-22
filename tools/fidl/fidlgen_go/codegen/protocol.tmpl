@@ -12,6 +12,7 @@ const (
 {{- end }}
 )
 
+{{ if .Openness.IsClosed -}}
 type {{ .ProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{range .DocComments}}
@@ -201,5 +202,47 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 }
 {{- end }}
 {{- end }}
+{{- else }}{{/* end of if .Openness.IsClosed */}}
+// Bindings for this protocol have not been generated because it is an
+// {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type {{ .ProxyName }} struct {}
+
+// Bindings for this protocol have not been generated because it is an
+// {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type {{ .Name }} interface {}
+
+{{- if eq .ProxyType "ChannelProxy" }}
+type {{ .RequestName }} _bindings.InterfaceRequest
+
+func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return {{ .RequestName }}(req), (*{{ .ProxyName }})(cli), err
+}
+
+{{- if .ServiceNameString }}
+// Implements ServiceRequest.
+func (_ {{ .RequestName }}) Name() string {
+	return {{ .ServiceNameString }}
+}
+func (c {{ .RequestName }}) ToChannel() _zx.Channel {
+	return c.Channel
+}
+
+const {{ .ServiceNameConstant }} = {{ .ServiceNameString }}
+{{- end }}
+{{- end }}
+
+// Bindings for this protocol have not been generated because it is an
+// {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type {{ .StubName }} struct {}
+
+// Bindings for this protocol have not been generated because it is an
+// {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are
+// needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
+type {{ .EventProxyName }} struct {}
+{{- end }}{{/* end of else for if .Openness.IsClosed */}}
 
 {{ end -}}

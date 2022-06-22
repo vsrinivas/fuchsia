@@ -405,7 +405,7 @@ fidl_testdata_info = [
   },
   {
     name = "unknown_interactions"
-    target = "//tools/fidl/fidlc/testdata/unknown_interactions:test.unknowninteractions"
+    target = "//tools/fidl/fidlc/testdata:test.unknowninteractions"
   },
   {
     name = "vectors"

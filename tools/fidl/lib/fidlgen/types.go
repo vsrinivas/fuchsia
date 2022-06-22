@@ -954,6 +954,17 @@ const (
 	Closed Openness = "closed"
 )
 
+func (o Openness) IsClosed() bool {
+	switch o {
+	case Open, Ajar:
+		return false
+	case Closed, "":
+		return true
+	default:
+		panic(fmt.Errorf("invalid openness %s", o))
+	}
+}
+
 // Protocol represents the declaration of a FIDL protocol.
 type Protocol struct {
 	Decl

@@ -27,43 +27,195 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-/// Request message decoding format for ExampleFlexibleTwoWayResult responses, used internally
+pub type UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsAjarProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsAjarProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsAjarProtocolStrictTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsAjarProtocolStrictEventErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsAjarProtocolStrictEventErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsAjarProtocolStrictEventErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsAjarProtocolFlexibleEventErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsAjarProtocolFlexibleEventErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsAjarProtocolFlexibleEventErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResultHandleWrapper =
+    Result<(), i32>;
+
+pub type UnknownInteractionsClosedProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsClosedProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsClosedProtocolStrictTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsClosedProtocolStrictEventErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsClosedProtocolStrictEventErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsClosedProtocolStrictEventErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsDriverProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsDriverProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsDriverProtocolStrictTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+/// Request message decoding format for UnknownInteractionsDriverProtocolFlexibleTwoWayResult responses, used internally
 /// by FIDL bindings to decode flexible method results. This should only be used
 /// by generated APIs, API users should never need to use this type. It is
 /// public because it is shared with composed protocols.
 #[doc(hidden)]
-pub type ExampleFlexibleTwoWayResultWireHandleWrapper = fidl::encoding::OpenResult<(), ()>;
+pub type UnknownInteractionsDriverProtocolFlexibleTwoWayResultWireHandleWrapper =
+    fidl::encoding::OpenResult<(), ()>;
+
+pub type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+/// Request message decoding format for UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult responses, used internally
+/// by FIDL bindings to decode flexible method results. This should only be used
+/// by generated APIs, API users should never need to use this type. It is
+/// public because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWireHandleWrapper =
+    fidl::encoding::OpenResult<(), i32>;
+
+pub type UnknownInteractionsProtocolStrictTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsProtocolStrictTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolStrictTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+/// Request message decoding format for UnknownInteractionsProtocolFlexibleTwoWayResult responses, used internally
+/// by FIDL bindings to decode flexible method results. This should only be used
+/// by generated APIs, API users should never need to use this type. It is
+/// public because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolFlexibleTwoWayResultWireHandleWrapper =
+    fidl::encoding::OpenResult<(), ()>;
+
+pub type UnknownInteractionsProtocolFlexibleTwoWayErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsProtocolFlexibleTwoWayErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolFlexibleTwoWayErrResultHandleWrapper = Result<(), i32>;
+
+/// Request message decoding format for UnknownInteractionsProtocolFlexibleTwoWayErrResult responses, used internally
+/// by FIDL bindings to decode flexible method results. This should only be used
+/// by generated APIs, API users should never need to use this type. It is
+/// public because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolFlexibleTwoWayErrResultWireHandleWrapper =
+    fidl::encoding::OpenResult<(), i32>;
+
+pub type UnknownInteractionsProtocolStrictEventErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsProtocolStrictEventErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolStrictEventErrResultHandleWrapper = Result<(), i32>;
+
+pub type UnknownInteractionsProtocolFlexibleEventErrResult = Result<(), i32>;
+
+/// Handle-type validating wrapper for UnknownInteractionsProtocolFlexibleEventErrResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
+pub type UnknownInteractionsProtocolFlexibleEventErrResultHandleWrapper = Result<(), i32>;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct ExampleMarker;
+pub struct UnknownInteractionsAjarProtocolMarker;
 
-impl fidl::endpoints::ProtocolMarker for ExampleMarker {
-    type Proxy = ExampleProxy;
-    type RequestStream = ExampleRequestStream;
-    const DEBUG_NAME: &'static str = "(anonymous) Example";
+impl fidl::endpoints::ProtocolMarker for UnknownInteractionsAjarProtocolMarker {
+    type Proxy = UnknownInteractionsAjarProtocolProxy;
+    type RequestStream = UnknownInteractionsAjarProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) UnknownInteractionsAjarProtocol";
 }
 
-pub trait ExampleProxyInterface: Send + Sync {
+pub trait UnknownInteractionsAjarProtocolProxyInterface: Send + Sync {
     fn r#strict_one_way(&self) -> Result<(), fidl::Error>;
     fn r#flexible_one_way(&self) -> Result<(), fidl::Error>;
     type StrictTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut;
-    type FlexibleTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
-    fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut;
+    type StrictTwoWayErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult), fidl::Error>,
+        > + Send;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut;
     type StrictEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    type StrictEventErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsAjarProtocolStrictEventErrResult), fidl::Error>,
+        > + Send;
     type FlexibleEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    type FlexibleEventErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsAjarProtocolFlexibleEventErrResult), fidl::Error>,
+        > + Send;
 }
 
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
-pub struct ExampleSynchronousProxy {
+pub struct UnknownInteractionsAjarProtocolSynchronousProxy {
     client: fidl::client::sync::Client,
 }
 
 #[cfg(target_os = "fuchsia")]
-impl ExampleSynchronousProxy {
+impl UnknownInteractionsAjarProtocolSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        let protocol_name = <ExampleMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        let protocol_name =
+            <UnknownInteractionsAjarProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
         Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
     }
 
@@ -73,43 +225,49 @@ impl ExampleSynchronousProxy {
 
     /// Waits until an event arrives and returns it. It is safe for other
     /// threads to make concurrent requests while waiting for an event.
-    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ExampleEvent, fidl::Error> {
-        ExampleEvent::decode(self.client.wait_for_event(deadline)?)
+    pub fn wait_for_event(
+        &self,
+        deadline: zx::Time,
+    ) -> Result<UnknownInteractionsAjarProtocolEvent, fidl::Error> {
+        UnknownInteractionsAjarProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x1f9937f425c8491a, fidl::encoding::DynamicFlags::empty())
+        self.client.send(&mut (), 0xd4663d6b2b5048b, fidl::encoding::DynamicFlags::empty())
     }
     pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x200d2009e52a95b8, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send(&mut (), 0x2275b8171ae4834f, fidl::encoding::DynamicFlags::FLEXIBLE)
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query(
             &mut (),
-            0x3ee105dfeda54985,
+            0x50e66d328336038,
             fidl::encoding::DynamicFlags::empty(),
             ___deadline,
         )?;
         Ok(())
     }
-    pub fn r#flexible_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        let _value: ExampleFlexibleTwoWayResultWireHandleWrapper = self.client.send_query(
-            &mut (),
-            0x7ddf3a4404acfa2c,
-            fidl::encoding::DynamicFlags::FLEXIBLE,
-            ___deadline,
-        )?;
-        let _value = _value.into_result::<ExampleMarker>("flexible_two_way")?;
-        Ok(())
+    pub fn r#strict_two_way_err(
+        &self,
+        ___deadline: zx::Time,
+    ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult), fidl::Error> {
+        let _value: UnknownInteractionsAjarProtocolStrictTwoWayErrResultHandleWrapper =
+            self.client.send_query(
+                &mut (),
+                0x5b47637577c69006,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
+        Ok(_value.map(|_value| ()))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ExampleProxy {
+pub struct UnknownInteractionsAjarProtocolProxy {
     client: fidl::client::Client,
 }
 
-impl fidl::endpoints::Proxy for ExampleProxy {
-    type Protocol = ExampleMarker;
+impl fidl::endpoints::Proxy for UnknownInteractionsAjarProtocolProxy {
+    type Protocol = UnknownInteractionsAjarProtocolMarker;
 
     fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
@@ -124,41 +282,47 @@ impl fidl::endpoints::Proxy for ExampleProxy {
     }
 }
 
-impl ExampleProxy {
-    /// Create a new Proxy for Example
+impl UnknownInteractionsAjarProtocolProxy {
+    /// Create a new Proxy for UnknownInteractionsAjarProtocol
     pub fn new(channel: fidl::AsyncChannel) -> Self {
-        let protocol_name = <ExampleMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        let protocol_name =
+            <UnknownInteractionsAjarProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, protocol_name) }
     }
 
-    /// Get a Stream of events from the remote end of the Example protocol
+    /// Get a Stream of events from the remote end of the UnknownInteractionsAjarProtocol protocol
     ///
     /// # Panics
     ///
     /// Panics if the event stream was already taken.
-    pub fn take_event_stream(&self) -> ExampleEventStream {
-        ExampleEventStream { event_receiver: self.client.take_event_receiver() }
+    pub fn take_event_stream(&self) -> UnknownInteractionsAjarProtocolEventStream {
+        UnknownInteractionsAjarProtocolEventStream {
+            event_receiver: self.client.take_event_receiver(),
+        }
     }
     pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        ExampleProxyInterface::r#strict_one_way(self)
+        UnknownInteractionsAjarProtocolProxyInterface::r#strict_one_way(self)
     }
     pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        ExampleProxyInterface::r#flexible_one_way(self)
+        UnknownInteractionsAjarProtocolProxyInterface::r#flexible_one_way(self)
     }
     pub fn r#strict_two_way(&self) -> fidl::client::QueryResponseFut<()> {
-        ExampleProxyInterface::r#strict_two_way(self)
+        UnknownInteractionsAjarProtocolProxyInterface::r#strict_two_way(self)
     }
-    pub fn r#flexible_two_way(&self) -> fidl::client::QueryResponseFut<()> {
-        ExampleProxyInterface::r#flexible_two_way(self)
+    pub fn r#strict_two_way_err(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult)>
+    {
+        UnknownInteractionsAjarProtocolProxyInterface::r#strict_two_way_err(self)
     }
 }
 
-impl ExampleProxyInterface for ExampleProxy {
+impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarProtocolProxy {
     fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x1f9937f425c8491a, fidl::encoding::DynamicFlags::empty())
+        self.client.send(&mut (), 0xd4663d6b2b5048b, fidl::encoding::DynamicFlags::empty())
     }
     fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x200d2009e52a95b8, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send(&mut (), 0x2275b8171ae4834f, fidl::encoding::DynamicFlags::FLEXIBLE)
     }
     type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
@@ -167,7 +331,7 @@ impl ExampleProxyInterface for ExampleProxy {
         }
         let send_result = self.client.call_send_raw_query(
             &mut (),
-            0x3ee105dfeda54985,
+            0x50e66d328336038,
             fidl::encoding::DynamicFlags::empty(),
         );
         QueryResponseFut(match send_result {
@@ -177,20 +341,21 @@ impl ExampleProxyInterface for ExampleProxy {
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
-    type FlexibleTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
-    fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut {
+    type StrictTwoWayErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult)>;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut {
         fn transform(
-            result: Result<ExampleFlexibleTwoWayResultWireHandleWrapper, fidl::Error>,
-        ) -> Result<(), fidl::Error> {
-            result.and_then(|_value| {
-                let _value = _value.into_result::<ExampleMarker>("flexible_two_way")?;
-                Ok(())
-            })
+            result: Result<
+                UnknownInteractionsAjarProtocolStrictTwoWayErrResultHandleWrapper,
+                fidl::Error,
+            >,
+        ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| ()))
         }
         let send_result = self.client.call_send_raw_query(
             &mut (),
-            0x7ddf3a4404acfa2c,
-            fidl::encoding::DynamicFlags::FLEXIBLE,
+            0x5b47637577c69006,
+            fidl::encoding::DynamicFlags::empty(),
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
@@ -200,23 +365,27 @@ impl ExampleProxyInterface for ExampleProxy {
         })
     }
     type StrictEventResponseFut = fidl::client::QueryResponseFut<()>;
+    type StrictEventErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsAjarProtocolStrictEventErrResult)>;
     type FlexibleEventResponseFut = fidl::client::QueryResponseFut<()>;
+    type FlexibleEventErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsAjarProtocolFlexibleEventErrResult)>;
 }
 
-pub struct ExampleEventStream {
+pub struct UnknownInteractionsAjarProtocolEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl std::marker::Unpin for ExampleEventStream {}
+impl std::marker::Unpin for UnknownInteractionsAjarProtocolEventStream {}
 
-impl futures::stream::FusedStream for ExampleEventStream {
+impl futures::stream::FusedStream for UnknownInteractionsAjarProtocolEventStream {
     fn is_terminated(&self) -> bool {
         self.event_receiver.is_terminated()
     }
 }
 
-impl futures::Stream for ExampleEventStream {
-    type Item = Result<ExampleEvent, fidl::Error>;
+impl futures::Stream for UnknownInteractionsAjarProtocolEventStream {
+    type Item = Result<UnknownInteractionsAjarProtocolEvent, fidl::Error>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -230,23 +399,38 @@ impl futures::Stream for ExampleEventStream {
             None => return std::task::Poll::Ready(None),
         };
 
-        std::task::Poll::Ready(Some(ExampleEvent::decode(buf)))
+        std::task::Poll::Ready(Some(UnknownInteractionsAjarProtocolEvent::decode(buf)))
     }
 }
 
 #[derive(Debug)]
-pub enum ExampleEvent {
+pub enum UnknownInteractionsAjarProtocolEvent {
     StrictEvent {},
 
+    StrictEventErr { result: UnknownInteractionsAjarProtocolStrictEventErrResult },
+
     FlexibleEvent {},
+
+    FlexibleEventErr { result: UnknownInteractionsAjarProtocolFlexibleEventErrResult },
     _UnknownEvent { ordinal: u64 },
 }
 
-impl ExampleEvent {
+impl UnknownInteractionsAjarProtocolEvent {
     #[allow(irrefutable_let_patterns)]
     pub fn into_strict_event(self) -> Option<()> {
-        if let ExampleEvent::StrictEvent {} = self {
+        if let UnknownInteractionsAjarProtocolEvent::StrictEvent {} = self {
             Some(())
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_event_err(
+        self,
+    ) -> Option<(UnknownInteractionsAjarProtocolStrictEventErrResult)> {
+        if let UnknownInteractionsAjarProtocolEvent::StrictEventErr { result } = self {
+            Some((result))
         } else {
             None
         }
@@ -254,79 +438,108 @@ impl ExampleEvent {
 
     #[allow(irrefutable_let_patterns)]
     pub fn into_flexible_event(self) -> Option<()> {
-        if let ExampleEvent::FlexibleEvent {} = self {
+        if let UnknownInteractionsAjarProtocolEvent::FlexibleEvent {} = self {
             Some(())
         } else {
             None
         }
     }
 
-    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ExampleEvent, fidl::Error> {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_event_err(
+        self,
+    ) -> Option<(UnknownInteractionsAjarProtocolFlexibleEventErrResult)> {
+        if let UnknownInteractionsAjarProtocolEvent::FlexibleEventErr { result } = self {
+            Some((result))
+        } else {
+            None
+        }
+    }
+
+    fn decode(
+        mut buf: fidl::MessageBufEtc,
+    ) -> Result<UnknownInteractionsAjarProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
         match tx_header.ordinal() {
-            0x28d6af569779dfe5 => {
+            0x6022ae999e9dc2b0 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleStrictEventEvent");
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &tx_header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-                Ok((ExampleEvent::StrictEvent {}))
+                Ok((
+                    UnknownInteractionsAjarProtocolEvent::StrictEvent {}
+                ))
             }
-            0x1ca93992b923103a => {
-                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleFlexibleEventEvent");
+            0x715bfcab27f735ed => {
+                let mut out_tuple: (UnknownInteractionsAjarProtocolStrictEventErrResult,) = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &tx_header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-                Ok((ExampleEvent::FlexibleEvent {}))
+                Ok((
+                    UnknownInteractionsAjarProtocolEvent::StrictEventErr {result: out_tuple.0,}
+                ))
+            }
+            0x11c9ba570ce71df3 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsAjarProtocolEvent::FlexibleEvent {}
+                ))
+            }
+            0x4fbe0d51e074e5bc => {
+                let mut out_tuple: (UnknownInteractionsAjarProtocolFlexibleEventErrResult,) = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsAjarProtocolEvent::FlexibleEventErr {result: out_tuple.0,}
+                ))
             }
             _ if tx_header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
-                Ok(ExampleEvent::_UnknownEvent { ordinal: tx_header.ordinal() })
+                Ok(UnknownInteractionsAjarProtocolEvent::_UnknownEvent {
+                    ordinal: tx_header.ordinal(),
+                })
             }
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: tx_header.ordinal(),
-                protocol_name: <ExampleMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
+                protocol_name: <UnknownInteractionsAjarProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            })
         }
     }
 }
 
-/// A Stream of incoming requests for Example
-pub struct ExampleRequestStream {
+/// A Stream of incoming requests for UnknownInteractionsAjarProtocol
+pub struct UnknownInteractionsAjarProtocolRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl std::marker::Unpin for ExampleRequestStream {}
+impl std::marker::Unpin for UnknownInteractionsAjarProtocolRequestStream {}
 
-impl futures::stream::FusedStream for ExampleRequestStream {
+impl futures::stream::FusedStream for UnknownInteractionsAjarProtocolRequestStream {
     fn is_terminated(&self) -> bool {
         self.is_terminated
     }
 }
 
-impl fidl::endpoints::RequestStream for ExampleRequestStream {
-    type Protocol = ExampleMarker;
-    type ControlHandle = ExampleControlHandle;
+impl fidl::endpoints::RequestStream for UnknownInteractionsAjarProtocolRequestStream {
+    type Protocol = UnknownInteractionsAjarProtocolMarker;
+    type ControlHandle = UnknownInteractionsAjarProtocolControlHandle;
 
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     fn control_handle(&self) -> Self::ControlHandle {
-        ExampleControlHandle { inner: self.inner.clone() }
+        UnknownInteractionsAjarProtocolControlHandle { inner: self.inner.clone() }
     }
 
     fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
@@ -338,8 +551,8 @@ impl fidl::endpoints::RequestStream for ExampleRequestStream {
     }
 }
 
-impl futures::Stream for ExampleRequestStream {
-    type Item = Result<ExampleRequest, fidl::Error>;
+impl futures::Stream for UnknownInteractionsAjarProtocolRequestStream {
+    type Item = Result<UnknownInteractionsAjarProtocolRequest, fidl::Error>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -351,7 +564,7 @@ impl futures::Stream for ExampleRequestStream {
             return std::task::Poll::Ready(None);
         }
         if this.is_terminated {
-            panic!("polled ExampleRequestStream after completion");
+            panic!("polled UnknownInteractionsAjarProtocolRequestStream after completion");
         }
         fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read_etc(cx, bytes, handles) {
@@ -375,140 +588,104 @@ impl futures::Stream for ExampleRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x1f9937f425c8491a => {
+                0xd4663d6b2b5048b => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleStrictOneWayRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictOneWayRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-
-                    Ok(ExampleRequest::StrictOneWay { control_handle })
-                }
-                0x200d2009e52a95b8 => {
-                    let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleFlexibleOneWayRequest");
-                    fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-
-                    Ok(ExampleRequest::FlexibleOneWay { control_handle })
-                }
-                0x3ee105dfeda54985 => {
-                    let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleStrictTwoWayRequest");
-                    fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-
-                    Ok(ExampleRequest::StrictTwoWay {
-                        responder: ExampleStrictTwoWayResponder {
-                            control_handle: std::mem::ManuallyDrop::new(control_handle),
-                            tx_id: header.tx_id(),
-                            ordinal: header.ordinal(),
-                        },
-                    })
-                }
-                0x7ddf3a4404acfa2c => {
-                    let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleFlexibleTwoWayRequest");
-                    fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-
-                    Ok(ExampleRequest::FlexibleTwoWay {
-                        responder: ExampleFlexibleTwoWayResponder {
-                            control_handle: std::mem::ManuallyDrop::new(control_handle),
-                            tx_id: header.tx_id(),
-                            ordinal: header.ordinal(),
-                        },
-                    })
-                }
-                _ if header.tx_id() == 0
-                    && header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) =>
-                {
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-                    Ok(ExampleRequest::_UnknownInteraction {
-                        ordinal: header.ordinal(),
-                        control_handle,
-                        direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
-                    })
-                }
-                _ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
-                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
-
-                    let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(
-                        zx_status::Status::NOT_SUPPORTED,
-                    );
-
-                    let mut msg = fidl::encoding::TransactionMessage {
-                        header: fidl::encoding::TransactionHeader::new(
-                            header.tx_id(),
-                            header.ordinal(),
-                            header.dynamic_flags(),
-                        ),
-                        body: &mut response,
+                    let control_handle = UnknownInteractionsAjarProtocolControlHandle {
+                        inner: this.inner.clone(),
                     };
 
-                    // We are inside of with_tls_decode_buf, so we can't use
-                    // with_tls_encode_buf. However, we know that the unknown
-                    // interaction reply will not contain any handles, so
-                    // creating a new Vec here does not cause an allocation.
-                    let mut handles = Vec::new();
-                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/Example_UnknownInteractionResponse");
-                    fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
-                    fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
-                    fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    Ok(UnknownInteractionsAjarProtocolRequest::StrictOneWay {control_handle,})
+                }
+                0x2275b8171ae4834f => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleOneWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsAjarProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
 
-                    control_handle
-                        .inner
-                        .channel()
-                        .write_etc(&*bytes, &mut handles)
-                        .map_err(fidl::Error::ServerResponseWrite)?;
+                    Ok(UnknownInteractionsAjarProtocolRequest::FlexibleOneWay {control_handle,})
+                }
+                0x50e66d328336038 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsAjarProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
 
-                    Ok(ExampleRequest::_UnknownInteraction {
+                    Ok(UnknownInteractionsAjarProtocolRequest::StrictTwoWay {responder:UnknownInteractionsAjarProtocolStrictTwoWayResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                0x5b47637577c69006 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsAjarProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsAjarProtocolRequest::StrictTwoWayErr {responder:UnknownInteractionsAjarProtocolStrictTwoWayErrResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                _ if header.tx_id() == 0 && header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                    let control_handle = UnknownInteractionsAjarProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+                    Ok(UnknownInteractionsAjarProtocolRequest::_UnknownInteraction {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
                     })
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),
-                    protocol_name: <ExampleMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                    protocol_name: <UnknownInteractionsAjarProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                 }),
             }))
         })
     }
 }
 #[derive(Debug)]
-pub enum ExampleRequest {
+pub enum UnknownInteractionsAjarProtocolRequest {
     StrictOneWay {
-        control_handle: ExampleControlHandle,
+        control_handle: UnknownInteractionsAjarProtocolControlHandle,
     },
     FlexibleOneWay {
-        control_handle: ExampleControlHandle,
+        control_handle: UnknownInteractionsAjarProtocolControlHandle,
     },
     StrictTwoWay {
-        responder: ExampleStrictTwoWayResponder,
+        responder: UnknownInteractionsAjarProtocolStrictTwoWayResponder,
     },
-    FlexibleTwoWay {
-        responder: ExampleFlexibleTwoWayResponder,
+    StrictTwoWayErr {
+        responder: UnknownInteractionsAjarProtocolStrictTwoWayErrResponder,
     },
     /// An interaction was received which does not match any known method.
     _UnknownInteraction {
         ordinal: u64,
-        control_handle: ExampleControlHandle,
-        direction: fidl::endpoints::UnknownInteractionDirection,
+        control_handle: UnknownInteractionsAjarProtocolControlHandle,
     },
 }
 
-impl ExampleRequest {
+impl UnknownInteractionsAjarProtocolRequest {
     #[allow(irrefutable_let_patterns)]
-    pub fn into_strict_one_way(self) -> Option<(ExampleControlHandle)> {
-        if let ExampleRequest::StrictOneWay { control_handle } = self {
+    pub fn into_strict_one_way(self) -> Option<(UnknownInteractionsAjarProtocolControlHandle)> {
+        if let UnknownInteractionsAjarProtocolRequest::StrictOneWay { control_handle } = self {
             Some((control_handle))
         } else {
             None
@@ -516,8 +693,8 @@ impl ExampleRequest {
     }
 
     #[allow(irrefutable_let_patterns)]
-    pub fn into_flexible_one_way(self) -> Option<(ExampleControlHandle)> {
-        if let ExampleRequest::FlexibleOneWay { control_handle } = self {
+    pub fn into_flexible_one_way(self) -> Option<(UnknownInteractionsAjarProtocolControlHandle)> {
+        if let UnknownInteractionsAjarProtocolRequest::FlexibleOneWay { control_handle } = self {
             Some((control_handle))
         } else {
             None
@@ -525,8 +702,10 @@ impl ExampleRequest {
     }
 
     #[allow(irrefutable_let_patterns)]
-    pub fn into_strict_two_way(self) -> Option<(ExampleStrictTwoWayResponder)> {
-        if let ExampleRequest::StrictTwoWay { responder } = self {
+    pub fn into_strict_two_way(
+        self,
+    ) -> Option<(UnknownInteractionsAjarProtocolStrictTwoWayResponder)> {
+        if let UnknownInteractionsAjarProtocolRequest::StrictTwoWay { responder } = self {
             Some((responder))
         } else {
             None
@@ -534,8 +713,10 @@ impl ExampleRequest {
     }
 
     #[allow(irrefutable_let_patterns)]
-    pub fn into_flexible_two_way(self) -> Option<(ExampleFlexibleTwoWayResponder)> {
-        if let ExampleRequest::FlexibleTwoWay { responder } = self {
+    pub fn into_strict_two_way_err(
+        self,
+    ) -> Option<(UnknownInteractionsAjarProtocolStrictTwoWayErrResponder)> {
+        if let UnknownInteractionsAjarProtocolRequest::StrictTwoWayErr { responder } = self {
             Some((responder))
         } else {
             None
@@ -545,28 +726,23 @@ impl ExampleRequest {
     /// Name of the method defined in FIDL
     pub fn method_name(&self) -> &'static str {
         match *self {
-            ExampleRequest::StrictOneWay { .. } => "strict_one_way",
-            ExampleRequest::FlexibleOneWay { .. } => "flexible_one_way",
-            ExampleRequest::StrictTwoWay { .. } => "strict_two_way",
-            ExampleRequest::FlexibleTwoWay { .. } => "flexible_two_way",
-            ExampleRequest::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
-                ..
-            } => "unknown one-way method",
-            ExampleRequest::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
-                ..
-            } => "unknown two-way method",
+            UnknownInteractionsAjarProtocolRequest::StrictOneWay { .. } => "strict_one_way",
+            UnknownInteractionsAjarProtocolRequest::FlexibleOneWay { .. } => "flexible_one_way",
+            UnknownInteractionsAjarProtocolRequest::StrictTwoWay { .. } => "strict_two_way",
+            UnknownInteractionsAjarProtocolRequest::StrictTwoWayErr { .. } => "strict_two_way_err",
+            UnknownInteractionsAjarProtocolRequest::_UnknownInteraction { .. } => {
+                "unknown one-way method"
+            }
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ExampleControlHandle {
+pub struct UnknownInteractionsAjarProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl fidl::endpoints::ControlHandle for ExampleControlHandle {
+impl fidl::endpoints::ControlHandle for UnknownInteractionsAjarProtocolControlHandle {
     fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -576,14 +752,39 @@ impl fidl::endpoints::ControlHandle for ExampleControlHandle {
     }
 }
 
-impl ExampleControlHandle {
+impl UnknownInteractionsAjarProtocolControlHandle {
     pub fn send_strict_event(&self) -> Result<(), fidl::Error> {
         let mut response = ();
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
                 0,
-                0x28d6af569779dfe5,
+                0x6022ae999e9dc2b0,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_strict_event_err(
+        &self,
+        mut result: &mut UnknownInteractionsAjarProtocolStrictEventErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x715bfcab27f735ed,
                 fidl::encoding::DynamicFlags::empty(),
             ),
             body: &mut response,
@@ -605,7 +806,32 @@ impl ExampleControlHandle {
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
                 0,
-                0x1ca93992b923103a,
+                0x11c9ba570ce71df3,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_flexible_event_err(
+        &self,
+        mut result: &mut UnknownInteractionsAjarProtocolFlexibleEventErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x4fbe0d51e074e5bc,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
             ),
             body: &mut response,
@@ -623,16 +849,16 @@ impl ExampleControlHandle {
 }
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
-pub struct ExampleStrictTwoWayResponder {
-    control_handle: std::mem::ManuallyDrop<ExampleControlHandle>,
+pub struct UnknownInteractionsAjarProtocolStrictTwoWayResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsAjarProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-/// Set the the channel to be shutdown (see [`ExampleControlHandle::shutdown`])
+/// Set the the channel to be shutdown (see [`UnknownInteractionsAjarProtocolControlHandle::shutdown`])
 /// if the responder is dropped without sending a response, so that the client
 /// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
-impl std::ops::Drop for ExampleStrictTwoWayResponder {
+impl std::ops::Drop for UnknownInteractionsAjarProtocolStrictTwoWayResponder {
     fn drop(&mut self) {
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
@@ -640,10 +866,10 @@ impl std::ops::Drop for ExampleStrictTwoWayResponder {
     }
 }
 
-impl fidl::endpoints::Responder for ExampleStrictTwoWayResponder {
-    type ControlHandle = ExampleControlHandle;
+impl fidl::endpoints::Responder for UnknownInteractionsAjarProtocolStrictTwoWayResponder {
+    type ControlHandle = UnknownInteractionsAjarProtocolControlHandle;
 
-    fn control_handle(&self) -> &ExampleControlHandle {
+    fn control_handle(&self) -> &UnknownInteractionsAjarProtocolControlHandle {
         &self.control_handle
     }
 
@@ -655,7 +881,7 @@ impl fidl::endpoints::Responder for ExampleStrictTwoWayResponder {
     }
 }
 
-impl ExampleStrictTwoWayResponder {
+impl UnknownInteractionsAjarProtocolStrictTwoWayResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -689,7 +915,7 @@ impl ExampleStrictTwoWayResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleStrictTwoWayResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -705,16 +931,16 @@ impl ExampleStrictTwoWayResponder {
 }
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
-pub struct ExampleFlexibleTwoWayResponder {
-    control_handle: std::mem::ManuallyDrop<ExampleControlHandle>,
+pub struct UnknownInteractionsAjarProtocolStrictTwoWayErrResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsAjarProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-/// Set the the channel to be shutdown (see [`ExampleControlHandle::shutdown`])
+/// Set the the channel to be shutdown (see [`UnknownInteractionsAjarProtocolControlHandle::shutdown`])
 /// if the responder is dropped without sending a response, so that the client
 /// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
-impl std::ops::Drop for ExampleFlexibleTwoWayResponder {
+impl std::ops::Drop for UnknownInteractionsAjarProtocolStrictTwoWayErrResponder {
     fn drop(&mut self) {
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
@@ -722,10 +948,10 @@ impl std::ops::Drop for ExampleFlexibleTwoWayResponder {
     }
 }
 
-impl fidl::endpoints::Responder for ExampleFlexibleTwoWayResponder {
-    type ControlHandle = ExampleControlHandle;
+impl fidl::endpoints::Responder for UnknownInteractionsAjarProtocolStrictTwoWayErrResponder {
+    type ControlHandle = UnknownInteractionsAjarProtocolControlHandle;
 
-    fn control_handle(&self) -> &ExampleControlHandle {
+    fn control_handle(&self) -> &UnknownInteractionsAjarProtocolControlHandle {
         &self.control_handle
     }
 
@@ -737,7 +963,1818 @@ impl fidl::endpoints::Responder for ExampleFlexibleTwoWayResponder {
     }
 }
 
-impl ExampleFlexibleTwoWayResponder {
+impl UnknownInteractionsAjarProtocolStrictTwoWayErrResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut UnknownInteractionsAjarProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut UnknownInteractionsAjarProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut UnknownInteractionsAjarProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct UnknownInteractionsClosedProtocolMarker;
+
+impl fidl::endpoints::ProtocolMarker for UnknownInteractionsClosedProtocolMarker {
+    type Proxy = UnknownInteractionsClosedProtocolProxy;
+    type RequestStream = UnknownInteractionsClosedProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) UnknownInteractionsClosedProtocol";
+}
+
+pub trait UnknownInteractionsClosedProtocolProxyInterface: Send + Sync {
+    fn r#strict_one_way(&self) -> Result<(), fidl::Error>;
+    type StrictTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut;
+    type StrictTwoWayErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult), fidl::Error>,
+        > + Send;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut;
+    type StrictEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    type StrictEventErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsClosedProtocolStrictEventErrResult), fidl::Error>,
+        > + Send;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct UnknownInteractionsClosedProtocolSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl UnknownInteractionsClosedProtocolSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name = <UnknownInteractionsClosedProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(
+        &self,
+        deadline: zx::Time,
+    ) -> Result<UnknownInteractionsClosedProtocolEvent, fidl::Error> {
+        UnknownInteractionsClosedProtocolEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+    pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x59282385962da24, fidl::encoding::DynamicFlags::empty())
+    }
+    pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
+        let _value: () = self.client.send_query(
+            &mut (),
+            0x5eda305d6b22f1f7,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
+        Ok(())
+    }
+    pub fn r#strict_two_way_err(
+        &self,
+        ___deadline: zx::Time,
+    ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult), fidl::Error> {
+        let _value: UnknownInteractionsClosedProtocolStrictTwoWayErrResultHandleWrapper =
+            self.client.send_query(
+                &mut (),
+                0x4fa35d5433db4d3a,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
+        Ok(_value.map(|_value| ()))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnknownInteractionsClosedProtocolProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for UnknownInteractionsClosedProtocolProxy {
+    type Protocol = UnknownInteractionsClosedProtocolMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl UnknownInteractionsClosedProtocolProxy {
+    /// Create a new Proxy for UnknownInteractionsClosedProtocol
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name = <UnknownInteractionsClosedProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the UnknownInteractionsClosedProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> UnknownInteractionsClosedProtocolEventStream {
+        UnknownInteractionsClosedProtocolEventStream {
+            event_receiver: self.client.take_event_receiver(),
+        }
+    }
+    pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        UnknownInteractionsClosedProtocolProxyInterface::r#strict_one_way(self)
+    }
+    pub fn r#strict_two_way(&self) -> fidl::client::QueryResponseFut<()> {
+        UnknownInteractionsClosedProtocolProxyInterface::r#strict_two_way(self)
+    }
+    pub fn r#strict_two_way_err(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult)>
+    {
+        UnknownInteractionsClosedProtocolProxyInterface::r#strict_two_way_err(self)
+    }
+}
+
+impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClosedProtocolProxy {
+    fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x59282385962da24, fidl::encoding::DynamicFlags::empty())
+    }
+    type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
+    fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
+        fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
+            result.map(|_value| ())
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x5eda305d6b22f1f7,
+            fidl::encoding::DynamicFlags::empty(),
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type StrictTwoWayErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult)>;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut {
+        fn transform(
+            result: Result<
+                UnknownInteractionsClosedProtocolStrictTwoWayErrResultHandleWrapper,
+                fidl::Error,
+            >,
+        ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| ()))
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x4fa35d5433db4d3a,
+            fidl::encoding::DynamicFlags::empty(),
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type StrictEventResponseFut = fidl::client::QueryResponseFut<()>;
+    type StrictEventErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsClosedProtocolStrictEventErrResult)>;
+}
+
+pub struct UnknownInteractionsClosedProtocolEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for UnknownInteractionsClosedProtocolEventStream {}
+
+impl futures::stream::FusedStream for UnknownInteractionsClosedProtocolEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for UnknownInteractionsClosedProtocolEventStream {
+    type Item = Result<UnknownInteractionsClosedProtocolEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(UnknownInteractionsClosedProtocolEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum UnknownInteractionsClosedProtocolEvent {
+    StrictEvent {},
+
+    StrictEventErr { result: UnknownInteractionsClosedProtocolStrictEventErrResult },
+}
+
+impl UnknownInteractionsClosedProtocolEvent {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_event(self) -> Option<()> {
+        if let UnknownInteractionsClosedProtocolEvent::StrictEvent {} = self {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_event_err(
+        self,
+    ) -> Option<(UnknownInteractionsClosedProtocolStrictEventErrResult)> {
+        if let UnknownInteractionsClosedProtocolEvent::StrictEventErr { result } = self {
+            Some((result))
+        } else {
+            None
+        }
+    }
+
+    fn decode(
+        mut buf: fidl::MessageBufEtc,
+    ) -> Result<UnknownInteractionsClosedProtocolEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            0xa8ee6ee302f693b => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsClosedProtocolEvent::StrictEvent {}
+                ))
+            }
+            0x12b105b1430a1201 => {
+                let mut out_tuple: (UnknownInteractionsClosedProtocolStrictEventErrResult,) = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsClosedProtocolEvent::StrictEventErr {result: out_tuple.0,}
+                ))
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name: <UnknownInteractionsClosedProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            })
+        }
+    }
+}
+
+/// A Stream of incoming requests for UnknownInteractionsClosedProtocol
+pub struct UnknownInteractionsClosedProtocolRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for UnknownInteractionsClosedProtocolRequestStream {}
+
+impl futures::stream::FusedStream for UnknownInteractionsClosedProtocolRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for UnknownInteractionsClosedProtocolRequestStream {
+    type Protocol = UnknownInteractionsClosedProtocolMarker;
+    type ControlHandle = UnknownInteractionsClosedProtocolControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        UnknownInteractionsClosedProtocolControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for UnknownInteractionsClosedProtocolRequestStream {
+    type Item = Result<UnknownInteractionsClosedProtocolRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled UnknownInteractionsClosedProtocolRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x59282385962da24 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictOneWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsClosedProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsClosedProtocolRequest::StrictOneWay {control_handle,})
+                }
+                0x5eda305d6b22f1f7 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsClosedProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsClosedProtocolRequest::StrictTwoWay {responder:UnknownInteractionsClosedProtocolStrictTwoWayResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                0x4fa35d5433db4d3a => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsClosedProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsClosedProtocolRequest::StrictTwoWayErr {responder:UnknownInteractionsClosedProtocolStrictTwoWayErrResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    protocol_name: <UnknownInteractionsClosedProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum UnknownInteractionsClosedProtocolRequest {
+    StrictOneWay { control_handle: UnknownInteractionsClosedProtocolControlHandle },
+    StrictTwoWay { responder: UnknownInteractionsClosedProtocolStrictTwoWayResponder },
+    StrictTwoWayErr { responder: UnknownInteractionsClosedProtocolStrictTwoWayErrResponder },
+}
+
+impl UnknownInteractionsClosedProtocolRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_one_way(self) -> Option<(UnknownInteractionsClosedProtocolControlHandle)> {
+        if let UnknownInteractionsClosedProtocolRequest::StrictOneWay { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_two_way(
+        self,
+    ) -> Option<(UnknownInteractionsClosedProtocolStrictTwoWayResponder)> {
+        if let UnknownInteractionsClosedProtocolRequest::StrictTwoWay { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_two_way_err(
+        self,
+    ) -> Option<(UnknownInteractionsClosedProtocolStrictTwoWayErrResponder)> {
+        if let UnknownInteractionsClosedProtocolRequest::StrictTwoWayErr { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            UnknownInteractionsClosedProtocolRequest::StrictOneWay { .. } => "strict_one_way",
+            UnknownInteractionsClosedProtocolRequest::StrictTwoWay { .. } => "strict_two_way",
+            UnknownInteractionsClosedProtocolRequest::StrictTwoWayErr { .. } => {
+                "strict_two_way_err"
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnknownInteractionsClosedProtocolControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for UnknownInteractionsClosedProtocolControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl UnknownInteractionsClosedProtocolControlHandle {
+    pub fn send_strict_event(&self) -> Result<(), fidl::Error> {
+        let mut response = ();
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0xa8ee6ee302f693b,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_strict_event_err(
+        &self,
+        mut result: &mut UnknownInteractionsClosedProtocolStrictEventErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x12b105b1430a1201,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsClosedProtocolStrictTwoWayResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsClosedProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsClosedProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsClosedProtocolStrictTwoWayResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsClosedProtocolStrictTwoWayResponder {
+    type ControlHandle = UnknownInteractionsClosedProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsClosedProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsClosedProtocolStrictTwoWayResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(&self) -> Result<(), fidl::Error> {
+        let mut response = (());
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsClosedProtocolStrictTwoWayErrResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsClosedProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsClosedProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsClosedProtocolStrictTwoWayErrResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsClosedProtocolStrictTwoWayErrResponder {
+    type ControlHandle = UnknownInteractionsClosedProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsClosedProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsClosedProtocolStrictTwoWayErrResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut UnknownInteractionsClosedProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut UnknownInteractionsClosedProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut UnknownInteractionsClosedProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct UnknownInteractionsProtocolMarker;
+
+impl fidl::endpoints::ProtocolMarker for UnknownInteractionsProtocolMarker {
+    type Proxy = UnknownInteractionsProtocolProxy;
+    type RequestStream = UnknownInteractionsProtocolRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) UnknownInteractionsProtocol";
+}
+
+pub trait UnknownInteractionsProtocolProxyInterface: Send + Sync {
+    fn r#strict_one_way(&self) -> Result<(), fidl::Error>;
+    fn r#flexible_one_way(&self) -> Result<(), fidl::Error>;
+    type StrictTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut;
+    type StrictTwoWayErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsProtocolStrictTwoWayErrResult), fidl::Error>,
+        > + Send;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut;
+    type FlexibleTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut;
+    type FlexibleTwoWayErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsProtocolFlexibleTwoWayErrResult), fidl::Error>,
+        > + Send;
+    fn r#flexible_two_way_err(&self) -> Self::FlexibleTwoWayErrResponseFut;
+    type StrictEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    type StrictEventErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsProtocolStrictEventErrResult), fidl::Error>,
+        > + Send;
+    type FlexibleEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    type FlexibleEventErrResponseFut: std::future::Future<
+            Output = Result<(UnknownInteractionsProtocolFlexibleEventErrResult), fidl::Error>,
+        > + Send;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct UnknownInteractionsProtocolSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl UnknownInteractionsProtocolSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let protocol_name =
+            <UnknownInteractionsProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(
+        &self,
+        deadline: zx::Time,
+    ) -> Result<UnknownInteractionsProtocolEvent, fidl::Error> {
+        UnknownInteractionsProtocolEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+    pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x4e7273b964d117a6, fidl::encoding::DynamicFlags::empty())
+    }
+    pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x818bb3a7a910446, fidl::encoding::DynamicFlags::FLEXIBLE)
+    }
+    pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
+        let _value: () = self.client.send_query(
+            &mut (),
+            0x734c996b0f37b942,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
+        Ok(())
+    }
+    pub fn r#strict_two_way_err(
+        &self,
+        ___deadline: zx::Time,
+    ) -> Result<(UnknownInteractionsProtocolStrictTwoWayErrResult), fidl::Error> {
+        let _value: UnknownInteractionsProtocolStrictTwoWayErrResultHandleWrapper =
+            self.client.send_query(
+                &mut (),
+                0x6d1c6002c51bb967,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
+        Ok(_value.map(|_value| ()))
+    }
+    pub fn r#flexible_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
+        let _value: UnknownInteractionsProtocolFlexibleTwoWayResultWireHandleWrapper =
+            self.client.send_query(
+                &mut (),
+                0x4a5bb3397008b7c,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+                ___deadline,
+            )?;
+        let _value = _value.into_result::<UnknownInteractionsProtocolMarker>("flexible_two_way")?;
+        Ok(())
+    }
+    pub fn r#flexible_two_way_err(
+        &self,
+        ___deadline: zx::Time,
+    ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayErrResult), fidl::Error> {
+        let _value: UnknownInteractionsProtocolFlexibleTwoWayErrResultWireHandleWrapper =
+            self.client.send_query(
+                &mut (),
+                0x61240f878cc37c07,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+                ___deadline,
+            )?;
+        let _value = _value
+            .into_nested_result::<UnknownInteractionsProtocolMarker>("flexible_two_way_err")?;
+        Ok(_value.map(|_value| ()))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnknownInteractionsProtocolProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for UnknownInteractionsProtocolProxy {
+    type Protocol = UnknownInteractionsProtocolMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl UnknownInteractionsProtocolProxy {
+    /// Create a new Proxy for UnknownInteractionsProtocol
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let protocol_name =
+            <UnknownInteractionsProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the UnknownInteractionsProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> UnknownInteractionsProtocolEventStream {
+        UnknownInteractionsProtocolEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        UnknownInteractionsProtocolProxyInterface::r#strict_one_way(self)
+    }
+    pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
+        UnknownInteractionsProtocolProxyInterface::r#flexible_one_way(self)
+    }
+    pub fn r#strict_two_way(&self) -> fidl::client::QueryResponseFut<()> {
+        UnknownInteractionsProtocolProxyInterface::r#strict_two_way(self)
+    }
+    pub fn r#strict_two_way_err(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(UnknownInteractionsProtocolStrictTwoWayErrResult)> {
+        UnknownInteractionsProtocolProxyInterface::r#strict_two_way_err(self)
+    }
+    pub fn r#flexible_two_way(&self) -> fidl::client::QueryResponseFut<()> {
+        UnknownInteractionsProtocolProxyInterface::r#flexible_two_way(self)
+    }
+    pub fn r#flexible_two_way_err(
+        &self,
+    ) -> fidl::client::QueryResponseFut<(UnknownInteractionsProtocolFlexibleTwoWayErrResult)> {
+        UnknownInteractionsProtocolProxyInterface::r#flexible_two_way_err(self)
+    }
+}
+
+impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolProxy {
+    fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x4e7273b964d117a6, fidl::encoding::DynamicFlags::empty())
+    }
+    fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
+        self.client.send(&mut (), 0x818bb3a7a910446, fidl::encoding::DynamicFlags::FLEXIBLE)
+    }
+    type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
+    fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
+        fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
+            result.map(|_value| ())
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x734c996b0f37b942,
+            fidl::encoding::DynamicFlags::empty(),
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type StrictTwoWayErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsProtocolStrictTwoWayErrResult)>;
+    fn r#strict_two_way_err(&self) -> Self::StrictTwoWayErrResponseFut {
+        fn transform(
+            result: Result<
+                UnknownInteractionsProtocolStrictTwoWayErrResultHandleWrapper,
+                fidl::Error,
+            >,
+        ) -> Result<(UnknownInteractionsProtocolStrictTwoWayErrResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| ()))
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x6d1c6002c51bb967,
+            fidl::encoding::DynamicFlags::empty(),
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type FlexibleTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
+    fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut {
+        fn transform(
+            result: Result<
+                UnknownInteractionsProtocolFlexibleTwoWayResultWireHandleWrapper,
+                fidl::Error,
+            >,
+        ) -> Result<(), fidl::Error> {
+            result.and_then(|_value| {
+                let _value =
+                    _value.into_result::<UnknownInteractionsProtocolMarker>("flexible_two_way")?;
+                Ok(())
+            })
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x4a5bb3397008b7c,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type FlexibleTwoWayErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsProtocolFlexibleTwoWayErrResult)>;
+    fn r#flexible_two_way_err(&self) -> Self::FlexibleTwoWayErrResponseFut {
+        fn transform(
+            result: Result<
+                UnknownInteractionsProtocolFlexibleTwoWayErrResultWireHandleWrapper,
+                fidl::Error,
+            >,
+        ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayErrResult), fidl::Error> {
+            result.and_then(|_value| {
+                let _value = _value.into_nested_result::<UnknownInteractionsProtocolMarker>(
+                    "flexible_two_way_err",
+                )?;
+                Ok(_value.map(|_value| ()))
+            })
+        }
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x61240f878cc37c07,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        );
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type StrictEventResponseFut = fidl::client::QueryResponseFut<()>;
+    type StrictEventErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsProtocolStrictEventErrResult)>;
+    type FlexibleEventResponseFut = fidl::client::QueryResponseFut<()>;
+    type FlexibleEventErrResponseFut =
+        fidl::client::QueryResponseFut<(UnknownInteractionsProtocolFlexibleEventErrResult)>;
+}
+
+pub struct UnknownInteractionsProtocolEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for UnknownInteractionsProtocolEventStream {}
+
+impl futures::stream::FusedStream for UnknownInteractionsProtocolEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for UnknownInteractionsProtocolEventStream {
+    type Item = Result<UnknownInteractionsProtocolEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(UnknownInteractionsProtocolEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum UnknownInteractionsProtocolEvent {
+    StrictEvent {},
+
+    StrictEventErr { result: UnknownInteractionsProtocolStrictEventErrResult },
+
+    FlexibleEvent {},
+
+    FlexibleEventErr { result: UnknownInteractionsProtocolFlexibleEventErrResult },
+    _UnknownEvent { ordinal: u64 },
+}
+
+impl UnknownInteractionsProtocolEvent {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_event(self) -> Option<()> {
+        if let UnknownInteractionsProtocolEvent::StrictEvent {} = self {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_event_err(
+        self,
+    ) -> Option<(UnknownInteractionsProtocolStrictEventErrResult)> {
+        if let UnknownInteractionsProtocolEvent::StrictEventErr { result } = self {
+            Some((result))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_event(self) -> Option<()> {
+        if let UnknownInteractionsProtocolEvent::FlexibleEvent {} = self {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_event_err(
+        self,
+    ) -> Option<(UnknownInteractionsProtocolFlexibleEventErrResult)> {
+        if let UnknownInteractionsProtocolEvent::FlexibleEventErr { result } = self {
+            Some((result))
+        } else {
+            None
+        }
+    }
+
+    fn decode(
+        mut buf: fidl::MessageBufEtc,
+    ) -> Result<UnknownInteractionsProtocolEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            0x9842669255c4fc1 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsProtocolEvent::StrictEvent {}
+                ))
+            }
+            0x3d956048f723bc6d => {
+                let mut out_tuple: (UnknownInteractionsProtocolStrictEventErrResult,) = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsProtocolEvent::StrictEventErr {result: out_tuple.0,}
+                ))
+            }
+            0x61bb1fab7d767866 => {
+                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsProtocolEvent::FlexibleEvent {}
+                ))
+            }
+            0x4bda3e6fb22bb5a9 => {
+                let mut out_tuple: (UnknownInteractionsProtocolFlexibleEventErrResult,) = fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrEvent");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+                Ok((
+                    UnknownInteractionsProtocolEvent::FlexibleEventErr {result: out_tuple.0,}
+                ))
+            }
+            _ if tx_header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                Ok(UnknownInteractionsProtocolEvent::_UnknownEvent {
+                    ordinal: tx_header.ordinal(),
+                })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                protocol_name: <UnknownInteractionsProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+            })
+        }
+    }
+}
+
+/// A Stream of incoming requests for UnknownInteractionsProtocol
+pub struct UnknownInteractionsProtocolRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for UnknownInteractionsProtocolRequestStream {}
+
+impl futures::stream::FusedStream for UnknownInteractionsProtocolRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for UnknownInteractionsProtocolRequestStream {
+    type Protocol = UnknownInteractionsProtocolMarker;
+    type ControlHandle = UnknownInteractionsProtocolControlHandle;
+
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    fn control_handle(&self) -> Self::ControlHandle {
+        UnknownInteractionsProtocolControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for UnknownInteractionsProtocolRequestStream {
+    type Item = Result<UnknownInteractionsProtocolRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled UnknownInteractionsProtocolRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x4e7273b964d117a6 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictOneWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::StrictOneWay {control_handle,})
+                }
+                0x818bb3a7a910446 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleOneWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::FlexibleOneWay {control_handle,})
+                }
+                0x734c996b0f37b942 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::StrictTwoWay {responder:UnknownInteractionsProtocolStrictTwoWayResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                0x6d1c6002c51bb967 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::StrictTwoWayErr {responder:UnknownInteractionsProtocolStrictTwoWayErrResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                0x4a5bb3397008b7c => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::FlexibleTwoWay {responder:UnknownInteractionsProtocolFlexibleTwoWayResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                0x61240f878cc37c07 => {
+                    let mut req: () = fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    Ok(UnknownInteractionsProtocolRequest::FlexibleTwoWayErr {responder:UnknownInteractionsProtocolFlexibleTwoWayErrResponder {
+                                control_handle: std::mem::ManuallyDrop::new(control_handle),
+                                tx_id: header.tx_id(),
+                                ordinal: header.ordinal(),
+                            },})
+                }
+                _ if header.tx_id() == 0 && header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+                    Ok(UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                        ordinal: header.ordinal(),
+                        control_handle,
+                        direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                    })
+                }
+                _ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                    let control_handle = UnknownInteractionsProtocolControlHandle {
+                        inner: this.inner.clone(),
+                    };
+
+                    let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(zx_status::Status::NOT_SUPPORTED);
+
+                    let mut msg = fidl::encoding::TransactionMessage {
+                        header: fidl::encoding::TransactionHeader::new(
+                            header.tx_id(), header.ordinal(), header.dynamic_flags(),
+                        ),
+                        body: &mut response,
+                    };
+
+                    // We are inside of with_tls_decode_buf, so we can't use
+                    // with_tls_encode_buf. However, we know that the unknown
+                    // interaction reply will not contain any handles, so
+                    // creating a new Vec here does not cause an allocation.
+                    let mut handles = Vec::new();
+                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocol_UnknownInteractionResponse");
+                    fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
+                    fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+                    fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+                    control_handle
+                        .inner
+                        .channel()
+                        .write_etc(&*bytes, &mut handles)
+                        .map_err(fidl::Error::ServerResponseWrite)?;
+
+                    Ok(UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                        ordinal: header.ordinal(),
+                        control_handle,
+                        direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                    })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    protocol_name: <UnknownInteractionsProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+#[derive(Debug)]
+pub enum UnknownInteractionsProtocolRequest {
+    StrictOneWay {
+        control_handle: UnknownInteractionsProtocolControlHandle,
+    },
+    FlexibleOneWay {
+        control_handle: UnknownInteractionsProtocolControlHandle,
+    },
+    StrictTwoWay {
+        responder: UnknownInteractionsProtocolStrictTwoWayResponder,
+    },
+    StrictTwoWayErr {
+        responder: UnknownInteractionsProtocolStrictTwoWayErrResponder,
+    },
+    FlexibleTwoWay {
+        responder: UnknownInteractionsProtocolFlexibleTwoWayResponder,
+    },
+    FlexibleTwoWayErr {
+        responder: UnknownInteractionsProtocolFlexibleTwoWayErrResponder,
+    },
+    /// An interaction was received which does not match any known method.
+    _UnknownInteraction {
+        ordinal: u64,
+        control_handle: UnknownInteractionsProtocolControlHandle,
+        direction: fidl::endpoints::UnknownInteractionDirection,
+    },
+}
+
+impl UnknownInteractionsProtocolRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_one_way(self) -> Option<(UnknownInteractionsProtocolControlHandle)> {
+        if let UnknownInteractionsProtocolRequest::StrictOneWay { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_one_way(self) -> Option<(UnknownInteractionsProtocolControlHandle)> {
+        if let UnknownInteractionsProtocolRequest::FlexibleOneWay { control_handle } = self {
+            Some((control_handle))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_two_way(self) -> Option<(UnknownInteractionsProtocolStrictTwoWayResponder)> {
+        if let UnknownInteractionsProtocolRequest::StrictTwoWay { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_strict_two_way_err(
+        self,
+    ) -> Option<(UnknownInteractionsProtocolStrictTwoWayErrResponder)> {
+        if let UnknownInteractionsProtocolRequest::StrictTwoWayErr { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_two_way(
+        self,
+    ) -> Option<(UnknownInteractionsProtocolFlexibleTwoWayResponder)> {
+        if let UnknownInteractionsProtocolRequest::FlexibleTwoWay { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_flexible_two_way_err(
+        self,
+    ) -> Option<(UnknownInteractionsProtocolFlexibleTwoWayErrResponder)> {
+        if let UnknownInteractionsProtocolRequest::FlexibleTwoWayErr { responder } = self {
+            Some((responder))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            UnknownInteractionsProtocolRequest::StrictOneWay { .. } => "strict_one_way",
+            UnknownInteractionsProtocolRequest::FlexibleOneWay { .. } => "flexible_one_way",
+            UnknownInteractionsProtocolRequest::StrictTwoWay { .. } => "strict_two_way",
+            UnknownInteractionsProtocolRequest::StrictTwoWayErr { .. } => "strict_two_way_err",
+            UnknownInteractionsProtocolRequest::FlexibleTwoWay { .. } => "flexible_two_way",
+            UnknownInteractionsProtocolRequest::FlexibleTwoWayErr { .. } => "flexible_two_way_err",
+            UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                ..
+            } => "unknown one-way method",
+            UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                ..
+            } => "unknown two-way method",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnknownInteractionsProtocolControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl fidl::endpoints::ControlHandle for UnknownInteractionsProtocolControlHandle {
+    fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}
+
+impl UnknownInteractionsProtocolControlHandle {
+    pub fn send_strict_event(&self) -> Result<(), fidl::Error> {
+        let mut response = ();
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x9842669255c4fc1,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_strict_event_err(
+        &self,
+        mut result: &mut UnknownInteractionsProtocolStrictEventErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x3d956048f723bc6d,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_flexible_event(&self) -> Result<(), fidl::Error> {
+        let mut response = ();
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x61bb1fab7d767866,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+
+    pub fn send_flexible_event_err(
+        &self,
+        mut result: &mut UnknownInteractionsProtocolFlexibleEventErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                0,
+                0x4bda3e6fb22bb5a9,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsProtocolStrictTwoWayResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsProtocolStrictTwoWayResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsProtocolStrictTwoWayResponder {
+    type ControlHandle = UnknownInteractionsProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsProtocolStrictTwoWayResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(&self) -> Result<(), fidl::Error> {
+        let mut response = (());
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsProtocolStrictTwoWayErrResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsProtocolStrictTwoWayErrResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsProtocolStrictTwoWayErrResponder {
+    type ControlHandle = UnknownInteractionsProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsProtocolStrictTwoWayErrResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut UnknownInteractionsProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut UnknownInteractionsProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut UnknownInteractionsProtocolStrictTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (_result);
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsProtocolFlexibleTwoWayResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsProtocolFlexibleTwoWayResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsProtocolFlexibleTwoWayResponder {
+    type ControlHandle = UnknownInteractionsProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsProtocolFlexibleTwoWayResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -771,7 +2808,98 @@ impl ExampleFlexibleTwoWayResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/ExampleFlexibleTwoWayResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct UnknownInteractionsProtocolFlexibleTwoWayErrResponder {
+    control_handle: std::mem::ManuallyDrop<UnknownInteractionsProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`UnknownInteractionsProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for UnknownInteractionsProtocolFlexibleTwoWayErrResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl fidl::endpoints::Responder for UnknownInteractionsProtocolFlexibleTwoWayErrResponder {
+    type ControlHandle = UnknownInteractionsProtocolControlHandle;
+
+    fn control_handle(&self) -> &UnknownInteractionsProtocolControlHandle {
+        &self.control_handle
+    }
+
+    fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+}
+
+impl UnknownInteractionsProtocolFlexibleTwoWayErrResponder {
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(
+        self,
+        mut result: &mut UnknownInteractionsProtocolFlexibleTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(
+        self,
+        mut result: &mut UnknownInteractionsProtocolFlexibleTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let r = self.send_raw(result);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(
+        &self,
+        mut _result: &mut UnknownInteractionsProtocolFlexibleTwoWayErrResult,
+    ) -> Result<(), fidl::Error> {
+        let mut response = (fidl::encoding::OpenResult::from(_result));
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::FLEXIBLE,
+            ),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);

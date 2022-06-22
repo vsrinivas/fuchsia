@@ -36,6 +36,7 @@ standalone_libraries = [
   "table.test.fidl",
   "union.test.fidl",
   "union_sandwich.test.fidl",
+  "unknown_interactions.test.fidl",
   "vectors.test.fidl",
   "versions.test.fidl",
 ]
@@ -53,6 +54,10 @@ foreach(filename, standalone_libraries) {
     public_deps = [ "//zircon/vdso/zx" ]
     if (filename == "handles.test.fidl") {
       public_deps += [ "//sdk/fidl/fdf" ]
+    }
+
+    if (filename == "unknown_interactions.test.fidl") {
+      experimental_flags = [ "unknown_interactions" ]
     }
 
     # To ensure quality of generated Dart bindings.

@@ -3,3 +3,1298 @@
 #include <fidl/test.unknowninteractions/cpp/driver/wire_messaging.h>
 
 #include <memory>
+
+namespace test_unknowninteractions {
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal = 6982839851953080288lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_FlexibleOneWay_Ordinal = 1083620022582160398lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal = 1481114722667499972lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal = 8222960355260037542lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal = 2929398860738426482lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal = 5583489590753947170lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::WriteOptions write_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::WriteOptions write_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> _request_object{};
+
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> _request_object{};
+
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::FlexibleTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::entries_[] = {
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictOneWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleOneWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayErr(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayErr(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::entries_end_ =
+    &entries_[6];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::TryDispatch(
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_DynamicFlags);
+}
+
+namespace test_unknowninteractions {
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal = 9111839835597799810lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal = 2815690661228737027lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal = 4350840352076287137lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::WriteOptions write_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> _request_object{};
+
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::entries_[] = {
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictOneWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayErr(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::entries_end_ =
+    &entries_[3];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::TryDispatch(
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+namespace test_unknowninteractions {
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal = 200845620698173917lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_Ordinal = 3790953144423004126lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal = 523076268125513549lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr uint64_t kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal = 7057260423103547829lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::WriteOptions write_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::WriteOptions write_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  outgoing.Write(client_end.handle(), std::move(write_options));
+  SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* request) {
+  constexpr uint32_t buffer_size =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::MessageDirection::kSending>();
+  uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, fidl::internal::DriverTransport> request_message(
+      buffer, buffer_size, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> response_storage;
+  ::fidl::CallOptions call_options = {
+      .outgoing_transport_context =
+          ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
+              arena.get()),
+  };
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> decoded{
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  arena_ = std::move(response_storage.arena);
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
+  }
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> _request_object{};
+
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::FlexibleOneWay() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> _request_object{};
+
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::FlexibleOneWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> _request{};
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport> _request_message(
+      _buffer, _buffer_size, &_request);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictTwoWay() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> fidl::internal::WireWeakAsyncBufferClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictTwoWayErr() {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+
+  ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> _request{};
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get());
+  return ::fidl::internal::WireBufferThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictTwoWay() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+
+::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>
+fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictTwoWayErr() {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> _request{};
+        return ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>(_transport->get<::fidl::internal::DriverTransport>()), arena_, &_request);
+      });
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+}  // namespace test_unknowninteractions
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::entries_[] = {
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictOneWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->FlexibleOneWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWay(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> empty_request;
+          auto* primary = &empty_request;
+          ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+          reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayErr(
+              primary, arena, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::entries_end_ =
+    &entries_[4];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::TryDispatch(
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::MakeReply() {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult result) {
+  ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>();
+  uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport>
+      _response_message(
+          _buffer, _buffer_size, &_response);
+  return _core()->SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
+          _arena().get()));
+}
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::ReplySuccess() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::WithResponse({}));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
+}
+#endif  // __Fuchsia__
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}
+
+void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+  ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_DynamicFlags);
+}

@@ -6,9 +6,9 @@
 namespace test {
 namespace unknowninteractions {
 namespace testing {
-class Example_TestBase : public ::test::unknowninteractions::Example {
+class UnknownInteractionsProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsProtocol {
  public:
-  virtual ~Example_TestBase() {}
+  virtual ~UnknownInteractionsProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void StrictOneWay() override {
     NotImplemented_("StrictOneWay");
@@ -19,8 +19,47 @@ class Example_TestBase : public ::test::unknowninteractions::Example {
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
   }
+  void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
+    NotImplemented_("StrictTwoWayErr");
+  }
   void FlexibleTwoWay(FlexibleTwoWayCallback callback) override {
     NotImplemented_("FlexibleTwoWay");
+  }
+  void FlexibleTwoWayErr(FlexibleTwoWayErrCallback callback) override {
+    NotImplemented_("FlexibleTwoWayErr");
+  }
+};
+
+class UnknownInteractionsClosedProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsClosedProtocol {
+ public:
+  virtual ~UnknownInteractionsClosedProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void StrictOneWay() override {
+    NotImplemented_("StrictOneWay");
+  }
+  void StrictTwoWay(StrictTwoWayCallback callback) override {
+    NotImplemented_("StrictTwoWay");
+  }
+  void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
+    NotImplemented_("StrictTwoWayErr");
+  }
+};
+
+class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsAjarProtocol {
+ public:
+  virtual ~UnknownInteractionsAjarProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void StrictOneWay() override {
+    NotImplemented_("StrictOneWay");
+  }
+  void FlexibleOneWay() override {
+    NotImplemented_("FlexibleOneWay");
+  }
+  void StrictTwoWay(StrictTwoWayCallback callback) override {
+    NotImplemented_("StrictTwoWay");
+  }
+  void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
+    NotImplemented_("StrictTwoWayErr");
   }
 };
 }  // namespace testing
