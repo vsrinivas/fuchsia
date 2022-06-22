@@ -394,10 +394,10 @@ file. To make the service available to your component, do the following.
     }
     ```
 1.  Add the following to your component's [core realm shard](#add-core-shard) or
-    `core.cml`:
+    `appmgr.core_shard.cml`:
 
     ```json5
-    // core.cml / component.core_shard.cml
+    // appmgr.core_shard.cml / component.core_shard.cml
     {
         offer: [
             ...
