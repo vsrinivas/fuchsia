@@ -202,7 +202,7 @@ Base) for a product. These packages are never evicted by the system.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -210,7 +210,7 @@ From //BUILD.gn:46
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -782,7 +782,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -790,7 +790,7 @@ From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -1112,7 +1112,19 @@ From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/
 Set to true to enable distributed compilation of C++ using RBE.
 Enabling this takes precedence over `use_goma`.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //out/not-default/args.gn:5
+
+**Overridden from the default:** `false`
+
+From //build/toolchain/rbe.gni:82
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //out/not-default/args.gn:5
+
+**Overridden from the default:** `false`
 
 From //build/toolchain/rbe.gni:82
 
@@ -2189,7 +2201,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
@@ -2197,7 +2209,7 @@ From //BUILD.gn:78
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
@@ -2258,7 +2270,7 @@ Contains the major version number of the ICU library, for dependencies that
 need different configuration based on the library version. Currently this
 is only useful in Fuchsia.
 
-**Current value (from the default):** `"70"`
+**Current value (from the default):** `"71"`
 
 From //third_party/icu/version.gni:9
 
@@ -2385,7 +2397,7 @@ Debug build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -2393,7 +2405,7 @@ From //build/config/BUILDCONFIG.gn:24
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -3918,7 +3930,7 @@ Set to true to enable distributed compilation of Rust using RBE.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `false`
 
@@ -3926,7 +3938,7 @@ From //build/toolchain/rbe.gni:37
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `false`
 
@@ -4331,13 +4343,13 @@ From //build/config.gni:13
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `""`
 
@@ -4558,7 +4570,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:12
+From //out/not-default/args.gn:13
 
 **Overridden from the default:** `[]`
 
@@ -4566,7 +4578,7 @@ From //BUILD.gn:64
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:12
+From //out/not-default/args.gn:13
 
 **Overridden from the default:** `[]`
 
@@ -4650,7 +4662,7 @@ This has lower precedence than `use_reclient_cxx` in
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `false`
 
@@ -4658,7 +4670,7 @@ From //build/toolchain/goma.gni:13
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `false`
 
