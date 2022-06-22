@@ -30,6 +30,7 @@ use {
     anyhow::{bail, Context, Result},
     fms::Entries,
     futures_lite::stream::StreamExt,
+    itertools::Itertools as _,
     std::{
         io::Write,
         path::{Path, PathBuf},
@@ -115,7 +116,8 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 /// - None and there is only one product bundle available, use it.
 /// - Some(product name) and a url with that fragment is found, use it.
 /// - Some(full product url with fragment) use it.
-/// If a match is not found, fail with an error message.
+/// If a match is not found or multiple matches are found, fail with an error
+/// message.
 ///
 /// Tip: Call `update_metadata()` to get up to date choices (or not, if the
 ///      intent is to select from what's already there).
@@ -124,18 +126,27 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
     urls.sort();
     urls.reverse();
     if let Some(looking_for) = &looking_for {
-        for url in urls {
-            if url.as_str() == looking_for {
-                return Ok(url.to_owned());
-            }
-            if url.fragment().expect("product_urls must have fragment") == looking_for {
-                return Ok(url.to_owned());
+        let matches = urls.into_iter().filter(|url| {
+            return url.as_str() == looking_for
+                || url.fragment().expect("product_urls must have fragment") == looking_for;
+        });
+        match matches.at_most_one() {
+            Ok(Some(m)) => Ok(m),
+            Ok(None) => bail!(
+                "A product bundle with that name was not found, please check the spelling and try again."
+            ),
+            // This branch can only happen with looking_for matches more than
+            // one fragment--full urls can only ever match once.
+            Err(matches) => {
+                let printable_matches =
+                    matches.map(|url| url.to_string()).collect::<Vec<String>>().join("\n");
+                bail!(
+                    "Multiple product bundles match for: '{}':\n{}",
+                    looking_for,
+                    printable_matches
+                )
             }
         }
-        bail!(
-            "A product bundle with that name was not found, \
-            please check the spelling and try again."
-        );
     } else {
         if urls.len() == 1 {
             // There is only one product bundle available.
