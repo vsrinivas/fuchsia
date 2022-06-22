@@ -14,7 +14,7 @@ use {
             RemoteCrypt,
         },
     },
-    anyhow::{Context, Error},
+    anyhow::{ensure, Context, Error},
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_fs::{AdminMarker, AdminRequest, AdminRequestStream},
     fidl_fuchsia_fs_startup::{
@@ -221,24 +221,8 @@ impl Component {
         device: ClientEnd<BlockMarker>,
         options: StartOptions,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/99591): When runring as a component, it's possible for us to end up with
-        // orphaned filesystems in the case where a client crashes and is unable to send
-        // Admin/Shutdown and this causes problems in some tests which do this deliberately.  To
-        // address this, we forcibly terminate any existing filesystem if there's an attempt to
-        // start another instance.  This is a problem whilst we are using static routing.  We can
-        // probably address this by switching to dynamic routing: e.g. change the Start method so
-        // that it supplies an export root and then we can notice when the client goes away.
-        let state = self.state.lock().unwrap().maybe_stop();
-        if let Some(state) = state {
-            // TODO(fxbug.dev/99591): There's a race here that we should think about: it's
-            // possible that Shutdown has been called on an old filesystem but hasn't completed,
-            // in which case this we'll skip over here and possibly fail below.
-            let _ = self
-                .outgoing_dir
-                .remove_entry_impl("root".into(), /* must_be_directory: */ false);
-            state.volumes.terminate().await;
-            let _ = state.fs.close().await;
-        }
+        ensure!(!matches!(&*self.state.lock().unwrap(), State::Started(_)), zx::Status::BAD_STATE);
+
         let client = RemoteBlockClient::new(device.into_channel()).await?;
         let crypt = if let Some(crypt) = options.crypt {
             Some(Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
