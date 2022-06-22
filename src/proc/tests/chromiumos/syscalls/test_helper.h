@@ -7,11 +7,10 @@
 
 #define SAFE_SYSCALL(X)                                                                         \
   ({                                                                                            \
-    int retval;                                                                                 \
-    retval = (X);                                                                               \
+    auto retval = (X);                                                                          \
     if (retval < 0) {                                                                           \
       fprintf(stderr, "Error at %s:%d: %s (%d)\n", __FILE__, __LINE__, strerror(errno), errno); \
-      exit(retval);                                                                             \
+      exit(-1);                                                                                 \
     };                                                                                          \
     retval;                                                                                     \
   })

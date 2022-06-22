@@ -16,9 +16,9 @@
 
 namespace {
 
-int received_signal = -1;
+int received_signal[64] = {};
 
-void record_signal(int signo) { received_signal = signo; }
+void record_signal(int signo) { received_signal[signo]++; }
 
 void ignore_signal(int signal) {
   struct sigaction action;
@@ -27,6 +27,7 @@ void ignore_signal(int signal) {
 }
 
 void register_signal_handler(int signal) {
+  received_signal[signal] = 0;
   struct sigaction action;
   action.sa_handler = record_signal;
   SAFE_SYSCALL(sigaction(signal, &action, nullptr));
@@ -42,6 +43,9 @@ int reap_children() {
   for (;;) {
     int wstatus;
     if (waitpid(-1, &wstatus, 0) == -1) {
+      if (errno == EINTR) {
+        continue;
+      }
       if (errno == ECHILD) {
         // No more child, reaping is done.
         return 0;
@@ -147,7 +151,7 @@ TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
         // currently doesn't handle signal outside of syscalls, and doesn't
         // handle multiple signals at once.
         SAFE_SYSCALL(getpid());
-        if (received_signal != SIGHUP) {
+        if (received_signal[SIGHUP] == 0) {
           fprintf(stderr, "Did not received expected SIGHUP\n");
           exit(-1);
         }
@@ -190,19 +194,20 @@ TEST(Pty, SigWinch) {
       SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
 
       // Register a signal handler for sigwinch.
+      ignore_signal(SIGUSR1);
       register_signal_handler(SIGWINCH);
 
       // Send a SIGUSR1 to notify our parent.
       SAFE_SYSCALL(kill(getppid(), SIGUSR1));
 
       // Wait for a SIGWINCH
-      while (received_signal != SIGWINCH) {
+      while (received_signal[SIGWINCH] == 0) {
         sleep_ns(10e7);
       }
 
     } else {
       // Wait for SIGUSR1
-      while (received_signal != SIGUSR1) {
+      while (received_signal[SIGUSR1] == 0) {
         sleep_ns(10e7);
       }
 
@@ -275,6 +280,89 @@ TEST(Pty, ioctl_TCSETSF) {
     struct termios config;
     SAFE_SYSCALL(ioctl(main_terminal, TCGETS, &config));
     SAFE_SYSCALL(ioctl(main_terminal, TCSETSF, &config));
+
+    // Ensure all forked process will exit and not reach back to gtest.
+    exit(0);
+  } else {
+    // Wait for all children to die.
+    ASSERT_EQ(0, reap_children());
+  }
+}
+
+TEST(Pty, SendSignals) {
+  // Reap children.
+  prctl(PR_SET_CHILD_SUBREAPER, 1);
+
+  if (SAFE_SYSCALL(fork()) == 0) {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal();
+    SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
+
+    // Register a signal handler for sigusr1.
+    register_signal_handler(SIGUSR1);
+    ignore_signal(SIGTTOU);
+
+    std::map<int, char> signal_and_control_character;
+    signal_and_control_character[SIGINT] = 3;
+    signal_and_control_character[SIGQUIT] = 28;
+    signal_and_control_character[SIGSTOP] = 26;
+
+    for (auto [signal, character] : signal_and_control_character) {
+      // fork a child, move it to its own process group and makes it the
+      // foreground one.
+      pid_t child_pid;
+      if ((child_pid = SAFE_SYSCALL(fork())) == 0) {
+        SAFE_SYSCALL(setpgid(0, 0));
+        SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
+
+        // Send a SIGUSR1 to notify our parent.
+        SAFE_SYSCALL(kill(getppid(), SIGUSR1));
+
+        // Wait to be killed by our parent.
+        for (;;) {
+          sleep_ns(10e8);
+        }
+
+      } else {
+        // Wait for SIGUSR1
+        while (received_signal[SIGUSR1] == 0) {
+          sleep_ns(10e7);
+        }
+
+        // Send control character.
+        char buffer[1];
+        buffer[0] = character;
+        SAFE_SYSCALL(write(main_terminal, buffer, 1));
+
+        int wstatus;
+        pid_t received_pid = SAFE_SYSCALL(waitpid(child_pid, &wstatus, WUNTRACED));
+        if (received_pid != child_pid) {
+          fprintf(stderr, "Unexpected children. Expected %d, but got %d\n", child_pid,
+                  received_pid);
+          exit(1);
+        }
+        if (signal == SIGSTOP) {
+          if (!WIFSTOPPED(wstatus)) {
+            fprintf(stderr, "Expected the child to have been stopped.\n");
+            exit(1);
+          }
+          // Ensure the children is called, even when only stopped.
+          SAFE_SYSCALL(kill(child_pid, SIGKILL));
+          SAFE_SYSCALL(waitpid(child_pid, NULL, 0));
+        } else {
+          if (!WIFSIGNALED(wstatus)) {
+            fprintf(stderr, "Expected the child to have been killed by a signal.\n");
+            exit(1);
+          }
+          if (WTERMSIG(wstatus) != signal) {
+            fprintf(stderr, "Expected the child to have been killed by signal %d.\n", signal);
+            exit(1);
+          }
+        }
+        exit(0);
+      }
+    }
 
     // Ensure all forked process will exit and not reach back to gtest.
     exit(0);

@@ -189,7 +189,7 @@ impl FileOps for DevPtmxFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.terminal.write().main_read(current_task, data)
+        self.terminal.main_read(current_task, data)
     }
 
     fn write(
@@ -198,7 +198,7 @@ impl FileOps for DevPtmxFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.terminal.write().main_write(current_task, data)
+        self.terminal.main_write(current_task, data)
     }
 
     fn wait_async(
@@ -210,15 +210,15 @@ impl FileOps for DevPtmxFile {
         handler: EventHandler,
         options: WaitAsyncOptions,
     ) -> WaitKey {
-        self.terminal.write().main_wait_async(waiter, events, handler, options)
+        self.terminal.main_wait_async(waiter, events, handler, options)
     }
 
     fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
-        self.terminal.write().main_cancel_wait(key);
+        self.terminal.main_cancel_wait(key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-        self.terminal.read().main_query_events()
+        self.terminal.main_query_events()
     }
 
     fn fcntl(
@@ -283,7 +283,7 @@ impl FileOps for DevPtsFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.terminal.write().replica_read(current_task, data)
+        self.terminal.replica_read(current_task, data)
     }
 
     fn write(
@@ -292,7 +292,7 @@ impl FileOps for DevPtsFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.terminal.write().replica_write(current_task, data)
+        self.terminal.replica_write(current_task, data)
     }
 
     fn wait_async(
@@ -304,15 +304,15 @@ impl FileOps for DevPtsFile {
         handler: EventHandler,
         options: WaitAsyncOptions,
     ) -> WaitKey {
-        self.terminal.write().replica_wait_async(waiter, events, handler, options)
+        self.terminal.replica_wait_async(waiter, events, handler, options)
     }
 
     fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
-        self.terminal.write().replica_cancel_wait(key);
+        self.terminal.replica_cancel_wait(key);
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-        self.terminal.read().replica_query_events()
+        self.terminal.replica_query_events()
     }
 
     fn fcntl(
@@ -404,15 +404,12 @@ fn shared_ioctl(
                 current_task.mm.read_object(UserRef::<uapi::winsize>::new(user_addr))?;
 
             // Send a SIGWINCH signal to the foreground process group.
-            let foreground_process_group_id = terminal
+            let foreground_process_group = terminal
                 .read()
                 .get_controlling_session(is_main)
                 .as_ref()
-                .map(|cs| cs.foregound_process_group);
-            let process_group: Option<Arc<ProcessGroup>> = foreground_process_group_id
-                .map(|id| current_task.thread_group.kernel.pids.read().get_process_group(id))
-                .flatten();
-            if let Some(process_group) = process_group {
+                .and_then(|cs| cs.foregound_process_group.upgrade());
+            if let Some(process_group) = foreground_process_group {
                 process_group.send_signals(&[SIGWINCH]);
             }
             Ok(SUCCESS)
@@ -430,19 +427,19 @@ fn shared_ioctl(
             // N.B. TCSETS on the main terminal actually affects the configuration of the replica
             // end.
             let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
-            terminal.write().set_termios(termios);
+            terminal.set_termios(termios);
             Ok(SUCCESS)
         }
         TCSETSF => {
             // This should drain the output queue and discard the pending input first.
             let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
-            terminal.write().set_termios(termios);
+            terminal.set_termios(termios);
             Ok(SUCCESS)
         }
         TCSETSW => {
             // TODO(qsr): This should drain the output queue first.
             let termios = current_task.mm.read_object(UserRef::<uapi::termios>::new(user_addr))?;
-            terminal.write().set_termios(termios);
+            terminal.set_termios(termios);
             Ok(SUCCESS)
         }
         _ => {
@@ -863,7 +860,7 @@ mod tests {
                 .get_controlling_session(false)
                 .as_ref()
                 .unwrap()
-                .foregound_process_group,
+                .foregound_process_group_leader,
             task2_pgid
         );
     }

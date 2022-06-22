@@ -408,7 +408,7 @@ impl ThreadGroup {
         // "When fd does not refer to the controlling terminal of the calling
         // process, -1 is returned" - tcgetpgrp(3)
         let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
-        Ok(cs.foregound_process_group)
+        Ok(cs.foregound_process_group_leader)
     }
 
     pub fn set_foreground_process_group(
@@ -441,12 +441,14 @@ impl ThreadGroup {
 
             // If the calling process is a member of a background group and not ignoring SIGTTOU, a
             // SIGTTOU signal is sent to all members of this background process group.
-            send_ttou = process_group.leader != cs.foregound_process_group
+            send_ttou = process_group.leader != cs.foregound_process_group_leader
                 && !SIGTTOU.is_in_set(current_task.read().signals.mask)
                 && self.signal_actions.get(SIGTTOU).sa_handler != SIG_IGN;
 
-            *controlling_session =
-                controlling_session.as_ref().unwrap().set_foregound_process_group(pgid);
+            *controlling_session = controlling_session
+                .as_ref()
+                .unwrap()
+                .set_foregound_process_group(&new_process_group);
         }
 
         // Locks must not be held when sending signals.
@@ -509,7 +511,7 @@ impl ThreadGroup {
 
         session_writer.controlling_terminal =
             Some(ControllingTerminal::new(terminal.clone(), is_main));
-        *controlling_session = ControllingSession::new(&process_group.session);
+        *controlling_session = ControllingSession::new(&process_group);
         Ok(())
     }
 

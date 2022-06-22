@@ -145,6 +145,135 @@ impl Terminal {
         Self { state, id, mutable_state: RwLock::new(Default::default()) }
     }
 
+    /// Sets the terminal configuration.
+    pub fn set_termios(self: &Arc<Self>, termios: uapi::termios) {
+        let signals = self.write().set_termios(termios);
+        self.send_signals(signals);
+    }
+
+    /// `wait_async` implementation of the main side of the terminal.
+    pub fn main_wait_async(
+        self: &Arc<Self>,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+        options: WaitAsyncOptions,
+    ) -> WaitKey {
+        self.write().main_wait_async(waiter, events, handler, options)
+    }
+
+    /// `cancel_wait` implementation of the main side of the terminal.
+    pub fn main_cancel_wait(self: &Arc<Self>, key: WaitKey) -> bool {
+        self.write().main_cancel_wait(key)
+    }
+
+    /// `query_events` implementation of the main side of the terminal.
+    pub fn main_query_events(self: &Arc<Self>) -> FdEvents {
+        self.read().main_query_events()
+    }
+
+    /// `read` implementation of the main side of the terminal.
+    pub fn main_read(
+        self: &Arc<Self>,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let (bytes, signals) = self.write().main_read(current_task, data)?;
+        self.send_signals(signals);
+
+        if bytes == 0 {
+            error!(EAGAIN)
+        } else {
+            Ok(bytes)
+        }
+    }
+
+    /// `write` implementation of the main side of the terminal.
+    pub fn main_write(
+        self: &Arc<Self>,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let (bytes, signals) = self.write().main_write(current_task, data)?;
+        self.send_signals(signals);
+
+        if bytes == 0 {
+            error!(EAGAIN)
+        } else {
+            Ok(bytes)
+        }
+    }
+
+    /// `wait_async` implementation of the replica side of the terminal.
+    pub fn replica_wait_async(
+        self: &Arc<Self>,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+        options: WaitAsyncOptions,
+    ) -> WaitKey {
+        self.write().replica_wait_async(waiter, events, handler, options)
+    }
+
+    /// `cancel_wait` implementation of the replica side of the terminal.
+    pub fn replica_cancel_wait(self: &Arc<Self>, key: WaitKey) -> bool {
+        self.write().replica_cancel_wait(key)
+    }
+
+    /// `query_events` implementation of the replica side of the terminal.
+    pub fn replica_query_events(self: &Arc<Self>) -> FdEvents {
+        self.read().replica_query_events()
+    }
+
+    /// `read` implementation of the replica side of the terminal.
+    pub fn replica_read(
+        self: &Arc<Self>,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let (bytes, signals) = self.write().replica_read(current_task, data)?;
+        self.send_signals(signals);
+
+        if bytes == 0 {
+            error!(EAGAIN)
+        } else {
+            Ok(bytes)
+        }
+    }
+
+    /// `write` implementation of the replica side of the terminal.
+    pub fn replica_write(
+        self: &Arc<Self>,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let (bytes, signals) = self.write().replica_write(current_task, data)?;
+        self.send_signals(signals);
+
+        if bytes == 0 {
+            error!(EAGAIN)
+        } else {
+            Ok(bytes)
+        }
+    }
+
+    /// Send the pending signals to the associated foreground process groups if they exist.
+    fn send_signals(self: &Arc<Self>, signals: PendingSignals) {
+        for is_input in &[false, true] {
+            let signals = signals.signals(*is_input);
+            if !signals.is_empty() {
+                let process_group = self
+                    .read()
+                    .get_controlling_session(*is_input)
+                    .as_ref()
+                    .and_then(|cs| cs.foregound_process_group.upgrade());
+                if let Some(process_group) = process_group {
+                    process_group.send_signals(signals);
+                }
+            }
+        }
+    }
+
     state_accessor!(Terminal, mutable_state);
 }
 
@@ -167,6 +296,42 @@ macro_rules! with_queue {
         result
         }
     };
+}
+
+/// Keep track of the signals to send when handling terminal content.
+#[must_use]
+pub struct PendingSignals {
+    pub input_signals: Vec<Signal>,
+    pub output_signals: Vec<Signal>,
+}
+
+impl PendingSignals {
+    pub fn new() -> Self {
+        Self { input_signals: vec![], output_signals: vec![] }
+    }
+
+    /// Add the given signal to the list of signal to send to the associate process group.
+    pub fn add(&mut self, signal: Signal, is_input: bool) {
+        if is_input {
+            self.input_signals.push(signal);
+        } else {
+            self.output_signals.push(signal);
+        }
+    }
+
+    /// Append all pending signals in `other` to `self`.
+    pub fn append(&mut self, mut other: Self) {
+        self.input_signals.append(&mut other.input_signals);
+        self.output_signals.append(&mut other.output_signals);
+    }
+
+    pub fn signals(&self, is_input: bool) -> &[Signal] {
+        if is_input {
+            &self.input_signals[..]
+        } else {
+            &self.output_signals[..]
+        }
+    }
 }
 
 state_implementation!(Terminal, TerminalMutableState, {
@@ -199,18 +364,28 @@ state_implementation!(Terminal, TerminalMutableState, {
         &self.termios
     }
 
+    /// Returns the number of available bytes to read from the side of the terminal described by
+    /// `is_main`.
+    pub fn get_available_read_size(&self, is_main: bool) -> usize {
+        let queue = if is_main { self.output_queue() } else { self.input_queue() };
+        queue.readable_size()
+    }
+
     /// Sets the terminal configuration.
-    pub fn set_termios(&mut self, termios: uapi::termios) {
+    fn set_termios(&mut self, termios: uapi::termios) -> PendingSignals {
         let old_canon_enabled = self.termios.has_local_flags(ICANON);
         self.termios = termios;
         if old_canon_enabled && !self.termios.has_local_flags(ICANON) {
-            with_queue!(self.input_queue.on_canon_disabled(self));
+            let signals = with_queue!(self.input_queue.on_canon_disabled(self));
             self.notify_waiters();
+            signals
+        } else {
+            PendingSignals::new()
         }
     }
 
     /// `wait_async` implementation of the main side of the terminal.
-    pub fn main_wait_async(
+    fn main_wait_async(
         &mut self,
         waiter: &Arc<Waiter>,
         events: FdEvents,
@@ -226,49 +401,39 @@ state_implementation!(Terminal, TerminalMutableState, {
     }
 
     /// `cancel_wait` implementation of the main side of the terminal.
-    pub fn main_cancel_wait(&mut self, key: WaitKey) -> bool {
+    fn main_cancel_wait(&mut self, key: WaitKey) -> bool {
         self.main_wait_queue.cancel_wait(key)
     }
 
     /// `query_events` implementation of the main side of the terminal.
-    pub fn main_query_events(&self) -> FdEvents {
+    fn main_query_events(&self) -> FdEvents {
         self.output_queue().read_readyness() | self.input_queue().write_readyness()
     }
 
     /// `read` implementation of the main side of the terminal.
-    pub fn main_read(
+    fn main_read(
         &mut self,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        let bytes = with_queue!(self.output_queue.read(self, current_task, data))?;
+    ) -> Result<(usize, PendingSignals), Errno> {
+        let result = with_queue!(self.output_queue.read(self, current_task, data))?;
         self.notify_waiters();
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(result)
     }
 
     /// `write` implementation of the main side of the terminal.
-    pub fn main_write(
+    fn main_write(
         &mut self,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        let bytes = with_queue!(self.input_queue.write(self, current_task, data))?;
+    ) -> Result<(usize, PendingSignals), Errno> {
+        let result = with_queue!(self.input_queue.write(self, current_task, data))?;
         self.notify_waiters();
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(result)
     }
 
     /// `wait_async` implementation of the replica side of the terminal.
-    pub fn replica_wait_async(
+    fn replica_wait_async(
         &mut self,
         waiter: &Arc<Waiter>,
         events: FdEvents,
@@ -284,52 +449,35 @@ state_implementation!(Terminal, TerminalMutableState, {
     }
 
     /// `cancel_wait` implementation of the replica side of the terminal.
-    pub fn replica_cancel_wait(&mut self, key: WaitKey) -> bool {
+    fn replica_cancel_wait(&mut self, key: WaitKey) -> bool {
         self.replica_wait_queue.cancel_wait(key)
     }
 
     /// `query_events` implementation of the replica side of the terminal.
-    pub fn replica_query_events(&self) -> FdEvents {
+    fn replica_query_events(&self) -> FdEvents {
         self.input_queue().read_readyness() | self.output_queue().write_readyness()
     }
 
     /// `read` implementation of the replica side of the terminal.
-    pub fn replica_read(
+    fn replica_read(
         &mut self,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        let bytes = with_queue!(self.input_queue.read(self, current_task, data))?;
+    ) -> Result<(usize, PendingSignals), Errno> {
+        let result = with_queue!(self.input_queue.read(self, current_task, data))?;
         self.notify_waiters();
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(result)
     }
 
     /// `write` implementation of the replica side of the terminal.
-    pub fn replica_write(
+    fn replica_write(
         &mut self,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        let bytes = with_queue!(self.output_queue.write(self, current_task, data))?;
+    ) -> Result<(usize, PendingSignals), Errno> {
+        let result = with_queue!(self.output_queue.write(self, current_task, data))?;
         self.notify_waiters();
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
-    }
-
-    /// Returns the number of available bytes to read from the side of the terminal described by
-    /// `is_main`.
-    pub fn get_available_read_size(&self, is_main: bool) -> usize {
-        let queue = if is_main { self.output_queue() } else { self.input_queue() };
-        queue.readable_size()
+        Ok(result)
     }
 
     /// Returns the input_queue. The Option is always filled, see `input_queue` description.
@@ -354,12 +502,28 @@ state_implementation!(Terminal, TerminalMutableState, {
         }
     }
 
+    /// Return whether a signal must be send when receiving `byte`, and if yes, which.
+    fn handle_signals(&mut self, byte: RawByte) -> Option<Signal> {
+        if !self.termios.has_local_flags(ISIG) {
+            return None;
+        }
+        self.termios.signal(byte)
+    }
+
     /// Transform the given `buffer` according to the terminal configuration and append it to the
     /// read buffer of the `queue`. The given queue is the input or output queue depending on
     /// `is_input`. The transformation method might update the other queue, but in the case, it is
     /// guaranteed that it won't have to update the initial one recursively. The transformation
     /// might also update the state of the terminal.
-    fn transform(&mut self, is_input: bool, queue: &mut Queue, buffer: &[RawByte]) -> usize {
+    ///
+    /// Returns the number of bytes extracted from the queue, as well as the pending signals
+    /// following the handling of the buffer.
+    fn transform(
+        &mut self,
+        is_input: bool,
+        queue: &mut Queue,
+        buffer: &[RawByte],
+    ) -> (usize, PendingSignals) {
         if is_input {
             self.transform_input(queue, buffer)
         } else {
@@ -368,7 +532,11 @@ state_implementation!(Terminal, TerminalMutableState, {
     }
 
     /// Transformation method for the output queue. See `transform`.
-    fn transform_output(&mut self, queue: &mut Queue, original_buffer: &[RawByte]) -> usize {
+    fn transform_output(
+        &mut self,
+        queue: &mut Queue,
+        original_buffer: &[RawByte],
+    ) -> (usize, PendingSignals) {
         let mut buffer = original_buffer;
 
         // transform_output is effectively always in noncanonical mode, as the
@@ -379,16 +547,20 @@ state_implementation!(Terminal, TerminalMutableState, {
             if queue.read_buffer.len() > 0 {
                 queue.readable = true;
             }
-            return buffer.len();
+            return (buffer.len(), PendingSignals::new());
         }
 
         let mut return_value = 0;
+        let mut signals = PendingSignals::new();
         while buffer.len() > 0 {
             let size = compute_next_character_size(buffer, &self.termios);
             let mut character_bytes = buffer[..size].to_vec();
             return_value += size;
             buffer = &buffer[size..];
             // It is guaranteed that character_bytes has at least one element.
+            if let Some(signal) = self.handle_signals(character_bytes[0]) {
+                signals.add(signal, false);
+            }
             match character_bytes[0] {
                 b'\n' => {
                     if self.termios.has_output_flags(ONLRET) {
@@ -436,17 +608,21 @@ state_implementation!(Terminal, TerminalMutableState, {
         if queue.read_buffer.len() > 0 {
             queue.readable = true;
         }
-        return_value
+        (return_value, signals)
     }
 
     /// Transformation method for the input queue. See `transform`.
-    fn transform_input(&mut self, queue: &mut Queue, original_buffer: &[RawByte]) -> usize {
+    fn transform_input(
+        &mut self,
+        queue: &mut Queue,
+        original_buffer: &[RawByte],
+    ) -> (usize, PendingSignals) {
         let mut buffer = original_buffer;
 
         // If there's a line waiting to be read in canonical mode, don't write
         // anything else to the read buffer.
         if self.termios.has_local_flags(ICANON) && queue.readable {
-            return 0;
+            return (0, PendingSignals::new());
         }
 
         let max_bytes = if self.termios.has_local_flags(ICANON) {
@@ -456,10 +632,14 @@ state_implementation!(Terminal, TerminalMutableState, {
         };
 
         let mut return_value = 0;
+        let mut signals = PendingSignals::new();
         while buffer.len() > 0 && queue.read_buffer.len() < CANON_MAX_BYTES {
             let size = compute_next_character_size(buffer, &self.termios);
             let mut character_bytes = buffer[..size].to_vec();
             // It is guaranteed that character_bytes has at least one element.
+            if let Some(signal) = self.handle_signals(character_bytes[0]) {
+                signals.add(signal, true);
+            }
             match character_bytes[0] {
                 b'\r' => {
                     if self.termios.has_input_flags(IGNCR) {
@@ -506,7 +686,7 @@ state_implementation!(Terminal, TerminalMutableState, {
 
             // Anything written to the read buffer will have to be echoed.
             if self.termios.has_local_flags(ECHO) {
-                with_queue!(self.output_queue.write_bytes(self, &character_bytes));
+                signals.append(with_queue!(self.output_queue.write_bytes(self, &character_bytes)));
             }
 
             // If we finish a line, make it available for reading.
@@ -521,7 +701,7 @@ state_implementation!(Terminal, TerminalMutableState, {
             queue.readable = true;
         }
 
-        return_value
+        (return_value, signals)
     }
 });
 
@@ -538,16 +718,24 @@ pub struct ControllingSession {
     /// The controlling session.
     pub session: Weak<Session>,
     /// The foreground process group.
-    pub foregound_process_group: pid_t,
+    pub foregound_process_group: Weak<ProcessGroup>,
+    /// The identifier of the foreground process group. This is necessary because the leader must
+    /// be returned even if the process group has already been deleted.
+    pub foregound_process_group_leader: pid_t,
 }
 
 impl ControllingSession {
-    pub fn new(session: &Arc<Session>) -> Option<Self> {
-        Some(Self { session: Arc::downgrade(session), foregound_process_group: session.leader })
+    pub fn new(process_group: &Arc<ProcessGroup>) -> Option<Self> {
+        Some(Self {
+            session: Arc::downgrade(&process_group.session),
+            foregound_process_group: Arc::downgrade(process_group),
+            foregound_process_group_leader: process_group.leader,
+        })
     }
 
-    pub fn set_foregound_process_group(&self, foregound_process_group: pid_t) -> Option<Self> {
-        Some(Self { session: self.session.clone(), foregound_process_group })
+    pub fn set_foregound_process_group(&self, process_group: &Arc<ProcessGroup>) -> Option<Self> {
+        assert!(self.session.upgrade().as_ref() == Some(&process_group.session));
+        Self::new(process_group)
     }
 }
 
@@ -558,6 +746,7 @@ trait TermIOS {
     fn has_local_flags(&self, flags: tcflag_t) -> bool;
     fn is_eof(&self, c: RawByte) -> bool;
     fn is_terminating(&self, character_bytes: &[RawByte]) -> bool;
+    fn signal(&self, c: RawByte) -> Option<Signal>;
 }
 
 impl TermIOS for uapi::termios {
@@ -595,6 +784,18 @@ impl TermIOS for uapi::termios {
             return self.has_local_flags(IEXTEN);
         }
         false
+    }
+    fn signal(&self, c: RawByte) -> Option<Signal> {
+        if c == self.c_cc[VINTR as usize] {
+            return Some(SIGINT);
+        }
+        if c == self.c_cc[VQUIT as usize] {
+            return Some(SIGQUIT);
+        }
+        if c == self.c_cc[VSUSP as usize] {
+            return Some(SIGSTOP);
+        }
+        None
     }
 }
 
@@ -711,7 +912,7 @@ impl Queue {
         terminal: &mut TerminalWriteGuard<'_>,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
+    ) -> Result<(usize, PendingSignals), Errno> {
         if !self.readable {
             return error!(EAGAIN);
         }
@@ -724,9 +925,9 @@ impl Queue {
             self.readable = false;
         }
 
-        self.drain_waiting_buffer(terminal);
+        let signals = self.drain_waiting_buffer(terminal);
 
-        Ok(written_to_userspace)
+        Ok((written_to_userspace, signals))
     }
 
     /// Writes to the queue from `data`. Returns the number of bytes copied.
@@ -735,7 +936,7 @@ impl Queue {
         terminal: &mut TerminalWriteGuard<'_>,
         current_task: &CurrentTask,
         data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
+    ) -> Result<(usize, PendingSignals), Errno> {
         let room = WAIT_BUFFER_MAX_BYTES - self.total_wait_buffer_length;
         let data_length = UserBuffer::get_total_length(data)?;
         if room == 0 && data_length > 0 {
@@ -744,12 +945,16 @@ impl Queue {
         let mut buffer = vec![0 as RawByte; std::cmp::min(room, data_length)];
         let read_from_userspace = current_task.mm.read_all(data, &mut buffer)?;
         assert!(read_from_userspace == buffer.len());
-        self.push_to_waiting_buffer(terminal, buffer);
-        Ok(read_from_userspace)
+        let signals = self.push_to_waiting_buffer(terminal, buffer);
+        Ok((read_from_userspace, signals))
     }
 
     /// Writes the given `buffer` to the queue.
-    fn write_bytes(&mut self, terminal: &mut TerminalWriteGuard<'_>, buffer: &[RawByte]) {
+    fn write_bytes(
+        &mut self,
+        terminal: &mut TerminalWriteGuard<'_>,
+        buffer: &[RawByte],
+    ) -> PendingSignals {
         self.push_to_waiting_buffer(terminal, buffer.to_vec())
     }
 
@@ -758,32 +963,36 @@ impl Queue {
         &mut self,
         terminal: &mut TerminalWriteGuard<'_>,
         buffer: Vec<RawByte>,
-    ) {
+    ) -> PendingSignals {
         self.total_wait_buffer_length += buffer.len();
         self.wait_buffers.push_back(buffer);
-        self.drain_waiting_buffer(terminal);
+        self.drain_waiting_buffer(terminal)
     }
 
     /// Processes the wait_buffers, filling the read buffer.
-    fn drain_waiting_buffer(&mut self, terminal: &mut TerminalWriteGuard<'_>) {
+    fn drain_waiting_buffer(&mut self, terminal: &mut TerminalWriteGuard<'_>) -> PendingSignals {
         let mut total = 0;
+        let mut signals_to_return = PendingSignals::new();
         while let Some(wait_buffer) = self.wait_buffers.pop_front() {
-            let count = terminal.transform(self.is_input, self, &wait_buffer);
+            let (count, signals) = terminal.transform(self.is_input, self, &wait_buffer);
             total += count;
+            signals_to_return.append(signals);
             if count != wait_buffer.len() {
                 self.wait_buffers.push_front(wait_buffer[count..].to_vec());
                 break;
             }
         }
         self.total_wait_buffer_length -= total;
+        signals_to_return
     }
 
     /// Called when the queue is moved from canonical mode, to non canonical mode.
-    fn on_canon_disabled(&mut self, terminal: &mut TerminalWriteGuard<'_>) {
-        self.drain_waiting_buffer(terminal);
+    fn on_canon_disabled(&mut self, terminal: &mut TerminalWriteGuard<'_>) -> PendingSignals {
+        let signals = self.drain_waiting_buffer(terminal);
         if !self.read_buffer.is_empty() {
             self.readable = true;
         }
+        signals
     }
 }
 
