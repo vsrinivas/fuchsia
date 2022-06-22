@@ -39,6 +39,8 @@ class WeakPtrFactory;
 template <typename T>
 class WeakPtr {
  public:
+  using element_type = T;
+
   WeakPtr() : ptr_(nullptr) {}
   WeakPtr(std::nullptr_t) : WeakPtr() {}
 
