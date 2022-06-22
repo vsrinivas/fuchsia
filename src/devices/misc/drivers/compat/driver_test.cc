@@ -22,6 +22,9 @@
 
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fboot = fuchsia_boot;
@@ -241,6 +244,13 @@ class DriverTest : public gtest::TestLoopFixture {
     dispatcher_ = *std::move(dispatcher);
   }
 
+  void TearDown() override {
+    TestLoopFixture::TearDown();
+
+    vfs_->Shutdown([](auto status) {});
+    RunUntilDispatchersIdle();
+  }
+
   std::unique_ptr<compat::Driver> StartDriver(std::string_view v1_driver_path,
                                               const zx_protocol_device_t* ops) {
     auto node_endpoints = fidl::CreateEndpoints<fdf::Node>();
@@ -295,31 +305,46 @@ class DriverTest : public gtest::TestLoopFixture {
                      &compat_service_directory_);
 
     // Setup and bind "/svc" directory.
-    svc_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
-      if (request->path.get() == fidl::DiscoverableProtocolName<flogger::LogSink>) {
-        zx_status_t status = fdio_service_connect_by_name(
-            fidl::DiscoverableProtocolName<flogger::LogSink>, request->object.channel().release());
-        ASSERT_EQ(ZX_OK, status);
-      } else if (request->path.get() == fidl::DiscoverableProtocolName<fboot::RootResource>) {
-        fidl::ServerEnd<fboot::RootResource> server_end(request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &root_resource_);
-      } else if (request->path.get() == fidl::DiscoverableProtocolName<fboot::Items>) {
-        fidl::ServerEnd<fboot::Items> server_end(request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &items_);
-      } else if (request->path.get() ==
-                 fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>) {
-        fidl::ServerEnd<fuchsia_device_fs::Exporter> server_end(request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &exporter_);
-      } else if (request->path.get() ==
-                 fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>) {
-        fidl::ServerEnd<fuchsia_scheduler::ProfileProvider> server_end(
-            request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &profile_provider_);
-      } else {
-        FAIL() << "Unexpected service: " << request->path.get();
-      }
-    });
-    fidl::BindServer(dispatcher(), std::move(svc_endpoints->server), &svc_directory_);
+    {
+      auto svc = fbl::MakeRefCounted<fs::PseudoDir>();
+      svc->AddEntry(fidl::DiscoverableProtocolName<flogger::LogSink>,
+                    fbl::MakeRefCounted<fs::Service>([](zx::channel server) {
+                      return fdio_service_connect_by_name(
+                          fidl::DiscoverableProtocolName<flogger::LogSink>, server.release());
+                    }));
+
+      svc->AddEntry(fidl::DiscoverableProtocolName<fboot::RootResource>,
+                    fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+                      fidl::ServerEnd<fboot::RootResource> server_end(std::move(server));
+                      fidl::BindServer(dispatcher(), std::move(server_end), &root_resource_);
+                      return ZX_OK;
+                    }));
+
+      svc->AddEntry(fidl::DiscoverableProtocolName<fboot::Items>,
+                    fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+                      fidl::ServerEnd<fboot::Items> server_end(std::move(server));
+                      fidl::BindServer(dispatcher(), std::move(server_end), &items_);
+                      return ZX_OK;
+                    }));
+
+      svc->AddEntry(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>,
+                    fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+                      fidl::ServerEnd<fuchsia_device_fs::Exporter> server_end(std::move(server));
+                      fidl::BindServer(dispatcher(), std::move(server_end), &exporter_);
+                      return ZX_OK;
+                    }));
+
+      svc->AddEntry(
+          fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>,
+          fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+            fidl::ServerEnd<fuchsia_scheduler::ProfileProvider> server_end(std::move(server));
+            fidl::BindServer(dispatcher(), std::move(server_end), &profile_provider_);
+            return ZX_OK;
+          }));
+
+      vfs_.emplace(dispatcher());
+      vfs_->ServeDirectory(svc, std::move(svc_endpoints->server));
+    }
 
     // Setup the namespace.
     fidl::Arena arena;
@@ -397,9 +422,9 @@ class DriverTest : public gtest::TestLoopFixture {
   TestFile v1_test_file_;
   TestFile firmware_file_;
   TestDirectory pkg_directory_;
-  TestDirectory svc_directory_;
   TestDirectory compat_service_directory_;
   TestExporter exporter_;
+  std::optional<fs::ManagedVfs> vfs_;
 
   fdf::Dispatcher dispatcher_;
   libsync::Completion dispatcher_shutdown_;
