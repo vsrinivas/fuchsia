@@ -13,8 +13,10 @@ import (
 
 	"github.com/google/subcommands"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
 
 var (
@@ -35,10 +37,14 @@ func main() {
 
 	flag.Parse()
 
-	l := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
-	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
-	ctx := logger.WithLogger(context.Background(), l)
-	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+	ctx = streams.ContextWithStdout(ctx, botanist.NewLockedWriter(os.Stdout))
+	ctx = streams.ContextWithStderr(ctx, botanist.NewLockedWriter(os.Stderr))
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	l := logger.NewLogger(level, color.NewColor(colors), stdout, stderr, "botanist ")
+	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 	os.Exit(int(subcommands.Execute(ctx)))
 }

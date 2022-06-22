@@ -289,6 +289,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return err
 	}
 	if ffx != nil {
+		stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+		defer flush()
+		ffx.SetStdoutStderr(stdout, stderr)
 		defer func() {
 			ffx.Stop()
 			if removeFFXOutputsDir {
@@ -607,7 +610,9 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 		Env: environ,
 	}
 
-	if err := runner.RunWithStdin(ctx, args, os.Stdout, os.Stderr, nil); err != nil {
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	if err := runner.RunWithStdin(ctx, args, stdout, stderr, nil); err != nil {
 		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
 	}
 	return nil

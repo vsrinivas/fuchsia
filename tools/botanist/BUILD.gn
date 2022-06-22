@@ -8,6 +8,8 @@ import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
   sources = [
+    "common.go",
+    "common_test.go",
     "pkg.go",
     "pkg_test.go",
   ]
@@ -20,6 +22,7 @@ go_library("botanist_lib") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
+    "//tools/lib/streams",
     "//tools/lib/subprocess",
     "//tools/net/netboot",
     "//tools/net/tftp",
@@ -42,6 +45,7 @@ go_library("targets") {
     "target_test.go",
   ]
   deps = [
+    ":botanist_lib",
     ":constants",
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/creack/pty",

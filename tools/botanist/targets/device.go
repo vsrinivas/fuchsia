@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -347,8 +348,10 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 		return errors.New("fastboot boot script not found")
 	}
 	cmd := exec.CommandContext(ctx, bootScript, "-s", t.config.FastbootSernum)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd.Run()
 }
 
@@ -398,8 +401,10 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 	}
 
 	cmd := exec.CommandContext(ctx, flashScript, flashArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd.Run()
 }
 

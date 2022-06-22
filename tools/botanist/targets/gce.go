@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
@@ -317,8 +318,10 @@ func (g *GCETarget) addSSHKey() error {
 	}
 	logger.Infof(g.loggerCtx, "GCE Mediator client command: %s", invocation)
 	cmd := exec.Command(invocation[0], invocation[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stdout, stderr, flush := botanist.NewStdioWriters(g.loggerCtx)
+	defer flush()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd.Run()
 }
 

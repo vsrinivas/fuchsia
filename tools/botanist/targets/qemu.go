@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -384,27 +385,30 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	var outputSink bytes.Buffer
 	cmd := exec.Command(invocation[0], invocation[1:]...)
 	cmd.Dir = workdir
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
 	if t.ptm != nil {
 		cmd.Stdin = t.ptm
-		cmd.Stdout = io.MultiWriter(t.ptm, &outputSink, os.Stdout)
-		cmd.Stderr = io.MultiWriter(t.ptm, &outputSink, os.Stderr)
+		cmd.Stdout = io.MultiWriter(t.ptm, &outputSink, stdout)
+		cmd.Stderr = io.MultiWriter(t.ptm, &outputSink, stderr)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setctty: true,
 			Setsid:  true,
 		}
 	} else {
-		cmd.Stdout = io.MultiWriter(&outputSink, os.Stdout)
-		cmd.Stderr = io.MultiWriter(&outputSink, os.Stderr)
+		cmd.Stdout = io.MultiWriter(&outputSink, stdout)
+		cmd.Stderr = io.MultiWriter(&outputSink, stderr)
 	}
 	logger.Debugf(ctx, "QEMU invocation:\n%s", strings.Join(invocation, " "))
 
 	if err := cmd.Start(); err != nil {
+		flush()
 		return fmt.Errorf("failed to start: %w", err)
 	}
 	t.process = cmd.Process
 
 	go func() {
 		err := cmd.Wait()
+		flush()
 		if err != nil {
 			err = fmt.Errorf("%s: %w", constants.QEMUInvocationErrorMsg, err)
 		}
@@ -469,8 +473,10 @@ func extendStorageFull(ctx context.Context, storageFull *bootserver.Image, fvmTo
 	}
 	logger.Debugf(ctx, "extending fvm.blk to %d bytes", size)
 	cmd := exec.CommandContext(ctx, absToolPath, storageFull.Path, "extend", "--length", strconv.Itoa(int(size)))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
