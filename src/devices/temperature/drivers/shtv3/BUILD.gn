@@ -13,7 +13,6 @@ driver_bind_rules("shtv3-bind") {
   tests = "shtv3-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.sensirion.platform",
   ]
 }
@@ -59,8 +58,6 @@ test("shtv3-test-bin") {
   deps = [
     ":common",
     "//src/devices/i2c/testing/fake-i2c",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 
