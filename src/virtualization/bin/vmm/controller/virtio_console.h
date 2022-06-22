@@ -30,7 +30,7 @@ class VirtioConsole : public VirtioComponentDevice<VIRTIO_ID_CONSOLE, kVirtioCon
  public:
   explicit VirtioConsole(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, zx::socket socket, fuchsia::sys::LauncherPtr& launcher,
+  zx_status_t Start(const zx::guest& guest, zx::socket socket,
                     fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:

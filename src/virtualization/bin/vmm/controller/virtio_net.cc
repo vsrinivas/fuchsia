@@ -16,34 +16,22 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
 
 zx_status_t VirtioNet::Start(const zx::guest& guest,
                              const fuchsia::hardware::ethernet::MacAddress& mac_address,
-                             bool enable_bridge, fuchsia::sys::LauncherPtr& launcher,
-                             fuchsia::component::RealmSyncPtr& realm,
+                             bool enable_bridge, fuchsia::component::RealmSyncPtr& realm,
                              async_dispatcher_t* dispatcher, size_t component_name_suffix) {
-  if (launcher) {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
+  const auto kComponentName = fxl::StringPrintf("virtio_net_%zu", component_name_suffix);
+  constexpr auto kComponentCollectionName = "virtio_net_devices";
+  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kComponentUrl;
-    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    services->Connect(net_.NewRequest());
-  } else {
-    const auto kComponentName = fxl::StringPrintf("virtio_net_%zu", component_name_suffix);
-    constexpr auto kComponentCollectionName = "virtio_net_devices";
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
-
-    zx_status_t status = CreateDynamicComponent(
-        realm, kComponentCollectionName, kComponentName.c_str(), kComponentUrl,
-        [net = net_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
-          return services->Connect(std::move(net));
-        });
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = CreateDynamicComponent(
+      realm, kComponentCollectionName, kComponentName.c_str(), kComponentUrl,
+      [net = net_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+        return services->Connect(std::move(net));
+      });
+  if (status != ZX_OK) {
+    return status;
   }
-
   fuchsia::virtualization::hardware::StartInfo start_info;
-  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

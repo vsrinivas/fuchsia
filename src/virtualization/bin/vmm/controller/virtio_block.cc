@@ -40,32 +40,23 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
       format_(format) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                               fuchsia::sys::LauncherPtr& launcher,
                                fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher, size_t component_name_suffix) {
-  if (launcher) {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
-    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    services->Connect(block_.NewRequest());
-  } else {
-    const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
-    constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-    auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+  const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
+  constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
+  auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
 
-    zx_status_t status = CreateDynamicComponent(
-        realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,
-        [block = block_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
-          return services->Connect(std::move(block));
-        });
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = CreateDynamicComponent(
+      realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,
+      [block = block_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+        return services->Connect(std::move(block));
+      });
+  if (status != ZX_OK) {
+    return status;
   }
 
   fuchsia::virtualization::hardware::StartInfo start_info;
-  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

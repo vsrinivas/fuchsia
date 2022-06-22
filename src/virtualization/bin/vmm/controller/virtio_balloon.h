@@ -26,8 +26,8 @@ class VirtioBalloon : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBal
 
   zx_status_t AddPublicService(sys::ComponentContext* context);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
-                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher);
 
  private:
   fidl::BindingSet<fuchsia::virtualization::BalloonController> bindings_;

@@ -23,8 +23,8 @@ class VirtioBlock
               fuchsia::virtualization::BlockFormat format);
 
   zx_status_t Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* dispatcher, size_t component_name_suffix);
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher,
+                    size_t component_name_suffix);
 
  private:
   fuchsia::virtualization::BlockMode mode_;

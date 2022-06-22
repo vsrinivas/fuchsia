@@ -30,8 +30,7 @@ class VirtioGpu
       const zx::guest& guest,
       fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
       fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
-      fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-      async_dispatcher_t* dispatcher);
+      fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   enum class State {

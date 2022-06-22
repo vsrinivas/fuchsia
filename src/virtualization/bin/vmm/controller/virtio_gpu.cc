@@ -31,39 +31,27 @@ zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
-    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-    async_dispatcher_t* dispatcher) {
-  if (launcher) {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
+    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
+  constexpr auto kComponentName = "virtio_gpu";
+  constexpr auto kComponentCollectionName = "virtio_gpu_devices";
+  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kComponentUrl;
-    services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    services_->Connect(gpu_.NewRequest());
-    services_->Connect(events_.NewRequest());
-  } else {
-    constexpr auto kComponentName = "virtio_gpu";
-    constexpr auto kComponentCollectionName = "virtio_gpu_devices";
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
-
-    zx_status_t status =
-        CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
-                               [gpu = gpu_.NewRequest(), events = events_.NewRequest()](
-                                   std::shared_ptr<sys::ServiceDirectory> services) mutable {
-                                 zx_status_t status = services->Connect(std::move(gpu));
-                                 if (status != ZX_OK) {
-                                   return status;
-                                 }
-                                 return services->Connect(std::move(events));
-                               });
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status =
+      CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
+                             [gpu = gpu_.NewRequest(), events = events_.NewRequest()](
+                                 std::shared_ptr<sys::ServiceDirectory> services) mutable {
+                               zx_status_t status = services->Connect(std::move(gpu));
+                               if (status != ZX_OK) {
+                                 return status;
+                               }
+                               return services->Connect(std::move(events));
+                             });
+  if (status != ZX_OK) {
+    return status;
   }
   events_.events().OnConfigChanged = fit::bind_member(this, &VirtioGpu::OnConfigChanged);
   fuchsia::virtualization::hardware::StartInfo start_info;
-  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

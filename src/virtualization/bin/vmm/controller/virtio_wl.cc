@@ -20,32 +20,21 @@ zx_status_t VirtioWl::Start(
     fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
-    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-    async_dispatcher_t* dispatcher) {
-  if (launcher) {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
+    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
+  constexpr auto kComponentName = "virtio_wl";
+  constexpr auto kComponentCollectionName = "virtio_wl_devices";
+  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kComponentUrl;
-    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    services->Connect(wayland_.NewRequest());
-  } else {
-    constexpr auto kComponentName = "virtio_wl";
-    constexpr auto kComponentCollectionName = "virtio_wl_devices";
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
-
-    zx_status_t status = CreateDynamicComponent(
-        realm, kComponentCollectionName, kComponentName, kComponentUrl,
-        [wayland = wayland_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
-          return services->Connect(std::move(wayland));
-        });
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = CreateDynamicComponent(
+      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      [wayland = wayland_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+        return services->Connect(std::move(wayland));
+      });
+  if (status != ZX_OK) {
+    return status;
   }
   fuchsia::virtualization::hardware::StartInfo start_info;
-  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

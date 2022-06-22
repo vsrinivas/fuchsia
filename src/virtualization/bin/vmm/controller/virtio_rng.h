@@ -23,8 +23,8 @@ class VirtioRng
  public:
   explicit VirtioRng(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
-                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

@@ -27,8 +27,7 @@ class VirtioMagma
   zx_status_t Start(const zx::guest& guest, zx::vmar vmar,
                     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
                         wayland_importer,
-                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* dispatcher);
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

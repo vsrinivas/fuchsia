@@ -28,9 +28,8 @@ class VirtioInput
 
   VirtioInput(const PhysMem& phys_mem, VirtioInputType type);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
-                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher,
-                    std::string component_name);
+  zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher, std::string component_name);
 
   template <typename Protocol>
   void Connect(fidl::InterfaceRequest<Protocol> request) {

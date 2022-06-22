@@ -28,8 +28,8 @@ class VirtioNet
 
   zx_status_t Start(const zx::guest& guest,
                     const fuchsia::hardware::ethernet::MacAddress& mac_address, bool enable_bridge,
-                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* dispatcher, size_t component_name_suffix);
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher,
+                    size_t component_name_suffix);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

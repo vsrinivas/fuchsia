@@ -200,34 +200,13 @@ resource("vmm-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("vmm_package") {
+fuchsia_package_with_single_component("vmm_package") {
   package_name = "vmm"
-  deps = [
-    ":vmm_package_v1",
-    ":vmm_package_v2",
-  ]
-}
-
-fuchsia_component("vmm_package_v2") {
   manifest = "meta/vmm.cml"
   deps = [
     ":bin",
     ":vmm-resources",
   ]
-  component_name = "vmm"
-}
-
-fuchsia_component("vmm_package_v1") {
-  manifest = "meta/vmm.cmx"
-  deps = [
-    ":bin",
-    ":vmm-resources",
-  ]
-  component_name = "vmm"
 }
 
 executable("vmm_unittests") {

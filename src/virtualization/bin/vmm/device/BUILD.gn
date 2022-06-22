@@ -88,27 +88,9 @@ executable("virtio_balloon_bin") {
   deps = [ ":virtio" ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_balloon") {
-  deps = [
-    ":virtio_balloon_v1",
-    ":virtio_balloon_v2",
-  ]
-}
-
-fuchsia_component("virtio_balloon_v2") {
+fuchsia_package_with_single_component("virtio_balloon") {
   manifest = "../meta/virtio_balloon.cml"
   deps = [ ":virtio_balloon_bin" ]
-  component_name = "virtio_balloon"
-}
-
-fuchsia_component("virtio_balloon_v1") {
-  manifest = "../meta/virtio_balloon.cmx"
-  deps = [ ":virtio_balloon_bin" ]
-  component_name = "virtio_balloon"
 }
 
 executable("virtio_console_bin") {
@@ -119,27 +101,9 @@ executable("virtio_console_bin") {
   deps = [ ":virtio" ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_console") {
-  deps = [
-    ":virtio_console_v1",
-    ":virtio_console_v2",
-  ]
-}
-
-fuchsia_component("virtio_console_v2") {
+fuchsia_package_with_single_component("virtio_console") {
   manifest = "../meta/virtio_console.cml"
   deps = [ ":virtio_console_bin" ]
-  component_name = "virtio_console"
-}
-
-fuchsia_component("virtio_console_v1") {
-  manifest = "../meta/virtio_console.cmx"
-  deps = [ ":virtio_console_bin" ]
-  component_name = "virtio_console"
 }
 
 executable("virtio_input_bin") {
@@ -150,26 +114,9 @@ executable("virtio_input_bin") {
   deps = [ ":virtio" ]
 }
 
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_input") {
-  deps = [
-    ":virtio_input_v1",
-    ":virtio_input_v2",
-  ]
-}
-
-fuchsia_component("virtio_input_v2") {
+fuchsia_package_with_single_component("virtio_input") {
   manifest = "../meta/virtio_input.cml"
   deps = [ ":virtio_input_bin" ]
-  component_name = "virtio_input"
-}
-
-fuchsia_component("virtio_input_v1") {
-  manifest = "../meta/virtio_input.cmx"
-  deps = [ ":virtio_input_bin" ]
-  component_name = "virtio_input"
 }
 
 executable("virtio_gpu_bin") {
@@ -197,27 +144,9 @@ executable("virtio_gpu_bin") {
   ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_gpu") {
-  deps = [
-    ":virtio_gpu_v1",
-    ":virtio_gpu_v2",
-  ]
-}
-
-fuchsia_component("virtio_gpu_v2") {
+fuchsia_package_with_single_component("virtio_gpu") {
   manifest = "../meta/virtio_gpu.cml"
   deps = [ ":virtio_gpu_bin" ]
-  component_name = "virtio_gpu"
-}
-
-fuchsia_component("virtio_gpu_v1") {
-  manifest = "../meta/virtio_gpu.cmx"
-  deps = [ ":virtio_gpu_bin" ]
-  component_name = "virtio_gpu"
 }
 
 source_set("magma_image") {
@@ -297,35 +226,19 @@ resource("virtio_magma_resources") {
   outputs = [ "drivers/libvulkan_intel.so" ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_magma") {
+fuchsia_package_with_single_component("virtio_magma") {
+  manifest = "../meta/virtio_magma.cml"
   deps = [
     # TODO(fxbug.dev/13128): don't hard-code the driver
+    ":virtio_magma_bin",
     ":virtio_magma_resources",
-    ":virtio_magma_v1",
-    ":virtio_magma_v2",
     "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
   ]
 }
 
-fuchsia_component("virtio_magma_v2") {
-  manifest = "../meta/virtio_magma.cml"
-  deps = [ ":virtio_magma_bin" ]
-  component_name = "virtio_magma"
-}
-
-fuchsia_component("virtio_magma_v1") {
-  manifest = "../meta/virtio_magma.cmx"
-  deps = [ ":virtio_magma_bin" ]
-  component_name = "virtio_magma"
-}
-
 fuchsia_package_with_single_component("virtio_magma_mock_system") {
   testonly = true
-  manifest = "../meta/virtio_magma.cmx"
+  manifest = "../meta/virtio_magma.cml"
   deps = [ ":virtio_magma_bin_mock_system" ]
 }
 
@@ -348,27 +261,9 @@ executable("virtio_wl_bin") {
   ]
 }
 
-# TODO(fxbug.dev/72386)
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_wl") {
-  deps = [
-    ":virtio_wl_v1",
-    ":virtio_wl_v2",
-  ]
-}
-
-fuchsia_component("virtio_wl_v2") {
+fuchsia_package_with_single_component("virtio_wl") {
   manifest = "../meta/virtio_wl.cml"
   deps = [ ":virtio_wl_bin" ]
-  component_name = "virtio_wl"
-}
-
-fuchsia_component("virtio_wl_v1") {
-  manifest = "../meta/virtio_wl.cmx"
-  deps = [ ":virtio_wl_bin" ]
-  component_name = "virtio_wl"
 }
 
 executable("device_tests") {

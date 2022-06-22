@@ -16,36 +16,23 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
 }
 
 zx_status_t VirtioConsole::Start(const zx::guest& guest, zx::socket socket,
-                                 fuchsia::sys::LauncherPtr& launcher,
                                  fuchsia::component::RealmSyncPtr& realm,
                                  async_dispatcher_t* dispatcher) {
-  if (launcher) {
-    constexpr auto kComponentUrl =
-        "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cmx";
+  constexpr auto kComponentName = "virtio_console";
+  constexpr auto kComponentCollectionName = "virtio_console_devices";
+  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kComponentUrl;
-    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    services->Connect(console_.NewRequest());
-  } else {
-    constexpr auto kComponentName = "virtio_console";
-    constexpr auto kComponentCollectionName = "virtio_console_devices";
-    constexpr auto kComponentUrl =
-        "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
-
-    zx_status_t status = CreateDynamicComponent(
-        realm, kComponentCollectionName, kComponentName, kComponentUrl,
-        [console = console_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
-          return services->Connect(std::move(console));
-        });
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = CreateDynamicComponent(
+      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      [console = console_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+        return services->Connect(std::move(console));
+      });
+  if (status != ZX_OK) {
+    return status;
   }
 
   fuchsia::virtualization::hardware::StartInfo start_info;
-  zx_status_t status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

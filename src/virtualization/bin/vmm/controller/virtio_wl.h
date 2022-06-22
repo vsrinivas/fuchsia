@@ -28,8 +28,7 @@ class VirtioWl
                     fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
                     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
-                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* dispatcher);
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
   zx_status_t GetImporter(
       fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request);
 
