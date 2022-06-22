@@ -26,7 +26,9 @@ use core::{
     convert::Infallible as Never,
     marker::PhantomData,
     num::{NonZeroU16, NonZeroUsize},
+    ops::RangeInclusive,
 };
+use nonzero_ext::nonzero;
 
 use assert_matches::assert_matches;
 use log::warn;
@@ -38,6 +40,7 @@ use packet::Buf;
 use packet_formats::ip::IpProto;
 
 use crate::{
+    algorithm::{PortAlloc, PortAllocImpl},
     context::InstantContext,
     data_structures::socketmap::{IterShadows as _, SocketMap},
     ip::{
@@ -142,8 +145,36 @@ struct TcpSockets<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
     // since the beginning and that information will then be used to generate
     // ISNs being requested.
     isn_ts: II,
+    port_alloc: PortAlloc<BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>>,
     inactive: IdMap<Inactive>,
     socketmap: BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>,
+}
+
+impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PortAllocImpl
+    for BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>
+{
+    const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
+    const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
+    type Id = I::Addr;
+
+    fn is_port_available(&self, addr: &I::Addr, port: u16) -> bool {
+        // We can safely unwrap here, because the ports received in
+        // `is_port_available` are guaranteed to be in `EPHEMERAL_RANGE`.
+        let port = NonZeroU16::new(port).unwrap();
+        let root_addr = AddrVec::<TcpPosixSocketSpec<I, D, II, R, S>>::from(ListenerAddr {
+            ip: ListenerIpAddr { addr: SpecifiedAddr::new(*addr), identifier: port },
+            device: None,
+        });
+
+        // A port is free if there are no sockets currently using it, and if
+        // there are no sockets that are shadowing it.
+        root_addr.iter_shadows().all(|a| match &a {
+            AddrVec::Listen(l) => self.get_listener_by_addr(&l).is_none(),
+            AddrVec::Conn(_c) => {
+                unreachable!("no connection shall be included in an iteration from a listener")
+            }
+        }) && self.get_shadower_counts(&root_addr) == 0
+    }
 }
 
 impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
@@ -241,6 +272,7 @@ where
 #[derive(Debug)]
 enum BindError {
     NoLocalAddr,
+    NoPort,
     Conflict(InsertError),
 }
 
@@ -258,10 +290,18 @@ where
     S: SendBuffer,
     SC: AsMut<TcpSockets<I, SC::DeviceId, II, R, S>> + TransportIpContext<I, C>,
 {
-    match port {
-        None => todo!("https://fxbug.dev/101595: support port allocation"),
-        Some(port) => bind_inner(sync_ctx, ctx, id, local_ip, port),
-    }
+    let port = match port {
+        None => {
+            let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
+                sync_ctx.as_mut();
+            match port_alloc.try_alloc(&local_ip, &socketmap) {
+                Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
+                None => return Err(BindError::NoPort),
+            }
+        }
+        Some(port) => port,
+    };
+    bind_inner(sync_ctx, ctx, id, local_ip, port)
 }
 
 fn bind_inner<I, II, R, S, SC, C>(
@@ -364,9 +404,10 @@ where
 enum ConnectError {
     IpSockCreationError(IpSockCreationError),
     IpSocketSendError(IpSockSendError),
+    NoPort,
 }
 
-fn connect<I, D, R, S, SC, C>(
+fn connect_bound<I, D, R, S, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: BoundId,
@@ -391,17 +432,71 @@ where
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
         .map_err(ConnectError::IpSockCreationError)?;
+    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
+    let _: Option<_> = sync_ctx.as_mut().socketmap.remove_listener_by_id(bound_id);
+    Ok(conn_id)
+}
+
+fn connect_unbound<I, D, R, S, SC, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: UnboundId,
+    remote: SocketAddr<I::Addr>,
+) -> Result<ConnectionId, ConnectError>
+where
+    I: IpExt,
+    D: IpDeviceId,
+    R: ReceiveBuffer,
+    S: SendBuffer,
+    C: InstantContext,
+    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
+        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
+        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
+{
+    let ip_sock = sync_ctx
+        .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), None)
+        .map_err(ConnectError::IpSockCreationError)?;
+    let local_port = {
+        let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
+            sync_ctx.as_mut();
+        match port_alloc.try_alloc(&*ip_sock.local_ip(), &socketmap) {
+            Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
+            None => return Err(ConnectError::NoPort),
+        }
+    };
+    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
+    let _: Option<_> = sync_ctx.as_mut().inactive.remove(id.into());
+    Ok(conn_id)
+}
+
+fn connect_inner<I, D, R, S, SC, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    ip_sock: IpSock<I, D>,
+    local_port: NonZeroU16,
+    remote_port: NonZeroU16,
+) -> Result<ConnectionId, ConnectError>
+where
+    I: IpExt,
+    D: IpDeviceId,
+    R: ReceiveBuffer,
+    S: SendBuffer,
+    C: InstantContext,
+    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
+        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
+        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
+{
     let isn = generate_isn::<I::Addr>(
         ctx.now().duration_since(sync_ctx.as_ref().isn_ts),
         SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
-        remote,
+        SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
         &sync_ctx.as_ref().secret,
     );
     let conn_addr = ConnAddr {
         ip: ConnIpAddr {
             local_ip: ip_sock.local_ip().clone(),
             local_identifier: local_port,
-            remote: (remote.ip, remote.port),
+            remote: (ip_sock.remote_ip().clone(), remote_port),
         },
         // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
         device: None,
@@ -426,9 +521,9 @@ where
         .send_ip_packet(ctx, &ip_sock, tcp_serialize_segment(syn, conn_addr.ip), None)
         .map_err(|(body, err)| {
             warn!("tcp: failed to send ip packet {:?}: {:?}", body, err);
+            assert_matches!(sync_ctx.as_mut().socketmap.remove_conn_by_id(conn_id), Some(_));
             ConnectError::IpSocketSendError(err)
         })?;
-    let _: Option<_> = sync_ctx.as_mut().socketmap.remove_listener_by_id(bound_id);
     Ok(conn_id)
 }
 
@@ -498,7 +593,7 @@ mod tests {
             socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSocketHandler},
             BufferIpTransportContext as _, DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::set_logger_for_test,
+        testutil::{set_logger_for_test, FakeCryptoRng},
         transport::tcp::{buffer::RingBuffer, UserError},
     };
 
@@ -589,6 +684,7 @@ mod tests {
                     socketmap: BoundSocketMap::default(),
                     secret: [0; 16],
                     isn_ts: DummyInstant::default(),
+                    port_alloc: PortAlloc::new(&mut FakeCryptoRng::new_xorshift(0)),
                 },
                 ip_socket_ctx,
             }
@@ -698,37 +794,54 @@ mod tests {
         panic!("unexpected timer fired: {:?}", timer)
     }
 
-    // The following test sets up two connected testing context - one as the
-    // server and the other as the client. Tests if a connection can be
-    // established using `bind`, `listen`, `connect` and `accept`.
-    #[ip_test]
-    fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
-    where
+    /// The following test sets up two connected testing context - one as the
+    /// server and the other as the client. Tests if a connection can be
+    /// established using `bind`, `listen`, `connect` and `accept`.
+    ///
+    /// # Arguments
+    ///
+    /// * `listen_addr` - The address to listen on.
+    /// * `bind_client` - Whether to bind the client before connecting.
+    fn bind_listen_connect_accept_inner<I: Ip + TcpTestIpExt>(
+        listen_addr: I::Addr,
+        bind_client: bool,
+    ) where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
-        set_logger_for_test();
+        log::info!("listen_addr: {:?}, bind_client: {}", listen_addr, bind_client);
         let mut net = new_test_net::<I>();
 
         let backlog = NonZeroUsize::new(1).unwrap();
         let server = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
             let conn = create_socket(sync_ctx, non_sync_ctx);
-            let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.remote_ip, Some(PORT_1))
+            let conn = bind(sync_ctx, non_sync_ctx, conn, listen_addr, Some(PORT_1))
                 .expect("failed to bind the server socket");
             listen(sync_ctx, non_sync_ctx, conn, backlog)
         });
 
         let client = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
             let conn = create_socket(sync_ctx, non_sync_ctx);
-            let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
-                .expect("failed to bind the client socket");
-            connect(
-                sync_ctx,
-                non_sync_ctx,
-                conn,
-                SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-            )
-            .expect("failed to connect")
+            if bind_client {
+                let conn =
+                    bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
+                        .expect("failed to bind the client socket");
+                connect_bound(
+                    sync_ctx,
+                    non_sync_ctx,
+                    conn,
+                    SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                )
+                .expect("failed to connect")
+            } else {
+                connect_unbound(
+                    sync_ctx,
+                    non_sync_ctx,
+                    conn,
+                    SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                )
+                .expect("failed to connect")
+            }
         });
         // Step once for the SYN packet to be sent.
         let _: StepResult = net.step(handle_frame, panic_if_any_timer);
@@ -750,7 +863,11 @@ mod tests {
         let (accepted, addr) = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
             accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
         });
-        assert_eq!(addr, SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 },);
+        if bind_client {
+            assert_eq!(addr, SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 });
+        } else {
+            assert_eq!(addr.ip, I::DUMMY_CONFIG.local_ip);
+        }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
             let (state, _): &(_, ConnAddr<_>) = net
@@ -777,6 +894,20 @@ mod tests {
             net.sync_ctx(REMOTE).get_mut().sockets.get_listener_by_id_mut(server),
             Some(&mut Listener::new(backlog)),
         );
+    }
+
+    #[ip_test]
+    fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
+    where
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
+            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+    {
+        set_logger_for_test();
+        for bind_client in [true, false] {
+            for listen_addr in [I::UNSPECIFIED_ADDRESS, *I::DUMMY_CONFIG.remote_ip] {
+                bind_listen_connect_accept_inner(listen_addr, bind_client);
+            }
+        }
     }
 
     // TODO(https://fxbug.dev/102105): The following tests are similar in that
@@ -850,7 +981,7 @@ mod tests {
             let conn = create_socket(sync_ctx, non_sync_ctx);
             let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
                 .expect("failed to bind the client socket");
-            connect(
+            connect_bound(
                 sync_ctx,
                 non_sync_ctx,
                 conn,

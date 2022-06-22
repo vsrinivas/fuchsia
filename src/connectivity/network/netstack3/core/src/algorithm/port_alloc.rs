@@ -112,6 +112,9 @@ pub(crate) trait PortAllocImpl {
     /// conflict for the given `id` *plus* ideally the port is not in LISTEN or
     /// CLOSED states for a given protocol (see [RFC 6056]).
     ///
+    /// Note: Callers must guarantee that the given port being checked is within
+    /// the `EPHEMERAL_RANGE`.
+    ///
     /// [RFC 6056]: https://tools.ietf.org/html/rfc6056#section-2.2
     fn is_port_available(&self, id: &Self::Id, port: PortNumber) -> bool;
 }
