@@ -27,8 +27,16 @@ Stash provides the `fuchsia.stash.Store`, `fuchsia.stash.Store2`, and
 `fuchsia.stash.SecureStore` services on Fuchsia, and there is a `stash_ctl`
 command to demonstrate how to access these services.
 
+`stash_ctl` is included in the `workstation_eng` product.
+
 ```
-$ fx shell run stash_ctl --help
+> fx set workstation_eng.x64
+> fx build
+```
+
+```
+> ffx component explore /core/stash
+$ stash_ctl --help
 ```
 
 ## Testing

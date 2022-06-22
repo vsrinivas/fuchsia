@@ -11,6 +11,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
+    "//build/validate:non_production_tag",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -30,19 +31,4 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
-}
-
-fuchsia_shell_package("stash_ctl") {
-  deps = [ ":bin" ]
-  manifest = "meta/stash_ctl.cmx"
-}
-
-fuchsia_unittest_package("stash_ctl_bin_test") {
-  deps = [ ":bin_test" ]
-}
-
-group("tests") {
-  testonly = true
-
-  public_deps = [ ":stash_ctl_bin_test" ]
 }

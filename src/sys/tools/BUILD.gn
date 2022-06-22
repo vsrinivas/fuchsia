@@ -7,6 +7,5 @@ group("tests") {
   deps = [
     "dash-launcher:tests",
     "log:tests",
-    "stash_ctl:tests",
   ]
 }

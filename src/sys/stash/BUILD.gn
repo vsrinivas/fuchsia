@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/images/args.gni")
 import("//build/rust/rustc_binary.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
@@ -106,6 +107,21 @@ fuchsia_package("pkg") {
     ":stash_secure",
     ":stash_secure_v2",
     ":stash_v2",
+  ]
+}
+
+# TODO(fxbug.dev/100447): Change the contents of the stash package
+# based on build type (user, eng, userdebug) rather than using
+# a different package altogether.
+fuchsia_package("pkg_eng") {
+  package_name = "stash"
+  deps = [
+    ":stash2_v2",
+    ":stash_cmp",
+    ":stash_secure",
+    ":stash_secure_v2",
+    ":stash_v2",
+    "//src/sys/tools/stash_ctl:bin",
   ]
 }
 
