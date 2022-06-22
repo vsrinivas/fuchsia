@@ -22,7 +22,7 @@ class DebugLogStatement;
 void SetDebugLogging(bool);
 bool IsDebugLoggingActive();
 
-// The debug logging can also be enabled dynamically remotely via
+// The debug logging in debug_agent can also be enabled dynamically remotely via
 //   fx log --select core/debug_agent#DEBUG
 // Although you usually want more options such as
 //   fx log --select core/debug_agent#DEBUG --tag debug_agent --since_now --hide_metadata --pretty

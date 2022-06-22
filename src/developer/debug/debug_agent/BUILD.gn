@@ -54,8 +54,6 @@ static_library("lib") {
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
-    "socket_connection.cc",
-    "socket_connection.h",
     "software_breakpoint.cc",
     "software_breakpoint.h",
     "stdio_handles.h",
@@ -148,21 +146,10 @@ executable("bin") {
   output_name = "debug_agent"
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.debugger",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/cmdline",
-  ]
+  deps = [ ":lib" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-fuchsia_component("debug_agent-component-legacy") {
-  component_name = "debug_agent"
-  manifest = "meta/debug_agent.cmx"
-  deps = [ ":bin" ]
 }
 
 executable("launcher") {
@@ -188,10 +175,7 @@ fuchsia_component("debug_agent-component") {
 }
 
 fuchsia_package("debug_agent") {
-  deps = [
-    ":debug_agent-component",
-    ":debug_agent-component-legacy",
-  ]
+  deps = [ ":debug_agent-component" ]
 }
 
 core_shard("core_shard") {
