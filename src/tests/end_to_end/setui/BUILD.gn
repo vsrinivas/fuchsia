@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+proto_library("emulator_proto") {
+  visibility = [ ":*" ]
+
+  sources = [ "//prebuilt/third_party/android/aemu/release/linux-x64/lib/emulator_controller.proto" ]
+
+  generate_python = false
+  cc_generator_options = "lite"
+  generator_plugin_suffix = ".grpc.pb"
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+  import_protobuf_full = true
+  proto_out_dir = "//src/tests/end_to_end/setui/"
+
+  deps = [
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+source_set("light_eq") {
+  sources = [
+    "brightness_test/mock_light_eq.cc",
+    "brightness_test/mock_light_eq.h",
+  ]
+}
+
+executable("test_bin") {
+  testonly = true
+
+  sources = [ "brightness_test/brightness_test.cc" ]
+
+  deps = [
+    ":emulator_proto",
+    ":light_eq",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_unittest_package("brightness_test") {
+  deps = [ ":test_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":brightness_test($host_toolchain)" ]
+}
