@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.display.color/Converter.SetValues(properties ConversionProperties)
+protocol fuchsia.ui.display.color/Converter
+library fuchsia.ui.display.color

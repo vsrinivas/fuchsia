@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.display.color;
+using zx;
+
+/// The properties required to apply color conversion to the display.
+/// The conversion is applied to each pixel of the display according to the formula:
+///
+/// [coefficients * (pixel + preoffsets) + postoffsets].
+///
+/// where pixel is a column vector consisting of the pixel's 3 RGB components.
+type ConversionProperties = table {
+    /// The |coefficients| param represents a 3x3 matrix, where the values are given in
+    /// row-major order:
+    ///
+    /// | 0  1  2 |
+    /// | 3  4  5 |
+    /// | 6  7  8 |
+    1: coefficients array<float32, 9>;
+    /// Preoffsets and postoffsets represent a [3x1] vector each of RGB values.
+    2: preoffsets array<float32, 3>;
+    3: postoffsets array<float32, 3>;
+};
+
+@discoverable
+protocol Converter {
+
+    /// Modifies the color of final display output of rendered content. The sole parameter is a
+    /// table of |ConversionProperties|, which contains the parameters required to apply the
+    /// color conversion formula to the display. Please see |ConversionProperties| defined
+    /// above for more information.
+    ///
+    /// All parameters in the properties table must be normal 32-bit floating point values.
+    /// If any of the values do not meet this specification, the new color conversion values
+    /// will not be applied and a value of ZX_ERR_INVALID_ARGS will be returned. Otherwise,
+    /// the return value will be ZX_OK: https://en.wikipedia.org/wiki/Normal_number_%28computing%29.
+    ///
+    /// Hardware that support color conversion generally accept a limited range of coefficient
+    /// values. Coefficients in the range of [-2, 2] inclusive will be accepted by most
+    /// hardware. The hardware driver will clamp values that are outside its acceptable range.
+    ///
+    /// `preoffsets`, `postoffsets`: Clients are encourged to produce color conversion values that
+    /// do not depend on pre and post offsets since some hardware do not have support for that.
+    /// For cases where pre and post offset values need to be used, the range should be limited to
+    /// (-1, 1).
+    SetValues(resource struct {
+        properties ConversionProperties;
+    }) -> (struct {
+        res zx.status;
+    });
+};

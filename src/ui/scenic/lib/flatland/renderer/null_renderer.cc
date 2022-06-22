@@ -132,7 +132,7 @@ bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) 
 
 void NullRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {}
 
-void NullRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
+void NullRenderer::SetColorConversionValues(const std::array<float, 9>& coefficients,
                                             const std::array<float, 3>& preoffsets,
                                             const std::array<float, 3>& postoffsets) {}
 

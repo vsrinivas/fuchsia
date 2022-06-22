@@ -71,7 +71,7 @@ class Renderer : public allocation::BufferCollectionImporter {
                       bool apply_color_conversion = false) = 0;
 
   // Values needed to adjust the color of the framebuffer as a postprocessing effect.
-  virtual void SetColorConversionValues(const std::array<float, 9>& matrix,
+  virtual void SetColorConversionValues(const std::array<float, 9>& coefficients,
                                         const std::array<float, 3>& preoffsets,
                                         const std::array<float, 3>& postoffsets) = 0;
 

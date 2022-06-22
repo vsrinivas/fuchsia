@@ -574,10 +574,10 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
     }
     if (should_apply_display_color_conversion_) {
       // Apply direct-to-display color conversion here.
-      zx_status_t status =
-          (*display_controller_)
-              ->SetDisplayColorConversion(data.display_id, color_conversion_preoffsets_,
-                                          color_conversion_matrix_, color_conversion_postoffsets_);
+      zx_status_t status = (*display_controller_)
+                               ->SetDisplayColorConversion(
+                                   data.display_id, color_conversion_preoffsets_,
+                                   color_conversion_coefficients_, color_conversion_postoffsets_);
       FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
     }
   }
@@ -912,18 +912,18 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   return collection_id;
 }
 
-void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& matrix,
+void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& coefficients,
                                                  const std::array<float, 3>& preoffsets,
                                                  const std::array<float, 3>& postoffsets) {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
-  color_conversion_matrix_ = matrix;
+  color_conversion_coefficients_ = coefficients;
   color_conversion_preoffsets_ = preoffsets;
   color_conversion_postoffsets_ = postoffsets;
-  should_apply_display_color_conversion_ = (matrix != kDefaultColorConversionMatrix) ||
+  should_apply_display_color_conversion_ = (coefficients != kDefaultColorConversionCoefficients) ||
                                            (preoffsets != kDefaultColorConversionOffsets) ||
                                            (postoffsets != kDefaultColorConversionOffsets);
-  renderer_->SetColorConversionValues(matrix, preoffsets, postoffsets);
+  renderer_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
 }
 
 uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) const {

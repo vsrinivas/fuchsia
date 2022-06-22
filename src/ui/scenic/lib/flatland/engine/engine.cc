@@ -174,12 +174,6 @@ Renderables Engine::GetRenderables(const FlatlandDisplay& display) {
   return std::make_pair(std::move(scene_state.image_rectangles), std::move(scene_state.images));
 }
 
-void Engine::SetColorConversionValues(const std::array<float, 9>& matrix,
-                                      const std::array<float, 3>& preoffsets,
-                                      const std::array<float, 3>& postoffsets) {
-  flatland_compositor_->SetColorConversionValues(matrix, preoffsets, postoffsets);
-}
-
 Engine::SceneState::SceneState(Engine& engine, TransformHandle root_transform) {
   snapshot = engine.uber_struct_system_->Snapshot();
 
@@ -206,6 +200,60 @@ Engine::SceneState::SceneState(Engine& engine, TransformHandle root_transform) {
       ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
                               SelectAttribute(global_image_sample_regions, image_indices),
                               SelectAttribute(global_clip_regions, image_indices), images);
+}
+
+void Engine::ColorConversionImpl::SetValues(
+    fuchsia::ui::display::color::ConversionProperties properties, SetValuesCallback callback) {
+  FX_DCHECK(flatland_compositor_);
+
+  if (!properties.has_coefficients()) {
+    FX_LOGS(ERROR) << "ColorConversionProperties must have coefficients.";
+    callback(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (!properties.has_preoffsets()) {
+    FX_LOGS(ERROR) << "ColorConversionProperties must have preoffsets.";
+    callback(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (!properties.has_postoffsets()) {
+    FX_LOGS(ERROR) << "ColorConversionProperties must have postoffsets.";
+    callback(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  auto coefficients = properties.coefficients();
+  auto preoffsets = properties.preoffsets();
+  auto postoffsets = properties.postoffsets();
+
+  for (auto val : coefficients) {
+    if (isinf(val) || isnan(val)) {
+      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      callback(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  for (auto val : preoffsets) {
+    if (isinf(val) || isnan(val)) {
+      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      callback(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  for (auto val : postoffsets) {
+    if (isinf(val) || isnan(val)) {
+      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      callback(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  flatland_compositor_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
+  callback(ZX_OK);
 }
 
 }  // namespace flatland

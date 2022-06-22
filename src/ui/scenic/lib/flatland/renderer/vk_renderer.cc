@@ -589,11 +589,25 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   frame->EndFrame(semaphores, nullptr);
 }
 
-void VkRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
+void VkRenderer::SetColorConversionValues(const std::array<float, 9>& coefficients,
                                           const std::array<float, 3>& preoffsets,
                                           const std::array<float, 3>& postoffsets) {
-  float values[16] = {matrix[0], matrix[1], matrix[2], 0, matrix[3], matrix[4], matrix[5], 0,
-                      matrix[6], matrix[7], matrix[8], 0, 0,         0,         0,         1};
+  float values[16] = {coefficients[0],
+                      coefficients[1],
+                      coefficients[2],
+                      0,
+                      coefficients[3],
+                      coefficients[4],
+                      coefficients[5],
+                      0,
+                      coefficients[6],
+                      coefficients[7],
+                      coefficients[8],
+                      0,
+                      0,
+                      0,
+                      0,
+                      1};
   glm::mat4 glm_matrix = glm::make_mat4(values);
   glm::vec4 glm_preoffsets(preoffsets[0], preoffsets[1], preoffsets[2], 0.0);
   glm::vec4 glm_postoffsets(postoffsets[0], postoffsets[1], postoffsets[2], 0.0);

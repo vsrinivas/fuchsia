@@ -400,7 +400,7 @@ protocol Controller {
     // array is treated as the identity element for the relevant operation.
     // Hardware that support color correction generally accept a limited range of coefficient
     // values. Coefficients in the range of [-2, 2] inclusive will be accepted by most
-    // hardware. The hardware driver will clamp values that are outside its accetable range.
+    // hardware. The hardware driver will clamp values that are outside its acceptable range.
     //
     // `preoffsets`, `postoffsets`: Clients are encourged to produce color correction values that
     // do not depend on pre and post offsets since some hardware do not have support for that.

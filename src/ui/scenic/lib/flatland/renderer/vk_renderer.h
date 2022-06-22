@@ -59,7 +59,7 @@ class VkRenderer final : public Renderer {
               bool apply_color_conversion = false) override;
 
   // |Renderer|.
-  void SetColorConversionValues(const std::array<float, 9>& matrix,
+  void SetColorConversionValues(const std::array<float, 9>& coefficients,
                                 const std::array<float, 3>& preoffsets,
                                 const std::array<float, 3>& postoffsets) override;
 

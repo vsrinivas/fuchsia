@@ -5,7 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
 
+#include <fuchsia/ui/display/color/cpp/fidl.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/zx/eventpair.h>
 
 // TODO(fxbug.dev/76640): delete when we delete hack_seen_display_ids_.
 #include <lib/fit/function.h>
@@ -54,15 +56,37 @@ class Engine {
   // Returns all renderables reachable from the display's root transform.
   Renderables GetRenderables(const FlatlandDisplay& display);
 
-  // These values are used to apply a color conversion post processing effect on rendered
-  // content, using the formula matrix * (pixel + preoffset) + postoffset.
-  void SetColorConversionValues(const std::array<float, 9>& matrix,
-                                const std::array<float, 3>& preoffsets,
-                                const std::array<float, 3>& postoffsets);
+  // Binds the engine as the backend to the color correction service.
+  void SetColorConversionInterface(
+      fidl::InterfaceRequest<fuchsia::ui::display::color::Converter> request) {
+    if (color_conversion_impl_ != nullptr) {
+      FX_LOGS(WARNING) << "Color correction Implementation already exists.";
+    }
+    color_conversion_impl_ =
+        std::make_shared<ColorConversionImpl>(std::move(request), flatland_compositor_.get());
+  }
 
  private:
   // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
+
+  // Separate out the color correction implementation as a nested class within the engine,
+  // so that we can lazily create it after allocating the engine.
+  class ColorConversionImpl : public fuchsia::ui::display::color::Converter {
+   public:
+    ColorConversionImpl(fidl::InterfaceRequest<fuchsia::ui::display::color::Converter> request,
+                        DisplayCompositor* flatland_compositor)
+        : binding_(this, std::move(request)), flatland_compositor_(flatland_compositor) {}
+
+    // |fuchsia::ui::display::color::Converter|
+    void SetValues(fuchsia::ui::display::color::ConversionProperties properties,
+                   SetValuesCallback callback) override;
+
+   private:
+    // The FIDL binding for the color correction api, which references |this| as the implementation.
+    fidl::Binding<fuchsia::ui::display::color::Converter> binding_;
+    flatland::DisplayCompositor* flatland_compositor_ = nullptr;
+  };
 
   struct SceneState {
     UberStruct::InstanceMap snapshot;
@@ -75,6 +99,7 @@ class Engine {
     SceneState(Engine& engine, TransformHandle root_transform);
   };
 
+  std::shared_ptr<ColorConversionImpl> color_conversion_impl_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;

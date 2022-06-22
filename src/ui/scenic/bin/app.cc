@@ -518,6 +518,11 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
                          : std::nullopt;
         });
 
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::display::color::Converter>)> handler =
+        fit::bind_member(flatland_engine_.get(), &flatland::Engine::SetColorConversionInterface);
+    zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+    FX_DCHECK(status == ZX_OK);
+
     frame_renderer_ = std::make_shared<TemporaryFrameRendererDelegator>(flatland_manager_,
                                                                         flatland_engine_, engine_);
   }

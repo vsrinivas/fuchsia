@@ -91,7 +91,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
       fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
   // Values needed to adjust the color of the framebuffer as a postprocessing effect.
-  void SetColorConversionValues(const std::array<float, 9>& matrix,
+  void SetColorConversionValues(const std::array<float, 9>& coefficients,
                                 const std::array<float, 3>& preoffsets,
                                 const std::array<float, 3>& postoffsets);
 
@@ -254,11 +254,12 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // constraints as AttachTokens.
   BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
 
-  constexpr static std::array<float, 9> kDefaultColorConversionMatrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  constexpr static std::array<float, 9> kDefaultColorConversionCoefficients = {1, 0, 0, 0, 1,
+                                                                               0, 0, 0, 1};
   constexpr static std::array<float, 3> kDefaultColorConversionOffsets = {0, 0, 0};
 
   bool should_apply_display_color_conversion_ = false;
-  std::array<float, 9> color_conversion_matrix_ = kDefaultColorConversionMatrix;
+  std::array<float, 9> color_conversion_coefficients_ = kDefaultColorConversionCoefficients;
   std::array<float, 3> color_conversion_preoffsets_ = kDefaultColorConversionOffsets;
   std::array<float, 3> color_conversion_postoffsets_ = kDefaultColorConversionOffsets;
 
