@@ -3,24 +3,34 @@
 // found in the LICENSE file.
 
 use {
-    crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding::MouseEvent},
+    crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
     async_trait::async_trait,
+    fuchsia_zircon as zx,
 };
-
-// TODO(https://fxbug.dev/102655): replace this with an import of
-// `touch_binding::TouchpadEvent`.
-struct _TouchpadEvent {}
 
 // TODO(https://fxbug.dev/102654): check that we've removed all leading `_` from types
 // and variables in this file.
 
-enum _ExamineEventResult {
+pub(super) struct _TouchpadEvent {
+    pub(super) timestamp: zx::Time,
+    // TODO(https://fxbug.dev/102655): replace these fields with a field that embeds
+    // `touch_data: super::touch_binding::TouchpadEvent`.
+    _pressed_buttons: Vec<u8>,
+    pub(super) contacts: Vec<touch_binding::TouchContact>,
+}
+
+pub(super) struct _MouseEvent {
+    _timestamp: zx::Time,
+    _mouse_data: mouse_binding::MouseEvent,
+}
+
+pub(super) enum _ExamineEventResult {
     Contender(Box<dyn Contender>),
     MatchedContender(Box<dyn MatchedContender>),
     Mismatch,
 }
 
-trait Contender {
+pub(super) trait Contender {
     /// Examines `event`, to determine whether or not the gesture
     /// is relevant to this `Recognizer`.
     ///
@@ -35,25 +45,28 @@ trait Contender {
     fn examine_event(self: Box<Self>, event: &_TouchpadEvent) -> _ExamineEventResult;
 }
 
-enum _VerifyEventResult {
+pub(super) enum _VerifyEventResult {
     MatchedContender(Box<dyn MatchedContender>),
     Mismatch,
 }
 
-enum _RecognizedGesture {
+pub(super) enum _RecognizedGesture {
     /// Contains one variant for each recognizer, and the
     /// special value `Unrecognized` for when no recognizer
     /// claims the gesture.
-    Unrecognized,
+    _Unrecognized,
 }
 
-struct _ProcessBufferedEventsResult {
-    generated_events: Vec<MouseEvent>,
-    winner: Option<Box<dyn Winner>>,
-    recognized_gesture: _RecognizedGesture, // for latency breakdown
+pub(super) struct _ProcessBufferedEventsResult {
+    #[allow(dead_code)] // Unread until we implement the gesture arena.
+    pub(super) generated_events: Vec<_MouseEvent>,
+    #[allow(dead_code)] // Unread until we implement the gesture arena.
+    pub(super) winner: Option<Box<dyn Winner>>,
+    #[allow(dead_code)] // Unread until we implement the gesture arena.
+    pub(super) recognized_gesture: _RecognizedGesture, // for latency breakdown
 }
 
-trait MatchedContender {
+pub(super) trait MatchedContender {
     /// Verifies that `event` still matches the gesture that is relevant
     /// to this `Recognizer`.
     ///
@@ -91,12 +104,12 @@ trait MatchedContender {
     ) -> _ProcessBufferedEventsResult;
 }
 
-enum _ProcessNewEventResult {
-    ContinueGesture(Option<MouseEvent>, Box<dyn Winner>),
+pub(super) enum _ProcessNewEventResult {
+    ContinueGesture(Option<_MouseEvent>, Box<dyn Winner>),
     EndGesture(Option<_TouchpadEvent>),
 }
 
-trait Winner {
+pub(super) trait Winner {
     /// Takes `event`, and generates corresponding `MouseEvent`s.
     ///
     /// Returns:
