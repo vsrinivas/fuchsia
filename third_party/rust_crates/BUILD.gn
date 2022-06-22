@@ -83,7 +83,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("async-trait") {
-  public_deps = [ ":async-trait-v0_1_51($host_toolchain)" ]
+  public_deps = [ ":async-trait-v0_1_56($host_toolchain)" ]
 }
 
 group("atomic-waker") {
@@ -1623,10 +1623,10 @@ rust_library("async-task-v4_0_3") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("async-trait-v0_1_51") {
+rust_proc_macro("async-trait-v0_1_56") {
   crate_name = "async_trait"
   crate_root = "//third_party/rust_crates/vendor/async-trait/src/lib.rs"
-  output_name = "async_trait-d25462a1cec8322c"
+  output_name = "async_trait-289dc1161e322d79"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -1639,8 +1639,8 @@ rust_proc_macro("async-trait-v0_1_51") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=d25462a1cec8322c",
-    "-Cextra-filename=-d25462a1cec8322c",
+    "-Cmetadata=289dc1161e322d79",
+    "-Cextra-filename=-289dc1161e322d79",
   ]
 
   visibility = [ ":*" ]
@@ -11023,7 +11023,7 @@ rust_library("trust-dns-proto-v0_21_2") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":async-trait-v0_1_51($host_toolchain)" ]
+  deps += [ ":async-trait-v0_1_56($host_toolchain)" ]
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":data-encoding-v2_3_2" ]
   deps += [ ":enum-as-inner-v0_4_0($host_toolchain)" ]

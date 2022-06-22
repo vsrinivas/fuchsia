@@ -1,22 +1,17 @@
-use crate::lifetime::CollectLifetimes;
+use crate::lifetime::{AddLifetimeToImplTrait, CollectLifetimes};
 use crate::parse::Item;
 use crate::receiver::{has_self_in_block, has_self_in_sig, mut_pat, ReplaceSelf};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
+use std::mem;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    parse_quote, Attribute, Block, FnArg, GenericParam, Generics, Ident, ImplItem, Lifetime, Pat,
-    PatIdent, Receiver, ReturnType, Signature, Stmt, Token, TraitItem, Type, TypeParamBound,
-    TypePath, WhereClause,
+    parse_quote, parse_quote_spanned, Attribute, Block, FnArg, GenericParam, Generics, Ident,
+    ImplItem, Lifetime, LifetimeDef, Pat, PatIdent, Receiver, ReturnType, Signature, Stmt, Token,
+    TraitItem, Type, TypeParamBound, TypePath, WhereClause,
 };
-
-macro_rules! parse_quote_spanned {
-    ($span:expr=> $($t:tt)*) => {
-        syn::parse2(quote_spanned!($span=> $($t)*)).unwrap()
-    };
-}
 
 impl ToTokens for Item {
     fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -40,17 +35,18 @@ enum Context<'a> {
 }
 
 impl Context<'_> {
-    fn lifetimes<'a>(&'a self, used: &'a [Lifetime]) -> impl Iterator<Item = &'a GenericParam> {
+    fn lifetimes<'a>(&'a self, used: &'a [Lifetime]) -> impl Iterator<Item = &'a LifetimeDef> {
         let generics = match self {
             Context::Trait { generics, .. } => generics,
             Context::Impl { impl_generics, .. } => impl_generics,
         };
-        generics.params.iter().filter(move |param| {
+        generics.params.iter().filter_map(move |param| {
             if let GenericParam::Lifetime(param) = param {
-                used.contains(&param.lifetime)
-            } else {
-                false
+                if used.contains(&param.lifetime) {
+                    return Some(param);
+                }
             }
+            None
         })
     }
 }
@@ -125,6 +121,8 @@ fn lint_suppress_with_body() -> Attribute {
     parse_quote! {
         #[allow(
             clippy::let_unit_value,
+            clippy::no_effect_underscore_binding,
+            clippy::shadow_same,
             clippy::type_complexity,
             clippy::type_repetition_in_bounds,
             clippy::used_underscore_binding
@@ -182,29 +180,40 @@ fn transform_sig(
         }
     }
 
-    for param in sig
-        .generics
-        .params
-        .iter()
-        .chain(context.lifetimes(&lifetimes.explicit))
-    {
+    for param in &mut sig.generics.params {
         match param {
             GenericParam::Type(param) => {
-                let param = &param.ident;
-                let span = param.span();
+                let param_name = &param.ident;
+                let span = match param.colon_token.take() {
+                    Some(colon_token) => colon_token.span,
+                    None => param_name.span(),
+                };
+                let bounds = mem::replace(&mut param.bounds, Punctuated::new());
                 where_clause_or_default(&mut sig.generics.where_clause)
                     .predicates
-                    .push(parse_quote_spanned!(span=> #param: 'async_trait));
+                    .push(parse_quote_spanned!(span=> #param_name: 'async_trait + #bounds));
             }
             GenericParam::Lifetime(param) => {
-                let param = &param.lifetime;
-                let span = param.span();
+                let param_name = &param.lifetime;
+                let span = match param.colon_token.take() {
+                    Some(colon_token) => colon_token.span,
+                    None => param_name.span(),
+                };
+                let bounds = mem::replace(&mut param.bounds, Punctuated::new());
                 where_clause_or_default(&mut sig.generics.where_clause)
                     .predicates
-                    .push(parse_quote_spanned!(span=> #param: 'async_trait));
+                    .push(parse_quote_spanned!(span=> #param: 'async_trait + #bounds));
             }
             GenericParam::Const(_) => {}
         }
+    }
+
+    for param in context.lifetimes(&lifetimes.explicit) {
+        let param = &param.lifetime;
+        let span = param.span();
+        where_clause_or_default(&mut sig.generics.where_clause)
+            .predicates
+            .push(parse_quote_spanned!(span=> #param: 'async_trait));
     }
 
     if sig.generics.lt_token.is_none() {
@@ -274,6 +283,7 @@ fn transform_sig(
                     let m = mut_pat(&mut arg.pat);
                     arg.pat = parse_quote!(#m #positional);
                 }
+                AddLifetimeToImplTrait.visit_type_mut(&mut arg.ty);
             }
         }
     }
@@ -345,7 +355,11 @@ fn transform_block(context: Context, sig: &mut Signature, block: &mut Block) {
                 } else {
                     let pat = &arg.pat;
                     let ident = positional_arg(i, pat);
-                    quote!(let #pat = #ident;)
+                    if let Pat::Wild(_) = **pat {
+                        quote!(let #ident = #ident;)
+                    } else {
+                        quote!(let #pat = #ident;)
+                    }
                 }
             }
         })
@@ -389,8 +403,10 @@ fn transform_block(context: Context, sig: &mut Signature, block: &mut Block) {
 }
 
 fn positional_arg(i: usize, pat: &Pat) -> Ident {
-    use syn::spanned::Spanned;
-    format_ident!("__arg{}", i, span = pat.span())
+    let span: Span = syn::spanned::Spanned::span(pat);
+    #[cfg(not(no_span_mixed_site))]
+    let span = span.resolved_at(Span::mixed_site());
+    format_ident!("__arg{}", i, span = span)
 }
 
 fn has_bound(supertraits: &Supertraits, marker: &Ident) -> bool {

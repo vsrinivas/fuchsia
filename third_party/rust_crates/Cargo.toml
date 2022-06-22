@@ -35,7 +35,7 @@ arrayvec = "0.7.1"
 assert_matches = "1.5.0"
 async-channel = "1.6.1"
 async-lock = "2.3"
-async-trait = "0.1.51"
+async-trait = "0.1.56"
 atomic-waker = "1.0.0"
 atty = "0.2.11"
 base64 = "0.9"
@@ -386,7 +386,7 @@ configs = [ "//build/config/rust:allow_simd" ]
 # TODO(https://github.com/rust-lang/rust/pull/72981): uncomment when backtrace is stabilized.
 #rustflags = ["--cfg=backtrace"]
 
-[gn.package.async-trait."0.1.51"]
+[gn.package.async-trait."0.1.56"]
 rustflags = []
 
 [gn.package.byteorder."1.3.1"]
