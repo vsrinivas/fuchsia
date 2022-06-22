@@ -23,7 +23,7 @@
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
 
-#define spicc0_clk_sel_fclk_div3 (3 << 7)
+#define spicc0_clk_sel_fclk_div4 (2 << 7)
 #define spicc0_clk_en (1 << 6)
 #define spicc0_clk_div(x) ((x)-1)
 
@@ -36,8 +36,8 @@ using spi_channel_t = fidl_metadata::spi::Channel;
 
 zx_status_t Nelson::SpiInit() {
   constexpr uint32_t kSpiccClkValue =
-      // SPICC0 clock enable (666 MHz)
-      spicc0_clk_sel_fclk_div3 | spicc0_clk_en | spicc0_clk_div(1) |
+      // SPICC0 clock enable (500 MHz)
+      spicc0_clk_sel_fclk_div4 | spicc0_clk_en | spicc0_clk_div(1) |
 
       // SPICC1 clock enable (666 MHz)
       spicc1_clk_sel_fclk_div3 | spicc1_clk_en | spicc1_clk_div(1);
@@ -94,7 +94,7 @@ zx_status_t Nelson::Spi0Init() {
       .bus_id = NELSON_SPICC0,
       .cs_count = 1,
       .cs = {0},                                       // index into fragments list
-      .clock_divider_register_value = (512 >> 1) - 1,  // SCLK = core clock / 512 = ~1.3 MHz
+      .clock_divider_register_value = (500 >> 1) - 1,  // SCLK = core clock / 500 = 1.0 MHz
       .use_enhanced_clock_mode = true,
   };
 
