@@ -22,6 +22,8 @@ type LauncherError = strict enum {
     DASH_BINARY = 6;
     /// Error occured involving the PTY
     PTY = 7;
+    /// Instance is not in a resolved state, so there is nothing to explore
+    INSTANCE_NOT_RESOLVED = 8;
 };
 
 @discoverable

@@ -7,7 +7,7 @@ use {
     errors::ffx_error,
     ffx_component_explore_args::ExploreComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_dash::LauncherProxy,
+    fidl_fuchsia_dash::{LauncherError, LauncherProxy},
     fidl_fuchsia_io as fio,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -33,7 +33,11 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
         .launch_with_socket(&relative_moniker, pty_server)
         .await
         .map_err(|e| ffx_error!("fidl error launching dash: {}", e))?
-        .map_err(|e| ffx_error!("could not launch dash: {:?}", e))?;
+        .map_err(|e| match e {
+            LauncherError::InstanceNotFound => ffx_error!("No instance was found matching the moniker '{}'. Use `ffx component list` to find the correct moniker to use here.", moniker),
+            LauncherError::InstanceNotResolved => ffx_error!("The specified instance is not resolved. Use `ffx component resolve {}` and retry this command", moniker),
+            e => ffx_error!("Unexpected error launching dash: {:?}", e),
+        })?;
 
     // Put the host terminal into raw mode, so input characters are not echoed, streams
     // are not buffered and newlines are not changed.

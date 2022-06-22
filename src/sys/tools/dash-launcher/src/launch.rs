@@ -241,6 +241,7 @@ fn create_dash_handles(
     Ok(vec![stdin_handle, stdout_handle, stderr_handle, job_handle, ldsvc_handle, utc_clock_handle])
 }
 
+#[derive(Debug)]
 struct InstanceScope {
     lib_dir: Option<fio::DirectoryProxy>,
     ns: Vec<NameInfo>,
@@ -263,31 +264,35 @@ impl InstanceScope {
         let mut ns = vec![];
         let mut lib_dir = None;
 
-        if let Some(resolved) = resolved {
-            if let Some(started) = resolved.started {
-                if let Some(out_dir) = started.out_dir {
-                    ns.push(NameInfo { path: "/out".to_string(), directory: out_dir });
-                }
-                if let Some(runtime_dir) = started.runtime_dir {
-                    ns.push(NameInfo { path: "/runtime".to_string(), directory: runtime_dir });
-                }
-            }
-            ns.push(NameInfo { path: "/ns".to_string(), directory: resolved.ns_dir });
-            ns.push(NameInfo { path: "/exposed".to_string(), directory: resolved.exposed_dir });
+        let resolved = if let Some(resolved) = resolved {
+            resolved
+        } else {
+            return Err(LauncherError::InstanceNotResolved);
+        };
 
-            // If available, use the component's /pkg/lib dir to load libraries
-            if let Some(pkg_dir) = resolved.pkg_dir {
-                let pkg_dir = pkg_dir.into_proxy().map_err(|_| LauncherError::Internal)?;
-                if let Ok(dir) = fuchsia_fs::directory::open_directory(
-                    &pkg_dir,
-                    "lib",
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-                )
-                .await
-                {
-                    info!("Using /pkg/lib dir of {} for loading libraries", moniker);
-                    lib_dir.replace(dir);
-                }
+        if let Some(started) = resolved.started {
+            if let Some(out_dir) = started.out_dir {
+                ns.push(NameInfo { path: "/out".to_string(), directory: out_dir });
+            }
+            if let Some(runtime_dir) = started.runtime_dir {
+                ns.push(NameInfo { path: "/runtime".to_string(), directory: runtime_dir });
+            }
+        }
+        ns.push(NameInfo { path: "/ns".to_string(), directory: resolved.ns_dir });
+        ns.push(NameInfo { path: "/exposed".to_string(), directory: resolved.exposed_dir });
+
+        // If available, use the component's /pkg/lib dir to load libraries
+        if let Some(pkg_dir) = resolved.pkg_dir {
+            let pkg_dir = pkg_dir.into_proxy().map_err(|_| LauncherError::Internal)?;
+            if let Ok(dir) = fuchsia_fs::directory::open_directory(
+                &pkg_dir,
+                "lib",
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            )
+            .await
+            {
+                info!("Using /pkg/lib dir of {} for loading libraries", moniker);
+                lib_dir.replace(dir);
             }
         }
         Ok(Self { ns, lib_dir })
@@ -409,13 +414,7 @@ mod tests {
         let resolved = None;
         let query = serve_realm_query(instance_info, resolved);
 
-        let instance_scope = InstanceScope::new(&query, ".").await.unwrap();
-        let ns = create_dash_namespace(instance_scope.ns).unwrap();
-
-        assert_eq!(ns.len(), 2);
-        let mut paths: Vec<String> = ns.into_iter().map(|e| e.path).collect();
-        paths.sort();
-
-        assert_eq!(paths, vec!["/bin", "/svc"]);
+        let err = InstanceScope::new(&query, ".").await.unwrap_err();
+        assert_eq!(err, LauncherError::InstanceNotResolved);
     }
 }
