@@ -6,6 +6,7 @@ use fuchsia_pkg::PackageManifest;
 use serde::de::{self, Deserializer};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 /// A manifest containing a list of images produced by the Image Assembler.
@@ -191,6 +192,52 @@ pub struct BlobfsContents {
     pub packages: PackagesMetadata,
     /// Maximum total size of all the blobs stored in this image.
     pub maximum_contents_size: Option<u64>,
+    /// List of blobs across all packages
+    pub blobs: PackageSetBlobInfo,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct PackageSetBlobInfo(BTreeSet<PackageBlob>);
+
+impl BlobfsContents {
+    /// Add base package info into BlobfsContents
+    pub fn add_base_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        Self::add_package(&mut self.packages.base, &mut self.blobs, path)?;
+        Ok(())
+    }
+
+    /// Add cache package info into BlobfsContents
+    pub fn add_cache_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        Self::add_package(&mut self.packages.cache, &mut self.blobs, path)?;
+        Ok(())
+    }
+
+    fn add_package(
+        package_set: &mut PackageSetMetadata,
+        content_blobs: &mut PackageSetBlobInfo,
+        path: impl AsRef<Path>,
+    ) -> anyhow::Result<()> {
+        let manifest = path.as_ref().to_owned();
+        let package_manifest = PackageManifest::try_load_from(&manifest)?;
+        let name = package_manifest.name().to_string();
+        let mut package_blobs: Vec<PackageBlob> = vec![];
+        for blob in package_manifest.into_blobs() {
+            content_blobs.0.insert(PackageBlob {
+                merkle: blob.merkle.to_string(),
+                path: blob.path.to_string(),
+                used_space_in_blobfs: 0, /* Use 0 until we populate with compressed size */
+            });
+            package_blobs.push(PackageBlob {
+                merkle: blob.merkle.to_string(),
+                path: blob.path.to_string(),
+                used_space_in_blobfs: 0, /* Use 0 until we populate with compressed size */
+            });
+        }
+        package_blobs.sort();
+        package_set.0.push(PackageMetadata { name, manifest, blobs: package_blobs });
+        Ok(())
+    }
 }
 
 /// Metadata on packages included in a given image.
@@ -207,16 +254,6 @@ pub struct PackagesMetadata {
 #[serde(transparent)]
 pub struct PackageSetMetadata(pub Vec<PackageMetadata>);
 
-impl PackageSetMetadata {
-    /// Add the package located at |path|.
-    pub fn add_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
-        let manifest = path.as_ref().to_owned();
-        let name = PackageManifest::try_load_from(&manifest)?.name().to_string();
-        self.0.push(PackageMetadata { name, manifest });
-        Ok(())
-    }
-}
-
 /// Metadata on a single package included in a given image.
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct PackageMetadata {
@@ -224,6 +261,18 @@ pub struct PackageMetadata {
     pub name: String,
     /// Path to the package's manifest.
     pub manifest: PathBuf,
+    /// List of blobs in this package.
+    pub blobs: Vec<PackageBlob>,
+}
+
+#[derive(Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Deserialize, Serialize)]
+pub struct PackageBlob {
+    // Merkle hash of this blob
+    pub merkle: String,
+    // Path of blob in package
+    pub path: String,
+    // Space used by this blob in blobfs
+    pub used_space_in_blobfs: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -289,6 +338,8 @@ impl<'de> Deserialize<'de> for Image {
 mod tests {
     use super::*;
     use serde_json::{json, Value};
+    use std::io::Write;
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn serialize() {
@@ -379,6 +430,84 @@ mod tests {
         assert!(result.unwrap_err().is_data());
     }
 
+    #[test]
+    fn test_blobfs_contents_add_base_or_cache_package() -> anyhow::Result<()> {
+        let content = generate_test_package_manifest_content();
+
+        let mut package_manifest_temp_file = NamedTempFile::new()?;
+        let dir = tempdir().unwrap();
+        write!(package_manifest_temp_file, "{}", content)?;
+        let path = package_manifest_temp_file.into_temp_path();
+        path.persist(dir.path().join("package_manifest_temp_file.json"))?;
+
+        let mut contents = BlobfsContents::default();
+        contents.add_base_package(dir.path().join("package_manifest_temp_file.json"))?;
+        contents.add_cache_package(dir.path().join("package_manifest_temp_file.json"))?;
+        let actual_package_blobs_base = &(contents.packages.base.0[0].blobs);
+        let actual_package_blobs_cache = &(contents.packages.cache.0[0].blobs);
+
+        let package_blob1 = PackageBlob {
+            merkle: "7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581".to_string(),
+            path: "bin/def".to_string(),
+            used_space_in_blobfs: 0,
+        };
+
+        let package_blob2 = PackageBlob {
+            merkle: "8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567".to_string(),
+            path: "lib/ghi".to_string(),
+            used_space_in_blobfs: 0,
+        };
+
+        let package_blob3 = PackageBlob {
+            merkle: "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70".to_string(),
+            path: "abc/".to_string(),
+            used_space_in_blobfs: 0,
+        };
+
+        let expected_blobs = vec![package_blob1, package_blob2, package_blob3];
+        // Verify if all 3 blobs are available and also if they are sorted.
+        assert_eq!(actual_package_blobs_base, &expected_blobs);
+        assert_eq!(actual_package_blobs_cache, &expected_blobs);
+
+        // Verify blobs in BlobfsContents
+        assert_eq!(contents.blobs.0.iter().map(|x| x.clone()).collect::<Vec<_>>(), expected_blobs);
+        Ok(())
+    }
+
+    fn generate_test_package_manifest_content() -> String {
+        let content = r#"{
+            "package": {
+                "name": "test_package",
+                "version": "0"
+            },
+            "blobs": [
+                {
+                    "path": "abc/",
+                    "merkle": "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70",
+                    "size": 2048,
+                    "source_path": "../../blobs/eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec78"
+                },
+                {
+                    "path": "bin/def",
+                    "merkle": "7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581",
+                    "size": 188416,
+                    "source_path": "../../blobs/7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581"
+                },
+                {
+                    "path": "lib/ghi",
+                    "merkle": "8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567",
+                    "size": 692224,
+                    "source_path": "../../blobs/8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567"
+                }
+            ],
+            "version": "1",
+            "blob_sources_relative": "file",
+            "repository": "fuchsia.com"
+        }
+        "#;
+        return content.to_string();
+    }
+
     fn generate_test_value() -> Value {
         json!([
             {
@@ -407,6 +536,7 @@ mod tests {
                         "cache": [],
                     },
                     "maximum_contents_size": None::<u64>,
+                    "blobs": [],
                 },
             },
             {

@@ -28,11 +28,11 @@ pub fn construct_blobfs(
     // Add the base and cache packages.
     for package_manifest_path in &image_config.base {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.packages.base.add_package(package_manifest_path)?;
+        contents.add_base_package(package_manifest_path)?;
     }
     for package_manifest_path in &image_config.cache {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.packages.cache.add_package(package_manifest_path)?;
+        contents.add_cache_package(package_manifest_path)?;
     }
 
     // Add the base package and its contents.
