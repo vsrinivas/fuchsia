@@ -39,6 +39,7 @@ enum IncomingService {
     EnergyScanConnector(EnergyScanConnectorRequestStream),
     ExperimentalDeviceConnector(ExperimentalDeviceConnectorRequestStream),
     ExperimentalDeviceExtraConnector(ExperimentalDeviceExtraConnectorRequestStream),
+    TelemetryProviderConnector(TelemetryProviderConnectorRequestStream),
 }
 
 const MAX_CONCURRENT: usize = 100;
@@ -88,6 +89,7 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingService::DatasetConnector)
         .add_fidl_service(IncomingService::ExperimentalDeviceConnector)
         .add_fidl_service(IncomingService::ExperimentalDeviceExtraConnector)
+        .add_fidl_service(IncomingService::TelemetryProviderConnector)
         .add_fidl_service(IncomingService::MeshcopConnector)
         .add_fidl_service(IncomingService::EnergyScanConnector);
 
@@ -113,6 +115,7 @@ async fn main() -> Result<(), Error> {
             IncomingService::ExperimentalDeviceExtraConnector(stream) => {
                 service.serve_to(stream).await
             }
+            IncomingService::TelemetryProviderConnector(stream) => service.serve_to(stream).await,
         } {
             fx_log_err!("{:?}", err);
         }

@@ -27,7 +27,8 @@ use lowpan_driver_common::lowpan_fidl::{
     ExperimentalDeviceConnectorRequest, ExperimentalDeviceConnectorRequestStream,
     ExperimentalDeviceExtraConnectorRequest, ExperimentalDeviceExtraConnectorRequestStream,
     LegacyJoiningConnectorRequest, LegacyJoiningConnectorRequestStream, MeshcopConnectorRequest,
-    MeshcopConnectorRequestStream, MAX_LOWPAN_DEVICES,
+    MeshcopConnectorRequestStream, TelemetryProviderConnectorRequest,
+    TelemetryProviderConnectorRequestStream, MAX_LOWPAN_DEVICES,
 };
 use lowpan_driver_common::{AsyncCondition, ZxStatus};
 use parking_lot::Mutex;
@@ -194,6 +195,11 @@ impl_serve_to_driver!(
     ExperimentalDeviceExtraConnectorRequestStream,
     ExperimentalDeviceExtraConnectorRequest,
     experimental_device_extra
+);
+impl_serve_to_driver!(
+    TelemetryProviderConnectorRequestStream,
+    TelemetryProviderConnectorRequest,
+    telemetry_provider
 );
 
 #[async_trait::async_trait()]

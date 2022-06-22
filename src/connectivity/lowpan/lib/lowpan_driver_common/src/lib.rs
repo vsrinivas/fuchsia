@@ -72,6 +72,12 @@ pub mod lowpan_fidl {
     pub use fidl_fuchsia_lowpan_experimental::DeviceMarker as ExperimentalDeviceMarker;
     pub use fidl_fuchsia_lowpan_experimental::DeviceRequest as ExperimentalDeviceRequest;
     pub use fidl_fuchsia_lowpan_experimental::DeviceRequestStream as ExperimentalDeviceRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderConnectorMarker;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderConnectorRequest;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderConnectorRequestStream;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderMarker;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderRequest;
+    pub use fidl_fuchsia_lowpan_experimental::TelemetryProviderRequestStream;
     pub use fidl_fuchsia_lowpan_experimental::{
         BeaconInfo, BeaconInfoStreamMarker, BeaconInfoStreamRequest, ChannelInfo,
         DeviceRouteConnectorMarker, DeviceRouteConnectorRequest, DeviceRouteConnectorRequestStream,
@@ -82,7 +88,7 @@ pub mod lowpan_fidl {
         LegacyJoiningConnectorMarker, LegacyJoiningConnectorRequest,
         LegacyJoiningConnectorRequestStream, LegacyJoiningMarker, LegacyJoiningRequest,
         LegacyJoiningRequestStream, NetworkScanParameters, OnMeshPrefix, ProvisionError,
-        ProvisioningMonitorRequest, ProvisioningProgress, RoutePreference,
+        ProvisioningMonitorRequest, ProvisioningProgress, RoutePreference, Telemetry,
     };
     pub use fidl_fuchsia_lowpan_test::*;
     pub use fidl_fuchsia_lowpan_thread::*;

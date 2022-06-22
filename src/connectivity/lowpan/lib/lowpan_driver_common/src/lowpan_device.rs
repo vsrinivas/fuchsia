@@ -172,6 +172,7 @@ pub trait Driver: Send + Sync {
     ) -> ZxResult<()>;
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings>;
 
+    /// Returns a snapshot of the current neighbor table.
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>>;
 
     /// Returns a snapshot of the counters without resetting the counters.
@@ -313,6 +314,19 @@ pub trait Driver: Send + Sync {
     async fn meshcop_update_txt_entries(&self, _txt_entries: Vec<(String, Vec<u8>)>) -> ZxResult {
         warn!("meshcop_update_txt_entries: Not supported by this device.");
         Err(ZxStatus::NOT_SUPPORTED)
+    }
+
+    /// Returns telemetry information of the device.
+    async fn get_telemetry(&self) -> ZxResult<Telemetry> {
+        Ok(Telemetry {
+            rssi: self.get_current_rssi().await.ok(),
+            partition_id: self.get_partition_id().await.ok(),
+            stack_version: self.get_ncp_version().await.ok(),
+            thread_router_id: self.get_thread_router_id().await.ok(),
+            thread_rloc: self.get_thread_rloc16().await.ok(),
+            channel_index: self.get_current_channel().await.ok(),
+            ..Telemetry::EMPTY
+        })
     }
 }
 
@@ -648,6 +662,38 @@ impl<T: Driver> ServeTo<ExperimentalDeviceExtraRequestStream> for T {
         request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
             |err| {
                 fx_log_err!("Error serving ExperimentalDeviceExtraRequestStream: {:?}", err);
+
+                if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                    request_control_handle.shutdown_with_epitaph(*epitaph);
+                }
+
+                err
+            },
+        )
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<TelemetryProviderRequestStream> for T {
+    async fn serve_to(&self, request_stream: TelemetryProviderRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| async {
+            match command {
+                TelemetryProviderRequest::GetTelemetry { responder } => {
+                    self.get_telemetry()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in get_telemetry_info request")?;
+                }
+            }
+            Result::<(), anyhow::Error>::Ok(())
+        };
+
+        request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
+            |err| {
+                fx_log_err!("Error serving TelemetryProviderRequestStream: {:?}", err);
 
                 if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
                     request_control_handle.shutdown_with_epitaph(*epitaph);
@@ -1249,6 +1295,37 @@ mod tests {
             assert_eq!(results.len(), 3, "Unexpected number of scan results");
 
             assert!(scanner.next().await.is_err(), "Calling next again should error");
+        };
+
+        futures::select! {
+            err = server_future.boxed_local().fuse() => panic!("Server task stopped: {:?}", err),
+            _ = client_future.boxed().fuse() => (),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_telemetry_info() {
+        let device = DummyDevice::default();
+
+        let (client_ep, server_ep) = create_endpoints::<TelemetryProviderMarker>().unwrap();
+
+        let server_future = device.serve_to(server_ep.into_stream().unwrap());
+
+        let proxy = client_ep.into_proxy().unwrap();
+
+        let client_future = async move {
+            assert_matches!(
+                proxy.get_telemetry().await,
+                Ok(Telemetry {
+                    rssi: Some(_),
+                    partition_id: Some(_),
+                    stack_version: Some(_),
+                    thread_router_id: Some(_),
+                    thread_rloc: Some(_),
+                    channel_index: Some(_),
+                    ..
+                })
+            )
         };
 
         futures::select! {

@@ -65,6 +65,7 @@ impl<T: Driver> ServeTo<DriverRequestStream> for T {
                         handle_protocol!(futures, protocols.device_extra);
                         handle_protocol!(futures, protocols.experimental_device);
                         handle_protocol!(futures, protocols.experimental_device_extra);
+                        handle_protocol!(futures, protocols.telemetry_provider);
                         handle_protocol!(futures, protocols.energy_scan);
                         handle_protocol!(futures, protocols.meshcop);
                         handle_protocol!(futures, protocols.counters);
