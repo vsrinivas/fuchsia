@@ -1489,7 +1489,20 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
     #[derive(Debug, PartialEq)]
     struct IpForwarding {
         v4: Option<bool>,
+        v4_multicast: Option<bool>,
         v6: Option<bool>,
+        v6_multicast: Option<bool>,
+    }
+
+    fn ip_forwarding_for_v4_and_v6(v4: Option<bool>, v6: Option<bool>) -> IpForwarding {
+        IpForwarding { v4: v4, v4_multicast: v4, v6: v6, v6_multicast: v6 }
+    }
+
+    fn ip_forwarding_for_unicast_and_multicast(
+        unicast: Option<bool>,
+        multicast: Option<bool>,
+    ) -> IpForwarding {
+        IpForwarding { v4: unicast, v4_multicast: multicast, v6: unicast, v6_multicast: multicast }
     }
 
     async fn get_ip_forwarding(iface: &netemul::TestInterface<'_>) -> IpForwarding {
@@ -1500,16 +1513,28 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
             .expect("get_configuration FIDL error")
             .expect("error getting configuration");
 
-        let finterfaces_admin::Ipv4Configuration { forwarding: v4, .. } =
-            ipv4_config.expect("IPv4 configuration should be populated");
-        let finterfaces_admin::Ipv6Configuration { forwarding: v6, .. } =
-            ipv6_config.expect("IPv6 configuration should be populated");
+        let finterfaces_admin::Ipv4Configuration {
+            forwarding: v4,
+            multicast_forwarding: v4_multicast,
+            ..
+        } = ipv4_config.expect("IPv4 configuration should be populated");
+        let finterfaces_admin::Ipv6Configuration {
+            forwarding: v6,
+            multicast_forwarding: v6_multicast,
+            ..
+        } = ipv6_config.expect("IPv6 configuration should be populated");
 
-        IpForwarding { v4, v6 }
+        IpForwarding { v4, v4_multicast, v6, v6_multicast }
     }
     // Initially, interfaces have IP forwarding disabled.
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(false), v6: Some(false) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
 
     /// Sets the forwarding configuration and checks the configuration before
     /// the update was applied.
@@ -1519,16 +1544,20 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
         expected_previous: IpForwarding,
     ) {
         let config_with_ip_forwarding_set =
-            |IpForwarding { v4, v6 }| finterfaces_admin::Configuration {
-                ipv4: Some(finterfaces_admin::Ipv4Configuration {
-                    forwarding: v4,
-                    ..finterfaces_admin::Ipv4Configuration::EMPTY
-                }),
-                ipv6: Some(finterfaces_admin::Ipv6Configuration {
-                    forwarding: v6,
-                    ..finterfaces_admin::Ipv6Configuration::EMPTY
-                }),
-                ..finterfaces_admin::Configuration::EMPTY
+            |IpForwarding { v4, v4_multicast, v6, v6_multicast }| {
+                finterfaces_admin::Configuration {
+                    ipv4: Some(finterfaces_admin::Ipv4Configuration {
+                        forwarding: v4,
+                        multicast_forwarding: v4_multicast,
+                        ..finterfaces_admin::Ipv4Configuration::EMPTY
+                    }),
+                    ipv6: Some(finterfaces_admin::Ipv6Configuration {
+                        forwarding: v6,
+                        multicast_forwarding: v6_multicast,
+                        ..finterfaces_admin::Ipv6Configuration::EMPTY
+                    }),
+                    ..finterfaces_admin::Configuration::EMPTY
+                }
             };
 
         let configuration = iface
@@ -1544,84 +1573,156 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
     // Set nothing.
     set_ip_forwarding(
         &iface1,
-        IpForwarding { v4: None, v6: None },
-        IpForwarding { v4: None, v6: None },
+        ip_forwarding_for_v4_and_v6(None, None),
+        ip_forwarding_for_v4_and_v6(None, None),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(false), v6: Some(false) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
 
     // Should do nothing since the interface's IP forwarding is already
     // disabled.
     set_ip_forwarding(
         &iface1,
-        IpForwarding { v4: Some(false), v6: Some(false) },
-        IpForwarding { v4: Some(false), v6: Some(false) },
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false)),
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(false), v6: Some(false) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
 
     // Enabling an interface's IP forwarding should not affect another
     // interface/protocol.
     set_ip_forwarding(
         &iface1,
-        IpForwarding { v4: Some(true), v6: None },
-        IpForwarding { v4: Some(false), v6: None },
+        ip_forwarding_for_v4_and_v6(Some(true), None),
+        ip_forwarding_for_v4_and_v6(Some(false), None),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(false) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(false))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
     set_ip_forwarding(
         &iface1,
-        IpForwarding { v4: None, v6: Some(true) },
-        IpForwarding { v4: None, v6: Some(false) },
+        ip_forwarding_for_v4_and_v6(None, Some(true)),
+        ip_forwarding_for_v4_and_v6(None, Some(false)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
 
     // Enabling IP forwarding again should be a no-op.
     set_ip_forwarding(
         &iface1,
-        IpForwarding { v4: Some(true), v6: Some(true) },
-        IpForwarding { v4: Some(true), v6: Some(true) },
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true)),
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
 
     // Enabling an interface's IP forwarding should not affect another
     // interface.
     set_ip_forwarding(
         &iface2,
-        IpForwarding { v4: Some(true), v6: Some(true) },
-        IpForwarding { v4: Some(false), v6: Some(false) },
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true)),
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(true), v6: Some(true) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
 
     // Disabling an interface's IP forwarding should not affect another
     // interface/protocol.
     set_ip_forwarding(
         &iface2,
-        IpForwarding { v4: Some(false), v6: Some(true) },
-        IpForwarding { v4: Some(true), v6: Some(true) },
+        ip_forwarding_for_v4_and_v6(Some(false), Some(true)),
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(true) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(true))
+    );
 
     // Disabling IP forwarding again should be a no-op if already disabled.
     set_ip_forwarding(
         &iface2,
-        IpForwarding { v4: Some(false), v6: Some(false) },
-        IpForwarding { v4: Some(false), v6: Some(true) },
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false)),
+        ip_forwarding_for_v4_and_v6(Some(false), Some(true)),
     )
     .await;
-    assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
-    assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
+    assert_eq!(
+        get_ip_forwarding(&iface1).await,
+        ip_forwarding_for_v4_and_v6(Some(true), Some(true))
+    );
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false))
+    );
+
+    // Verify that the unicast and multicast forwarding settings can be toggled
+    // independently.
+    set_ip_forwarding(
+        &iface2,
+        ip_forwarding_for_unicast_and_multicast(Some(false), Some(true)),
+        ip_forwarding_for_v4_and_v6(Some(false), Some(false)),
+    )
+    .await;
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_unicast_and_multicast(Some(false), Some(true))
+    );
+
+    set_ip_forwarding(
+        &iface2,
+        ip_forwarding_for_unicast_and_multicast(Some(true), Some(false)),
+        ip_forwarding_for_unicast_and_multicast(Some(false), Some(true)),
+    )
+    .await;
+    assert_eq!(
+        get_ip_forwarding(&iface2).await,
+        ip_forwarding_for_unicast_and_multicast(Some(true), Some(false))
+    );
 }
 
 // Test that reinstalling a port with the same base port identifier works.
