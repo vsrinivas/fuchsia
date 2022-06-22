@@ -422,6 +422,10 @@ pub enum ClientSmeStatus {
 }
 
 impl ClientSmeStatus {
+    pub fn is_connecting(&self) -> bool {
+        matches!(self, ClientSmeStatus::Connecting(_))
+    }
+
     pub fn is_connected(&self) -> bool {
         matches!(self, ClientSmeStatus::Connected(_))
     }
@@ -592,17 +596,22 @@ impl ClientSme {
         scan_request: fidl_sme::ScanRequest,
     ) -> oneshot::Receiver<Result<Vec<wlan_common::scan::ScanResult>, fidl_mlme::ScanResultCode>>
     {
-        info!(
-            "SME received a scan command, initiating a{} discovery scan",
-            match scan_request {
-                fidl_sme::ScanRequest::Active(_) => "n active",
-                fidl_sme::ScanRequest::Passive(_) => " passive",
-            }
-        );
         let (responder, receiver) = Responder::new();
-        let scan = DiscoveryScan::new(responder, scan_request);
-        let req = self.scan_sched.enqueue_scan_to_discover(scan);
-        self.send_scan_request(req);
+        if self.status().is_connecting() {
+            info!("SME ignoring scan request because a connect is in progress");
+            responder.respond(Err(fidl_mlme::ScanResultCode::ShouldWait));
+        } else {
+            info!(
+                "SME received a scan command, initiating a{} discovery scan",
+                match scan_request {
+                    fidl_sme::ScanRequest::Active(_) => "n active",
+                    fidl_sme::ScanRequest::Passive(_) => " passive",
+                }
+            );
+            let scan = DiscoveryScan::new(responder, scan_request);
+            let req = self.scan_sched.enqueue_scan_to_discover(scan);
+            self.send_scan_request(req);
+        }
         receiver
     }
 
@@ -1604,6 +1613,27 @@ mod tests {
             recv.try_recv(),
             Ok(Some(Err(fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware)))
         );
+    }
+
+    #[test]
+    fn test_scan_is_rejected_while_connecting() {
+        let exec = fuchsia_async::TestExecutor::new().unwrap();
+        let (mut sme, _mlme_strem, _time_stream) = create_sme(&exec);
+
+        // Send a connect command to move SME into Connecting state
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
+        let _recv = sme.on_connect_command(connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            authentication_open(),
+        ));
+        assert_variant!(sme.status(), ClientSmeStatus::Connecting(_));
+
+        // Send a scan command and verify a ShouldWait response is returned
+        let mut recv =
+            sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+        assert_eq!(recv.try_recv(), Ok(Some(Err(fidl_mlme::ScanResultCode::ShouldWait))));
     }
 
     #[test]

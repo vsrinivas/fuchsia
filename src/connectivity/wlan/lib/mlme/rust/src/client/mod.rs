@@ -325,6 +325,14 @@ impl ClientMlme {
     }
 
     fn on_sme_connect(&mut self, req: fidl_mlme::ConnectRequest) -> Result<(), Error> {
+        // Cancel any ongoing scan so that it doesn't conflict with the connect request
+        let channel_state = &mut self.channel_state;
+        let sta = self.sta.as_mut();
+        self.scanner.bind(&mut self.ctx).cancel_ongoing_scan(
+            |ctx, scanner| channel_state.bind(ctx, scanner, sta),
+            &mut self.chan_sched,
+        );
+
         let bssid = req.selected_bss.bssid;
         let result = match req.selected_bss.try_into() {
             Ok(bss) => {
@@ -1583,6 +1591,47 @@ mod tests {
         .expect("valid ConnectRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
         assert!(!client.sta.eapol_required());
+    }
+
+    #[test]
+    fn test_connect_req_cancels_ongoing_scan() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
+
+        me.on_sme_scan(scan_req());
+        assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
+
+        // There should be a scheduled event for channel scheduler
+        let (_, channel_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        assert_variant!(channel_event.event, super::TimedEvent::ChannelScheduler);
+
+        // Send a connect request
+        let bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
+        me.on_sme_connect(fidl_mlme::ConnectRequest {
+            selected_bss: bss.clone(),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            wep_key: None,
+            security_ie: vec![],
+        })
+        .expect("valid ConnectRequest should be handled successfully");
+
+        // Verify that scan is canceled
+        let msg =
+            m.fake_device.next_mlme_msg::<fidl_mlme::ScanEnd>().expect("error reading SCAN.end");
+        assert_eq!(msg.txn_id, scan_req().txn_id);
+        assert_eq!(msg.code, fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware);
+
+        // Verify that channel has switched to the BSS's
+        assert_eq!(me.ctx.device.channel().primary, bss.channel.primary);
+
+        // Verify that time scheduler timeout is no-op
+        me.handle_timed_event(channel_event.id, channel_event.event);
+        assert_eq!(me.ctx.device.channel().primary, bss.channel.primary);
     }
 
     #[test]

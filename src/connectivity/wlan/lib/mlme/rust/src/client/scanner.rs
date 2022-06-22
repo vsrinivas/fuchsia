@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr},
-    log::{error, warn},
+    log::{error, info, warn},
     thiserror::Error,
     wlan_common::{
         mac::{self, CapabilityInfo},
@@ -139,6 +139,28 @@ struct ChannelList {
 }
 
 impl<'a> BoundScanner<'a> {
+    /// Canceling any software scan that's in progress
+    pub fn cancel_ongoing_scan<F, CL>(
+        &'a mut self,
+        build_channel_listener: F,
+        chan_sched: &mut ChannelScheduler,
+    ) where
+        F: FnOnce(&'a mut Context, &'a mut Scanner) -> CL,
+        CL: ChannelListener,
+    {
+        match &self.scanner.ongoing_scan {
+            Some(OngoingScan::MlmeScan { .. }) => {
+                let mut listener = build_channel_listener(self.ctx, self.scanner);
+                chan_sched
+                    .bind(&mut listener, ChannelListenerSource::Scanner)
+                    .cancel_all_channel_requests();
+            }
+            _ => {
+                // TODO(fxbug.dev/102984): implement this for offloaded scan.
+            }
+        }
+    }
+
     /// Handle scan request. Queue requested scan channels in channel scheduler.
     ///
     /// If a scan request is in progress, or the new request has invalid argument (empty channel
@@ -505,18 +527,18 @@ impl<'a> BoundScanner<'a> {
     }
 
     /// Called when channel scheduler has gone through all the requested channels from a scan
-    /// request. The scanner submits scan results to SME.
-    pub fn handle_channel_req_complete(&mut self) {
+    /// request successfully, or the requested channels are canceled.
+    pub fn handle_channel_req_complete(&mut self, code: fidl_mlme::ScanResultCode) {
         match self.scanner.ongoing_scan.take() {
             Some(OngoingScan::MlmeScan { req, .. }) => {
+                if code == fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware {
+                    info!("In-progress scan request canceled");
+                }
                 let _ = self
                     .ctx
                     .device
                     .mlme_control_handle()
-                    .send_on_scan_end(&mut fidl_mlme::ScanEnd {
-                        txn_id: req.txn_id,
-                        code: fidl_mlme::ScanResultCode::Success,
-                    })
+                    .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id: req.txn_id, code })
                     .map_err(|e| {
                         error!("error sending MLME ScanEnd: {}", e);
                     });
@@ -1335,7 +1357,7 @@ mod tests {
             )
             .expect("expect scan req accepted");
         handle_beacon_foo(&mut scanner, &mut ctx);
-        scanner.bind(&mut ctx).handle_channel_req_complete();
+        scanner.bind(&mut ctx).handle_channel_req_complete(fidl_mlme::ScanResultCode::Success);
 
         let scan_result = m
             .fake_device
@@ -1374,7 +1396,7 @@ mod tests {
 
         handle_beacon_foo(&mut scanner, &mut ctx);
         handle_beacon_bar(&mut scanner, &mut ctx);
-        scanner.bind(&mut ctx).handle_channel_req_complete();
+        scanner.bind(&mut ctx).handle_channel_req_complete(fidl_mlme::ScanResultCode::Success);
 
         // Verify that one scan result is sent for each beacon
         let foo_scan_result = m

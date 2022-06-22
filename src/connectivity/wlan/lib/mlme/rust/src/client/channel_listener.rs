@@ -7,7 +7,7 @@ use {
         client::{channel_scheduler, scanner::Scanner, Client, Context, TimedEvent},
         device::Device,
     },
-    banjo_fuchsia_wlan_common as banjo_common,
+    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::{debug, error, warn},
     wlan_common::timer::Timer,
 };
@@ -41,6 +41,12 @@ pub trait ChannelListener {
     /// Triggered when request is fully serviced, or the request is interrupted but will not
     /// be retried anymore.
     fn on_req_complete(
+        &mut self,
+        request_id: channel_scheduler::RequestId,
+        queue_state: channel_scheduler::QueueState,
+    );
+    /// Triggered when request is canceled.
+    fn on_req_canceled(
         &mut self,
         request_id: channel_scheduler::RequestId,
         queue_state: channel_scheduler::QueueState,
@@ -141,9 +147,35 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
         request_id: channel_scheduler::RequestId,
         queue_state: channel_scheduler::QueueState,
     ) {
+        let is_req_canceled = false;
+        self.on_req_finalized(request_id, queue_state, is_req_canceled);
+    }
+
+    fn on_req_canceled(
+        &mut self,
+        request_id: channel_scheduler::RequestId,
+        queue_state: channel_scheduler::QueueState,
+    ) {
+        let is_req_canceled = true;
+        self.on_req_finalized(request_id, queue_state, is_req_canceled);
+    }
+}
+
+impl<'a> MlmeChannelListener<'a> {
+    fn on_req_finalized(
+        &mut self,
+        request_id: channel_scheduler::RequestId,
+        queue_state: channel_scheduler::QueueState,
+        is_req_canceled: bool,
+    ) {
         if Some(request_id) == self.state.off_channel_req_id {
             self.state.off_channel_req_id.take();
-            self.scanner.bind(self.ctx).handle_channel_req_complete();
+            let code = if is_req_canceled {
+                fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware
+            } else {
+                fidl_mlme::ScanResultCode::Success
+            };
+            self.scanner.bind(self.ctx).handle_channel_req_complete(code);
         }
 
         match (queue_state, self.state.main_channel) {
@@ -214,6 +246,7 @@ mod test_utils {
             req_id: channel_scheduler::RequestId,
         },
         ReqComplete(channel_scheduler::RequestId, channel_scheduler::QueueState),
+        ReqCanceled(channel_scheduler::RequestId, channel_scheduler::QueueState),
     }
 
     impl ChannelListener for MockListener<'_> {
@@ -249,6 +282,14 @@ mod test_utils {
             queue_state: channel_scheduler::QueueState,
         ) {
             self.events.borrow_mut().push(LEvent::ReqComplete(req_id, queue_state));
+        }
+
+        fn on_req_canceled(
+            &mut self,
+            req_id: channel_scheduler::RequestId,
+            queue_state: channel_scheduler::QueueState,
+        ) {
+            self.events.borrow_mut().push(LEvent::ReqCanceled(req_id, queue_state));
         }
     }
 }

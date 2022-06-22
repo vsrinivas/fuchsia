@@ -139,6 +139,15 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
         }
     }
 
+    /// Cancel any existing timeout and clear all channel requests. Notify listener
+    /// of all canceled requests.
+    pub fn cancel_all_channel_requests(&mut self) {
+        self.cancel_existing_timeout();
+        for request_id in self.chan_sched.queue.drain() {
+            self.listener.on_req_canceled(request_id, QueueState::Empty)
+        }
+    }
+
     /// Service request at front of the queue if there's one.
     fn maybe_service_front_req(&mut self) {
         let (channel, meta) = match self.chan_sched.queue.front() {
@@ -189,6 +198,10 @@ struct ChannelQueue {
 impl ChannelQueue {
     fn new() -> Self {
         Self { queue: VecDeque::new() }
+    }
+
+    fn drain(&mut self) -> impl Iterator<Item = RequestId> + '_ {
+        self.queue.drain(..).map(|req| req.request_id())
     }
 
     fn push_front(&mut self, req: ChannelRequest) {
@@ -509,6 +522,32 @@ mod tests {
         assert_eq!(
             m.listener_state.drain_events(),
             vec![LEvent::ReqComplete(id2, QueueState::Empty)]
+        );
+    }
+
+    #[test]
+    fn test_cancel_all_channel_requests() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut chan_sched = ChannelScheduler::new();
+        let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
+        let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
+
+        let from = m.fake_device.wlan_channel;
+        let req_id =
+            chan_sched.queue_channels(vec![QUEUE_CHANNEL_1, QUEUE_CHANNEL_2], 200.millis());
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![
+                LEvent::PreSwitch { from, to: QUEUE_CHANNEL_1, req_id },
+                LEvent::PostSwitch { from, to: QUEUE_CHANNEL_1, req_id },
+            ]
+        );
+
+        chan_sched.cancel_all_channel_requests();
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqCanceled(req_id, QueueState::Empty)]
         );
     }
 
