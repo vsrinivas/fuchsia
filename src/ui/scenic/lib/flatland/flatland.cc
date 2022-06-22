@@ -272,10 +272,11 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
   uber_struct->debug_name = debug_name_;
 
-  // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
-  // waiting on the acquire fences to indicate that a Present is pending.
-  auto present_id =
-      flatland_presenter_->RegisterPresent(session_id_, std::move(*args.mutable_release_fences()));
+  // Obtain the PresentId which is needed to:
+  // - enqueue the UberStruct.
+  // - schedule a frame
+  // - notify client when the frame has been presented
+  auto present_id = scheduling::GetNextPresentId();
   present2_helper_.RegisterPresent(present_id,
                                    /*present_received_time=*/zx::time(async_now(dispatcher())));
 
@@ -293,7 +294,8 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
         // it to the InstanceMap used for rendering.
         uber_struct_queue_->Push(present_id, std::move(uber_struct));
         flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
-                                                      {session_id_, present_id}, unsquashable);
+                                                      {session_id_, present_id}, unsquashable,
+                                                      std::move(release_fences));
 
         // Finalize Link destruction operations after publishing the new UberStruct. This
         // ensures that any local Transforms referenced by the to-be-deleted Links are already

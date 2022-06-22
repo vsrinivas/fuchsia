@@ -52,45 +52,22 @@ std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences() {
   return result;
 }
 
-scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
-    scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
-  scheduling::PresentId present_id = scheduling::kInvalidPresentId;
-
-  if (auto scheduler = frame_scheduler_.lock()) {
-    // Since FrameScheduler::RegisterPresent() will not run immediately, generate a PresentId
-    // independently.
-    present_id = scheduling::GetNextPresentId();
-
-    // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
-    // since GFX sessions may access the FrameScheduler without passing through this object. Post a
-    // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(main_dispatcher_, [thiz = shared_from_this(), scheduler, present_id, session_id,
-                                       release_fences = std::move(release_fences)]() mutable {
-      scheduling::SchedulingIdPair id_pair{session_id, present_id};
-      FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
-      thiz->release_fences_.emplace(id_pair, std::move(release_fences));
-
-      scheduler->RegisterPresent(session_id, {}, present_id);
-    });
-  } else {
-    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
-    FX_LOGS(WARNING) << "Cannot register present due to missing FrameScheduler.";
-  }
-
-  return present_id;
-}
-
 void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_presentation_time,
                                                         scheduling::SchedulingIdPair id_pair,
-                                                        bool unsquashable) {
+                                                        bool unsquashable,
+                                                        std::vector<zx::event> release_fences) {
   if (auto scheduler = frame_scheduler_.lock()) {
     // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
     // since GFX sessions may access the FrameScheduler without passing through this object. Post a
     // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(
-        main_dispatcher_, [scheduler, requested_presentation_time, id_pair, unsquashable] {
-          scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair, !unsquashable);
-        });
+    async::PostTask(main_dispatcher_, [thiz = shared_from_this(), scheduler,
+                                       requested_presentation_time, id_pair, unsquashable,
+                                       release_fences = std::move(release_fences)]() mutable {
+      FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
+      thiz->release_fences_.emplace(id_pair, std::move(release_fences));
+      scheduler->RegisterPresent(id_pair.session_id, {}, id_pair.present_id);
+      scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair, !unsquashable);
+    });
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
     FX_LOGS(WARNING) << "Cannot schedule update for session due to missing FrameScheduler.";

@@ -40,25 +40,24 @@ using fuchsia::ui::composition::OnNextFrameBeginValues;
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandManagerTest harness. |session_id| is the SessionId for |flatland|. |expect_success|
 // should be false if the call to Present() is expected to trigger an error.
-#define PRESENT(flatland, session_id, expect_success)                              \
-  {                                                                                \
-    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);     \
-    if (expect_success) {                                                          \
-      EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));      \
-      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));   \
-    }                                                                              \
-    fuchsia::ui::composition::PresentArgs present_args;                            \
-    present_args.set_requested_presentation_time(0);                               \
-    present_args.set_acquire_fences({});                                           \
-    present_args.set_release_fences({});                                           \
-    present_args.set_unsquashable(false);                                          \
-    flatland->Present(std::move(present_args));                                    \
-    /* If expecting success, wait for the worker thread to process the request. */ \
-    if (expect_success) {                                                          \
-      RunLoopUntil([this, session_id, num_pending_sessions] {                      \
-        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;     \
-      });                                                                          \
-    }                                                                              \
+#define PRESENT(flatland, session_id, expect_success)                               \
+  {                                                                                 \
+    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);      \
+    if (expect_success) {                                                           \
+      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _)); \
+    }                                                                               \
+    fuchsia::ui::composition::PresentArgs present_args;                             \
+    present_args.set_requested_presentation_time(0);                                \
+    present_args.set_acquire_fences({});                                            \
+    present_args.set_release_fences({});                                            \
+    present_args.set_unsquashable(false);                                           \
+    flatland->Present(std::move(present_args));                                     \
+    /* If expecting success, wait for the worker thread to process the request. */  \
+    if (expect_success) {                                                           \
+      RunLoopUntil([this, session_id, num_pending_sessions] {                       \
+        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;      \
+      });                                                                           \
+    }                                                                               \
   }
 
 namespace {
@@ -74,24 +73,15 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
     mock_flatland_presenter_ = std::make_shared<::testing::StrictMock<MockFlatlandPresenter>>();
 
-    ON_CALL(*mock_flatland_presenter_, RegisterPresent(_, _))
+    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _))
         .WillByDefault(::testing::Invoke(
-            [&](scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
+            [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
+                bool unsquashable, std::vector<zx::event> release_fences) {
               EXPECT_TRUE(release_fences.empty());
 
-              const auto next_present_id = scheduling::GetNextPresentId();
-
-              pending_presents_.insert({session_id, next_present_id});
-
-              return next_present_id;
-            }));
-
-    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _))
-        .WillByDefault(
-            ::testing::Invoke([&](zx::time requested_presentation_time,
-                                  scheduling::SchedulingIdPair id_pair, bool unsquashable) {
-              // The ID pair must be already registered.
-              EXPECT_TRUE(pending_presents_.count(id_pair));
+              // The ID pair must not be already registered.
+              EXPECT_FALSE(pending_presents_.count(id_pair));
+              pending_presents_.insert(id_pair);
 
               // Ensure present IDs are strictly increasing.
               auto& queue = pending_session_updates_[id_pair.session_id];

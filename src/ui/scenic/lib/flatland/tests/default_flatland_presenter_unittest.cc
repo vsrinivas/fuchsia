@@ -48,12 +48,8 @@ TEST_F(DefaultFlatlandPresenterTest, NoFrameSchedulerSet) {
   const scheduling::PresentId kPresentId = 2;
 
   // No function should crash, even though there is no FrameScheduler.
-  scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, /*release_fences=*/{});
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
-
-  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
+  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true,
+                                      /*release_fences=*/{});
   RunLoopUntilIdle();
 
   presenter->RemoveSession(kSessionId);
@@ -72,12 +68,8 @@ TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
   const scheduling::PresentId kPresentId = 2;
 
   // No function should crash, even though the FrameScheduler has expired.
-  scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, /*release_fences=*/{});
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
-
-  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true);
+  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true,
+                                      /*release_fences=*/{});
   RunLoopUntilIdle();
 
   presenter->RemoveSession(kSessionId);
@@ -103,10 +95,11 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   presenter->SetFrameScheduler(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 2;
-  const scheduling::PresentId present_id = presenter->RegisterPresent(kSessionId, {});
+  const scheduling::PresentId present_id = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionId, present_id}, /*unsquashable=*/false,
+                                      /*release_fences=*/{});
   RunLoopUntilIdle();
 
-  EXPECT_NE(present_id, scheduling::kInvalidPresentId);
   EXPECT_EQ(last_session_id, kSessionId);
   EXPECT_EQ(last_present_id, present_id);
 }
@@ -140,7 +133,8 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
   const zx::time kPresentationTime = zx::time(123);
   const bool kUnsquashable = false;
 
-  presenter->ScheduleUpdateForSession(kPresentationTime, kIdPair, kUnsquashable);
+  presenter->ScheduleUpdateForSession(kPresentationTime, kIdPair, kUnsquashable,
+                                      /*release_fences=*/{});
   RunLoopUntilIdle();
 
   EXPECT_EQ(last_presentation_time, kPresentationTime);
@@ -233,13 +227,21 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
   std::vector<zx::event> release_fences_B3 = utils::CreateEventArray(2);
   std::vector<zx_koid_t> release_fence_koids_B3 = utils::ExtractKoids(release_fences_B3);
 
-  const auto present_id_A1 = presenter->RegisterPresent(kSessionIdA, std::move(release_fences_A1));
-  const auto present_id_A2 = presenter->RegisterPresent(kSessionIdA, std::move(release_fences_A2));
-  const auto present_id_B1 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B1));
-  const auto present_id_B2 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B2));
+  const auto present_id_A1 = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionIdA, present_id_A1},
+                                      /*unsquashable=*/true, std::move(release_fences_A1));
+  const auto present_id_A2 = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionIdA, present_id_A2},
+                                      /*unsquashable=*/true, std::move(release_fences_A2));
+  const auto present_id_B1 = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionIdB, present_id_B1},
+                                      /*unsquashable=*/true, std::move(release_fences_B1));
+  const auto present_id_B2 = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionIdB, present_id_B2},
+                                      /*unsquashable=*/true, std::move(release_fences_B2));
 
-  // There will be no fences yet, because RegisterPresent() stashes the fences in a task dispatched
-  // to the main thread, which hasn't run yet.
+  // There will be no fences yet, because ScheduleUpdateForSession() stashes the fences in a task
+  // dispatched to the main thread, which hasn't run yet.
   auto fences_empty = TakeReleaseFences(presenter, {
                                                        {kSessionIdA, present_id_A2},
                                                        {kSessionIdB, present_id_B1},
@@ -268,7 +270,9 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
   }
 
   // Register one more present.
-  const auto present_id_B3 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B3));
+  const auto present_id_B3 = scheduling::GetNextPresentId();
+  presenter->ScheduleUpdateForSession(zx::time(0), {kSessionIdB, present_id_B3},
+                                      /*unsquashable=*/true, std::move(release_fences_B3));
   RunLoopUntilIdle();
   auto fences_B2B3 = TakeReleaseFences(presenter, {
                                                       {kSessionIdB, present_id_B3},
@@ -356,8 +360,10 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
       async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
       for (uint64_t i = 0; i < kNumPresents; ++i) {
-        // RegisterPresent() is one of the three functions being tested.
-        auto present_id = presenter->RegisterPresent(session_id, /*release_fences=*/{});
+        // ScheduleUpdateForSession() is one of the two functions being tested.
+        auto present_id = scheduling::GetNextPresentId();
+        presenter->ScheduleUpdateForSession(zx::time(0), {session_id, present_id},
+                                            /*unsquashable=*/true, /*release_fences=*/{});
         presents.push_back(present_id);
 
         // Yield with some randomness so the threads get jumbled up a bit.
@@ -365,15 +371,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
           std::this_thread::yield();
         }
 
-        // ScheduleUpdateForSession() is the second function being tested.
-        presenter->ScheduleUpdateForSession(zx::time(0), {session_id, present_id}, true);
-
-        // Yield with some randomness so the threads get jumbled up a bit.
-        if (std::rand() % 4 == 0) {
-          std::this_thread::yield();
-        }
-
-        // GetFuturePresentationInfos() is the third function being tested.
+        // GetFuturePresentationInfos() is the second function being tested.
         presenter->GetFuturePresentationInfos(
             [&presentation_info_count, &loop, &loop_quits, &checker](auto) {
               presentation_info_count++;
@@ -416,7 +414,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   for (uint64_t i = 0; i < kNumGfxPresents; ++i) {
     // RegisterPresent() is one of the three functions being tested.
     auto present_id = scheduling::GetNextPresentId();
-    present_id = frame_scheduler->RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
+    frame_scheduler->RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
     gfx_presents.push_back(present_id);
 
     // ScheduleUpdateForSession() is the second function being tested.

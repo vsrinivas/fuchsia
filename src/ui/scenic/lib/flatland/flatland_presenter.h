@@ -18,15 +18,6 @@ class FlatlandPresenter {
  public:
   virtual ~FlatlandPresenter() {}
 
-  // From scheduling::FrameScheduler::RegisterPresent():
-  //
-  // Registers per-present information with the frame scheduler and returns an incrementing
-  // PresentId unique to that session.
-  //
-  // This function should be called from Flatland instance worker threads.
-  virtual scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
-                                                std::vector<zx::event> release_fences) = 0;
-
   // From scheduling::FrameScheduler::ScheduleUpdateForSession():
   //
   // Tells the frame scheduler to schedule a frame. This is also used for updates triggered by
@@ -37,7 +28,8 @@ class FlatlandPresenter {
   //
   // This function should be called from Flatland instance worker threads.
   virtual void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                        scheduling::SchedulingIdPair id_pair, bool squashable) = 0;
+                                        scheduling::SchedulingIdPair id_pair, bool squashable,
+                                        std::vector<zx::event> release_fences) = 0;
 
   // From scheduling::FrameScheduler::GetFuturePresentationInfos():
   // Gets the predicted latch points and presentation times for the frames at or before the next

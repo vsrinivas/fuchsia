@@ -119,37 +119,33 @@ struct GlobalIdPair {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                          \
-  {                                                                                                \
-    bool had_acquire_fences = !(args).acquire_fences.empty();                                      \
-    if (expect_success) {                                                                          \
-      EXPECT_CALL(*mock_flatland_presenter_,                                                       \
-                  RegisterPresent((flatland)->GetRoot().GetInstanceId(), _));                      \
-    }                                                                                              \
-    bool processed_callback = false;                                                               \
-    fuchsia::ui::composition::PresentArgs present_args;                                            \
-    present_args.set_requested_presentation_time((args).requested_presentation_time.get());        \
-    present_args.set_acquire_fences(std::move((args).acquire_fences));                             \
-    present_args.set_release_fences(std::move((args).release_fences));                             \
-    present_args.set_unsquashable((args).unsquashable);                                            \
-    (flatland)->Present(std::move(present_args));                                                  \
-    if (expect_success) {                                                                          \
-      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */               \
-      if (!had_acquire_fences) {                                                                   \
-        EXPECT_CALL(                                                                               \
-            *mock_flatland_presenter_,                                                             \
-            ScheduleUpdateForSession((args).requested_presentation_time, _, (args).unsquashable)); \
-      }                                                                                            \
-      RunLoopUntilIdle();                                                                          \
-      if (!(args).skip_session_update_and_release_fences) {                                        \
-        ApplySessionUpdatesAndSignalFences();                                                      \
-      }                                                                                            \
-      (flatland)->OnNextFrameBegin((args).present_credits_returned,                                \
-                                   std::move((args).presentation_infos));                          \
-    } else {                                                                                       \
-      RunLoopUntilIdle();                                                                          \
-      EXPECT_EQ(GetPresentError((flatland)->GetSessionId()), (args).expected_error);               \
-    }                                                                                              \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                   \
+  {                                                                                         \
+    bool had_acquire_fences = !(args).acquire_fences.empty();                               \
+    bool processed_callback = false;                                                        \
+    fuchsia::ui::composition::PresentArgs present_args;                                     \
+    present_args.set_requested_presentation_time((args).requested_presentation_time.get()); \
+    present_args.set_acquire_fences(std::move((args).acquire_fences));                      \
+    present_args.set_release_fences(std::move((args).release_fences));                      \
+    present_args.set_unsquashable((args).unsquashable);                                     \
+    (flatland)->Present(std::move(present_args));                                           \
+    if (expect_success) {                                                                   \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */        \
+      if (!had_acquire_fences) {                                                            \
+        EXPECT_CALL(*mock_flatland_presenter_,                                              \
+                    ScheduleUpdateForSession((args).requested_presentation_time, _,         \
+                                             (args).unsquashable, _));                      \
+      }                                                                                     \
+      RunLoopUntilIdle();                                                                   \
+      if (!(args).skip_session_update_and_release_fences) {                                 \
+        ApplySessionUpdatesAndSignalFences();                                               \
+      }                                                                                     \
+      (flatland)->OnNextFrameBegin((args).present_credits_returned,                         \
+                                   std::move((args).presentation_infos));                   \
+    } else {                                                                                \
+      RunLoopUntilIdle();                                                                   \
+      EXPECT_EQ(GetPresentError((flatland)->GetSessionId()), (args).expected_error);        \
+    }                                                                                       \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -233,23 +229,13 @@ class FlatlandTest : public gtest::TestLoopFixture {
   void SetUp() override {
     mock_flatland_presenter_ = new ::testing::StrictMock<MockFlatlandPresenter>();
 
-    ON_CALL(*mock_flatland_presenter_, RegisterPresent(_, _))
+    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _))
         .WillByDefault(::testing::Invoke(
-            [&](scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
-              const auto next_present_id = scheduling::GetNextPresentId();
-
-              // Store all release fences.
-              pending_release_fences_[{session_id, next_present_id}] = std::move(release_fences);
-
-              return next_present_id;
-            }));
-
-    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _))
-        .WillByDefault(
-            ::testing::Invoke([&](zx::time requested_presentation_time,
-                                  scheduling::SchedulingIdPair id_pair, bool unsquashable) {
-              // The ID must be already registered.
-              EXPECT_TRUE(pending_release_fences_.find(id_pair) != pending_release_fences_.end());
+            [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
+                bool unsquashable, std::vector<zx::event> release_fences) {
+              // The ID must not already be registered.
+              EXPECT_FALSE(pending_release_fences_.find(id_pair) != pending_release_fences_.end());
+              pending_release_fences_[id_pair] = std::move(release_fences);
 
               // Ensure IDs are strictly increasing.
               auto current_id_kv = pending_session_updates_.find(id_pair.session_id);
@@ -475,16 +461,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
     ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     auto present_id = scheduling::PeekNextPresentId();
-    EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(display->session_id(), _));
-    // TODO(fxbug.dev/76640): we would like to verify that the returned id matches |present_id|.
-    // However, using WillOnce() as below causes important stuff in the default mock implementation
-    // to not happen.  This is not a big deal, because the the |present_id| is also validated by the
-    // mock call to ScheduleUpdateForSession().
-    //    .WillOnce(Return(present_id));
     EXPECT_CALL(
         *mock_flatland_presenter_,
         ScheduleUpdateForSession(
-            zx::time(0), scheduling::SchedulingIdPair{display->session_id(), present_id}, true));
+            zx::time(0), scheduling::SchedulingIdPair{display->session_id(), present_id}, true, _));
     display->SetContent(std::move(parent_token), child_view_watcher->NewRequest());
     child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
                        NoViewProtocols(), parent_viewport_watcher->NewRequest());
@@ -615,12 +595,11 @@ TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
   const bool kDefaultUnsquashable = false;
   const zx::time kDefaultRequestedPresentationTime = zx::time(0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland->GetRoot().GetInstanceId(), _));
   fuchsia::ui::composition::PresentArgs present_args;
   flatland->Present(std::move(present_args));
 
-  EXPECT_CALL(*mock_flatland_presenter_,
-              ScheduleUpdateForSession(kDefaultRequestedPresentationTime, _, kDefaultUnsquashable));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(kDefaultRequestedPresentationTime,
+                                                                  _, kDefaultUnsquashable, _));
   RunLoopUntilIdle();
 }
 
@@ -637,46 +616,49 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   args.release_fences = utils::CreateEventArray(1);
   auto release_copy = utils::CopyEvent(args.release_fences[0]);
 
-  // Because the Present includes acquire fences, it should only be registered with the
-  // FlatlandPresenter. The UberStructSystem shouldn't have any entries and applying session
-  // updates shouldn't signal the release fence.
+  // Because the Present includes unsignaled acquire fences, the UberStructSystem shouldn't have any
+  // entries and applying session updates shouldn't signal the release fence.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 1ul);
-
+  EXPECT_EQ(registered_presents.size(), 0ul);
   EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
-
   EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
-  // Signal the second fence and ensure the Present is still registered, the UberStructSystem
-  // doesn't update, and the release fence isn't signaled.
+  // Signal the second fence and verify the UberStructSystem doesn't update, and the release fence
+  // isn't signaled.
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
 
   registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 1ul);
-
+  EXPECT_EQ(registered_presents.size(), 0ul);
   EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
-
   EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
-  // Signal the first fence and ensure the Present is no longer registered (because it has been
-  // applied), the UberStructSystem contains an UberStruct for the instance, and the release fence
-  // is signaled.
+  // Signal the first fence and verify that, the UberStructSystem contains an UberStruct for the
+  // instance, and the release fence is signaled.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
+
+  // After signaling the final acquire fence (and running the loop), there is now a registered
+  // present.  There is still no UberStruct, nor has the release fence been signalled, because
+  // session updates haven't been applied.
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
+  EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
   ApplySessionUpdatesAndSignalFences();
 
+  // There is no longer a registered present; it was removed because it was processed when
+  // session updates were applied.  There is now an UberStruct, and the release fence has been
+  // signaled.
   registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_TRUE(registered_presents.empty());
-
+  EXPECT_EQ(registered_presents.size(), 0ul);
   EXPECT_NE(GetUberStruct(flatland.get()), nullptr);
-
   EXPECT_TRUE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 }
 
@@ -691,16 +673,17 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
   args.acquire_fences = utils::CreateEventArray(1);
   auto acquire_copy = utils::CopyEvent(args.acquire_fences[0]);
 
-  // Because the Present includes acquire fences, it should only be registered with the
-  // FlatlandPresenter. There should be no requested presentation time.
+  // Because the Present includes acquire fences, it isn't registered with the presenter immediately
+  // upon `Present()`.
+  auto present_id = scheduling::PeekNextPresentId();
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 1ul);
+  EXPECT_EQ(registered_presents.size(), 0ul);
 
   const auto id_pair = scheduling::SchedulingIdPair({
       .session_id = flatland->GetRoot().GetInstanceId(),
-      .present_id = registered_presents[0],
+      .present_id = present_id,
   });
 
   auto maybe_presentation_time = GetRequestedPresentationTime(id_pair);
@@ -710,7 +693,7 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
   // presentation time.
   acquire_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
 
   registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
@@ -740,7 +723,7 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
   // update immediately, and the release fence should be signaled. The PRESENT macro only expects
   // the ScheduleUpdateForSession() call when no acquire fences are present, but since this test
   // specifically tests pre-signaled fences, the EXPECT_CALL must be added here.
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
@@ -767,11 +750,10 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // empty, and the release fence is unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args1), true);
 
+  // No presents have been registered since the acquire fence hasn't been signaled yet.
   auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 1ul);
-
+  EXPECT_EQ(registered_presents.size(), 0ul);
   EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
-
   EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
 
   // Create a transform and make it the root.
@@ -793,23 +775,22 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // UberStructSystem is still empty and both release fences are unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args2), true);
 
+  // No presents have been registered since neither of the acquire fences have been signaled yet.
   registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 2ul);
-
+  EXPECT_EQ(registered_presents.size(), 0ul);
   EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
-
   EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
   EXPECT_FALSE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
 
   // Signal the fence for the second Present(). Since the first one is not done, there should still
-  // be two Presents registered, no UberStruct for the instance, and neither fence should be
+  // be no Presents registered, no UberStruct for the instance, and neither fence should be
   // signaled.
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
 
   registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 2ul);
+  EXPECT_EQ(registered_presents.size(), 0ul);
 
   EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
@@ -820,7 +801,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // registered Presents and an UberStruct with a 2-element topology: the local root, and kId.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _)).Times(2);
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _)).Times(2);
   RunLoopUntilIdle();
 
   ApplySessionUpdatesAndSignalFences();
@@ -1931,7 +1912,7 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   // Signal the acquire fence to unbind the link.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(parent_viewport_watcher.is_bound());
@@ -2439,7 +2420,7 @@ TEST_F(FlatlandTest, ClearDelaysLinkDestructionUntilPresent) {
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(child_view_watcher.is_bound());
@@ -2472,7 +2453,7 @@ TEST_F(FlatlandTest, ClearDelaysLinkDestructionUntilPresent) {
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(child_view_watcher.is_bound());
@@ -2790,7 +2771,7 @@ TEST_F(FlatlandTest, ValidChildToParentFlow_ChildUsedCreateView2) {
 
   // Signal the acquire fence to unblock the present.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
   UpdateLinks(parent->GetRoot());
@@ -2871,7 +2852,7 @@ TEST_F(FlatlandTest, ContentHasPresentedSignalWaitsForAcquireFences) {
   EXPECT_FALSE(cvs.has_value());
 
   // Signal the acquire fence.
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
@@ -3485,7 +3466,7 @@ TEST_F(FlatlandTest, ReleaseViewportReturnsOriginalToken) {
   // Signal the acquire fence to unbind the link.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(child_view_watcher.is_bound());
@@ -5317,8 +5298,7 @@ TEST_F(FlatlandTest, MultithreadedLinkResolution) {
   // the LinkSystem mutex in between the execution of the two link-resolution closures (each of
   // which also locks the LinkSystem mutex).
   bool presented = false;
-  EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(child_flatland->GetSessionId(), _));
-  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _, _));
   async::PostTask(child_flatland_thread_loop.dispatcher(), ([&]() {
                     child_flatland->CreateView2(
                         std::move(creation_tokens.view_token), scenic::NewViewIdentityOnCreation(),

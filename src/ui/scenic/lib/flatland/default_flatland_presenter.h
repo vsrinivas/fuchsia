@@ -35,12 +35,9 @@ class DefaultFlatlandPresenter final
   std::vector<zx::event> TakeReleaseFences();
 
   // |FlatlandPresenter|
-  scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
-                                        std::vector<zx::event> release_fences) override;
-
-  // |FlatlandPresenter|
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                scheduling::SchedulingIdPair id_pair, bool unsquashable) override;
+                                scheduling::SchedulingIdPair id_pair, bool unsquashable,
+                                std::vector<zx::event> release_fences) override;
 
   // |FlatlandPresenter|.
   void GetFuturePresentationInfos(scheduling::FrameScheduler::GetFuturePresentationInfosCallback
