@@ -88,21 +88,34 @@ class FakePowerRegistration
   fidl::ClientEnd<fuchsia_io::Directory> dir_;
 };
 
-zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
-  const auto& get_boot_item = *static_cast<GetBootItemFunction*>(ctx);
-  zx::vmo vmo;
-  uint32_t length = 0;
-  if (get_boot_item) {
-    zx_status_t status = get_boot_item(type, extra, &vmo, &length);
-    if (status != ZX_OK) {
-      return status;
+class FakeItemsService : public fidl::WireServer<fuchsia_boot::Items> {
+ public:
+  explicit FakeItemsService(GetBootItemFunction items_callback)
+      : items_callback_(std::move(items_callback)) {}
+
+  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+    zx::vmo vmo;
+    uint32_t length = 0;
+
+    zx_status_t status = ZX_ERR_BAD_STATE;
+    if (items_callback_) {
+      status = items_callback_(request->type, request->extra, &vmo, &length);
+    }
+
+    if (status == ZX_OK) {
+      completer.Reply(std::move(vmo), length);
+    } else {
+      completer.Reply(zx::vmo(ZX_HANDLE_INVALID), 0);
     }
   }
-  return fuchsia_boot_ItemsGet_reply(txn, vmo.release(), length);
-}
 
-constexpr fuchsia_boot_Items_ops kItemsOps = {
-    .Get = ItemsGet,
+  void GetBootloaderFile(GetBootloaderFileRequestView request,
+                         GetBootloaderFileCompleter::Sync& completer) override {
+    completer.Reply(zx::vmo(ZX_HANDLE_INVALID));  // Unimplemented.
+  }
+
+ private:
+  GetBootItemFunction items_callback_;
 };
 
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
@@ -186,8 +199,6 @@ struct IsolatedDevmgr::SvcLoopState {
     // concurrent access to them
     loop.Shutdown();
   }
-
-  GetBootItemFunction get_boot_item;
 
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
@@ -284,7 +295,6 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
     fidl::ClientEnd<fuchsia_io::Directory> driver_index_outgoing_client,
     GetBootItemFunction get_boot_item, std::map<std::string, std::string>&& boot_args) {
   svc_loop_state_ = std::make_unique<SvcLoopState>();
-  svc_loop_state_->get_boot_item = std::move(get_boot_item);
 
   // Quit the loop when the channel is closed.
   svc_loop_state_->bootsvc_wait.set_object(bootsvc_server.channel().get());
@@ -325,14 +335,14 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
   // by component_manager. The difference between these fakes and the optional services above is
   // that these 1) are fakeable (unlike fuchsia.process.Launcher) and 2) seem to be required
   // services for devcoordinator.
-  auto items_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
-  CreateFakeService(svc_loop_state_->root, fuchsia_boot_Items_Name,
-                    svc_loop_state_->loop.dispatcher(), items_dispatch,
-                    &svc_loop_state_->get_boot_item, &kItemsOps);
-
   auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_kernel_RootJob_dispatch);
   CreateFakeService(svc_loop_state_->root, fuchsia_kernel_RootJob_Name,
                     svc_loop_state_->loop.dispatcher(), root_job_dispatch, &job_, &kRootJobOps);
+
+  // Create fake Items service.
+  CreateFakeCppService<fuchsia_boot::Items>(
+      svc_loop_state_->root, svc_loop_state_->loop.dispatcher(),
+      std::make_unique<FakeItemsService>(std::move(get_boot_item)));
 
   // Create fake Boot Arguments.
   CreateFakeCppService<fuchsia_boot::Arguments>(

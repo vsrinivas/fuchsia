@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/client.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/profile.h>
@@ -25,7 +28,6 @@ namespace {
 // the channel).
 
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
-constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvider_Name;
 constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
 constexpr char kRootJobPath[] = "/svc/" fuchsia_kernel_RootJob_Name;
@@ -48,17 +50,11 @@ TEST(SvchostTest, FuchsiaBootFactoryItemsPresent) {
 }
 
 TEST(SvchostTest, FuchsiaBootItemsPresent) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+  auto client_end = service::Connect<fuchsia_boot::Items>();
+  ASSERT_TRUE(client_end.is_ok(), "failed to connect to fuchsia_boot::Items");
 
-  status = fdio_service_connect(kItemsPath, server.release());
-  ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
-
-  zx::vmo payload;
-  uint32_t length;
-  status = fuchsia_boot_ItemsGet(client.get(), 0, 0, payload.reset_and_get_address(), &length);
-  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_ItemsGet failed");
+  auto result = fidl::WireCall(*client_end)->Get(0, 0);
+  ASSERT_EQ(ZX_OK, result.status(), "fuchsia_boot::Items::Get failed");
 }
 
 TEST(SvchostTest, FuchsiaReadOnlyBootLogPresent) {
