@@ -212,33 +212,27 @@ class DriverImpl
 
   template <class IoProvider>
   void Init(IoProvider& io) {
-    auto divisor = kMaxBaudRate / kDefaultBaudRate;
-
     // Get basic config done so that tx functions.
 
     // Disable all interrupts.
     InterruptEnableRegister::Get().FromValue(0).WriteTo(io.io());
 
-    auto lcr = LineControlRegister::Get().FromValue(0);
+    // Extended FIFO mode must be enabled while the divisor latch is.
+    // Be sure to preserve the line controls, modulo divisor latch access,
+    // which should be disabled immediately after configuring the FIFO.
+    auto lcr = LineControlRegister::Get().ReadFrom(io.io());
     lcr.set_divisor_latch_access(true).WriteTo(io.io());
-    auto dllr = DivisorLatchLowerRegister::Get().FromValue(0);
-    auto dlur = DivisorLatchUpperRegister::Get().FromValue(0);
-    dllr.set_data(static_cast<uint8_t>(divisor)).WriteTo(io.io());
-    dlur.set_data(static_cast<uint8_t>(divisor >> 8)).WriteTo(io.io());
 
     auto fcr = FifoControlRegister::Get().FromValue(0);
     fcr.set_fifo_enable(true)
         .set_rx_fifo_reset(true)
         .set_tx_fifo_reset(true)
         .set_receiver_trigger(FifoControlRegister::kMaxTriggerLevel)
-        // Must be done while divisor latch is enabled.
         .set_extended_fifo_enable(true)
         .WriteTo(io.io());
 
-    lcr.set_divisor_latch_access(false)
-        .set_word_length(LineControlRegister::kWordLength8)
-        .set_stop_bits(LineControlRegister::kStopBits1)
-        .WriteTo(io.io());
+    // Commit divisor by clearing the latch.
+    lcr.set_divisor_latch_access(false).WriteTo(io.io());
 
     // Drive flow control bits high since we don't actively manage them.
     auto mcr = ModemControlRegister::Get().FromValue(0);
@@ -252,6 +246,30 @@ class DriverImpl
     } else {
       fifo_depth_ = kFifoDepthGeneric;
     }
+  }
+
+  // TODO(fxbug.dev/102726): Give more freedom in setting the controls.
+  template <class IoProvider>
+  void SetLineControl(IoProvider& io) {
+    constexpr uint32_t kDivisor = kMaxBaudRate / kDefaultBaudRate;
+
+    LineControlRegister::Get().FromValue(0).set_divisor_latch_access(true).WriteTo(io.io());
+
+    DivisorLatchLowerRegister::Get()
+        .FromValue(0)
+        .set_data(static_cast<uint8_t>(kDivisor))
+        .WriteTo(io.io());
+    DivisorLatchUpperRegister::Get()
+        .FromValue(0)
+        .set_data(static_cast<uint8_t>(kDivisor >> 8))
+        .WriteTo(io.io());
+
+    LineControlRegister::Get()
+        .FromValue(0)
+        .set_divisor_latch_access(false)
+        .set_word_length(LineControlRegister::kWordLength8)
+        .set_stop_bits(LineControlRegister::kStopBits1)
+        .WriteTo(io.io());
   }
 
   template <class IoProvider>

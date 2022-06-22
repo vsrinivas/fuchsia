@@ -65,6 +65,10 @@ void InitAcpi(LegacyBoot& boot_info) {
 
 }  // namespace
 
+// A default, weak definition that may be overrode to perform other relevant
+// initialization.
+[[gnu::weak]] void LegacyBootSetUartConsole(const uart::all::Driver& uart) { SetUartConsole(uart); }
+
 void LegacyBootInitMemory() {
   InitAcpi(gLegacyBoot);
 

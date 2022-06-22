@@ -9,16 +9,20 @@
 #include <lib/boot-shim/test-serial-number.h>
 #include <lib/fit/defer.h>
 #include <lib/memalloc/pool.h>
+#include <lib/uart/all.h>
 #include <lib/zbitl/image.h>
 #include <stdlib.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 #include <zircon/pixelformat.h>
 
+#include <ktl/type_traits.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <phys/trampoline-boot.h>
+#include <phys/uart.h>
 
 #include "legacy-boot-shim.h"
 #include "stdout.h"
@@ -171,6 +175,12 @@ bool LoadDepthchargeZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
 }  // namespace
 
 void LegacyBootQuirks() { FixRamdiskSize(); }
+
+// Overrides the default, weak definition.
+void LegacyBootSetUartConsole(const uart::all::Driver& uart) {
+  SetUartConsole(uart);
+  GetUartDriver().Visit([](auto&& driver) { driver.SetLineControl(); });
+}
 
 bool LegacyBootShim::BootQuirksLoad(TrampolineBoot& boot) {
   return !IsProperZbi() && LoadDepthchargeZbi(*this, boot);

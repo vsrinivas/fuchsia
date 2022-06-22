@@ -10,6 +10,8 @@
 
 namespace {
 
+constexpr uint8_t kDefaultLineControls = 0b0000'0011;
+
 using SimpleTestDriver =
     uart::KernelDriver<uart::ns8250::MmioDriver, uart::mock::IoProvider, uart::Unsynchronized>;
 constexpr dcfg_simple_t kTestConfig = {};
@@ -20,11 +22,10 @@ TEST(Ns8250Tests, HelloWorld) {
   driver.io()
       .mock()
       .ExpectWrite(uint8_t{0b0000'0000}, 1)  // Init
-      .ExpectWrite(uint8_t{0b1000'0000}, 3)
-      .ExpectWrite(uint8_t{0b0000'0001}, 0)
-      .ExpectWrite(uint8_t{0b0000'0000}, 1)
+      .ExpectRead(uint8_t{kDefaultLineControls}, 3)
+      .ExpectWrite(uint8_t{kDefaultLineControls | 0b1000'0000}, 3)
       .ExpectWrite(uint8_t{0b1110'0111}, 2)
-      .ExpectWrite(uint8_t{0b0000'0011}, 3)
+      .ExpectWrite(uint8_t{kDefaultLineControls}, 3)
       .ExpectWrite(uint8_t{0b0000'0011}, 4)
       .ExpectRead(uint8_t{0b1110'0001}, 2)
       .ExpectRead(uint8_t{0b0110'0000}, 5)  // TxReady -> true
@@ -37,17 +38,38 @@ TEST(Ns8250Tests, HelloWorld) {
   EXPECT_EQ(3, driver.Write("hi\n"));
 }
 
+TEST(Ns8250Tests, SetLineControl) {
+  SimpleTestDriver driver(kTestConfig);
+
+  driver.io()
+      .mock()
+      .ExpectWrite(uint8_t{0b0000'0000}, 1)  // Init
+      .ExpectRead(uint8_t{kDefaultLineControls}, 3)
+      .ExpectWrite(uint8_t{kDefaultLineControls | 0b1000'0000}, 3)
+      .ExpectWrite(uint8_t{0b1110'0111}, 2)
+      .ExpectWrite(uint8_t{kDefaultLineControls}, 3)
+      .ExpectWrite(uint8_t{0b0000'0011}, 4)
+      .ExpectRead(uint8_t{0b1110'0001}, 2)
+      .ExpectRead(uint8_t{0b0110'0000}, 5)   // TxReady -> true
+      .ExpectWrite(uint8_t{0b1000'0000}, 3)  // SetLineControl
+      .ExpectWrite(uint8_t{0b0000'0001}, 0)
+      .ExpectWrite(uint8_t{0b0000'0000}, 1)
+      .ExpectWrite(uint8_t{0b0000'0011}, 3);
+
+  driver.Init();
+  driver.SetLineControl();
+}
+
 TEST(Ns8250Tests, Read) {
   SimpleTestDriver driver(kTestConfig);
 
   driver.io()
       .mock()
       .ExpectWrite(uint8_t{0b0000'0000}, 1)  // Init
-      .ExpectWrite(uint8_t{0b1000'0000}, 3)
-      .ExpectWrite(uint8_t{0b0000'0001}, 0)
-      .ExpectWrite(uint8_t{0b0000'0000}, 1)
+      .ExpectRead(uint8_t{kDefaultLineControls}, 3)
+      .ExpectWrite(uint8_t{kDefaultLineControls | 0b1000'0000}, 3)
       .ExpectWrite(uint8_t{0b1110'0111}, 2)
-      .ExpectWrite(uint8_t{0b0000'0011}, 3)
+      .ExpectWrite(uint8_t{kDefaultLineControls}, 3)
       .ExpectWrite(uint8_t{0b0000'0011}, 4)
       .ExpectRead(uint8_t{0b1110'0001}, 2)
       .ExpectRead(uint8_t{0b0110'0000}, 5)  // TxReady -> true

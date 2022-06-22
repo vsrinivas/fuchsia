@@ -365,6 +365,18 @@ class KernelDriver {
     uart_.Init(io_);
   }
 
+  // Configure the UART line control settings.
+  //
+  // TODO(fxbug.dev/102726): Give more freedom in setting the controls.
+  void SetLineControl() {
+    // TODO(fxbug.dev/102726): Set it on all variants.
+    if constexpr (kCanSetLineControl) {
+      Guard lock(sync_);
+      uart_.Init(io_);
+      uart_.SetLineControl(io_);
+    }
+  }
+
   // TODO(mcgrathr): Add InitInterrupt for enabling interrupt-based i/o.
 
   // This is the FILE-compatible API: `FILE::stdout_ = FILE{&driver};`.
@@ -418,6 +430,18 @@ class KernelDriver {
     Sync& sync_;
     typename Sync::InterruptState state_;
   };
+
+  // SFINAE check for a UartType::SetLineControl method.
+  template <typename UartType = uart_type,
+            typename = decltype(std::declval<UartType>().SetLineControl())>
+  static constexpr bool SfinaeSetLineControl(int ignored) {
+    return true;
+  }
+
+  // This overload is chosen only if SFINAE detected a missing SetLineControl method.
+  static constexpr bool SfinaeSetLineControl(...) { return false; }
+
+  static constexpr bool kCanSetLineControl = SfinaeSetLineControl(0);
 };
 
 // These specializations are defined in the library to cover all the ZBI item
