@@ -3450,9 +3450,9 @@ dependencies = [
 
 [[package]]
 name = "rustfix"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f0be05fc0675ef4f47119dc39cfc46636bb77d4fc4ef1bd851b9c3f7697f32a"
+checksum = "ecd2853d9e26988467753bd9912c3a126f642d05d229a4b53f5752ee36c56481"
 dependencies = [
  "anyhow",
  "log",

@@ -438,11 +438,8 @@ if (current_os == "fuchsia") {
   }
 }
 
-import("//src/lib/syslog/rust/log_visibility.gni")
-
 group("log") {
   public_deps = [ ":log-v0_4_11" ]
-  visibility = third_party_rust_crate_log_visibility
 }
 
 group("lru-cache") {
@@ -741,7 +738,7 @@ group("rustc-hash") {
 
 if (!(current_os == "fuchsia")) {
   group("rustfix") {
-    public_deps = [ ":rustfix-v0_6_0" ]
+    public_deps = [ ":rustfix-v0_6_1" ]
   }
 }
 
@@ -8913,10 +8910,10 @@ rust_library("rustc-serialize-v0_3_24") {
   visibility = [ ":*" ]
 }
 
-rust_library("rustfix-v0_6_0") {
+rust_library("rustfix-v0_6_1") {
   crate_name = "rustfix"
   crate_root = "//third_party/rust_crates/vendor/rustfix/src/lib.rs"
-  output_name = "rustfix-fda3b6dfc642f9fd"
+  output_name = "rustfix-f703216d17cf7216"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -8930,8 +8927,8 @@ rust_library("rustfix-v0_6_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=fda3b6dfc642f9fd",
-    "-Cextra-filename=-fda3b6dfc642f9fd",
+    "-Cmetadata=f703216d17cf7216",
+    "-Cextra-filename=-f703216d17cf7216",
   ]
 
   visibility = [ ":*" ]

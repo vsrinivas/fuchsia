@@ -100,7 +100,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
                 .chars()
                 .take_while(|&c| char::is_whitespace(c))
                 .count();
-            std::cmp::min(indent, line.highlight_start)
+            std::cmp::min(indent, line.highlight_start - 1)
         })
         .min()?;
 
@@ -182,11 +182,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         }
     }
 
-    let snippets = diagnostic
-        .spans
-        .iter()
-        .filter_map(|span| parse_snippet(span))
-        .collect();
+    let snippets = diagnostic.spans.iter().filter_map(parse_snippet).collect();
 
     let solutions: Vec<_> = diagnostic
         .children
@@ -207,7 +203,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
                 })
                 .filter_map(collect_span)
                 .collect();
-            if replacements.len() >= 1 {
+            if !replacements.is_empty() {
                 Some(Solution {
                     message: child.message.clone(),
                     replacements,
