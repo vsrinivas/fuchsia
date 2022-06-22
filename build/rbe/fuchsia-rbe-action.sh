@@ -79,7 +79,7 @@ output_files=
 rewrapper_options=()
 want_auto_reproxy=0
 canonicalize_working_dir="false"
-diagnose_nonzero_exit=1
+diagnose_nonzero_exit=0
 label=
 
 prev_opt=
