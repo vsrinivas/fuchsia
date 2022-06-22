@@ -1335,10 +1335,7 @@ mod tests {
             Some(authenticator),
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
-                #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95068)
-                account_handler_proxy
-                    .create_account(Some(TEST_AUTH_MECHANISM_ID.clone()))
-                    .await??;
+                account_handler_proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await??;
 
                 // Get a proxy to the Account interface
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();

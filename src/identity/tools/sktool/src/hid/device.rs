@@ -257,7 +257,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
             let response_packet = self
                 .connection
                 .read_matching_packet(|packet| {
-                    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95068)
+                    #[allow(clippy::if_same_then_else)]
                     if packet.channel() != self.channel {
                         // It's normal to see responses to other clients on other channels.
                         return Ok(false);

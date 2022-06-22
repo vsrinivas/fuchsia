@@ -793,16 +793,13 @@ where
             Some(block_device) => {
                 match self.disk_manager.bind_to_encrypted_block(block_device).await {
                     Ok(encrypted_block) => {
-                        let shred_res = encrypted_block.shred().await.map_err(|err| {
+                        let _ = encrypted_block.shred().await.map_err(|err| {
                             warn!(
                                 "remove_account: couldn't shred encrypted block device: {} \
                                     (ignored)",
                                 err
                             );
                         });
-                        // Ignore the result.
-                        #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95068)
-                        drop(shred_res);
                     }
                     Err(err) => {
                         // Ignore the failure.
