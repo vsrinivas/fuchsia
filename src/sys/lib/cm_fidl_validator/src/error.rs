@@ -7,47 +7,67 @@ use {std::fmt, thiserror::Error};
 /// Enum type that can represent any error encountered during validation.
 #[derive(Debug, Error, PartialEq, Clone)]
 pub enum Error {
-    #[error("{} missing {}", .0.decl, .0.field)]
+    #[error("Field `{}` is missing for {}.", .0.field, .0.decl)]
     MissingField(DeclField),
-    #[error("{} has empty {}", .0.decl, .0.field)]
+
+    #[error("Field `{}` is empty for {}.", .0.field, .0.decl)]
     EmptyField(DeclField),
-    #[error("{} has extraneous {}", .0.decl, .0.field)]
+
+    #[error("{} has unnecessary field `{}`.", .0.decl, .0.field)]
     ExtraneousField(DeclField),
-    #[error("\"{1}\" is a duplicate {} {}", .0.decl, .0.field)]
+
+    #[error("\"{1}\" is duplicated for field `{}` in {}.", .0.field, .0.decl)]
     DuplicateField(DeclField, String),
-    #[error("{} has invalid {}", .0.decl, .0.field)]
+
+    #[error("Field `{}` for {} is invalid.",  .0.field, .0.decl)]
     InvalidField(DeclField),
-    #[error("{}'s {} is too long", .0.decl, .0.field)]
-    FieldTooLong(DeclField),
-    #[error("\"{0}\" cannot declare a capability of type {1}")]
+
+    #[error("Field `{}` for {} is too long. The field must be up to {1} characters.", .0.field, .0.decl)]
+    FieldTooLong(DeclField, usize),
+
+    #[error("\"{0}\" cannot declare a capability of type `{1}`.")]
     InvalidCapabilityType(DeclField, String),
-    #[error("\"{0}\" target \"{1}\" is same as source")]
+
+    #[error("\"{0}\" target \"{1}\" is same as source.")]
     OfferTargetEqualsSource(String, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in children")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in children.")]
     InvalidChild(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in collections")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in collections.")]
     InvalidCollection(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in storage")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in storage.")]
     InvalidStorage(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in environments")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in environments.")]
     InvalidEnvironment(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in capabilities")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in capabilities.")]
     InvalidCapability(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in runners")]
+
+    #[error("\"{1}\" is referenced in {0} but it does not appear in runners.")]
     InvalidRunner(DeclField, String),
-    #[error("\"{1}\" is referenced in {0} but it does not appear in events")]
+
+    #[error("\"{1}\" is referenced in {0} but there is no corresponding event provided to the component. Specifically, the event has to be `use`d.")]
     EventStreamEventNotFound(DeclField, String),
-    #[error("dependency cycle(s) exist: {0}")]
+
+    #[error("There are dependency cycle(s): {0}.")]
     DependencyCycle(String),
-    #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
+
+    #[error("Path \"{path}\" from {decl} overlaps with \"{other_path}\" path from {other_decl}. Paths across decls must be unique in order to avoid namespace collisions.")]
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
-    #[error("built-in capability decl {0} should not specify a source path, found \"{1}\"")]
+
+    #[error("Source path \"{1}\" provided to {0} decl is unnecessary. Built-in capabilities don't need this field as they originate from the framework.")]
     ExtraneousSourcePath(DeclField, String),
-    #[error("configuration schema defines a vector nested in another vector")]
+
+    #[error("Configuration schema defines a vector nested inside another vector. Vector can only contain numbers, booleans, and strings.")]
     NestedVector,
-    #[error("the availability in {0} for {1} must be set to \"required\" because the source is not \"parent\" or \"void\"")]
+
+    #[error("The `availability` field in {0} for {1} must be set to \"required\" because the source is not parent.")]
     AvailabilityMustBeRequired(DeclField, String),
-    #[error("the availability in {0} for {1} must be set to \"optional\" because the source is \"void\"")]
+
+    #[error("The `availability` field in {0} for {1} must be set to \"optional\" because the source is \"void\".")]
     AvailabilityMustBeOptional(DeclField, String),
 }
 
@@ -80,7 +100,18 @@ impl Error {
     }
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::FieldTooLong(DeclField { decl: decl_type.into(), field: keyword.into() })
+        Error::FieldTooLong(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            cm_types::MAX_NAME_LENGTH,
+        )
+    }
+
+    pub fn field_too_long_with_max(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        max: usize,
+    ) -> Self {
+        Error::FieldTooLong(DeclField { decl: decl_type.into(), field: keyword.into() }, max)
     }
 
     pub fn invalid_capability_type(
@@ -265,31 +296,37 @@ mod tests {
 
     #[test]
     fn test_errors() {
-        assert_eq!(format!("{}", Error::missing_field("Decl", "keyword")), "Decl missing keyword");
-        assert_eq!(format!("{}", Error::empty_field("Decl", "keyword")), "Decl has empty keyword");
+        assert_eq!(
+            format!("{}", Error::missing_field("Decl", "keyword")),
+            "Field `keyword` is missing for Decl."
+        );
+        assert_eq!(
+            format!("{}", Error::empty_field("Decl", "keyword")),
+            "Field `keyword` is empty for Decl."
+        );
         assert_eq!(
             format!("{}", Error::duplicate_field("Decl", "keyword", "foo")),
-            "\"foo\" is a duplicate Decl keyword"
+            "\"foo\" is duplicated for field `keyword` in Decl."
         );
         assert_eq!(
             format!("{}", Error::invalid_field("Decl", "keyword")),
-            "Decl has invalid keyword"
+            "Field `keyword` for Decl is invalid."
         );
         assert_eq!(
-            format!("{}", Error::field_too_long("Decl", "keyword")),
-            "Decl's keyword is too long"
+            format!("{}", Error::field_too_long_with_max("Decl", "keyword", 100)),
+            "Field `keyword` for Decl is too long. The field must be up to 100 characters."
         );
         assert_eq!(
             format!("{}", Error::invalid_child("Decl", "source", "child")),
-            "\"child\" is referenced in Decl.source but it does not appear in children"
+            "\"child\" is referenced in Decl.source but it does not appear in children."
         );
         assert_eq!(
             format!("{}", Error::invalid_collection("Decl", "source", "child")),
-            "\"child\" is referenced in Decl.source but it does not appear in collections"
+            "\"child\" is referenced in Decl.source but it does not appear in collections."
         );
         assert_eq!(
             format!("{}", Error::invalid_storage("Decl", "source", "name")),
-            "\"name\" is referenced in Decl.source but it does not appear in storage"
+            "\"name\" is referenced in Decl.source but it does not appear in storage."
         );
     }
 }

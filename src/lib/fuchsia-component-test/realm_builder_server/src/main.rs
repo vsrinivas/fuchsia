@@ -517,7 +517,10 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDeclWithName(name, e));
+            return Err(RealmBuilderError::InvalidComponentDeclWithName(
+                name,
+                to_tabulated_string(e),
+            ));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), false);
         self.realm_node.add_child(name, options, child_realm_node).await
@@ -798,7 +801,7 @@ impl RealmNodeState {
             });
         decl.children.get_or_insert(vec![]).extend(child_decls);
         if let Err(e) = cm_fidl_validator::validate(&decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(e));
+            return Err(RealmBuilderError::InvalidComponentDecl(to_tabulated_string(e)));
         }
         Ok(())
     }
@@ -915,8 +918,12 @@ impl RealmNode2 {
             let fidl_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
-            cm_fidl_validator::validate(&fidl_decl)
-                .map_err(|e| RealmBuilderError::InvalidComponentDeclWithName(relative_url, e))?;
+            cm_fidl_validator::validate(&fidl_decl).map_err(|e| {
+                RealmBuilderError::InvalidComponentDeclWithName(
+                    relative_url,
+                    to_tabulated_string(e),
+                )
+            })?;
 
             let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
             self_.component_loaded_from_pkg = true;
@@ -1061,9 +1068,10 @@ impl RealmNode2 {
                 .await
             {
                 Ok(url) => Ok(url),
-                Err(e) => {
-                    Err(RealmBuilderError::InvalidComponentDeclWithName(walked_path.join("/"), e))
-                }
+                Err(e) => Err(RealmBuilderError::InvalidComponentDeclWithName(
+                    walked_path.join("/"),
+                    to_tabulated_string(e),
+                )),
             }
         }
         .boxed()
@@ -1630,11 +1638,11 @@ enum RealmBuilderError {
 
     /// A component declaration failed validation.
     #[error("The constructed component declaration is invalid. Please fix all the listed errors:\n{0}\nFor a reference as to how component declarations are authored, see https://fuchsia.dev/go/components/declaration.")]
-    InvalidComponentDecl(cm_fidl_validator::error::ErrorList),
+    InvalidComponentDecl(String),
 
     /// A component declaration failed validation.
     #[error("The component declaration for child \"{0}\" is invalid. Please fix all the listed errors:\n{1}\nFor a reference as to how component declarations are authored, see https://fuchsia.dev/go/components/declaration.")]
-    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList),
+    InvalidComponentDeclWithName(String, String),
 
     /// The referenced child does not exist.
     #[error("No child exists with the name \"{0}\". Before fetching or changing its component declaration, a child must be added to the realm with the `AddChild` group of methods.")]
@@ -1750,6 +1758,21 @@ fn is_relative_url(url: &str) -> bool {
 
 fn is_legacy_url(url: &str) -> bool {
     url.trim().ends_with(".cmx")
+}
+
+// Formats an ErrorList into a tabulated string. This format is used to create
+// more readable user error messages.
+fn to_tabulated_string(errors: cm_fidl_validator::error::ErrorList) -> String {
+    let mut output = String::new();
+    for (i, err) in errors.errs.iter().enumerate() {
+        let is_last_element = errors.errs.len() - i == 1;
+        output.push_str(&format!("  {}. {}", i + 1, err));
+        if !is_last_element {
+            output.push('\n');
+        }
+    }
+
+    output
 }
 
 #[cfg(test)]

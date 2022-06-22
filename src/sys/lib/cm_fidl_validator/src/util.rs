@@ -45,7 +45,7 @@ pub(crate) fn check_presence_and_length(
     match prop {
         Some(prop) if prop.len() == 0 => errors.push(Error::empty_field(decl_type, keyword)),
         Some(prop) if prop.len() > max_len => {
-            errors.push(Error::field_too_long(decl_type, keyword))
+            errors.push(Error::field_too_long_with_max(decl_type, keyword, max_len))
         }
         Some(_) => (),
         None => errors.push(Error::missing_field(decl_type, keyword)),
@@ -438,7 +438,7 @@ mod tests {
         test_identifier_path_too_long => {
             check_fn = check_path,
             input = &format!("/{}", "a".repeat(1024)),
-            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![Error::field_too_long_with_max("FooDecl", "foo", /*max=*/1024usize)])),
         },
 
         // name
@@ -460,12 +460,12 @@ mod tests {
         test_identifier_name_too_long => {
             check_fn = check_name,
             input = &format!("{}", "a".repeat(MAX_NAME_LENGTH + 1)),
-            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![Error::field_too_long_with_max("FooDecl", "foo", MAX_NAME_LENGTH)])),
         },
         test_identifier_dynamic_name_too_long => {
             check_fn = check_dynamic_name,
             input = &format!("{}", "a".repeat(MAX_DYNAMIC_NAME_LENGTH + 1)),
-            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![Error::field_too_long_with_max("FooDecl", "foo", MAX_DYNAMIC_NAME_LENGTH)])),
         },
 
         // url
@@ -482,7 +482,7 @@ mod tests {
         test_identifier_url_too_long => {
             check_fn = check_url,
             input = &format!("fuchsia-pkg://{}", "a".repeat(4083)),
-            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+            result = Err(ErrorList::new(vec![Error::field_too_long_with_max("FooDecl", "foo", 4096)])),
         },
     }
 }
