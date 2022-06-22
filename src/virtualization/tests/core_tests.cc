@@ -15,6 +15,7 @@
 namespace {
 
 using testing::HasSubstr;
+using namespace std::chrono_literals;
 
 constexpr size_t kVirtioBalloonPageCount = 256;
 constexpr size_t kVirtioConsoleMessageCount = 100;
@@ -135,7 +136,8 @@ TYPED_TEST(CoreGuestTest, RealTimeClock) {
   // Ensure the clock matches the system time, within a few minutes.
   std::cout << "Guest time is " << (host_timestamp - guest_timestamp)
             << " second(s) behind host time.\n";
-  EXPECT_LT(std::abs(host_timestamp - guest_timestamp), std::chrono::minutes(5).count())
+  EXPECT_LT(std::abs(host_timestamp - guest_timestamp),
+            std::chrono::duration_cast<std::chrono::seconds>(5min).count())
       << "Guest time (" << guest_timestamp << ") and host time (" << host_timestamp
       << ") differ by more than 5 minutes.";
 }
