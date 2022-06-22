@@ -23,10 +23,14 @@ type LookupError = strict enum {
 @discoverable
 protocol Lookup {
     /// Lookup a list of IP addresses by hostname.
-    ///
-    /// If `hostname` is an Internationalized Domain Name, it must be encoded as
-    /// per RFC 3490.
     LookupIp(struct {
+        /// The hostname to look up.
+        ///
+        /// Must be a valid host domain name; i.e. may not be an IP address in
+        /// dotted-decimal notation.
+        ///
+        /// If it is an Internationalized Domain Name, it must be encoded as per
+        /// RFC 3490.
         hostname fuchsia.net.Hostname;
         options @generated_name("LookupIpOptions") table {
             /// Include IPv4 results.

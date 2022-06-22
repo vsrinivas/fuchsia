@@ -87,6 +87,7 @@ bin_base = {
   test_deps = [
     "//src/connectivity/lib/net-declare",
     "//src/lib/const-unwrap",
+    "//third_party/rust_crates:itertools",
   ]
 
   sources = [ "src/main.rs" ]

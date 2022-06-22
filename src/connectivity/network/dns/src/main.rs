@@ -29,11 +29,12 @@ use {
     std::net::IpAddr,
     std::num::NonZeroUsize,
     std::rc::Rc,
+    std::str::FromStr as _,
     std::sync::Arc,
     tracing::{debug, error, info, warn},
     trust_dns_proto::{
         op::ResponseCode,
-        rr::{domain::IntoName, TryParseIp},
+        rr::{domain::IntoName, RData, RecordType},
     },
     trust_dns_resolver::{
         config::{
@@ -41,7 +42,7 @@ use {
             ResolverOpts,
         },
         error::{ResolveError, ResolveErrorKind},
-        lookup, lookup_ip,
+        lookup,
     },
     unicode_xid::UnicodeXID as _,
 };
@@ -312,7 +313,8 @@ impl QueryWindow {
 
 fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: ServerList) {
     let mut resolver_opts = ResolverOpts::default();
-    resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
+    // TODO(https://fxbug.dev/102536): Set ip_strategy once a unified lookup API
+    // exists that respects this setting.
     resolver_opts.num_concurrent_reqs = 10;
     // TODO(https://github.com/bluejekyll/trust-dns/issues/1702): possibly reenable
     // Trust-DNS's internal name server sorting once it is more correct and
@@ -357,20 +359,11 @@ enum IncomingRequest {
 trait ResolverLookup {
     fn new(config: ResolverConfig, options: ResolverOpts) -> Self;
 
-    async fn lookup_ip<N: IntoName + TryParseIp + Send>(
+    async fn lookup<N: IntoName + Send>(
         &self,
-        host: N,
-    ) -> Result<lookup_ip::LookupIp, ResolveError>;
-
-    async fn ipv4_lookup<N: IntoName + Send>(
-        &self,
-        host: N,
-    ) -> Result<lookup::Ipv4Lookup, ResolveError>;
-
-    async fn ipv6_lookup<N: IntoName + Send>(
-        &self,
-        host: N,
-    ) -> Result<lookup::Ipv6Lookup, ResolveError>;
+        name: N,
+        record_type: RecordType,
+    ) -> Result<lookup::Lookup, ResolveError>;
 
     async fn reverse_lookup(&self, addr: IpAddr) -> Result<lookup::ReverseLookup, ResolveError>;
 }
@@ -381,25 +374,12 @@ impl ResolverLookup for Resolver {
         Resolver::new(config, options, Spawner).expect("failed to create resolver")
     }
 
-    async fn lookup_ip<N: IntoName + TryParseIp + Send>(
+    async fn lookup<N: IntoName + Send>(
         &self,
-        host: N,
-    ) -> Result<lookup_ip::LookupIp, ResolveError> {
-        self.lookup_ip(host).await
-    }
-
-    async fn ipv4_lookup<N: IntoName + Send>(
-        &self,
-        host: N,
-    ) -> Result<lookup::Ipv4Lookup, ResolveError> {
-        self.ipv4_lookup(host).await
-    }
-
-    async fn ipv6_lookup<N: IntoName + Send>(
-        &self,
-        host: N,
-    ) -> Result<lookup::Ipv6Lookup, ResolveError> {
-        self.ipv6_lookup(host).await
+        name: N,
+        record_type: RecordType,
+    ) -> Result<lookup::Lookup, ResolveError> {
+        self.lookup(name, record_type, Default::default()).await
     }
 
     async fn reverse_lookup(&self, addr: IpAddr) -> Result<lookup::ReverseLookup, ResolveError> {
@@ -812,49 +792,88 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                 let ipv6_lookup = ipv6_lookup.unwrap_or(false);
                 let sort_addresses = sort_addresses.unwrap_or(false);
                 let mut lookup_result = (|| async {
-                    let start_time = fasync::Time::now();
-                    let resolver = resolver.read();
-                    let result: Result<Vec<_>, _> = match (ipv4_lookup, ipv6_lookup) {
-                        (true, false) => resolver.ipv4_lookup(hostname).await.map(|addrs| {
-                            addrs
-                                .into_iter()
-                                .map(|addr| net_ext::IpAddress(IpAddr::V4(addr)).into())
-                                .collect()
-                        }),
-                        (false, true) => resolver.ipv6_lookup(hostname).await.map(|addrs| {
-                            addrs
-                                .into_iter()
-                                .map(|addr| net_ext::IpAddress(IpAddr::V6(addr)).into())
-                                .collect()
-                        }),
-                        (true, true) => resolver.lookup_ip(hostname).await.map(|addrs| {
-                            addrs.into_iter().map(|addr| net_ext::IpAddress(addr).into()).collect()
-                        }),
-                        (false, false) => {
+                    let hostname = hostname.as_str();
+                    // The [`IntoName`] implementation for &str does not
+                    // properly reject IPv4 addresses in accordance with RFC
+                    // 1123 section 2.1:
+                    //
+                    //   If a dotted-decimal number can be entered without such
+                    //   identifying delimiters, then a full syntactic check must be
+                    //   made, because a segment of a host domain name is now allowed
+                    //   to begin with a digit and could legally be entirely numeric
+                    //   (see Section 6.1.2.4).  However, a valid host name can never
+                    //   have the dotted-decimal form #.#.#.#, since at least the
+                    //   highest-level component label will be alphabetic.
+                    //
+                    // Thus we explicitly reject such input here.
+                    //
+                    // TODO(https://github.com/bluejekyll/trust-dns/issues/1725):
+                    // Remove this when the implementation is sufficiently
+                    // strict.
+                    match IpAddr::from_str(hostname) {
+                        Ok(addr) => {
+                            let _: IpAddr = addr;
                             return Err(fname::LookupError::InvalidArgs);
                         }
+                        Err(std::net::AddrParseError { .. }) => {}
                     };
+                    let resolver = resolver.read();
+                    let start_time = fasync::Time::now();
+                    let (ret1, ret2) = futures::future::join(
+                        futures::future::OptionFuture::from(
+                            ipv4_lookup.then(|| resolver.lookup(hostname, RecordType::A)),
+                        ),
+                        futures::future::OptionFuture::from(
+                            ipv6_lookup.then(|| resolver.lookup(hostname, RecordType::AAAA)),
+                        ),
+                    )
+                    .await;
+                    let result = [ret1, ret2];
+                    if result.iter().all(Option::is_none) {
+                        return Err(fname::LookupError::InvalidArgs);
+                    }
+                    let (addrs, error) = IntoIterator::into_iter(result)
+                        .filter_map(std::convert::identity)
+                        .fold((Vec::new(), None), |(mut addrs, mut error), result| {
+                            let () = match result {
+                                Err(err) => match error.as_ref() {
+                                    Some(_err) => {}
+                                    None => {
+                                        error = Some(err);
+                                    }
+                                },
+                                Ok(lookup) => lookup.iter().for_each(|rdata| match rdata {
+                                    RData::A(addr) => {
+                                        addrs.push(net_ext::IpAddress(IpAddr::V4(*addr)).into())
+                                    }
+                                    RData::AAAA(addr) => {
+                                        addrs.push(net_ext::IpAddress(IpAddr::V6(*addr)).into())
+                                    }
+                                    RData::CNAME(name) => {
+                                        // TODO(https://fxbug.dev/102536): Why are we seeing CNAME
+                                        // records when looking up A/AAAA records?
+                                        debug!(
+                                            "received CNAME={} for Lookup({}, {:?})",
+                                            name, hostname, options
+                                        )
+                                    }
+                                    rdata => error!("unexpected rdata {:?}", rdata),
+                                }),
+                            };
+                            (addrs, error)
+                        });
+                    let count =
+                        addrs.len().try_into().map_err(|std::num::TryFromIntError { .. }| {
+                            // Return an error from the resolver.
+                            error.expect("error present when no records are returned")
+                        });
                     let () = stats
                         .finish_query(
                             start_time,
-                            result
-                                .as_ref()
-                                .map(|addrs| {
-                                    addrs.len().try_into().expect(
-                                        "got zero resolved addresses in a successful DNS response",
-                                    )
-                                })
-                                .map_err(|e| e.kind()),
+                            count.as_ref().copied().map_err(ResolveError::kind),
                         )
                         .await;
-                    let addrs =
-                        result.map_err(|e| handle_err("LookupIp", e)).and_then(|addrs| {
-                            if addrs.is_empty() {
-                                Err(fname::LookupError::NotFound)
-                            } else {
-                                Ok(addrs)
-                            }
-                        })?;
+                    let _: NonZeroUsize = count.map_err(|err| handle_err("LookupIp", err))?;
                     let addrs = if sort_addresses {
                         sort_preferred_addresses(addrs, &routes).await
                     } else {
@@ -1115,16 +1134,14 @@ mod tests {
     use dns::DEFAULT_PORT;
     use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
     use futures::future::TryFutureExt as _;
+    use itertools::Itertools as _;
     use net_declare::{fidl_ip, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
     };
-    use trust_dns_resolver::{
-        error::ResolveErrorKind, lookup::Ipv4Lookup, lookup::Ipv6Lookup, lookup::Lookup,
-        lookup::ReverseLookup, lookup_ip::LookupIp,
-    };
+    use trust_dns_resolver::{error::ResolveErrorKind, lookup::Lookup, lookup::ReverseLookup};
 
     use super::*;
 
@@ -1261,25 +1278,30 @@ mod tests {
         config: ResolverConfig,
     }
 
-    impl MockResolver {
-        fn ip_lookup<N: IntoName + Send>(
+    #[async_trait]
+    impl ResolverLookup for MockResolver {
+        fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
+            MockResolver { config }
+        }
+
+        async fn lookup<N: IntoName + Send>(
             &self,
-            host: N,
-            ipv4_lookup: bool,
-            ipv6_lookup: bool,
-        ) -> Result<Lookup, ResolveError> {
-            let host_name = host.into_name().unwrap().to_utf8();
-            let rdatas = std::iter::empty()
-                .chain(
-                    (ipv4_lookup
-                        && [REMOTE_IPV4_HOST, REMOTE_IPV4_IPV6_HOST].contains(&host_name.as_str()))
+            name: N,
+            record_type: RecordType,
+        ) -> Result<lookup::Lookup, ResolveError> {
+            let name = name.into_name()?;
+            let host_name = name.to_utf8();
+            let rdatas = match record_type {
+                RecordType::A => [REMOTE_IPV4_HOST, REMOTE_IPV4_IPV6_HOST]
+                    .contains(&host_name.as_str())
                     .then(|| RData::A(IPV4_HOST)),
-                )
-                .chain(
-                    (ipv6_lookup
-                        && [REMOTE_IPV6_HOST, REMOTE_IPV4_IPV6_HOST].contains(&host_name.as_str()))
+                RecordType::AAAA => [REMOTE_IPV6_HOST, REMOTE_IPV4_IPV6_HOST]
+                    .contains(&host_name.as_str())
                     .then(|| RData::AAAA(IPV6_HOST)),
-                );
+                record_type => {
+                    panic!("unexpected record type {:?}", record_type)
+                }
+            };
 
             let records: Vec<Record> = rdatas
                 .into_iter()
@@ -1304,34 +1326,6 @@ mod tests {
             }
 
             Ok(Lookup::new_with_max_ttl(Query::default(), records.into()))
-        }
-    }
-
-    #[async_trait]
-    impl ResolverLookup for MockResolver {
-        fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
-            MockResolver { config }
-        }
-
-        async fn lookup_ip<N: IntoName + TryParseIp + Send>(
-            &self,
-            host: N,
-        ) -> Result<lookup_ip::LookupIp, ResolveError> {
-            self.ip_lookup(host, true, true).map(LookupIp::from)
-        }
-
-        async fn ipv4_lookup<N: IntoName + Send>(
-            &self,
-            host: N,
-        ) -> Result<lookup::Ipv4Lookup, ResolveError> {
-            self.ip_lookup(host, true, false).map(Ipv4Lookup::from)
-        }
-
-        async fn ipv6_lookup<N: IntoName + Send>(
-            &self,
-            host: N,
-        ) -> Result<lookup::Ipv6Lookup, ResolveError> {
-            self.ip_lookup(host, false, true).map(Ipv6Lookup::from)
         }
 
         async fn reverse_lookup(
@@ -1567,6 +1561,57 @@ mod tests {
                 );
             })
             .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_lookupip_ip_literal() {
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                let proxy = &proxy;
+
+                let range = || IntoIterator::into_iter([true, false]);
+
+                futures::stream::iter(range().cartesian_product(range()))
+                    .for_each_concurrent(None, move |(ipv4_lookup, ipv6_lookup)| async move {
+                        assert_eq!(
+                            proxy
+                                .lookup_ip(
+                                    "240.0.0.2",
+                                    fname::LookupIpOptions {
+                                        ipv4_lookup: Some(ipv4_lookup),
+                                        ipv6_lookup: Some(ipv6_lookup),
+                                        ..fname::LookupIpOptions::EMPTY
+                                    }
+                                )
+                                .await
+                                .expect("lookup_ip"),
+                            Err(fname::LookupError::InvalidArgs),
+                            "ipv4_lookup={},ipv6_lookup={}",
+                            ipv4_lookup,
+                            ipv6_lookup,
+                        );
+
+                        assert_eq!(
+                            proxy
+                                .lookup_ip(
+                                    "abcd::2",
+                                    fname::LookupIpOptions {
+                                        ipv4_lookup: Some(ipv4_lookup),
+                                        ipv6_lookup: Some(ipv6_lookup),
+                                        ..fname::LookupIpOptions::EMPTY
+                                    }
+                                )
+                                .await
+                                .expect("lookup_ip"),
+                            Err(fname::LookupError::InvalidArgs),
+                            "ipv4_lookup={},ipv6_lookup={}",
+                            ipv4_lookup,
+                            ipv6_lookup,
+                        );
+                    })
+                    .await
+            })
+            .await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2162,24 +2207,11 @@ mod tests {
             BlockingResolver {}
         }
 
-        async fn lookup_ip<N: IntoName + TryParseIp + Send>(
+        async fn lookup<N: IntoName + Send>(
             &self,
-            _host: N,
-        ) -> Result<lookup_ip::LookupIp, ResolveError> {
-            futures::future::pending().await
-        }
-
-        async fn ipv4_lookup<N: IntoName + Send>(
-            &self,
-            _host: N,
-        ) -> Result<lookup::Ipv4Lookup, ResolveError> {
-            futures::future::pending().await
-        }
-
-        async fn ipv6_lookup<N: IntoName + Send>(
-            &self,
-            _host: N,
-        ) -> Result<lookup::Ipv6Lookup, ResolveError> {
+            _name: N,
+            _record_type: RecordType,
+        ) -> Result<lookup::Lookup, ResolveError> {
             futures::future::pending().await
         }
 

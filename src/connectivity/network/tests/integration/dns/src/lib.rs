@@ -25,6 +25,7 @@ use futures::{
     stream::{self, StreamExt as _},
     AsyncReadExt as _, AsyncWriteExt as _,
 };
+use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
 use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
@@ -53,6 +54,63 @@ use packet_formats::{
     udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs},
 };
 use packet_formats_dhcp::v6;
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn no_ip_literal() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            "realm",
+            &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
+        )
+        .expect("create realm");
+
+    let name_lookup =
+        realm.connect_to_protocol::<net_name::LookupMarker>().expect("connect to protocol");
+
+    let range = || IntoIterator::into_iter([true, false]);
+
+    let name_lookup = &name_lookup;
+    futures::stream::iter(range().cartesian_product(range()))
+        .for_each_concurrent(None, move |(ipv4_lookup, ipv6_lookup)| async move {
+            assert_eq!(
+                name_lookup
+                    .lookup_ip(
+                        "240.0.0.2",
+                        net_name::LookupIpOptions {
+                            ipv4_lookup: Some(ipv4_lookup),
+                            ipv6_lookup: Some(ipv6_lookup),
+                            ..net_name::LookupIpOptions::EMPTY
+                        },
+                    )
+                    .await
+                    .expect("call lookup IP"),
+                Err(net_name::LookupError::InvalidArgs),
+                "ipv4_lookup={},ipv6_lookup={}",
+                ipv4_lookup,
+                ipv6_lookup,
+            );
+
+            assert_eq!(
+                name_lookup
+                    .lookup_ip(
+                        "abcd::2",
+                        net_name::LookupIpOptions {
+                            ipv4_lookup: Some(ipv4_lookup),
+                            ipv6_lookup: Some(ipv6_lookup),
+                            ..net_name::LookupIpOptions::EMPTY
+                        },
+                    )
+                    .await
+                    .expect("call lookup IP"),
+                Err(net_name::LookupError::InvalidArgs),
+                "ipv4_lookup={},ipv6_lookup={}",
+                ipv4_lookup,
+                ipv6_lookup,
+            );
+        })
+        .await
+}
 
 /// Keep polling the lookup admin's DNS servers until it returns `expect`.
 async fn poll_lookup_admin<
@@ -653,7 +711,10 @@ async fn fallback_on_error_response_code() {
         error_response_code: trust_dns_proto::op::ResponseCode,
     }
 
-    for test_case in IntoIterator::into_iter([(true, true), (true, false), (false, true)])
+    let range = || IntoIterator::into_iter([true, false]);
+
+    for test_case in range()
+        .cartesian_product(range())
         .cartesian_product([
             ResponseCode::Refused,
             ResponseCode::NXDomain,
@@ -662,10 +723,12 @@ async fn fallback_on_error_response_code() {
             ResponseCode::NotAuth,
             ResponseCode::BADMODE,
         ])
-        .map(|((ipv4_lookup, ipv6_lookup), error_response_code)| FallbackTestCase {
-            ipv4_lookup,
-            ipv6_lookup,
-            error_response_code,
+        .filter_map(|((ipv4_lookup, ipv6_lookup), error_response_code)| {
+            (ipv4_lookup || ipv6_lookup).then(|| FallbackTestCase {
+                ipv4_lookup,
+                ipv6_lookup,
+                error_response_code,
+            })
         })
     {
         eprintln!("Entering test case: {:?}", test_case);
