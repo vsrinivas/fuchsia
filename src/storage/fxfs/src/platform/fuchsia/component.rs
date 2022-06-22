@@ -10,9 +10,7 @@ use {
         log::*,
         object_store::volume::root_volume,
         platform::{
-            fuchsia::{
-                errors::map_to_status, volume::FxVolumeAndRoot, volumes_directory::VolumesDirectory,
-            },
+            fuchsia::{errors::map_to_status, volumes_directory::VolumesDirectory},
             RemoteCrypt,
         },
     },
@@ -269,7 +267,19 @@ impl Component {
             );
             scope.wait().await;
         }
-        self.start_serving(&volume).await?;
+
+        self.outgoing_dir.add_entry_impl(
+            "root".to_string(),
+            volume.root().clone(),
+            /* overwrite: */ true,
+        )?;
+
+        self.outgoing_dir.add_entry_impl(
+            "volumes".to_string(),
+            volumes.directory_node().clone(),
+            /* overwrite: */ true,
+        )?;
+
         if let State::PreStart { queued } = std::mem::replace(
             &mut *self.state.lock().unwrap(),
             State::Started(Started {
@@ -356,6 +366,9 @@ impl Component {
             let _ = self
                 .outgoing_dir
                 .remove_entry_impl("root".into(), /* must_be_directory: */ false);
+            let _ = self
+                .outgoing_dir
+                .remove_entry_impl("volumes".into(), /* must_be_directory: */ false);
             state.volumes.terminate().await;
             let _ = state.fs.close().await;
         }
@@ -389,25 +402,16 @@ impl Component {
                             warn!(error = e.as_value(), "Failed to send volume creation response")
                         });
                 }
-                VolumesRequest::Remove { name: _, responder } => {
-                    // TODO(fxbug.dev/99182)
+                VolumesRequest::Remove { name, responder } => {
+                    info!(name = name.as_str(), "Remove volume");
                     responder
-                        .send_no_shutdown_on_err(&mut Err(zx::Status::INTERNAL.into_raw()))
-                        .unwrap();
+                        .send(&mut volumes.remove_volume(&name).await.map_err(map_to_raw_status))
+                        .unwrap_or_else(|e| {
+                            warn!(error = e.as_value(), "Failed to send volume removal response")
+                        });
                 }
             }
         }
-    }
-
-    /// Serves this volume on `outgoing_dir`.
-    async fn start_serving(&self, volume: &FxVolumeAndRoot) -> Result<(), Error> {
-        self.outgoing_dir.add_entry_impl(
-            "root".to_string(),
-            volume.root().clone(),
-            /* overwrite: */ true,
-        )?;
-
-        Ok(())
     }
 
     async fn handle_lifecycle_requests(&self, lifecycle_channel: zx::Channel) -> Result<(), Error> {
@@ -429,19 +433,24 @@ mod tests {
     use {
         super::Component,
         crate::{filesystem::FxFilesystem, object_store::volume::root_volume},
-        fidl::{encoding::Decodable, endpoints::Proxy},
+        fidl::{
+            encoding::Decodable,
+            endpoints::{Proxy, ServerEnd},
+        },
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_fs_startup::{StartOptions, StartupMarker},
+        fidl_fuchsia_fxfs::VolumesMarker,
         fidl_fuchsia_io as fio,
         fidl_fuchsia_process_lifecycle::{LifecycleMarker, LifecycleProxy},
         fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol_at_dir_svc,
+        fuchsia_fs::directory::readdir,
         fuchsia_zircon as zx,
         futures::future::{BoxFuture, FusedFuture},
         futures::{future::FutureExt, pin_mut, select},
         ramdevice_client::{wait_for_device, RamdiskClientBuilder},
         remote_block_device::RemoteBlockClient,
-        std::pin::Pin,
+        std::{collections::HashSet, pin::Pin},
         storage_device::block_device::BlockDevice,
         storage_device::DeviceHolder,
     };
@@ -551,5 +560,119 @@ mod tests {
         })
         .await;
         component_task.await;
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_create_and_remove() {
+        run_test(|client, _| {
+            let volumes_proxy = connect_to_protocol_at_dir_svc::<VolumesMarker>(client)
+                .expect("Unable to connect to Volumes protocol");
+
+            let fs_admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(client)
+                .expect("Unable to connect to Admin protocol");
+
+            async move {
+                let (dir_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                        .expect("create_proxy failed");
+                volumes_proxy
+                    .create("test", None, server_end)
+                    .await
+                    .expect("fidl failed")
+                    .expect("create failed");
+
+                // This should fail whilst the volume is mounted.
+                volumes_proxy
+                    .remove("test")
+                    .await
+                    .expect("fidl failed")
+                    .expect_err("remove succeeded");
+
+                let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(&dir_proxy)
+                    .expect("Unable to connect to Volumes protocol");
+                admin_proxy.shutdown().await.expect("shutdown failed");
+
+                // Creating another volume with the same name should fail.
+                let (_dir_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                        .expect("create_proxy failed");
+                volumes_proxy
+                    .create("test", None, server_end)
+                    .await
+                    .expect("fidl failed")
+                    .expect_err("create succeeded");
+
+                volumes_proxy.remove("test").await.expect("fidl failed").expect("remove failed");
+
+                // Removing a non-existent volume should fail.
+                volumes_proxy
+                    .remove("test")
+                    .await
+                    .expect("fidl failed")
+                    .expect_err("remove failed");
+
+                // Create the same volume again and it should now succeed.
+                let (_dir_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                        .expect("create_proxy failed");
+                volumes_proxy
+                    .create("test", None, server_end)
+                    .await
+                    .expect("fidl failed")
+                    .expect("create failed");
+
+                fs_admin_proxy.shutdown().await.expect("shutdown failed");
+            }
+            .boxed()
+        })
+        .await;
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_volumes_enumeration() {
+        run_test(|client, _| {
+            let volumes_proxy = connect_to_protocol_at_dir_svc::<VolumesMarker>(client)
+                .expect("Unable to connect to Volumes protocol");
+
+            let (volumes_dir_proxy, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                    .expect("create_proxy failed");
+            client
+                .open(
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    0,
+                    "volumes",
+                    ServerEnd::new(server_end.into_channel()),
+                )
+                .expect("open failed");
+
+            let fs_admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(client)
+                .expect("Unable to connect to Admin protocol");
+
+            async move {
+                let (_dir_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                        .expect("create_proxy failed");
+                volumes_proxy
+                    .create("test", None, server_end)
+                    .await
+                    .expect("fidl failed")
+                    .expect("create failed");
+
+                assert_eq!(
+                    readdir(&volumes_dir_proxy)
+                        .await
+                        .expect("readdir failed")
+                        .iter()
+                        .map(|d| d.name.as_str())
+                        .collect::<HashSet<_>>(),
+                    HashSet::from(["default", "test"])
+                );
+
+                fs_admin_proxy.shutdown().await.expect("shutdown failed");
+            }
+            .boxed()
+        })
+        .await;
     }
 }

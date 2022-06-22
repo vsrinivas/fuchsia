@@ -105,8 +105,9 @@ protocol Volumes {
     Create(resource struct {
         name string:fuchsia.io.MAX_FILENAME;
         crypt client_end:<Crypt, optional>;
-        outgoing_directory server_end:fuchsia.io.Node;
+        outgoing_directory server_end:fuchsia.io.Directory;
     }) -> (struct {}) error zx.status;
+
     /// Permanently deletes a volume identified by `name`.  If the volume is mounted, this call will
     /// fail.
     Remove(resource struct {

@@ -74,9 +74,8 @@ impl VolumesDirectory {
     /// Returns the directory node which can be used to provide connections for e.g. enumerating
     /// entries in the VolumesDirectory.
     /// Directly manipulating the entries in this node will result in strange behaviour.
-    #[cfg(test)]
-    pub fn directory_node(&self) -> Arc<vfs::directory::immutable::Simple> {
-        self.directory_node.clone()
+    pub fn directory_node(&self) -> &Arc<vfs::directory::immutable::Simple> {
+        &self.directory_node
     }
 
     fn add_directory_entry(self: &Arc<Self>, name: &str, store_id: u64) {
@@ -153,7 +152,6 @@ impl VolumesDirectory {
     }
 
     /// Removes a volume. The volume must exist but encrypted volume keys are not required.
-    #[allow(unused)]
     pub async fn remove_volume(&self, name: &str) -> Result<(), Error> {
         let store = self.root_volume.volume_directory().store();
         let fs = store.filesystem();
@@ -174,10 +172,14 @@ impl VolumesDirectory {
             _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
         };
         // Cowardly refuse to delete a mounted volume.
-        if self.mounted_volumes.lock().unwrap().contains_key(&object_id) {
-            bail!(FxfsError::AlreadyBound);
-        }
-        self.root_volume.delete_volume(name).await
+        ensure!(
+            !self.mounted_volumes.lock().unwrap().contains_key(&object_id),
+            FxfsError::AlreadyBound
+        );
+        self.root_volume.delete_volume(name).await?;
+        // This shouldn't fail because the entry should exist.
+        self.directory_node.remove_entry(name, /* must_be_directory: */ false).unwrap();
+        Ok(())
     }
 
     /// Terminates all opened volumes.
@@ -602,7 +604,7 @@ mod tests {
             .expect("Create proxy to succeed");
         let dir_proxy = Arc::new(dir_proxy);
 
-        volumes_directory.directory_node().open(
+        volumes_directory.directory_node().clone().open(
             ExecutionScope::new(),
             fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
@@ -672,7 +674,7 @@ mod tests {
 
         let (volume_proxy, volume_server_end) =
             fidl::endpoints::create_proxy::<VolumeMarker>().expect("Create proxy to succeed");
-        volumes_directory.directory_node().open(
+        volumes_directory.directory_node().clone().open(
             ExecutionScope::new(),
             fio::OpenFlags::RIGHT_READABLE,
             0,
