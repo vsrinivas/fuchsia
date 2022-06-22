@@ -286,33 +286,34 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
         })?
         .context("Getting hash from daemon")?;
 
-    match daemon_version_info.exec_path {
-        None => log::warn!("Daemon version info did not contain an executable path."),
-        Some(daemon_path) => {
-            let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
-
-            if let Some(path) = path {
-                if path != daemon_path {
-                    eprintln!(
-                        "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
-                    daemon_path);
-                    log::warn!(
-                        "Found a running daemon that is from a different copy of ffx. \
-                            Continuing to connect...\
-                            \n\nDaemon path: {}\
-                            \nffx front-end path: {}",
-                        daemon_path,
-                        path
-                    );
-                }
-            } else {
-                log::warn!("Could not get path of ffx executable");
-            }
-        }
-    };
-
     if Some(build_id) == daemon_version_info.build_id {
         link_task.detach();
+
+        match daemon_version_info.exec_path {
+            None => log::warn!("Daemon version info did not contain an executable path."),
+            Some(daemon_path) => {
+                let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
+
+                if let Some(path) = path {
+                    if path != daemon_path {
+                        eprintln!(
+                            "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
+                        daemon_path);
+                        log::warn!(
+                            "Found a running daemon that is from a different copy of ffx. \
+                                Continuing to connect...\
+                                \n\nDaemon path: {}\
+                                \nffx front-end path: {}",
+                            daemon_path,
+                            path
+                        );
+                    }
+                } else {
+                    log::warn!("Could not get path of ffx executable");
+                }
+            }
+        };
+
         return Ok(proxy);
     }
 
