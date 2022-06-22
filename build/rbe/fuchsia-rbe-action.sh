@@ -58,6 +58,12 @@ options:
   --no-reproxy: assume reproxy is already running, and only use rewrapper.
       [This is the default.]
 
+  --diagnose-nonzero, --no-diagnose-nonzero:
+      On nonzero exit statuses, attempt to diagnose potential RBE issues.
+      This scans reproxy logs for information, and can be noisy.
+      Default: --diagnose-nonzero
+
+
   All other options are forwarded to rewrapper until -- is encountered.
 
 Detected parameters:
@@ -73,6 +79,7 @@ output_files=
 rewrapper_options=()
 want_auto_reproxy=0
 canonicalize_working_dir="false"
+diagnose_nonzero_exit=1
 label=
 
 prev_opt=
@@ -120,6 +127,9 @@ do
       canonicalize_working_dir="$optarg"
       rewrapper_options+=( "$opt" )
       ;;
+
+    --diagnose-nonzero) diagnose_nonzero_exit=1 ;;
+    --no-diagnose-nonzero) diagnose_nonzero_exit=0 ;;
 
     --auto-reproxy) want_auto_reproxy=1 ;;
     --no-reproxy) want_auto_reproxy=0 ;;
@@ -259,6 +269,11 @@ case "$status" in
     ;;
   0) exit "$status" ;;
 esac
+
+# From a nonzero exit code alone, it is difficult to distinguish a command
+# error from an infrastructure error.  We can attempt to scrape information
+# from the reproxy log, but this is fragile.
+test "$diagnose_nonzero_exit" = 0 || exit "$status"
 
 # Diagnostics: Suggest where to look, and possible actions.
 # Look for symptoms inside reproxy's log, where most of the action is.
