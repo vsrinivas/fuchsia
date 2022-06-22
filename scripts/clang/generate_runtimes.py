@@ -32,7 +32,7 @@ TRIPLE_TO_TARGET = {
 
 # TODO(phosek): use `clang --target=... -print-multi-lib` instead of hardcoding
 # these once it supports all variants.
-CFLAGS = [[], ["-fsanitize=address"], ["-fsanitize=undefined"]]
+CFLAGS = [[], ["-fsanitize=address"], ["-fsanitize=undefined"], ["-fsanitize=hwaddress"]]
 LDFLAGS = [[], ["-static-libstdc++"]]
 
 
@@ -170,6 +170,10 @@ def main():
         sysroot = os.path.join(args.sdk_dir, "arch", arch, "sysroot")
 
         for cflags in CFLAGS:
+            # HWASan is currently not supported for x64.
+            if cflags == ["-fsanitize=hwaddress"] and arch != "arm64":
+                continue
+
             for ldflags in LDFLAGS:
                 runtime = []
                 for lib in trace_link(clang_dir, target, sysroot, cflags,
