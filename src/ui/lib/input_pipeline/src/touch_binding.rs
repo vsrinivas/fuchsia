@@ -219,7 +219,6 @@ impl TouchBinding {
     ) -> Result<Self, Error> {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
             device.get_descriptor().await?;
-        let cloned_device_description = device_descriptor.clone();
 
         match device_descriptor.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
@@ -242,7 +241,7 @@ impl TouchBinding {
                         .filter_map(Result::ok)
                         .collect(),
                 },
-                _touch_device_type: get_device_type(device, cloned_device_description).await,
+                _touch_device_type: get_device_type(device).await,
             }),
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
         }
@@ -427,17 +426,7 @@ fn send_event(
 /// Windows Precision Touchpad reports `MouseCollection` or `WindowsPrecisionTouchpadCollection`
 /// in `TouchFeatureReport`. Fallback all error responses on `get_feature_report` to TouchScreen
 /// because some touch screen does not report this method.
-async fn get_device_type(
-    input_device: &fidl_input_report::InputDeviceProxy,
-    descriptor: fidl_fuchsia_input_report::DeviceDescriptor,
-) -> TouchDeviceType {
-    // TODO(fxbug.dev/102936): input-synthesis does not implement `get_feature_report` yet, check
-    // it is also a mouse to prevent calling `get_feature_report` on synthesis device. Remove when
-    // we fix the bug.
-    if descriptor.mouse.is_none() {
-        return TouchDeviceType::TouchScreen;
-    }
-
+async fn get_device_type(input_device: &fidl_input_report::InputDeviceProxy) -> TouchDeviceType {
     match input_device.get_feature_report().await {
         Ok(Ok(fidl_input_report::FeatureReport {
             touch:
@@ -690,7 +679,6 @@ mod tests {
 
     #[test_case(true, None, TouchDeviceType::TouchScreen; "touch screen")]
     #[test_case(false, None, TouchDeviceType::TouchScreen; "no mouse descriptor, no touch_input_mode")]
-    #[test_case(false, Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection), TouchDeviceType::TouchScreen; "no mouse descriptor, has touch_input_mode")]
     #[test_case(true, Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection), TouchDeviceType::WindowsPrecisionTouchpad; "touchpad in mouse mode")]
     #[test_case(true, Some(fidl_input_report::TouchConfigurationInputMode::WindowsPrecisionTouchpadCollection), TouchDeviceType::WindowsPrecisionTouchpad; "touchpad in touchpad mode")]
     #[fasync::run_singlethreaded(test)]

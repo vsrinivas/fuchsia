@@ -4,6 +4,8 @@
 
 #![warn(missing_docs)]
 
+use fidl_fuchsia_input_report::InputDeviceGetFeatureReportResult;
+
 use {
     crate::{
         modern_backend::input_reports_reader::InputReportsReader, synthesizer,
@@ -16,8 +18,9 @@ use {
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_report::{
         ConsumerControlButton, ConsumerControlInputReport, ContactInputReport, DeviceDescriptor,
-        InputDeviceRequest, InputDeviceRequestStream, InputReport, InputReportsReaderMarker,
-        KeyboardInputReport, MouseInputReport, TouchInputReport, TOUCH_MAX_CONTACTS,
+        FeatureReport, InputDeviceRequest, InputDeviceRequestStream, InputReport,
+        InputReportsReaderMarker, KeyboardInputReport, MouseInputReport, TouchInputReport,
+        TOUCH_MAX_CONTACTS,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
     fuchsia_async as fasync,
@@ -32,7 +35,6 @@ use {
 /// # Notes
 /// * Some of the methods of `fuchsia.input.report.InputDevice` are not relevant to
 ///   input injection, so this implemnentation does not support them:
-///   * `GetFeatureReport` and `SetFeatureReport` are for sensors.
 ///   * `SendOutputReport` provides a way to change keyboard LED state.
 ///   If these FIDL methods are invoked, `InputDevice::flush()` will resolve to Err.
 /// * This implementation does not support multiple calls to `GetInputReportsReader`,
@@ -307,6 +309,15 @@ impl InputDevice {
                     }
                 }
             }
+            Ok(InputDeviceRequest::GetFeatureReport { responder }) => {
+                let mut result: InputDeviceGetFeatureReportResult = Ok(FeatureReport::EMPTY);
+                match responder.send(&mut result) {
+                    Ok(()) => None,
+                    Err(e) => Some(Err(
+                        anyhow::Error::from(e).context("sending GetFeatureReport response")
+                    )),
+                }
+            }
             Err(e) => {
                 // Fail fast.
                 //
@@ -371,6 +382,25 @@ mod tests {
     };
 
     const DEFAULT_REPORT_TIMESTAMP: u64 = 0;
+
+    mod responds_to_get_feature_report_request {
+        use super::*;
+
+        #[fasync::run_until_stalled(test)]
+        async fn single_request_before_call_to_get_feature_report() -> Result<(), Error> {
+            let (proxy, request_stream) = endpoints::create_proxy_and_stream::<InputDeviceMarker>()
+                .context("creating InputDevice proxy and stream")?;
+            let input_device_server_fut =
+                Box::new(InputDevice::new(request_stream, DeviceDescriptor::EMPTY)).flush();
+            let get_feature_report_fut = proxy.get_feature_report();
+            std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
+
+            let (_, get_feature_report_result) =
+                future::join(input_device_server_fut, get_feature_report_fut).await;
+            assert_eq!(get_feature_report_result.context("fidl error")?, Ok(FeatureReport::EMPTY));
+            Ok(())
+        }
+    }
 
     mod responds_to_get_descriptor_request {
         use {
