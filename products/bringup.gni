@@ -6,6 +6,8 @@ import("//src/sys/appmgr/core_shards.gni")
 
 product_build = true
 
+# bringup products have their own assemble_system() instantiation.
+use_bringup_assembly = true
 bootfs_only = true
 
 product_bootfs_labels = [

@@ -12,6 +12,9 @@
 import("//build/security/policies.gni")
 import("//products/bringup.gni")
 
+# Minimal, and all products based on it, use the "standard" assembled_system()
+# impl in `//build/images/fuchsia`
+use_bringup_assembly = false
 bootfs_only = false
 
 # Kernel command line arguments.

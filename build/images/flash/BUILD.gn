@@ -11,14 +11,6 @@ import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/sdk/virtual_device.gni")
 
-supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
-
-files = {
-  fvm = "obj/build/images/fuchsia/fuchsia/fvm.blk"
-  fvm_fastboot = "obj/build/images/fuchsia/fuchsia/fvm.fastboot.blk"
-}
-not_needed([ "files" ])
-
 # Deps that are added to the //build/images:default_image_deps target.
 flash_image_deps = []
 
@@ -208,8 +200,8 @@ flash_script_outputs = [ "$root_out_dir/flash.sh" ]
 
 host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
 flash_script_args = [
-  "--image=" + rebase_path(image, root_build_dir),
-  "--recovery-image=" + rebase_path(recovery_image, root_build_dir),
+  "--image=" + rebase_path(files.final_zbi, root_build_dir),
+  "--recovery-image=" + rebase_path(files.recovery_zbi, root_build_dir),
   "--output=" + rebase_path(flash_script_outputs[0], root_build_dir),
   "--zircon-a=${zircon_a_partition}",
   "--zircon-b=${zircon_b_partition}",
@@ -240,7 +232,7 @@ foreach(info, firmware_info) {
 }
 if (supports_fastboot_fvm) {
   flash_script_args += [
-    "--fvm-image=" + files.fvm_fastboot,
+    "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
     "--fvm=${fvm_partition}",
   ]
   flash_script_deps += [ "//build/images/fuchsia" ]
@@ -248,7 +240,7 @@ if (supports_fastboot_fvm) {
   parts += [
     {
       name = fvm_partition
-      path = files.fvm_fastboot
+      path = rebase_path(files.fvm_fastboot, root_build_dir)
     },
   ]
 }
@@ -549,7 +541,7 @@ generated_file("fastboot_manifest_archive") {
 ## read a flash.json rather than taking the GN object.
 
 # We shouldn't generate a product metadata if we are building an SDK.
-if (!bootfs_only && !build_sdk_archives) {
+if (!use_bringup_assembly && !build_sdk_archives) {
   compatible_devices = []
 
   # Virtual device manifest should only be generated for emu compatible boards.
@@ -588,8 +580,8 @@ if (!bootfs_only && !build_sdk_archives) {
       deps += [ ":virtual_device_specification" ]
       emu_manifest = {
         initial_ramdisk = "fuchsia.zbi"
-        kernel = rebase_path(qemu_kernel_file, root_out_dir)
-        disk_images = [ files.fvm ]
+        kernel = rebase_path(files.qemu_kernel, root_out_dir)
+        disk_images = [ rebase_path(files.fvm, root_build_dir) ]
       }
     }
 

@@ -3,16 +3,20 @@
 # found in the LICENSE file.
 
 import("//build/images/args.gni")
+import("//build/product.gni")
+
+# This centralizes the definition of a bunch of labels and files used in the
+# various //build/images/**/BUILD.gn files.
 
 # Kernel file used to populate emu manifest
-qemu_kernel_file = ""
-qemu_kernel_target = ""
+_qemu_kernel_file = ""
+_qemu_kernel_target = ""
 if (target_cpu == "x64") {
-  qemu_kernel_file = "$root_build_dir/multiboot.bin"
-  qemu_kernel_target = "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
+  _qemu_kernel_file = "$root_build_dir/multiboot.bin"
+  _qemu_kernel_target = "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
 } else if (target_cpu == "arm64") {
-  qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
-  qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+  _qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+  _qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
 } else {
   assert(false, "Unsupported target cpu: $target_cpu")
 }
@@ -23,17 +27,75 @@ recovery_is_zedboot =
 
 flash_manifest_version = 3
 
-image_suffix = "zbi"
-if (custom_signing_script != "" || use_vboot) {
-  image_suffix = "zbi.signed"
+# These are the common assembly-related labels.
+labels = {
+  if (use_bringup_assembly) {
+    images = "//build/images/bringup"
+    assembly_name = "bringup"
+  } else {
+    images = "//build/images/fuchsia"
+    assembly_name = "fuchsia"
+    images_prime = "${images}:${assembly_name}_prime"
+
+    fuchsia_netboot = "${images}:netboot"
+
+    meta_packages = "${images}:fuchsia.meta_packages"
+  }
+
+  qemu_kernel = _qemu_kernel_target
 }
 
-image = "$root_out_dir/fuchsia.${image_suffix}"
-vbmeta = "$root_out_dir/fuchsia.vbmeta"
+supports_fastboot_fvm = fvm_partition != "" && !use_bringup_assembly
 
-recovery_image = "$root_out_dir/recovery.zbi"
-recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
-if (recovery_is_zedboot) {
-  recovery_image = "$root_out_dir/zedboot.${image_suffix}"
-  recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
+# These are the common assembly-related files.
+files = {
+  if (!use_bringup_assembly) {
+    images_outdir = get_label_info(labels.images, "target_out_dir")
+    assembly_outdir = images_outdir + "/${labels.assembly_name}"
+
+    minfs = "${assembly_outdir}/data.blk"
+    blobfs = "${assembly_outdir}/blob.blk"
+
+    # TODO(fxbug.dev/82077): Remove this once clients switch to the new path
+    old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
+
+    flash_manifest = "${images_outdir}/flash_manifest/flash.json"
+
+    fvm = "${assembly_outdir}/fvm.blk"
+
+    if (supports_fastboot_fvm) {
+      fvm_fastboot = "${assembly_outdir}/fvm.fastboot.blk"
+    }
+
+    base_package_names = "$root_build_dir/base_packages.list"
+    cache_package_names = "$root_build_dir/cache_packages.list"
+    universe_package_names = "$root_build_dir/universe_packages.list"
+    manifests_from_metadata =
+        "$root_build_dir/package_manifests_from_metadata.list"
+
+    # TODO(https://fxbug.dev/98480) move these to image-relative paths along with tools' usages
+    base_package_manifests = "$root_build_dir/base_package_manifests.list"
+    cache_package_manifests = "$root_build_dir/cache_package_manifests.list"
+  }
+
+  _image_suffix = "zbi"
+  if (custom_signing_script != "" || use_vboot) {
+    _image_suffix = "zbi.signed"
+  }
+
+  # Final output image and vbmeta
+  final_zbi = "$root_out_dir/fuchsia.${_image_suffix}"
+  final_vbmeta = "$root_out_dir/fuchsia.vbmeta"
+
+  # Recovery output image and vbmeta
+  if (recovery_is_zedboot) {
+    recovery_zbi = "$root_out_dir/zedboot.${_image_suffix}"
+    recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
+  } else {
+    # The standard recovery image and vbmeta locations.
+    recovery_zbi = "$root_out_dir/recovery.${_image_suffix}"
+    recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
+  }
+
+  qemu_kernel = _qemu_kernel_file
 }

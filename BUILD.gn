@@ -698,8 +698,17 @@ build_api_module("tests") {
     # Pull in tests from host_labels.
     "//:host",
 
-    # Pull in tests from *_package_labels.
-    "//build/images/updates:packages",
+    # Pull in tests present in the assembled product image.
+    "//build/images:main_assembly",
+
+    # While these should be redundant with the above, they way in which they are
+    # redundant (included via the main assembly) is quite opaque, and so they
+    # are listed here for developers to be able to see (and to ensure that all
+    # developer-chosen tests are in the build api, catching any failures to
+    # include those tests in the assembly.
+    ":developer_base_packages",
+    ":developer_cache_packages",
+    ":developer_universe_packages",
   ]
   if (include_zbi_host_tests) {
     deps += [ "//build/zircon/zbi_tests" ]
@@ -1111,7 +1120,7 @@ build_api_module("cipd_assembly_artifacts") {
   testonly = true
   data_keys = [ "assembly_inputs" ]
   walk_keys = [ "assembly_inputs_barrier" ]
-  deps = [ "//build/images/fuchsia" ]
+  deps = [ "//build/images:main_assembly" ]
 }
 
 # This describes the locations of archives for the out-of-tree assembly inputs
@@ -1213,9 +1222,10 @@ group("developer_base_driver_packages") {
 group("developer_base_packages") {
   testonly = base_cache_packages_testonly
   visibility = [
-    "//build/assembly/*",
+    ":tests",
     "//build/images/*",
   ]
+
   public_deps = base_package_labels
 }
 
@@ -1224,7 +1234,7 @@ group("developer_base_packages") {
 group("developer_cache_packages") {
   testonly = base_cache_packages_testonly
   visibility = [
-    "//build/assembly/*",
+    ":tests",
     "//build/images/*",
   ]
   public_deps = cache_package_labels
@@ -1233,7 +1243,10 @@ group("developer_cache_packages") {
 # Universe packages added by the developer, using `fx set` or `fx args`
 group("developer_universe_packages") {
   testonly = fuchsia_zbi_testonly
-  visibility = [ "//build/images/*" ]
+  visibility = [
+    ":tests",
+    "//build/images/*",
+  ]
   public_deps = universe_package_labels
 }
 

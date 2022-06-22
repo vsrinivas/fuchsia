@@ -24,32 +24,19 @@ import("//build/security.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 
-labels = {
-  images = "//build/images/fuchsia"
-  images_netboot = "//build/images/fuchsia:netboot"
-  base_packages = "//build/images/fuchsia:fuchsia.base_packages"
-  cache_packages = "//build/images/fuchsia:fuchsia.cache_packages"
-}
+assert(
+    bootfs_only == use_bringup_assembly,
+    "use_bringup_assembly is replacing bootfs_only, and MUST always be the same value")
 
-supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
-files = {
-  outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
-  gendir = "${outdir}/gen"
-  minfs = "${outdir}/data.blk"
-  blobfs = "${root_out_dir}/obj/build/images/blob.blk"
-  flash_manifest =
-      "${root_out_dir}/obj/build/images/fuchsia/flash_manifest/flash.json"
-
-  if (!bootfs_only) {
-    fvm = "${outdir}/fvm.blk"
-  }
-
-  if (supports_fastboot_fvm) {
-    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
-  }
-}
-if (bootfs_only && !supports_fastboot_fvm) {
-  not_needed(files, "*")
+# This is a group that contains the one-and-only assembly implementation.  It
+# can be used in contexts that need either bringup or the full-fuchsia assembly
+# implementation's outputs.
+#
+# If a target requires the outputs of the full-fuchsia assembly implementation,
+# it should directly use it (//build/images/fuchsia).
+group("main_assembly") {
+  testonly = use_bringup_assembly || fuchsia_zbi_testonly
+  public_deps = [ labels.images ]
 }
 
 # Dependencies for all image targets referenced by paver_targets, i.e., the
@@ -67,9 +54,9 @@ write_file(board_name_file, "${board_name}")
 group("qemu-kernel") {
   metadata = {
     image_paths = [ "IMAGE_QEMU_KERNEL_RAW=" +
-                    rebase_path(qemu_kernel_file, root_build_dir) ]
+                    rebase_path(files.qemu_kernel, root_build_dir) ]
   }
-  deps = [ qemu_kernel_target ]
+  deps = [ labels.qemu_kernel ]
 }
 
 default_image_deps += [ ":qemu-kernel" ]
@@ -117,27 +104,27 @@ action("check_vtables_in_rodata") {
 
 group("fvm.sparse.blk") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
+  public_deps = [ labels.images ]
 }
 
 group("fvm.blob.sparse.blk") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
+  public_deps = [ labels.images ]
 }
 
 group("fvm.fastboot.blk") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
+  public_deps = [ labels.images ]
 }
 
 group("fuchsia") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
+  public_deps = [ labels.images ]
 }
 
 group("fuchsia.vbmeta") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
+  public_deps = [ labels.images ]
 }
 
 # Pseudo-target to record information about the sizes of filesystems assembled
@@ -146,7 +133,7 @@ group("fuchsia.vbmeta") {
 # once this targets is no longer hardcoded in infra.
 group("record_filesystem_sizes") {
   testonly = true
-  if (!bootfs_only) {
+  if (!use_bringup_assembly) {
     deps = [ "//build/images/sizes:elf_sizes.json" ]
   }
 }
@@ -190,7 +177,7 @@ mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
 mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
 mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
 
-if (!bootfs_only) {
+if (!use_bringup_assembly) {
   fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
   fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
 }
@@ -201,13 +188,9 @@ compiled_action("uefi-disk") {
   deps = [
     "zedboot",
     "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",
+    labels.images,
     mkfs_label,
   ]
-  if (bootfs_only) {
-    deps += [ "bringup" ]
-  } else {
-    deps += [ labels.images ]
-  }
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   inputs = [ mkfs_bin ]
@@ -226,13 +209,16 @@ compiled_action("uefi-disk") {
     "10000000000",  # 10GB
   ]
 
-  if (bootfs_only) {
+  if (use_bringup_assembly) {
     args += [ "-ramdisk-only" ]
   } else {
     inputs += [
       fvm_tool_path,
       files.minfs,
-      files.blobfs,
+
+      # TODO(fxbug.dev/82077): Switch this to the new path the uefi script is
+      # switched over to using it (or taking it as an argument).
+      files.old_blobfs_path,
     ]
     deps += [
       "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
@@ -263,7 +249,7 @@ group("images") {
     "//build/images/archive:build_args_metadata",
   ]
 
-  if (!bootfs_only) {
+  if (defined(labels.images_netboot)) {
     deps += [ labels.images_netboot ]
   }
 }
@@ -284,7 +270,7 @@ group("default-images") {
 
   if (size_checker_input != {
       }) {
-    # Size checks only make sense when bootfs_only is false, since
+    # Size checks only make sense when use_bringup_assembly is false, since
     # they require system images in addition to the ZBI.
     deps += [ "size_checker:size_report.json" ]
   }
@@ -305,10 +291,10 @@ group("default-images") {
     deps += [ "archive:netboot-script" ]
   }
 
-  # TODO(fxbug.dev/46415): The build graph for "bringup" (bootfs_only) MUST only
+  # TODO(fxbug.dev/46415): The build graph for "bringup" (use_bringup_assembly) MUST only
   # contain one zircon-a metadata target, which means that anything
   # reaching fuchsia.zbi must be excluded from the build graph.
-  if (!bootfs_only) {
+  if (!use_bringup_assembly) {
     deps += [
       ":record_filesystem_sizes",
       "//build/images/updates",
