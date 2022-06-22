@@ -26,8 +26,7 @@ group("examples") {
 
 group("tests") {
   testonly = true
-  public_deps =
-      [ "flatland-view-provider:flatland-view-provider-example-tests" ]
+  public_deps = [ "flatland-view-provider:flatland-view-provider-tests" ]
 }
 
 fuchsia_package("flatland-examples") {
@@ -36,5 +35,6 @@ fuchsia_package("flatland-examples") {
     "flatland-display",
     "flatland-display:flatland-display-rust",
     "flatland-view-provider",
+    "flatland-view-provider:flatland-view-provider-v1",
   ]
 }
