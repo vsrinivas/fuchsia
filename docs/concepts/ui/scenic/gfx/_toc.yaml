@@ -8,6 +8,10 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/ui/scenic/gfx/index.md
+- title: "Life of a Pixel"
+  path: /docs/development/graphics/scenic/concepts/life_of_a_pixel.md
+- title: "Views"
+  path: /docs/development/graphics/scenic/concepts/view_ref.md
 - title: "Resource lifecycle"
   path: /docs/concepts/ui/scenic/gfx/scenic_resource_lifecycle.md
 - title: "Units and metrics"

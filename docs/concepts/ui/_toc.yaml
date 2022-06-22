@@ -19,7 +19,6 @@ toc:
   - title: "Gfx"
     section:
     - include: /docs/concepts/ui/scenic/gfx/_toc.yaml
-    path: /docs/concepts/ui/scenic/gfx/index.md
   - title: "Frame scheduling"
     path: /docs/concepts/ui/scenic/frame_scheduling.md
   - title: "View tree"
