@@ -23,6 +23,14 @@ pub trait Radio {
     /// Functional equivalent of
     /// [`otsys::otPlatRadioSetRegion`](crate::otsys::otPlatRadioSetRegion).
     fn set_region(&self, region: RadioRegion) -> Result;
+
+    /// Functional equivalent of
+    /// [`otsys::otPlatRadioGetTransmitPower`](crate::otsys::otPlatRadioGetTransmitPower).
+    fn get_transmit_power(&self) -> Result<Decibels>;
+
+    /// Functional equivalent of
+    /// [`otsys::otPlatRadioGetVersionString`](crate::otsys::otPlatRadioGetVersionString).
+    fn radio_get_version_string(&self) -> &str;
 }
 
 impl<T: Radio + Boxable> Radio for ot::Box<T> {
@@ -40,6 +48,14 @@ impl<T: Radio + Boxable> Radio for ot::Box<T> {
 
     fn set_region(&self, region: RadioRegion) -> Result {
         self.as_ref().set_region(region)
+    }
+
+    fn get_transmit_power(&self) -> Result<Decibels> {
+        self.as_ref().get_transmit_power()
+    }
+
+    fn radio_get_version_string(&self) -> &str {
+        self.as_ref().radio_get_version_string()
     }
 }
 
@@ -64,5 +80,24 @@ impl Radio for Instance {
 
     fn set_region(&self, region: RadioRegion) -> Result {
         Error::from(unsafe { otPlatRadioSetRegion(self.as_ot_ptr(), region.into()) }).into()
+    }
+
+    fn get_transmit_power(&self) -> Result<Decibels> {
+        let mut ret = DECIBELS_UNSPECIFIED;
+        Error::from(unsafe {
+            otPlatRadioGetTransmitPower(self.as_ot_ptr(), &mut ret as *mut Decibels)
+        })
+        .into_result()?;
+        Ok(ret)
+    }
+
+    fn radio_get_version_string(&self) -> &str {
+        unsafe {
+            // SAFETY: `otPlatRadioGetVersionString` guarantees to return a C-String that will not
+            //         change.
+            CStr::from_ptr(otPlatRadioGetVersionString(self.as_ot_ptr()))
+                .to_str()
+                .expect("OpenThread version string was bad UTF8")
+        }
     }
 }

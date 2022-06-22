@@ -76,3 +76,6 @@ pub type NetifIndex = u32;
 
 /// Unspecified network index.
 pub const NETIF_INDEX_UNSPECIFIED: NetifIndex = 0;
+
+/// Unspecified power
+pub const DECIBELS_UNSPECIFIED: Decibels = -128;
