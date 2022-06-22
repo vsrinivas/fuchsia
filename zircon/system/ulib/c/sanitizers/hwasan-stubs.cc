@@ -4,7 +4,8 @@
 
 #include <lib/zircon-internal/unique-backtrace.h>
 
-#include "hwasan_impl.h"
+// This will include the hwasan interface.
+#include "asan_impl.h"
 
 // In the HWASan build, this file provides weak definitions for all the
 // same entry points that are defined by the HWASan runtime library.

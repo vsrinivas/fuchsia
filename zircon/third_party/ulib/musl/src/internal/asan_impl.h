@@ -22,6 +22,16 @@
 
 void __asan_early_init(void) __attribute__((visibility("hidden")));
 
+#elif __has_feature(hwaddress_sanitizer)
+
+// Expose the hwasan interface.
+#include <sanitizer/hwasan_interface.h>
+
+// In the sanitized build, the __hwasan_mem* names provided by the
+// sanitizer runtime must have weak definitions in libc to satisfy
+// its own references before the sanitizer runtime is loaded.
+#define __asan_weak_alias(name) __typeof(name) __hwasan_##name __attribute__((weak, alias(#name)));
+
 #else  // !__has_feature(address_sanitizer)
 
 #define __asan_weak_alias(name)  // Do nothing in unsanitized build.
