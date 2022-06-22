@@ -402,11 +402,12 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
 
 }  // namespace
 
+namespace {
 template <FidlWireFormatVersion WireFormatVersion>
-zx_status_t internal__fidl_decode_impl__may_break(
-    const fidl::internal::CodingConfig& encoding_configuration, const fidl_type_t* type,
-    void* bytes, uint32_t num_bytes, const fidl_handle_t* handles, const void* handle_metadata,
-    uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode) {
+zx_status_t fidl_decode_impl(const fidl::internal::CodingConfig& encoding_configuration,
+                             const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                             const fidl_handle_t* handles, const void* handle_metadata,
+                             uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode) {
   auto drop_all_handles = [&]() { FidlHandleCloseMany(handles, num_handles); };
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
@@ -473,16 +474,15 @@ zx_status_t internal__fidl_decode_impl__may_break(
   return ZX_OK;
 }
 
-namespace {
 template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t fidl_decode_impl_handle_info(const fidl::internal::CodingConfig& encoding_configuration,
                                          const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                                          const zx_handle_info_t* handle_infos, uint32_t num_handles,
                                          const char** out_error_msg, bool hlcpp_mode) {
   if (!handle_infos) {
-    return internal__fidl_decode_impl__may_break<WireFormatVersion>(
-        encoding_configuration, type, bytes, num_bytes, nullptr, nullptr, num_handles,
-        out_error_msg, hlcpp_mode);
+    return fidl_decode_impl<WireFormatVersion>(encoding_configuration, type, bytes, num_bytes,
+                                               nullptr, nullptr, num_handles, out_error_msg,
+                                               hlcpp_mode);
   }
   fidl_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -493,9 +493,9 @@ zx_status_t fidl_decode_impl_handle_info(const fidl::internal::CodingConfig& enc
         .rights = handle_infos[i].rights,
     };
   }
-  return internal__fidl_decode_impl__may_break<WireFormatVersion>(
-      encoding_configuration, type, bytes, num_bytes, handles, handle_metadata, num_handles,
-      out_error_msg, hlcpp_mode);
+  return fidl_decode_impl<WireFormatVersion>(encoding_configuration, type, bytes, num_bytes,
+                                             handles, handle_metadata, num_handles, out_error_msg,
+                                             hlcpp_mode);
 }
 }  // namespace
 
