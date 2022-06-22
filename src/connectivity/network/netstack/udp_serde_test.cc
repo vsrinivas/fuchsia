@@ -170,7 +170,7 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
     }
   }
 
-  const Buffer addr_buf = {
+  const ConstBuffer addr_buf = {
       .buf = addr,
       .buf_size = addr_len,
   };
@@ -356,7 +356,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
     }
   }
 
-  const Buffer addr_buf = {
+  const ConstBuffer addr_buf = {
       .buf = addr,
       .buf_size = addr_len,
   };

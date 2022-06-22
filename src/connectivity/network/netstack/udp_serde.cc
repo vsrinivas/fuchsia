@@ -211,7 +211,7 @@ fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_
       fidl::internal::WireFormatVersion::kV2, buf.data(), static_cast<uint32_t>(meta_size));
 }
 
-SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_addr,
+SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, ConstBuffer from_addr,
                                                   Buffer out_buf) {
   fidl::Arena<
       fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>()>
@@ -227,7 +227,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
       if (from_addr.buf == nullptr) {
         return SerializeRecvMsgMetaErrorFromAddrBufferNull;
       }
-      cpp20::span<uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
+      cpp20::span<const uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
       cpp20::span<uint8_t> to_addr(ipv4_socket_addr.address.addr.data(),
                                    sizeof(ipv4_socket_addr.address.addr));
       if (from_addr_span.size() != to_addr.size()) {
@@ -241,7 +241,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
       if (from_addr.buf == nullptr) {
         return SerializeRecvMsgMetaErrorFromAddrBufferNull;
       }
-      cpp20::span<uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
+      cpp20::span<const uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
       cpp20::span<uint8_t> to_addr(ipv6_socket_addr.address.addr.data(),
                                    sizeof(ipv6_socket_addr.address.addr));
       if (from_addr_span.size() != to_addr.size()) {
@@ -288,7 +288,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
       if (pktinfo.addr.buf == nullptr) {
         return SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull;
       }
-      const cpp20::span<uint8_t> from_addr(pktinfo.addr.buf, pktinfo.addr.buf_size);
+      const cpp20::span<const uint8_t> from_addr(pktinfo.addr.buf, pktinfo.addr.buf_size);
       cpp20::span<uint8_t> to_addr(fidl_pktinfo.header_destination_addr.addr.data(),
                                    decltype(fidl_pktinfo.header_destination_addr.addr)::size());
       if (from_addr.size() != to_addr.size()) {
