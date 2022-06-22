@@ -10,13 +10,11 @@ use crate::{
     directory::{
         common::new_connection_validate_flags,
         connection::{
-            io1::{
-                handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-                DerivedConnection,
-            },
+            io1::{handle_requests, BaseConnection, ConnectionState, DerivedConnection},
             util::OpenDirectory,
         },
         entry::DirectoryEntry,
+        entry_container,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -27,16 +25,12 @@ use {
     futures::future::BoxFuture, std::sync::Arc,
 };
 
-pub trait ImmutableConnectionClient: BaseConnectionClient {}
-
-impl<T> ImmutableConnectionClient for T where T: BaseConnectionClient + 'static {}
-
 pub struct ImmutableConnection {
     base: BaseConnection<Self>,
 }
 
 impl DerivedConnection for ImmutableConnection {
-    type Directory = dyn ImmutableConnectionClient;
+    type Directory = dyn entry_container::Directory;
     const MUTABLE: bool = false;
 
     fn new(

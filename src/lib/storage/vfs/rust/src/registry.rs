@@ -15,36 +15,19 @@ use {
     std::sync::Arc,
 };
 
-pub trait TokenRegistryClient: DirectoryEntry + MutableDirectory + Send + Sync {
-    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory>;
-}
-
-impl<T> TokenRegistryClient for T
-where
-    T: DirectoryEntry + MutableDirectory + Send + Sync + 'static,
-{
-    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory> {
-        self as Arc<dyn MutableDirectory>
-    }
-}
-
 pub const DEFAULT_TOKEN_RIGHTS: Rights = Rights::BASIC;
 
 /// A `TokenRegistry` allows directories to perform "cross-directory" operations, such as renaming
 /// across directories and linking entries.
 pub trait TokenRegistry {
-    fn get_token(&self, container: Arc<dyn TokenRegistryClient>) -> Result<Handle, Status>;
-    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn TokenRegistryClient>>, Status>;
-    fn unregister(&self, container: Arc<dyn TokenRegistryClient>);
+    fn get_token(&self, container: Arc<dyn MutableDirectory>) -> Result<Handle, Status>;
+    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn MutableDirectory>>, Status>;
+    fn unregister(&self, container: Arc<dyn MutableDirectory>);
 }
-
-pub trait InodeRegistryClient: DirectoryEntry + Send + Sync {}
-
-impl<T> InodeRegistryClient for T where T: DirectoryEntry + Send + Sync {}
 
 /// An `InodeRegistry` issues "inode ids" to `DirectoryEntry` objects, unique to the scope of the
 /// registry.
 pub trait InodeRegistry {
-    fn get_inode(&self, node: Arc<dyn InodeRegistryClient>) -> u64;
-    fn unregister(&self, node: Arc<dyn InodeRegistryClient>);
+    fn get_inode(&self, node: Arc<dyn DirectoryEntry>) -> u64;
+    fn unregister(&self, node: Arc<dyn DirectoryEntry>);
 }

@@ -35,7 +35,7 @@ pub enum ConnectionState {
 /// This is an API a derived directory connection needs to implement, in order for the
 /// `BaseConnection` to be able to interact with it.
 pub trait DerivedConnection: Send + Sync {
-    type Directory: BaseConnectionClient + ?Sized;
+    type Directory: Directory + ?Sized;
 
     /// Whether these connections support mutable connections.
     const MUTABLE: bool;
@@ -72,12 +72,6 @@ pub trait DerivedConnection: Send + Sync {
         request: fio::DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
 }
-
-/// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to
-/// interact with it.
-pub trait BaseConnectionClient: DirectoryEntry + Directory + Send + Sync {}
-
-impl<T> BaseConnectionClient for T where T: DirectoryEntry + Directory + Send + Sync + 'static {}
 
 /// Handles functionality shared between mutable and immutable FIDL connections to a directory.  A
 /// single directory may contain multiple connections.  Instances of the `BaseConnection`

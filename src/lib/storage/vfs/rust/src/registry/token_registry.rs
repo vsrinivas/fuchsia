@@ -4,9 +4,10 @@
 
 //! A simple implementation of the [`TokenRegistry`] trait.
 
-use super::{TokenRegistry, TokenRegistryClient, DEFAULT_TOKEN_RIGHTS};
+use super::{TokenRegistry, DEFAULT_TOKEN_RIGHTS};
 
 use {
+    crate::directory::entry_container::MutableDirectory,
     fidl::Handle,
     fuchsia_zircon::{AsHandleRef, Event, HandleBased, Koid, Status},
     std::collections::hash_map::HashMap,
@@ -31,24 +32,24 @@ struct Inner {
     ///       )
     ///     ).is_some()
     ///
-    /// `usize` is actually `*const dyn InodeRegistryClient`, but as pointers are `!Send` and
+    /// `usize` is actually `*const dyn DirectoryEntry`, but as pointers are `!Send` and
     /// `!Sync`, we store it as `usize` - never need to dereference it.  See
     /// [https://internals.rust-lang.org/t/shouldnt-pointers-be-send-sync-or/8818] for discussion.
     /// Another alternative would be to add `unsafe impl Send for Inner {}`, but it seems less
     /// desirable, as there are other fields in this struct.
     ///
-    /// We rely on the presence of the `Weak<dyn TokenRegistryClient>` in `token_to_container` to
+    /// We rely on the presence of the `Weak<dyn MutableDirectory>` in `token_to_container` to
     /// make sure that the pointer value (store as `usize`) does not change.  `Arc` and `Weak`
     /// allocate a box for the contained value, that is not moved or deallocated while there is a
     /// live `Arc` *or* `Weak`.
     ///
     /// `Weak` actually has `as_raw()` that would allow me to implement hashing for `Weak<dyn
-    /// TokenRegistryClient>` based on the contained object address and equality based on the same,
+    /// MutableDirectory>` based on the contained object address and equality based on the same,
     /// but it is behind a `weak_into_raw` flag.  See
     /// [https://github.com/rust-lang/rust/issues/60728].  When this method is stable,
     /// we should switch to something like
     ///
-    ///     HashMap<WeakHasher<Weak<dyn TokenRegistryClient>>, Handle>
+    ///     HashMap<WeakHasher<Weak<dyn MutableDirectory>>, Handle>
     ///
     /// where `WeakHasher` hashes the pointer address stored inside the `Weak` instance and
     /// implements equality based on the contained object address.
@@ -57,7 +58,7 @@ struct Inner {
     /// Maps a koid of a container to a weak pointer to it.  We actually expect these pointers to
     /// be always valid, but for robustness we do not store strong references here.  Debug build
     /// will assert if we ever see a weak reference, but the release build will just ignore it.
-    token_to_container: HashMap<Koid, Weak<dyn TokenRegistryClient>>,
+    token_to_container: HashMap<Koid, Weak<dyn MutableDirectory>>,
 }
 
 impl Simple {
@@ -72,9 +73,9 @@ impl Simple {
 }
 
 impl TokenRegistry for Simple {
-    fn get_token(&self, container: Arc<dyn TokenRegistryClient>) -> Result<Handle, Status> {
+    fn get_token(&self, container: Arc<dyn MutableDirectory>) -> Result<Handle, Status> {
         let container_id =
-            container.as_ref() as *const dyn TokenRegistryClient as *const usize as usize;
+            container.as_ref() as *const dyn MutableDirectory as *const usize as usize;
 
         let mut this = if let Ok(this) = self.inner.lock() {
             this
@@ -105,7 +106,7 @@ impl TokenRegistry for Simple {
         }
     }
 
-    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn TokenRegistryClient>>, Status> {
+    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn MutableDirectory>>, Status> {
         let koid = token.get_koid()?;
 
         let this = if let Ok(this) = self.inner.lock() {
@@ -133,9 +134,9 @@ impl TokenRegistry for Simple {
         Ok(res)
     }
 
-    fn unregister(&self, container: Arc<dyn TokenRegistryClient>) {
+    fn unregister(&self, container: Arc<dyn MutableDirectory>) {
         let container_id =
-            container.as_ref() as *const dyn TokenRegistryClient as *const usize as usize;
+            container.as_ref() as *const dyn MutableDirectory as *const usize as usize;
 
         let mut this = if let Ok(this) = self.inner.lock() {
             this
@@ -181,7 +182,7 @@ mod tests {
     use {
         self::mocks::MockDirectory,
         super::Simple,
-        crate::registry::{TokenRegistry, TokenRegistryClient, DEFAULT_TOKEN_RIGHTS},
+        crate::registry::{MutableDirectory, TokenRegistry, DEFAULT_TOKEN_RIGHTS},
         fuchsia_zircon::{AsHandleRef, HandleBased, Rights},
         std::sync::Arc,
     };
@@ -211,7 +212,7 @@ mod tests {
 
     #[test]
     fn client_unregister() {
-        let client: Arc<dyn TokenRegistryClient> = MockDirectory::new();
+        let client: Arc<dyn MutableDirectory> = MockDirectory::new();
         let registry = Simple::new();
 
         let token = registry.get_token(client.clone()).unwrap();
@@ -225,8 +226,8 @@ mod tests {
             // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
             // the same across casts done in different code generation units at compilation time.
             assert!(
-                client.as_ref() as *const dyn TokenRegistryClient as *const u8
-                    == res.as_ref() as *const dyn TokenRegistryClient as *const u8
+                client.as_ref() as *const dyn MutableDirectory as *const u8
+                    == res.as_ref() as *const dyn MutableDirectory as *const u8
             );
         }
 

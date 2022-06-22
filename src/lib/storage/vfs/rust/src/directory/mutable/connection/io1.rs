@@ -9,10 +9,7 @@ use crate::{
     directory::{
         common::new_connection_validate_flags,
         connection::{
-            io1::{
-                handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-                DerivedConnection,
-            },
+            io1::{handle_requests, BaseConnection, ConnectionState, DerivedConnection},
             util::OpenDirectory,
         },
         entry::DirectoryEntry,
@@ -21,7 +18,6 @@ use crate::{
     },
     execution_scope::ExecutionScope,
     path::Path,
-    registry::TokenRegistryClient,
 };
 
 use {
@@ -33,39 +29,12 @@ use {
     std::sync::Arc,
 };
 
-/// This is an API a mutable directory needs to implement, in order for a `MutableConnection` to be
-/// able to interact with this it.
-pub trait MutableConnectionClient: BaseConnectionClient + MutableDirectory {
-    fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient>;
-
-    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory>;
-
-    fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient>;
-}
-
-impl<T> MutableConnectionClient for T
-where
-    T: BaseConnectionClient + MutableDirectory + 'static,
-{
-    fn into_base_connection_client(self: Arc<Self>) -> Arc<dyn BaseConnectionClient> {
-        self as Arc<dyn BaseConnectionClient>
-    }
-
-    fn into_mutable_directory(self: Arc<Self>) -> Arc<dyn MutableDirectory> {
-        self as Arc<dyn MutableDirectory>
-    }
-
-    fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient> {
-        self as Arc<dyn TokenRegistryClient>
-    }
-}
-
 pub struct MutableConnection {
     base: BaseConnection<Self>,
 }
 
 impl DerivedConnection for MutableConnection {
-    type Directory = dyn MutableConnectionClient;
+    type Directory = dyn MutableDirectory;
     const MUTABLE: bool = true;
 
     fn new(
@@ -138,7 +107,7 @@ impl MutableConnection {
     /// Very similar to create_connection, but creates a connection without spawning a new task.
     pub async fn create_connection_async(
         scope: ExecutionScope,
-        directory: Arc<dyn MutableConnectionClient>,
+        directory: Arc<dyn MutableDirectory>,
         flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
@@ -265,8 +234,7 @@ impl MutableConnection {
             Some(registry) => registry,
         };
 
-        let token =
-            token_registry.get_token(self.base.directory.clone().into_token_registry_client())?;
+        let token = token_registry.get_token(self.base.directory.clone())?;
         Ok(token)
     }
 
@@ -300,20 +268,14 @@ impl MutableConnection {
         self.base
             .directory
             .clone()
-            .into_mutable_directory()
             .get_filesystem()
-            .rename(
-                self.base.directory.clone().into_mutable_directory().into_any(),
-                src,
-                dst_parent.into_mutable_directory().into_any(),
-                dst,
-            )
+            .rename(self.base.directory.clone().into_any(), src, dst_parent.into_any(), dst)
             .await
     }
 
     fn prepare_connection(
         scope: ExecutionScope,
-        directory: Arc<dyn MutableConnectionClient>,
+        directory: Arc<dyn MutableDirectory>,
         flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) -> Result<(Self, fio::DirectoryRequestStream), Error> {

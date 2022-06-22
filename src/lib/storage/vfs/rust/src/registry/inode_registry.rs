@@ -4,9 +4,10 @@
 
 //! A simple implementation of the [`InodeRegistry`] trait.
 
-use super::{InodeRegistry, InodeRegistryClient};
+use super::InodeRegistry;
 
 use {
+    crate::directory::entry::DirectoryEntry,
     fidl_fuchsia_io as fio,
     std::collections::hash_map::HashMap,
     std::sync::{Arc, Mutex, Weak},
@@ -19,7 +20,7 @@ pub struct Simple {
 struct Inner {
     /// Stores inode ids for directory entries.
     ///
-    /// `usize` is actually `*const dyn InodeRegistryClient`, but as pointers are `!Send` and
+    /// `usize` is actually `*const dyn DirectoryEntry`, but as pointers are `!Send` and
     /// `!Sync`, we store it as `usize` - never need to dereference it.
     ///
     /// `Weak` is necessary to make sure that the pointer (stored as `usize`) is valid.  Even
@@ -29,16 +30,16 @@ struct Inner {
     ///
     /// Ideally we would want
     ///
-    ///     HashMap<Weak<dyn TokenRegistryClient>, Handle>
+    ///     HashMap<Weak<dyn MutableDirectory>, Handle>
     ///
     /// but `Weak` does not implement `Hash` and does not provide access to the address of the
     /// stored data.  See [`token_registry::Inner::container_to_token`] comment for details.
     ///
-    assigned: HashMap<usize, (u64, Weak<dyn InodeRegistryClient>)>,
+    assigned: HashMap<usize, (u64, Weak<dyn DirectoryEntry>)>,
     next_inode: u64,
 }
 
-/// `*const InodeRegistryClient` is `!Send`, as all pointers are `!Send` by default.  `Inner` only
+/// `*const DirectoryEntry` is `!Send`, as all pointers are `!Send` by default.  `Inner` only
 /// uses pointers to do bookkeeping, we never actually dereference them.
 unsafe impl Send for Inner {}
 
@@ -49,8 +50,8 @@ impl Simple {
 }
 
 impl InodeRegistry for Simple {
-    fn get_inode(&self, node: Arc<dyn InodeRegistryClient>) -> u64 {
-        let node_id = node.as_ref() as *const dyn InodeRegistryClient as *const usize as usize;
+    fn get_inode(&self, node: Arc<dyn DirectoryEntry>) -> u64 {
+        let node_id = node.as_ref() as *const dyn DirectoryEntry as *const usize as usize;
 
         let mut this = if let Ok(this) = self.inner.lock() {
             this
@@ -72,8 +73,8 @@ impl InodeRegistry for Simple {
         }
     }
 
-    fn unregister(&self, node: Arc<dyn InodeRegistryClient>) {
-        let node_id = node.as_ref() as *const dyn InodeRegistryClient as *const usize as usize;
+    fn unregister(&self, node: Arc<dyn DirectoryEntry>) {
+        let node_id = node.as_ref() as *const dyn DirectoryEntry as *const usize as usize;
 
         let mut this = if let Ok(this) = self.inner.lock() {
             this
