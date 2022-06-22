@@ -16,11 +16,11 @@ use crate::host_watcher::{HostEvent, HostWatcher};
 use crate::pairing::PairingManager;
 use crate::types::keys::aes_from_anti_spoofing_and_public;
 use crate::types::packets::{
-    decrypt_key_based_pairing_request, decrypt_passkey_request, key_based_pairing_response,
-    parse_key_based_pairing_request, passkey_response, KeyBasedPairingAction,
-    KeyBasedPairingRequest,
+    decrypt_account_key_request, decrypt_key_based_pairing_request, decrypt_passkey_request,
+    key_based_pairing_response, parse_key_based_pairing_request, passkey_response,
+    KeyBasedPairingAction, KeyBasedPairingRequest,
 };
-use crate::types::{AccountKey, AccountKeyList, Error};
+use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
 
 /// The toplevel server that manages the current state of the Fast Pair Provider service.
 /// Owns the interfaces for interacting with various BT system services.
@@ -78,12 +78,13 @@ impl Provider {
     /// Implements Steps 1 & 2 in the Pairing Procedure as defined in the GFPS specification. See
     /// https://developers.google.com/nearby/fast-pair/specifications/service/gatt#procedure
     ///
-    /// Returns the decrypted request and associated key if the request was successfully decrypted.
+    /// Returns the decrypted request and associated shared secret key if the request was
+    /// successfully decrypted.
     /// Returns Error otherwise.
     fn find_key_for_encrypted_request(
-        &self,
+        &mut self,
         request: Vec<u8>,
-    ) -> Result<(AccountKey, KeyBasedPairingRequest), Error> {
+    ) -> Result<(SharedSecret, KeyBasedPairingRequest), Error> {
         // There must be a local Host to facilitate pairing.
         let local_address = self.host_watcher.address().ok_or(Error::internal("No active host"))?;
 
@@ -98,13 +99,18 @@ impl Provider {
             vec![aes_key]
         } else {
             debug!("Trying saved Account Keys");
-            self.account_keys.keys.iter().cloned().collect()
+            self.account_keys.keys().map(|k| k.shared_secret()).cloned().collect()
         };
 
         for key in keys_to_try {
             match decrypt_key_based_pairing_request(&encrypted_request, &key, &local_address) {
                 Ok(request) => {
                     debug!("Found a valid key for pairing");
+                    // Refresh the LRU position of the key that successfully decrypted the request
+                    // as it will be used for subsequent steps of the pairing procedure. The result
+                    // of this operation is ignored as if the `key` is calculated using the
+                    // Public/Private keys, then it won't exist in the `account_keys` cache.
+                    let _ = self.account_keys.mark_used(&(&key).into());
                     return Ok((key, request));
                 }
                 Err(e) => {
@@ -129,7 +135,7 @@ impl Provider {
         let (key, request) = match self.find_key_for_encrypted_request(encrypted_request) {
             Ok((key, request)) => (key, request),
             Err(e) => {
-                info!("Couldn't decrypt request: {:?}", e);
+                info!("Couldn't find a key for the request: {:?}", e);
                 response(Err(gatt::Error::WriteRequestRejected));
                 return;
             }
@@ -212,6 +218,48 @@ impl Provider {
             Err(e) => {
                 warn!("Error processing GATT Passkey Write: {:?}", e);
                 response(Err(gatt::Error::WriteRequestRejected));
+                if let Some(p) = self.pairing.inner_mut() {
+                    let _ = p.cancel_pairing_procedure(peer_id);
+                }
+            }
+        }
+    }
+
+    fn handle_write_account_key_request(
+        &mut self,
+        peer_id: PeerId,
+        encrypted_request: Vec<u8>,
+        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+    ) {
+        // Attempts to decrypt and parse the the `encrypted_request`. Returns an Account Key on
+        // success, Error otherwise.
+        let verify_fn = || -> Result<AccountKey, Error> {
+            let pairing_manager =
+                self.pairing.inner_mut().ok_or(Error::internal("No pairing manager"))?;
+            let key = pairing_manager
+                .key_for_procedure(&peer_id)
+                .ok_or(Error::internal("No active pairing procedure"))?;
+
+            let account_key = decrypt_account_key_request(encrypted_request, key)?;
+            // The key-based pairing procedure is officially complete. The shared secret stored by
+            // the `PairingManager` is no longer valid.
+            pairing_manager.complete_pairing_procedure(peer_id)?;
+            Ok(account_key)
+        };
+
+        match verify_fn() {
+            Ok(key) => {
+                // Notify GATT service that the write has been processed.
+                response(Ok(()));
+                self.account_keys.save(key);
+                info!("Successfully saved Account Key");
+            }
+            Err(e) => {
+                warn!("Error processing GATT Account Key Write: {:?}", e);
+                response(Err(gatt::Error::WriteRequestRejected));
+                if let Some(p) = self.pairing.inner_mut() {
+                    let _ = p.cancel_pairing_procedure(peer_id);
+                }
             }
         }
     }
@@ -224,7 +272,9 @@ impl Provider {
             GattRequest::VerifyPasskey { peer_id, encrypted_passkey, response } => {
                 self.handle_verify_passkey_request(peer_id, encrypted_passkey, response);
             }
-            _ => todo!("Implement GATT support"),
+            GattRequest::WriteAccountKey { peer_id, encrypted_account_key, response } => {
+                self.handle_write_account_key_request(peer_id, encrypted_account_key, response);
+            }
         }
     }
 
@@ -300,12 +350,14 @@ mod tests {
     use std::convert::{TryFrom, TryInto};
 
     use crate::gatt_service::{
-        tests::setup_gatt_service, KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
-        PASSKEY_CHARACTERISTIC_HANDLE,
+        tests::setup_gatt_service, ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
+        KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE, PASSKEY_CHARACTERISTIC_HANDLE,
     };
     use crate::host_watcher::tests::example_host;
     use crate::pairing::tests::MockPairing;
-    use crate::types::packets::tests::{KEY_BASED_PAIRING_REQUEST, PASSKEY_REQUEST};
+    use crate::types::packets::tests::{
+        ACCOUNT_KEY_REQUEST, KEY_BASED_PAIRING_REQUEST, PASSKEY_REQUEST,
+    };
     use crate::types::{keys, ModelId};
 
     async fn setup_provider(
@@ -531,8 +583,28 @@ mod tests {
 
         // The Fast Pair pairing procedure is not complete but the PairingDelegate request has been
         // responded to.
-        let (pairing_result, _server_fut) = run_while(&mut exec, server_fut, pairing_fut);
+        let (pairing_result, mut server_fut) = run_while(&mut exec, server_fut, pairing_fut);
         assert_eq!(pairing_result.unwrap(), (true, 0x123456));
+
+        // Peer responds positively to successfully finish pairing.
+        let _ = mock_pairing
+            .downstream_delegate_client
+            .on_pairing_complete(&mut PEER_ID.into(), true)
+            .expect("valid FIDL request");
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("main loop still active");
+
+        // After pairing succeeds, the peer will request to write an Account Key.
+        let encrypted_buf = keys::tests::encrypt_message(&ACCOUNT_KEY_REQUEST);
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Ok(()),
+            /* expect_item= */ false,
+        );
+        let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+        // TODO(fxbug.dev/97271): When the keys are actually written to persistent storage, verify
+        // that the key was actually saved.
     }
 
     #[fuchsia::test]
@@ -615,8 +687,13 @@ mod tests {
                 .unwrap(),
         );
         // Two keys - one key should work, other is random.
-        provider.account_keys.keys.push(AccountKey::new([2; 16]));
-        provider.account_keys.keys.push(keys::tests::example_aes_key());
+        provider.account_keys = AccountKeyList::with_capacity_and_keys(
+            10,
+            vec![
+                AccountKey::new([2; 16]),
+                AccountKey::new(keys::tests::example_aes_key().as_bytes().clone()),
+            ],
+        );
         let _provider_server = server_task(provider);
 
         // Initiating a key-based pairing request should be handled gracefully. Because there are no
@@ -702,6 +779,81 @@ mod tests {
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             PASSKEY_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Err(gatt::Error::WriteRequestRejected),
+            /* expect_item= */ false,
+        );
+        let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+    }
+
+    // TODO(fxbug.dev/102963): This test will be obsolete if the PairingManager is resilient to
+    // ordering of events.
+    #[fuchsia::test]
+    fn account_key_write_before_pairing_complete_is_error() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let setup_fut = setup_provider();
+        pin_mut!(setup_fut);
+        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing) =
+            exec.run_singlethreaded(&mut setup_fut);
+
+        // To avoid a bunch of unnecessary boilerplate involving the `host_watcher`, set the active
+        // host with a known address.
+        provider.host_watcher.set_active_host(
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true)
+                .try_into()
+                .unwrap(),
+        );
+        let server_fut = provider.run();
+        pin_mut!(server_fut);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
+        // defined in the GFPS.
+        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Ok(()),
+            /* expect_item= */ true,
+        );
+        let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
+
+        // We expect Fast Pair to take ownership of the delegate - new SetPairingDelegate request.
+        let expect_fut = mock_pairing.expect_set_pairing_delegate();
+        let (_, mut server_fut) = run_while(&mut exec, server_fut, expect_fut);
+
+        // Peer requests to pair - drive the future associated with the request and the server to
+        // process it.
+        let pairing_fut = mock_pairing.make_pairing_request(PEER_ID, 0x123456);
+        pin_mut!(pairing_fut);
+        let _ = exec.run_until_stalled(&mut pairing_fut).expect_pending("waiting for response");
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("main loop still active");
+        let _ = exec.run_until_stalled(&mut pairing_fut).expect_pending("waiting for response");
+
+        // Expect the peer to then send the passkey over GATT.
+        let encrypted_buf = keys::tests::encrypt_message(&PASSKEY_REQUEST);
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            PASSKEY_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Ok(()),
+            /* expect_item= */ true,
+        );
+        let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
+
+        // The Fast Pair pairing procedure is not complete but the PairingDelegate request has been
+        // responded to.
+        let (pairing_result, server_fut) = run_while(&mut exec, server_fut, pairing_fut);
+        assert_eq!(pairing_result.unwrap(), (true, 0x123456));
+
+        // The peer requests to write the Account Key before pairing is complete. This should be
+        // rejected.
+        let encrypted_buf = keys::tests::encrypt_message(&ACCOUNT_KEY_REQUEST);
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
             encrypted_buf,
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,

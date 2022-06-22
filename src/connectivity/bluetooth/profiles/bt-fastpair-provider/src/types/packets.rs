@@ -9,13 +9,19 @@ use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
 use crate::types::keys::public_key_from_bytes;
-use crate::types::{AccountKey, Error};
+use crate::types::{AccountKey, Error, SharedSecret};
+
+/// Default size of an encrypted/decrypted GATT request buffer.
+const GATT_REQUEST_BUFFER_SIZE: usize = 16;
+
+/// Default size of an encrypted/decrypted GATT response buffer.
+const GATT_RESPONSE_BUFFER_SIZE: usize = 16;
 
 /// Attempts to parse the provided key-based pairing `request`.
 /// Returns the encrypted portion of the request and an optional Public Key on success.
 pub fn parse_key_based_pairing_request(
     mut request: Vec<u8>,
-) -> Result<([u8; 16], Option<p256::PublicKey>), Error> {
+) -> Result<([u8; GATT_REQUEST_BUFFER_SIZE], Option<p256::PublicKey>), Error> {
     // The first 16 bytes of the `request` contains the encrypted request. There can also
     // be an optional Public Key which is 64 bytes long. Therefore, the payload can either be
     // 16 or 80 bytes long.
@@ -24,7 +30,8 @@ pub fn parse_key_based_pairing_request(
         16 => None,
         _ => return Err(Error::Packet),
     };
-    let encrypted_request: [u8; 16] = request[..16].try_into().map_err(|_| Error::Packet)?;
+    let encrypted_request: [u8; GATT_REQUEST_BUFFER_SIZE] =
+        request[..GATT_REQUEST_BUFFER_SIZE].try_into().map_err(|_| Error::Packet)?;
     Ok((encrypted_request, public_key))
 }
 
@@ -71,8 +78,8 @@ pub struct KeyBasedPairingRequest {
 /// Attempts to decrypt, parse, and validate the provided `encrypted` key-based pairing request.
 /// Returns the parsed request on success, Error otherwise.
 pub fn decrypt_key_based_pairing_request(
-    encrypted_request: &[u8; 16],
-    key: &AccountKey,
+    encrypted_request: &[u8; GATT_REQUEST_BUFFER_SIZE],
+    key: &SharedSecret,
     local_address: &Address,
 ) -> Result<KeyBasedPairingRequest, Error> {
     let request = key.decrypt(encrypted_request);
@@ -123,8 +130,11 @@ pub_decodable_enum! {
 
 /// Attempts to decrypt and parse the provided `encrypted_request`.
 /// Returns the integer passkey on success, Error otherwise.
-pub fn decrypt_passkey_request(encrypted_request: Vec<u8>, key: &AccountKey) -> Result<u32, Error> {
-    if encrypted_request.len() != 16 {
+pub fn decrypt_passkey_request(
+    encrypted_request: Vec<u8>,
+    key: &SharedSecret,
+) -> Result<u32, Error> {
+    if encrypted_request.len() != GATT_REQUEST_BUFFER_SIZE {
         return Err(Error::Packet);
     }
 
@@ -142,11 +152,28 @@ pub fn decrypt_passkey_request(encrypted_request: Vec<u8>, key: &AccountKey) -> 
     }
 }
 
+pub fn decrypt_account_key_request(
+    encrypted_request: Vec<u8>,
+    key: &SharedSecret,
+) -> Result<AccountKey, Error> {
+    if encrypted_request.len() != GATT_REQUEST_BUFFER_SIZE {
+        return Err(Error::Packet);
+    }
+
+    let request = encrypted_request.try_into().map_err(|_| Error::Packet)?;
+    let decrypted = key.decrypt(&request);
+    if decrypted[0] != 0x04 {
+        return Err(Error::Packet);
+    }
+
+    Ok(AccountKey::new(decrypted))
+}
+
 /// Builds and returns an encrypted response to a Key-based Pairing write request. The response is
 /// encrypted using the provided Account `key`.
 /// Defined in Table 1.3 in the GFPS.
-pub fn key_based_pairing_response(key: &AccountKey, local_address: Address) -> Vec<u8> {
-    let mut response = [0; 16];
+pub fn key_based_pairing_response(key: &SharedSecret, local_address: Address) -> Vec<u8> {
+    let mut response = [0; GATT_RESPONSE_BUFFER_SIZE];
     // First byte indicates key-based pairing response.
     response[0] = 0x01;
     // Next 6 bytes is the local BR/EDR address.
@@ -159,8 +186,8 @@ pub fn key_based_pairing_response(key: &AccountKey, local_address: Address) -> V
 /// Builds and returns an encrypted response to a Passkey write request. The response is encrypted
 /// using the provided Account `key`.
 /// Defined in Table 2.2 in the GFPS.
-pub fn passkey_response(key: &AccountKey, passkey: u32) -> Vec<u8> {
-    let mut response = [0; 16];
+pub fn passkey_response(key: &SharedSecret, passkey: u32) -> Vec<u8> {
+    let mut response = [0; GATT_RESPONSE_BUFFER_SIZE];
     // First byte indicates Provider passkey.
     response[0] = u8::from(&PasskeyType::Provider);
     // Next 3 bytes is the passkey.
@@ -380,5 +407,40 @@ pub(crate) mod tests {
         let parsed_passkey =
             decrypt_passkey_request(encrypted_buf.to_vec(), &example_aes_key()).expect("can parse");
         assert_eq!(parsed_passkey, 0x123456);
+    }
+
+    pub const ACCOUNT_KEY_REQUEST: [u8; 16] = [
+        0x04, // All Account Keys start with 0x04.
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05,
+    ];
+
+    #[test]
+    fn decrypt_account_key_request_too_small() {
+        let encrypted_buf = vec![1; 10];
+        let result = decrypt_account_key_request(encrypted_buf, &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn decrypt_account_key_request_too_large() {
+        let encrypted_buf = vec![1; 20];
+        let result = decrypt_account_key_request(encrypted_buf, &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn parse_invalid_account_key_request() {
+        let mut buf = ACCOUNT_KEY_REQUEST;
+        buf[0] = 0x00;
+        let encrypted_buf = encrypt_message(&buf);
+        let result = decrypt_account_key_request(encrypted_buf.to_vec(), &example_aes_key());
+        assert_matches!(result, Err(Error::Packet));
+    }
+
+    #[test]
+    fn parse_valid_account_key_request() {
+        let encrypted_buf = encrypt_message(&ACCOUNT_KEY_REQUEST);
+        let result = decrypt_account_key_request(encrypted_buf.to_vec(), &example_aes_key());
+        assert_matches!(result, Ok(_));
     }
 }

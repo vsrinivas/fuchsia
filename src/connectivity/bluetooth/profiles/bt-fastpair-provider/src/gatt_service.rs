@@ -48,7 +48,7 @@ pub const PASSKEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 3 };
 /// Custom characteristic - Account Key.
 const ACCOUNT_KEY_CHARACTERISTIC_UUID: &str = "FE2C1236-8366-4814-8EB0-01DE32100BEA";
 /// Fixed Handle assigned to the Account Key characteristic.
-const ACCOUNT_KEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 4 };
+pub const ACCOUNT_KEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 4 };
 
 /// Standard characteristic - the firmware revision of the device.
 const FIRMWARE_REVISION_CHARACTERISTIC_UUID: u16 = 0x2A26;

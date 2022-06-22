@@ -11,14 +11,17 @@ use crate::types::{AccountKey, Error};
 /// Returns a byte array created by applying a variable-length Bloom Filter to the provided list of
 /// Account Keys.
 ///
-/// `keys` is a list of Account Keys and must be nonempty.
+/// `keys` is an iterator over Account Keys and must be nonempty.
 /// `salt` is a randomly generated value.
 ///
 /// See https://developers.google.com/nearby/fast-pair/specifications/service/provider#AccountKeyFilter
 /// for more details.
 ///
 /// Returns an Error if the input is invalid (empty account keys).
-pub fn bloom_filter(keys: &Vec<AccountKey>, salt: u8) -> Result<Vec<u8>, Error> {
+pub fn bloom_filter<'a, K>(keys: K, salt: u8) -> Result<Vec<u8>, Error>
+where
+    K: Iterator<Item = &'a AccountKey> + ExactSizeIterator,
+{
     let n = keys.len();
     if n < 1 {
         return Err(Error::internal("Invalid Account Key List size"));
@@ -75,8 +78,8 @@ mod tests {
             0xEE, 0xFF,
         ]);
 
-        let bloom_result =
-            bloom_filter(&vec![example_account_key], example_salt).expect("bloom filter succeeds");
+        let bloom_result = bloom_filter(vec![example_account_key].iter(), example_salt)
+            .expect("bloom filter succeeds");
 
         let expected_bloom_result = [0x0a, 0x42, 0x88, 0x10];
         assert_eq!(bloom_result, expected_bloom_result);
@@ -98,7 +101,7 @@ mod tests {
         ]);
 
         let bloom_result =
-            bloom_filter(&vec![example_account_key1, example_account_key2], example_salt)
+            bloom_filter(vec![example_account_key1, example_account_key2].iter(), example_salt)
                 .expect("bloom filter succeeds");
 
         let expected_bloom_result = [0x2F, 0xBA, 0x06, 0x42, 0x00];
@@ -108,7 +111,7 @@ mod tests {
     #[test]
     fn empty_account_key_list_is_error() {
         let example_salt = 0xc7;
-        let bloom_result = bloom_filter(&vec![], example_salt);
+        let bloom_result = bloom_filter(vec![].iter(), example_salt);
         assert_matches!(bloom_result, Err(_));
     }
 }

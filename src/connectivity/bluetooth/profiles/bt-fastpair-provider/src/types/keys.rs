@@ -6,7 +6,7 @@ use elliptic_curve::sec1::FromEncodedPoint;
 use p256::{EncodedPoint, FieldBytes, PublicKey, SecretKey};
 use sha2::{Digest, Sha256};
 
-use crate::types::{AccountKey, Error};
+use crate::types::{Error, SharedSecret};
 
 // TODO(fxbug.dev/97159): The local Private Key is registered on a per-product basis. Load this
 // from the structured configuration library. To simplify local development, this value is
@@ -57,7 +57,7 @@ pub fn private_key_from_bytes(bytes: Vec<u8>) -> Result<SecretKey, Error> {
 pub fn aes_from_anti_spoofing_and_public(
     local_secret_key: &SecretKey,
     remote_public_key: &PublicKey,
-) -> Result<AccountKey, Error> {
+) -> Result<SharedSecret, Error> {
     // The shared secret is computed via the DH algorithm. This uses the local Secret Key and the
     // remote Public key.
     let shared_secret = elliptic_curve::ecdh::diffie_hellman(
@@ -73,7 +73,7 @@ pub fn aes_from_anti_spoofing_and_public(
     let mut anti_spoofing_key: [u8; 16] = [0; 16];
     anti_spoofing_key.copy_from_slice(&calculated_hash[..16]);
 
-    Ok(AccountKey::new(anti_spoofing_key))
+    Ok(SharedSecret::new(anti_spoofing_key))
 }
 
 #[cfg(test)]
@@ -97,8 +97,8 @@ pub(crate) mod tests {
     /// Expected AES secret key defined in the GFPS specification. This key is the result of
     /// applying ECDH to a Public and Private key.
     /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#ecdh_key_exchange
-    pub(crate) fn example_aes_key() -> AccountKey {
-        AccountKey::new([
+    pub(crate) fn example_aes_key() -> SharedSecret {
+        SharedSecret::new([
             0xB0, 0x7F, 0x1F, 0x17, 0xC2, 0x36, 0xCB, 0xD3, 0x35, 0x23, 0xC5, 0x15, 0xF3, 0x50,
             0xAE, 0x57,
         ])

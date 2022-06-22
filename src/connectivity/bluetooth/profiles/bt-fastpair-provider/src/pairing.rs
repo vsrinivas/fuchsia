@@ -17,9 +17,9 @@ use fuchsia_bluetooth::types::{Peer, PeerId};
 use futures::stream::{FusedStream, FuturesUnordered, Stream, StreamExt};
 use futures::{future::BoxFuture, FutureExt};
 use std::{collections::HashMap, convert::TryFrom};
-use tracing::{debug, trace, warn};
+use tracing::{debug, info, trace, warn};
 
-use crate::types::{AccountKey, Error};
+use crate::types::{Error, SharedSecret};
 
 pub struct PairingArgs {
     input: InputCapability,
@@ -50,20 +50,23 @@ enum ProcedureState {
     /// Classic/LE pairing is in progress and will be completed upon confirmation of the Seeker's
     /// passkey.
     Pairing { passkey: u32, responder: PairingResponder },
-    /// Passkey verification is complete and the procedure is effectively finished.
+    /// Passkey verification is complete - this doesn't necessarily mean the Provider and Seeker
+    /// passkeys were equal, only that the comparison took place.
     PasskeyChecked,
+    /// Classic/LE pairing was successfully completed.
+    PairingComplete,
 }
 
 /// An active Fast Pair Pairing procedure.
 struct Procedure {
     /// Shared secret used to encode/decode messages sent/received in the procedure.
-    key: AccountKey,
+    key: SharedSecret,
     /// Current status of the procedure.
     state: ProcedureState,
 }
 
 impl Procedure {
-    fn new(key: AccountKey) -> Self {
+    fn new(key: SharedSecret) -> Self {
         Self { key, state: ProcedureState::Started }
     }
 }
@@ -199,13 +202,13 @@ impl PairingManager {
         self.set_pairing_delegate(PairingDelegateOwner::Upstream)
     }
 
-    /// Returns the shared secret AccountKey for the active procedure with the remote peer.
-    pub fn key_for_procedure(&self, id: &PeerId) -> Option<&AccountKey> {
+    /// Returns the SharedSecret for the active procedure with the remote peer.
+    pub fn key_for_procedure(&self, id: &PeerId) -> Option<&SharedSecret> {
         self.procedures.get(id).map(|procedure| &procedure.key)
     }
 
     /// Attempts to initiate a new Fast Pair pairing procedure with the provided peer.
-    pub fn new_pairing_procedure(&mut self, id: PeerId, key: AccountKey) -> Result<(), Error> {
+    pub fn new_pairing_procedure(&mut self, id: PeerId, key: SharedSecret) -> Result<(), Error> {
         if self.procedures.contains_key(&id) {
             return Err(Error::internal(&format!("Pairing with {:?} already in progress", id)));
         }
@@ -219,15 +222,14 @@ impl PairingManager {
     /// pairing procedure with the peer.
     /// If the comparison is made, responds to the in-progress pairing request with the result of
     /// the comparison.
-    /// Note: There is an implicit assumption that the peer has already made the pairing request
-    /// before `compare_passkey` is called with the GATT passkey. While the GFPS does specify this
-    /// ordering, this may not always be the case in practice. fxbug.dev/102963 tracks the changes
-    /// needed to be resilient to the ordering of messages.
     ///
     /// Returns Error if the comparison was unable to be made (e.g the pairing procedure didn't
     /// exist or wasn't in the expected state).
     /// Returns the passkey on success (e.g the comparison took place, not that `gatt_passkey`
     /// necessarily matched the expected passkey).
+    // TODO(fxbug.dev/102963): There is an implicit assumption that the peer has already made the
+    // pairing request before `compare_passkey` is called with the GATT passkey. While the GFPS
+    // does specify this ordering, this may not always be the case in practice.
     pub fn compare_passkey(&mut self, id: PeerId, gatt_passkey: u32) -> Result<u32, Error> {
         debug!("Comparing passkey for {:?} (gatt passkey: {})", id, gatt_passkey);
         let procedure = self
@@ -249,20 +251,31 @@ impl PairingManager {
     /// Attempts to complete the pairing procedure by handing pairing capabilities back to the
     /// upstream client.
     /// Returns Error if there is no such finished procedure or if the pairing handoff failed.
-    #[allow(unused)]
-    // TODO(fxbug.dev/96222): Remove when used by Provider server.
+    // TODO(fxbug.dev/102963): There is an implicit assumption that the peer has already
+    // successfully completed the Classic/LE pairing request (e.g OnPairingComplete
+    // { success = true }) before `complete_pairing_procedure` is called. While the GFPS does
+    // specify this ordering, this may not always be the case in practice.
     pub fn complete_pairing_procedure(&mut self, id: PeerId) -> Result<(), Error> {
         if !self
             .procedures
             .get(&id)
-            .map_or(false, |p| matches!(p.state, ProcedureState::PasskeyChecked))
+            .map_or(false, |p| matches!(p.state, ProcedureState::PairingComplete))
         {
-            return Err(Error::internal(&format!("Can't complete procedure with {:?}", id)));
+            return Err(Error::internal(&format!(
+                "Procedure with {} is not in the correct state",
+                id
+            )));
         }
 
         // Procedure is in the correct (finished) state and we can clean up and try to give the
         // delegate back to the upstream client.
-        let _ = self.procedures.remove(&id).expect("procedure finished");
+        self.cancel_pairing_procedure(id)
+    }
+
+    /// Cancels the Fast Pair pairing procedure with the peer.
+    /// Returns Ok if the PairingDelegate was successfully released, or Error otherwise.
+    pub fn cancel_pairing_procedure(&mut self, id: PeerId) -> Result<(), Error> {
+        let _ = self.procedures.remove(&id);
         self.release_delegate()
     }
 
@@ -300,18 +313,26 @@ impl PairingManager {
         passkey: u32,
         responder: PairingResponder,
     ) -> Result<(), Error> {
-        if let Some(procedure) =
-            self.procedures.get_mut(&peer.id).filter(|p| matches!(p.state, ProcedureState::Started))
-        {
-            if method == PairingMethod::PasskeyComparison {
+        if let Some(procedure) = self.procedures.get_mut(&peer.id) {
+            if matches!(procedure.state, ProcedureState::Started)
+                && method == PairingMethod::PasskeyComparison
+            {
                 procedure.state = ProcedureState::Pairing { passkey, responder };
                 return Ok(());
             }
 
-            warn!("Received unsupported Fast Pair pairing method {:?}", method);
+            let msg = if method != PairingMethod::PasskeyComparison {
+                "unsupported"
+            } else {
+                "unexpected"
+            };
+
+            warn!(
+                "Received {} pairing request (id: {}, pairing method {:?})",
+                msg, peer.id, method
+            );
             // The current pairing procedure is no longer valid.
-            let _ = self.procedures.remove(&peer.id).expect("procedure is active");
-            self.release_delegate()?;
+            self.cancel_pairing_procedure(peer.id)?;
         } else {
             warn!("Unexpected pairing request for {}. Ignoring..", peer.id);
             // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
@@ -321,6 +342,38 @@ impl PairingManager {
         // Reject the pairing attempt since it is either unexpected or invalid.
         let _ = responder.send(false, 0u32);
         Ok(())
+    }
+
+    fn handle_pairing_complete(
+        &mut self,
+        id: PeerId,
+        success: bool,
+    ) -> Result<Option<PeerId>, Error> {
+        debug!("OnPairingComplete for {} (success = {})", id, success);
+        match self.procedures.get_mut(&id) {
+            Some(procedure)
+                if success && matches!(procedure.state, ProcedureState::PasskeyChecked) =>
+            {
+                procedure.state = ProcedureState::PairingComplete;
+                return Ok(Some(id));
+            }
+            Some(_) if success => {
+                warn!("Unexpected OnPairingComplete success for Fast Pair pairing with {}", id);
+                self.cancel_pairing_procedure(id)?;
+                // TODO(fxbug.dev/103204): This indicates Fast Pair pairing was completed in an non-
+                // spec-compliant manner. We should remove the bond via sys.Access/Forget.
+            }
+            Some(_) => {
+                info!("OnPairingComplete failure for Fast Pair pairing with {}", id);
+                self.cancel_pairing_procedure(id)?;
+            }
+            None => {
+                debug!("Pairing complete for non-Fast Pair peer {}. Ignoring..", id);
+                // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
+                // per peer.
+            }
+        }
+        Ok(None)
     }
 
     fn handle_pairing_delegate_request(
@@ -347,21 +400,7 @@ impl PairingManager {
                 self.handle_pairing_request(peer, method, displayed_passkey, responder)?;
             }
             PairingDelegateRequest::OnPairingComplete { id, success, .. } => {
-                let id = id.into();
-                debug!("OnPairingComplete for {} (success = {})", id, success);
-                if self
-                    .procedures
-                    .get(&id)
-                    .map_or(false, |p| matches!(p.state, ProcedureState::PasskeyChecked))
-                {
-                    if success {
-                        return Ok(Some(id));
-                    }
-
-                    // Otherwise, pairing failed and the pairing procedure is terminated.
-                    let _ = self.procedures.remove(&id).expect("procedure finished");
-                    let _ = self.release_delegate();
-                }
+                return self.handle_pairing_complete(id.into(), success);
             }
             PairingDelegateRequest::OnRemoteKeypress { .. } => {}
         }
@@ -756,6 +795,8 @@ pub(crate) mod tests {
         // Per GFPS Pairing Procedure Step 16, if pairing fails, then the shared secret must be
         // discarded.
         assert_matches!(manager.key_for_procedure(&id), None);
+        // Can't complete the procedure since pairing failed.
+        assert_matches!(manager.complete_pairing_procedure(id), Err(Error::InternalError(_)));
     }
 
     #[fuchsia::test]
@@ -824,6 +865,32 @@ pub(crate) mod tests {
         assert_matches!(manager.complete_pairing_procedure(id), Err(Error::InternalError(_)));
     }
 
+    // TODO(fxbug.dev/102963): This test will be obsolete if the PairingManager is resilient to
+    // ordering of events.
+    #[fuchsia::test]
+    async fn complete_pairing_before_on_pairing_complete_is_error() {
+        let (mut manager, mut mock) = MockPairing::new_with_manager().await;
+
+        let id = PeerId(123);
+        assert_matches!(manager.new_pairing_procedure(id, keys::tests::example_aes_key()), Ok(_));
+        mock.expect_set_pairing_delegate().await;
+
+        // Peer tries to pair - no stream item since pairing isn't complete.
+        let request_fut = mock.make_pairing_request(id, 555666);
+        assert_matches!(manager.select_next_some().now_or_never(), None);
+
+        // No stream item after comparing passkeys since pairing isn't complete.
+        let passkey = manager.compare_passkey(id, 555666).expect("successful comparison");
+        assert_eq!(passkey, 555666);
+        assert_matches!(manager.select_next_some().now_or_never(), None);
+        // Expect the pairing request to resolve as passkeys have been verified.
+        let result = request_fut.await.expect("fidl response");
+        assert_eq!(result, (true, 555666));
+
+        // Attempting to complete pairing before OnPairingComplete is an Error.
+        assert_matches!(manager.complete_pairing_procedure(id), Err(_));
+    }
+
     #[fuchsia::test]
     async fn concurrent_pairing_procedures() {
         let (mut manager, mut mock) = MockPairing::new_with_manager().await;
@@ -849,6 +916,15 @@ pub(crate) mod tests {
         // Expect the pairing request to resolve as passkeys have been verified.
         let result = request_fut.await.expect("fidl response");
         assert_eq!(result, (true, 555666));
+
+        // Downstream server signals pairing completion.
+        let _ = mock
+            .downstream_delegate_client
+            .on_pairing_complete(&mut id1.into(), true)
+            .expect("valid fidl request");
+        // Expect a Pairing Manager stream item indicating completion of pairing with the peer.
+        let result = manager.select_next_some().await;
+        assert_eq!(result, id1);
 
         // PairingManager owner will complete pairing once the peer makes a GATT Write to the
         // Account Key characteristic.
