@@ -118,6 +118,7 @@ error value is returned.
  - [`zx_pager_create_vmo()`]
  - [`zx_pager_detach_vmo()`]
  - [`zx_pager_op_range()`]
+ - [`zx_pager_query_vmo_stats()`]
  - [`zx_pager_supply_pages()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
@@ -125,4 +126,5 @@ error value is returned.
 [`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
 [`zx_pager_op_range()`]: pager_op_range.md
+[`zx_pager_query_vmo_stats()`]: pager_query_vmo_stats.md
 [`zx_pager_supply_pages()`]: pager_supply_pages.md

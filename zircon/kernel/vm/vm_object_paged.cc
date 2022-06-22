@@ -958,6 +958,14 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   uint64_t page_count_before = is_contiguous() ? cow_pages_locked()->DebugGetPageCountLocked() : 0;
 #endif
 
+  auto mark_modified = fit::defer([this, original_start = start, &start]() {
+    if (start > original_start) {
+      // Mark modified since we wrote zeros.
+      AssertHeld(lock_);
+      mark_modified_locked();
+    }
+  });
+
   // We might need a page request if the VMO is backed by a page source.
   __UNINITIALIZED LazyPageRequest page_request;
   while (start < end) {
@@ -1016,6 +1024,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
   if (status != ZX_OK) {
     return status;
   }
+  // We were able to successfully resize. Mark as modified.
+  mark_modified_locked();
   return ZX_OK;
 }
 
@@ -1056,6 +1066,15 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // Track our two offsets.
   uint64_t src_offset = offset;
   size_t dest_offset = 0;
+
+  auto mark_modified = fit::defer([this, &dest_offset, write]() {
+    if (write && dest_offset > 0) {
+      // We wrote something, so mark as modified.
+      AssertHeld(lock_);
+      mark_modified_locked();
+    }
+  });
+
   __UNINITIALIZED LookupInfo pages;
   // Record the current generation count, we can use this to attempt to avoid re-performing checks
   // whilst copying.

@@ -82,4 +82,17 @@ protocol pager {
         actual optional_usize;
         avail optional_usize;
     });
+
+    /// Query pager related statistics on a pager owned VMO.
+    /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
+    /// Rights: pager_vmo must be of type ZX_OBJ_TYPE_VMO.
+    @next
+    pager_query_vmo_stats(resource struct {
+        pager handle:PAGER;
+        pager_vmo handle:VMO;
+        options uint32;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+    });
 };

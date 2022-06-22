@@ -124,6 +124,9 @@ class UserPager {
   // passed in with |num_dirty_ranges_to_verify|.
   bool VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
                          size_t num_dirty_ranges_to_verify);
+  // Queries pager vmo stats, and returns whether the |paged_vmo| has been modified since the last
+  // query.
+  bool VerifyModified(Vmo* paged_vmo);
 
   // Begins and ends writeback on pages in the specified range.
   bool WritebackBeginPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);

@@ -471,6 +471,17 @@ bool UserPager::WritebackEndPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t
   return true;
 }
 
+bool UserPager::VerifyModified(Vmo* paged_vmo) {
+  zx_pager_vmo_stats_t stats;
+  zx_status_t status = zx_pager_query_vmo_stats(pager_.get(), paged_vmo->vmo().get(),
+                                                ZX_PAGER_RESET_VMO_STATS, &stats, sizeof(stats));
+  if (status != ZX_OK) {
+    fprintf(stderr, "failed to query pager vmo stats with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return stats.modified == ZX_PAGER_VMO_STATS_MODIFIED;
+}
+
 bool UserPager::VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
                                   size_t num_dirty_ranges_to_verify) {
   if (num_dirty_ranges_to_verify > 0 && dirty_ranges_to_verify == nullptr) {

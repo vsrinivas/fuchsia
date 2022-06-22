@@ -32,6 +32,9 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
                                uint64_t length, user_out_ptr<void> buffer, size_t buffer_size,
                                user_out_ptr<size_t> actual, user_out_ptr<size_t> avail);
 
+  zx_status_t QueryPagerVmoStats(VmAspace* current_aspace, fbl::RefPtr<VmObject> vmo,
+                                 uint32_t options, user_out_ptr<void> buffer, size_t buffer_size);
+
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PAGER; }
 
   void on_zero_handles() final;

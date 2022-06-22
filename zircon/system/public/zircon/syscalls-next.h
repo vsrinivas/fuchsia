@@ -65,6 +65,20 @@ typedef struct zx_vmo_dirty_range {
 // options flags for zx_vmo_dirty_range_t
 #define ZX_VMO_DIRTY_RANGE_IS_ZERO ((uint64_t)1u)
 
+// Struct used by the zx_pager_query_vmo_stats() syscall.
+typedef struct zx_pager_vmo_stats {
+  // Will be set to ZX_PAGER_VMO_STATS_MODIFIED if the VMO was modified, or 0 otherwise.
+  // Note that this can be set to 0 if a previous zx_pager_query_vmo_stats() call specified the
+  // ZX_PAGER_RESET_VMO_STATS option, which resets the modified state.
+  uint32_t modified;
+} zx_pager_vmo_stats_t;
+
+// values for zx_pager_vmo_stats.modified
+#define ZX_PAGER_VMO_STATS_MODIFIED ((uint32_t)1u)
+
+// options for zx_pager_query_vmo_stats()
+#define ZX_PAGER_RESET_VMO_STATS ((uint32_t)1u)
+
 // ====== End of pager writeback support ====== //
 
 __END_CDECLS

@@ -3,13 +3,20 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/iommu.h>
 #include <zircon/syscalls-next.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/iommu.h>
 
 #include <zxtest/zxtest.h>
 
 #include "test_thread.h"
 #include "userpager.h"
+
+__BEGIN_CDECLS
+__WEAK extern zx_handle_t get_root_resource(void);
+__END_CDECLS
 
 namespace pager_tests {
 
@@ -4050,6 +4057,618 @@ TEST(PagerWriteback, FailDirtyRequestAfterDetach) {
 
   // The page was not dirtied.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a VMO is marked modified on a zx_vmo_write.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnVmoWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Write to the VMO.
+  uint8_t data = 0xaa;
+  ASSERT_OK(vmo->vmo().write(&data, 0, sizeof(data)));
+
+  // The VMO should be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a VMO is marked modified when written through a mapping.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnMappingWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // Map the VMO.
+  zx_vaddr_t ptr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo->vmo(), 0,
+                                       zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Write to the VMO via the mapping.
+  auto buf = reinterpret_cast<uint8_t*>(ptr);
+  uint8_t data = 0xbb;
+  *buf = data;
+
+  // The VMO should be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a VMO is marked modified on resize.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnResize, ZX_VMO_RESIZABLE) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been resized yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Resize the VMO down.
+  ASSERT_TRUE(vmo->Resize(0));
+
+  // The VMO should be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify dirty ranges.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(2));
+
+  // The VMO should be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), 0, 2 * zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a VMO is marked modified on a ZX_VMO_OP_ZERO.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnOpZero, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Zero the VMO.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), nullptr, 0));
+
+  // The VMO should be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), 0, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a VMO is not marked modified on a zx_vmo_read.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnVmoRead, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Read from the VMO.
+  uint8_t data;
+  ASSERT_OK(vmo->vmo().read(&data, 0, sizeof(data)));
+
+  // The VMO shouldn't be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a VMO is not marked modified when read through a mapping.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnMappingRead, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Map the VMO.
+  zx_vaddr_t ptr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo->vmo(), 0,
+                                       zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Read from the VMO via the mapping.
+  auto buf = reinterpret_cast<uint8_t*>(ptr);
+  uint8_t data = *buf;
+
+  // The VMO shouldn't be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_EQ(*(uint8_t*)(expected.data()), data);
+}
+
+// Tests that a VMO is not marked modified when a write is failed by failing a DIRTY request.
+TEST(PagerWriteback, NotModifiedOnFailedDirtyRequest) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Try to write to the VMO.
+  TestThread t1([vmo]() -> bool {
+    uint8_t data = 0xaa;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the dirty request.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+  ASSERT_TRUE(t1.WaitForFailure());
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Map the VMO.
+  zx_vaddr_t ptr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo->vmo(), 0,
+                                       zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // Try to write to the VMO via the mapping.
+  TestThread t2([ptr]() -> bool {
+    auto buf = reinterpret_cast<uint8_t*>(ptr);
+    *buf = 0xbb;
+    return true;
+  });
+  ASSERT_TRUE(t2.Start());
+
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the dirty request.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+  ASSERT_TRUE(t2.WaitForCrash(ptr, ZX_ERR_IO));
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a VMO is not marked modified on a failed zx_vmo_write.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedVmoWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Write to the VMO with the source buffer set up such that the copying fails. Make the source
+  // buffer pager backed too, and fail reads from it.
+  Vmo* src_vmo;
+  ASSERT_TRUE(pager.CreateVmo(1, &src_vmo));
+
+  // Map the source VMO.
+  zx_vaddr_t ptr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, src_vmo->vmo(), 0,
+                                       zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // Attempt the VMO write.
+  TestThread t([vmo, ptr]() -> bool {
+    auto buf = reinterpret_cast<uint8_t*>(ptr);
+    return vmo->vmo().write(buf, 0, sizeof(uint8_t)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a read request when the VMO write attempts reading from the source VMO.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(src_vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the read request so that the write fails.
+  ASSERT_TRUE(pager.FailPages(src_vmo, 0, 1));
+  ASSERT_TRUE(t.WaitForFailure());
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  // We mark pages dirty when they are looked up, i.e. *before* writing to them, so they will still
+  // be reported as dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a VMO is not marked modified on a failed resize.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedResize, ZX_VMO_RESIZABLE) {
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  if (!&get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been resized yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page.
+  zx::iommu iommu;
+  zx::bti bti;
+  zx::pmt pmt;
+  zx::unowned_resource root_res(get_root_resource());
+  zx_iommu_desc_dummy_t desc;
+  ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()));
+  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  zx_paddr_t addr;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), zx_system_get_page_size(),
+                    zx_system_get_page_size(), &addr, 1, &pmt));
+
+  // Try to resize down across the pinned page. The resize should fail.
+  ASSERT_EQ(vmo->vmo().set_size(zx_system_get_page_size()), ZX_ERR_BAD_STATE);
+
+  if (pmt) {
+    pmt.unpin();
+  }
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a VMO is marked modified when a zx_vmo_write partially succeeds.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnPartialVmoWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the pages in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 2));
+  }
+
+  // Write to the VMO with the source buffer set up such that the copying partially fails. Make the
+  // source buffer pager backed too, and fail reads from it.
+  Vmo* src_vmo;
+  ASSERT_TRUE(pager.CreateVmo(2, &src_vmo));
+  // Supply a single page in the source, so we can partially read from it.
+  ASSERT_TRUE(pager.SupplyPages(src_vmo, 0, 1));
+
+  // Map the source VMO.
+  zx_vaddr_t ptr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, src_vmo->vmo(), 0,
+                                       2 * zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, 2 * zx_system_get_page_size());
+  });
+
+  // Attempt the VMO write.
+  TestThread t([vmo, ptr]() -> bool {
+    auto buf = reinterpret_cast<uint8_t*>(ptr);
+    return vmo->vmo().write(buf, 0, 2 * zx_system_get_page_size()) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a read request when the VMO write attempts reading from the source VMO.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(src_vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Fail the read request so that the write fails.
+  ASSERT_TRUE(pager.FailPages(src_vmo, 1, 1));
+  ASSERT_TRUE(t.WaitForFailure());
+
+  // The write partially succeeded, so the VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+
+  // Verify dirty pages and contents.
+  src_vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  // We mark pages dirty when they are looked up, i.e. *before* writing to them, so they will still
+  // be reported as dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // We will now try a partial write by failing dirty requests, which is only relevant for
+  // TRAP_DIRTY.
+  if (!(create_option & ZX_VMO_TRAP_DIRTY)) {
+    return;
+  }
+
+  // Start with clean pages again.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 2));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 2));
+
+  // Dirty a single page, so that writing to the other generates a dirty request.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  // Try to write to the VMO.
+  TestThread t1([vmo]() -> bool {
+    uint8_t data[2 * zx_system_get_page_size()];
+    memset(data, 0xaa, 2 * zx_system_get_page_size());
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // Should see a dirty request for page 1.
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Fail the dirty request.
+  ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
+  ASSERT_TRUE(t1.WaitForFailure());
+
+  // The write succeeded partially, so the VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), 0xaa, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  range.length = 1;
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a clone cannot be marked modified.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedCloneWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been written to, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Create a clone.
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  // Write to the clone.
+  uint8_t data[zx_system_get_page_size()];
+  memset(data, 0xcc, zx_system_get_page_size());
+  ASSERT_OK(clone->vmo().write(&data, 0, sizeof(data)));
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The clone should not support the modified query.
+  zx_pager_vmo_stats_t stats;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_vmo_stats(pager.pager().get(), clone->vmo().get(),
+                                                          0, &stats, sizeof(stats)));
+  ASSERT_FALSE(pager.VerifyModified(clone.get()));
+
+  // Verify clone contents.
+  memcpy(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(clone.get(), 0, 1, expected.data(), true));
+  ASSERT_FALSE(pager.VerifyDirtyRanges(clone.get(), nullptr, 0));
+}
+
+// Tests that querying the modified state without the reset option does not reset.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedNoReset, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    // Dirty the page in preparation for the write, avoiding the need to trap.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // The VMO hasn't been written to yet, so it shouldn't be marked modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Write to the VMO.
+  uint8_t data = 0xaa;
+  ASSERT_OK(vmo->vmo().write(&data, 0, sizeof(data)));
+
+  // Verify modified state without resetting it.
+  zx_pager_vmo_stats_t stats;
+  ASSERT_OK(
+      zx_pager_query_vmo_stats(pager.pager().get(), vmo->vmo().get(), 0, &stats, sizeof(stats)));
+  ASSERT_EQ(ZX_PAGER_VMO_STATS_MODIFIED, stats.modified);
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The VMO should still be marked modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state now with the reset option should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
 }
 
 }  // namespace pager_tests

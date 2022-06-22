@@ -231,3 +231,27 @@ zx_status_t sys_pager_query_dirty_ranges(zx_handle_t pager, zx_handle_t pager_vm
   return pager_dispatcher->QueryDirtyRanges(up->aspace().get(), pager_vmo_dispatcher->vmo(), offset,
                                             length, buffer, buffer_size, actual, avail);
 }
+
+// zx_status_t zx_pager_query_vmo_stats
+zx_status_t sys_pager_query_vmo_stats(zx_handle_t pager, zx_handle_t pager_vmo, uint32_t options,
+                                      user_out_ptr<void> buffer, size_t buffer_size) {
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<PagerDispatcher> pager_dispatcher;
+  zx_status_t status = up->handle_table().GetDispatcher(*up, pager, &pager_dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::RefPtr<VmObjectDispatcher> pager_vmo_dispatcher;
+  status = up->handle_table().GetDispatcher(*up, pager_vmo, &pager_vmo_dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (pager_vmo_dispatcher->pager_koid() != pager_dispatcher->get_koid()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return pager_dispatcher->QueryPagerVmoStats(up->aspace().get(), pager_vmo_dispatcher->vmo(),
+                                              options, buffer, buffer_size);
+}

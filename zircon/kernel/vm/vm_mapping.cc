@@ -866,6 +866,11 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   }
   DEBUG_ASSERT(lookup_info.num_pages > 0);
 
+  // We looked up in order to write. Mark as modified.
+  if (pf_flags & VMM_PF_FLAG_WRITE) {
+    object_->mark_modified_locked();
+  }
+
   // if we read faulted, and lookup didn't say that this is always writable, then we map or modify
   // the page without any write permissions. This ensures we will fault again if a write is
   // attempted so we can potentially replace this page with a copy or a new one, or update the

@@ -286,6 +286,9 @@ class VmObject : public VmHierarchyBase,
   virtual bool is_private_pager_copy_supported() const { return false; }
   // Returns true if the VMO's pages require dirty bit tracking.
   virtual bool is_dirty_tracked_locked() const TA_REQ(lock_) { return false; }
+  // Marks the VMO as modified if the VMO tracks modified state (only supported for pager-backed
+  // VMOs).
+  virtual void mark_modified_locked() TA_REQ(lock_) {}
 
   // Returns true if the vmo is a hidden paged vmo.
   virtual bool is_hidden() const { return false; }
@@ -414,6 +417,13 @@ class VmObject : public VmHierarchyBase,
   // error code to terminate the enumeration early with that error code.
   virtual zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
                                            DirtyRangeEnumerateFunction&& dirty_range_fn) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Query pager relevant VMO stats, e.g. whether the VMO has been modified. If |reset| is set to
+  // true, the queried stats are reset as well, potentially affecting the queried state returned by
+  // future calls to this function.
+  virtual zx_status_t QueryPagerVmoStats(bool reset, zx_pager_vmo_stats_t* stats) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

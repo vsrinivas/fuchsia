@@ -82,6 +82,9 @@ class VmObjectPaged final : public VmObject {
   bool is_dirty_tracked_locked() const override TA_REQ(lock_) {
     return cow_pages_locked()->is_dirty_tracked_locked();
   }
+  void mark_modified_locked() override TA_REQ(lock_) {
+    return cow_pages_locked()->mark_modified_locked();
+  }
   ChildType child_type() const override {
     if (is_slice()) {
       return ChildType::kSlice;
@@ -163,6 +166,11 @@ class VmObjectPaged final : public VmObject {
                                    DirtyRangeEnumerateFunction&& dirty_range_fn) override {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->EnumerateDirtyRangesLocked(offset, len, ktl::move(dirty_range_fn));
+  }
+
+  zx_status_t QueryPagerVmoStats(bool reset, zx_pager_vmo_stats_t* stats) override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->QueryPagerVmoStatsLocked(reset, stats);
   }
 
   zx_status_t WritebackBegin(uint64_t offset, uint64_t len) override {

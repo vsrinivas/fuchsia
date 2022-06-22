@@ -187,6 +187,15 @@ class VmCowPages final
     return result;
   }
 
+  // The modified state is only supported for root pager-backed VMOs, and will get queried (and
+  // possibly reset) on the next QueryPagerVmoStatsLocked() call.
+  void mark_modified_locked() TA_REQ(lock_) {
+    if (!is_source_preserving_page_content_locked()) {
+      return;
+    }
+    pager_stats_modified_ = true;
+  }
+
   bool is_source_preserving_page_content_locked() const TA_REQ(lock_) {
     bool result = page_source_ && page_source_->properties().is_preserving_page_content;
     DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
@@ -313,6 +322,22 @@ class VmCowPages final
   zx_status_t EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
                                          DirtyRangeEnumerateFunction&& dirty_range_fn)
       TA_REQ(lock_);
+
+  // Query pager VMO |stats|, and reset them too if |reset| is set to true.
+  zx_status_t QueryPagerVmoStatsLocked(bool reset, zx_pager_vmo_stats_t* stats) TA_REQ(lock_) {
+    DEBUG_ASSERT(stats);
+    // The modified state should only be set for VMOs directly backed by a pager.
+    DEBUG_ASSERT(!pager_stats_modified_ || is_source_preserving_page_content_locked());
+
+    if (!is_source_preserving_page_content_locked()) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    stats->modified = pager_stats_modified_ ? ZX_PAGER_VMO_STATS_MODIFIED : 0;
+    if (reset) {
+      pager_stats_modified_ = false;
+    }
+    return ZX_OK;
+  }
 
   // See VmObject::WritebackBegin
   zx_status_t WritebackBeginLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
@@ -1258,6 +1283,10 @@ class VmCowPages final
   //    this bool is part of mitigating any potential DMA-while-not-pinned (which is not permitted
   //    but is also difficult to detect or prevent without an IOMMU).
   bool ever_pinned_ TA_GUARDED(lock_) = false;
+
+  // Tracks whether this VMO was modified (written / resized) if backed by a pager. This gets reset
+  // to false if QueryPagerVmoStatsLocked() is called with |reset| set to true.
+  bool pager_stats_modified_ TA_GUARDED(lock_) = false;
 };
 
 // VmCowPagesContainer exists to essentially split the VmCowPages ref_count_ into two counts, so

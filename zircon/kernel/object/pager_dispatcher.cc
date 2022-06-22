@@ -271,3 +271,39 @@ zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::Ref
   }
   return status;
 }
+
+zx_status_t PagerDispatcher::QueryPagerVmoStats(VmAspace* current_aspace, fbl::RefPtr<VmObject> vmo,
+                                                uint32_t options, user_out_ptr<void> buffer,
+                                                size_t buffer_size) {
+  if (buffer_size < sizeof(zx_pager_vmo_stats_t)) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  bool reset = options & ZX_PAGER_RESET_VMO_STATS;
+  options &= ~ZX_PAGER_RESET_VMO_STATS;
+  if (options) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_pager_vmo_stats_t stats;
+  zx_status_t status = vmo->QueryPagerVmoStats(reset, &stats);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  do {
+    UserCopyCaptureFaultsResult copy_result =
+        buffer.reinterpret<zx_pager_vmo_stats_t>().copy_to_user_capture_faults(stats);
+    if (copy_result.status == ZX_OK) {
+      break;
+    }
+    DEBUG_ASSERT(copy_result.fault_info.has_value());
+    zx_status_t fault_status =
+        current_aspace->SoftFault(copy_result.fault_info->pf_va, copy_result.fault_info->pf_flags);
+    if (fault_status != ZX_OK) {
+      return fault_status;
+    }
+  } while (true);
+
+  return ZX_OK;
+}
