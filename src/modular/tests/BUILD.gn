@@ -13,14 +13,17 @@ group("tests") {
     ":modular_integration_tests",
     ":module_with_fake_runner",
     "modular_config",
+    "//src/cobalt/bin/testing/mock_cobalt",
+
+    # Required by modular_test_harness
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner",
+
+    # Used for intl testing.
+    "//src/intl/intl_services:pkg_small",
 
     # modular_test_harness is a dep for any test that uses test_harness_fixture
     # (all of the tests below). Add it here so that an fx set --with
     # //src/modular/tests includes it.
-    "//src/cobalt/bin/testing/mock_cobalt",
-
-    # Used for intl testing.
-    "//src/intl/intl_services:pkg_small",
     "//src/modular/bin/modular_test_harness",
   ]
 }

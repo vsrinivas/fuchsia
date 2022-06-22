@@ -53,8 +53,10 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
       fidl::BindingSet<fuchsia::modular::session::Launcher, std::unique_ptr<LauncherImpl>>;
 
   enum class State {
-    // normal mode of operation
+    // Normal mode of operation.
     RUNNING,
+    // basemgr is restarting the session.
+    RESTARTING,
     // basemgr is shutting down.
     SHUTTING_DOWN
   };
@@ -170,6 +172,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   async::Executor executor_;
 
   State state_ = State::RUNNING;
+
+  fxl::WeakPtrFactory<BasemgrImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrImpl);
 };

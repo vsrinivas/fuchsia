@@ -79,6 +79,12 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 AppClientBase::~AppClientBase() = default;
 
 void AppClientBase::ImplTeardown(fit::function<void()> done) {
+  // If the component is not running, it's not serving the lifecycle service, so don't try to
+  // teardown gracefully.
+  if (!component_controller_) {
+    done();
+    return;
+  }
   LifecycleServiceTerminate(std::move(done));
 }
 

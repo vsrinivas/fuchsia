@@ -51,19 +51,9 @@ SessionContextImpl::SessionContextImpl(
     if (!weak_this) {
       return;
     }
-
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
-                   << "Calling on_session_shutdown_().";
-
-    // This prevents us from receiving any further requests.
-    weak_this->session_context_binding_.Unbind();
-
-    // Shutdown(), which expects a graceful shutdown of sessionmgr, does not
-    // apply here because sessionmgr crashed. Move |on_session_shutdown_| on to the stack before
-    // invoking it, in case the |on_session_shutdown_| deletes |this|.
-    auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
-    on_session_shutdown(ShutDownReason::CRITICAL_FAILURE);
-    // Don't touch |this|.
+                   << "Shutting down.";
+    weak_this->Shutdown(ShutDownReason::CRITICAL_FAILURE, [] {});
   });
 }
 
@@ -94,21 +84,24 @@ void SessionContextImpl::Shutdown(ShutDownReason reason, fit::function<void()> c
     return;
   }
 
+  FX_LOGS(INFO) << "Shutting down sessionmgr.";
+
   // Close the SessionContext channel to ensure no more requests from the
   // channel are processed.
   session_context_binding_.Unbind();
 
   sessionmgr_app_->Teardown(kSessionmgrTimeout, [weak_this = weak_factory_.GetWeakPtr(), reason] {
-    // One of the callbacks might delete |SessionContextImpl|, so always guard against
-    // WeakPtr<SessionContextImpl>.
-    for (const auto& callback : weak_this->shutdown_callbacks_) {
-      callback();
-      if (!weak_this) {
-        return;
-      }
+    if (!weak_this) {
+      return;
     }
+
+    auto shutdown_callbacks = std::move(weak_this->shutdown_callbacks_);
     auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
     on_session_shutdown(reason);
+
+    for (const auto& callback : shutdown_callbacks) {
+      callback();
+    }
   });
 }
 

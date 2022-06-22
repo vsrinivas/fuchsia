@@ -169,6 +169,7 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
                     fidl_fuchsia_hardware_power_statecontrol::AdminMarker,
                 >())
                 .capability(Capability::protocol::<fidl_fuchsia_ui_policy::PresenterMarker>())
+                .capability(Capability::protocol::<fidl_fuchsia_session::RestarterMarker>())
                 .from(&placeholder)
                 .to(&basemgr),
         )

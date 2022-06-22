@@ -60,17 +60,20 @@ class SessionProvider {
   StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token,
                                   scenic::ViewRefPair view_ref_pair);
 
+  // |AsyncHolder|
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.
+  // Should be called through |AsyncHolder.Teardown|, not directly.
   void Teardown(fit::function<void()> callback);
+
+  // Asynchronously tears down the sessionmgr process. |callback| is invoked
+  // once teardown is complete or has timed out.
+  void Shutdown(fit::function<void()> callback);
+
+  void MarkClockAsStarted();
 
   // Callback function for session_provider to invoke when there is no active session.
   void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason);
-
-  // Shuts down the running session, causing a new session to be created.
-  void RestartSession(fit::function<void()> on_restart_complete);
-
-  void MarkClockAsStarted();
 
   // Returns true if sessionmgr is running.
   bool is_session_running() const { return !!session_context_; }

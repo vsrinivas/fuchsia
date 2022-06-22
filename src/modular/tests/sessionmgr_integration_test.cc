@@ -530,24 +530,27 @@ TEST_F(SessionmgrIntegrationTest, SessionShellReceivesComponentArgsFromConfig) {
 }
 
 TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
+  LaunchCountingComponent session_shell;
+
   // Max number of session shell crashes allowed before a reboot is triggered.
-  static constexpr size_t kMaxSessionRetries = 4;
+  static constexpr int kMaxSessionRetries = 4;
 
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> admin_bindings;
 
-  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   modular_testing::TestHarnessBuilder builder;
-  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
+  RunLoopUntil([&] { return session_shell.launch_count() == 1; });
 
   auto crash_session_shell = [this, &session_shell]() {
-    // kill session_shell
-    for (size_t i = 0; i < kMaxSessionRetries; i++) {
-      RunLoopUntil([&] { return session_shell->is_running(); });
-      session_shell->Exit(0);
-      RunLoopUntil([&] { return !session_shell->is_running(); });
+    // kill session_shell and wait for it to restart
+    for (int i = 0; i < kMaxSessionRetries; i++) {
+      RunLoopUntil([&] { return session_shell.is_running(); });
+      auto launch_count_before = session_shell.launch_count();
+      session_shell.Exit(0);
+      RunLoopUntil([&] { return session_shell.launch_count() == launch_count_before + 1; });
     }
   };
 
@@ -559,12 +562,13 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   mock_admin.Reset();
   crash_session_shell();
 
-  RunLoopUntil([&] { return !session_shell->is_running(); });
-  RunLoopUntil([&] { return session_shell->is_running(); });
+  RunLoopUntil([&] { return session_shell.is_running(); });
   EXPECT_FALSE(mock_admin.reboot_called());
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSession) {
+  LaunchCountingComponent session_shell;
+
   // Setup environment with a suffix to enable globbing for basemgr's debug service
   fuchsia::modular::testing::TestHarnessSpec spec;
   spec.set_environment_suffix("test");
@@ -577,12 +581,11 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> admin_bindings;
 
   // Use a session shell to determine if a session has been started.
-  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
-  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
   FX_LOGS(INFO) << "Waiting for session shell to startup.";
-  RunLoopUntil([&] { return session_shell->is_running(); });
+  RunLoopUntil([&] { return session_shell.is_running(); });
 
   // Connect to basemgr to call RestartSession
   constexpr char kBasemgrGlobPath[] = "/hub/r/mth_*_test/*/c/basemgr.cmx/*/out/debug/basemgr";
@@ -596,13 +599,11 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   for (int i = 0; i < 4; i++) {
     bool session_restarted = false;
     basemgr->RestartSession([&] { session_restarted = true; });
-    FX_LOGS(INFO) << "Waiting for session shell to shutdown. Iteration: " << i;
-    RunLoopUntil([&] { return !session_shell->is_running(); });
-    FX_LOGS(INFO) << "Waiting for confirmation from RestartSession().";
+    FX_LOGS(INFO) << "Waiting for for session to restart.";
     RunLoopUntil([&] { return session_restarted; });
     ASSERT_FALSE(mock_admin.reboot_called()) << "Suspend called on iteration #" << i;
     FX_LOGS(INFO) << "Waiting for session shell to start after restart.";
-    RunLoopUntil([&] { return session_shell->is_running(); });
+    RunLoopUntil([&] { return session_shell.launch_count() == i + 1; });
   }
   ASSERT_FALSE(mock_admin.reboot_called());
 }

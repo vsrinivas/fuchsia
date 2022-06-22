@@ -51,6 +51,7 @@ source_set("basemgr_impl") {
   ]
 
   deps = [
+    "//src/lib/fostr/fidl/fuchsia.session",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/modular_config",
@@ -265,6 +266,7 @@ rustc_test("basemgr_v1_to_v2_test_realm_bin") {
     "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",

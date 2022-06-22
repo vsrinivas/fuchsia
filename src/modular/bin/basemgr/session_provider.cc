@@ -95,23 +95,16 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   return fpromise::ok();
 }
 
-void SessionProvider::Teardown(fit::function<void()> callback) {
+void SessionProvider::Teardown(fit::function<void()> callback) { Shutdown(std::move(callback)); }
+
+void SessionProvider::Shutdown(fit::function<void()> callback) {
   if (!is_session_running()) {
     callback();
     return;
   }
 
-  // Shutdown will execute the given |callback|, then destroy |session_context_|.
+  // Shutdown will call OnSessionShutdown, then execute the given |callback|.
   session_context_->Shutdown(ShutDownReason::CLIENT_REQUEST, std::move(callback));
-}
-
-void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
-  if (!is_session_running()) {
-    return;
-  }
-
-  // Shutting down a session effectively restarts the session.
-  session_context_->Shutdown(ShutDownReason::CLIENT_REQUEST, std::move(on_restart_complete));
 }
 
 void SessionProvider::MarkClockAsStarted() { clock_started_ = true; }

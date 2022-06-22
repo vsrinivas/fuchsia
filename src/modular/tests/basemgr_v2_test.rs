@@ -173,8 +173,34 @@ impl TestFixture {
             .builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.session.Restarter"))
+                    .capability(Capability::protocol::<fsession::RestarterMarker>())
                     .from(&self.placeholder)
+                    .to(&self.basemgr),
+            )
+            .await?;
+        Ok(self)
+    }
+
+    // Vend a `fuchsia.session.Restarter` implementation that sends a message on
+    // `restarter_sender` when the client calls `Restart`.
+    async fn route_restarter_with_sender(
+        self,
+        sender: mpsc::Sender<()>,
+    ) -> Result<TestFixture, Error> {
+        let restarter = self
+            .builder
+            .add_local_child(
+                "restarter_with_sender",
+                move |handles| Box::pin(restarter_with_sender_impl(sender.clone(), handles)),
+                ChildOptions::new(),
+            )
+            .await?;
+        let () = self
+            .builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fsession::RestarterMarker>())
+                    .from(&restarter)
                     .to(&self.basemgr),
             )
             .await?;
@@ -340,17 +366,41 @@ async fn test_launch_v2_eager_children() -> Result<(), Error> {
 async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error> {
     const BASEMGR_WITH_CRITICAL_CHILDREN_URL: &str = "#meta/basemgr-with-critical-children.cm";
 
+    let (restart_sender, restart_receiver) = mpsc::channel(1);
+
     let fixture = TestFixture::new(BASEMGR_WITH_CRITICAL_CHILDREN_URL)
+        .await?
+        .route_restarter_with_sender(restart_sender)
         .await?
         .route_noop_sys_launcher()
         .await?;
 
+    let instance = fixture.builder.build().await?;
+
+    let restart_requested = restart_receiver.take(1).next().await.is_some();
+    assert!(restart_requested);
+
+    // We have to destroy the instance after the test assertion because
+    // basemgr teardown will be spammy with error logs due to closing sessionmgr's
+    // ComponentController channel
+    instance.destroy().await?;
+
+    Ok(())
+}
+
+// Tests that sessionmgr crashing will yield a session restart.
+#[fuchsia::test]
+async fn test_restart_session_after_sessionmgr_crashes() -> Result<(), Error> {
     let (restart_sender, restart_receiver) = mpsc::channel(1);
-    let local_restarter = fixture
+
+    let fixture =
+        TestFixture::new(BASEMGR_URL).await?.route_restarter_with_sender(restart_sender).await?;
+
+    let sys_launcher = fixture
         .builder
         .add_local_child(
-            "local_restarter",
-            move |handles| Box::pin(local_restarter_impl(restart_sender.clone(), handles)),
+            "sys_launcher",
+            move |handles| Box::pin(sys_launcher_crash(handles)),
             ChildOptions::new(),
         )
         .await?;
@@ -358,15 +408,15 @@ async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error
         .builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.session.Restarter"))
-                .from(&local_restarter)
+                .capability(Capability::protocol_by_name("fuchsia.sys.Launcher"))
+                .from(&sys_launcher)
                 .to(&fixture.basemgr),
         )
         .await?;
 
     let instance = fixture.builder.build().await?;
 
-    let restart_requested = restart_receiver.take(1).next().await.unwrap();
+    let restart_requested = restart_receiver.take(1).next().await.is_some();
     assert!(restart_requested);
 
     // We have to destroy the instance after the test assertion because
@@ -491,8 +541,8 @@ async fn basemgr_child_impl(
     Ok(())
 }
 
-async fn local_restarter_impl(
-    restart_sender: mpsc::Sender<bool>,
+async fn restarter_with_sender_impl(
+    restart_sender: mpsc::Sender<()>,
     handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
@@ -502,7 +552,7 @@ async fn local_restarter_impl(
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
                     fsession::RestarterRequest::Restart { .. } => {
-                        restart_sender.try_send(true).expect("failed to send message");
+                        restart_sender.try_send(()).expect("failed to send message");
                     }
                 }
             }
@@ -530,6 +580,33 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
     client_end.into_proxy().unwrap()
 }
 
+// Implements a `fuchsia.sys.Launcher` that drops the controller passed to
+// `CreateComponent`, simulating the component crashing instantly.
+async fn sys_launcher_crash(handles: LocalComponentHandles) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(|mut stream: fsys::LauncherRequestStream| {
+        fasync::Task::local(async move {
+            while let Some(request) = stream.try_next().await.expect("failed to serve Launcher") {
+                match request {
+                    fsys::LauncherRequest::CreateComponent {
+                        launch_info: _,
+                        controller: _,
+                        control_handle: _,
+                    } => {
+                        // Do nothing; controller is dropped.
+                    }
+                }
+            }
+        })
+        .detach();
+    });
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
+}
+
+// Implements a `fuchsia.sys.Launcher` that launches a component that does nothing but
+// serve its outgoing directory.
 async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|mut stream: fsys::LauncherRequestStream| {

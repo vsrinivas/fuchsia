@@ -9,7 +9,7 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/bin/basemgr/sessions.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -18,7 +18,7 @@
 namespace modular_testing {
 namespace {
 
-class SessionContextImplTest : public gtest::TestLoopFixture {};
+class SessionContextImplTest : public gtest::RealLoopFixture {};
 
 TEST_F(SessionContextImplTest, StartSessionmgr) {
   sys::testing::FakeLauncher launcher;
@@ -51,10 +51,10 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
+TEST_F(SessionContextImplTest, SessionmgrCrashInvokesOnSessionShutdown) {
   // Program the fake launcher to drop the CreateComponent request such that
   // the error handler of the sessionmgr_app is invoked. This should invoke the
-  // done_callback.
+  // on_session_shutdown callback.
   sys::testing::FakeLauncher launcher;
 
   std::string url = "test_url_string";
@@ -69,7 +69,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
-  bool done_callback_called = false;
+  bool on_session_shutdown_called = false;
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
       std::move(view_ref_pair),
@@ -78,12 +78,12 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
       /*on_session_shutdown=*/
-      [&done_callback_called](modular::SessionContextImpl::ShutDownReason /* unused */) {
-        done_callback_called = true;
+      [&on_session_shutdown_called](modular::SessionContextImpl::ShutDownReason /* unused */) {
+        on_session_shutdown_called = true;
       });
 
-  RunLoopUntilIdle();
-  EXPECT_TRUE(done_callback_called);
+  RunLoopUntil([&on_session_shutdown_called]() { return on_session_shutdown_called; });
+  EXPECT_TRUE(on_session_shutdown_called);
 }
 
 }  // namespace

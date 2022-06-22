@@ -19,6 +19,7 @@
 #include "lib/fpromise/promise.h"
 #include "lib/zx/handle.h"
 #include "src/lib/files/directory.h"
+#include "src/lib/fostr/fidl/fuchsia/session/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
@@ -90,7 +91,8 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       session_restarter_(std::move(session_restarter)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
-      executor_(async_get_default_dispatcher()) {
+      executor_(async_get_default_dispatcher()),
+      weak_factory_(this) {
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
   outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
@@ -118,12 +120,12 @@ void BasemgrImpl::Start() {
 
   auto start_session_result = StartSession();
   if (start_session_result.is_error()) {
-    FX_PLOGS(FATAL, start_session_result.error()) << "Could not start session";
+    FX_PLOGS(FATAL, start_session_result.error()) << "Could not start session.";
   }
 }
 
 void BasemgrImpl::Shutdown() {
-  FX_LOGS(INFO) << "Shutting down basemgr";
+  FX_LOGS(INFO) << "Shutting down basemgr.";
 
   // Prevent the shutdown sequence from running twice.
   if (state_ == State::SHUTTING_DOWN) {
@@ -188,14 +190,15 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
       /*delegate=*/this, launcher_.get(), device_administrator_.get(), config_accessor,
       std::move(svc_for_v1_sessionmgr), outgoing_services_->root_dir(),
       /*on_zero_sessions=*/[this] {
-        if (state_ == State::SHUTTING_DOWN) {
+        if (state_ == State::SHUTTING_DOWN || state_ == State::RESTARTING) {
           return;
         }
-        FX_DLOGS(INFO) << "Re-starting due to session closure";
-        auto start_session_result = StartSession();
-        if (start_session_result.is_error()) {
-          FX_PLOGS(FATAL, start_session_result.error()) << "Could not restart session";
-        }
+        FX_DLOGS(INFO) << "Restarting session due to sessionmgr shutdown.";
+        RestartSession([weak_this = weak_factory_.GetWeakPtr()]() {
+          if (weak_this) {
+            weak_this->state_ = State::RUNNING;
+          }
+        });
       }));
 
   FX_LOGS(INFO) << "Waiting for clock started signal.";
@@ -240,10 +243,53 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
-  if (state_ == State::SHUTTING_DOWN || !session_provider_.get()) {
+  if (state_ == State::SHUTTING_DOWN || state_ == State::RESTARTING || !session_provider_.get()) {
+    on_restart_complete();
     return;
   }
-  session_provider_->RestartSession(std::move(on_restart_complete));
+
+  state_ = State::RESTARTING;
+
+  FX_LOGS(INFO) << "Restarting session.";
+
+  session_restarter_.set_error_handler([weak_this = weak_factory_.GetWeakPtr(),
+                                        on_restart_complete = on_restart_complete.share()](
+                                           zx_status_t status) mutable {
+    if (!weak_this) {
+      on_restart_complete();
+      return;
+    }
+
+    FX_PLOGS(WARNING, status)
+        << "Lost connection to fuchsia.session.Restarter. "
+           "This should only happen when basemgr is running as a v1 component. "
+           "Falling back to restarting just sessionmgr.";
+    // Shut down the existing session and start a new one, but keep the existing SessionProvider.
+    weak_this->session_provider_->Shutdown(
+        [weak_this = std::move(weak_this), on_restart_complete = std::move(on_restart_complete)]() {
+          if (!weak_this) {
+            return;
+          }
+          auto start_session_result = weak_this->StartSession();
+          if (start_session_result.is_error()) {
+            FX_PLOGS(FATAL, start_session_result.error()) << "Could not restart session.";
+          }
+          weak_this->state_ = State::RUNNING;
+          on_restart_complete();
+        });
+  });
+
+  session_restarter_->Restart([weak_this = weak_factory_.GetWeakPtr(),
+                               on_restart_complete = std::move(on_restart_complete)](
+                                  fuchsia::session::Restarter_Restart_Result result) {
+    if (result.is_err()) {
+      FX_LOGS(FATAL) << "Failed to restart session: " << result.err();
+    }
+    if (weak_this) {
+      weak_this->state_ = State::RUNNING;
+    }
+    on_restart_complete();
+  });
 }
 
 void BasemgrImpl::StartSessionWithRandomId() {
@@ -266,7 +312,10 @@ void BasemgrImpl::GetPresentation(
 }
 
 void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
-  // If there is a session provider, tear it down and try again. This stops any running session.
+  state_ = State::RESTARTING;
+
+  // If there is a session provider, tear it down and try again. This stops any running
+  // sessionmgr.
   if (session_provider_.get()) {
     session_provider_.Teardown(
         kSessionProviderTimeout,
@@ -282,6 +331,8 @@ void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig conf
   if (auto result = StartSession(); result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Could not start session";
   }
+
+  state_ = State::RUNNING;
 }
 
 fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher>
