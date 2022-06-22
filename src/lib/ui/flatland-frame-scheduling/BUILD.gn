@@ -34,6 +34,20 @@ rustc_library("flatland-frame-scheduling-lib") {
   ]
 }
 
+source_set("simple_present") {
+  sources = [
+    "src/simple_present.cc",
+    "src/simple_present.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/syslog/cpp:cpp",
+  ]
+}
+
 fuchsia_unittest_package("flatland-frame-scheduling-lib-tests") {
   deps = [ ":flatland-frame-scheduling-lib_test" ]
 }
