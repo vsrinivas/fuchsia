@@ -25,5 +25,5 @@ fuchsia_unittest_package("dash-test-package") {
     ":dash-test",
     "//zircon/third_party/uapp/dash",
   ]
-  manifest = "dash-test.cmx"
+  manifest = "dash-test.cml"
 }

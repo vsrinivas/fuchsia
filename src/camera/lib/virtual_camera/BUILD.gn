@@ -53,6 +53,6 @@ executable("virtual_camera_unittest_bin") {
 }
 
 fuchsia_unittest_package("virtual_camera_unittest") {
-  manifest = "meta/virtual_camera_unittest.cmx"
+  manifest = "meta/virtual_camera_unittest.cml"
   deps = [ ":virtual_camera_unittest_bin" ]
 }

@@ -79,7 +79,7 @@ executable("sherlock_configs_unittest_bin") {
 }
 
 fuchsia_unittest_package("sherlock_configs_unittest") {
-  manifest = "meta/sherlock_configs_unittest.cmx"
+  manifest = "meta/sherlock_configs_unittest.cml"
   deps = [ ":sherlock_configs_unittest_bin" ]
   test_specs = {
     # This is not necessary

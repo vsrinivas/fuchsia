@@ -409,7 +409,7 @@ rustc_binary("textgrid") {
 }
 
 fuchsia_unittest_package("carnelian-render-tests") {
-  manifest = "meta/carnelian_lib_test.cmx"
+  manifest = "meta/carnelian_lib_test.cml"
   deps = [
     ":carnelian_test",
     "//src/lib/vulkan:vulkan_validation_layers",
@@ -417,7 +417,7 @@ fuchsia_unittest_package("carnelian-render-tests") {
 }
 
 fuchsia_unittest_package("carnelian-tests") {
-  manifest = "meta/carnelian_lib_test.cmx"
+  manifest = "meta/carnelian_lib_test.cml"
   deps = [ ":carnelian_test" ]
 }
 

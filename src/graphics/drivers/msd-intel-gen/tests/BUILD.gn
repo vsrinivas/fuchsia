@@ -25,7 +25,7 @@ group("integration") {
 
 fuchsia_test_component("msd_intel_gen_nonhardware_tests_component") {
   deps = [ "unit_tests:msd_intel_gen_nonhardware_tests" ]
-  manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
+  manifest = "meta/msd_intel_gen_nonhardware_tests.cml"
 }
 
 fuchsia_test_package("msd_intel_gen_nonhardware_tests") {

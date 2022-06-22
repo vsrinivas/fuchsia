@@ -125,7 +125,7 @@ executable("test_bin") {
 }
 
 fuchsia_unittest_package("run_test_component_unittests") {
-  manifest = "meta/run_test_component_unittests.cmx"
+  manifest = "meta/run_test_component_unittests.cml"
   deps = [ ":test_bin" ]
 }
 

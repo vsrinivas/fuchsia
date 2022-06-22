@@ -48,5 +48,5 @@ executable("modular_cpp_tests_bin") {
 
 fuchsia_unittest_package("modular_cpp_tests") {
   deps = [ ":modular_cpp_tests_bin" ]
-  manifest = "meta/modular_cpp_tests_bin.cmx"
+  manifest = "meta/modular_cpp_tests_bin.cml"
 }

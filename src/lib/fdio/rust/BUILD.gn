@@ -64,7 +64,7 @@ fuchsia_component("test-component") {
     ":spawn_builder_test_target",
     ":spawn_test_target",
   ]
-  manifest = "meta/fdio_lib_test.cmx"
+  manifest = "meta/fdio_lib_test.cml"
 }
 
 fuchsia_test_package("test-package") {

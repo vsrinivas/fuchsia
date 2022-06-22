@@ -80,7 +80,7 @@ rustc_binary("fb_integration_test_bin") {
 
 fuchsia_unittest_package("fb_integration_test") {
   deps = [ ":fb_integration_test_bin" ]
-  manifest = "meta/fb_integration_test.cmx"
+  manifest = "meta/fb_integration_test.cml"
 
   test_specs = {
     environments = [ nuc_env ]

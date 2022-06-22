@@ -130,7 +130,7 @@ fuchsia_unittest_package("zbitl-tests") {
     ":zbitl-test-resources",
     ":zbitl-unittests",
   ]
-  manifest = "meta/zbitl-unittests.cmx"
+  manifest = "meta/zbitl-unittests.cml"
 }
 
 fuzzer_package("zbitl-fuzzers") {

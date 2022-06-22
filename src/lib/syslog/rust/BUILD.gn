@@ -307,7 +307,7 @@ rustc_library("syslog-listener") {
 }
 
 fuchsia_unittest_package("fuchsia-syslog-tests") {
-  manifest = "meta/fuchsia_syslog_lib_test.cmx"
+  manifest = "meta/fuchsia_syslog_lib_test.cml"
   deps = [ ":syslog-tests" ]
 }
 

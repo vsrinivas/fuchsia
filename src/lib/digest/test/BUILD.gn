@@ -44,7 +44,7 @@ fuchsia_component("digest-unit-tests-component") {
   component_name = "digest-unit-tests"
   testonly = true
 
-  manifest = "digest-unit-tests.cmx"
+  manifest = "digest-unit-tests.cml"
 
   deps = [ ":digest" ]
 }

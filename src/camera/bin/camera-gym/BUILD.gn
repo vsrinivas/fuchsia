@@ -184,7 +184,7 @@ executable("camera_gym_test_bin") {
 }
 
 fuchsia_unittest_package("camera_gym_test") {
-  manifest = "meta/camera_gym_test.cmx"
+  manifest = "meta/camera_gym_test.cml"
   deps = [ ":camera_gym_test_bin" ]
 }
 
@@ -203,6 +203,6 @@ executable("stream_cycler_test_bin") {
 }
 
 fuchsia_unittest_package("stream_cycler_test") {
-  manifest = "meta/stream_cycler_test.cmx"
+  manifest = "meta/stream_cycler_test.cml"
   deps = [ ":stream_cycler_test_bin" ]
 }
