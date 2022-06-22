@@ -133,6 +133,7 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
         match matches.at_most_one() {
             Ok(Some(m)) => Ok(m),
             Ok(None) => bail!(
+                "{}",
                 "A product bundle with that name was not found, please check the spelling and try again."
             ),
             // This branch can only happen with looking_for matches more than
@@ -148,14 +149,16 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
             }
         }
     } else {
-        if urls.len() == 1 {
-            // There is only one product bundle available.
-            return Ok(urls[0].to_owned());
-        } else {
-            bail!(
-                "Since there is more than one product bundle available, \
-                please pass in a product bundle URL."
-            );
+        match urls.into_iter().at_most_one() {
+            Ok(Some(url)) => Ok(url),
+            Ok(None) => bail!("There are no product bundles available."),
+            Err(urls) => {
+                let printable_urls =
+                    urls.map(|url| url.to_string()).collect::<Vec<String>>().join("\n");
+                bail!(
+                    "There is more than one product bundle available, please pass in a product bundle URL:\n{}", printable_urls
+                )
+            }
         }
     }
 }
