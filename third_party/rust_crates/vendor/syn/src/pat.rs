@@ -14,6 +14,7 @@ ast_enum_of_structs! {
     ///
     /// [syntax tree enum]: Expr#syntax-tree-enums
     #[cfg_attr(doc_cfg, doc(cfg(feature = "full")))]
+    #[cfg_attr(not(syn_no_non_exhaustive), non_exhaustive)]
     pub enum Pat {
         /// A box pattern: `box v`.
         Box(PatBox),
@@ -72,18 +73,17 @@ ast_enum_of_structs! {
         /// A pattern that matches any value: `_`.
         Wild(PatWild),
 
-        // The following is the only supported idiom for exhaustive matching of
-        // this enum.
+        // Not public API.
         //
-        //     match expr {
-        //         Pat::Box(e) => {...}
-        //         Pat::Ident(e) => {...}
+        // For testing exhaustiveness in downstream code, use the following idiom:
+        //
+        //     match pat {
+        //         Pat::Box(pat) => {...}
+        //         Pat::Ident(pat) => {...}
         //         ...
-        //         Pat::Wild(e) => {...}
+        //         Pat::Wild(pat) => {...}
         //
-        //         #[cfg(test)]
-        //         Pat::__TestExhaustive(_) => unimplemented!(),
-        //         #[cfg(not(test))]
+        //         #[cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
         //         _ => { /* some sane fallback */ }
         //     }
         //
@@ -91,12 +91,9 @@ ast_enum_of_structs! {
         // a variant. You will be notified by a test failure when a variant is
         // added, so that you can add code to handle it, but your library will
         // continue to compile and work for downstream users in the interim.
-        //
-        // Once `deny(reachable)` is available in rustc, Pat will be
-        // reimplemented as a non_exhaustive enum.
-        // https://github.com/rust-lang/rust/issues/44109#issuecomment-521781237
+        #[cfg(syn_no_non_exhaustive)]
         #[doc(hidden)]
-        __TestExhaustive(crate::private),
+        __NonExhaustive,
     }
 }
 
@@ -376,19 +373,7 @@ pub mod parsing {
         let begin = input.fork();
         let (qself, path) = path::parsing::qpath(input, true)?;
 
-        if input.peek(Token![..]) {
-            return pat_range(input, begin, qself, path);
-        }
-
-        if qself.is_some() {
-            return Ok(Pat::Path(PatPath {
-                attrs: Vec::new(),
-                qself,
-                path,
-            }));
-        }
-
-        if input.peek(Token![!]) && !input.peek(Token![!=]) {
+        if qself.is_none() && input.peek(Token![!]) && !input.peek(Token![!=]) {
             let mut contains_arguments = false;
             for segment in &path.segments {
                 match segment.arguments {
@@ -415,9 +400,19 @@ pub mod parsing {
         }
 
         if input.peek(token::Brace) {
-            pat_struct(input, path).map(Pat::Struct)
+            let pat = pat_struct(input, path)?;
+            if qself.is_some() {
+                Ok(Pat::Verbatim(verbatim::between(begin, input)))
+            } else {
+                Ok(Pat::Struct(pat))
+            }
         } else if input.peek(token::Paren) {
-            pat_tuple_struct(input, path).map(Pat::TupleStruct)
+            let pat = pat_tuple_struct(input, path)?;
+            if qself.is_some() {
+                Ok(Pat::Verbatim(verbatim::between(begin, input)))
+            } else {
+                Ok(Pat::TupleStruct(pat))
+            }
         } else if input.peek(Token![..]) {
             pat_range(input, begin, qself, path)
         } else {
@@ -656,7 +651,7 @@ pub mod parsing {
     fn pat_lit_expr(input: ParseStream) -> Result<Option<Box<Expr>>> {
         if input.is_empty()
             || input.peek(Token![|])
-            || input.peek(Token![=>])
+            || input.peek(Token![=])
             || input.peek(Token![:]) && !input.peek(Token![::])
             || input.peek(Token![,])
             || input.peek(Token![;])
@@ -829,7 +824,7 @@ mod printing {
     impl ToTokens for PatPath {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             tokens.append_all(self.attrs.outer());
-            private::print_path(tokens, &self.qself, &self.path);
+            path::printing::print_path(tokens, &self.qself, &self.path);
         }
     }
 
@@ -883,10 +878,7 @@ mod printing {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             tokens.append_all(self.attrs.outer());
             self.lo.to_tokens(tokens);
-            match &self.limits {
-                RangeLimits::HalfOpen(t) => t.to_tokens(tokens),
-                RangeLimits::Closed(t) => t.to_tokens(tokens),
-            }
+            self.limits.to_tokens(tokens);
             self.hi.to_tokens(tokens);
         }
     }

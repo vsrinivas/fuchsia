@@ -9,6 +9,7 @@ use syn::Type;
 #[test]
 fn test_mut_self() {
     syn::parse_str::<Type>("fn(mut self)").unwrap();
+    syn::parse_str::<Type>("fn(mut self,)").unwrap();
     syn::parse_str::<Type>("fn(mut self: ())").unwrap();
     syn::parse_str::<Type>("fn(mut self: ...)").unwrap_err();
     syn::parse_str::<Type>("fn(mut self: mut self)").unwrap_err();
@@ -284,4 +285,68 @@ fn test_trait_object() {
     // None of the following are valid Rust types.
     syn::parse_str::<Type>("for<'a> dyn Trait<'a>").unwrap_err();
     syn::parse_str::<Type>("dyn for<'a> 'a + Trait").unwrap_err();
+}
+
+#[test]
+fn test_trailing_plus() {
+    #[rustfmt::skip]
+    let tokens = quote!(impl Trait +);
+    snapshot!(tokens as Type, @r###"
+    Type::ImplTrait {
+        bounds: [
+            Trait(TraitBound {
+                modifier: None,
+                path: Path {
+                    segments: [
+                        PathSegment {
+                            ident: "Trait",
+                            arguments: None,
+                        },
+                    ],
+                },
+            }),
+        ],
+    }
+    "###);
+
+    #[rustfmt::skip]
+    let tokens = quote!(dyn Trait +);
+    snapshot!(tokens as Type, @r###"
+    Type::TraitObject {
+        dyn_token: Some,
+        bounds: [
+            Trait(TraitBound {
+                modifier: None,
+                path: Path {
+                    segments: [
+                        PathSegment {
+                            ident: "Trait",
+                            arguments: None,
+                        },
+                    ],
+                },
+            }),
+        ],
+    }
+    "###);
+
+    #[rustfmt::skip]
+    let tokens = quote!(Trait +);
+    snapshot!(tokens as Type, @r###"
+    Type::TraitObject {
+        bounds: [
+            Trait(TraitBound {
+                modifier: None,
+                path: Path {
+                    segments: [
+                        PathSegment {
+                            ident: "Trait",
+                            arguments: None,
+                        },
+                    ],
+                },
+            }),
+        ],
+    }
+    "###);
 }

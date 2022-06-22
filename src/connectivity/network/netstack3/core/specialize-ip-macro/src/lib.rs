@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/103193): remove when lint is stable
+#![feature(non_exhaustive_omitted_patterns_lint)]
+
 #[macro_use]
 extern crate quote;
 #[macro_use]
@@ -826,8 +829,10 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
             Expr::TryBlock(x) => &mut x.attrs,
             Expr::Yield(x) => &mut x.attrs,
             Expr::Verbatim(_) => &mut dummy,
-            Expr::__TestExhaustive(_) => unreachable!(),
+            #[deny(non_exhaustive_omitted_patterns)]
+            _ => unreachable!(),
         },
-        Stmt::Item(Item::__TestExhaustive(_)) => unreachable!(),
+        #[deny(non_exhaustive_omitted_patterns)]
+        _ => unreachable!(),
     })
 }

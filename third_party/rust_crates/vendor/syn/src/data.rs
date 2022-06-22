@@ -246,12 +246,11 @@ pub mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for Variant {
         fn parse(input: ParseStream) -> Result<Self> {
-            let mut attrs = input.call(Attribute::parse_outer)?;
+            let attrs = input.call(Attribute::parse_outer)?;
             let _visibility: Visibility = input.parse()?;
             let ident: Ident = input.parse()?;
             let fields = if input.peek(token::Brace) {
-                let fields = parse_braced(input, &mut attrs)?;
-                Fields::Named(fields)
+                Fields::Named(input.parse()?)
             } else if input.peek(token::Paren) {
                 Fields::Unnamed(input.parse()?)
             } else {
@@ -295,17 +294,6 @@ pub mod parsing {
         }
     }
 
-    pub(crate) fn parse_braced(
-        input: ParseStream,
-        attrs: &mut Vec<Attribute>,
-    ) -> Result<FieldsNamed> {
-        let content;
-        let brace_token = braced!(content in input);
-        attr::parsing::parse_inner(&content, attrs)?;
-        let named = content.parse_terminated(Field::parse_named)?;
-        Ok(FieldsNamed { brace_token, named })
-    }
-
     impl Field {
         /// Parses a named (braced struct) field.
         #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
@@ -313,7 +301,11 @@ pub mod parsing {
             Ok(Field {
                 attrs: input.call(Attribute::parse_outer)?,
                 vis: input.parse()?,
-                ident: Some(input.parse()?),
+                ident: Some(if input.peek(Token![_]) {
+                    input.call(Ident::parse_any)
+                } else {
+                    input.parse()
+                }?),
                 colon_token: Some(input.parse()?),
                 ty: input.parse()?,
             })

@@ -293,7 +293,7 @@ serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 shared_child = "0.3.5"
 signal-hook = "0.3.8"
 simplelog = "0.10.2"
-syn = { version = "1.0.5", features = ["full", "visit", "visit-mut", "extra-traits"] }
+syn = { version = "1.0.98", features = ["full", "visit", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
@@ -658,7 +658,7 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.63" ]
 [gn.package.rayon-core."1.7.0"]
 [gn.package.serde_json."1.0.59"]
 rustflags = ["--cfg=limb_width_64"]
-[gn.package.syn."1.0.74"]
+[gn.package.syn."1.0.98"]
 [gn.package.test-case."1.1.0"]
 [gn.package.wasm-bindgen."0.2.63"]
 
