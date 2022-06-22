@@ -1,0 +1,23 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/cpuperf_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "sys/cpu-trace"
+        ],
+        "features": [
+            "isolated-persistent-storage",
+            "isolated-temp",
+            "shell-commands"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

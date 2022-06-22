@@ -72,5 +72,5 @@ test("install-disk-image-test") {
 
 fuchsia_unittest_package("install-disk-image-test-package") {
   deps = [ ":install-disk-image-test" ]
-  manifest = "meta/install-disk-image-test.cml"
+  manifest = "meta/install-disk-image-test.cmx"
 }

@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/pty-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.hardware.pty.Device"
+        ]
+    }
+}

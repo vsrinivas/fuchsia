@@ -61,7 +61,7 @@ executable("add_mod_command_runner_unittest") {
 }
 
 fuchsia_unittest_component("add-mod-command-runner-unittest") {
-  manifest = "../meta/add_mod_command_runner_unittest.cml"
+  manifest = "../meta/add_mod_command_runner_unittest.cmx"
   deps = [ ":add_mod_command_runner_unittest" ]
 }
 
@@ -93,7 +93,7 @@ executable("remove_mod_command_runner_unittest") {
 }
 
 fuchsia_unittest_component("remove-mod-command-runner-unittest") {
-  manifest = "../meta/remove_mod_command_runner_unittest.cml"
+  manifest = "../meta/remove_mod_command_runner_unittest.cmx"
   deps = [ ":remove_mod_command_runner_unittest" ]
 }
 

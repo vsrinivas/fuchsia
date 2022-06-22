@@ -1,0 +1,16 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/trace_manager_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.controller.ConsumerRegistry",
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.controller.Director",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

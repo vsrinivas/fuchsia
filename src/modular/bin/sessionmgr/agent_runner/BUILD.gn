@@ -62,7 +62,7 @@ executable("agent_runner_unittest") {
 }
 
 fuchsia_unittest_package("agent_runner_unittests") {
-  manifest = "meta/agent_runner_unittest.cml"
+  manifest = "meta/agent_runner_unittest.cmx"
   deps = [ ":agent_runner_unittest" ]
   test_specs = {
     log_settings = {

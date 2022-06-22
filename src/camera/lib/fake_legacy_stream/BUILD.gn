@@ -46,6 +46,6 @@ executable("fake_legacy_stream_unittest_bin") {
 }
 
 fuchsia_unittest_package("fake_legacy_stream_unittest") {
-  manifest = "meta/fake_legacy_stream_unittest.cml"
+  manifest = "meta/fake_legacy_stream_unittest.cmx"
   deps = [ ":fake_legacy_stream_unittest_bin" ]
 }

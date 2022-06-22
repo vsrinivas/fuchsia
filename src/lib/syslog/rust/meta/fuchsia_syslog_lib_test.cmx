@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/fuchsia_syslog_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ]
+}

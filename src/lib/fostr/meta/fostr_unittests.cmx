@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.WriteOnlyLog"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/fostr_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.WriteOnlyLog"
+        ]
+    }
+}

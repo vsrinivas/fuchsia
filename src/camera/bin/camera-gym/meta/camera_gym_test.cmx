@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/camera_gym_test_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

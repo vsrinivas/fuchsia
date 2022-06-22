@@ -60,5 +60,5 @@ executable("sys_service_unittests") {
 
 fuchsia_unittest_package("sys_service_tests") {
   deps = [ ":sys_service_unittests" ]
-  manifest = "../meta/sys_service_unittests.cml"
+  manifest = "../meta/sys_service_unittests.cmx"
 }

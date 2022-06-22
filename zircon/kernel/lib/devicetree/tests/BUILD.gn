@@ -64,7 +64,7 @@ fuchsia_unittest_package("devicetree-test-package") {
     ":devicetree-tests",
     ":dtb_resources",
   ]
-  manifest = "meta/devicetree-tests.cml"
+  manifest = "meta/devicetree-tests.cmx"
   test_specs = {
     # The test requires that a ZBI item of type ZBI_TYPE_DEVICETREE exists,
     # which is true in the case of the arm64 qemu-boot-shim.

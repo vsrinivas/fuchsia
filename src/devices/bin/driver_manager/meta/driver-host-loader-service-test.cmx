@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.VmexResource"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/driver_host_loader_service_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.kernel.VmexResource"
+        ]
+    }
+}

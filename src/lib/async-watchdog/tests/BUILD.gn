@@ -28,5 +28,5 @@ fuchsia_unittest_package("unittests") {
   package_name = "async-watchdog-unittests"
   component_name = "async-watchdog-unittests"
   deps = [ ":async-watchdog-unittests" ]
-  manifest = "meta/async-watchdog-unittests.cml"
+  manifest = "meta/async-watchdog-unittests.cmx"
 }

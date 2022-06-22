@@ -33,6 +33,6 @@ rustc_test("test") {
 
 fuchsia_unittest_package("storage-manager-integration-test-pkg") {
   component_name = "storage_manager_integration_test"
-  manifest = "meta/storage_manager_integration_test.cml"
+  manifest = "meta/storage_manager_integration_test.cmx"
   deps = [ ":test" ]
 }

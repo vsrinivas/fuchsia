@@ -28,6 +28,6 @@ test("fidl_cpp_natural_type_api_tests_bin") {
 
 fuchsia_unittest_package("fidl_cpp_natural_type_api_tests") {
   # Use `fuchsia.process.Launcher` for death tests
-  manifest = "meta/natural_type_api_tests.cml"
+  manifest = "meta/natural_type_api_tests.cmx"
   deps = [ ":fidl_cpp_natural_type_api_tests_bin" ]
 }

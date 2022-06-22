@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/sherlock_configs_unittest_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

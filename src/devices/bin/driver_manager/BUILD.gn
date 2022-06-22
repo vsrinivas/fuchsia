@@ -233,7 +233,7 @@ test("driver_manager_test") {
 }
 
 fuchsia_unittest_component("driver-manager-test") {
-  manifest = "meta/driver-manager-test.cml"
+  manifest = "meta/driver-manager-test.cmx"
   deps = [
     ":driver_manager_test",
     "testing:ambient_vmex_test_util",
@@ -255,7 +255,7 @@ test("driver_host_loader_service_test") {
 }
 
 fuchsia_unittest_component("driver-host-loader-service-test") {
-  manifest = "meta/driver-host-loader-service-test.cml"
+  manifest = "meta/driver-host-loader-service-test.cmx"
   deps = [ ":driver_host_loader_service_test" ]
 }
 

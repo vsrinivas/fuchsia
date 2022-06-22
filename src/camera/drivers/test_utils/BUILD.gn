@@ -111,7 +111,7 @@ fuchsia_unittest_package("fake_buffer_collection_unittest") {
 }
 
 fuchsia_unittest_package("button_checker_unittest") {
-  manifest = "meta/button_checker_unittest.cml"
+  manifest = "meta/button_checker_unittest.cmx"
   deps = [ ":button_checker_unittest_bin" ]
   test_specs = {
     environments = [

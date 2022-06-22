@@ -122,7 +122,7 @@ if (is_fuchsia) {
   }
 
   fuchsia_unittest_package("fidl-handle-closing-tests") {
-    manifest = "run_with_handle_policy_tests.cml"
+    manifest = "run_with_handle_policy_tests.cmx"
     deps = [ ":test_launcher_bin" ]
   }
 }

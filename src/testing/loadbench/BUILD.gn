@@ -83,7 +83,7 @@ executable("loadbench_unittests") {
 
 fuchsia_unittest_package("loadbench_tests") {
   component_name = "loadbench_unittests"
-  manifest = "meta/loadbench_unittests.cml"
+  manifest = "meta/loadbench_unittests.cmx"
   deps = [ ":loadbench_unittests" ]
   test_specs = {
     log_settings = {

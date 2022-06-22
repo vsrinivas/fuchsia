@@ -1,0 +1,26 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/carnelian_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

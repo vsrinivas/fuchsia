@@ -154,7 +154,7 @@ executable("hwstress_v2_test") {
 }
 
 fuchsia_test_component("hwstress_v1_test_pkg") {
-  manifest = "meta/hwstress_test.cml"
+  manifest = "meta/hwstress_test.cmx"
   deps = [ ":hwstress_test" ]
 }
 

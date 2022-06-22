@@ -60,7 +60,7 @@ executable("puppet_master_impl_unittest") {
 }
 
 fuchsia_unittest_component("puppet-master-impl-unittest") {
-  manifest = "meta/puppet_master_impl_unittest.cml"
+  manifest = "meta/puppet_master_impl_unittest.cmx"
   deps = [ ":puppet_master_impl_unittest" ]
 }
 
@@ -125,7 +125,7 @@ executable("dispatch_story_command_executor_unittest") {
 }
 
 fuchsia_unittest_component("dispatch-story-command-executor-unittest") {
-  manifest = "meta/dispatch_story_command_executor_unittest.cml"
+  manifest = "meta/dispatch_story_command_executor_unittest.cmx"
   deps = [ ":dispatch_story_command_executor_unittest" ]
 }
 

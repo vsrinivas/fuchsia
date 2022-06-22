@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.DebugResource",
+                "fuchsia.kernel.InfoResource"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/loadbench_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.kernel.DebugResource",
+            "fuchsia.kernel.InfoResource"
+        ]
+    }
+}

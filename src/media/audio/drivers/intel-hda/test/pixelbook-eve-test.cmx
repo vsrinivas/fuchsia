@@ -1,0 +1,26 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/pixelbook-eve-test-bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/audio-input",
+            "class/audio-output",
+            "class/intel-hda"
+        ],
+        "services": [
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
+        ]
+    }
+}

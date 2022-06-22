@@ -1,0 +1,26 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/audio_core_hardware_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.AudioCore",
+            "fuchsia.media.AudioDeviceEnumerator",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

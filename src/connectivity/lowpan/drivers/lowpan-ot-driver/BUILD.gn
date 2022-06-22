@@ -110,7 +110,7 @@ fuchsia_package("lowpan-ot-driver") {
 }
 
 fuchsia_unittest_package("lowpan-ot-driver-test") {
-  manifest = "meta/lowpan-ot-driver-test.cml"
+  manifest = "meta/lowpan-ot-driver-test.cmx"
   deps = [ ":bin_test" ]
   test_specs = {
     environments = [

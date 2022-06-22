@@ -35,7 +35,7 @@ fuchsia_unittest_component("account_handler_test") {
 
 fuchsia_unittest_component("account_manager_test") {
   deps = [ "account_manager:bin_test" ]
-  manifest = "meta/account_manager_bin_test.cml"
+  manifest = "meta/account_manager_bin_test.cmx"
 }
 
 fuchsia_unittest_component("dev_auth_provider_test") {

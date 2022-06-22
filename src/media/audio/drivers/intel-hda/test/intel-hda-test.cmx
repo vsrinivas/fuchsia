@@ -1,0 +1,18 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/intel-hda-test-bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/audio-input",
+            "class/audio-output",
+            "class/intel-hda"
+        ],
+        "services": [
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

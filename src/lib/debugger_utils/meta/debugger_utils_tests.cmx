@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.RootJob"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/debugger_utils_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.kernel.RootJob",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
+    }
+}

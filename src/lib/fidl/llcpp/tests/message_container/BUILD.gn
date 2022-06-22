@@ -51,7 +51,7 @@ test("fidl_llcpp_message_container_tests_bin") {
 fuchsia_unittest_package("fidl_llcpp_message_container_tests") {
   # TODO(fxbug.dev/74490): Required for death-tests. We could remove the
   # manifests by switching to zxtest.
-  manifest = "meta/fidl_llcpp_message_container_tests.cml"
+  manifest = "meta/fidl_llcpp_message_container_tests.cmx"
   deps = [ ":fidl_llcpp_message_container_tests_bin" ]
 }
 

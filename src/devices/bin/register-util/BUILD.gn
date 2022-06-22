@@ -38,7 +38,7 @@ test("bin") {
 }
 
 fuchsia_unittest_package("register-util-test-package") {
-  manifest = "meta/register-util-test.cml"
+  manifest = "meta/register-util-test.cmx"
   deps = [ ":bin" ]
 }
 

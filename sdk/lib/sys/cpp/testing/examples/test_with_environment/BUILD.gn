@@ -47,7 +47,7 @@ fuchsia_component("fake_echo_app_component") {
 
 fuchsia_test_component("test_with_environment_example_component") {
   component_name = "test_with_environment_example"
-  manifest = "meta/test_with_environment_example_test.cml"
+  manifest = "meta/test_with_environment_example_test.cmx"
   deps = [ ":test_with_environment_example_test_bin" ]
 }
 

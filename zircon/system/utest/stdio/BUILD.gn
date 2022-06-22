@@ -30,5 +30,5 @@ fuchsia_unittest_package("stdio-test-package") {
     ":stdio-test",
     ":stdio-test-util",
   ]
-  manifest = "stdio-test.cml"
+  manifest = "stdio-test.cmx"
 }

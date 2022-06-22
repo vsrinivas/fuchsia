@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.RootJob"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/driver_manager_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.Items",
+            "fuchsia.kernel.RootJob",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

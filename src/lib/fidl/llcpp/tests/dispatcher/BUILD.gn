@@ -94,6 +94,6 @@ test("fidl_llcpp_endpoints_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_endpoints_tests") {
   # Use `fuchsia.process.Launcher` for death tests
-  manifest = "meta/endpoints_tests.cml"
+  manifest = "meta/endpoints_tests.cmx"
   deps = [ ":fidl_llcpp_endpoints_tests_bin" ]
 }

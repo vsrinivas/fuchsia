@@ -72,6 +72,6 @@ executable("loader_service_test") {
 }
 
 fuchsia_unittest_package("loader-service-test") {
-  manifest = "meta/loader-service-test.cml"
+  manifest = "meta/loader-service-test.cmx"
   deps = [ ":loader_service_test" ]
 }

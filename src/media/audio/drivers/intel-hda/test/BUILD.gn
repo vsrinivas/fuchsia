@@ -48,13 +48,13 @@ executable("pixelbook-eve-test-bin") {
 }
 
 fuchsia_unittest_package("pixelbook-eve-test-package") {
-  manifest = "pixelbook-eve-test.cml"
+  manifest = "pixelbook-eve-test.cmx"
   package_name = "pixelbook-eve-test"
   deps = [ ":pixelbook-eve-test-bin" ]
 }
 
 fuchsia_unittest_package("intel-hda-test-package") {
-  manifest = "intel-hda-test.cml"
+  manifest = "intel-hda-test.cmx"
   package_name = "intel-hda-test"
   deps = [ ":intel-hda-test-bin" ]
   test_specs = {

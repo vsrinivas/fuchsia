@@ -56,6 +56,6 @@ executable("image_io_util_unittest_bin") {
 }
 
 fuchsia_unittest_package("image_io_util_unittest") {
-  manifest = "meta/image_io_util_unittest.cml"
+  manifest = "meta/image_io_util_unittest.cmx"
   deps = [ ":image_io_util_unittest_bin" ]
 }

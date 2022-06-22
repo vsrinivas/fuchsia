@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/lsusb-test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/usb-device"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
+    }
+}

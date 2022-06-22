@@ -60,7 +60,7 @@ source_set("hardware_tests") {
 }
 
 fuchsia_unittest_package("msd-vsi-vip-nonhardware-tests") {
-  manifest = "meta/msd-vsi-vip-nonhardware-tests.cml"
+  manifest = "meta/msd-vsi-vip-nonhardware-tests.cmx"
   deps = [ ":nonhardware_tests" ]
   test_specs = {
     log_settings = {

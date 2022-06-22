@@ -23,7 +23,7 @@ test("profile") {
 }
 
 fuchsia_unittest_package("profile-test-pkg") {
-  manifest = "meta/profile-test.cml"
+  manifest = "meta/profile-test.cmx"
   deps = [ ":profile" ]
 }
 
@@ -53,7 +53,7 @@ resource("profile-config-files") {
 }
 
 fuchsia_unittest_package("profile-config-test-pkg") {
-  manifest = "meta/profile-config-test.cml"
+  manifest = "meta/profile-config-test.cmx"
   deps = [
     ":profile-config",
     ":profile-config-files",

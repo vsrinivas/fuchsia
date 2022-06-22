@@ -34,7 +34,7 @@ rustc_test("bin") {
 
 fuchsia_component("test-logs-stop") {
   testonly = true
-  manifest = "meta/test.cml"
+  manifest = "meta/test.cmx"
   deps = [ ":bin" ]
 }
 

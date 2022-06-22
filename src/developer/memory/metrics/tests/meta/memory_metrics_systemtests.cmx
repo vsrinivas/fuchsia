@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/memory_metrics_systemtests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.kernel.RootJobForInspect",
+            "fuchsia.kernel.Stats"
+        ]
+    }
+}

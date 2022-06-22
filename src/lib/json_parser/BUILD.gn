@@ -57,7 +57,7 @@ if (is_fuchsia) {
   import("//build/testing/environments.gni")
 
   fuchsia_unittest_package("json_parser_unittests") {
-    manifest = "meta/json_parser_unittests.cml"
+    manifest = "meta/json_parser_unittests.cmx"
     deps = [ ":json_parser_unittests_bin" ]
     test_specs = {
       environments = [ emu_env ]

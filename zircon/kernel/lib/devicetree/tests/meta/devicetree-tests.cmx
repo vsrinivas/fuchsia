@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.Items"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/devicetree-tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.Items"
+        ]
+    }
+}

@@ -21,6 +21,6 @@ rustc_library("webpki-roots-fuchsia") {
 }
 
 fuchsia_unittest_package("webpki-roots-fuchsia_tests") {
-  manifest = "meta/webpki_roots_fuchsia_lib_test.cml"
+  manifest = "meta/webpki_roots_fuchsia_lib_test.cmx"
   deps = [ ":webpki-roots-fuchsia_test" ]
 }

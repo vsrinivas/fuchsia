@@ -100,7 +100,7 @@ fuchsia_component("stdio-writer") {
 }
 
 fuchsia_unittest_component("component-launching-test") {
-  manifest = "meta/component-launching-test.cml"
+  manifest = "meta/component-launching-test.cmx"
   deps = [ ":driver" ]
 }
 
