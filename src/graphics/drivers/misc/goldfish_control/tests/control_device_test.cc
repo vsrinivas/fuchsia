@@ -6,9 +6,9 @@
 
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
@@ -281,19 +281,21 @@ class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::Goldfis
   std::vector<std::vector<uint8_t>> io_buffer_contents_;
 };
 
-class FakeAddressSpace
-    : public ddk::GoldfishAddressSpaceProtocol<FakeAddressSpace, ddk::base_protocol>,
-      public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
+class FakeAddressSpace : public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice> {
  public:
-  FakeAddressSpace() : proto_({&goldfish_address_space_protocol_ops_, this}) {}
+  FakeAddressSpace() {}
 
-  const goldfish_address_space_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
-                                                  zx::channel request) {
-    return ZX_OK;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>|
+  void OpenChildDriver(OpenChildDriverRequestView request,
+                       OpenChildDriverCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
   }
+};
 
+class FakeAddressSpaceChild
+    : public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
+ public:
+  FakeAddressSpaceChild() {}
   // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver>|
   void AllocateBlock(AllocateBlockRequestView request,
                      AllocateBlockCompleter::Sync& completer) override {}
@@ -306,7 +308,6 @@ class FakeAddressSpace
   void Ping(PingRequestView request, PingCompleter::Sync& completer) override {}
 
  private:
-  goldfish_address_space_protocol_t proto_;
   zx::channel request_;
 };
 
@@ -327,7 +328,8 @@ class ControlDeviceTest : public testing::Test {
  public:
   ControlDeviceTest()
       : loop_(&kAsyncLoopConfigNeverAttachToThread),
-        pipe_server_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+        pipe_server_loop_(&kAsyncLoopConfigNeverAttachToThread),
+        address_space_server_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
     fake_parent_ = MockDevice::FakeRootParent();
@@ -341,12 +343,21 @@ class ControlDeviceTest : public testing::Test {
           return ZX_OK;
         },
         "goldfish-pipe");
-    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE, address_space_.proto()->ops,
-                              address_space_.proto()->ctx, "goldfish-address-space");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
+        [this](zx::channel channel) {
+          fidl::BindServer(
+              address_space_server_loop_.dispatcher(),
+              fidl::ServerEnd<fuchsia_hardware_goldfish::AddressSpaceDevice>(std::move(channel)),
+              &address_space_);
+          return ZX_OK;
+        },
+        "goldfish-address-space");
     fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_SYNC, sync_.proto()->ops, sync_.proto()->ctx,
                               "goldfish-sync");
 
     pipe_server_loop_.StartThread("goldfish-pipe-fidl-server");
+    address_space_server_loop_.StartThread("goldfish-address-space-fidl-server");
 
     auto dut = std::make_unique<Control>(fake_parent_.get());
     ASSERT_OK(dut->Bind());
@@ -382,12 +393,14 @@ class ControlDeviceTest : public testing::Test {
 
   FakePipe pipe_;
   FakeAddressSpace address_space_;
+  FakeAddressSpaceChild address_space_child_;
   FakeSync sync_;
 
   std::shared_ptr<MockDevice> fake_parent_;
 
   async::Loop loop_;
   async::Loop pipe_server_loop_;
+  async::Loop address_space_server_loop_;
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish::ControlDevice>>
       control_fidl_server_ = std::nullopt;
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_ = {};

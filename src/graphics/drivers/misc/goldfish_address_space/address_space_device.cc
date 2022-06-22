@@ -4,11 +4,17 @@
 
 #include "address_space_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/dispatcher.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fit/defer.h>
 #include <limits.h>
 
@@ -62,7 +68,9 @@ uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 
 // static
 zx_status_t AddressSpaceDevice::Create(void* ctx, zx_device_t* device) {
-  auto address_space_device = std::make_unique<goldfish::AddressSpaceDevice>(device);
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  auto address_space_device = std::make_unique<goldfish::AddressSpaceDevice>(device, dispatcher);
 
   zx_status_t status = address_space_device->Bind();
   if (status == ZX_OK) {
@@ -72,8 +80,8 @@ zx_status_t AddressSpaceDevice::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-AddressSpaceDevice::AddressSpaceDevice(zx_device_t* parent)
-    : DeviceType(parent), pci_(parent, "pci") {}
+AddressSpaceDevice::AddressSpaceDevice(zx_device_t* parent, async_dispatcher_t* dispatcher)
+    : DeviceType(parent), pci_(parent, "pci"), dispatcher_(dispatcher) {}
 
 AddressSpaceDevice::~AddressSpaceDevice() = default;
 
@@ -135,7 +143,41 @@ zx_status_t AddressSpaceDevice::Bind() {
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_), REGISTER_PHYS_START_LOW);
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_ >> 32), REGISTER_PHYS_START_HIGH);
 
+  status = loop_.StartThread("goldfish-address-space-thread");
+  outgoing_.emplace(loop_.dispatcher());
+  outgoing_->svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
+      fbl::MakeRefCounted<fs::Service>(
+          [device = this](
+              fidl::ServerEnd<fuchsia_hardware_goldfish::AddressSpaceDevice> request) mutable {
+            auto status =
+                fidl::BindSingleInFlightOnly(device->dispatcher_, std::move(request), device);
+            if (status != ZX_OK) {
+              zxlogf(ERROR, "%s: failed to bind channel: %s", kTag, zx_status_get_string(status));
+            }
+            return status;
+          }));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  status = outgoing_->Serve(std::move(endpoints->server));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to service the outgoing directory: %s", kTag,
+           zx_status_get_string(status));
+    return status;
+  }
+
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
+  };
+
   return DdkAdd(ddk::DeviceAddArgs("goldfish-address-space")
+                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                    .set_fidl_protocol_offers(offers)
+                    .set_outgoing_dir(endpoints->client.TakeChannel())
                     .set_proto_id(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE));
 }
 

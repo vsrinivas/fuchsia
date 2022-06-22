@@ -5,29 +5,12 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/platform-defs.h>
-
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 
 #include "test.h"
 
 namespace board_test {
-
-zx_status_t TestBoard::GoldfishAddressSpaceInit() {
-  pbus_dev_t goldfish_address_space_dev = {};
-  goldfish_address_space_dev.name = "goldfish_address_space";
-  goldfish_address_space_dev.vid = PDEV_VID_TEST;
-  goldfish_address_space_dev.pid = PDEV_PID_PBUS_TEST;
-  goldfish_address_space_dev.did = PDEV_DID_TEST_GOLDFISH_ADDRESS_SPACE;
-
-  zx_status_t status = pbus_.DeviceAdd(&goldfish_address_space_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
-    return status;
-  }
-
-  return ZX_OK;
-}
 
 zx_status_t TestBoard::GoldfishSyncInit() {
   pbus_dev_t goldfish_sync_dev = {};

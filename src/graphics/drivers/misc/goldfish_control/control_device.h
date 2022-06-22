@@ -6,8 +6,8 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
+#include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/ddk/device.h>
@@ -134,7 +134,7 @@ class Control : public ControlType,
   fbl::Mutex lock_;
   fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_;
   ddk::GoldfishControlProtocolClient control_;
-  ddk::GoldfishAddressSpaceProtocolClient address_space_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceDevice> address_space_;
   ddk::GoldfishSyncProtocolClient sync_;
   int32_t id_ = 0;
   zx::bti bti_ TA_GUARDED(lock_);

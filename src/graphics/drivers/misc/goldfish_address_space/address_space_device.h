@@ -6,11 +6,13 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
@@ -33,15 +35,13 @@ using ChildDriverType =
     ddk::Device<AddressSpaceChildDriver,
                 ddk::Messageable<fuchsia_hardware_goldfish::AddressSpaceChildDriver>::Mixin>;
 
-class AddressSpaceDevice
-    : public DeviceType,
-      public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol> {
+class AddressSpaceDevice : public DeviceType {
   using fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
 
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  explicit AddressSpaceDevice(zx_device_t* parent);
+  explicit AddressSpaceDevice(zx_device_t* parent, async_dispatcher_t* dispatcher);
   ~AddressSpaceDevice();
 
   zx_status_t Bind();
@@ -55,14 +55,6 @@ class AddressSpaceDevice
   uint32_t DestroyChildDriver(uint32_t handle);
   uint32_t ChildDriverPing(uint32_t handle);
 
-  // |fuchsia.hardware.GoldfishAddressSpace|
-  zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
-                                                  zx::channel request) {
-    return OpenChildDriver(
-        static_cast<fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType>(type),
-        std::move(request));
-  }
-
   // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>|
   void OpenChildDriver(OpenChildDriverRequestView request,
                        OpenChildDriverCompleter::Sync& completer) override {
@@ -73,10 +65,10 @@ class AddressSpaceDevice
   // Device protocol implementation.
   void DdkRelease();
 
- private:
   zx_status_t OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
                               zx::channel request);
 
+ private:
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
 
   ddk::PciProtocolClient pci_;
@@ -86,6 +78,10 @@ class AddressSpaceDevice
 
   fbl::Mutex mmio_lock_;
   std::optional<fdf::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
+
+  std::optional<svc::Outgoing> outgoing_;
+  async_dispatcher_t* dispatcher_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AddressSpaceDevice);
 };

@@ -32,6 +32,7 @@ type AddressSpaceChildDriverType = strict enum : uint32 {
 /// to run the child driver logic, driven by the app. There is a protocol to
 /// permanently associate a particular goldfish address space driver connection
 /// with a particular type of child driver, discussed next.
+@discoverable
 protocol AddressSpaceDevice {
     OpenChildDriver(resource struct {
         type AddressSpaceChildDriverType;

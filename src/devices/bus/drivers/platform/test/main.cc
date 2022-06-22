@@ -59,9 +59,6 @@ TEST(PbusTest, Enumeration) {
   EXPECT_OK(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
-  EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                 "sys/platform/11:01:1d/test-goldfish-address-space", &fd),
-            ZX_OK);
   EXPECT_EQ(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:20/test-goldfish-sync", &fd),
       ZX_OK);
@@ -81,7 +78,6 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
-  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1d/test-goldfish-address-space", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:20/test-goldfish-sync", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:21/test-pci", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:22/test-power-sensor", &st, 0), 0);

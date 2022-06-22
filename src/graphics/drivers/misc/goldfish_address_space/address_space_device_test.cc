@@ -4,8 +4,8 @@
 
 #include "src/graphics/drivers/misc/goldfish_address_space/address_space_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/common_types.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fake-bti/bti.h>
@@ -103,6 +103,8 @@ class VmoMapping {
 
 class AddressSpaceDeviceTest : public zxtest::Test {
  public:
+  AddressSpaceDeviceTest() : async_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   // |zxtest::Test|
   void SetUp() override {
     fake_root_ = MockDevice::FakeRootParent();
@@ -132,7 +134,8 @@ class AddressSpaceDeviceTest : public zxtest::Test {
     fake_root_->AddProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto()->ops, mock_pci_.GetProto()->ctx,
                             "pci");
 
-    std::unique_ptr<AddressSpaceDevice> dut(new AddressSpaceDevice(fake_root_.get()));
+    std::unique_ptr<AddressSpaceDevice> dut(
+        new AddressSpaceDevice(fake_root_.get(), async_loop_.dispatcher()));
     ASSERT_OK(dut->Bind());
     dut_ = dut.release();
   }
@@ -153,6 +156,7 @@ class AddressSpaceDeviceTest : public zxtest::Test {
   }
 
  protected:
+  async::Loop async_loop_;
   ddk::MockPci mock_pci_;
   std::shared_ptr<MockDevice> fake_root_;
   AddressSpaceDevice* dut_;
@@ -216,8 +220,8 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   Flush(ctrl_regs);
 
   // Create device.
-  ASSERT_OK(dut_->GoldfishAddressSpaceOpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
-                                                      endpoints->server.TakeChannel()));
+  ASSERT_OK(dut_->OpenChildDriver(fuchsia_hardware_goldfish::AddressSpaceChildDriverType::kDefault,
+                                  endpoints->server.TakeChannel()));
   Flush(ctrl_regs);
   EXPECT_EQ(ctrl_regs->handle, kChildDriverHandle);
 

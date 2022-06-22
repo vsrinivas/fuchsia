@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/dsi/cpp/banjo.h>
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
@@ -58,7 +57,6 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::TeeProtocol<FragmentProxy>,
                       public ddk::UsbModeSwitchProtocol<FragmentProxy>,
                       public ddk::VregProtocol<FragmentProxy>,
-                      public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
                       public ddk::DsiProtocol<FragmentProxy>,
                       public ddk::GoldfishSyncProtocol<FragmentProxy>,
                       // TODO(fxbug.dev/32978): PciProxyBase implements
@@ -100,8 +98,6 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t ClockGetNumInputs(uint32_t* out_num_inputs);
   zx_status_t ClockGetInput(uint32_t* out_current_input);
   zx_status_t EthBoardResetPhy();
-  zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
-                                                  zx::channel request);
   zx_status_t GoldfishSyncCreateTimeline(zx::channel request);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);

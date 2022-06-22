@@ -4,6 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
@@ -90,27 +91,37 @@ Control::~Control() {
 }
 
 zx_status_t Control::Init() {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
-  if (endpoints.is_error()) {
-    return endpoints.status_value();
+  auto pipe_endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+  if (pipe_endpoints.is_error()) {
+    return pipe_endpoints.status_value();
   }
 
   zx_status_t status = device_connect_fragment_fidl_protocol(
       parent(), "goldfish-pipe",
       fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
-      endpoints->server.TakeChannel().release());
+      pipe_endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to connect to FIDL fragment: %s", kTag, zx_status_get_string(status));
     return status;
   }
-  pipe_ = fidl::BindSyncClient(std::move(endpoints->client));
+  pipe_ = fidl::BindSyncClient(std::move(pipe_endpoints->client));
 
-  status = ddk::GoldfishAddressSpaceProtocolClient::CreateFromDevice(
-      parent(), "goldfish-address-space", &address_space_);
+  auto address_space_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceDevice>();
+  if (address_space_endpoints.is_error()) {
+    return address_space_endpoints.status_value();
+  }
+
+  status = device_connect_fragment_fidl_protocol(
+      parent(), "goldfish-address-space",
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
+      address_space_endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: goldfish address space fragment is invalid", kTag);
+    zxlogf(ERROR, "%s: failed to connect to FIDL goldfish-address-space fragment: %s", kTag,
+           zx_status_get_string(status));
     return status;
   }
+  address_space_ = fidl::BindSyncClient(std::move(address_space_endpoints->client));
 
   status = ddk::GoldfishSyncProtocolClient::CreateFromDevice(parent(), "goldfish-sync", &sync_);
   if (status != ZX_OK) {
@@ -222,15 +233,17 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   zx::status endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceChildDriver>();
   if (!endpoints.is_ok()) {
-    zxlogf(ERROR, "%s: FIDL endpoints failed: %d", kTag, endpoints.status_value());
+    zxlogf(ERROR, "%s: FIDL endpoints failed: %s", kTag, endpoints.status_string());
     return endpoints.status_value();
   }
 
-  zx_status_t status = address_space_.OpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
-                                                      endpoints->server.TakeChannel());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AddressSpaceDevice::OpenChildDriver failed: %d", kTag, status);
-    return status;
+  auto result = address_space_->OpenChildDriver(
+      fuchsia_hardware_goldfish::AddressSpaceChildDriverType::kDefault,
+      std::move(endpoints->server));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddressSpaceDevice::OpenChildDriver failed: %s", kTag,
+           zx_status_get_string(result.status()));
+    return result.status();
   }
 
   address_space_child_ = fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>(

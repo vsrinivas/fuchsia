@@ -46,9 +46,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_ETH_BOARD:
       proto->ops = &eth_board_protocol_ops_;
       return ZX_OK;
-    case ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE:
-      proto->ops = &goldfish_address_space_protocol_ops_;
-      return ZX_OK;
     case ZX_PROTOCOL_GOLDFISH_SYNC:
       proto->ops = &goldfish_sync_protocol_ops_;
       return ZX_OK;
@@ -328,18 +325,6 @@ zx_status_t FragmentProxy::EthBoardResetPhy() {
   req.op = EthBoardOp::RESET_PHY;
 
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-}
-
-zx_status_t FragmentProxy::GoldfishAddressSpaceOpenChildDriver(
-    address_space_child_driver_type_t type, zx::channel request) {
-  GoldfishAddressSpaceProxyRequest req = {};
-  GoldfishAddressSpaceProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE;
-  req.op = GoldfishAddressSpaceOp::OPEN_CHILD_DRIVER;
-
-  zx_handle_t channel = request.release();
-  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
-             nullptr);
 }
 
 zx_status_t FragmentProxy::GoldfishSyncCreateTimeline(zx::channel request) {
