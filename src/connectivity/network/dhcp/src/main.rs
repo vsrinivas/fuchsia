@@ -13,7 +13,7 @@ use {
         },
         stash::Stash,
     },
-    fuchsia_async::{self as fasync, net::UdpSocket},
+    fuchsia_async::net::UdpSocket,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     net_types::ethernet::Mac,
@@ -22,6 +22,7 @@ use {
         collections::HashMap,
         net::{IpAddr, Ipv4Addr, SocketAddr},
     },
+    tracing::{debug, error, info, warn},
     void::Void,
 };
 
@@ -63,13 +64,12 @@ struct Args {
     persistent: bool,
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main()]
 async fn main() -> Result<(), Error> {
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
-    log::info!("starting");
+    info!("starting");
 
     let Args { persistent } = argh::from_env();
-    log::info!("persistent={}", persistent);
+    info!("persistent={}", persistent);
     if persistent {
         let stash = Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
         // The server parameters and the client records must be consistent with one another in
@@ -79,24 +79,24 @@ async fn main() -> Result<(), Error> {
         let (params, options, records) = match stash.load_parameters().await {
             Ok(params) => {
                 let options = stash.load_options().await.unwrap_or_else(|e| {
-                    log::warn!("failed to load options from stash: {:?}", e);
+                    warn!("failed to load options from stash: {:?}", e);
                     HashMap::new()
                 });
                 let records = stash.load_client_records().await.unwrap_or_else(|e| {
-                    log::warn!("failed to load client records from stash: {:?}", e);
+                    warn!("failed to load client records from stash: {:?}", e);
                     HashMap::new()
                 });
                 (params, options, records)
             }
             Err(e) => {
-                log::warn!("failed to load parameters from stash: {:?}", e);
+                warn!("failed to load parameters from stash: {:?}", e);
                 (default_parameters(), HashMap::new(), HashMap::new())
             }
         };
         let server = match Server::new_from_state(stash.clone(), params, options, records) {
             Ok(v) => v,
             Err(e) => {
-                log::warn!("failed to create server from persistent state: {}", e);
+                warn!("failed to create server from persistent state: {}", e);
                 Server::new(Some(stash), default_parameters())
             }
         };
@@ -130,9 +130,9 @@ async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
             let () = socket_sink.try_send(socket_collection)?;
         }
         Err(e @ fuchsia_zircon::Status::INVALID_ARGS) => {
-            log::info!("server not configured for serving leases: {:?}", e)
+            info!("server not configured for serving leases: {:?}", e)
         }
-        Err(e) => log::warn!("could not enable server on startup: {:?}", e),
+        Err(e) => warn!("could not enable server on startup: {:?}", e),
     }
 
     let admin_fut =
@@ -140,7 +140,7 @@ async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
             match incoming_service {
                 IncomingService::Server(stream) => {
                     run_server(stream, &server, &default_parameters(), socket_sink.clone())
-                        .inspect_err(|e| log::warn!("run_server failed: {:?}", e))
+                        .inspect_err(|e| warn!("run_server failed: {:?}", e))
                         .await?;
                     Ok(())
                 }
@@ -149,7 +149,7 @@ async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
 
     let server_fut = define_running_server_fut(&server, socket_stream);
 
-    log::info!("running");
+    info!("running");
     let ((), ()) = futures::try_join!(server_fut, admin_fut)?;
 
     Ok(())
@@ -179,7 +179,7 @@ impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
         // interface can still succeed.
         let () = socket.set_reuse_port(true)?;
         let () = socket.bind_device(Some(name.as_bytes()))?;
-        log::info!("socket bound to device {}", name);
+        info!("socket bound to device {}", name);
         let () = socket.set_broadcast(true)?;
         let () = socket.bind(&SocketAddr::new(IpAddr::V4(src), SERVER_PORT).into())?;
         Ok(UdpSocket::from_socket(socket.into())?)
@@ -288,14 +288,14 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
                 // the SoftAP interface name will fail with ENODEV. However, such a failure is
                 // normal and expected under those circumstances.
                 Some(libc::ENODEV) => {
-                    log::warn!("Failed to create server sockets: {}", e)
+                    warn!("Failed to create server sockets: {}", e)
                 }
-                Some(_) | None => log::error!("Failed to create server sockets: {}", e),
+                Some(_) | None => error!("Failed to create server sockets: {}", e),
             };
             fuchsia_zircon::Status::IO
         })?;
         if sockets.is_empty() {
-            log::error!("No sockets to run server on");
+            error!("No sockets to run server on");
             return Err(fuchsia_zircon::Status::INVALID_ARGS);
         }
         self.abort_handle = Some(abort_handle);
@@ -356,53 +356,53 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
     ) -> Result<Option<(std::net::SocketAddrV4, Vec<u8>, Option<Mac>)>, Error> {
         let msg = match Message::from_buffer(buf) {
             Ok(msg) => {
-                log::debug!("parsed message from {}: {:?}", sender, msg);
+                debug!("parsed message from {}: {:?}", sender, msg);
                 msg
             }
             Err(e) => {
-                log::warn!("failed to parse message from {}: {}", sender, e);
+                warn!("failed to parse message from {}: {}", sender, e);
                 return Ok(None);
             }
         };
 
         let typ = msg.get_dhcp_type();
         if sender.ip().is_unspecified() {
-            log::info!("processing {:?} from {}", typ, msg.chaddr);
+            info!("processing {:?} from {}", typ, msg.chaddr);
         } else {
-            log::info!("processing {:?} from {}", typ, sender);
+            info!("processing {:?} from {}", typ, sender);
         }
 
         // This call should not block because the server is single-threaded.
         let result = self.server.borrow_mut().dispatch_message(msg);
         match result {
             Err(e) => {
-                log::error!("error processing client message: {:?}", e);
+                error!("error processing client message: {:?}", e);
                 Ok(None)
             }
             Ok(ServerAction::AddressRelease(addr)) => {
-                log::info!("released address: {}", addr);
+                info!("released address: {}", addr);
                 Ok(None)
             }
             Ok(ServerAction::AddressDecline(addr)) => {
-                log::info!("allocated address: {}", addr);
+                info!("allocated address: {}", addr);
                 Ok(None)
             }
             Ok(ServerAction::SendResponse(message, dst)) => {
-                log::debug!("generated response: {:?}", message);
+                debug!("generated response: {:?}", message);
 
                 let typ = message.get_dhcp_type();
                 // Check if server returned an explicit destination ip.
                 let (addr, chaddr) = match dst {
                     ResponseTarget::Broadcast => {
-                        log::info!("sending {:?} to {}", typ, Ipv4Addr::BROADCAST);
+                        info!("sending {:?} to {}", typ, Ipv4Addr::BROADCAST);
                         (Ipv4Addr::BROADCAST, None)
                     }
                     ResponseTarget::Unicast(addr, None) => {
-                        log::info!("sending {:?} to {}", typ, addr);
+                        info!("sending {:?} to {}", typ, addr);
                         (addr, None)
                     }
                     ResponseTarget::Unicast(addr, Some(chaddr)) => {
-                        log::info!("sending {:?} to ip {} chaddr {}", typ, addr, chaddr);
+                        info!("sending {:?} to ip {} chaddr {}", typ, addr, chaddr);
                         (addr, Some(chaddr))
                     }
                 };
@@ -480,7 +480,7 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
                 let () = cleanup().await?;
             }
             let sent = sent?;
-            log::info!("response sent to {}: {} bytes", dst, sent);
+            info!("response sent to {}: {} bytes", dst, sent);
         }
     }
 }
@@ -501,7 +501,7 @@ where
             sockets.into_iter().map(|sock| define_msg_handling_loop_future(sock, server)),
         );
 
-        log::info!("Server starting");
+        info!("Server starting");
         match futures::future::Abortable::new(msg_loops, abort_registration).await {
             Ok(Ok(v)) => {
                 let _: Vec<Void> = v;
@@ -510,12 +510,12 @@ where
             Ok(Err(error)) => {
                 // There was an error handling the server sockets. Disable the
                 // server.
-                log::error!("Server encountered an error: {}. Stopping server.", error);
+                error!("Server encountered an error: {}. Stopping server.", error);
                 let () = server.borrow_mut().disable();
                 Ok(())
             }
             Err(futures::future::Aborted {}) => {
-                log::info!("Server stopped");
+                info!("Server stopped");
                 Ok(())
             }
         }
@@ -546,14 +546,14 @@ where
                         &mut match server.borrow_mut().enable() {
                             Ok(Some(socket_collection)) => {
                                 socket_sink.send(socket_collection).await.map_err(|e| {
-                                    log::error!("Failed to send sockets to sink: {:?}", e);
+                                    error!("Failed to send sockets to sink: {:?}", e);
                                     // Disable the server again to keep a consistent state.
                                     let () = server.borrow_mut().disable();
                                     fuchsia_zircon::Status::INTERNAL
                                 })
                             }
                             Ok(None) => {
-                                log::info!("Server already running");
+                                info!("Server already running");
                                 Ok(())
                             }
                             Err(status) => Err(status),
@@ -618,6 +618,7 @@ where
 mod tests {
     use super::*;
     use dhcp::configuration::ServerParameters;
+    use fuchsia_async as fasync;
     use futures::{sink::drain, FutureExt};
     use net_declare::{fidl_ip_v4, std_ip_v4};
 

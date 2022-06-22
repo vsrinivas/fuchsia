@@ -8,6 +8,7 @@ use crate::server::{ClientRecords, DataStore, LeaseRecord};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr as _;
 use std::string::ToString as _;
+use tracing::warn;
 
 /// A wrapper around a `fuchsia.stash.StoreAccessor` proxy.
 ///
@@ -140,7 +141,7 @@ impl Stash {
                 Some(v) => v,
                 None => {
                     // Invalid key-value pair: remove the invalid pair and try the next one.
-                    log::warn!("failed to parse key string: {}", kv.key);
+                    warn!("failed to parse key string: {}", kv.key);
                     let () = self.rm_key(&kv.key)?;
                     return Ok(None);
                 }
@@ -148,7 +149,7 @@ impl Stash {
             let key = match ClientIdentifier::from_str(key) {
                 Ok(v) => v,
                 Err(e) => {
-                    log::warn!("client id from string conversion failed: {}", e);
+                    warn!("client id from string conversion failed: {}", e);
                     let () = self.rm_key(&kv.key)?;
                     return Ok(None);
                 }
@@ -156,7 +157,7 @@ impl Stash {
             let val = match kv.val {
                 fidl_fuchsia_stash::Value::Stringval(v) => v,
                 v => {
-                    log::warn!("invalid value variant stored in stash: {:?}", v);
+                    warn!("invalid value variant stored in stash: {:?}", v);
                     let () = self.rm_key(&kv.key)?;
                     return Ok(None);
                 }
@@ -164,7 +165,7 @@ impl Stash {
             let val: LeaseRecord = match serde_json::from_str(&val) {
                 Ok(v) => v,
                 Err(e) => {
-                    log::warn!("failed to parse JSON from string: {}", e);
+                    warn!("failed to parse JSON from string: {}", e);
                     let () = self.rm_key(&kv.key)?;
                     return Ok(None);
                 }

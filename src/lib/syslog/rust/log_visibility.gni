@@ -61,7 +61,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/lowpan/lib/openthread_rust:*",
   "//src/connectivity/lowpan/service:*",
   "//src/connectivity/lowpan/tools/lowpanctl:*",
-  "//src/connectivity/network/dhcp:*",
   "//src/connectivity/network/dhcpv6/client:*",
   "//src/connectivity/network/dhcpv6/core:*",
   "//src/connectivity/network/net-cli:*",

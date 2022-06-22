@@ -15,6 +15,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::net::Ipv4Addr;
 use thiserror::Error;
+use tracing::{error, info, warn};
 
 /// A minimal DHCP server.
 ///
@@ -785,7 +786,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                         panic!("fatal inconsistency in server address pool: {}", e)
                     }
                     Err(ServerError::DataStoreUpdateFailure(e)) => {
-                        log::warn!("failed to update data store: {}", e)
+                        warn!("failed to update data store: {}", e)
                     }
                     Err(e) => return Err(e),
                 };
@@ -797,7 +798,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     fn save_params(&mut self) -> Result<(), Status> {
         if let Some(store) = self.store.as_mut() {
             store.store_parameters(&self.params).map_err(|e| {
-                log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
+                warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
                 fuchsia_zircon::Status::INTERNAL
             })
         } else {
@@ -875,7 +876,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
 
         // TODO(fxbug.dev/62558): rethink this check and this function.
         if self.pool.universe.is_empty() {
-            log::error!("Server validation failed: Address pool is empty");
+            error!("Server validation failed: Address pool is empty");
             return Err(Status::INVALID_ARGS);
         }
         Ok(&self.params)
@@ -890,7 +891,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
         let option = self.options_repo.get(&opt_code).ok_or(Status::NOT_FOUND)?;
         let option = option.clone();
         let fidl_option = option.try_into_fidl().map_err(|protocol_error| {
-            log::warn!(
+            warn!(
                 "server dispatcher could not convert dhcp option for fidl transport: {}",
                 protocol_error
             );
@@ -942,7 +943,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
 
     fn dispatch_set_option(&mut self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status> {
         let option = DhcpOption::try_from_fidl(value).map_err(|protocol_error| {
-            log::warn!(
+            warn!(
                 "server dispatcher could not convert fidl argument into dhcp option: {}",
                 protocol_error
             );
@@ -952,7 +953,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
         let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
         if let Some(store) = self.store.as_mut() {
             let () = store.store_options(&opts).map_err(|e| {
-                log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+                warn!("store_options({:?}) in stash failed: {}", opts, e);
                 fuchsia_zircon::Status::INTERNAL
             })?;
         }
@@ -978,7 +979,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                     match crate::configuration::ManagedAddresses::try_from_fidl(managed_addrs) {
                         Ok(managed_addrs) => managed_addrs,
                         Err(e) => {
-                            log::info!(
+                            info!(
                                 "dispatch_set_parameter() got invalid AddressPool argument: {:?}",
                                 e
                             );
@@ -993,7 +994,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                     match crate::configuration::LeaseLength::try_from_fidl(lease_length) {
                         Ok(lease_length) => lease_length,
                         Err(e) => {
-                            log::info!(
+                            info!(
                                 "dispatch_set_parameter() got invalid LeaseLength argument: {}",
                                 e
                             );
@@ -1011,7 +1012,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                     {
                         Ok(static_assignments) => static_assignments,
                         Err(e) => {
-                            log::info!("dispatch_set_parameter() got invalid StaticallyAssignedAddrs argument: {}", e);
+                            info!("dispatch_set_parameter() got invalid StaticallyAssignedAddrs argument: {}", e);
                             return Err(Status::INVALID_ARGS);
                         }
                     }
@@ -1037,7 +1038,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                     .clone()
                     .try_into_fidl()
                     .map_err(|protocol_error| {
-                        log::warn!(
+                        warn!(
                         "server dispatcher could not convert dhcp option for fidl transport: {}",
                         protocol_error
                     );
@@ -1078,7 +1079,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
         let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
         if let Some(store) = self.store.as_mut() {
             let () = store.store_options(&opts).map_err(|e| {
-                log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+                warn!("store_options({:?}) in stash failed: {}", opts, e);
                 fuchsia_zircon::Status::INTERNAL
             })?;
         }
@@ -1103,7 +1104,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
             }
             if let Some(store) = store {
                 let () = store.delete(&id).map_err(|e| {
-                    log::warn!("delete({}) failed: {:?}", id, e);
+                    warn!("delete({}) failed: {:?}", id, e);
                     fuchsia_zircon::Status::INTERNAL
                 })?;
             }
