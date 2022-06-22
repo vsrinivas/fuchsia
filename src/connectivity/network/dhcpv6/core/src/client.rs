@@ -17,6 +17,7 @@ use std::{
     net::Ipv6Addr,
     time::{Duration, Instant},
 };
+use tracing::debug;
 use zerocopy::ByteSlice;
 
 /// Initial Information-request timeout `INF_TIMEOUT` from [RFC 8415, Section 7.6].
@@ -772,7 +773,7 @@ impl ServerDiscovery {
                     //    (though each must have a unique IAID).
                     let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
                         Entry::Occupied(entry) => {
-                            log::debug!(
+                            debug!(
                                 "received unexpected IA_NA option with non-unique IAID {:?}.",
                                 entry.key()
                             );
@@ -810,7 +811,7 @@ impl ServerDiscovery {
                             | v6::ParsedDhcpOption::ElapsedTime(_)
                             | v6::ParsedDhcpOption::DnsServers(_)
                             | v6::ParsedDhcpOption::DomainList(_) => {
-                                log::debug!(
+                                debug!(
                                     "received unexpected suboption with code \
                                     {:?} in IANA options in Advertise message.",
                                     iana_opt.code()
@@ -834,31 +835,31 @@ impl ServerDiscovery {
                 v6::ParsedDhcpOption::StatusCode(code, message) => {
                     status_code = Some(code.get());
                     if !message.is_empty() {
-                        log::debug!("received status code {:?}: {}", status_code.as_ref(), message);
+                        debug!("received status code {:?}: {}", status_code.as_ref(), message);
                     }
                 }
                 v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option Information Refresh Time \
                         ({:?}) in Advertise message",
                         refresh_time
                     );
                 }
                 v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option IA Addr [addr: {:?}] as top \
                         option in Advertise message",
                         iaaddr_data.addr()
                     );
                 }
                 v6::ParsedDhcpOption::Oro(option_codes) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option ORO ({:?}) in Advertise message",
                         option_codes
                     );
                 }
                 v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option Elapsed Time ({:?}) in Advertise message",
                         elapsed_time
                     );
@@ -1631,14 +1632,14 @@ impl Requesting {
                     status_code = Some(match v6::StatusCode::try_from(status_code_opt.get()) {
                         Ok(code) => code,
                         Err(code) => {
-                            log::debug!("received unknown status code {:?}", code);
+                            debug!("received unknown status code {:?}", code);
                             continue;
                         }
                     });
                     if !message.is_empty() {
                         // Status message is intended for logging only; log if
                         // not empty.
-                        log::debug!("received status code {:?}: {}", status_code.as_ref(), message);
+                        debug!("received status code {:?}: {}", status_code.as_ref(), message);
                     }
                 }
                 v6::ParsedDhcpOption::ClientId(client_id_opt) => {
@@ -1678,7 +1679,7 @@ impl Requesting {
                                 // do with IAs that were not requested by the
                                 // client. Ignore unsolicited IAs to control how
                                 // many addresses are assigned to the client.
-                                log::debug!(
+                                debug!(
                                     "received unexpected IA_NA option \
                                     {:?} not requested by the client.",
                                     iana_data
@@ -1694,7 +1695,7 @@ impl Requesting {
                     //    (though each must have a unique IAID).
                     let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
                         Entry::Occupied(entry) => {
-                            log::debug!(
+                            debug!(
                                 "received unexpected IA_NA option with non-unique IAID {:?}.",
                                 entry.key()
                             );
@@ -1736,7 +1737,7 @@ impl Requesting {
                                     //    recorded by the client, that have a
                                     //    valid lifetime of 0 in the IA Address.
                                     v6::TimeValue::Zero => {
-                                        log::debug!(
+                                        debug!(
                                             "IA(address: {:?}) with valid lifetime 0 is ignored",
                                             iaaddr_data.addr()
                                         );
@@ -1751,17 +1752,14 @@ impl Requesting {
                                     Some(match v6::StatusCode::try_from(code.get()) {
                                         Ok(code) => code,
                                         Err(code) => {
-                                            log::debug!(
-                                                "received unknown IANA status code {:?}",
-                                                code
-                                            );
+                                            debug!("received unknown IANA status code {:?}", code);
                                             // Ignore IANA options with unknown
                                             // status code.
                                             continue 'top_level_options;
                                         }
                                     });
                                 if !message.is_empty() {
-                                    log::debug!(
+                                    debug!(
                                         "received status code {:?}: {}",
                                         iana_status_code.as_ref(),
                                         message
@@ -1778,7 +1776,7 @@ impl Requesting {
                             | v6::ParsedDhcpOption::ElapsedTime(_)
                             | v6::ParsedDhcpOption::DnsServers(_)
                             | v6::ParsedDhcpOption::DomainList(_) => {
-                                log::debug!(
+                                debug!(
                                     "received unexpected option with code {:?} \
                                     in IANA options in Reply.",
                                     iana_opt.code()
@@ -1829,7 +1827,7 @@ impl Requesting {
                         | v6::StatusCode::NoBinding
                         | v6::StatusCode::UseMulticast
                         | v6::StatusCode::NoPrefixAvail => {
-                            log::debug!(
+                            debug!(
                                 "received unexpected status code {:?} in IANA option",
                                 iana_status_code
                             );
@@ -1838,7 +1836,7 @@ impl Requesting {
                 }
                 v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
                 v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option Information Refresh \
                         Time ({:?}) in Reply to non-Information Request \
                         message",
@@ -1846,26 +1844,23 @@ impl Requesting {
                     );
                 }
                 v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option IA Addr [addr: {:?}] as top \
                         option in Reply message",
                         iaaddr_data.addr()
                     );
                 }
                 v6::ParsedDhcpOption::Preference(preference_opt) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option Preference ({:?}) in Reply message",
                         preference_opt
                     );
                 }
                 v6::ParsedDhcpOption::Oro(option_codes) => {
-                    log::debug!(
-                        "received unexpected option ORO ({:?}) in Reply message",
-                        option_codes
-                    );
+                    debug!("received unexpected option ORO ({:?}) in Reply message", option_codes);
                 }
                 v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
-                    log::debug!(
+                    debug!(
                         "received unexpected option Elapsed Time ({:?}) in Reply message",
                         elapsed_time
                     );
@@ -2000,7 +1995,7 @@ impl Requesting {
             v6::StatusCode::NoAddrsAvail
             | v6::StatusCode::NoPrefixAvail
             | v6::StatusCode::NoBinding => {
-                log::debug!(
+                debug!(
                     "received top level error status code {:?} in Reply to Request",
                     status_code,
                 );

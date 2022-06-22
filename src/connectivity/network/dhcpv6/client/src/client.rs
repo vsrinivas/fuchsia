@@ -39,6 +39,7 @@ use {
         str::FromStr as _,
         time::{Duration, Instant},
     },
+    tracing::warn,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -236,13 +237,10 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     dhcpv6_core::client::Action::SendMessage(buf) => {
                         let () = match client.socket.send_to(&buf, client.server_addr).await {
                             Ok(size) => assert_eq!(size, buf.len()),
-                            Err(e) => {
-                                let () = log::warn!(
-                                    "failed to send message to {}: {}; will retransmit later",
-                                    client.server_addr,
-                                    e
-                                );
-                            }
+                            Err(e) => warn!(
+                                "failed to send message to {}: {}; will retransmit later",
+                                client.server_addr, e
+                            ),
                         };
                     }
                     dhcpv6_core::client::Action::ScheduleTimer(timer_type, timeout) => {
@@ -328,10 +326,9 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                             .map(zx::Duration::from_nanos)
                             .unwrap_or_else(|_: TryFromIntError| {
                                 let duration = zx::Duration::from_nanos(i64::MAX);
-                                let () = log::warn!(
+                                let () = warn!(
                                     "time duration {:?} overflows zx::Duration, truncating to {:?}",
-                                    timeout,
-                                    duration
+                                    timeout, duration
                                 );
                                 duration
                             }),
@@ -374,7 +371,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                 // Discard invalid messages.
                 //
                 // https://tools.ietf.org/html/rfc8415#section-16.
-                let () = log::warn!("failed to parse received message: {}", e);
+                warn!("failed to parse received message: {}", e);
                 return Ok(());
             }
         };
@@ -445,7 +442,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                         request.map(|request| self.handle_client_request(request)).transpose()
                     }
                     Err(e) => {
-                        Ok(Some(log::warn!("FIDL client request error: {}", e)))
+                        Ok(Some(warn!("FIDL client request error: {}", e)))
                     }
                 }
             }

@@ -71,7 +71,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/connectivity/lowpan/lib/openthread_rust:*",
   "//src/connectivity/lowpan/service:*",
   "//src/connectivity/lowpan/tools/lowpanctl:*",
-  "//src/connectivity/network/dhcpv6/client:*",
   "//src/connectivity/openthread/tests/lib:*",
   "//src/connectivity/openthread/tests/test-code:*",
   "//src/connectivity/openthread/tests/test-components:*",

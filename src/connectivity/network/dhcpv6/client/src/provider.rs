@@ -9,6 +9,7 @@ use {
         ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
     },
     futures::{Future, StreamExt as _},
+    tracing::{error, warn},
 };
 
 /// Handles client provider requests from the input stream.
@@ -29,10 +30,10 @@ pub(crate) async fn run_client_provider<Fut, F>(
                     let params_str = format!("{:?}", params);
                     let () =
                         serve_client(params, request).await.unwrap_or_else(|e: anyhow::Error| {
-                            log::error!("error running client with params {}: {:?}", params_str, e)
+                            error!("error running client with params {}: {:?}", params_str, e);
                         });
                 }
-                Err(e) => log::warn!("client provider request FIDL error: {}", e),
+                Err(e) => warn!("client provider request FIDL error: {}", e),
             }
         })
         .await

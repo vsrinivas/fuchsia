@@ -6,21 +6,20 @@ mod client;
 mod provider;
 
 use {
-    anyhow::{Context as _, Error, Result},
+    anyhow::{Error, Result},
     fidl_fuchsia_net_dhcpv6::ClientProviderRequestStream,
-    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     futures::{future, StreamExt as _, TryStreamExt as _},
+    tracing::info,
 };
 
 enum IncomingService {
     ClientProvider(ClientProviderRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main()]
 async fn main() -> Result<()> {
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
-    let () = log::info!("starting");
+    info!("starting");
 
     let mut fs = ServiceFs::new_local();
     let _: &mut ServiceFsDir<'_, _> =
