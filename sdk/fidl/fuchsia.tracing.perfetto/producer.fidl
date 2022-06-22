@@ -6,6 +6,28 @@ library fuchsia.tracing.perfetto;
 
 using zx;
 
+/// An interface for receiving a trace buffer from the Perfetto
+/// system tracing server.
+protocol BufferReceiver {
+    /// Called by the system tracing service, to provide a trace buffer
+    /// to the Perfetto Producer. The buffer size is specified via
+    /// the `ZX_PROP_VMO_CONTENT_SIZE` handle property.
+    /// The Producer will invoke the callback when the buffer is
+    /// received. The system tracing service must wait until the callback
+    /// is signaled before continuing with trace session setup.
+    /// Method should be called only once per BufferReceiver connection.
+    /// The channel may be safely dropped once a buffer is received.
+    ProvideBuffer(resource struct {
+        buffer zx.handle:VMO;
+    }) -> (struct {}) error zx.status;
+};
+
+/// Specifies how the trace buffer should be exchanged.
+type TraceBuffer = strict resource union {
+    /// Used to receive the trace buffer from the system tracing service.
+    1: from_server client_end:<BufferReceiver>;
+};
+
 /// Interface for creating connections between Perfetto "Producers" and
 /// a shared Perfetto service.
 /// To learn more about Perfetto, see: https://www.perfetto.dev/docs/
@@ -14,16 +36,19 @@ using zx;
 protocol ProducerConnector {
     /// Connects a Perfetto Producer to the Perfetto backend. Both sides
     /// will communicate over `producer_socket` using Perfetto's internal
-    /// wire format.
-    /// Passing a valid `trace_buffer` handle will result in trace data being
-    /// sent over shared memory, which is more efficient than sending data over
-    /// the socket.
+    /// wire format "ProducerPort" (see
+    /// //third_party/perfetto/protos/perfetto/ipc/producer_port.proto).
+    ///
+    /// `trace_buffer` either provides a buffer for communicating trace data
+    /// from the client, or an interface for receiving a buffer from the
+    /// server, depending on the client's needs.
+    ///
     /// The lifetime of `producer_socket` may outlive the connection lifetime
     /// of ProducerConnector.
     /// Multiple Producers may be connected simultaneously.
     // TODO(fxb/85561): Define error conditions and status codes.
     ConnectProducer(resource struct {
         producer_socket zx.handle:SOCKET;
-        trace_buffer zx.handle:<VMO, optional>;
+        buffer TraceBuffer;
     }) -> (struct {}) error zx.status;
 };

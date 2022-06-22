@@ -11,7 +11,8 @@ PerfettoBridge::PerfettoBridge() = default;
 PerfettoBridge::~PerfettoBridge() = default;
 
 // fuchsia::tracing::perfetto::ProducerConnector implementation.
-void PerfettoBridge::ConnectProducer(::zx::socket producer_socket, ::zx::vmo trace_buffer,
+void PerfettoBridge::ConnectProducer(::zx::socket producer_socket,
+                                     ::fuchsia::tracing::perfetto::TraceBuffer buffer,
                                      ConnectProducerCallback callback) {
   FX_NOTIMPLEMENTED();
 }
