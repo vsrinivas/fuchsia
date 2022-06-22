@@ -464,6 +464,7 @@ non-hermetic tests:
 
 Capability                   | Description
 ---------------------------- | -----------------------------
+`dev-input`                  | Input
 `dev-input-report`           | Input method events
 `dev-display-controller`     | Graphical display controller
 `dev-goldfish-address-space` | Goldfish address space device

@@ -479,8 +479,13 @@
             ],
         },
 
-        // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
-        // needs access to /dev/class/input-report.
+        // Some non-hermetic tests require access to real input.
+        {
+            directory: "dev-input",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "r*" ],
+        },
         {
             directory: "dev-input-report",
             from: "parent",

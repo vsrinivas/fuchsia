@@ -243,6 +243,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-input",
+            to: "#test_manager",
+            subdir: "class/input",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-input-report",
             to: "#test_manager",
             subdir: "class/input-report",
