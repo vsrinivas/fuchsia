@@ -56,6 +56,8 @@ print_usage_and_exit() {
   echo "      uploaded."
   echo ""
   echo "   -f Force. Script will refuse to upload unless this flag is specified."
+  echo ""
+  echo "NOTE: incremental builds are partially supported, use with caution."
 
   exit $1
 }
@@ -85,9 +87,15 @@ board_for_arch() {
 create_cros_tree() {
   local -r cros_dir="$1"
   local -r termina_revision="$2"
+  local -r mesa_branch="$3"
+
+  if [ -d ${cros_dir} ]; then
+    return
+  fi
 
   mkdir -p "${cros_dir}"
   pushd "${cros_dir}"
+
   repo init -u https://chrome-internal.googlesource.com/chromeos/manifest-internal -b release-"${termina_revision}"
   repo sync -j8
 
@@ -103,11 +111,9 @@ create_cros_tree() {
     git config remote.fuchsia.url >&- || \
     git remote add fuchsia https://fuchsia.googlesource.com/third_party/mesa && \
     git remote update fuchsia && \
-    git checkout fuchsia/main)
+    git checkout fuchsia/${mesa_branch})
 
-  if [ ! -d src/third_party/fuchsia ]; then
-    git clone https://fuchsia.googlesource.com/fuchsia src/third_party/fuchsia
-  fi
+  git clone https://fuchsia.googlesource.com/fuchsia src/third_party/fuchsia
 
   popd
 }
@@ -115,6 +121,7 @@ create_cros_tree() {
 build_debian_drivers() {
   local -r debian_dir="$1"
   local -r arch="$2"
+  local -r mesa_branch="$3"
 
   if [ "${arch}" != "x64" ]; then
     echo "Debian build only supports x64"
@@ -146,7 +153,7 @@ build_debian_drivers() {
       libpciaccess-dev libpciaccess-dev:i386"
 
     # Mesa for 32bit ICD build
-    git clone https://fuchsia.googlesource.com/third_party/mesa ${debian_dir}/src/mesa
+    git clone https://fuchsia.googlesource.com/third_party/mesa -b ${mesa_branch} ${debian_dir}/src/mesa
     git clone https://fuchsia.googlesource.com/fuchsia ${debian_dir}/src/mesa/subprojects/fuchsia
 
     mkdir -p ${debian_dir}/src/mesa/build32
@@ -358,13 +365,15 @@ main() {
   fi
 
   target="all"
+  mesa_branch="main"
 
-  while getopts "nft:h" FLAG; do
+  while getopts "nft:m:h" FLAG; do
     case "${FLAG}" in
     n) dry_run=true ;;
     f) force=true ;;
     h) print_usage_and_exit 0 ;;
     t) target=${OPTARG} ;;
+    m) mesa_branch=${OPTARG} ;;
     *) print_usage_and_exit 1 ;;
     esac
   done
@@ -405,13 +414,13 @@ main() {
 
   if [ "${target}" == "all" ]; then
     echo "*** Prepare chromeos tree"
-    create_cros_tree "${work_dir}/cros" "${termina_revision}"
+    create_cros_tree "${work_dir}/cros" "${termina_revision}" "${mesa_branch}"
   fi
 
   if [[ "${target}" == "all" || "${target}" == "debian" ]]; then
     if [ "${arch}" == "x64" ]; then
       echo "*** Prepare debian and build"
-      build_debian_drivers "${work_dir}/debian" "${arch}"
+      build_debian_drivers "${work_dir}/debian" "${arch}" "${mesa_branch}"
 
       echo "*** Copy debian drivers to chromeos tree"
       dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/prebuilt-${arch}
