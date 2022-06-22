@@ -23,17 +23,3 @@ rustc_binary("bin") {
 
   sources = [ "src/main.rs" ]
 }
-
-fuchsia_shell_package("onet") {
-  deps = [ ":bin" ]
-  manifest = "meta/onet.cmx"
-}
-
-group("tests") {
-  testonly = true
-}
-
-install_host_tools("host") {
-  deps = [ ":bin" ]
-  outputs = [ "onet" ]
-}
