@@ -38,18 +38,6 @@ rustc_binary("input-pipeline-bin") {
   ]
 }
 
-fuchsia_component("component-for-test") {
-  component_name = "input-pipeline"
-  manifest = "meta/input-pipeline-base.cmx"
-  deps = [ ":input-pipeline-bin" ]
-}
-
-fuchsia_component("component") {
-  component_name = "input-pipeline"
-  manifest = "meta/input-pipeline.cmx"
-  deps = [ ":input-pipeline-bin" ]
-}
-
 fuchsia_component("component-v2") {
   component_name = "input-pipeline"
   manifest = "meta/input-pipeline.cml"
