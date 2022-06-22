@@ -230,6 +230,18 @@ zx_status_t DsiDw::SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd,
     case kMipiDsiDtDcsShortWrite1:
       status = DcsWriteShort(cmd, txdata);
       break;
+    case kMipiDsiDtDcsLongWrite:
+    case kMipiDsiDtGenLongWrite:
+      mipi_dsi_cmd_t banjo_cmd;
+      banjo_cmd.virt_chn_id = cmd.virtual_channel_id();
+      banjo_cmd.dsi_data_type = cmd.dsi_data_type();
+      banjo_cmd.pld_data_list = txdata.data();
+      banjo_cmd.pld_data_count = txdata.count();
+      banjo_cmd.rsp_data_list = response.mutable_data();
+      banjo_cmd.rsp_data_count = response.count();
+      banjo_cmd.flags = cmd.flags();
+      status = GenWriteLong(banjo_cmd);
+      break;
     default:
       DSI_ERROR("Unsupported/Invalid DSI Command Type %d\n", cmd.dsi_data_type());
       status = ZX_ERR_NOT_SUPPORTED;

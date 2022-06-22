@@ -8,6 +8,7 @@ executable("dsiutil") {
     "//sdk/banjo/fuchsia.hardware.dsiimpl:fuchsia.hardware.dsiimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/fxl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mipi-dsi",
   ]
