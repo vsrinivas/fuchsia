@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("bin") {
   name = "setui_service_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "setui_service_integration_test.rs"
   sources = [
     "lib.rs",

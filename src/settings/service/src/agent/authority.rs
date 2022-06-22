@@ -158,6 +158,7 @@ mod tests {
 
             fn create(&self, context: Context) -> futures::future::BoxFuture<'static, ()> {
                 Box::pin(async move {
+                    let _ = &context;
                     let mut receptor = context.receptor;
                     fasync::Task::spawn(async move {
                         while let Ok((Payload::Invocation(_), client)) =

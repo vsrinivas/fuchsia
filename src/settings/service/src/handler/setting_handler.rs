@@ -205,6 +205,7 @@ impl ClientImpl {
 
         // Process MessageHub requests
         fasync::Task::spawn(async move {
+            let _ = &context;
             let nonce = fuchsia_trace::generate_nonce();
             trace!(
                 nonce,

@@ -103,6 +103,7 @@ where
     C: Create + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
+        let _ = &context;
         let proxy = ClientProxy::new(context.service_messenger);
         C::create(proxy).await.map(|handler| Box::new(handler) as BoxedHandler)
     })

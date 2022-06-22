@@ -21,7 +21,7 @@ group("service") {
 rustc_library("lib") {
   name = "settings"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
@@ -334,7 +334,7 @@ rustc_binary("bin") {
   name = "setui_service"
   with_unit_tests = true
 
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",
@@ -431,7 +431,7 @@ core_shard("setui_service_with_camera_core_shard") {
 
 rustc_binary("setui-config-test") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   output_name = "setui_config_test"
   deps = [
     ":lib",

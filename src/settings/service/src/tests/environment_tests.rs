@@ -47,6 +47,7 @@ impl TestAgent {
         let mut agent = TestAgent { delegate: context.delegate.clone() };
 
         fasync::Task::spawn(async move {
+            let _ = &context;
             while let Ok((AgentPayload::Invocation(invocation), client)) =
                 context.receptor.next_of::<AgentPayload>().await
             {

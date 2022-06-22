@@ -38,6 +38,7 @@ impl TestMonitorAgent {
                 Box::pin(async move {
                     // Immediately respond to all invocations
                     fasync::Task::spawn(async move {
+                        let _ = &context;
                         while let Ok((.., client)) = context.receptor.next_of::<Payload>().await {
                             client.reply(Payload::Complete(Ok(())).into()).send().ack();
                         }

@@ -106,6 +106,7 @@ impl PolicyValuesInspectAgent {
         let mut agent = Self { messenger_client, inspect_node, policy_values: InspectMap::new() };
 
         fasync::Task::spawn(async move {
+            let _ = &context;
             let nonce = fuchsia_trace::generate_nonce();
             trace!(nonce, "policy_values_inspect_agent");
             // Request initial values from all policy handlers.

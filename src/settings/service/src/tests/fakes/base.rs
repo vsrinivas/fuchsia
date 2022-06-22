@@ -32,6 +32,7 @@ pub(crate) fn create_setting_handler(
     Box::new(move |mut context| {
         let handler = shared_handler.clone();
         fasync::Task::spawn(async move {
+            let _ = &context;
             while let Ok((payload, client)) = context.receptor.next_of::<Payload>().await {
                 // There could be other events such as acks so do not necessarily
                 // return an error if a different message event is received here.

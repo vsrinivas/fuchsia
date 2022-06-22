@@ -48,6 +48,7 @@ async fn test_agent_event_propagation() {
             *publisher_capture.lock().await = Some(context.get_publisher());
 
             fasync::Task::spawn(async move {
+                let _ = &context;
                 while let Ok((Payload::Invocation(_), client)) =
                     context.receptor.next_of::<Payload>().await
                 {

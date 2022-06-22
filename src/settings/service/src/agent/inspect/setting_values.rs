@@ -148,6 +148,7 @@ impl SettingValuesInspectAgent {
         };
 
         fasync::Task::spawn(async move {
+            let _ = &context;
             let event = receptor.fuse();
             let agent_event = context.receptor.fuse();
             futures::pin_mut!(agent_event, event);

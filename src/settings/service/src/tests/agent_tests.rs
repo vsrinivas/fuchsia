@@ -90,6 +90,7 @@ impl TestAgent {
             Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
                 fasync::Task::spawn(async move {
+                    let _ = &context;
                     while let Ok((Payload::Invocation(invocation), client)) =
                         context.receptor.next_of::<Payload>().await
                     {

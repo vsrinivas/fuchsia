@@ -200,6 +200,7 @@ impl SettingProxyInspectAgent {
 
         fasync::Task::spawn({
             async move {
+            let _ = &context;
             let nonce = fuchsia_trace::generate_nonce();
             trace!(nonce, "setting_proxy_inspect_agent");
             let event = message_rx.fuse();
