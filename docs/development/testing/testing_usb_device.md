@@ -108,7 +108,7 @@ usb_peripheral::FunctionDescriptor function_desc = {
 };
 function_descs.push_back(function_desc);
 
-ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(device_desc, std::move(function_descs)));
+ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(device_desc, std::move(function_descs)));
 ```
 
 Once the `SetupPeripheralDevice` function has succeeded, the usb-function driver

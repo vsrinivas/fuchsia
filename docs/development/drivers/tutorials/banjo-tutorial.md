@@ -968,7 +968,7 @@ TEST(SomeTest, SomeTestCase) {
     CodeUnderTest dut(gpio.GetProto());
     EXPECT_OK(dut.DoSomething());
 
-    ASSERT_NO_FATAL_FAILURES(gpio.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURE(gpio.VerifyAndClear());
 }
 ```
 
