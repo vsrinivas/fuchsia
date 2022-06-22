@@ -9,7 +9,7 @@ use {
     cm_rust::CapabilityName,
     core::mem::size_of,
     fidl_fuchsia_boot as fboot,
-    fuchsia_zbi::{ZbiParser, ZbiResult, ZbiType::BootloaderFile},
+    fuchsia_zbi::{ZbiParser, ZbiParserError, ZbiResult, ZbiType::BootloaderFile},
     fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -103,9 +103,37 @@ impl BuiltinCapability for Items {
                         Err(_) => responder.send(None, 0)?,
                     }
                 }
-                fboot::ItemsRequest::Get2 { responder, .. } => {
-                    // Unimplemented, see fxbug.dev/102804.
-                    responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+                fboot::ItemsRequest::Get2 { type_, extra, responder } => {
+                    let extra = if let Some(extra) = extra { Some((*extra).n) } else { None };
+                    let mut item_vec = match self.zbi_parser.try_get_item(type_, extra) {
+                        Ok(vec) => vec
+                            .iter()
+                            .map(|result| -> Result<fboot::RetrievedItems, Error> {
+                                let vmo = zx::Vmo::create(result.bytes.len().try_into()?)?;
+                                vmo.write(&result.bytes, 0)?;
+                                Ok(fboot::RetrievedItems {
+                                    payload: vmo,
+                                    length: result.bytes.len().try_into()?,
+                                    extra: result.extra,
+                                })
+                            })
+                            .collect::<Result<Vec<fboot::RetrievedItems>, Error>>()
+                            .map_err(|_| zx::Status::INTERNAL.into_raw()),
+                        Err(err) => {
+                            match err {
+                                ZbiParserError::ItemNotStored { .. } => {
+                                    Err(zx::Status::NOT_SUPPORTED.into_raw())
+                                }
+                                _ => {
+                                    // Errors such as item not found are not unexpected, and so not
+                                    // propagated to the client.
+                                    Ok(vec![])
+                                }
+                            }
+                        }
+                    };
+
+                    responder.send(&mut item_vec)?
                 }
                 fboot::ItemsRequest::GetBootloaderFile { filename, responder } => {
                     match self.bootloader_files.get(&filename) {
@@ -227,6 +255,89 @@ mod tests {
             vmo.write(&self.zbi_bytes, 0)?;
             Ok(vmo)
         }
+    }
+
+    #[fuchsia::test]
+    async fn get2_untracked_item_not_found() {
+        let zbi_type = ZbiType::Crashlog;
+        let item = b"abcd";
+
+        let zbi = ZbiBuilder::new()
+            .add_header(zbi_type, 0, item.len().try_into().unwrap())
+            .add_item(item)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create ZBI");
+        let parser = ZbiParser::new(zbi)
+            .set_store_item(ZbiType::Cmdline)
+            .parse()
+            .expect("failed to parse ZBI");
+
+        let item_service = serve_items(parser).expect("failed to serve items");
+
+        // Crashlog existed in the ZBI, but the parser configuration is set to only store Cmdline
+        // items.
+        let result = item_service
+            .get2(zbi_type.into_raw(), None)
+            .await
+            .expect("failed to query item service");
+        assert_eq!(zx::Status::from_raw(result.unwrap_err()), zx::Status::NOT_SUPPORTED);
+    }
+
+    #[fuchsia::test]
+    async fn get2_multiple_items_same_type_different_extras() {
+        let zbi_type = ZbiType::Crashlog;
+
+        let item1 = b"abcd";
+        let extra1 = 123;
+
+        let item2 = b"efgh";
+        let extra2 = 456;
+
+        let zbi = ZbiBuilder::new()
+            .add_header(zbi_type, extra1, item1.len().try_into().unwrap())
+            .add_item(item1)
+            .add_header(zbi_type, extra2, item2.len().try_into().unwrap())
+            .add_item(item2)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create ZBI");
+        let parser = ZbiParser::new(zbi).parse().expect("failed to parse ZBI");
+
+        let item_service = serve_items(parser).expect("failed to serve items");
+
+        // Get both items by not specifying the extra.
+        let result = item_service
+            .get2(zbi_type.into_raw(), None)
+            .await
+            .expect("failed to query item service")
+            .expect("failed to retrieve items");
+
+        assert_eq!(result.len(), 2);
+
+        let retrieved =
+            result.iter().find(|item| item.extra == extra1).expect("failed to find item");
+        let mut bytes = vec![0; retrieved.length as usize];
+        retrieved.payload.read(&mut bytes, 0).expect("failed to read bytes");
+        assert_eq!(bytes, item1);
+        assert_eq!(retrieved.length, item1.len() as u32);
+
+        let retrieved =
+            result.iter().find(|item| item.extra == extra2).expect("failed to find item");
+        let mut bytes = vec![0; retrieved.length as usize];
+        retrieved.payload.read(&mut bytes, 0).expect("failed to read bytes");
+        assert_eq!(bytes, item2);
+        assert_eq!(retrieved.length, item2.len() as u32);
+
+        // Get a single item by specifying the extra.
+        let result = item_service
+            .get2(zbi_type.into_raw(), Some(&mut fidl_fuchsia_boot::Extra { n: extra2 }))
+            .await
+            .expect("failed to query item service")
+            .expect("failed to retrieve items");
+
+        assert!(result.iter().find(|item| item.extra == extra2).is_some());
+        assert!(result.iter().find(|item| item.extra == extra1).is_none());
     }
 
     #[fuchsia::test]
