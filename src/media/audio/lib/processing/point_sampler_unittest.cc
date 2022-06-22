@@ -112,6 +112,8 @@ TEST_P(PassthroughTest, PassthroughMono) {
   // Create mono sampler.
   auto mono_sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kUnsigned8),
                                            CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  EXPECT_EQ(mono_sampler->pos_filter_length(), Fixed::FromRaw(kHalfFrame.raw_value() + 1));
+  EXPECT_EQ(mono_sampler->neg_filter_length(), kHalfFrame);
 
   // Process with unity gain.
   const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};

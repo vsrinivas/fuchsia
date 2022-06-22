@@ -28,11 +28,16 @@ namespace {
 // interpolation of those two neighbouring frames. To avoid this issue, we always snap to the
 // forward nearest neighbor sample directly without interpolation, i.e. choosing the newer frame
 // position when the fractional sampling position is exactly in the middle between two positions.
-constexpr int64_t kFracPositiveFilterWidth = kHalfFrame.raw_value();
+constexpr int64_t kFracPositiveFilterLength = kHalfFrame.raw_value() + 1;
+constexpr int64_t kFracNegativeFilterLength = kHalfFrame.raw_value();
 
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
 class PointSamplerImpl : public PointSampler {
  public:
+  PointSamplerImpl()
+      : PointSampler(Fixed::FromRaw(kFracPositiveFilterLength),
+                     Fixed::FromRaw(kFracNegativeFilterLength)) {}
+
   // Processes `source` into `dest` with `gain`.
   void Process(Source source, Dest dest, Gain gain, bool accumulate) final {
     switch (gain.type) {
@@ -94,7 +99,7 @@ class PointSamplerImpl : public PointSampler {
     auto& source_frame_offset = *source.frame_offset_ptr;
     const auto source_frac_offset = source_frame_offset.raw_value();
     const int64_t source_frac_end =
-        (source.frame_count << Fixed::Format::FractionalBits) - kFracPositiveFilterWidth;
+        (source.frame_count << Fixed::Format::FractionalBits) - kFracPositiveFilterLength + 1;
     if (source_frac_offset >= source_frac_end) {
       return;
     }
@@ -105,8 +110,8 @@ class PointSamplerImpl : public PointSampler {
 
     if constexpr (Type != GainType::kSilent) {
       const auto* source_frame = &static_cast<const SourceSampleType*>(
-          source
-              .samples)[Floor(source_frac_offset + kFracPositiveFilterWidth) * SourceChannelCount];
+          source.samples)[Floor(source_frac_offset + kFracPositiveFilterLength - 1) *
+                          SourceChannelCount];
       float* dest_frame = &dest.samples[dest_frame_offset * DestChannelCount];
 
       float scale = gain.scale;

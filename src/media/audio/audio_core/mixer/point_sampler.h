@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "src/media/audio/audio_core/mixer/mixer.h"
+#include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
@@ -26,9 +27,9 @@ class PointSampler : public Mixer {
            bool accumulate) override;
 
  protected:
-  PointSampler(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits,
-               std::shared_ptr<media_audio::Sampler> point_sampler)
-      : Mixer(pos_filter_width, neg_filter_width, gain_limits),
+  PointSampler(Gain::Limits gain_limits, std::shared_ptr<media_audio::Sampler> point_sampler)
+      : Mixer(Fixed::FromRaw(point_sampler->pos_filter_length().raw_value() - 1),
+              Fixed::FromRaw(point_sampler->neg_filter_length().raw_value() - 1), gain_limits),
         point_sampler_(std::move(point_sampler)) {}
 
  private:

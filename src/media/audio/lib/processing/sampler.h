@@ -24,6 +24,24 @@ namespace media_audio {
 // must ensure that the requested source and destination samples are aligned with respect to their
 // audio format and timeline.
 //
+// Each sampler define their positive and negative lengths of the filter that are expressed in
+// fixed-point fractional source subframe units. These lengths convey which source frames will be
+// referenced by the filter, when producing corresponding destination frames for a specific instant
+// in time.
+//
+// Positive filter length refers to how far forward (positively) the filter looks, from the PTS in
+// question; while negative filter length refers to how far backward (negatively) the filter looks,
+// from that same PTS. The center frame position is included in the length. For example, a pure
+// "sample and hold" sampler might have a positive filter length of `Fixed::FromRaw(1)` and a
+// negative filter length of `kOneFrame`:
+//
+//       center
+//         VV
+//   ***************
+//     ^   ^^
+//     +---++
+//       n  p
+//
 // This class is not safe for concurrent use.
 class Sampler {
  public:
@@ -71,6 +89,20 @@ class Sampler {
 
   // Processes `source` into `dest` with `gain`.
   virtual void Process(Source source, Dest dest, Gain gain, bool accumulate) = 0;
+
+  // Returns positive filter length in frames.
+  Fixed pos_filter_length() const { return pos_filter_length_; }
+
+  // Returns negative filter length in frames.
+  Fixed neg_filter_length() const { return neg_filter_length_; }
+
+ protected:
+  Sampler(Fixed pos_filter_length, Fixed neg_filter_length)
+      : pos_filter_length_(pos_filter_length), neg_filter_length_(neg_filter_length) {}
+
+ private:
+  const Fixed pos_filter_length_;
+  const Fixed neg_filter_length_;
 };
 
 // Mixes `source_sample` to `dest_sample_ptr` with a gain `scale` of `Type`.
