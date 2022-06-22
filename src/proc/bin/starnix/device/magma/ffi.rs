@@ -15,7 +15,7 @@ use crate::device::{
     },
     wayland::image_file::ImageInfo,
 };
-use crate::fs::{anon_fs, Anon, FdFlags, VmoFileObject};
+use crate::fs::{Anon, FdFlags, VmoFileObject};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -274,7 +274,7 @@ pub fn get_buffer_handle(
     } else {
         let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
         let file = Anon::new_file(
-            anon_fs(current_task.kernel()),
+            current_task,
             Box::new(VmoFileObject::new(Arc::new(vmo))),
             OpenFlags::RDWR,
         );
@@ -321,7 +321,7 @@ pub fn query(
     if result_buffer_out != zx::sys::ZX_HANDLE_INVALID {
         let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(result_buffer_out)) };
         let file = Anon::new_file(
-            anon_fs(current_task.kernel()),
+            current_task,
             Box::new(VmoFileObject::new(Arc::new(vmo))),
             OpenFlags::RDWR,
         );

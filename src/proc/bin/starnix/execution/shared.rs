@@ -125,9 +125,9 @@ pub struct StartupHandles {
 /// If there is a `numbered_handles` of type `HandleType::User0`, that is
 /// interpreted as the server end of the ShellController protocol.
 pub fn parse_numbered_handles(
+    current_task: &CurrentTask,
     numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     files: &Arc<FdTable>,
-    kernel: &Kernel,
 ) -> Result<StartupHandles, Error> {
     let mut shell_controller = None;
     if let Some(numbered_handles) = numbered_handles {
@@ -136,7 +136,7 @@ pub fn parse_numbered_handles(
             if info.handle_type() == HandleType::FileDescriptor {
                 files.insert(
                     FdNumber::from_raw(info.arg().into()),
-                    create_file_from_handle(kernel, numbered_handle.handle)?,
+                    create_file_from_handle(current_task, numbered_handle.handle)?,
                 );
             } else if info.handle_type() == HandleType::User0 {
                 shell_controller = Some(ServerEnd::<fstardev::ShellControllerMarker>::from(
@@ -146,7 +146,7 @@ pub fn parse_numbered_handles(
         }
     } else {
         // If no numbered handles are provided default 0, 1, and 2 to a syslog file.
-        let stdio = SyslogFile::new(&kernel);
+        let stdio = SyslogFile::new(current_task);
         files.insert(FdNumber::from_raw(0), stdio.clone());
         files.insert(FdNumber::from_raw(1), stdio.clone());
         files.insert(FdNumber::from_raw(2), stdio);

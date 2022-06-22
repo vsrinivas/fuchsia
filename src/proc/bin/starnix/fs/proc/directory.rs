@@ -5,6 +5,7 @@
 //! Module containing implementations of [`FsNodeOps`] for serving directories in the /proc
 //! in-memory filesystem.
 
+use crate::auth::FsCred;
 use crate::fs::{
     emit_dotdot, fileops_impl_directory, DirectoryEntryType, DirentSink, FileObject, FileOps,
     FileSystem, FsNode, FsNodeOps, FsStr, FsString, SeekOrigin,
@@ -34,7 +35,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
         ops: impl FsNodeOps + 'static,
         mode: FileMode,
     ) -> Self {
-        let node = self.fs.create_node_with_ops(ops, mode);
+        let node = self.fs.create_node_with_ops(ops, mode, FsCred::root());
         self.add_node_entry(name, node)
     }
 
@@ -53,7 +54,8 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn build(self) -> Arc<FsNode> {
         self.fs.create_node_with_ops(
             Arc::new(StaticDirectory { entries: self.entries }),
-            FileMode::IFDIR | FileMode::ALLOW_ALL,
+            mode!(IFDIR, 0o777),
+            FsCred::root(),
         )
     }
 }
@@ -136,7 +138,7 @@ pub trait DirectoryDelegate: Sync + Send + 'static {
 /// a [`DirectoryDelegate`] implementation. The resulting directory has permissions `0o777`
 /// (`rwxrwxrwx`).
 pub fn dynamic_directory<D: DirectoryDelegate>(fs: &Arc<FileSystem>, d: D) -> Arc<FsNode> {
-    fs.create_node_with_ops(Arc::new(DynamicDirectory(d)), FileMode::IFDIR | FileMode::ALLOW_ALL)
+    fs.create_node_with_ops(Arc::new(DynamicDirectory(d)), mode!(IFDIR, 0o777), FsCred::root())
 }
 
 struct DynamicDirectory<D>(D);

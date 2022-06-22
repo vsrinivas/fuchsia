@@ -6,6 +6,7 @@ use fuchsia_zircon as zx;
 use once_cell::sync::OnceCell;
 use std::sync::{Arc, Weak};
 
+use crate::auth::FsCred;
 use crate::device::DeviceMode;
 use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
@@ -194,12 +195,25 @@ pub trait FsNodeOps: Send + Sync + AsAny {
     ///
     /// This function is never called with FileMode::IFDIR. The mkdir function
     /// is used to create directories instead.
-    fn mknod(&self, _node: &FsNode, _name: &FsStr, _mode: FileMode) -> Result<FsNodeHandle, Errno> {
+    fn mknod(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _mode: FileMode,
+        _dev: DeviceType,
+        _owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
         error!(ENOTDIR)
     }
 
     /// Create and return the given child node as a subdirectory.
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn mkdir(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _mode: FileMode,
+        _owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
         error!(ENOTDIR)
     }
 
@@ -209,6 +223,7 @@ pub trait FsNodeOps: Send + Sync + AsAny {
         _node: &FsNode,
         _name: &FsStr,
         _target: &FsStr,
+        _owner: FsCred,
     ) -> Result<FsNodeHandle, Errno> {
         error!(ENOTDIR)
     }
@@ -337,16 +352,19 @@ impl FsNodeOps for SpecialNode {
 
 impl FsNode {
     pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
-        Self::new_internal(Box::new(ops), Weak::new(), 1, FileMode::IFDIR | FileMode::ALLOW_ALL)
+        Self::new_internal(Box::new(ops), Weak::new(), 1, mode!(IFDIR, 0o777), FsCred::root())
     }
 
-    pub fn new(
+    /// Create a node without inserting it into the FileSystem node cache. This is usually not what
+    /// you want! Only use if you're also using get_or_create_node, like ext4.
+    pub fn new_uncached(
         ops: Box<dyn FsNodeOps>,
         fs: &FileSystemHandle,
         inode_num: ino_t,
         mode: FileMode,
+        owner: FsCred,
     ) -> FsNodeHandle {
-        Arc::new(Self::new_internal(ops, Arc::downgrade(fs), inode_num, mode))
+        Arc::new(Self::new_internal(ops, Arc::downgrade(fs), inode_num, mode, owner))
     }
 
     fn new_internal(
@@ -354,11 +372,14 @@ impl FsNode {
         fs: Weak<FileSystem>,
         inode_num: ino_t,
         mode: FileMode,
+        owner: FsCred,
     ) -> FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             mode,
             blksize: DEFAULT_BYTES_PER_BLOCK,
+            uid: owner.uid,
+            gid: owner.gid,
             link_count: if mode.is_dir() { 2 } else { 1 },
             time_create: now,
             time_access: now,
@@ -519,16 +540,37 @@ impl FsNode {
         self.ops().lookup(self, name)
     }
 
-    pub fn mknod(&self, name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
-        self.ops().mknod(self, name, mode)
+    pub fn mknod(
+        &self,
+        name: &FsStr,
+        mode: FileMode,
+        dev: DeviceType,
+        owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
+        self.ops().mknod(self, name, mode, dev, owner)
     }
 
-    pub fn mkdir(&self, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        self.ops().mkdir(self, name)
+    pub fn mkdir(
+        &self,
+        name: &FsStr,
+        mode: FileMode,
+        owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        assert!(
+            mode & FileMode::IFMT == FileMode::IFDIR,
+            "mkdir called without directory node type."
+        );
+        self.ops().mkdir(self, name, mode, owner)
     }
 
-    pub fn create_symlink(&self, name: &FsStr, target: &FsStr) -> Result<FsNodeHandle, Errno> {
-        self.ops().create_symlink(self, name, target)
+    pub fn create_symlink(
+        &self,
+        name: &FsStr,
+        target: &FsStr,
+        owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        self.ops().create_symlink(self, name, target, owner)
     }
 
     pub fn readlink(&self, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
@@ -547,6 +589,31 @@ impl FsNode {
 
     pub fn truncate(&self, length: u64) -> Result<(), Errno> {
         self.ops().truncate(self, length)
+    }
+
+    /// Check whether the node can be accessed in the current context with the specified access
+    /// flags (read, write, or exec). Accounts for capabilities and whether the current user is the
+    /// owner or is in the file's group.
+    pub fn check_access(&self, current_task: &CurrentTask, access: Access) -> Result<(), Errno> {
+        let (node_uid, node_gid, mode) = {
+            let info = self.info();
+            (info.uid, info.gid, info.mode.bits())
+        };
+        let creds = &current_task.read().creds;
+        if creds.has_capability(CAP_DAC_OVERRIDE) {
+            return Ok(());
+        }
+        let mode_flags = if creds.euid == node_uid {
+            (mode & 0o700) >> 6
+        } else if creds.groups.contains(&node_gid) {
+            (mode & 0o070) >> 3
+        } else {
+            (mode & 0o007) >> 0
+        };
+        if (mode_flags & access.bits()) != access.bits() {
+            return error!(EACCES);
+        }
+        Ok(())
     }
 
     /// Associates the provided socket with this file node.
@@ -676,7 +743,7 @@ mod tests {
         current_task
             .fs
             .root()
-            .create_node(b"zero", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::ZERO)
+            .create_node(&current_task, b"zero", mode!(IFCHR, 0o666), DeviceType::ZERO)
             .expect("create_node");
 
         // Prepare the user buffer with some values other than the expected content (non-zero).
@@ -705,7 +772,7 @@ mod tests {
         let node = &current_task
             .fs
             .root()
-            .create_node(b"zero", FileMode::IFCHR, DeviceType::ZERO)
+            .create_node(&current_task, b"zero", FileMode::IFCHR, DeviceType::ZERO)
             .expect("create_node")
             .entry
             .node;

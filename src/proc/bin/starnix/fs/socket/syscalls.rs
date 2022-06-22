@@ -23,8 +23,7 @@ pub fn sys_socket(
     let domain = parse_socket_domain(domain)?;
     let socket_type = parse_socket_type(domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
-    let socket_file =
-        Socket::new_file(current_task.kernel(), Socket::new(domain, socket_type), open_flags);
+    let socket_file = Socket::new_file(current_task, Socket::new(domain, socket_type), open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     let fd = current_task.files.add_with_flags(socket_file, fd_flags)?;
@@ -171,13 +170,20 @@ pub fn sys_bind(
             if name[0] == b'\0' {
                 current_task.abstract_socket_namespace.bind(name, socket)?;
             } else {
-                let mode = current_task.fs.apply_umask(mode!(IFSOCK, 0o765));
+                let mode = file.node().info().mode;
+                let mode = current_task.fs.apply_umask(mode).with_type(FileMode::IFSOCK);
                 let (parent, basename) =
                     current_task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
 
                 let _dir_entry = parent
                     .entry
-                    .bind_socket(basename, socket.clone(), SocketAddress::Unix(name.clone()), mode)
+                    .bind_socket(
+                        basename,
+                        socket.clone(),
+                        SocketAddress::Unix(name.clone()),
+                        mode,
+                        current_task.as_fscred(),
+                    )
                     .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
             }
         }
@@ -236,7 +242,7 @@ pub fn sys_accept4(
     }
 
     let open_flags = socket_flags_to_open_flags(flags);
-    let accepted_socket_file = Socket::new_file(current_task.kernel(), accepted_socket, open_flags);
+    let accepted_socket_file = Socket::new_file(current_task, accepted_socket, open_flags);
     let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let accepted_fd = current_task.files.add_with_flags(accepted_socket_file, fd_flags)?;
     Ok(accepted_fd)
@@ -347,13 +353,7 @@ pub fn sys_socketpair(
     let socket_type = parse_socket_type(domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = UnixSocket::new_pair(
-        &current_task.thread_group.kernel,
-        domain,
-        socket_type,
-        current_task.as_ucred(),
-        open_flags,
-    );
+    let (left, right) = UnixSocket::new_pair(current_task, domain, socket_type, open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     // TODO: Eventually this will need to allocate two fd numbers (each of which could

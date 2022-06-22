@@ -344,7 +344,7 @@ mod tests {
 
     #[::fuchsia::test]
     fn test_vsock_socket() {
-        let (kernel, current_task) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let (fs1, fs2) = fidl::Socket::create(ZirconSocketOpts::STREAM).unwrap();
         const VSOCK_PORT: u32 = 5555;
 
@@ -360,7 +360,7 @@ mod tests {
             .lookup(&VSOCK_PORT)
             .expect("Failed to look up listening socket.");
         let remote =
-            create_fuchsia_pipe(&kernel, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
+            create_fuchsia_pipe(&current_task, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
         listen_socket.remote_connection(remote).unwrap();
 
         let server_socket = listen_socket.accept(current_task.as_ucred()).unwrap();
@@ -412,9 +412,9 @@ mod tests {
         let (fs1, fs2) = fidl::Socket::create(ZirconSocketOpts::STREAM).unwrap();
         let socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
         let remote =
-            create_fuchsia_pipe(&kernel, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
+            create_fuchsia_pipe(&current_task, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
         downcast_socket_to_vsock(&socket).lock().state = VsockSocketState::Connected(remote);
-        let socket_file = Socket::new_file(&kernel, socket, OpenFlags::RDWR);
+        let socket_file = Socket::new_file(&current_task, socket, OpenFlags::RDWR);
 
         let current_task_2 = create_task(&kernel, "task2");
         const XFER_SIZE: usize = 42;

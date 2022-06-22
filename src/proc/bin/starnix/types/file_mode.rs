@@ -69,6 +69,10 @@ impl FileMode {
         FileMode(self.bits() & uapi::S_IFMT)
     }
 
+    pub fn with_type(&self, file_type: FileMode) -> FileMode {
+        FileMode((self.bits() & 0o777) | (file_type.bits() & uapi::S_IFMT))
+    }
+
     pub fn is_lnk(&self) -> bool {
         (self.bits() & uapi::S_IFMT) == uapi::S_IFLNK
     }
@@ -95,16 +99,6 @@ impl FileMode {
 
     pub fn is_sock(&self) -> bool {
         (self.bits() & uapi::S_IFMT) == uapi::S_IFSOCK
-    }
-
-    pub fn has_open_access(&self, flags: OpenFlags) -> bool {
-        let access_mode = flags & OpenFlags::ACCESS_MASK;
-        match access_mode {
-            OpenFlags::RDONLY => self.contains(FileMode::IRUSR),
-            OpenFlags::WRONLY => self.contains(FileMode::IWUSR),
-            OpenFlags::RDWR => self.contains(FileMode::IRUSR) && self.contains(FileMode::IWUSR),
-            _ => true, // Nonstandard access modes can be opened but will fail to read or write.
-        }
     }
 }
 
@@ -136,6 +130,25 @@ macro_rules! mode {
     ($type:ident, $mode:expr) => {
         crate::types::FileMode::from_bits($mode) | crate::types::FileMode::$type
     };
+}
+
+bitflags::bitflags! {
+    pub struct Access: u32 {
+        const EXIST = 0;
+        const EXEC = 1;
+        const WRITE = 2;
+        const READ = 4;
+    }
+}
+impl Access {
+    pub fn from_open_flags(flags: OpenFlags) -> Self {
+        match flags & OpenFlags::ACCESS_MASK {
+            OpenFlags::RDONLY => Self::READ,
+            OpenFlags::WRONLY => Self::WRITE,
+            OpenFlags::RDWR => Self::READ | Self::WRITE,
+            _ => Self::EXIST, // Nonstandard access modes can be opened but will fail to read or write.
+        }
+    }
 }
 
 // Public re-export of macros allows them to be used like regular rust items.

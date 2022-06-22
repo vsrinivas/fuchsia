@@ -197,9 +197,9 @@ mod test {
 
     #[::fuchsia::test]
     fn test_stuff() -> Result<(), Errno> {
-        let (kern, current_task) = create_kernel_and_task();
+        let (_kern, current_task) = create_kernel_and_task();
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        let file = Anon::new_file(anon_fs(&kern), Box::new(TestSeqFile::new()), OpenFlags::RDONLY);
+        let file = Anon::new_file(&current_task, Box::new(TestSeqFile::new()), OpenFlags::RDONLY);
 
         let read_test = |offset: usize, length: usize| -> Result<Vec<u8>, Errno> {
             let size = file.read_at(&current_task, offset, &[UserBuffer { address, length }])?;

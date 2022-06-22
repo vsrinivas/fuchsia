@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
+use crate::auth::FsCred;
 use crate::lock::{Mutex, MutexGuard};
 use crate::logging::not_implemented;
 use crate::types::*;
@@ -138,23 +139,37 @@ impl FsNodeOps for TmpfsDirectory {
         error!(ENOENT)
     }
 
-    fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn mkdir(
+        &self,
+        node: &FsNode,
+        _name: &FsStr,
+        mode: FileMode,
+        owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
         node.info_write().link_count += 1;
         *self.child_count.lock() += 1;
-        Ok(node.fs().create_node(Box::new(TmpfsDirectory::new()), FileMode::IFDIR))
+        Ok(node.fs().create_node(Box::new(TmpfsDirectory::new()), mode, owner))
     }
 
-    fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
+    fn mknod(
+        &self,
+        node: &FsNode,
+        _name: &FsStr,
+        mode: FileMode,
+        dev: DeviceType,
+        owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
         let ops: Box<dyn FsNodeOps> = match mode.fmt() {
             FileMode::IFREG => Box::new(VmoFileNode::new()?),
-            FileMode::IFIFO => Box::new(TmpfsSpecialNode::new()),
-            FileMode::IFBLK => Box::new(TmpfsSpecialNode::new()),
-            FileMode::IFCHR => Box::new(TmpfsSpecialNode::new()),
-            FileMode::IFSOCK => Box::new(TmpfsSpecialNode::new()),
+            FileMode::IFIFO | FileMode::IFBLK | FileMode::IFCHR | FileMode::IFSOCK => {
+                Box::new(TmpfsSpecialNode::new())
+            }
             _ => return error!(EACCES),
         };
         *self.child_count.lock() += 1;
-        Ok(node.fs().create_node(ops, mode))
+        let node = node.fs().create_node(ops, mode, owner);
+        node.info_write().rdev = dev;
+        Ok(node)
     }
 
     fn create_symlink(
@@ -162,9 +177,10 @@ impl FsNodeOps for TmpfsDirectory {
         node: &FsNode,
         _name: &FsStr,
         target: &FsStr,
+        owner: FsCred,
     ) -> Result<FsNodeHandle, Errno> {
         *self.child_count.lock() += 1;
-        Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), FileMode::IFLNK))
+        Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), mode!(IFLNK, 0o777), owner))
     }
 
     fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
@@ -205,10 +221,8 @@ impl FsNodeOps for TmpfsSpecialNode {
 mod test {
     use super::*;
     use crate::mm::*;
-    use crate::task::*;
     use crate::testing::*;
     use fuchsia_zircon as zx;
-    use std::ffi::CString;
     use std::sync::Arc;
     use zerocopy::AsBytes;
 
@@ -235,7 +249,7 @@ mod test {
         let _file = current_task
             .fs
             .root()
-            .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
+            .create_node(&current_task, path, mode!(IFREG, 0o777), DeviceType::NONE)
             .unwrap();
 
         let wr_file = current_task.open_file(path, OpenFlags::RDWR).unwrap();
@@ -279,7 +293,7 @@ mod test {
         let _file = current_task
             .fs
             .root()
-            .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
+            .create_node(&current_task, path, mode!(IFREG, 0o777), DeviceType::NONE)
             .unwrap();
         let rd_file = current_task.open_file(path, OpenFlags::RDONLY).unwrap();
 
@@ -315,20 +329,20 @@ mod test {
                 FdNumber::AT_FDCWD,
                 path,
                 OpenFlags::CREAT | OpenFlags::RDONLY,
-                FileMode::ALLOW_ALL,
+                FileMode::from_bits(0o777),
             )
             .expect("failed to create file");
         assert_eq!(0, file.read(&current_task, &[]).expect("failed to read"));
         assert!(file.write(&current_task, &[]).is_err());
 
         let file = current_task
-            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::WRONLY, FileMode::ALLOW_ALL)
+            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::WRONLY, FileMode::EMPTY)
             .expect("failed to open file WRONLY");
         assert!(file.read(&current_task, &[]).is_err());
         assert_eq!(0, file.write(&current_task, &[]).expect("failed to write"));
 
         let file = current_task
-            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::RDWR, FileMode::ALLOW_ALL)
+            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::RDWR, FileMode::EMPTY)
             .expect("failed to open file RDWR");
         assert_eq!(0, file.read(&current_task, &[]).expect("failed to read"));
         assert_eq!(0, file.write(&current_task, &[]).expect("failed to write"));
@@ -336,30 +350,13 @@ mod test {
 
     #[::fuchsia::test]
     fn test_persistence() {
-        let kernel = Arc::new(
-            Kernel::new(&CString::new("test-kernel").unwrap(), &Vec::new())
-                .expect("failed to create kernel"),
-        );
-        let fs = TmpFs::new();
+        let (_kernel, current_task) = create_kernel_and_task();
+
         {
-            let root = fs.root();
+            let root = &current_task.fs.root().entry;
             let usr = root.create_dir(b"usr").expect("failed to create usr");
             root.create_dir(b"etc").expect("failed to create usr/etc");
             usr.create_dir(b"bin").expect("failed to create usr/bin");
-        }
-
-        let current_task = Task::create_process_without_parent(
-            &kernel.clone(),
-            CString::new("test-task").unwrap(),
-            FsContext::new(fs),
-        )
-        .expect("failed to create first task");
-
-        // Take the lock on thread group and task in the correct order to ensure any wrong ordering
-        // will trigger the tracing-mutex at the right call site.
-        {
-            let _l1 = current_task.thread_group.read();
-            let _l2 = current_task.read();
         }
 
         // At this point, all the nodes are dropped.
@@ -376,7 +373,7 @@ mod test {
                 FdNumber::AT_FDCWD,
                 b"/usr/bin/test.txt",
                 OpenFlags::RDWR | OpenFlags::CREAT,
-                FileMode::ALLOW_ALL,
+                FileMode::from_bits(0o777),
             )
             .expect("failed to create test.txt");
         let txt = current_task

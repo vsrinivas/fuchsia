@@ -105,13 +105,9 @@ impl FsContext {
         // mask are used), and returns the previous value of the mask.
         //
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
-        state.umask = umask & FileMode::ALLOW_ALL;
+        state.umask = umask & FileMode::from_bits(0o777);
 
         old_umask
-    }
-
-    pub fn namespace_root(&self) -> NamespaceNode {
-        self.state.read().namespace.root()
     }
 
     pub fn unshare_namespace(&self) {

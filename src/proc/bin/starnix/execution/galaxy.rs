@@ -170,11 +170,8 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
         for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();
-            let apex_subdir = apex_dir.create_node(
-                apex,
-                FileMode::IFDIR | FileMode::from_bits(0o700),
-                DeviceType::NONE,
-            )?;
+            let apex_subdir =
+                apex_dir.create_node(init_task, apex, mode!(IFDIR, 0o700), DeviceType::NONE)?;
             let apex_source = init_task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
             apex_subdir.mount(WhatToMount::Dir(apex_source.entry), MountFlags::empty())?;
         }
@@ -226,7 +223,7 @@ async fn wait_for_init_file(
     // TODO(fxb/96299): Use inotify machinery to wait for the file.
     loop {
         fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
-        let root = current_task.fs.namespace_root();
+        let root = current_task.fs.root();
         let mut context = LookupContext::default();
         match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
             Ok(_) => break,

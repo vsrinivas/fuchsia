@@ -7,7 +7,6 @@ use std::usize;
 
 use crate::fs::eventfd::*;
 use crate::fs::fuchsia::*;
-use crate::fs::memfd::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::logging::{not_implemented, strace};
@@ -310,39 +309,9 @@ pub fn sys_faccessat(
     user_path: UserCString,
     mode: u32,
 ) -> Result<(), Errno> {
-    // These values are defined in libc headers rather than in UAPI headers.
-    const F_OK: u32 = 0;
-    const X_OK: u32 = 1;
-    const W_OK: u32 = 2;
-    const R_OK: u32 = 4;
-
-    if mode & !(X_OK | W_OK | R_OK) != 0 {
-        return error!(EINVAL);
-    }
-
+    let mode = Access::from_bits(mode).ok_or_else(|| errno!(EINVAL))?;
     let name = lookup_at(current_task, dir_fd, user_path, LookupFlags::no_follow())?;
-    let node = &name.entry.node;
-
-    if mode == F_OK {
-        return Ok(());
-    }
-
-    // TODO(security): These access checks are not quite correct because
-    // they don't consider the current uid and they don't consider GRO or
-    // OTH bits. Really, these checks should be done by the auth system once
-    // that exists.
-    let stat = node.stat()?;
-    if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
-        return error!(EACCES);
-    }
-    if mode & W_OK != 0 && stat.st_mode & S_IWUSR == 0 {
-        return error!(EACCES);
-    }
-    if mode & R_OK != 0 && stat.st_mode & S_IRUSR == 0 {
-        return error!(EACCES);
-    }
-
-    Ok(())
+    name.entry.node.check_access(current_task, mode)
 }
 
 pub fn sys_getdents(
@@ -469,12 +438,7 @@ pub fn sys_readlinkat(
     buffer_size: usize,
 ) -> Result<usize, Errno> {
     let entry = lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        let stat = parent.entry.node.stat()?;
-        // TODO(security): This check is obviously not correct, and should be updated once
-        // we have an auth system.
-        if stat.st_mode & S_IRUSR == 0 {
-            return error!(EACCES);
-        }
+        parent.entry.node.check_access(current_task, Access::READ)?;
         let mut context = LookupContext::new(SymlinkMode::NoFollow);
         Ok(parent.lookup_child(&current_task, &mut context, basename)?.entry)
     })?;
@@ -533,9 +497,13 @@ pub fn sys_mkdirat(
     user_path: UserCString,
     mode: FileMode,
 ) -> Result<(), Errno> {
-    let mode = current_task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        parent.create_node(basename, FileMode::IFDIR | mode, DeviceType::NONE)
+        parent.create_node(
+            current_task,
+            basename,
+            mode.with_type(FileMode::IFDIR),
+            DeviceType::NONE,
+        )
     })?;
     Ok(())
 }
@@ -556,9 +524,8 @@ pub fn sys_mknodat(
         FileMode::EMPTY => FileMode::IFREG,
         _ => return error!(EINVAL),
     };
-    let mode = file_type | current_task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        parent.create_node(basename, mode, dev)
+        parent.create_node(current_task, basename, mode.with_type(file_type), dev)
     })?;
     Ok(())
 }
@@ -747,6 +714,7 @@ fn do_getxattr(
     value_addr: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
+    node.entry.node.check_access(current_task, Access::READ)?;
     if !node.entry.node.info().mode.contains(FileMode::IRUSR) {
         return error!(EACCES);
     }
@@ -807,12 +775,8 @@ fn do_setxattr(
     if size > XATTR_NAME_MAX as usize {
         return error!(E2BIG);
     }
+    node.entry.node.check_access(current_task, Access::WRITE)?;
     let mode = node.entry.node.info().mode;
-    if !mode.contains(FileMode::IWUSR)
-        && !current_task.read().creds.has_capability(CAP_DAC_OVERRIDE)
-    {
-        return error!(EACCES);
-    }
     if mode.is_chr() || mode.is_fifo() {
         return error!(EPERM);
     }
@@ -874,10 +838,8 @@ fn do_removexattr(
     node: &NamespaceNode,
     name_addr: UserCString,
 ) -> Result<(), Errno> {
+    node.entry.node.check_access(current_task, Access::WRITE)?;
     let mode = node.entry.node.info().mode;
-    if !mode.contains(FileMode::IWUSR) {
-        return error!(EACCES);
-    }
     if mode.is_chr() || mode.is_fifo() {
         return error!(EPERM);
     }
@@ -1061,11 +1023,7 @@ pub fn sys_symlinkat(
     }
 
     lookup_parent_at(current_task, new_dir_fd, user_path, |parent, basename| {
-        let stat = parent.entry.node.stat()?;
-        if stat.st_mode & S_IWUSR == 0 {
-            return error!(EACCES);
-        }
-        parent.symlink(basename, target)
+        parent.symlink(current_task, basename, target)
     })?;
     Ok(())
 }
@@ -1194,7 +1152,7 @@ pub fn sys_eventfd2(current_task: &CurrentTask, value: u32, flags: u32) -> Resul
     let blocking = (flags & EFD_NONBLOCK) == 0;
     let eventfd_type =
         if (flags & EFD_SEMAPHORE) == 0 { EventFdType::Counter } else { EventFdType::Semaphore };
-    let file = new_eventfd(current_task.kernel(), value, eventfd_type, blocking);
+    let file = new_eventfd(current_task, value, eventfd_type, blocking);
     let fd_flags = if flags & EFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(file, fd_flags)?;
     Ok(fd)
@@ -1225,7 +1183,7 @@ pub fn sys_timerfd_create(
         fd_flags |= FdFlags::CLOEXEC;
     };
 
-    let timer = TimerFile::new(current_task.kernel(), open_flags)?;
+    let timer = TimerFile::new(current_task, open_flags)?;
     let fd = current_task.files.add_with_flags(timer, fd_flags)?;
     Ok(fd)
 }
@@ -1323,7 +1281,7 @@ pub fn sys_pselect6(
     let sets = &[(read_events, &readfds), (write_events, &writefds), (except_events, &exceptfds)];
 
     let mut num_fds = 0;
-    let file_object = EpollFileObject::new(current_task.kernel());
+    let file_object = EpollFileObject::new(current_task);
     let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
     for fd in 0..nfds {
         let mut aggregated_events = 0;
@@ -1407,7 +1365,7 @@ pub fn sys_epoll_create1(current_task: &CurrentTask, flags: u32) -> Result<FdNum
     if flags & !EPOLL_CLOEXEC != 0 {
         return Err(EINVAL);
     }
-    let ep_file = EpollFileObject::new(current_task.kernel());
+    let ep_file = EpollFileObject::new(current_task);
     let fd_flags = if flags & EPOLL_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(ep_file, fd_flags)?;
     Ok(fd)
@@ -1501,7 +1459,7 @@ fn poll(
 
     let timeout = duration_from_poll_timeout(timeout)?;
     let mut pollfds = vec![pollfd::default(); num_fds as usize];
-    let file_object = EpollFileObject::new(current_task.kernel());
+    let file_object = EpollFileObject::new(current_task);
     let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
 
     for (index, poll_descriptor) in pollfds.iter_mut().enumerate() {

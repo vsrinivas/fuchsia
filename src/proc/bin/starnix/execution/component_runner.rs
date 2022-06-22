@@ -17,7 +17,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 use tracing::info;
 
-use crate::auth::Credentials;
+use crate::auth::{Credentials, FsCred};
 use crate::execution::{
     create_remotefs_filesystem, execute_task, galaxy::Galaxy, get_pkg_hash, parse_numbered_handles,
 };
@@ -96,7 +96,7 @@ pub async fn start_component(
     let credentials = Credentials::from_passwd(user_passwd)?;
     current_task.write().creds = credentials;
     let startup_handles =
-        parse_numbered_handles(start_info.numbered_handles, &current_task.files, &galaxy.kernel)?;
+        parse_numbered_handles(&current_task, start_info.numbered_handles, &current_task.files)?;
     let shell_controller = startup_handles.shell_controller;
 
     let mut argv = vec![binary_path];
@@ -161,8 +161,9 @@ fn mount_component_pkg_data(
             galaxy.system_task.lookup_path_from_root(COMPONENT_PKG_ROOT_DIRECTORY.as_bytes())?;
         pkg_dir.entry.create_node(
             hash.as_bytes(),
-            FileMode::IFDIR | FileMode::from_bits(0o755),
+            mode!(IFDIR, 0o755),
             DeviceType::NONE,
+            FsCred::root(),
         )?;
         galaxy.system_task.lookup_path_from_root(pkg_path.as_bytes())?
     };

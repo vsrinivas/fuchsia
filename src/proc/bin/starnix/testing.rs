@@ -8,6 +8,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
+use crate::auth::FsCred;
 use crate::fs::fuchsia::RemoteFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
@@ -207,7 +208,7 @@ pub fn create_panicking_file() -> FileHandle {
     let fs = FileSystem::new(TestFs);
     FileObject::new_anonymous(
         Box::new(PanicFileOps),
-        fs.create_node(Box::new(PlaceholderFsNodeOps), FileMode::from_bits(0o600)),
+        fs.create_node(Box::new(PlaceholderFsNodeOps), mode!(IFREG, 0o600), FsCred::root()),
         OpenFlags::RDWR,
     )
 }

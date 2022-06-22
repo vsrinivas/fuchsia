@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::pid_directory::*;
+use crate::auth::FsCred;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -33,7 +34,7 @@ impl ProcDirectory {
         let nodes = btreemap! {
             &b"cmdline"[..] => {
                 let cmdline = kernel.upgrade().unwrap().cmdline.clone();
-                fs.create_node_with_ops(ByteVecFile::new(cmdline), mode!(IFREG, 0o444))
+                fs.create_node_with_ops(ByteVecFile::new(cmdline), mode!(IFREG, 0o444), FsCred::root())
             },
             &b"self"[..] => SelfSymlink::new(fs),
             &b"thread-self"[..] => ThreadSelfSymlink::new(fs),
@@ -129,7 +130,7 @@ struct SelfSymlink;
 
 impl SelfSymlink {
     fn new(fs: &FileSystemHandle) -> FsNodeHandle {
-        fs.create_node_with_ops(Self, FileMode::IFLNK | FileMode::ALLOW_ALL)
+        fs.create_node_with_ops(Self, mode!(IFLNK, 0o777), FsCred::root())
     }
 }
 
@@ -147,7 +148,7 @@ struct ThreadSelfSymlink;
 
 impl ThreadSelfSymlink {
     fn new(fs: &FileSystemHandle) -> FsNodeHandle {
-        fs.create_node_with_ops(Self, FileMode::IFLNK | FileMode::ALLOW_ALL)
+        fs.create_node_with_ops(Self, mode!(IFLNK, 0o777), FsCred::root())
     }
 }
 

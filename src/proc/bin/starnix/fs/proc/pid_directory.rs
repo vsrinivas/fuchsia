@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use crate::auth::FsCred;
 use crate::fs::{proc::directory::*, *};
 use crate::lock::Mutex;
 use crate::mm::{ProcMapsFile, ProcStatFile};
@@ -66,7 +67,11 @@ impl DirectoryDelegate for FdDirectory {
         let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
         // Make sure that the file descriptor exists before creating the node.
         let _ = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
-        Ok(fs.create_node(FdSymlink::new(self.task.clone(), fd), FdSymlink::file_mode()))
+        Ok(fs.create_node(
+            FdSymlink::new(self.task.clone(), fd),
+            FdSymlink::file_mode(),
+            self.task.as_fscred(),
+        ))
     }
 }
 
@@ -90,7 +95,7 @@ impl DirectoryDelegate for FdInfoDirectory {
         let pos = *file.offset.lock();
         let flags = file.flags();
         let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
-        Ok(fs.create_node_with_ops(ByteVecFile::new(data), mode!(IFREG, 0o444)))
+        Ok(fs.create_node_with_ops(ByteVecFile::new(data), mode!(IFREG, 0o444), FsCred::root()))
     }
 }
 
@@ -147,7 +152,7 @@ pub struct ExeSymlink {
 
 impl ExeSymlink {
     fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        fs.create_node_with_ops(ExeSymlink { task }, FileMode::IFLNK | FileMode::ALLOW_ALL)
+        fs.create_node_with_ops(ExeSymlink { task }, mode!(IFLNK, 0o777), FsCred::root())
     }
 }
 
@@ -182,7 +187,7 @@ impl FdSymlink {
     }
 
     fn file_mode() -> FileMode {
-        FileMode::IFLNK | FileMode::ALLOW_ALL
+        mode!(IFLNK, 0o777)
     }
 }
 
@@ -213,6 +218,7 @@ impl CmdlineFile {
                 Ok(CmdlineFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
             }),
             mode!(IFREG, 0o444),
+            FsCred::root(),
         )
     }
 }

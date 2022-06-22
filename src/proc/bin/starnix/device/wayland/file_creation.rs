@@ -19,12 +19,12 @@ pub fn create_display_socket(
     let (socket_parent, socket_basename) =
         current_task.lookup_parent_at(FdNumber::AT_FDCWD, &display_path)?;
 
-    let mode = current_task.fs.apply_umask(mode!(IFSOCK, 0o765));
     let _socket_dir_entry = socket_parent.entry.bind_socket(
         socket_basename,
         display_socket.clone(),
         SocketAddress::Unix(display_path.clone()),
-        mode,
+        current_task.fs.apply_umask(mode!(IFSOCK, 0o777)),
+        current_task.as_fscred(),
     );
     display_socket.listen(1)?;
 
@@ -35,7 +35,7 @@ pub fn create_display_socket(
 pub fn create_device_file(current_task: &CurrentTask, device_path: FsString) -> Result<(), Errno> {
     let (device_parent, device_basename) =
         current_task.lookup_parent_at(FdNumber::AT_FDCWD, &device_path)?;
-    let mode = current_task.fs.apply_umask(mode!(IFREG, 0o765));
+    let mode = current_task.fs.apply_umask(mode!(IFREG, 0o777));
     let _device_entry = device_parent.entry.add_node_ops(device_basename, mode, DmaBufNode {})?;
     Ok(())
 }

@@ -14,6 +14,7 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
+use crate::auth::*;
 use crate::fs::{fileops_impl_directory, fs_node_impl_symlink};
 use crate::logging::impossible_error;
 use crate::task::CurrentTask;
@@ -91,11 +92,11 @@ impl FsNodeOps for ExtDirectory {
                 }
             };
             let mode = FileMode::from_bits(ext_node.inode.e2di_mode.into());
-            let child = FsNode::new(ops, &node.fs(), inode_num, mode);
+            let owner =
+                FsCred { uid: ext_node.inode.e2di_uid.into(), gid: ext_node.inode.e2di_gid.into() };
+            let child = FsNode::new_uncached(ops, &node.fs(), inode_num, mode, owner);
 
             let mut info = child.info_write();
-            info.uid = ext_node.inode.e2di_uid.into();
-            info.gid = ext_node.inode.e2di_gid.into();
             info.size = u32::from(ext_node.inode.e2di_size) as usize;
             info.link_count = ext_node.inode.e2di_nlink.into();
             std::mem::drop(info);

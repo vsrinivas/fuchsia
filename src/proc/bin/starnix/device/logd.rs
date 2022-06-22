@@ -6,6 +6,7 @@
 //! TODO(fxbug.dev/96419): This is meant as a stop-gap to help debug Android binaries. Remove once
 //! full init/logd support lands.
 
+use crate::auth::FsCred;
 use crate::fs::socket::{Socket, SocketAddress, SocketDomain, SocketType};
 use crate::task::Kernel;
 use crate::types::*;
@@ -23,13 +24,14 @@ pub fn create_socket_and_start_server(kernel: &Arc<Kernel>) {
 
     let devfs_root = crate::fs::devtmpfs::dev_tmp_fs(kernel).root().clone();
     devfs_root
-        .create_node(b"socket", FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE)
+        .create_node(b"socket", mode!(IFDIR, 0o777), DeviceType::NONE, FsCred::root())
         .expect("create /dev/socket")
         .bind_socket(
             SOCKET_NAME,
             logdw_socket.clone(),
             SocketAddress::Unix(SOCKET_NAME.to_vec()),
             mode!(IFSOCK, 0o777),
+            FsCred::root(),
         )
         .expect("create /dev/socket/logdw");
 

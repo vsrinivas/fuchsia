@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use super::*;
+use crate::auth::FsCred;
 use crate::lock::Mutex;
 use crate::types::*;
 
@@ -151,16 +152,17 @@ impl FileSystem {
         }
     }
 
-    // File systems that produce their own IDs for nodes should invoke this
-    // function. The ones who leave to this object to assign the IDs should
-    // call |create_node|.
+    /// File systems that produce their own IDs for nodes should invoke this
+    /// function. The ones who leave to this object to assign the IDs should
+    /// call |create_node|.
     pub fn create_node_with_id(
         self: &Arc<Self>,
         ops: Box<dyn FsNodeOps>,
-        mode: FileMode,
         id: ino_t,
+        mode: FileMode,
+        owner: FsCred,
     ) -> FsNodeHandle {
-        let node = FsNode::new(ops, self, id, mode);
+        let node = FsNode::new_uncached(ops, self, id, mode, owner);
         self.nodes.lock().insert(node.inode_num, Arc::downgrade(&node));
         if let Some(label) = self.selinux_context.get() {
             let _ = node.set_xattr(b"security.selinux", label, XattrOp::Create);
@@ -168,17 +170,23 @@ impl FileSystem {
         node
     }
 
-    pub fn create_node(self: &Arc<Self>, ops: Box<dyn FsNodeOps>, mode: FileMode) -> FsNodeHandle {
+    pub fn create_node(
+        self: &Arc<Self>,
+        ops: Box<dyn FsNodeOps>,
+        mode: FileMode,
+        owner: FsCred,
+    ) -> FsNodeHandle {
         let inode_num = self.next_inode_num();
-        self.create_node_with_id(ops, mode, inode_num)
+        self.create_node_with_id(ops, inode_num, mode, owner)
     }
 
     pub fn create_node_with_ops(
         self: &Arc<Self>,
         ops: impl FsNodeOps + 'static,
         mode: FileMode,
+        owner: FsCred,
     ) -> FsNodeHandle {
-        self.create_node(Box::new(ops), mode)
+        self.create_node(Box::new(ops), mode, owner)
     }
 
     /// Remove the given FsNode from the node cache.

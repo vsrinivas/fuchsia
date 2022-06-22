@@ -109,20 +109,20 @@ impl UnixSocket {
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
     pub fn new_pair(
-        kernel: &Kernel,
+        current_task: &CurrentTask,
         domain: SocketDomain,
         socket_type: SocketType,
-        credentials: ucred,
         open_flags: OpenFlags,
     ) -> (FileHandle, FileHandle) {
+        let credentials = current_task.as_ucred();
         let left = Socket::new(domain, socket_type);
         let right = Socket::new(domain, socket_type);
         downcast_socket_to_unix(&left).lock().state = UnixSocketState::Connected(right.clone());
         downcast_socket_to_unix(&left).lock().credentials = Some(credentials.clone());
         downcast_socket_to_unix(&right).lock().state = UnixSocketState::Connected(left.clone());
         downcast_socket_to_unix(&right).lock().credentials = Some(credentials);
-        let left = Socket::new_file(kernel, left, open_flags);
-        let right = Socket::new_file(kernel, right, open_flags);
+        let left = Socket::new_file(current_task, left, open_flags);
+        let right = Socket::new_file(current_task, right, open_flags);
         (left, right)
     }
 

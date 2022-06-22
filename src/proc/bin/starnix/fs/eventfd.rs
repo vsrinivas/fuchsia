@@ -32,14 +32,14 @@ pub struct EventFdFileObject {
 }
 
 pub fn new_eventfd(
-    kernel: &Kernel,
+    current_task: &CurrentTask,
     value: u32,
     eventfd_type: EventFdType,
     blocking: bool,
 ) -> FileHandle {
     let open_flags = if blocking { OpenFlags::RDWR } else { OpenFlags::RDWR | OpenFlags::NONBLOCK };
     Anon::new_file(
-        anon_fs(kernel),
+        current_task,
         Box::new(EventFdFileObject {
             inner: Mutex::new(EventFdInner {
                 value: value.into(),

@@ -16,8 +16,8 @@ use crate::lock::RwLock;
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
 
-#[cfg(test)]
-use std::ffi::CString;
+//#[cfg(test)]
+//use std::ffi::CString;
 
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
@@ -90,14 +90,6 @@ impl Kernel {
             device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
             features: HashSet::from_iter(features.iter().cloned()),
         })
-    }
-
-    #[cfg(test)]
-    pub fn new_for_testing() -> Arc<Kernel> {
-        Arc::new(
-            Self::new(&CString::new("testing").unwrap(), &Vec::new())
-                .expect("Failed to create test kernel."),
-        )
     }
 
     /// Opens a device file (driver) identified by `dev`.

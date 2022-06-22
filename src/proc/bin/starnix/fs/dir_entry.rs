@@ -7,9 +7,11 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Weak};
 
+use crate::auth::FsCred;
 use crate::fs::socket::*;
 use crate::fs::*;
 use crate::lock::{RwLock, RwLockWriteGuard};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 struct DirEntryState {
@@ -138,11 +140,19 @@ impl DirEntry {
 
     /// Look up a directory entry with the given name as direct child of this
     /// entry.
-    pub fn component_lookup(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
+    pub fn component_lookup(
+        self: &DirEntryHandle,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<DirEntryHandle, Errno> {
         let (node, _) = self.get_or_create_child(name, || {
+            // TODO(tbodt): correct access check:
+            // self.node.check_access(current_task, Access::X)?;
             if !self.node.info().mode.contains(FileMode::IWUSR) {
                 return error!(EACCES);
             }
+            // TODO(tbodt): correct access check:
+            // self.node.check_access(current_task, Access::X)?;
             self.node.lookup(name)
         })?;
         Ok(node)
@@ -158,14 +168,11 @@ impl DirEntry {
     fn create_entry<F>(
         self: &DirEntryHandle,
         name: &FsStr,
-        mode: FileMode,
-        dev: DeviceType,
         create_node_fn: F,
     ) -> Result<DirEntryHandle, Errno>
     where
         F: FnOnce() -> Result<FsNodeHandle, Errno>,
     {
-        assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
         if DirEntry::is_reserved_name(name) {
             return error!(EEXIST);
         }
@@ -173,16 +180,7 @@ impl DirEntry {
         if name.len() > NAME_MAX as usize {
             return error!(ENAMETOOLONG);
         }
-        let (entry, exists) = self.get_or_create_child(name, || {
-            let node = create_node_fn()?;
-            let mut info = node.info_write();
-            info.mode = mode;
-            if mode.is_blk() || mode.is_chr() {
-                info.rdev = dev;
-            }
-            std::mem::drop(info);
-            Ok(node)
-        })?;
+        let (entry, exists) = self.get_or_create_child(name, create_node_fn)?;
         if exists {
             return error!(EEXIST);
         }
@@ -191,51 +189,8 @@ impl DirEntry {
         Ok(entry)
     }
 
-    #[cfg(test)]
-    pub fn create_dir(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
-        // TODO: apply_umask
-        self.create_entry(name, FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE, || {
-            self.node.mkdir(name)
-        })
-    }
-
-    pub fn create_node(
-        self: &DirEntryHandle,
-        name: &FsStr,
-        mode: FileMode,
-        dev: DeviceType,
-    ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, mode, dev, || {
-            if mode.is_dir() {
-                self.node.mkdir(name)
-            } else {
-                let node = self.node.mknod(name, mode)?;
-                if mode.is_sock() {
-                    node.set_socket(Socket::new(SocketDomain::Unix, SocketType::Stream));
-                }
-                Ok(node)
-            }
-        })
-    }
-
-    pub fn bind_socket(
-        self: &DirEntryHandle,
-        name: &FsStr,
-        socket: SocketHandle,
-        socket_address: SocketAddress,
-        mode: FileMode,
-    ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, mode, DeviceType::NONE, || {
-            let node = self.node.mknod(name, mode)?;
-            if let Some(unix_socket) = socket.downcast_socket::<UnixSocket>() {
-                unix_socket.bind_socket_to_node(&socket, socket_address, &node)?;
-            } else {
-                return error!(ENOTSUP);
-            }
-            Ok(node)
-        })
-    }
-
+    /// Magically creates a node without asking the filesystem. All the other node creation
+    /// functions go through the filesystem, such as create_node or create_symlink.
     pub fn add_node_ops(
         self: &DirEntryHandle,
         name: &FsStr,
@@ -252,17 +207,72 @@ impl DirEntry {
         dev: DeviceType,
         ops: impl FsNodeOps + 'static,
     ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, mode, dev, || Ok(self.node.fs().create_node(Box::new(ops), mode)))
+        self.create_entry(name, || {
+            let node = self.node.fs().create_node(Box::new(ops), mode, FsCred::root());
+            {
+                let mut info = node.info_write();
+                info.rdev = dev;
+            }
+            Ok(node)
+        })
+    }
+
+    // This is marked as test-only because it sets the owner/group to root instead of the current
+    // user to save a bit of typing in tests, but this shouldn't happen silently in production.
+    #[cfg(test)]
+    pub fn create_dir(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
+        // TODO: apply_umask
+        self.create_entry(name, || self.node.mkdir(name, mode!(IFDIR, 0o777), FsCred::root()))
+    }
+
+    /// Ask the filesystem to create a node. This is the equivalent of mknod. Works for any type of
+    /// file other than a symlink.
+    pub fn create_node(
+        self: &DirEntryHandle,
+        name: &FsStr,
+        mode: FileMode,
+        dev: DeviceType,
+        owner: FsCred,
+    ) -> Result<DirEntryHandle, Errno> {
+        self.create_entry(name, || {
+            if mode.is_dir() {
+                self.node.mkdir(name, mode, owner)
+            } else {
+                let node = self.node.mknod(name, mode, dev, owner)?;
+                if mode.is_sock() {
+                    node.set_socket(Socket::new(SocketDomain::Unix, SocketType::Stream));
+                }
+                Ok(node)
+            }
+        })
+    }
+
+    pub fn bind_socket(
+        self: &DirEntryHandle,
+        name: &FsStr,
+        socket: SocketHandle,
+        socket_address: SocketAddress,
+        mode: FileMode,
+        owner: FsCred,
+    ) -> Result<DirEntryHandle, Errno> {
+        self.create_entry(name, || {
+            let node = self.node.mknod(name, mode, DeviceType::NONE, owner)?;
+            if let Some(unix_socket) = socket.downcast_socket::<UnixSocket>() {
+                unix_socket.bind_socket_to_node(&socket, socket_address, &node)?;
+            } else {
+                return error!(ENOTSUP);
+            }
+            Ok(node)
+        })
     }
 
     pub fn create_symlink(
         self: &DirEntryHandle,
         name: &FsStr,
         target: &FsStr,
+        owner: FsCred,
     ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, FileMode::IFLNK | FileMode::ALLOW_ALL, DeviceType::NONE, || {
-            self.node.create_symlink(name, target)
-        })
+        self.create_entry(name, || self.node.create_symlink(name, target, owner))
     }
 
     pub fn link(self: &DirEntryHandle, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {

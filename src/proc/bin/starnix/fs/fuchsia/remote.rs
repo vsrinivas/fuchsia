@@ -11,6 +11,7 @@ use syncio::{
 };
 use tracing::warn;
 
+use crate::auth::FsCred;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::impossible_error;
@@ -56,12 +57,12 @@ impl RemoteNode {
 }
 
 pub fn create_fuchsia_pipe(
-    kern: &Kernel,
+    current_task: &CurrentTask,
     socket: zx::Socket,
     flags: OpenFlags,
 ) -> Result<FileHandle, Errno> {
     let ops = Box::new(RemotePipeObject::new(socket.into_handle())?);
-    Ok(Anon::new_file(anon_fs(kern), ops, flags))
+    Ok(Anon::new_file(current_task, ops, flags))
 }
 
 fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) {
@@ -160,8 +161,12 @@ impl FsNodeOps for RemoteNode {
         let ops = Box::new(RemoteNode { zxio, rights: self.rights });
         let mode =
             FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
+        // Make sure the same permissions are granted to user, group, and other.
+        let user_perms = mode.bits() & 0o700;
+        let mode = mode | FileMode::from_bits((user_perms >> 3) | (user_perms >> 6));
+        log::info!("remote fs file {:?} mode {:?}", name, mode);
 
-        let child = node.fs().create_node_with_id(ops, mode, attrs.id);
+        let child = node.fs().create_node_with_id(ops, attrs.id, mode, FsCred::root());
 
         update_into_from_attrs(&mut child.info_write(), attrs);
         Ok(child)
@@ -575,11 +580,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_blocking_io() -> Result<(), anyhow::Error> {
-        let (kernel, current_task) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
 
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let (client, server) = zx::Socket::create(zx::SocketOpts::empty())?;
-        let pipe = create_fuchsia_pipe(&kernel, client, OpenFlags::RDWR)?;
+        let pipe = create_fuchsia_pipe(&current_task, client, OpenFlags::RDWR)?;
 
         let thread = std::thread::spawn(move || {
             assert_eq!(

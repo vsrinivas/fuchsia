@@ -85,3 +85,15 @@ impl Credentials {
         self.is_superuser()
     }
 }
+
+/// The owner and group of a file. Used as a parameter for functions that create files.
+pub struct FsCred {
+    pub uid: uid_t,
+    pub gid: gid_t,
+}
+
+impl FsCred {
+    pub fn root() -> Self {
+        Self { uid: 0, gid: 0 }
+    }
+}

@@ -17,6 +17,7 @@ use wayland_bridge::dispatcher::WaylandDispatcher;
 
 use super::bridge_client::*;
 use super::file_creation::*;
+use crate::auth::FsCred;
 use crate::device::wayland::image_file::ImageFile;
 use crate::device::wayland::BufferCollectionFile;
 use crate::fs::buffers::*;
@@ -254,9 +255,13 @@ async fn handle_server_data(
             // Create vmo files for each of the provided handles.
             while let Some(handle) = buffer.take_handle(0) {
                 let vmo = zx::Vmo::from(handle);
-                let file = Anon::new_file(
-                    anon_fs(&kernel),
+                let file = FileObject::new_anonymous(
                     Box::new(VmoFileObject::new(Arc::new(vmo))),
+                    anon_fs(&kernel).create_node(
+                        Box::new(Anon),
+                        FileMode::from_bits(0o600),
+                        FsCred::root(),
+                    ),
                     OpenFlags::RDWR,
                 );
                 files.push(file);

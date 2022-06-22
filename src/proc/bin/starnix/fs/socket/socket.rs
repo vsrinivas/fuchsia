@@ -203,10 +203,14 @@ impl Socket {
     /// - `kernel`: The kernel that is used to fetch `SocketFs`, to store the created socket node.
     /// - `socket`: The socket to store in the `FsNode`.
     /// - `open_flags`: The `OpenFlags` which are used to create the `FileObject`.
-    pub fn new_file(kernel: &Kernel, socket: SocketHandle, open_flags: OpenFlags) -> FileHandle {
-        let fs = socket_fs(kernel);
+    pub fn new_file(
+        current_task: &CurrentTask,
+        socket: SocketHandle,
+        open_flags: OpenFlags,
+    ) -> FileHandle {
+        let fs = socket_fs(current_task.kernel());
         let mode = mode!(IFSOCK, 0o777);
-        let node = fs.create_node(Box::new(Anon), mode);
+        let node = fs.create_node(Box::new(Anon), mode, current_task.as_fscred());
         node.set_socket(socket.clone());
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
     }

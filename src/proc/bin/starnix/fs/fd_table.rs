@@ -158,13 +158,13 @@ mod test {
     use super::*;
 
     use crate::fs::fuchsia::SyslogFile;
-    use crate::task::*;
+    use crate::testing::*;
 
     #[::fuchsia::test]
     fn test_fd_table_install() {
-        let kern = Kernel::new_for_testing();
+        let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&kern);
+        let file = SyslogFile::new(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
@@ -178,9 +178,9 @@ mod test {
 
     #[::fuchsia::test]
     fn test_fd_table_fork() {
-        let kern = Kernel::new_for_testing();
+        let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&kern);
+        let file = SyslogFile::new(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -200,9 +200,9 @@ mod test {
 
     #[::fuchsia::test]
     fn test_fd_table_exec() {
-        let kern = Kernel::new_for_testing();
+        let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&kern);
+        let file = SyslogFile::new(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -220,9 +220,9 @@ mod test {
 
     #[::fuchsia::test]
     fn test_fd_table_pack_values() {
-        let kern = Kernel::new_for_testing();
+        let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&kern);
+        let file = SyslogFile::new(&current_task);
 
         // Add two FDs.
         let fd0 = files.add(file.clone()).unwrap();

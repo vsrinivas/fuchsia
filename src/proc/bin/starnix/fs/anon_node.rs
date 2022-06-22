@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::task::Kernel;
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
 pub struct Anon;
@@ -15,10 +15,15 @@ impl FsNodeOps for Anon {
 }
 
 impl Anon {
-    pub fn new_file(fs: &FileSystemHandle, ops: Box<dyn FileOps>, flags: OpenFlags) -> FileHandle {
+    pub fn new_file(
+        current_task: &CurrentTask,
+        ops: Box<dyn FileOps>,
+        flags: OpenFlags,
+    ) -> FileHandle {
+        let fs = anon_fs(current_task.kernel());
         FileObject::new_anonymous(
             ops,
-            fs.create_node(Box::new(Anon), FileMode::from_bits(0o600)),
+            fs.create_node(Box::new(Anon), FileMode::from_bits(0o600), current_task.as_fscred()),
             flags,
         )
     }

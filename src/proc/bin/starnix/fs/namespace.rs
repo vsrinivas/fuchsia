@@ -334,15 +334,26 @@ impl NamespaceNode {
 
     pub fn create_node(
         &self,
+        current_task: &CurrentTask,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
     ) -> Result<NamespaceNode, Errno> {
-        Ok(self.with_new_entry(self.entry.create_node(name, mode, dev)?))
+        self.entry.node.check_access(current_task, Access::WRITE)?;
+        let owner = current_task.as_fscred();
+        let mode = current_task.fs.apply_umask(mode);
+        Ok(self.with_new_entry(self.entry.create_node(name, mode, dev, owner)?))
     }
 
-    pub fn symlink(&self, name: &FsStr, target: &FsStr) -> Result<NamespaceNode, Errno> {
-        Ok(self.with_new_entry(self.entry.create_symlink(name, target)?))
+    pub fn symlink(
+        &self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        target: &FsStr,
+    ) -> Result<NamespaceNode, Errno> {
+        self.entry.node.check_access(current_task, Access::WRITE)?;
+        let owner = current_task.as_fscred();
+        Ok(self.with_new_entry(self.entry.create_symlink(name, target, owner)?))
     }
 
     pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
@@ -383,7 +394,8 @@ impl NamespaceNode {
             }
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
-            let mut child = self.with_new_entry(self.entry.component_lookup(basename)?);
+            let mut child =
+                self.with_new_entry(self.entry.component_lookup(current_task, basename)?);
             while child.entry.node.is_lnk() {
                 match context.symlink_mode {
                     SymlinkMode::NoFollow => {

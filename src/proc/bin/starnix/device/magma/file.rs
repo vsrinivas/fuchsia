@@ -277,10 +277,10 @@ impl FileOps for MagmaFile {
                         .and_then(|buffers| buffers.get(&(control.buffer as magma_buffer_t)))
                     {
                         Some(BufferInfo::Image(image_info)) => {
-                            ImageFile::new(current_task.kernel(), image_info.clone(), vmo)
+                            ImageFile::new(current_task, image_info.clone(), vmo)
                         }
                         _ => Anon::new_file(
-                            anon_fs(current_task.kernel()),
+                            current_task,
                             Box::new(VmoFileObject::new(Arc::new(vmo))),
                             OpenFlags::RDWR,
                         ),
@@ -457,7 +457,7 @@ impl FileOps for MagmaFile {
                 };
                 let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(handle_out)) };
                 let file = Anon::new_file(
-                    anon_fs(current_task.kernel()),
+                    current_task,
                     Box::new(VmoFileObject::new(Arc::new(vmo))),
                     OpenFlags::RDWR,
                 );

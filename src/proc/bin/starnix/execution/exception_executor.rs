@@ -208,10 +208,6 @@ fn run_exception_loop(
 
         block_while_stopped(current_task);
 
-        if current_task.read().exit_status.is_none() {
-            dequeue_signal(current_task);
-        }
-
         {
             let task_state = current_task.read();
             if let Some(exit_status) = task_state.exit_status.as_ref() {
@@ -224,6 +220,8 @@ fn run_exception_loop(
                 return Ok(exit_status);
             }
         }
+
+        dequeue_signal(current_task);
 
         // Handle the debug address after the thread is set up to continue, because
         // `set_process_debug_addr` expects the register state to be in a post-syscall state (most

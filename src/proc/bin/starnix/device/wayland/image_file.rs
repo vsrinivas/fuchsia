@@ -10,7 +10,7 @@ use magma::*;
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::task::{CurrentTask, Kernel};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 pub struct ImageInfo {
@@ -45,9 +45,9 @@ pub struct ImageFile {
 }
 
 impl ImageFile {
-    pub fn new(kernel: &Kernel, info: ImageInfo, vmo: zx::Vmo) -> FileHandle {
+    pub fn new(current_task: &CurrentTask, info: ImageInfo, vmo: zx::Vmo) -> FileHandle {
         Anon::new_file(
-            anon_fs(kernel),
+            current_task,
             Box::new(ImageFile { info, vmo: Arc::new(vmo) }),
             OpenFlags::RDWR,
         )

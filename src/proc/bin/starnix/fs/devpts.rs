@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use crate::auth::FsCred;
 use crate::device::terminal::*;
 use crate::device::DeviceOps;
 use crate::fs::tmpfs::*;
@@ -30,8 +31,9 @@ pub fn create_pts_node(fs: &FileSystemHandle, task: &CurrentTask, id: u32) -> Re
     let device_type = get_device_type_for_pts(id);
     let pts = fs.root().create_node(
         id.to_string().as_bytes(),
-        FileMode::IFCHR | FileMode::from_bits(0o620),
+        mode!(IFCHR, 0o620),
         device_type,
+        task.as_fscred(),
     )?;
     let mut info = pts.node.info_write();
     info.blksize = BLOCK_SIZE;
@@ -47,7 +49,7 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     // Create ptmx
     let ptmx = fs
         .root()
-        .create_node(b"ptmx", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::PTMX)
+        .create_node(b"ptmx", mode!(IFCHR, 0o666), DeviceType::PTMX, FsCred::root())
         .unwrap();
     ptmx.node.info_write().blksize = BLOCK_SIZE;
 
@@ -456,7 +458,7 @@ fn shared_ioctl(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::Credentials;
+    use crate::auth::{Credentials, FsCred};
     use crate::testing::*;
 
     fn ioctl<T: zerocopy::AsBytes + zerocopy::FromBytes + Copy>(
@@ -486,7 +488,7 @@ mod tests {
         name: &FsStr,
         flags: OpenFlags,
     ) -> Result<FileHandle, Errno> {
-        let component = fs.root().component_lookup(name)?;
+        let component = fs.root().component_lookup(task, name)?;
         Ok(FileObject::new_anonymous(
             component.node.open(task, flags)?,
             component.node.clone(),
@@ -519,9 +521,9 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        root.component_lookup(b"0").unwrap_err();
+        root.component_lookup(&task, b"0").unwrap_err();
         let _ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        root.component_lookup(b"0").expect("pty");
+        root.component_lookup(&task, b"0").expect("pty");
     }
 
     #[::fuchsia::test]
@@ -529,11 +531,11 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        root.component_lookup(b"0").unwrap_err();
+        root.component_lookup(&task, b"0").unwrap_err();
         let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
         let _pts = open_file(&task, &fs, b"0").expect("open file");
         std::mem::drop(ptmx);
-        root.component_lookup(b"0").unwrap_err();
+        root.component_lookup(&task, b"0").unwrap_err();
     }
 
     #[::fuchsia::test]
@@ -546,15 +548,15 @@ mod tests {
         let mut _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
         let _ptmx2 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
 
-        root.component_lookup(b"0").expect("component_lookup");
-        root.component_lookup(b"1").expect("component_lookup");
-        root.component_lookup(b"2").expect("component_lookup");
+        root.component_lookup(&task, b"0").expect("component_lookup");
+        root.component_lookup(&task, b"1").expect("component_lookup");
+        root.component_lookup(&task, b"2").expect("component_lookup");
 
         std::mem::drop(_ptmx1);
-        root.component_lookup(b"1").unwrap_err();
+        root.component_lookup(&task, b"1").unwrap_err();
 
         _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        root.component_lookup(b"1").expect("component_lookup");
+        root.component_lookup(&task, b"1").expect("component_lookup");
     }
 
     #[::fuchsia::test]
@@ -565,8 +567,9 @@ mod tests {
             .root()
             .create_node(
                 b"custom_pts",
-                FileMode::IFCHR | FileMode::from_bits(0o666),
+                mode!(IFCHR, 0o666),
                 DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
+                FsCred::root(),
             )
             .expect("custom_pts");
         assert!(pts.node.open(&task, OpenFlags::RDONLY).is_err());
@@ -578,9 +581,9 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        root.component_lookup(b"0").expect("component_lookup");
+        root.component_lookup(&task, b"0").expect("component_lookup");
         root.unlink(b"0", UnlinkKind::NonDirectory).expect("unlink");
-        root.component_lookup(b"0").unwrap_err();
+        root.component_lookup(&task, b"0").unwrap_err();
 
         std::mem::drop(ptmx);
     }
@@ -642,7 +645,7 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let _ptmx_file = open_file(&task, &fs, b"ptmx").expect("open file");
 
-        let pts = fs.root().component_lookup(b"0").expect("component_lookup");
+        let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
         assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
     }
 
@@ -651,7 +654,7 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let pts = fs.root().component_lookup(b"0").expect("component_lookup");
+        let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
 
         // Check that the lock is not set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(0));

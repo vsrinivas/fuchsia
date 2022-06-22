@@ -57,8 +57,11 @@ fn connect_to_vsock(
 ) -> Result<(), Error> {
     let socket = galaxy.kernel.default_abstract_vsock_namespace.lookup(&port)?;
 
-    let pipe =
-        create_fuchsia_pipe(&galaxy.kernel, bridge_socket, OpenFlags::RDWR | OpenFlags::NONBLOCK)?;
+    let pipe = create_fuchsia_pipe(
+        &galaxy.system_task,
+        bridge_socket,
+        OpenFlags::RDWR | OpenFlags::NONBLOCK,
+    )?;
     socket.remote_connection(pipe)?;
 
     Ok(())

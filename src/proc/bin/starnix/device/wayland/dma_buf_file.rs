@@ -230,11 +230,7 @@ impl DmaBufFile {
     ) -> Result<FdNumber, Errno> {
         let vmo = Arc::new(buffer_collection_info.buffers[0].vmo.take().ok_or(errno!(EINVAL))?);
         current_task.files.add_with_flags(
-            BufferCollectionFile::new(
-                &current_task.thread_group.kernel,
-                buffer_collection_import_token,
-                vmo,
-            )?,
+            BufferCollectionFile::new(current_task, buffer_collection_import_token, vmo)?,
             FdFlags::empty(),
         )
     }

@@ -480,9 +480,9 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
 
-        let (kernel, current_task) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let (local_socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let pipe = create_fuchsia_pipe(&kernel, remote_socket, OpenFlags::RDWR).unwrap();
+        let pipe = create_fuchsia_pipe(&current_task, remote_socket, OpenFlags::RDWR).unwrap();
 
         const MEM_SIZE: usize = 1024;
         let proc_mem = map_memory(&current_task, UserAddress::default(), MEM_SIZE as u64);
@@ -530,8 +530,8 @@ mod tests {
     #[::fuchsia::test]
     fn test_async_wait_cancel() {
         for do_cancel in [true, false] {
-            let (kernel, current_task) = create_kernel_and_task();
-            let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);
+            let (_kernel, current_task) = create_kernel_and_task();
+            let event = new_eventfd(&current_task, 0, EventFdType::Counter, true);
             let waiter = Waiter::new();
             let callback_count = Arc::new(AtomicU64::new(0));
             let callback_count_clone = callback_count.clone();

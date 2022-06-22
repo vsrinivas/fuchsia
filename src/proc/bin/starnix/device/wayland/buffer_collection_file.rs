@@ -8,7 +8,7 @@ use fuchsia_zircon as zx;
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::task::{CurrentTask, Kernel};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 pub struct BufferCollectionFile {
@@ -23,12 +23,12 @@ pub struct BufferCollectionFile {
 impl BufferCollectionFile {
     /// Creates a new anonymous `BufferCollectionFile` in `kernel`.
     pub fn new(
-        kernel: &Kernel,
+        current_task: &CurrentTask,
         token: fuicomp::BufferCollectionImportToken,
         vmo: Arc<zx::Vmo>,
     ) -> Result<FileHandle, Errno> {
         Ok(Anon::new_file(
-            anon_fs(kernel),
+            current_task,
             Box::new(BufferCollectionFile { token, vmo }),
             OpenFlags::RDWR,
         ))

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::auth::FsCred;
 use crate::fs::tmpfs::*;
 use crate::fs::*;
 use crate::task::*;
@@ -16,12 +17,11 @@ fn init_devtmpfs() -> FileSystemHandle {
     let root = fs.root();
 
     let mkchr = |name, device_type| {
-        root.create_node(name, FileMode::IFCHR | FileMode::from_bits(0o666), device_type).unwrap();
+        root.create_node(name, mode!(IFCHR, 0o666), device_type, FsCred::root()).unwrap();
     };
 
     let mkdir = |name| {
-        root.create_node(name, FileMode::IFDIR | FileMode::from_bits(0o755), DeviceType::NONE)
-            .unwrap();
+        root.create_node(name, mode!(IFDIR, 0o755), DeviceType::NONE, FsCred::root()).unwrap();
     };
 
     mkchr(b"null", DeviceType::NULL);
@@ -35,7 +35,7 @@ fn init_devtmpfs() -> FileSystemHandle {
     // tty related nodes
     mkdir(b"pts");
     mkchr(b"tty", DeviceType::TTY);
-    root.create_symlink(b"ptmx", b"pts/ptmx").unwrap();
+    root.create_symlink(b"ptmx", b"pts/ptmx", FsCred::root()).unwrap();
 
     fs
 }

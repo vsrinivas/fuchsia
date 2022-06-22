@@ -81,9 +81,9 @@ struct EpollState {
 
 impl EpollFileObject {
     /// Allocate a new, empty epoll object.
-    pub fn new(kernel: &Kernel) -> FileHandle {
+    pub fn new(current_task: &CurrentTask) -> FileHandle {
         Anon::new_file(
-            anon_fs(kernel),
+            current_task,
             Box::new(EpollFileObject {
                 waiter: Waiter::new(),
                 state: Arc::new(RwLock::new(EpollState {
@@ -447,7 +447,7 @@ mod tests {
         let write_buf = [UserBuffer { address: write_mem, length: test_len }];
         writer_task.mm.write_memory(write_mem, test_bytes).unwrap();
 
-        let epoll_file_handle = EpollFileObject::new(&kernel);
+        let epoll_file_handle = EpollFileObject::new(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
             .add(
@@ -483,7 +483,7 @@ mod tests {
     fn test_epoll_ready_then_wait() {
         const EVENT_DATA: u64 = 42;
 
-        let (kernel, current_task) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
 
         let (pipe_out, pipe_in) = new_pipe(&current_task).unwrap();
 
@@ -499,7 +499,7 @@ mod tests {
 
         assert_eq!(pipe_in.write(&current_task, &write_buf).unwrap(), test_bytes.len());
 
-        let epoll_file_handle = EpollFileObject::new(&kernel);
+        let epoll_file_handle = EpollFileObject::new(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
             .add(
@@ -527,11 +527,11 @@ mod tests {
     #[::fuchsia::test]
     fn test_epoll_ctl_cancel() {
         for do_cancel in [true, false] {
-            let (kernel, current_task) = create_kernel_and_task();
-            let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);
+            let (_kernel, current_task) = create_kernel_and_task();
+            let event = new_eventfd(&current_task, 0, EventFdType::Counter, true);
             let waiter = Waiter::new();
 
-            let epoll_file_handle = EpollFileObject::new(&kernel);
+            let epoll_file_handle = EpollFileObject::new(&current_task);
             let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
             const EVENT_DATA: u64 = 42;
             epoll_file
@@ -589,9 +589,9 @@ mod tests {
 
     #[::fuchsia::test]
     fn test_cancel_after_notify() {
-        let (kernel, current_task) = create_kernel_and_task();
-        let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);
-        let epoll_file_handle = EpollFileObject::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let event = new_eventfd(&current_task, 0, EventFdType::Counter, true);
+        let epoll_file_handle = EpollFileObject::new(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
 
         // Add a thing

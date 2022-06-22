@@ -10,7 +10,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::auth::Credentials;
+use crate::auth::*;
 use crate::execution::*;
 use crate::fs::*;
 use crate::loader::*;
@@ -445,6 +445,11 @@ impl Task {
         ucred { pid: self.get_pid(), uid: state.creds.uid, gid: state.creds.gid }
     }
 
+    pub fn as_fscred(&self) -> FsCred {
+        let state = self.read();
+        FsCred { uid: state.creds.euid, gid: state.creds.egid }
+    }
+
     pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
         // If both the tasks share a thread group the signal can be sent. This is not documented
         // in kill(2) because kill does not support task-level granularity in signal sending.
@@ -617,8 +622,12 @@ impl CurrentTask {
                 if context.must_be_directory {
                     return error!(EISDIR);
                 }
-                let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-                parent.create_node(&basename, FileMode::IFREG | access, DeviceType::NONE)
+                parent.create_node(
+                    self,
+                    &basename,
+                    mode.with_type(FileMode::IFREG),
+                    DeviceType::NONE,
+                )
             }
             error => error,
         }
@@ -675,8 +684,8 @@ impl CurrentTask {
         }
 
         // Mode only applies to future accesses of newly created files.
-        if !flags.contains(OpenFlags::CREAT) && !mode.has_open_access(flags) {
-            return error!(EACCES);
+        if !flags.contains(OpenFlags::CREAT) {
+            name.entry.node.check_access(self, Access::from_open_flags(flags))?;
         }
 
         if mode.is_dir() {
