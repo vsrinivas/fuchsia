@@ -522,7 +522,7 @@ Do the following:
    {{ '<strong>' }}[2013.418][core/ffx-laboratory:hello_world][][I] Hello again, World!{{ '</strong>' }}
    ```
 
-## 6. View symbolized logs {:#view-symbolized-logs}
+## 5. View symbolized logs {:#view-symbolized-logs}
 
 Examine the [symbolized logs][symbolize-logs] (that is, human readable
 stack traces) of a crashed component.
@@ -571,16 +571,27 @@ Do the following:
    Building a component automatically generates and registers the component’s debug
    symbols in your development environment.
 
+1. For newly registered symbols to be used in your environment, restart the `ffx` daemon:
+
+   Note: This is a temporary workaround. This issue is being tracked in
+   [Issue 94614][ticket-94614]{:.external}.
+
+   ```posix-terminal
+   tools/ffx daemon stop
+   ```
+
+   A new instance of the `ffx `daemon starts the next time you run a `ffx` command.
+
 1. Verify that the sample component's crash stack is symbolized in the kernel logs:
 
    ```posix-terminal
-   tools/ffx log --kernel dump
+   tools/ffx log --kernel
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --kernel dump
+   $ tools/ffx log --kernel
    ...
    [174978.449][klog][klog][I] [[[ELF module #0x6 "libzircon.so" BuildID=5679a47f32c6fa7b 0x422808b26000]]]
    [174978.449][klog][klog][I] [[[ELF module #0x7 "libc.so" BuildID=1c3e8dded0fc94eb 0x428049099000]]]
@@ -596,7 +607,9 @@ Do the following:
    Verify that the lines in the kernel logs show the exact filenames and line numbers (for example,
    `main() src/hello_world/hello_world.cc:9`) that might've caused the component to crash.
 
-## 7. Debug the sample component {:#debug-the-sample-component}
+   Press `CTRL+C` to exit.
+
+## 6. Debug the sample component {:#debug-the-sample-component}
 
 Launch the Fuchsia debugger ([`zxdb`][fuchsia-debugger]) for debugging the sample
 component, which is now updated to crash when it's started.
@@ -749,7 +762,7 @@ Do the following:
    Note: For more information on usages and best practices on `zxdb`, see the
    [zxdb user guide][zxdb-user-guide].
 
-## 8. Inspect components {:#inspect-components}
+## 7. Inspect components {:#inspect-components}
 
 Retrieve a component's data exposed by Fuchsia's Inspect API. This data can be any
 set of specialized information that a Fuchsia component is programmed to collect
@@ -860,7 +873,7 @@ Do the following:
 
    This data records all the events triggered by components on the device so far.
 
-## 9. Run tests {:#run-tests}
+## 8. Run tests {:#run-tests}
 
 Run tests on the device by launching test components, which are included
 in the [SDK samples repository][sdk-samples-repo]{:.external}.
@@ -1126,3 +1139,4 @@ is available for the Fuchsia package server.
 [hello-world-component]: https://fuchsia.googlesource.com/sdk-samples/getting-started/+/refs/heads/main/src/hello_world/
 [fuchsia-package-server]: /docs/development/sdk/ffx/create-a-package-repository.md
 [hello-world-test-package]: https://fuchsia.googlesource.com/sdk-samples/getting-started/+/refs/heads/main/src/hello_world/BUILD.bazel#68
+[ticket-94614]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=94614
