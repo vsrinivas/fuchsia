@@ -18,13 +18,14 @@ pub struct StubPolicy<P: Plan> {
 }
 
 impl<P: Plan> Policy for StubPolicy<P> {
-    type UpdatePolicyData = PolicyData;
-    type RebootPolicyData = ();
+    type ComputeNextUpdateTimePolicyData = PolicyData;
+    type UpdateCheckAllowedPolicyData = ();
     type UpdateCanStartPolicyData = ();
+    type RebootPolicyData = ();
     type InstallPlan = P;
 
     fn compute_next_update_time(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::ComputeNextUpdateTimePolicyData,
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -33,7 +34,7 @@ impl<P: Plan> Policy for StubPolicy<P> {
     }
 
     fn update_check_allowed(
-        _policy_data: &Self::UpdatePolicyData,
+        _policy_data: &Self::UpdateCheckAllowedPolicyData,
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -119,7 +120,7 @@ where
         check_options: &CheckOptions,
     ) -> BoxFuture<'_, CheckDecision> {
         let decision = StubPolicy::<P>::update_check_allowed(
-            &PolicyData::builder().use_timesource(&self.time_source).build(),
+            &(),
             apps,
             scheduling,
             protocol_state,
@@ -175,11 +176,9 @@ mod tests {
 
     #[test]
     fn test_update_check_allowed_on_demand() {
-        let policy_data =
-            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::OnDemand };
         let result = StubPolicy::<StubPlan>::update_check_allowed(
-            &policy_data,
+            &(),
             &[],
             &UpdateCheckSchedule::default(),
             &ProtocolState::default(),
@@ -195,11 +194,9 @@ mod tests {
 
     #[test]
     fn test_update_check_allowed_scheduled_task() {
-        let policy_data =
-            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::ScheduledTask };
         let result = StubPolicy::<StubPlan>::update_check_allowed(
-            &policy_data,
+            &(),
             &[],
             &UpdateCheckSchedule::default(),
             &ProtocolState::default(),

@@ -42,13 +42,14 @@ const MAX_FUZZ_PERCENTAGE_RANGE: u32 = 200;
 struct FuchsiaPolicy;
 
 impl Policy for FuchsiaPolicy {
-    type UpdatePolicyData = FuchsiaUpdatePolicyData;
-    type RebootPolicyData = FuchsiaRebootPolicyData;
+    type ComputeNextUpdateTimePolicyData = FuchsiaComputeNextUpdateTimePolicyData;
+    type UpdateCheckAllowedPolicyData = FuchsiaUpdateCheckAllowedPolicyData;
     type UpdateCanStartPolicyData = FuchsiaUpdateCanStartPolicyData;
+    type RebootPolicyData = FuchsiaRebootPolicyData;
     type InstallPlan = FuchsiaInstallPlan;
 
     fn compute_next_update_time(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::ComputeNextUpdateTimePolicyData,
         _apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
@@ -145,7 +146,7 @@ impl Policy for FuchsiaPolicy {
     }
 
     fn update_check_allowed(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::UpdateCheckAllowedPolicyData,
         _apps: &[App],
         scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -368,7 +369,8 @@ where
         protocol_state: &'a ProtocolState,
     ) -> BoxFuture<'a, CheckTiming> {
         async move {
-            let policy_data = FuchsiaUpdatePolicyData::from_policy_engine(self).await;
+            let policy_data =
+                FuchsiaComputeNextUpdateTimePolicyData::from_policy_engine(self).await;
 
             let timing = FuchsiaPolicy::compute_next_update_time(
                 &policy_data,
@@ -390,7 +392,7 @@ where
         check_options: &'a CheckOptions,
     ) -> BoxFuture<'a, CheckDecision> {
         async move {
-            let policy_data = FuchsiaUpdatePolicyData::from_policy_engine(self).await;
+            let policy_data = FuchsiaUpdateCheckAllowedPolicyData::from_policy_engine(self).await;
 
             let decision = FuchsiaPolicy::update_check_allowed(
                 &policy_data,
@@ -543,25 +545,36 @@ impl UiActivityState {
 }
 
 #[derive(Clone, Debug)]
-struct FuchsiaUpdatePolicyData {
+struct FuchsiaComputeNextUpdateTimePolicyData {
     current_time: ComplexTime,
     config: PolicyConfig,
     interval_fuzz_seed: Option<u64>,
-    update_check_rate_limiter: UpdateCheckRateLimiter,
-    opt_out_preference: OptOutPreference,
 }
 
-impl FuchsiaUpdatePolicyData {
+impl FuchsiaComputeNextUpdateTimePolicyData {
     async fn from_policy_engine<T: TimeSource>(policy_engine: &FuchsiaPolicyEngine<T>) -> Self {
-        let opt_out_preference = {
-            let provider = || connect_to_protocol::<OptOutMarker>();
-            query_opt_out_preference(provider).await
-        };
-
         Self {
             current_time: policy_engine.time_source.now(),
             config: policy_engine.config.clone(),
             interval_fuzz_seed: Some(rand::random()),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct FuchsiaUpdateCheckAllowedPolicyData {
+    current_time: ComplexTime,
+    update_check_rate_limiter: UpdateCheckRateLimiter,
+    opt_out_preference: OptOutPreference,
+}
+
+impl FuchsiaUpdateCheckAllowedPolicyData {
+    async fn from_policy_engine<T: TimeSource>(policy_engine: &FuchsiaPolicyEngine<T>) -> Self {
+        let opt_out_preference =
+            query_opt_out_preference(connect_to_protocol::<OptOutMarker>).await;
+
+        Self {
+            current_time: policy_engine.time_source.now(),
             update_check_rate_limiter: policy_engine.update_check_rate_limiter.clone(),
             opt_out_preference,
         }
@@ -580,7 +593,7 @@ impl FuchsiaUpdateCanStartPolicyData {
 
         async move {
             let commit_status = match query_commit_status_and_update_status(
-                || connect_to_protocol::<CommitStatusProviderMarker>(),
+                connect_to_protocol::<CommitStatusProviderMarker>,
                 &mut *engine_commit_status.lock().await,
             )
             .await
@@ -703,23 +716,15 @@ mod tests {
     }
 
     #[derive(Debug)]
-    struct UpdatePolicyDataBuilder {
+    struct ComputeNextUpdateTimePolicyDataBuilder {
         current_time: ComplexTime,
         config: PolicyConfig,
         interval_fuzz_seed: Option<u64>,
-        recent_update_check_times: VecDeque<Instant>,
-        opt_out_preference: OptOutPreference,
     }
 
-    impl UpdatePolicyDataBuilder {
-        fn new(current_time: ComplexTime, config: PolicyConfig) -> Self {
-            Self {
-                current_time,
-                config,
-                interval_fuzz_seed: None,
-                recent_update_check_times: VecDeque::new(),
-                opt_out_preference: OptOutPreference::AllowAllUpdates,
-            }
+    impl ComputeNextUpdateTimePolicyDataBuilder {
+        fn new(current_time: ComplexTime) -> Self {
+            Self { current_time, config: PolicyConfig::default(), interval_fuzz_seed: None }
         }
 
         /// Set the `config` explicitly from a given PolicyConfig.
@@ -731,7 +736,30 @@ mod tests {
         fn interval_fuzz_seed(self, interval_fuzz_seed: Option<u64>) -> Self {
             Self { interval_fuzz_seed, ..self }
         }
+        fn build(self) -> FuchsiaComputeNextUpdateTimePolicyData {
+            FuchsiaComputeNextUpdateTimePolicyData {
+                current_time: self.current_time,
+                config: self.config,
+                interval_fuzz_seed: self.interval_fuzz_seed,
+            }
+        }
+    }
 
+    #[derive(Debug)]
+    struct UpdateCheckAllowedPolicyDataBuilder {
+        current_time: ComplexTime,
+        recent_update_check_times: VecDeque<Instant>,
+        opt_out_preference: OptOutPreference,
+    }
+
+    impl UpdateCheckAllowedPolicyDataBuilder {
+        fn new(current_time: ComplexTime) -> Self {
+            Self {
+                current_time,
+                recent_update_check_times: VecDeque::new(),
+                opt_out_preference: OptOutPreference::AllowAllUpdates,
+            }
+        }
         /// Set the `recent_update_check_times` explicitly from a given VecDeque<Instant>.
         fn recent_update_check_times(self, recent_update_check_times: VecDeque<Instant>) -> Self {
             Self { recent_update_check_times, ..self }
@@ -742,11 +770,9 @@ mod tests {
             Self { opt_out_preference, ..self }
         }
 
-        fn build(self) -> FuchsiaUpdatePolicyData {
-            FuchsiaUpdatePolicyData {
+        fn build(self) -> FuchsiaUpdateCheckAllowedPolicyData {
+            FuchsiaUpdateCheckAllowedPolicyData {
                 current_time: self.current_time,
-                config: self.config,
-                interval_fuzz_seed: self.interval_fuzz_seed,
                 update_check_rate_limiter: UpdateCheckRateLimiter::with_recent_update_check_times(
                     self.recent_update_check_times,
                 ),
@@ -768,7 +794,7 @@ mod tests {
         fn test_fuchsia_update_policy_data_builder_doesnt_panic(interval_fuzz_seed: u64) {
             let mock_time = MockTimeSource::new_from_now();
             let now = mock_time.now();
-            UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
+            ComputeNextUpdateTimePolicyDataBuilder::new(now)
                 .interval_fuzz_seed(Some(interval_fuzz_seed))
                 .build();
         }
@@ -785,7 +811,9 @@ mod tests {
             let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
             // Set up the state for this check:
             //  - the time is "now"
-            let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
+            let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now)
+                .interval_fuzz_seed(Some(interval_fuzz_seed))
+                .build();
             // Execute the policy check.
             FuchsiaPolicy::compute_next_update_time(
                 &policy_data,
@@ -897,7 +925,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -934,7 +962,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -968,7 +996,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -1019,7 +1047,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -1067,7 +1095,7 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 1, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -1103,7 +1131,7 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 4, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -1141,7 +1169,7 @@ mod tests {
         };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -1172,9 +1200,8 @@ mod tests {
         let policy_config =
             PolicyConfig { periodic_interval, retry_delay, ..PolicyConfig::default() };
         //  - the time is "now"
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
-            .config(policy_config)
-            .build();
+        let policy_data =
+            ComputeNextUpdateTimePolicyDataBuilder::new(now).config(policy_config).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -1215,7 +1242,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = UpdateCheckAllowedPolicyDataBuilder::new(now).build();
         let check_options = CheckOptions::default();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
@@ -1254,7 +1281,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default()).build();
+        let policy_data = UpdateCheckAllowedPolicyDataBuilder::new(now).build();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
             &policy_data,
@@ -1290,7 +1317,7 @@ mod tests {
             .iter()
             .map(|&i| now.mono - Duration::from_secs(i))
             .collect();
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
+        let policy_data = UpdateCheckAllowedPolicyDataBuilder::new(now)
             .recent_update_check_times(recent_update_check_times)
             .build();
         let check_options = CheckOptions::default();
@@ -1399,7 +1426,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = UpdatePolicyDataBuilder::new(now, PolicyConfig::default())
+        let policy_data = UpdateCheckAllowedPolicyDataBuilder::new(now)
             .opt_out_preference(OptOutPreference::AllowOnlySecurityUpdates)
             .build();
         let check_options = CheckOptions::default();

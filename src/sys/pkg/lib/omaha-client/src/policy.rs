@@ -103,14 +103,15 @@ impl Default for UpdateDecision {
 
 /// The policy implementation itself
 pub trait Policy {
-    type UpdatePolicyData;
-    type RebootPolicyData;
+    type ComputeNextUpdateTimePolicyData;
+    type UpdateCheckAllowedPolicyData;
     type UpdateCanStartPolicyData;
+    type RebootPolicyData;
     type InstallPlan: Plan;
 
     /// When should the next update happen?
     fn compute_next_update_time(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::ComputeNextUpdateTimePolicyData,
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
@@ -122,7 +123,7 @@ pub trait Policy {
     /// it would perform an update, but instead just tell the device whether or not
     /// an update is available.
     fn update_check_allowed(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::UpdateCheckAllowedPolicyData,
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
