@@ -7,7 +7,7 @@ use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 mod auth;
 mod collections;
@@ -31,7 +31,9 @@ mod testing;
 
 #[fuchsia::main(logging_tags = ["starnix"])]
 async fn main() -> Result<(), Error> {
-    let galaxy = Rc::new(create_galaxy().await?);
+    let galaxy = Arc::new(create_galaxy().await?);
+    let serve_galaxy = galaxy.clone();
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         let galaxy = galaxy.clone();
@@ -43,8 +45,11 @@ async fn main() -> Result<(), Error> {
         .detach();
     });
     fs.dir("svc").add_fidl_service(move |stream| {
+        let galaxy = serve_galaxy.clone();
         fasync::Task::local(async move {
-            execution::serve_starnix_manager(stream).await.expect("failed to start manager.")
+            execution::serve_starnix_manager(stream, galaxy)
+                .await
+                .expect("failed to start manager.")
         })
         .detach();
     });

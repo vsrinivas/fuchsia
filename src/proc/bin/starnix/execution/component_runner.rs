@@ -14,7 +14,7 @@ use fuchsia_component::client as fclient;
 use fuchsia_zircon as zx;
 use rand::Rng;
 use std::ffi::CString;
-use std::rc::Rc;
+use std::sync::Arc;
 use tracing::info;
 
 use crate::auth::Credentials;
@@ -41,7 +41,7 @@ use crate::types::*;
 pub async fn start_component(
     mut start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
-    galaxy: Rc<Galaxy>,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     let url = start_info.resolved_url.clone().unwrap_or("<unknown>".to_string());
     info!(

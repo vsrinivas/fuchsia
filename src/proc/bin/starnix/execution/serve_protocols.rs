@@ -13,13 +13,17 @@ use fuchsia_async as fasync;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::HandleBased;
 use futures::TryStreamExt;
-use std::rc::Rc;
+use std::sync::Arc;
 use tracing::error;
+
+use crate::fs::fuchsia::create_fuchsia_pipe;
+use crate::types::OpenFlags;
 
 use super::*;
 
 pub async fn serve_starnix_manager(
     mut request_stream: fstardev::ManagerRequestStream,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
@@ -36,14 +40,33 @@ pub async fn serve_starnix_manager(
             fstardev::ManagerRequest::StartShell { params, controller, .. } => {
                 start_shell(params, controller).await?;
             }
+            fstardev::ManagerRequest::VsockConnect { port, bridge_socket, .. } => {
+                connect_to_vsock(port, bridge_socket, &galaxy).unwrap_or_else(|e| {
+                    tracing::error!("failed to connect to vsock {:?}", e);
+                });
+            }
         }
     }
     Ok(())
 }
 
+fn connect_to_vsock(
+    port: u32,
+    bridge_socket: fidl::Socket,
+    galaxy: &Arc<Galaxy>,
+) -> Result<(), Error> {
+    let socket = galaxy.kernel.default_abstract_vsock_namespace.lookup(&port)?;
+
+    let pipe =
+        create_fuchsia_pipe(&galaxy.kernel, bridge_socket, OpenFlags::RDWR | OpenFlags::NONBLOCK)?;
+    socket.remote_connection(pipe)?;
+
+    Ok(())
+}
+
 pub async fn serve_component_runner(
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
-    galaxy: Rc<Galaxy>,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
