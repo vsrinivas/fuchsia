@@ -50,44 +50,42 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	writerFn, err := getWriter()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "While parsing --format: %v\n", err)
+	if err := mainImpl(); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+}
+
+func mainImpl() error {
+	writerFn, err := getWriter()
+	if err != nil {
+		return fmt.Errorf("While parsing --format: %v", err)
+	}
 	if *fir == "" {
-		fmt.Fprintf(os.Stderr, "The flag --fidl-ir-file=... is required\n")
-		os.Exit(1)
+		return fmt.Errorf("The flag --fidl-ir-file=... is required")
 	}
 	in, err := os.Open(*fir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open file: %v: %v\n", *fir, err)
-		os.Exit(1)
+		return fmt.Errorf("Could not open file: %v: %w", *fir, err)
 	}
 	if *out == "" {
-		fmt.Fprintf(os.Stderr, "The flag --output-file=... is required\n")
-		os.Exit(1)
+		return fmt.Errorf("The flag --output-file=... is required")
 	}
 
-	w, err := os.Create(*out)
-	defer func() {
-		if err := w.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while closing: %v: %v\n", *out, err)
-			os.Exit(1)
-		}
-	}()
-
+	f, err := os.Create(*out)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not create file: %v: %v\n", *out, err)
-		os.Exit(1)
+		return fmt.Errorf("Could not create file: %v: %w", *out, err)
 	}
+
 	root, err := fidlgen.DecodeJSONIr(in)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not parse FIDL IR from: %v: %v\n", *in, err)
-		os.Exit(1)
+		f.Close() // decode error takes precedence.
+		return fmt.Errorf("Could not parse FIDL IR from: %v: %w", *in, err)
 	}
-	if err := writerFn(root, w); err != nil {
-		fmt.Fprintf(os.Stderr, "While summarizing %v into %v: %v\n", *in, *out, err)
-		os.Exit(1)
+	if err := writerFn(root, f); err != nil {
+		f.Close() // writerFn error takes precedence.
+		return fmt.Errorf("While summarizing %v into %v: %w", *in, *out, err)
 	}
+
+	return f.Close()
 }
