@@ -42,8 +42,9 @@ constexpr unsigned char kInsecureCryptMetadataKey[32] = {
 
 zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
                                                   fuchsia_fs_startup::wire::StartOptions options,
-                                                  const std::string& fs_name) {
-  std::string startup_service_path = std::string("/") + fs_name + "/fuchsia.fs.startup.Startup";
+                                                  const std::string& partition_name) {
+  std::string startup_service_path =
+      std::string("/") + partition_name + "/fuchsia.fs.startup.Startup";
   auto startup_client_end =
       service::Connect<fuchsia_fs_startup::Startup>(startup_service_path.c_str());
   if (startup_client_end.is_error()) {
@@ -59,7 +60,7 @@ zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
                    << startup_res.status_string();
     return zx::make_status(startup_res.status());
   }
-  FX_LOGS(INFO) << "successfully mounted " << fs_name;
+  FX_LOGS(INFO) << "successfully mounted " << partition_name;
   return zx::ok();
 }
 
@@ -150,32 +151,13 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  std::string binary_path(BinaryPathForFormat(format));
-  if (binary_path.empty()) {
-    FX_LOGS(ERROR) << "Unsupported format: " << DiskFormatString(format);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (format == fs_management::kDiskFormatFxfs) {
-    std::string device_path = GetDevicePath(block_device);
-
-    // TODO(fxbug.dev/99591): Statically route the crypt service.
-    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-    if (crypt_client_or.is_error()) {
-      return crypt_client_or.error_value();
+  if (format == fs_management::kDiskFormatF2fs) {
+    std::string binary_path(BinaryPathForFormat(format));
+    if (binary_path.empty()) {
+      FX_LOGS(ERROR) << "Unsupported format: " << DiskFormatString(format);
+      return ZX_ERR_INVALID_ARGS;
     }
 
-    auto fidl_options = options.as_start_options();
-    fidl_options->crypt = std::move(crypt_client_or).value();
-
-    if (zx::status<> status =
-            LaunchFsComponent(std::move(block_device), *std::move(fidl_options), "fxfs");
-        status.is_error()) {
-      return status.error_value();
-    }
-
-    fshost_.RegisterDevicePath(FsManager::MountPoint::kData, device_path);
-  } else {
     if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
                                       std::move(block_device), {});
         result.is_error()) {
@@ -188,15 +170,38 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
       FX_PLOGS(ERROR, status) << "failed to add diagnostic directory for "
                               << fs_management::DiskFormatString(format);
     }
+  } else {
+    std::string device_path = GetDevicePath(block_device);
+
+    auto fidl_options = options.as_start_options();
+    if (format == fs_management::kDiskFormatFxfs) {
+      // TODO(fxbug.dev/99591): Statically route the crypt service.
+      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+      if (crypt_client_or.is_error()) {
+        return crypt_client_or.error_value();
+      }
+      fidl_options->crypt = std::move(crypt_client_or).value();
+    }
+
+    if (zx::status<> status =
+            LaunchFsComponent(std::move(block_device), *std::move(fidl_options), "data");
+        status.is_error()) {
+      return status.error_value();
+    }
+
+    fshost_.RegisterDevicePath(FsManager::MountPoint::kData, device_path);
   }
 
   // Obtain data root used for serving disk usage statistics. Must be valid otherwise the lazy node
-  // serving the statistics will hang indefinitely.
+  // serving the statistics will hang indefinitely. If we fail to get the data root, just log
+  // loudly, but don't fail. Serving stats is best-effort and shouldn't cause mounting to fail.
   auto data_root_or = manager().GetRoot(FsManager::MountPoint::kData);
-  if (data_root_or.is_error()) {
-    return data_root_or.error_value();
+  if (data_root_or.is_ok()) {
+    inspect_manager().ServeStats("data", std::move(data_root_or.value()));
+  } else {
+    FX_LOGS(WARNING) << "failed to get data root to serve inspect stats. Assuming test environment "
+                        "and continuing.";
   }
-  inspect_manager().ServeStats("data", std::move(data_root_or.value()));
 
   data_mounted_ = true;
   return ZX_OK;

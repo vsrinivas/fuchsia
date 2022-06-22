@@ -24,7 +24,7 @@
         {
             protocol: "fuchsia.fs.startup.Startup",
             from: "#fxfs",
-            path: "/fxfs/fuchsia.fs.startup.Startup",
+            path: "/data/fuchsia.fs.startup.Startup",
         },
 
         // Required for inspect data and to migrate data.

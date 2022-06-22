@@ -56,6 +56,7 @@ TEST_F(MounterTest, CreateFilesystemMounter) { FilesystemMounter mounter(manager
 enum class FilesystemType {
   kBlobfs,
   kMinfs,
+  kDurable,
   kFactoryfs,
 };
 
@@ -92,6 +93,9 @@ class TestMounter : public FilesystemMounter {
       case FilesystemType::kBlobfs:
         EXPECT_EQ(fs_name, "blobfs");
         break;
+      case FilesystemType::kMinfs:
+        EXPECT_EQ(fs_name, "data");
+        break;
       default:
         ADD_FAILURE() << "Unexpected filesystem type";
     }
@@ -106,7 +110,7 @@ class TestMounter : public FilesystemMounter {
     }
 
     switch (expected_filesystem_) {
-      case FilesystemType::kMinfs:
+      case FilesystemType::kDurable:
         EXPECT_EQ(std::string_view(argv[0]), kMinfsPath);
         EXPECT_EQ(len, 2ul);
         break;
@@ -144,7 +148,7 @@ TEST_F(MounterTest, DurableMount) {
   config_.durable() = true;
   TestMounter mounter(manager(), &config_);
 
-  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  mounter.ExpectFilesystem(FilesystemType::kDurable);
   ASSERT_EQ(mounter.MountDurable(zx::channel(), fs_management::MountOptions()), ZX_OK);
   ASSERT_TRUE(mounter.DurableMounted());
 }
@@ -157,6 +161,21 @@ TEST_F(MounterTest, FactoryMount) {
   ASSERT_OK(mounter.MountFactoryFs(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.FactoryMounted());
+}
+
+TEST_F(MounterTest, MinfsMount) {
+  TestMounter mounter(manager(), &config_);
+  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
+                              fs_management::DiskFormat::kDiskFormatMinfs));
+  ASSERT_TRUE(mounter.DataMounted());
+}
+
+TEST_F(MounterTest, BlobfsMount) {
+  TestMounter mounter(manager(), &config_);
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
+  ASSERT_TRUE(mounter.BlobMounted());
 }
 
 }  // namespace

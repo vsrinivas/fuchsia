@@ -932,7 +932,7 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
 
   if (format == fs_management::kDiskFormatFxfs) {
     // Fxfs runs as a component.
-    constexpr char startup_service_path[] = "/fxfs/fuchsia.fs.startup.Startup";
+    constexpr char startup_service_path[] = "/data/fuchsia.fs.startup.Startup";
     auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
     if (startup_client_end.is_error()) {
       FX_PLOGS(ERROR, startup_client_end.error_value())
@@ -1103,7 +1103,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
 
   if (format == fs_management::kDiskFormatFxfs) {
     // Fxfs runs as a component.
-    constexpr char startup_service_path[] = "/fxfs/fuchsia.fs.startup.Startup";
+    constexpr char startup_service_path[] = "/data/fuchsia.fs.startup.Startup";
     auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
     if (startup_client_end.is_error()) {
       FX_PLOGS(ERROR, startup_client_end.error_value())

@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "minfs",
+            url: "#meta/minfs.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.fs.startup.Startup",
+            from: "#minfs",
+            path: "/data/fuchsia.fs.startup.Startup",
+        },
+
+        // Required for inspect data.
+        {
+            directory: "root",
+            from: "#minfs",
+            rights: [ "rw*" ],
+            path: "/data_root",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#minfs",
+        },
+    ],
+    expose: [
+        {
+            directory: "root",
+            from: "#minfs",
+            as: "minfs",
+        },
+    ],
+}

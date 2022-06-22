@@ -146,6 +146,7 @@ source_set("block-watcher") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/uuid:uuid",
     "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
@@ -167,9 +168,7 @@ source_set("block-watcher") {
 
   if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs:fxfs_component" ]
-  }
-
-  if (data_filesystem_format == "f2fs") {
+  } else if (data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
@@ -342,6 +341,7 @@ template("fshost_integration_test") {
       "//src/lib/storage/fs_management",
       "//src/lib/storage/ramdevice_client/cpp",
       "//src/lib/testing/predicates",
+      "//src/storage/bin/minfs:minfs-component",
       "//src/storage/blobfs",
       "//src/storage/fxfs:fxfs_component",
       "//src/storage/fxfs-crypt",
@@ -452,12 +452,14 @@ cmc_merge("fshost.cml") {
     "meta/cpp_fshost.cml",
     "meta/real_fshost.cml",
   ]
-  if (data_filesystem_format == "fxfs") {
-    sources += [ "meta/fxfs_fshost.cml" ]
-  } else {
-    sources += [ "meta/no_fxfs_fshost.cml" ]
-  }
   if (!bootfs_only) {
+    if (data_filesystem_format == "fxfs") {
+      sources += [ "meta/fxfs_fshost.cml" ]
+    } else if (data_filesystem_format == "f2fs") {
+      sources += [ "meta/f2fs_fshost.cml" ]
+    } else {
+      sources += [ "meta/minfs_fshost.cml" ]
+    }
     sources += [ "meta/core_fshost.cml" ]
   }
 }

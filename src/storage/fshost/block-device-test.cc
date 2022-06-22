@@ -5,6 +5,7 @@
 #include "block-device.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
@@ -139,8 +140,27 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_NOT_SUPPORTED);
 }
 
+class TestMinfsMounter : public FilesystemMounter {
+ public:
+  TestMinfsMounter(FsManager& fshost, const fshost_config::Config* config)
+      : FilesystemMounter(fshost, config) {}
+
+  zx::status<> LaunchFsComponent(zx::channel block_device,
+                                 fuchsia_fs_startup::wire::StartOptions options,
+                                 const std::string& fs_name) final {
+    EXPECT_EQ(fs_name, "data");
+    return zx::ok();
+  }
+
+  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
+                       size_t len) final {
+    ADD_FAILURE() << "Unexpected call to LaunchFs";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+};
+
 TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
-  FilesystemMounter mounter(manager_, &config_);
+  TestMinfsMounter mounter(manager_, &config_);
 
   // Initialize Ramdisk with an empty GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk());
@@ -158,7 +178,7 @@ TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
 }
 
 TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
-  FilesystemMounter mounter(manager_, &config_);
+  TestMinfsMounter mounter(manager_, &config_);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
@@ -175,7 +195,7 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
 TEST_F(BlockDeviceTest, TestMinfsReformat) {
   auto config = EmptyConfig();
   config.check_filesystems() = true;
-  FilesystemMounter mounter(manager_, &config);
+  TestMinfsMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));

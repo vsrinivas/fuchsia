@@ -119,7 +119,9 @@ zx_status_t FsManager::Initialize(
   // for them, and instead point them at an empty, read-only folder in the fs dir, so the directory
   // capability can be successfully routed.
   std::vector<MountPoint> mount_points;
-  mount_points.push_back(MountPoint::kData);
+  if (config.data_filesystem_format() == "f2fs") {
+    mount_points.push_back(MountPoint::kData);
+  }
   if (config.durable()) {
     mount_points.push_back(MountPoint::kDurable);
   } else {
@@ -132,11 +134,6 @@ zx_status_t FsManager::Initialize(
   }
 
   for (const auto& point : mount_points) {
-    if (config.data_filesystem_format() == "fxfs") {
-      // Fxfs launches as a component so doesn't have a mount node.
-      continue;
-    }
-
     zx::status endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints_or.is_error()) {
       return endpoints_or.status_value();

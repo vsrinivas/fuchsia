@@ -33,7 +33,7 @@ cmc_merge("test-fshost.cml") {
     "//src/storage/fshost/meta/config.cml",
     "//src/storage/fshost/meta/core_fshost.cml",
     "//src/storage/fshost/meta/cpp_fshost.cml",
-    "//src/storage/fshost/meta/no_fxfs_fshost.cml",
+    "//src/storage/fshost/meta/minfs_fshost.cml",
   ]
 }
 
@@ -106,7 +106,6 @@ cmc_merge("test-fshost-no-watcher.cml") {
     "//src/storage/fshost/meta/config.cml",
     "//src/storage/fshost/meta/core_fshost.cml",
     "//src/storage/fshost/meta/cpp_fshost.cml",
-    "//src/storage/fshost/meta/no_fxfs_fshost.cml",
     "//src/storage/fshost/testing/meta/no_watcher.cml",
   ]
 }

@@ -137,24 +137,35 @@ void ComponentRunner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Managed VFS shutdown failed with status: " << zx_status_get_string(status);
     }
-    minfs_->Sync([this, cb = std::move(cb)](zx_status_t sync_status) mutable {
-      if (sync_status != ZX_OK) {
-        FX_LOGS(ERROR) << "Sync at unmount failed with status: "
-                       << zx_status_get_string(sync_status);
-      }
-      async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-        std::unique_ptr<Bcache> bc = Minfs::Destroy(std::move(minfs_));
-        bc.reset();
+    if (minfs_) {
+      minfs_->Sync([this, cb = std::move(cb)](zx_status_t sync_status) mutable {
+        if (sync_status != ZX_OK) {
+          FX_LOGS(ERROR) << "Sync at unmount failed with status: "
+                         << zx_status_get_string(sync_status);
+        }
+        async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
+          std::unique_ptr<Bcache> bc = Minfs::Destroy(std::move(minfs_));
+          bc.reset();
 
+          if (on_unmount_) {
+            on_unmount_();
+          }
+
+          // Tell the unmounting channel that we've completed teardown. This *must* be the last
+          // thing we do because after this, the caller can assume that it's safe to destroy the
+          // runner.
+          cb(ZX_OK);
+        });
+      });
+    } else {
+      async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
         if (on_unmount_) {
           on_unmount_();
         }
 
-        // Tell the unmounting channel that we've completed teardown. This *must* be the last thing
-        // we do because after this, the caller can assume that it's safe to destroy the runner.
         cb(ZX_OK);
       });
-    });
+    }
   });
 }
 
