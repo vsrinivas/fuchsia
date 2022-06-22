@@ -36,6 +36,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/launch.rs",
     "src/main.rs",
     "src/socket.rs",
   ]
