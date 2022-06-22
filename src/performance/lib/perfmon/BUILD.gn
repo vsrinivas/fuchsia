@@ -99,7 +99,6 @@ executable("perfmon_tests_app") {
 }
 
 fuchsia_unittest_package("perfmon_tests") {
-  manifest = "meta/perfmon_tests.cmx"
   deps = [ ":perfmon_tests_app" ]
 }
 
