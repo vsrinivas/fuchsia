@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_INSNTRACE_CONTROL_H_
-#define SRC_DEVELOPER_INSNTRACE_CONTROL_H_
+#ifndef SRC_PERFORMANCE_INSNTRACE_CONTROL_H_
+#define SRC_PERFORMANCE_INSNTRACE_CONTROL_H_
 
-#include "src/developer/insntrace/config.h"
+#include "src/performance/insntrace/config.h"
 
 namespace insntrace {
 
@@ -31,4 +31,4 @@ void FreeTrace(const IptConfig& config);
 
 }  // namespace insntrace
 
-#endif  // SRC_DEVELOPER_INSNTRACE_CONTROL_H_
+#endif  // SRC_PERFORMANCE_INSNTRACE_CONTROL_H_

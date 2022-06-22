@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_INSNTRACE_PRINT_PRINTER_CONFIG_H_
-#define SRC_DEVELOPER_INSNTRACE_PRINT_PRINTER_CONFIG_H_
+#ifndef SRC_PERFORMANCE_INSNTRACE_PRINT_PRINTER_CONFIG_H_
+#define SRC_PERFORMANCE_INSNTRACE_PRINT_PRINTER_CONFIG_H_
 
 namespace intel_processor_trace {
 
@@ -29,4 +29,4 @@ enum class OutputView {
 
 }  // namespace intel_processor_trace
 
-#endif  // SRC_DEVELOPER_INSNTRACE_PRINT_PRINTER_CONFIG_H_
+#endif  // SRC_PERFORMANCE_INSNTRACE_PRINT_PRINTER_CONFIG_H_

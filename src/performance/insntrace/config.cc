@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/insntrace/config.h"
+#include "src/performance/insntrace/config.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
@@ -16,8 +16,8 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/insntrace/control.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/insntrace/control.h"
 
 namespace insntrace {
 

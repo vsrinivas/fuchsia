@@ -188,8 +188,8 @@ group("far") {
 group("insntrace") {
   testonly = true
   public_deps = [
-    "//src/developer/insntrace",
-    "//src/developer/insntrace:host_insntrace_print",
+    "//src/performance/insntrace",
+    "//src/performance/insntrace:host_insntrace_print",
   ]
 }
 

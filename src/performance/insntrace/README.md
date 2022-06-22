@@ -118,14 +118,14 @@ hosts. A script is provided to copy the needed files from the target
 to the host:
 
 ```
-$ sh src/developer/insntrace/copy_ptout.sh \
+$ sh src/performance/insntrace/copy_ptout.sh \
   <zircon-hostname> <input-path-prefix> <output-path-prefix>
 ```
 
 Example:
 
 ```
-$ sh src/developer/insntrace/copy_ptout.sh \
+$ sh src/performance/insntrace/copy_ptout.sh \
   "" /tmp/ptout ./ptout
 ```
 
@@ -145,7 +145,7 @@ zircon$ ls -l /tmp/ptout.*
 -rw-------    1 0        0              5472 Jul 11 13:08 ptout.ktrace
 -rw-------    1 0        0                84 Jul 11 13:08 ptout.ptlist
 
-linux$ sh src/developer/insntrace/copy_ptout.sh "" /tmp/ptout ./ptout
+linux$ sh src/performance/insntrace/copy_ptout.sh "" /tmp/ptout ./ptout
 linux$ ls -l ptout.*
 -rw-r----- 1 dje eng   621984 Jul 10 22:16 ptout.cpu0.pt
 -rw-r----- 1 dje eng    10080 Jul 10 22:16 ptout.cpu1.pt

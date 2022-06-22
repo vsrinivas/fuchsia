@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
-#define SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
+#ifndef SRC_PERFORMANCE_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
+#define SRC_PERFORMANCE_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
 
 #include <string>
 
@@ -39,4 +39,4 @@ struct CommandLineSettings {
 
 }  // namespace intel_processor_trace
 
-#endif  // SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
+#endif  // SRC_PERFORMANCE_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_INSNTRACE_UTILS_H_
-#define SRC_DEVELOPER_INSNTRACE_UTILS_H_
+#ifndef SRC_PERFORMANCE_INSNTRACE_UTILS_H_
+#define SRC_PERFORMANCE_INSNTRACE_UTILS_H_
 
 #include <zircon/types.h>
 
@@ -19,4 +19,4 @@ void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
 
 }  // namespace insntrace
 
-#endif  // SRC_DEVELOPER_INSNTRACE_UTILS_H_
+#endif  // SRC_PERFORMANCE_INSNTRACE_UTILS_H_

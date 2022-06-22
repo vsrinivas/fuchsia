@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_INSNTRACE_PRINT_RAW_PRINTER_H_
-#define SRC_DEVELOPER_INSNTRACE_PRINT_RAW_PRINTER_H_
+#ifndef SRC_PERFORMANCE_INSNTRACE_PRINT_RAW_PRINTER_H_
+#define SRC_PERFORMANCE_INSNTRACE_PRINT_RAW_PRINTER_H_
 
 #include <cstdio>
 #include <memory>
@@ -80,4 +80,4 @@ class RawPrinter {
 
 }  // namespace intel_processor_trace
 
-#endif  // SRC_DEVELOPER_INSNTRACE_PRINT_RAW_PRINTER_H_
+#endif  // SRC_PERFORMANCE_INSNTRACE_PRINT_RAW_PRINTER_H_

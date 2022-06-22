@@ -15,6 +15,7 @@ group("tests") {
   deps = [
     "bin:tests",
     "cpuperf:tests",
+    "insntrace:tests",
     "lib:tests",
   ]
 }
