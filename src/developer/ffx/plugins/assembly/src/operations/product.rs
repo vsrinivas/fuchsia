@@ -12,7 +12,14 @@ use log::info;
 mod assembly_builder;
 
 pub fn assemble(args: ProductArgs) -> Result<()> {
-    let ProductArgs { product, outdir, gendir: _, input_bundles_dir, legacy_bundle_dir } = args;
+    let ProductArgs {
+        product,
+        outdir,
+        gendir: _,
+        input_bundles_dir,
+        legacy_bundle_dir,
+        additional_packages_path,
+    } = args;
 
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
@@ -36,10 +43,15 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
             .add_bundle(&bundle_path)
             .context(format!("Adding input bundle: {}", bundle_path.display()))?;
     }
-
     builder
         .add_product_packages(&config.product.packages)
         .context("Adding product-provided packages")?;
+
+    if let Some(package_config_path) = additional_packages_path {
+        let additional_packages =
+            util::read_config(&package_config_path).context("Loading additional package config")?;
+        builder.add_product_packages(&additional_packages).context("Adding additional packages")?;
+    }
 
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
     assembly_validate_product::validate_product(&image_assembly)?;
