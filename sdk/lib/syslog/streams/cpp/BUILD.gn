@@ -46,6 +46,6 @@ test("streams-encoder-test") {
 }
 
 fuchsia_unittest_package("streams-cpp-tests") {
-  manifest = "meta/streams-encoder-test.cmx"
+  manifest = "meta/streams-encoder-test.cml"
   deps = [ ":streams-encoder-test" ]
 }

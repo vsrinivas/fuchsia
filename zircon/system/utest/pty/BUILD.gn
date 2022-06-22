@@ -19,7 +19,7 @@ test("pty") {
 }
 
 fuchsia_unittest_package("pty-test") {
-  manifest = "meta/pty-test.cmx"
+  manifest = "meta/pty-test.cml"
   deps = [ ":pty" ]
 }
 

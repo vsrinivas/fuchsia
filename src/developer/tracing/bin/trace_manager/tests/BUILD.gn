@@ -47,7 +47,7 @@ resource("tracing.config") {
 
 fuchsia_test_component("trace_manager_tests_component") {
   component_name = "trace_manager_tests"
-  manifest = "meta/trace_manager_tests.cmx"
+  manifest = "meta/trace_manager_tests.cml"
   deps = [ ":trace_manager_tests_bin" ]
 }
 

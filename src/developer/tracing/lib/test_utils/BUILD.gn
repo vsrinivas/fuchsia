@@ -54,7 +54,7 @@ executable("tracing_test_utils_signal_peer") {
 }
 
 fuchsia_unittest_package("tracing_test_utils_tests") {
-  manifest = "meta/tracing_test_utils_tests.cmx"
+  manifest = "meta/tracing_test_utils_tests.cml"
   deps = [
     ":tracing_test_utils_return_1234",
     ":tracing_test_utils_signal_peer",

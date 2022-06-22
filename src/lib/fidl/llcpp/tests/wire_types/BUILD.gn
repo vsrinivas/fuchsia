@@ -47,7 +47,7 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_wire_type_api_tests") {
   # Use `fuchsia.process.Launcher` for death tests
-  manifest = "meta/wire_type_api_tests.cmx"
+  manifest = "meta/wire_type_api_tests.cml"
   deps = [ ":fidl_llcpp_wire_type_api_tests_bin" ]
 }
 

@@ -56,7 +56,7 @@ fuchsia_component("telephony-qmi-usb-integration-test") {
 
 fuchsia_component("tel-driver-unit-test") {
   testonly = true
-  manifest = "meta/tel-driver-unit-test.cmx"
+  manifest = "meta/tel-driver-unit-test.cml"
 
   deps = [
     "driver-unit:tel-driver-unit-test",

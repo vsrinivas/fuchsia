@@ -166,7 +166,7 @@ executable("session_context_impl_unittest") {
 }
 
 fuchsia_unittest_component("session-context-impl-unittest") {
-  manifest = "meta/session_context_impl_unittest.cmx"
+  manifest = "meta/session_context_impl_unittest.cml"
   deps = [ ":session_context_impl_unittest" ]
 }
 

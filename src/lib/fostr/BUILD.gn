@@ -81,7 +81,7 @@ test("fostr-test-bin") {
 
 fuchsia_unittest_package("fostr-tests") {
   package_name = "fostr_unittests"
-  manifest = "meta/fostr_unittests.cmx"
+  manifest = "meta/fostr_unittests.cml"
   deps = [ ":fostr-test-bin" ]
 }
 

@@ -99,7 +99,7 @@ executable("virtual_camera_agent_unittest_bin") {
 }
 
 fuchsia_unittest_package("virtual_camera_agent_unittest") {
-  manifest = "meta/virtual_camera_agent_unittest.cmx"
+  manifest = "meta/virtual_camera_agent_unittest.cml"
   deps = [ ":virtual_camera_agent_unittest_bin" ]
 }
 
@@ -117,6 +117,6 @@ executable("stream_storage_unittest_bin") {
 }
 
 fuchsia_unittest_package("stream_storage_unittest") {
-  manifest = "meta/stream_storage_unittest.cmx"
+  manifest = "meta/stream_storage_unittest.cml"
   deps = [ ":stream_storage_unittest_bin" ]
 }

@@ -81,7 +81,7 @@ fuchsia_unittest_package("lsusb-lib-tests") {
 # A simple test utility that returns the integer value provided to it in its first argument.
 
 fuchsia_unittest_package("lsusb-test") {
-  manifest = "meta/lsusb-test.cmx"
+  manifest = "meta/lsusb-test.cml"
   deps = [
     ":lsusb",
     ":lsusb-test-bin",

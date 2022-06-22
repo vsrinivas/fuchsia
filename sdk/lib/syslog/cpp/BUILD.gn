@@ -262,12 +262,12 @@ test("logging_cpp_unittests_structured") {
 }
 
 fuchsia_unittest_component("logging-cpp-unittests") {
-  manifest = "meta/logging_cpp_unittests.cmx"
+  manifest = "meta/logging_cpp_unittests.cml"
   deps = [ ":logging_cpp_unittests" ]
 }
 
 fuchsia_unittest_component("logging-cpp-unittests-structured") {
-  manifest = "meta/logging_cpp_unittests_structured.cmx"
+  manifest = "meta/logging_cpp_unittests_structured.cml"
   deps = [ ":logging_cpp_unittests_structured" ]
 }
 

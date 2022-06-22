@@ -25,7 +25,7 @@ fuchsia_unittest_component("identity_common_test") {
 
 fuchsia_unittest_component("storage_manager_test") {
   deps = [ "storage_manager:storage_manager_test" ]
-  manifest = "meta/storage_manager_lib_test.cmx"
+  manifest = "meta/storage_manager_lib_test.cml"
 }
 
 fuchsia_unittest_component("token_cache_test") {
@@ -34,12 +34,12 @@ fuchsia_unittest_component("token_cache_test") {
 
 fuchsia_unittest_component("token_manager_test") {
   deps = [ "token_manager:token_manager_test" ]
-  manifest = "meta/token_manager_lib_test.cmx"
+  manifest = "meta/token_manager_lib_test.cml"
 }
 
 fuchsia_unittest_component("token_store_test") {
   deps = [ "token_store:token_store_test" ]
-  manifest = "meta/token_store_lib_test.cmx"
+  manifest = "meta/token_store_lib_test.cml"
 }
 
 fuchsia_test_package("identity_lib_unittests") {

@@ -43,7 +43,7 @@ if (is_kernel) {
 
   fuchsia_unittest_package("boot-options-tests") {
     deps = [ ":boot-options-unittests" ]
-    manifest = "meta/boot-options-tests.cmx"
+    manifest = "meta/boot-options-tests.cml"
   }
 
   fuzzer_package("boot-options-fuzzers") {

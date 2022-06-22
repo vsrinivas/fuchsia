@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//src/media/audio/hardware.gni")
 
 fuchsia_unittest_package("audio_core_hardware_tests") {
-  manifest = "meta/audio_core_hardware_tests.cmx"
+  manifest = "meta/audio_core_hardware_tests.cml"
   deps = [ ":audio_core_hardware_tests_bin" ]
   test_specs = {
     # By definition this validates software that requires real audio input hardware.
