@@ -602,7 +602,7 @@ async fn access_ota_blob_as_executable() {
         // a hash to load the correct executable).
         AccessCheckRequest {
             config: AccessCheckConfig {
-                package_name: "pkgfs".to_string(),
+                package_name: "system_image".to_string(),
                 domain_with_hash: config.update_domain.clone(),
                 domain_without_hash: DEFAULT_DOMAIN.to_string(),
                 local_package_path: hello_world_v1_meta_far_path.to_string(),
