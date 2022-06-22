@@ -43,6 +43,7 @@ pub struct ResponseAndMetadata {
     pub merkle: Hash,
     pub check_assertion: UpdateCheckAssertion,
     pub version: String,
+    pub cohort_assertion: Option<String>,
 }
 
 impl Default for ResponseAndMetadata {
@@ -55,6 +56,7 @@ impl Default for ResponseAndMetadata {
             .unwrap(),
             check_assertion: UpdateCheckAssertion::UpdatesEnabled,
             version: "0.1.2.3".to_string(),
+            cohort_assertion: None,
         }
     }
 }
@@ -119,6 +121,13 @@ impl OmahaServer {
     pub fn set_all_update_check_assertions(&mut self, value: UpdateCheckAssertion) {
         for response_and_metadata in self.responses_by_appid.values_mut() {
             response_and_metadata.check_assertion = value;
+        }
+    }
+
+    /// Sets the special assertion to make on any future cohort in requests
+    pub fn set_all_cohort_assertions(&mut self, value: Option<String>) {
+        for response_and_metadata in self.responses_by_appid.values_mut() {
+            response_and_metadata.cohort_assertion = value.clone();
         }
     }
 
@@ -241,6 +250,11 @@ async fn handle_omaha_request(
                         assert!(updatedisabled);
                     }
                 }
+
+                assert_eq!(
+                    app.get("cohort").and_then(|v| v.as_str()),
+                    expected.cohort_assertion.as_deref()
+                );
 
                 let updatecheck = match expected.response {
                     OmahaResponse::Update => json!({

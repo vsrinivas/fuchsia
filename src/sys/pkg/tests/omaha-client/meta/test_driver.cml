@@ -21,6 +21,10 @@
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
             from: "parent",
         },
+        {
+            protocol: [ "fuchsia.sys2.LifecycleController" ],
+            from: "framework",
+        },
     ],
     offer: [
         {

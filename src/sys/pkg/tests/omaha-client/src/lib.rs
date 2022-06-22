@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
     fidl_fuchsia_update_installer::UpdateNotStartedReason,
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_inspect::{
         assert_data_tree,
@@ -1596,6 +1596,7 @@ async fn test_omaha_client_installation_deferred() {
         config_status_response.lock().replace(paver::ConfigurationStatus::Healthy).unwrap(),
         paver::ConfigurationStatus::Pending
     );
+    env.server.lock().set_all_cohort_assertions(Some("1:1:".to_string()));
     omaha_client_update(
         env,
         tree_assertion!(
@@ -2032,5 +2033,46 @@ async fn test_update_check_sets_updatedisabled_when_opted_out() {
     env.proxies
         .config_optout
         .set(fuchsia_update_config_optout::OptOutPreference::AllowOnlySecurityUpdates);
+    env.server.lock().set_all_cohort_assertions(Some("1:1:".to_string()));
+    do_nop_update_check(&env).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_keeps_cohort() {
+    let env = TestEnvBuilder::new().build().await;
+
+    do_nop_update_check(&env).await;
+
+    env.server.lock().set_all_cohort_assertions(Some("1:1:".to_string()));
+    do_nop_update_check(&env).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_persists_cohort() {
+    let mut env = TestEnvBuilder::new().build().await;
+
+    do_nop_update_check(&env).await;
+
+    // Stop omaha-client and restart it.
+    let lifecycle_controller =
+        connect_to_protocol::<fidl_fuchsia_sys2::LifecycleControllerMarker>().unwrap();
+    lifecycle_controller
+        .stop(
+            &format!(
+                "./realm_builder:{}/omaha_client_service",
+                env.realm_instance.root.child_name()
+            ),
+            false,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    env.proxies.update_manager = env
+        .realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
+        .expect("connect to update manager");
+
+    env.server.lock().set_all_cohort_assertions(Some("1:1:".to_string()));
     do_nop_update_check(&env).await;
 }
