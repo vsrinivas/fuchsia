@@ -24,14 +24,6 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
-
-                // TODO(fxbug.dev/103037): delete fuchsia.factory.* capabilities
-                "fuchsia.factory.AlphaFactoryStoreProvider",
-                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.PlayReadyFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.factory.WidevineFactoryStoreProvider",
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.ui.input.InputDeviceRegistry", // test-only
             ],
@@ -218,13 +210,11 @@
                 "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.factory.WidevineFactoryStoreProvider",
             ],
-
-            // TODO(fxbug.dev/103037): route from "#factory_store_providers"
-            from: "self",
+            from: "#factory_store_providers",
             to: "#sl4f",
 
-            // TODO(fxbug.dev/103037): delete "weak_for_migration"
-            dependency: "weak_for_migration",
+            // See: fxbug.dev/103037
+            source_availability: "unknown",
         },
 
         // TODO(https://fxbug.dev/98760): Remove once fixed.

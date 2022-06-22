@@ -56,12 +56,6 @@
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.factory.AlphaFactoryStoreProvider",
-                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.PlayReadyFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.factory.WidevineFactoryStoreProvider",
                 "fuchsia.feedback.DataProvider",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hwinfo.Board",
@@ -109,6 +103,18 @@
                 "fuchsia.wlan.policy.ClientProvider",
                 "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
             ],
+        },
+        {
+            // fxbug.dev/103037: only available in some product configurations
+            protocol: [
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
+            ],
+            availability: "optional",
         },
     ],
     expose: [
