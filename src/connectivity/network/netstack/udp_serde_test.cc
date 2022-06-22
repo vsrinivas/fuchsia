@@ -161,12 +161,8 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       cmsg_set.has_ipv6_pktinfo = true;
       cmsg_set.ipv6_pktinfo = {
           .if_index = 47,
-          .addr =
-              {
-                  .buf = addr,
-                  .buf_size = addr_len,
-              },
       };
+      memcpy(cmsg_set.ipv6_pktinfo.addr, addr, addr_len);
     }
   }
 
@@ -182,15 +178,13 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       .buf_size = kRxUdpPreludeSize,
   };
   constexpr size_t kPayloadSize = 41;
-  ASSERT_EQ(serialize_recv_msg_meta(
-                {
-                    .cmsg_set = cmsg_set,
-                    .from_addr_type = addr_type,
-                    .payload_size = kPayloadSize,
-                    .port = kPort,
-                },
-                addr_buf, out_buf),
-            SerializeRecvMsgMetaErrorNone);
+  RecvMsgMeta meta = {
+      .cmsg_set = cmsg_set,
+      .from_addr_type = addr_type,
+      .payload_size = kPayloadSize,
+      .port = kPort,
+  };
+  ASSERT_EQ(serialize_recv_msg_meta(&meta, addr_buf, out_buf), SerializeRecvMsgMetaErrorNone);
   fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
   ASSERT_TRUE(decoded.ok());
@@ -251,8 +245,9 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       EXPECT_EQ(ipv6_control.pktinfo().iface, cmsg_set.ipv6_pktinfo.if_index);
       span found_pktinfo_addr(ipv6_control.pktinfo().header_destination_addr.addr.data(),
                               ipv6_control.pktinfo().header_destination_addr.addr.size());
-      span expected_pktinfo_addr(cmsg_set.ipv6_pktinfo.addr.buf,
-                                 cmsg_set.ipv6_pktinfo.addr.buf_size);
+      span expected_pktinfo_addr(
+          cmsg_set.ipv6_pktinfo.addr,
+          sizeof(cmsg_set.ipv6_pktinfo.addr) / sizeof(cmsg_set.ipv6_pktinfo.addr[0]));
       EXPECT_EQ(found_pktinfo_addr, expected_pktinfo_addr);
       EXPECT_FALSE(network_control.has_ip());
     }
@@ -362,7 +357,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
   };
 
   // Output buffer null.
-  EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
+  EXPECT_EQ(serialize_recv_msg_meta(&meta, addr_buf,
                                     {
                                         .buf = nullptr,
                                         .buf_size = 0,
@@ -372,7 +367,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
   uint8_t kBuf[kTxUdpPreludeSize];
 
   // Output buffer too short.
-  EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
+  EXPECT_EQ(serialize_recv_msg_meta(&meta, addr_buf,
                                     {
                                         .buf = kBuf,
                                         .buf_size = 0,
@@ -380,7 +375,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
             SerializeRecvMsgMetaErrorOutputBufferTooSmall);
 
   // Address too short.
-  EXPECT_EQ(serialize_recv_msg_meta(meta,
+  EXPECT_EQ(serialize_recv_msg_meta(&meta,
                                     {
                                         .buf = addr,
                                         .buf_size = 0,
@@ -390,37 +385,6 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
                                         .buf_size = kTxUdpPreludeSize,
                                     }),
             SerializeRecvMsgMetaErrorFromAddrBufferTooSmall);
-
-  // Ipv6PktInfo buffer null.
-  meta.cmsg_set = {
-      .has_ipv6_pktinfo = true,
-      .ipv6_pktinfo =
-          {
-              .addr =
-                  {
-                      .buf = nullptr,
-                      .buf_size = 0,
-                  },
-          },
-  };
-  EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
-                                    {
-                                        .buf = kBuf,
-                                        .buf_size = kTxUdpPreludeSize,
-                                    }),
-            SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull);
-
-  // Ipv6PktInfo buffer wrong size.
-  meta.cmsg_set.ipv6_pktinfo.addr = {
-      .buf = addr,
-      .buf_size = 0,
-  };
-  EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
-                                    {
-                                        .buf = kBuf,
-                                        .buf_size = kTxUdpPreludeSize,
-                                    }),
-            SerializeRecvMsgMetaErrorIpv6PktInfoAddrWrongSize);
 }
 
 INSTANTIATE_TEST_SUITE_P(UdpSerdeTest, UdpSerdeTest,

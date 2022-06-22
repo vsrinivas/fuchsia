@@ -211,7 +211,7 @@ fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_
       fidl::internal::WireFormatVersion::kV2, buf.data(), static_cast<uint32_t>(meta_size));
 }
 
-SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, ConstBuffer from_addr,
+SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, ConstBuffer from_addr,
                                                   Buffer out_buf) {
   fidl::Arena<
       fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>()>
@@ -222,6 +222,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, ConstBuffer 
   fnet::wire::SocketAddress socket_addr;
   fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
   fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
+  const RecvMsgMeta& meta = *meta_;
   switch (meta.from_addr_type) {
     case IpAddrType::Ipv4: {
       if (from_addr.buf == nullptr) {
@@ -285,15 +286,10 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, ConstBuffer 
       fuchsia_posix_socket::wire::Ipv6PktInfoRecvControlData fidl_pktinfo = {
           .iface = pktinfo.if_index,
       };
-      if (pktinfo.addr.buf == nullptr) {
-        return SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull;
-      }
-      const cpp20::span<const uint8_t> from_addr(pktinfo.addr.buf, pktinfo.addr.buf_size);
+      const cpp20::span<const uint8_t> from_addr(pktinfo.addr,
+                                                 sizeof(pktinfo.addr) / sizeof(pktinfo.addr[0]));
       cpp20::span<uint8_t> to_addr(fidl_pktinfo.header_destination_addr.addr.data(),
                                    decltype(fidl_pktinfo.header_destination_addr.addr)::size());
-      if (from_addr.size() != to_addr.size()) {
-        return SerializeRecvMsgMetaErrorIpv6PktInfoAddrWrongSize;
-      }
       copy_into(to_addr, from_addr);
       ipv6_control_set = true;
       ipv6_control_builder.pktinfo(fidl_pktinfo);

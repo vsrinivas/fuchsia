@@ -69,7 +69,7 @@ FXL_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf);
 
 typedef struct Ipv6PktInfo {
   uint64_t if_index;
-  ConstBuffer addr;
+  uint8_t addr[kMaxIpAddrSize];
 } Ipv6PktInfo;
 
 typedef struct CmsgSet {
@@ -103,8 +103,6 @@ typedef enum SerializeRecvMsgMetaError {
   SerializeRecvMsgMetaErrorNone,
   SerializeRecvMsgMetaErrorOutputBufferNull,
   SerializeRecvMsgMetaErrorOutputBufferTooSmall,
-  SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull,
-  SerializeRecvMsgMetaErrorIpv6PktInfoAddrWrongSize,
   SerializeRecvMsgMetaErrorFromAddrBufferNull,
   SerializeRecvMsgMetaErrorFromAddrBufferTooSmall,
   SerializeRecvMsgMetaErrorFailedToEncode,
@@ -115,7 +113,7 @@ typedef enum SerializeRecvMsgMetaError {
 //
 // On success, returns SerializeRecvMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
-FXL_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta,
+FXL_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_,
                                                              ConstBuffer from_addr, Buffer out_buf);
 
 // The length of the prelude bytes in a Tx message.
