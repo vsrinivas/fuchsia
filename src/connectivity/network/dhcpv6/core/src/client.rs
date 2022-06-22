@@ -477,10 +477,9 @@ fn compute_preferred_address_count(
 }
 
 // Calculates the elapsed time since `start_time`, in centiseconds.
-fn elapsed_time_in_centisecs(start_time: Instant) -> u16 {
+fn elapsed_time_in_centisecs(start_time: Instant, now: Instant) -> u16 {
     u16::try_from(
-        Instant::now()
-            .duration_since(start_time)
+        now.duration_since(start_time)
             .as_millis()
             .checked_div(ELAPSED_TIME_DENOMINATOR)
             .expect("division should succeed, denominator is non-zero"),
@@ -540,6 +539,7 @@ impl ServerDiscovery {
         options_to_request: &[v6::OptionCode],
         solicit_max_rt: Duration,
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         Self {
             client_id,
@@ -550,7 +550,7 @@ impl ServerDiscovery {
             collected_advertise: BinaryHeap::new(),
             collected_sol_max_rt: Vec::new(),
         }
-        .send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+        .send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
 
     /// Calculates timeout for retransmitting solicits using parameters
@@ -577,6 +577,7 @@ impl ServerDiscovery {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -590,8 +591,8 @@ impl ServerDiscovery {
         let mut options = vec![v6::DhcpOption::ClientId(&client_id)];
 
         let (start_time, elapsed_time) = match first_solicit_time {
-            None => (Instant::now(), 0),
-            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time)),
+            None => (now, 0),
+            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
         options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
 
@@ -656,6 +657,7 @@ impl ServerDiscovery {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -682,6 +684,7 @@ impl ServerDiscovery {
                 collected_advertise,
                 solicit_max_rt,
                 rng,
+                now,
             );
         }
 
@@ -694,7 +697,7 @@ impl ServerDiscovery {
             collected_advertise,
             collected_sol_max_rt,
         }
-        .send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+        .send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
 
     fn advertise_message_received<R: Rng, B: ByteSlice>(
@@ -702,6 +705,7 @@ impl ServerDiscovery {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         msg: v6::Message<'_, B>,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -959,7 +963,7 @@ impl ServerDiscovery {
             addresses,
             dns_servers: dns_servers.unwrap_or(Vec::new()),
             preference,
-            receive_time: Instant::now(),
+            receive_time: now,
             preferred_addresses_count,
         };
 
@@ -1004,6 +1008,7 @@ impl ServerDiscovery {
                 collected_advertise,
                 solicit_max_rt,
                 rng,
+                now,
             );
         }
 
@@ -1218,6 +1223,7 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     mut collected_advertise: BinaryHeap<AdvertiseMessage>,
     solicit_max_rt: Duration,
     rng: &mut R,
+    now: Instant,
 ) -> Transition {
     if let Some(advertise) = collected_advertise.pop() {
         return Requesting::start(
@@ -1228,6 +1234,7 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
             collected_advertise,
             solicit_max_rt,
             rng,
+            now,
         );
     }
     return ServerDiscovery::start(
@@ -1237,6 +1244,7 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
         &options_to_request,
         solicit_max_rt,
         rng,
+        now,
     );
 }
 
@@ -1268,6 +1276,7 @@ impl Requesting {
         collected_advertise: BinaryHeap<AdvertiseMessage>,
         solicit_max_rt: Duration,
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let AdvertiseMessage {
             server_id,
@@ -1335,7 +1344,7 @@ impl Requesting {
             retrans_count: 0,
             solicit_max_rt,
         }
-        .send_and_reschedule_retransmission(transaction_id(), options_to_request, rng)
+        .send_and_reschedule_retransmission(transaction_id(), options_to_request, rng, now)
     }
 
     /// Calculates timeout for retransmitting requests using parameters
@@ -1359,9 +1368,10 @@ impl Requesting {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Transition { state, actions: request_actions, transaction_id } =
-            self.send_and_schedule_retransmission(transaction_id, options_to_request, rng);
+            self.send_and_schedule_retransmission(transaction_id, options_to_request, rng, now);
         let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
             .chain(request_actions.into_iter())
             .collect();
@@ -1379,6 +1389,7 @@ impl Requesting {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -1439,8 +1450,8 @@ impl Requesting {
         //    to indicate how long the client has been trying to complete the
         //    current DHCP message exchange.
         let mut elapsed_time = 0;
-        let first_request_time = Some(first_request_time.map_or(Instant::now(), |start_time| {
-            elapsed_time = elapsed_time_in_centisecs(start_time);
+        let first_request_time = Some(first_request_time.map_or(now, |start_time| {
+            elapsed_time = elapsed_time_in_centisecs(start_time, now);
             retrans_count += 1;
             start_time
         }));
@@ -1515,6 +1526,7 @@ impl Requesting {
         request_transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -1541,6 +1553,7 @@ impl Requesting {
                 request_transaction_id,
                 options_to_request,
                 rng,
+                now,
             );
         }
         if let Some(advertise) = collected_advertise.pop() {
@@ -1552,6 +1565,7 @@ impl Requesting {
                 collected_advertise,
                 solicit_max_rt,
                 rng,
+                now,
             );
         }
         return ServerDiscovery::start(
@@ -1561,6 +1575,7 @@ impl Requesting {
             &options_to_request,
             solicit_max_rt,
             rng,
+            now,
         );
     }
 
@@ -1569,6 +1584,7 @@ impl Requesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         msg: v6::Message<'_, B>,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -1929,6 +1945,7 @@ impl Requesting {
                     *msg.transaction_id(),
                     options_to_request,
                     rng,
+                    now,
                 );
             }
             v6::StatusCode::NotOnLink => {
@@ -1973,6 +1990,7 @@ impl Requesting {
                     *msg.transaction_id(),
                     options_to_request,
                     rng,
+                    now,
                 );
             }
             // TODO(https://fxbug.dev/76764): implement unicast.
@@ -1993,6 +2011,7 @@ impl Requesting {
                     collected_advertise,
                     solicit_max_rt,
                     rng,
+                    now,
                 );
             }
             // Per RFC 8415, section 18.2.10.1:
@@ -2021,6 +2040,7 @@ impl Requesting {
                     collected_advertise,
                     solicit_max_rt,
                     rng,
+                    now,
                 );
             },
         }
@@ -2241,6 +2261,7 @@ impl AddressAssigned {
         self,
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self { client_id, addresses, server_id, dns_servers, solicit_max_rt } = self;
         // Start renewing addresses, per RFC 8415, section 18.2.4:
@@ -2256,6 +2277,7 @@ impl AddressAssigned {
             dns_servers,
             solicit_max_rt,
             rng,
+            now,
         )
     }
 }
@@ -2295,6 +2317,7 @@ impl Renewing {
         dns_servers: Vec<Ipv6Addr>,
         solicit_max_rt: Duration,
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         Self {
             client_id,
@@ -2305,7 +2328,7 @@ impl Renewing {
             retrans_timeout: Duration::default(),
             solicit_max_rt,
         }
-        .send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+        .send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
 
     /// Calculates timeout for retransmitting Renew using parameters specified
@@ -2323,6 +2346,7 @@ impl Renewing {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         let Self {
             client_id,
@@ -2334,8 +2358,8 @@ impl Renewing {
             solicit_max_rt,
         } = self;
         let (start_time, elapsed_time) = match first_renew_time {
-            None => (Instant::now(), 0),
-            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time)),
+            None => (now, 0),
+            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
 
         let oro = std::iter::once(v6::OptionCode::SolMaxRt)
@@ -2404,8 +2428,9 @@ impl Renewing {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
-        self.send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+        self.send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
 }
 
@@ -2449,10 +2474,11 @@ impl ClientState {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         msg: v6::Message<'_, B>,
+        now: Instant,
     ) -> Transition {
         match self {
             ClientState::ServerDiscovery(s) => {
-                s.advertise_message_received(options_to_request, rng, msg)
+                s.advertise_message_received(options_to_request, rng, msg, now)
             }
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
@@ -2470,10 +2496,11 @@ impl ClientState {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
         msg: v6::Message<'_, B>,
+        now: Instant,
     ) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
-            ClientState::Requesting(s) => s.reply_message_received(options_to_request, rng, msg),
+            ClientState::Requesting(s) => s.reply_message_received(options_to_request, rng, msg, now),
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
             | ClientState::AddressAssigned(_)
@@ -2490,19 +2517,20 @@ impl ClientState {
         transaction_id: [u8; 3],
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
             ClientState::ServerDiscovery(s) => {
-                s.retransmission_timer_expired(transaction_id, options_to_request, rng)
+                s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
             }
             ClientState::Requesting(s) => {
-                s.retransmission_timer_expired(transaction_id, options_to_request, rng)
+                s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
             }
             ClientState::Renewing(s) => {
-                s.retransmission_timer_expired(transaction_id, options_to_request, rng)
+                s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
             }
             ClientState::InformationReceived(_) | ClientState::AddressAssigned(_) => {
                 unreachable!("received unexpected retransmission timeout in state {:?}.", self);
@@ -2536,9 +2564,10 @@ impl ClientState {
         self,
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
+        now: Instant,
     ) -> Transition {
         match self {
-            ClientState::AddressAssigned(s) => s.renew_timer_expired(options_to_request, rng),
+            ClientState::AddressAssigned(s) => s.renew_timer_expired(options_to_request, rng, now),
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
@@ -2656,6 +2685,7 @@ impl<R: Rng> ClientStateMachine<R> {
         configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
+        now: Instant,
     ) -> (Self, Actions) {
         let Transition { state, actions, transaction_id: new_transaction_id } =
             ServerDiscovery::start(
@@ -2665,6 +2695,7 @@ impl<R: Rng> ClientStateMachine<R> {
                 &options_to_request,
                 MAX_SOLICIT_TIMEOUT,
                 &mut rng,
+                now,
             );
         (
             Self {
@@ -2687,7 +2718,7 @@ impl<R: Rng> ClientStateMachine<R> {
     /// # Panics
     ///
     /// `handle_timeout` panics if current state is None.
-    pub fn handle_timeout(&mut self, timeout_type: ClientTimerType) -> Actions {
+    pub fn handle_timeout(&mut self, timeout_type: ClientTimerType, now: Instant) -> Actions {
         let ClientStateMachine { transaction_id, options_to_request, state, rng } = self;
         let old_state = state.take().expect("state should not be empty");
         let Transition { state: new_state, actions, transaction_id: new_transaction_id } =
@@ -2696,11 +2727,14 @@ impl<R: Rng> ClientStateMachine<R> {
                     *transaction_id,
                     &options_to_request,
                     rng,
+                    now,
                 ),
                 ClientTimerType::Refresh => {
                     old_state.refresh_timer_expired(*transaction_id, &options_to_request, rng)
                 }
-                ClientTimerType::Renew => old_state.renew_timer_expired(&options_to_request, rng),
+                ClientTimerType::Renew => {
+                    old_state.renew_timer_expired(&options_to_request, rng, now)
+                }
             };
         *state = Some(new_state);
         *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
@@ -2712,7 +2746,11 @@ impl<R: Rng> ClientStateMachine<R> {
     /// # Panics
     ///
     /// `handle_reply` panics if current state is None.
-    pub fn handle_message_receive<B: ByteSlice>(&mut self, msg: v6::Message<'_, B>) -> Actions {
+    pub fn handle_message_receive<B: ByteSlice>(
+        &mut self,
+        msg: v6::Message<'_, B>,
+        now: Instant,
+    ) -> Actions {
         let ClientStateMachine { transaction_id, options_to_request, state, rng } = self;
         if msg.transaction_id() != transaction_id {
             Vec::new() // Ignore messages for other clients.
@@ -2727,6 +2765,7 @@ impl<R: Rng> ClientStateMachine<R> {
                         &options_to_request,
                         rng,
                         msg,
+                        now,
                     );
                     *state = Some(new_state);
                     *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
@@ -2740,7 +2779,7 @@ impl<R: Rng> ClientStateMachine<R> {
                     } = state
                         .take()
                         .expect("state should not be empty")
-                        .advertise_message_received(&options_to_request, rng, msg);
+                        .advertise_message_received(&options_to_request, rng, msg, now);
                     *state = Some(new_state);
                     *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
                     actions
@@ -2801,6 +2840,7 @@ pub(crate) mod testutil {
         configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
+        now: Instant,
     ) -> ClientStateMachine<R> {
         let (client, actions) = ClientStateMachine::start_stateful(
             transaction_id.clone(),
@@ -2808,6 +2848,7 @@ pub(crate) mod testutil {
             configured_addresses.clone(),
             options_to_request.clone(),
             rng,
+            now,
         );
 
         assert_matches!(
@@ -2972,6 +3013,7 @@ pub(crate) mod testutil {
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
+        now: Instant,
     ) -> (ClientStateMachine<R>, [u8; 3]) {
         // Generate a transaction_id for the Solicit - Advertise message
         // exchange.
@@ -3002,6 +3044,7 @@ pub(crate) mod testutil {
             configured_addresses.clone(),
             options_to_request.clone(),
             rng,
+            now,
         );
 
         let mut options = vec![
@@ -3044,7 +3087,7 @@ pub(crate) mod testutil {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // The client should select the server that sent the best advertise and
         // transition to Requesting.
-        let actions = client.handle_message_receive(msg);
+        let actions = client.handle_message_receive(msg, now);
         let mut buf = assert_matches!(
             &actions[..],
            [
@@ -3095,6 +3138,7 @@ pub(crate) mod testutil {
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
+        now: Instant,
     ) -> (ClientStateMachine<R>, Actions) {
         let (mut client, transaction_id) = testutil::request_addresses_and_assert(
             client_id.clone(),
@@ -3102,6 +3146,7 @@ pub(crate) mod testutil {
             addresses_to_assign.clone(),
             expected_dns_servers,
             rng,
+            now,
         );
 
         let mut options =
@@ -3139,7 +3184,7 @@ pub(crate) mod testutil {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let actions = client.handle_message_receive(msg);
+        let actions = client.handle_message_receive(msg, now);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let expected_addresses =
@@ -3302,6 +3347,7 @@ pub(crate) mod testutil {
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         rng: R,
+        now: Instant,
     ) -> ClientStateMachine<R> {
         let (mut client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
@@ -3309,6 +3355,7 @@ pub(crate) mod testutil {
             addresses_to_assign.clone(),
             &[],
             rng,
+            now,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let old_transaction_id = *transaction_id;
@@ -3332,7 +3379,7 @@ pub(crate) mod testutil {
 
         // Renew timeout should trigger a transition to Renewing, send a renew
         // message and schedule retransmission.
-        let actions = client.handle_timeout(ClientTimerType::Renew);
+        let actions = client.handle_timeout(ClientTimerType::Renew, now);
         let mut buf = assert_matches!(
             &actions[..],
             [
@@ -3454,7 +3501,7 @@ mod tests {
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-            let actions = client.handle_message_receive(msg);
+            let actions = client.handle_message_receive(msg, Instant::now());
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 client;
 
@@ -3492,7 +3539,7 @@ mod tests {
             [_, Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)]
         );
 
-        let actions = client.handle_timeout(ClientTimerType::Retransmission);
+        let actions = client.handle_timeout(ClientTimerType::Retransmission, Instant::now());
         // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
         assert_matches!(
             actions[..],
@@ -3520,8 +3567,9 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
         // Transition to InformationReceived state.
+        let time = Instant::now();
         assert_eq!(
-            client.handle_message_receive(msg)[..],
+            client.handle_message_receive(msg, time)[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
@@ -3529,7 +3577,7 @@ mod tests {
         );
 
         // Refresh should start another round of information request.
-        let actions = client.handle_timeout(ClientTimerType::Refresh);
+        let actions = client.handle_timeout(ClientTimerType::Refresh, time);
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
         let builder =
@@ -3565,6 +3613,7 @@ mod tests {
             testutil::to_configured_addresses(address_count, preferred_addresses),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
     }
 
@@ -3733,12 +3782,14 @@ mod tests {
     #[test]
     fn receive_complete_advertise_with_max_preference() {
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -3764,7 +3815,7 @@ mod tests {
 
         // The client should stay in ServerDiscovery when receiving a complete
         // advertise with preference less than 255.
-        assert!(client.handle_message_receive(msg).is_empty());
+        assert!(client.handle_message_receive(msg, time).is_empty());
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             std_ip_v6!("::ffff:c00a:1ff"),
             60,
@@ -3788,7 +3839,7 @@ mod tests {
 
         // The client should transition to Requesting when receiving a complete
         // advertise with preference 255.
-        let actions = client.handle_message_receive(msg);
+        let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         assert_matches!(
             state,
@@ -3828,12 +3879,14 @@ mod tests {
     fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
+        let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         let preferred_lifetime = 10;
@@ -3866,7 +3919,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-        assert_matches!(client.handle_message_receive(msg)[..], []);
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let collected_advertise = assert_matches!(
@@ -3906,17 +3959,19 @@ mod tests {
     #[test]
     fn select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         // On transmission timeout, if no advertise were received the client
         // should stay in server discovery and resend solicit.
-        let actions = client.handle_timeout(ClientTimerType::Retransmission);
+        let actions = client.handle_timeout(ClientTimerType::Retransmission, time);
         assert_matches!(
             &actions[..],
             [
@@ -3959,7 +4014,7 @@ mod tests {
 
         // The client should transition to Requesting when receiving any
         // advertise while retransmitting.
-        let actions = client.handle_message_receive(msg);
+        let actions = client.handle_message_receive(msg, time);
         assert_matches!(
             &actions[..],
             [
@@ -3996,6 +4051,7 @@ mod tests {
             ],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
     }
 
@@ -4026,6 +4082,7 @@ mod tests {
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             client_id.clone(),
             configured_addresses.clone(),
@@ -4034,6 +4091,7 @@ mod tests {
             collected_advertise,
             MAX_SOLICIT_TIMEOUT,
             &mut rng,
+            time,
         );
 
         let expected_addresses = (0..)
@@ -4075,7 +4133,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(
             &state,
             ClientState::Requesting(Requesting {
@@ -4108,7 +4166,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
 
         let expected_addresses: HashMap<v6::IAID, AddressEntry> = HashMap::from([(
             v6::IAID::new(0),
@@ -4146,7 +4204,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(&state, ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses: _,
@@ -4182,7 +4240,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(state, ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses: _,
@@ -4219,6 +4277,7 @@ mod tests {
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             client_id.clone(),
             configured_addresses.clone(),
@@ -4227,6 +4286,7 @@ mod tests {
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
             &mut rng,
+            time,
         );
 
         // If the reply contains an address with status code NotOnLink, the
@@ -4258,7 +4318,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         let expected_addresses = HashMap::from([
             (iaid1, AddressEntry::ToRequest(AddressToRequest::new(None, Some(address1)))),
             (
@@ -4322,6 +4382,7 @@ mod tests {
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             client_id.clone(),
             configured_addresses.clone(),
@@ -4330,6 +4391,7 @@ mod tests {
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
             &mut rng,
+            time,
         );
 
         // The client should discard the IAs with invalid lifetimes.
@@ -4351,7 +4413,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         match valid_ia {
             true =>
             // The client should transition to AddressAssigned if the reply contains
@@ -4444,6 +4506,7 @@ mod tests {
             ),
         ] {
             let client_id = v6::duid_uuid();
+            let time = Instant::now();
             let Transition { state, actions: _, transaction_id } = Requesting::start(
                 client_id.clone(),
                 configured_addresses.clone(),
@@ -4452,6 +4515,7 @@ mod tests {
                 BinaryHeap::new(),
                 MAX_SOLICIT_TIMEOUT,
                 &mut rng,
+                time,
             );
 
             let iana_options1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -4489,7 +4553,7 @@ mod tests {
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
             let Transition { state, actions, transaction_id: _ } =
-                state.reply_message_received(&[], &mut rng, msg);
+                state.reply_message_received(&[], &mut rng, msg, time);
             assert_matches!(
                 state,
                 ClientState::AddressAssigned(AddressAssigned {
@@ -4525,12 +4589,14 @@ mod tests {
     fn requesting_retransmit_max_retrans_count() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
+        let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -4550,7 +4616,7 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg)[..], []);
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -4583,7 +4649,7 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg)[..], []);
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -4602,7 +4668,7 @@ mod tests {
         // The client should transition to Requesting and select the server that
         // sent the best advertise.
         assert_matches!(
-            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+            &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
            [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::SendMessage(buf),
@@ -4624,7 +4690,7 @@ mod tests {
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
-                &client.handle_timeout(ClientTimerType::Retransmission)[..],
+                &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
                [
                     Action::SendMessage(buf),
                     // `_timeout` is not checked because retransmission timeout
@@ -4653,7 +4719,7 @@ mod tests {
         // When the retransmission count reaches REQUEST_MAX_RC, the client
         // should select another server.
         assert_matches!(
-            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+            &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
            [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::SendMessage(buf),
@@ -4679,7 +4745,7 @@ mod tests {
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
-                &client.handle_timeout(ClientTimerType::Retransmission)[..],
+                &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
                [
                     Action::SendMessage(buf),
                     // `_timeout` is not checked because retransmission timeout
@@ -4709,7 +4775,7 @@ mod tests {
         // does not have information about another server, the client should
         // restart server discovery.
         assert_matches!(
-            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+            &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
            [
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)
@@ -4756,6 +4822,7 @@ mod tests {
             ],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
 
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
@@ -4796,6 +4863,7 @@ mod tests {
             )],
             &dns_servers,
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
         assert_matches!(
             &actions[..],
@@ -4823,6 +4891,7 @@ mod tests {
         );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
         let client_id = v6::duid_uuid();
+        let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             client_id.clone(),
             configured_addresses.clone(),
@@ -4831,6 +4900,7 @@ mod tests {
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
             &mut rng,
+            time,
         );
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
@@ -4863,7 +4933,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
@@ -4893,7 +4963,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
@@ -4922,7 +4992,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
-            state.reply_message_received(&options_to_request, &mut rng, msg);
+            state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(&state,
             ClientState::AddressAssigned(AddressAssigned {
                     client_id: _,
@@ -4961,6 +5031,7 @@ mod tests {
             ],
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
     }
 
@@ -4984,6 +5055,7 @@ mod tests {
             }],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
@@ -5025,12 +5097,14 @@ mod tests {
                 t2,
             ),
         ];
+        let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
             client_id.clone(),
             server_id.clone(),
             addresses_to_assign.clone(),
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
@@ -5048,7 +5122,7 @@ mod tests {
         );
 
         // Assert renew is retransmitted on retransmission timeout.
-        let actions = client.handle_timeout(ClientTimerType::Retransmission);
+        let actions = client.handle_timeout(ClientTimerType::Retransmission, time);
         let mut buf = assert_matches!(
             &actions[..],
             [
@@ -5115,7 +5189,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-        assert!(client.handle_message_receive(msg).is_empty());
+        assert!(client.handle_message_receive(msg, Instant::now()).is_empty());
 
         // Messages with unsupported/unexpected types are discarded.
         for msg_type in IntoIterator::into_iter([
@@ -5140,13 +5214,13 @@ mod tests {
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-            assert!(client.handle_message_receive(msg).is_empty());
+            assert!(client.handle_message_receive(msg, Instant::now()).is_empty());
         }
     }
 
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
-    fn infomation_requesting_refresh_timeout_is_unreachable() {
+    fn information_requesting_refresh_timeout_is_unreachable() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -5155,12 +5229,12 @@ mod tests {
 
         // Should panic if Refresh timeout is received while in
         // InformationRequesting state.
-        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+        let _actions = client.handle_timeout(ClientTimerType::Refresh, Instant::now());
     }
 
     #[test]
     #[should_panic(expected = "received unexpected retransmission timeout")]
-    fn infomation_received_retransmission_timeout_is_unreachable() {
+    fn information_received_retransmission_timeout_is_unreachable() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -5180,8 +5254,9 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Transition to InformationReceived state.
+        let time = Instant::now();
         assert_eq!(
-            client.handle_message_receive(msg)[..],
+            client.handle_message_receive(msg, time)[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
@@ -5197,43 +5272,48 @@ mod tests {
 
         // Should panic if Retransmission timeout is received while in
         // InformationReceived state.
-        let _actions = client.handle_timeout(ClientTimerType::Retransmission);
+        let _actions = client.handle_timeout(ClientTimerType::Retransmission, time);
     }
 
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn server_discovery_refresh_timeout_is_unreachable() {
+        let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             v6::duid_uuid(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         // Should panic if Refresh is received while in ServerDiscovery state.
-        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+        let _actions = client.handle_timeout(ClientTimerType::Refresh, time);
     }
 
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn requesting_refresh_timeout_is_unreachable() {
+        let time = Instant::now();
         let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
             v6::duid_uuid(),
             v6::duid_uuid(),
             vec![TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         // Should panic if Refresh is received while in Requesting state.
-        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+        let _actions = client.handle_timeout(ClientTimerType::Refresh, time);
     }
 
     #[test_case(ClientTimerType::Refresh)]
     #[test_case(ClientTimerType::Retransmission)]
     #[should_panic(expected = "received unexpected")]
     fn address_assiged_unexpected_timeout_is_unreachable(timeout: ClientTimerType) {
+        let time = Instant::now();
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             v6::duid_uuid(),
@@ -5258,17 +5338,19 @@ mod tests {
             }],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         // Should panic if Refresh or Retransmission timeout is received while
         // in AddressAssigned state.
-        let _actions = client.handle_timeout(timeout);
+        let _actions = client.handle_timeout(timeout, time);
     }
 
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn renewing_refresh_timeout_is_unreachable() {
         let t1 = v6::NonZeroOrMaxU32::new(40).expect("40 is non-zero or u32::MAX");
+        let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
             v6::duid_uuid(),
             v6::duid_uuid(),
@@ -5281,10 +5363,11 @@ mod tests {
             )],
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
+            time,
         );
 
         // Should panic if Refresh is received while in Renewing state.
-        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+        let _actions = client.handle_timeout(ClientTimerType::Refresh, time);
     }
 
     // NOTE: All comparisons are done on millisecond, so this test is not affected by precision

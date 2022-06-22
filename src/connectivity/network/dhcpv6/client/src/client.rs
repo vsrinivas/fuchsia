@@ -37,7 +37,7 @@ use {
         net::{IpAddr, Ipv6Addr, SocketAddr},
         num::{NonZeroU8, TryFromIntError},
         str::FromStr as _,
-        time::Duration,
+        time::{Duration, Instant},
     },
 };
 
@@ -173,6 +173,7 @@ fn create_state_machine(
                 configured_addresses,
                 information_config.map_or_else(Vec::new, to_dhcpv6_option_codes),
                 StdRng::from_entropy(),
+                Instant::now(),
             ))
         }
         None => {
@@ -361,7 +362,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
         timer_type: dhcpv6_core::client::ClientTimerType,
     ) -> Result<(), ClientError> {
         let () = self.cancel_timer(timer_type)?; // This timer just fired.
-        let actions = self.state_machine.handle_timeout(timer_type);
+        let actions = self.state_machine.handle_timeout(timer_type, Instant::now());
         self.run_actions(actions).await
     }
 
@@ -377,7 +378,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                 return Ok(());
             }
         };
-        let actions = self.state_machine.handle_message_receive(msg);
+        let actions = self.state_machine.handle_message_receive(msg, Instant::now());
         self.run_actions(actions).await
     }
 
