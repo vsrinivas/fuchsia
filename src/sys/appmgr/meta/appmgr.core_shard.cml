@@ -63,7 +63,6 @@
 
                 // TODO(fxbug.dev/93338): delete fuchsia.tee.* below when tee_manager migrated to CFv2
                 "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
-                "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
                 "fuchsia.tee.DeviceInfo",
                 "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.ui.annotation.Registry",

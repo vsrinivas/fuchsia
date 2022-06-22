@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/system_update_configurator_smoke_test",
+    },
+    children: [
+        {
+            name: "tee_manager",
+            url: "#meta/tee_manager.cm",
+        },
+        {
+            name: "system_update_configurator",
+            url: "#meta/system-update-configurator.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
+            ],
+            from: "#system_update_configurator",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
+                "fuchsia.tee.DeviceInfo",
+            ],
+            from: "#tee_manager",
+            to: "#system_update_configurator",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#system_update_configurator",
+                "#tee_manager",
+            ],
+        },
+        {
+            directory: "dev-tee",
+            from: "parent",
+            to: "#tee_manager",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#tee_manager",
+            subdir: "tee_manager",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#tee_manager",
+        },
+    ],
+}

@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/security/tee_manager/meta/tee_manager.base.cml" ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385" ],
+            from: "self",
+        },
+    ],
+}

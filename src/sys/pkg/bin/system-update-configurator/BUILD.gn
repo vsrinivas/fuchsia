@@ -79,5 +79,54 @@ fuchsia_unittest_package("system-update-configurator-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":system-update-configurator-tests" ]
+  public_deps = [
+    ":system-update-configurator-integration-test",
+    ":system-update-configurator-tests",
+  ]
+}
+
+rustc_test("bin_test") {
+  name = "system_update_configurator_smoke_test"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.update.config:fuchsia.update.config-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:libc",
+  ]
+
+  source_root = "src/integration_test.rs"
+  sources = [ "src/integration_test.rs" ]
+}
+
+fuchsia_component("system-update-configurator-integration-test-cmp") {
+  testonly = true
+  component_name = "system-update-configurator-integration-test"
+  manifest = "meta/system-update-configurator-integration-test.cml"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_component("tee-manager-test-cmp") {
+  manifest = "meta/tee-manager.test.cml"
+  component_name = "tee_manager"
+  deps = [ "//src/security/tee_manager:bin" ]
+}
+
+fuchsia_test_package("system-update-configurator-integration-test") {
+  test_components = [ ":system-update-configurator-integration-test-cmp" ]
+  deps = [
+    ":component",
+    ":tee-manager-test-cmp",
+  ]
+  test_specs = {
+    environments = [
+      sherlock_env,
+      nelson_env,
+    ]
+  }
 }
