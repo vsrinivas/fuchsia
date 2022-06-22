@@ -870,4 +870,64 @@ TEST_F(ChromiumInputTest, ChromiumMouseMove) {
                                              /*component_name=*/"mouse-input-chromium");
 }
 
+TEST_F(ChromiumInputTest, ChromiumMouseDownMoveUp) {
+  LaunchWebEngineClient();
+
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
+  auto initial_position = EnsureMouseIsReadyAndGetPosition(input_synthesis, device_id);
+
+  double initial_x = initial_position.x;
+  double initial_y = initial_position.y;
+
+  auto down_injection_time = zx::clock::get_monotonic();
+  {
+    auto ts = static_cast<uint64_t>(down_injection_time.get());
+    fuchsia::input::report::MouseInputReport report;
+    report.set_pressed_buttons({0});
+    SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+  }
+  auto move_injection_time = zx::clock::get_monotonic();
+  {
+    auto ts = static_cast<uint64_t>(move_injection_time.get());
+    fuchsia::input::report::MouseInputReport report;
+    report.set_pressed_buttons({0});
+    report.set_movement_x(kClickToDragThreshold);
+    report.set_movement_y(0);
+    SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+  }
+  auto up_injection_time = zx::clock::get_monotonic();
+  {
+    auto ts = static_cast<uint64_t>(up_injection_time.get());
+    fuchsia::input::report::MouseInputReport report;
+    report.set_pressed_buttons({});
+    SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+  }
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 3; });
+
+  auto event_down = response_listener_->PopEvent();
+  auto event_move = response_listener_->PopEvent();
+  auto event_up = response_listener_->PopEvent();
+
+  VerifyEvent(event_down,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/1,
+              /*expected_type=*/"mousedown", down_injection_time,
+              /*component_name=*/"mouse-input-chromium");
+  VerifyEventLocationOnTheRightOfExpectation(event_move,
+                                             /*expected_x_min=*/initial_x,
+                                             /*expected_y=*/initial_y,
+                                             /*expected_buttons=*/1,
+                                             /*expected_type=*/"mousemove", move_injection_time,
+                                             /*component_name=*/"mouse-input-chromium");
+  VerifyEvent(event_up,
+              /*expected_x=*/event_move.local_x(),
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"mouseup", up_injection_time,
+              /*component_name=*/"mouse-input-chromium");
+}
+
 }  // namespace
