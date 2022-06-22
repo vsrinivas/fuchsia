@@ -31,30 +31,59 @@ class MmioBuffer;
 
 namespace ddk {
 
-class Pci : public ddk::PciProtocolClient {
+// This class wraps the Banjo-generated ddk::PciProtocolClient which contains the client
+// implementation for the fuchsia.hardware.pci.Pci protocol. This is temporary
+// while we migrate the PCI protocol from Banjo to FIDL. Eventually this class
+// will go away. See fxbug.dev/99914 for details.
+class Pci {
  public:
   static constexpr char kFragmentName[] = "pci";
   Pci() = default;
 
-  explicit Pci(const pci_protocol_t& proto) : ddk::PciProtocolClient(&proto) {}
+  explicit Pci(const pci_protocol_t& proto) : client_(ddk::PciProtocolClient(&proto)) {}
 
-  explicit Pci(zx_device_t* parent) : ddk::PciProtocolClient(parent) {}
+  explicit Pci(zx_device_t* parent) : client_(ddk::PciProtocolClient(parent)) {}
 
   // Prefer Pci::FromFragment(parent) to construct.
   Pci(zx_device_t* parent, const char* fragment_name)
-      : ddk::PciProtocolClient(parent, fragment_name) {}
+      : client_(ddk::PciProtocolClient(parent, fragment_name)) {}
 
-  // Check Pci.is_valid() (on PriProtocolClient base class) after calling to check for proper
+  // Check Pci.is_valid() (on the PciProtocolClient) after calling to check for proper
   // initialization. This can fail if the composite device does not expose the "pci" interface.
   static Pci FromFragment(zx_device_t* parent) { return Pci(parent, kFragmentName); }
 
   ~Pci() = default;
 
-  // This class extends from the Banjo-generated ddk::PciProtocolClient which contains the client
-  // implementation for the fuchsia.hardware.pci.Pci protocol.
+  zx_status_t GetDeviceInfo(pci_device_info_t* out_info);
+  zx_status_t GetBar(uint32_t bar_id, pci_bar_t* out_result);
+  zx_status_t SetBusMastering(bool enabled);
+  zx_status_t ResetDevice();
+  zx_status_t AckInterrupt();
+  zx_status_t MapInterrupt(uint32_t which_irq, zx::interrupt* out_interrupt);
+  void GetInterruptModes(pci_interrupt_modes_t* out_modes);
+  zx_status_t SetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t ReadConfig8(uint16_t offset, uint8_t* out_value);
+  zx_status_t ReadConfig16(uint16_t offset, uint16_t* out_value);
+  zx_status_t ReadConfig32(uint16_t offset, uint32_t* out_value);
+  zx_status_t WriteConfig8(uint16_t offset, uint8_t value);
+  zx_status_t WriteConfig16(uint16_t offset, uint16_t value);
+  zx_status_t WriteConfig32(uint16_t offset, uint32_t value);
+  zx_status_t GetFirstCapability(pci_capability_id_t id, uint8_t* out_offset);
+  zx_status_t GetNextCapability(pci_capability_id_t id, uint8_t start_offset, uint8_t* out_offset);
+  zx_status_t GetFirstExtendedCapability(pci_extended_capability_id_t id, uint16_t* out_offset);
+  zx_status_t GetNextExtendedCapability(pci_extended_capability_id_t id, uint16_t start_offset,
+                                        uint16_t* out_offset);
+  zx_status_t GetBti(uint32_t index, zx::bti* out_bti);
 
+  // These two methods are not Banjo methods but miscellaneous PCI helper
+  // methods.
   zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count, pci_interrupt_mode_t* out_mode);
   zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<fdf::MmioBuffer>* mmio);
+
+  bool is_valid() const { return client_.is_valid(); }
+
+ private:
+  ddk::PciProtocolClient client_;
 };
 
 }  // namespace ddk

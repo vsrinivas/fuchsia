@@ -55,10 +55,79 @@ zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id, uint3
 
 namespace ddk {
 
+zx_status_t Pci::GetDeviceInfo(pci_device_info_t* out_info) {
+  return client_.GetDeviceInfo(out_info);
+}
+
+zx_status_t Pci::GetBar(uint32_t bar_id, pci_bar_t* out_result) {
+  return client_.GetBar(bar_id, out_result);
+}
+
+zx_status_t Pci::SetBusMastering(bool enabled) { return client_.SetBusMastering(enabled); }
+
+zx_status_t Pci::ResetDevice() { return client_.ResetDevice(); }
+
+zx_status_t Pci::AckInterrupt() { return client_.AckInterrupt(); }
+
+zx_status_t Pci::MapInterrupt(uint32_t which_irq, zx::interrupt* out_interrupt) {
+  return client_.MapInterrupt(which_irq, out_interrupt);
+}
+
+void Pci::GetInterruptModes(pci_interrupt_modes_t* out_modes) {
+  return client_.GetInterruptModes(out_modes);
+}
+
+zx_status_t Pci::SetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count) {
+  return client_.SetInterruptMode(mode, requested_irq_count);
+}
+
+zx_status_t Pci::ReadConfig8(uint16_t offset, uint8_t* out_value) {
+  return client_.ReadConfig8(offset, out_value);
+}
+
+zx_status_t Pci::ReadConfig16(uint16_t offset, uint16_t* out_value) {
+  return client_.ReadConfig16(offset, out_value);
+}
+zx_status_t Pci::ReadConfig32(uint16_t offset, uint32_t* out_value) {
+  return client_.ReadConfig32(offset, out_value);
+}
+
+zx_status_t Pci::WriteConfig8(uint16_t offset, uint8_t value) {
+  return client_.WriteConfig8(offset, value);
+}
+
+zx_status_t Pci::WriteConfig16(uint16_t offset, uint16_t value) {
+  return client_.WriteConfig16(offset, value);
+}
+
+zx_status_t Pci::WriteConfig32(uint16_t offset, uint32_t value) {
+  return client_.WriteConfig32(offset, value);
+}
+
+zx_status_t Pci::GetFirstCapability(pci_capability_id_t id, uint8_t* out_offset) {
+  return client_.GetFirstCapability(id, out_offset);
+}
+
+zx_status_t Pci::GetNextCapability(pci_capability_id_t id, uint8_t start_offset,
+                                   uint8_t* out_offset) {
+  return client_.GetNextCapability(id, start_offset, out_offset);
+}
+
+zx_status_t Pci::GetFirstExtendedCapability(pci_extended_capability_id_t id, uint16_t* out_offset) {
+  return client_.GetFirstExtendedCapability(id, out_offset);
+}
+
+zx_status_t Pci::GetNextExtendedCapability(pci_extended_capability_id_t id, uint16_t start_offset,
+                                           uint16_t* out_offset) {
+  return client_.GetNextExtendedCapability(id, start_offset, out_offset);
+}
+
+zx_status_t Pci::GetBti(uint32_t index, zx::bti* out_bti) { return client_.GetBti(index, out_bti); }
+
 zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
                          std::optional<fdf::MmioBuffer>* mmio) {
   pci_bar_t bar;
-  zx_status_t status = GetBar(index, &bar);
+  zx_status_t status = client_.GetBar(index, &bar);
   if (status != ZX_OK) {
     return status;
   }
@@ -82,7 +151,7 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
 zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count,
                                         pci_interrupt_mode_t* out_mode) {
   pci_protocol_t proto{};
-  GetProto(&proto);
+  client_.GetProto(&proto);
   return pci_configure_interrupt_mode(&proto, requested_irq_count, out_mode);
 }
 
