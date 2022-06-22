@@ -5,7 +5,6 @@
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 
 #include <lib/fidl/cpp/message_buffer.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 

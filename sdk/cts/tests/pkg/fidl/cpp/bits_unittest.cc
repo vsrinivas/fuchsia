@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/misc/cpp/fidl.h>
 #include <lib/stdcompat/optional.h>
 
-#include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
-
-#include "lib/fidl/cpp/builder.h"
 
 // The following APIs tested are shared between strict and flexible bits, but
 // are tested separately.

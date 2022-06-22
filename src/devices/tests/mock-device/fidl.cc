@@ -4,7 +4,6 @@
 
 #include "fidl.h"
 
-#include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/zx/channel.h>

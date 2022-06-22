@@ -6,7 +6,6 @@
 #define LIB_FIDL_CPP_INTERNAL_PENDING_RESPONSE_H_
 
 #include <lib/fidl/cpp/internal/message_sender.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <zircon/types.h>
 
 namespace fidl {

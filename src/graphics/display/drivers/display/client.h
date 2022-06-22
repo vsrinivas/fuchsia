@@ -12,7 +12,6 @@
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>

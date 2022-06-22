@@ -4,8 +4,6 @@
 
 #include "lib/fidl/cpp/internal/stub_controller.h"
 
-#include <lib/fidl/cpp/message_buffer.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>

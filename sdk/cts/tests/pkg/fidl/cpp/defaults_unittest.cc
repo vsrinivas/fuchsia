@@ -6,8 +6,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/cpp/builder.h"
-
 namespace fidl {
 namespace test {
 namespace misc {

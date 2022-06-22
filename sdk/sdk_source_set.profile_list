@@ -149,14 +149,11 @@ src:../../zircon/system/ulib/fidl/include/lib/fidl/walker.h
 src:../../zircon/system/ulib/fidl/epitaph.c
 src:../../zircon/system/ulib/fidl/handle_closing.cc
 src:../../zircon/system/ulib/fidl/include/lib/fidl/epitaph.h
-src:../../sdk/lib/fidl/cpp/builder.cc
 src:../../sdk/lib/fidl/cpp/clone.cc
 src:../../sdk/lib/fidl/cpp/decoder.cc
 src:../../sdk/lib/fidl/cpp/encoder.cc
 src:../../sdk/lib/fidl/cpp/message.cc
 src:../../sdk/lib/fidl/cpp/message_buffer.cc
-src:../../sdk/lib/fidl/cpp/message_builder.cc
-src:../../sdk/lib/fidl/cpp/builder.h
 src:../../sdk/lib/fidl/cpp/clone.h
 src:../../sdk/lib/fidl/cpp/coding_traits.h
 src:../../sdk/lib/fidl/cpp/comparison.h
@@ -168,7 +165,6 @@ src:../../sdk/lib/fidl/cpp/internal/natural_types_header.h
 src:../../sdk/lib/fidl/cpp/internal/natural_types_implementation.h
 src:../../sdk/lib/fidl/cpp/message.h
 src:../../sdk/lib/fidl/cpp/message_buffer.h
-src:../../sdk/lib/fidl/cpp/message_builder.h
 src:../../sdk/lib/fidl/cpp/message_part.h
 src:../../sdk/lib/fidl/cpp/object_coding.h
 src:../../sdk/lib/fidl/cpp/string.h

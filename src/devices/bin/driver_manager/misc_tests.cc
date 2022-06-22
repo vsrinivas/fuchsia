@@ -10,7 +10,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/fidl.h>

@@ -34,7 +34,6 @@ cts_source_set("host_test_sources") {
   testonly = true
 
   sources = [
-    "array_unittest.cc",
     "bits_unittest.cc",
     "bitset_unittest.cc",
     "clone_unittest.cc",

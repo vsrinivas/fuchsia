@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/handles/cpp/fidl.h>
-#include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
@@ -18,36 +16,36 @@ TEST(Message, BasicTests) {
   zx_handle_info_t handle_info_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
   zx_handle_disposition_t handle_disposition_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
 
-  fidl::Builder builder(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES);
-
-  fidl_message_header_t* header = builder.New<fidl_message_header_t>();
-  header->txid = 5u;
-  header->ordinal = 42u;
-
-  fidl_string_t* view = builder.New<fidl_string_t>();
-
-  char* data = builder.NewArray<char>(4);
-  view->data = data;
-  view->size = 4;
-
-  data[0] = 'a';
-  data[1] = 'b';
-  data[2] = 'c';
+  fidl_message_header_t header = {
+      .txid = 5u,
+      .ordinal = 42u,
+  };
+  char data[4] = "abc";
+  fidl_string_t str = {
+      .size = 3,
+      .data = data,
+  };
+  memcpy(byte_buffer, &header, sizeof(header));
+  memcpy(byte_buffer + sizeof(header), &str, sizeof(str));
+  memcpy(byte_buffer + sizeof(header) + sizeof(str), data, 3);
+  memset(byte_buffer + sizeof(header) + sizeof(str), 0, 5);
 
   fidl::HLCPPOutgoingMessage outgoing_message(
-      builder.Finalize(),
+      fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES, sizeof(header) + sizeof(str) + 8),
       fidl::HandleDispositionPart(handle_disposition_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
 
   EXPECT_EQ(outgoing_message.txid(), 5u);
   EXPECT_EQ(outgoing_message.ordinal(), 42u);
 
   fidl::BytePart payload = fidl::BytePart(outgoing_message.body_view().bytes(), 0);
-  EXPECT_EQ(reinterpret_cast<fidl_string_t*>(payload.data()), view);
+  fidl_string_t* payload_str = reinterpret_cast<fidl_string_t*>(payload.data());
+  EXPECT_EQ(3, payload_str->size);
+  EXPECT_STREQ("abc", payload_str->data);
 
   zx::channel h1, h2;
   EXPECT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
 
-  EXPECT_EQ(ZX_OK, outgoing_message.Write(h1.get(), 0u));
+  ASSERT_EQ(ZX_OK, outgoing_message.Write(h1.get(), 0u));
 
   memset(byte_buffer, 0, ZX_CHANNEL_MAX_MSG_BYTES);
 
@@ -57,7 +55,7 @@ TEST(Message, BasicTests) {
   fidl::HLCPPIncomingMessage incoming_message(
       fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
       fidl::HandleInfoPart(handle_info_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
-  EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0u));
+  ASSERT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0u));
 
   EXPECT_EQ(incoming_message.txid(), 5u);
   EXPECT_EQ(incoming_message.ordinal(), 42u);
@@ -101,33 +99,6 @@ TEST(Message, ReadErrorCodes) {
   // Read from closed channel.
   server.reset();
   EXPECT_EQ(message.Read(client.get(), /*flags=*/0), ZX_ERR_PEER_CLOSED);
-}
-
-TEST(MessageBuilder, BasicTests) {
-  zx::event e;
-  EXPECT_EQ(zx::event::create(0, &e), ZX_OK);
-  EXPECT_NE(e.get(), ZX_HANDLE_INVALID);
-
-  // Note: |MessageBuilder| takes a coding table which is strictly speaking
-  // internal API.
-  fidl::MessageBuilder builder(
-      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestTable);
-  builder.header()->txid = 5u;
-  builder.header()->ordinal = 42u;
-
-  zx_handle_t* handle_ptr = builder.New<zx_handle_t>();
-  zx_handle_t handle_value = e.release();
-  *handle_ptr = handle_value;
-
-  fidl::HLCPPOutgoingMessage message;
-  const char* error_msg;
-  EXPECT_EQ(builder.Encode(&message, &error_msg), ZX_OK);
-
-  EXPECT_EQ(message.txid(), 5u);
-  EXPECT_EQ(message.ordinal(), 42u);
-  EXPECT_EQ(message.handles().actual(), 1u);
-  EXPECT_EQ(message.handles().size(), 1u);
-  EXPECT_EQ(message.handles().data()[0].handle, handle_value);
 }
 
 TEST(MessagePart, IsStlContainerTest) {

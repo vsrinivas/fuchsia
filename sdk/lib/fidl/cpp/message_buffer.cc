@@ -43,8 +43,6 @@ HLCPPOutgoingMessage OutgoingMessageBuffer::CreateEmptyOutgoingMessage() {
                               HandleDispositionPart(handles(), handles_capacity()));
 }
 
-Builder OutgoingMessageBuffer::CreateBuilder() { return Builder(bytes(), bytes_capacity()); }
-
 IncomingMessageBuffer::IncomingMessageBuffer(uint32_t bytes_capacity, uint32_t handles_capacity)
     : buffer_(static_cast<uint8_t*>(
           malloc(GetAllocSize<zx_handle_info_t>(bytes_capacity, handles_capacity)))),

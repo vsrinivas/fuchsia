@@ -6,7 +6,6 @@
 #define LIB_FIDL_CPP_INTERNAL_PROXY_CONTROLLER_H_
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_builder.h>
 
 #include <map>
 #include <memory>

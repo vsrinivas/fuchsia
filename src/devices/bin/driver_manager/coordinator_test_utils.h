@@ -15,7 +15,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/txn_header.h>

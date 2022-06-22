@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_CPP_MESSAGE_BUFFER_H_
 #define LIB_FIDL_CPP_MESSAGE_BUFFER_H_
 
-#include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <stdint.h>
 #include <zircon/fidl.h>
@@ -41,9 +40,6 @@ class OutgoingMessageBuffer {
   //
   // The returned |HLCPPOutgoingMessage| contains no bytes or handles.
   HLCPPOutgoingMessage CreateEmptyOutgoingMessage();
-
-  // Creates a |Builder| that is backed by the memory in this buffer.
-  Builder CreateBuilder();
 
  private:
   uint8_t* const buffer_;

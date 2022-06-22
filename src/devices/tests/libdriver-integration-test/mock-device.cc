@@ -4,8 +4,6 @@
 
 #include "mock-device.h"
 
-#include <lib/fidl/cpp/builder.h>
-#include <lib/fidl/cpp/message_buffer.h>
 #include <zircon/assert.h>
 
 namespace libdriver_integration_test {
