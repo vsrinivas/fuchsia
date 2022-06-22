@@ -23,7 +23,7 @@
 
 #endif  // __x86_64__
 
-#define NO_ASAN __attribute__((no_sanitize("address")))
+#define NO_ASAN __attribute__((no_sanitize("address", "hwaddress")))
 
 #ifndef __ASSEMBLER__
 

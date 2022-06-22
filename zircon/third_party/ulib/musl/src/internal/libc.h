@@ -111,7 +111,7 @@ extern char** __environ;
 #define weak_alias(old, new) extern __typeof(old) new __attribute__((weak, alias(#old)))
 
 #ifdef __clang__
-#define NO_ASAN __attribute__((no_sanitize("address")))
+#define NO_ASAN __attribute__((no_sanitize("address", "hwaddress")))
 #else
 #define NO_ASAN
 #endif
