@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/button_checker_unittest_bin",
+    },
+    use: [
+        { protocol: "fuchsia.process.Launcher" },
+        {
+            directory: "dev-input",
+            rights: [ "r*" ],
+            path: "/dev/class/input",
+        },
+    ],
+}
