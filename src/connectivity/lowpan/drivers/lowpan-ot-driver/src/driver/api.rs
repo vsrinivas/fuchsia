@@ -763,4 +763,34 @@ where
 
         Ok(())
     }
+
+    /// Returns telemetry information of the device.
+    async fn get_telemetry(&self) -> ZxResult<Telemetry> {
+        let (thread_link_mode, leader_data, rcp_version, tx_power) = {
+            let driver_state = self.driver_state.lock();
+            (
+                Some(driver_state.ot_instance.get_link_mode().bits()),
+                driver_state.ot_instance.get_leader_data().ok(),
+                Some(driver_state.ot_instance.radio_get_version_string().to_string()),
+                driver_state.ot_instance.get_transmit_power().ok(),
+            )
+        };
+        Ok(Telemetry {
+            rssi: self.get_current_rssi().await.ok(),
+            partition_id: self.get_partition_id().await.ok(),
+            stack_version: self.get_ncp_version().await.ok(),
+            rcp_version,
+            thread_link_mode,
+            thread_router_id: self.get_thread_router_id().await.ok(),
+            thread_rloc: self.get_thread_rloc16().await.ok(),
+            thread_network_data_version: leader_data.as_ref().map(|x| x.data_version()),
+            thread_stable_network_data_version: leader_data
+                .as_ref()
+                .map(|x| x.stable_data_version()),
+            thread_leader_weight: leader_data.as_ref().map(|x| x.weighting()),
+            channel_index: self.get_current_channel().await.ok(),
+            tx_power,
+            ..Telemetry::EMPTY
+        })
+    }
 }
