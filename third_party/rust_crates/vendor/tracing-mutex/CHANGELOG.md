@@ -6,7 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.2.0]
+## [0.2.1] - 2022-05-23
+
+### Added
+
+- Build [docs.rs] documentation with all features enabled for completeness.
+- Add support for `std::sync::Condvar`
+
+### Fixed
+
+- The `parkinglot` module is now correctly enabled by the `parkinglot` feature rather than the
+  `lockapi` feature.
+
+## [0.2.0] - 2022-05-07
 
 ### Added
 - Generic support for wrapping mutexes that implement the traits provided by the
@@ -55,11 +67,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Initial release.
 
-[Unreleased]: https://github.com/bertptrs/tracing-mutex/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/bertptrs/tracing-mutex/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/bertptrs/tracing-mutex/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bertptrs/tracing-mutex/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/bertptrs/tracing-mutex/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/bertptrs/tracing-mutex/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/bertptrs/tracing-mutex/releases/tag/v0.1.0
 
+[docs.rs]: https://docs.rs/tracing-mutex/latest/tracing_mutex/
 [lock_api]: https://docs.rs/lock_api/
 [parking_lot]: https://docs.rs/parking_lot/

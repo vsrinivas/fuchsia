@@ -4272,9 +4272,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-mutex"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "029d8c53606e2efde3b3f632ea242856e3169eb05e4696bcf1f5afa3b7c9747d"
+checksum = "b3df21ca58f0e0b5ee3181d8eebb8f2ec16d6ecbb2a04f351aa6abd7cf700f22"
 dependencies = [
  "lazy_static",
  "lock_api 0.4.7",

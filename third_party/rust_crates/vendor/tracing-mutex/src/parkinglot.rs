@@ -194,9 +194,9 @@ impl TracingOnce {
         self.inner.call_once(f);
     }
 
-    /// Performs the given initialization routeine once and only once.
+    /// Performs the given initialization routine once and only once.
     ///
-    /// This method is identical to [`TracingOnce::call_once`] except it ignores poisining.
+    /// This method is identical to [`TracingOnce::call_once`] except it ignores poisoning.
     pub fn call_once_force(&self, f: impl FnOnce(OnceState)) {
         let _borrow = self.id.get_borrowed();
         self.inner.call_once_force(f);

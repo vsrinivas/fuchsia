@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tracing-mutex"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Bert Peters <bert@bertptrs.nl>"]
 description = "Ensure deadlock-free mutexes by allocating in order, or else."
 documentation = "https://docs.rs/tracing-mutex"
@@ -30,6 +30,13 @@ categories = [
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/bertptrs/tracing-mutex"
 resolver = "2"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = [
+    "--cfg",
+    "docsrs",
+]
 
 [[bench]]
 name = "mutex"

@@ -45,6 +45,7 @@
 //! enabled, and to the underlying mutex when they're not.
 //!
 //! [paper]: https://whileydave.com/publications/pk07_jea/
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use std::cell::RefCell;
 use std::cell::UnsafeCell;
 use std::fmt;
@@ -61,16 +62,20 @@ use std::sync::PoisonError;
 
 use lazy_static::lazy_static;
 #[cfg(feature = "lockapi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lockapi")))]
 pub use lock_api;
 #[cfg(feature = "parkinglot")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parkinglot")))]
 pub use parking_lot;
 
 use crate::graph::DiGraph;
 
 mod graph;
 #[cfg(feature = "lockapi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lockapi")))]
 pub mod lockapi;
-#[cfg(feature = "lockapi")]
+#[cfg(feature = "parkinglot")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parkinglot")))]
 pub mod parkinglot;
 pub mod stdsync;
 

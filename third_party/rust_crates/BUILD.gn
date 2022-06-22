@@ -945,7 +945,7 @@ group("tracing-log") {
 }
 
 group("tracing-mutex") {
-  public_deps = [ ":tracing-mutex-v0_2_0" ]
+  public_deps = [ ":tracing-mutex-v0_2_1" ]
 }
 
 group("tracing-subscriber") {
@@ -10939,10 +10939,10 @@ rust_library("tracing-log-v0_1_2") {
   visibility = [ ":*" ]
 }
 
-rust_library("tracing-mutex-v0_2_0") {
+rust_library("tracing-mutex-v0_2_1") {
   crate_name = "tracing_mutex"
   crate_root = "//third_party/rust_crates/vendor/tracing-mutex/src/lib.rs"
-  output_name = "tracing_mutex-4f32008b94479e94"
+  output_name = "tracing_mutex-d2105b4603a79f7d"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -10955,8 +10955,8 @@ rust_library("tracing-mutex-v0_2_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2021",
-    "-Cmetadata=4f32008b94479e94",
-    "-Cextra-filename=-4f32008b94479e94",
+    "-Cmetadata=d2105b4603a79f7d",
+    "-Cextra-filename=-d2105b4603a79f7d",
     "--cfg=feature=\"lock_api\"",
     "--cfg=feature=\"lockapi\"",
     "--cfg=feature=\"parking_lot\"",
