@@ -200,6 +200,44 @@ TEST_F(FileTest, FileReadExceedFileSize) {
   test_file_vn = nullptr;
 }
 
+TEST(FileTest2, FailedNidReuse) {
+  std::unique_ptr<Bcache> bc;
+  constexpr uint64_t kBlockCount = 409600;
+  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions(), kBlockCount);
+
+  std::unique_ptr<F2fs> fs;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  fbl::RefPtr<fs::Vnode> tmp_child;
+  uint32_t iter = 0;
+  while (true) {
+    if (auto err = root_dir->Create(std::to_string(++iter), S_IFREG, &tmp_child); err != ZX_OK) {
+      ASSERT_EQ(err, ZX_ERR_NO_SPACE);
+      break;
+    }
+    ASSERT_EQ(tmp_child->Close(), ZX_OK);
+    tmp_child = nullptr;
+  }
+
+  const uint32_t kIteration = fs->GetNodeManager().GetFreeNidCount() + 1;
+  for (uint32_t i = 0; i < kIteration; ++i) {
+    ASSERT_EQ(root_dir->Create(std::to_string(++iter), S_IFREG, &tmp_child), ZX_ERR_NO_SPACE);
+  }
+
+  for (uint32_t i = 0; i < kIteration; ++i) {
+    ASSERT_EQ(root_dir->Create(std::to_string(++iter), S_IFDIR, &tmp_child), ZX_ERR_NO_SPACE);
+  }
+
+  root_dir->Close();
+  root_dir = nullptr;
+  FileTester::Unmount(std::move(fs), &bc);
+}
+
 TEST(DeadLockTest, Truncate) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);

@@ -113,6 +113,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearNlink();
       vnode->UnlockNewInode();
+      Vfs()->GetVCache().RemoveDirty(vnode);
       Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
@@ -290,6 +291,7 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
       vnode->ClearFlag(InodeInfoFlag::kIncLink);
       vnode->ClearNlink();
       vnode->UnlockNewInode();
+      Vfs()->GetVCache().RemoveDirty(vnode);
       Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
