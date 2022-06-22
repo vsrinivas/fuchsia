@@ -40,13 +40,6 @@ fuchsia_component("svc") {
   deps = [ ":fake_clock_svc" ]
 }
 
-fuchsia_component("svc_legacy") {
-  testonly = true
-  component_name = "fake_clock"
-  manifest = "meta/fake_clock.cmx"
-  deps = [ ":fake_clock_svc" ]
-}
-
 fuchsia_unittest_package("tests") {
   package_name = "fake_clock_test"
   deps = [ ":fake_clock_svc_test" ]
