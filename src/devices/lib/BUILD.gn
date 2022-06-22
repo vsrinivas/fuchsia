@@ -16,6 +16,7 @@ group("tests") {
   deps = [
     "acpi:tests",
     "bind:tests",
+    "compat:tests",
     "dev-operation:tests",
     "dma-buffer:tests",
     "driver:tests",
