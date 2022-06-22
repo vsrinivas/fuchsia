@@ -213,14 +213,6 @@ pub struct FlatlandSceneManager {
 
 #[async_trait]
 impl SceneManager for FlatlandSceneManager {
-    async fn add_view_to_scene(
-        &mut self,
-        _view_provider: ui_app::ViewProviderProxy,
-        _name: Option<String>,
-    ) -> Result<ui_views::ViewRef, Error> {
-        panic!("unimplemented");
-    }
-
     async fn set_root_view(
         &mut self,
         view_provider: ui_app::ViewProviderProxy,

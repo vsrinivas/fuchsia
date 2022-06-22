@@ -85,7 +85,7 @@ pub struct GfxSceneManager {
     ///   |
     /// a11y_proxy_view
     ///   |
-    /// (all views in `views`)
+    /// client_root_view_holder_node
     ///
     ///
     /// *This represents the state when GfxSceneManager is first created, before
@@ -104,7 +104,7 @@ pub struct GfxSceneManager {
     ///   |
     /// a11y_proxy_view
     ///   |
-    /// (all views in `views`)
+    /// client_root_view_holder_node
 
     /// The root view of Scene Manager.
     /// This view is always static. It's used as the 'source' view when injecting events through
@@ -129,13 +129,11 @@ pub struct GfxSceneManager {
     a11y_proxy_session: scenic::SessionPtr,
     a11y_proxy_presentation_sender: PresentationSender,
 
-    /// The view holder [`scenic::EntityNodes`], which have been added to the Scene.
-    views: Vec<scenic::EntityNode>,
+    /// Holds the view holder [`scenic::EntityNode`] (if `set_root_view` has been called).
+    client_root_view_holder_node: Option<scenic::EntityNode>,
 
-    /// This refers to one of the views in `views`.
-    /// It's not actually the 'root' view of any other views in `views`, but it's special in that
-    /// if the a11y view is inserted we'll re-focus this view afterwards.
-    /// TODO(fxbug.dev/100977) Simplify the view hierarchy.
+    /// Holds a duplicate ref to the view added in `set_root_view`.
+    /// We need this so that if the a11y view is inserted we'll re-focus this view afterwards.
     client_root_view_ref: Option<ui_views::ViewRef>,
 
     /// Supports callers of fuchsia.ui.pointerinjector.configuration.setup.WatchViewport(), allowing
@@ -175,29 +173,14 @@ struct ScenicResources {
 
 #[async_trait]
 impl SceneManager for GfxSceneManager {
-    async fn add_view_to_scene(
-        &mut self,
-        view_provider: ui_app::ViewProviderProxy,
-        name: Option<String>,
-    ) -> Result<ui_views::ViewRef, Error> {
-        let token_pair = scenic::ViewTokenPair::new()?;
-        let mut viewref_pair = scenic::ViewRefPair::new()?;
-        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        view_provider.create_view_with_view_ref(
-            token_pair.view_token.value,
-            &mut viewref_pair.control_ref,
-            &mut viewref_pair.view_ref,
-        )?;
-        self.add_view(token_pair.view_holder_token, name);
-        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
-
-        Ok(viewref_dup)
-    }
-
     async fn set_root_view(
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error> {
+        if self.client_root_view_holder_node.is_some() {
+            panic!("GFX set_root_view doesn't support replacing the current root view");
+        };
+
         let token_pair = scenic::ViewTokenPair::new()?;
         let mut viewref_pair = scenic::ViewRefPair::new()?;
 
@@ -215,7 +198,20 @@ impl SceneManager for GfxSceneManager {
             &mut viewref_pair.control_ref,
             &mut viewref_pair.view_ref,
         )?;
-        self.add_view(token_pair.view_holder_token, Some("root".to_string()));
+
+        let view_holder = GfxSceneManager::create_view_holder(
+            &self.a11y_proxy_session,
+            token_pair.view_holder_token,
+            self.display_metrics,
+            Some("root".to_string()),
+        );
+
+        let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
+        view_holder_node.attach(&view_holder);
+        view_holder_node.set_translation(0.0, 0.0, 0.0);
+
+        self.a11y_proxy_view.add_child(&view_holder_node);
+        self.client_root_view_holder_node = Some(view_holder_node);
         GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
@@ -251,7 +247,7 @@ impl SceneManager for GfxSceneManager {
 
         // Disconnect the old proxy view/viewholder from the scene graph.
         self.a11y_proxy_view_holder.detach();
-        for view_holder_node in self.views.iter_mut() {
+        if let Some(ref view_holder_node) = self.client_root_view_holder_node {
             self.a11y_proxy_view.detach_child(&*view_holder_node);
         }
 
@@ -270,7 +266,7 @@ impl SceneManager for GfxSceneManager {
         );
 
         // Reconnect existing view holders to the new a11y proxy view.
-        for view_holder_node in self.views.iter_mut() {
+        if let Some(ref view_holder_node) = self.client_root_view_holder_node {
             self.a11y_proxy_view.add_child(&*view_holder_node);
         }
 
@@ -547,7 +543,7 @@ impl GfxSceneManager {
             a11y_proxy_view,
             a11y_proxy_session,
             a11y_proxy_presentation_sender: a11y_proxy_sender,
-            views: vec![],
+            client_root_view_holder_node: None,
             client_root_view_ref: None,
             viewport_hanging_get,
             viewport_publisher: viewport_publisher,
@@ -732,27 +728,6 @@ impl GfxSceneManager {
         view_holder.set_view_properties(view_properties);
 
         view_holder
-    }
-
-    /// Creates a view holder, stores it in [`self.views`], then wraps it in a view holder node.
-    ///
-    /// # Parameters
-    /// - `view_holder_token`: The view holder token used to create the view holder.
-    /// - `name`: The debugging name for the created view.
-    fn add_view(&mut self, view_holder_token: ui_views::ViewHolderToken, name: Option<String>) {
-        let view_holder = GfxSceneManager::create_view_holder(
-            &self.a11y_proxy_session,
-            view_holder_token,
-            self.display_metrics,
-            name,
-        );
-
-        let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
-        view_holder_node.attach(&view_holder);
-        view_holder_node.set_translation(0.0, 0.0, 0.0);
-
-        self.a11y_proxy_view.add_child(&view_holder_node);
-        self.views.push(view_holder_node);
     }
 
     /// Sets focus on the root view if it exists.

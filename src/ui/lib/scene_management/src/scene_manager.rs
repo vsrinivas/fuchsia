@@ -66,24 +66,6 @@ pub type PresentationReceiver = UnboundedReceiver<PresentationMessage>;
 /// ```
 #[async_trait]
 pub trait SceneManager: Send {
-    /// Requests a view from the view provider and adds it to the scene.
-    ///
-    /// # Parameters
-    /// - `view_provider`: The [`ViewProviderProxy`] to fetch the view from.
-    /// - `name`: The optional name for the view.
-    ///
-    /// # Returns
-    /// The [`scenic::Node`] for the added view. This can be used to move the view around in the
-    /// scene.
-    ///
-    /// # Errors
-    /// Returns an error if a view could not be created or added to the scene.
-    async fn add_view_to_scene(
-        &mut self,
-        view_provider: ui_app::ViewProviderProxy,
-        name: Option<String>,
-    ) -> Result<ui_views::ViewRef, Error>;
-
     /// Sets the root view for the scene.
     ///
     /// Removes any previous root view, as well as all of its descendants.
