@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/perfetto-bridge/perfetto_bridge.h"
+#include "src/performance/perfetto-bridge/perfetto_bridge.h"
 
 #include <lib/syslog/cpp/macros.h>
 

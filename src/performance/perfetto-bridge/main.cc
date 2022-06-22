@@ -9,9 +9,9 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/perfetto-bridge/perfetto_bridge.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/performance/perfetto-bridge/perfetto_bridge.h"
 
 int main(int argc, char** argv) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);

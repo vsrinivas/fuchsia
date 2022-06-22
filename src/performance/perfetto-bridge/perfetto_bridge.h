@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
-#define SRC_DEVELOPER_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
+#ifndef SRC_PERFORMANCE_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
+#define SRC_PERFORMANCE_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
 
 #include <fuchsia/tracing/perfetto/cpp/fidl.h>
 
@@ -25,4 +25,4 @@ class PerfettoBridge : public fuchsia::tracing::perfetto::ProducerConnector,
   void ConnectConsumer(::zx::socket consumer_socket, ConnectConsumerCallback callback) final;
 };
 
-#endif  // SRC_DEVELOPER_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
+#endif  // SRC_PERFORMANCE_PERFETTO_BRIDGE_PERFETTO_BRIDGE_H_
