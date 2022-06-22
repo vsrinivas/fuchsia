@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1757
+From //build/config/BUILDCONFIG.gn:1756
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -179,7 +179,7 @@ be visible to Driver Manager. These package labels are also considered to be in 
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:56
 
 **Overridden from the default:** `[]`
 
@@ -187,7 +187,7 @@ From //BUILD.gn:38
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:56
 
 **Overridden from the default:** `[]`
 
@@ -621,7 +621,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:9
+From //products/bringup.gni:11
 
 **Overridden from the default:** `false`
 
@@ -629,7 +629,7 @@ From //build/images/args.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:9
+From //products/bringup.gni:11
 
 **Overridden from the default:** `false`
 
@@ -992,31 +992,31 @@ TODO: redo comments
 
 **Current value (from the default):** `"core-generic"`
 
-From //build/product.gni:26
+From //build/product.gni:30
 
 ### core_realm_restrict_persistent_storage
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:28
+From //build/product.gni:32
 
 ### core_realm_shards
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
 
-From //products/bringup.gni:50
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
-From //build/product.gni:27
+From //build/product.gni:31
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
 
-From //products/bringup.gni:50
+From //products/bringup.gni:52
 
 **Overridden from the default:** `[]`
 
-From //build/product.gni:27
+From //build/product.gni:31
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -1388,14 +1388,14 @@ From //build/config/compiler.gni:66
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:52
+From //build/product.gni:56
 
 ### emu_window_size_width
 Configuration to override the default window size for the virtual device in pixels.
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:51
+From //build/product.gni:55
 
 ### enable_api_diff
 Detect dart API changes
@@ -1562,7 +1562,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1504
+From //build/config/BUILDCONFIG.gn:1503
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -1819,7 +1819,7 @@ TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to bui
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:33
+From //build/product.gni:37
 
 ### fuchsia_product_assembly_config_file
 Used to provide assembly with a complete product assembly config.  This can
@@ -1828,7 +1828,7 @@ GN using generated_file().
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:38
+From //build/product.gni:42
 
 ### fuchsia_product_assembly_config_label
 If the above file is created by a target in GN, then the label that creates
@@ -1836,7 +1836,7 @@ it needs to be specified as well.
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:42
+From //build/product.gni:46
 
 ### fuchsia_route_sources_config
 An optional file path to the route_sources verifier configuration to be used
@@ -2653,7 +2653,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1326
+From //build/config/BUILDCONFIG.gn:1325
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -2666,7 +2666,7 @@ From //src/modular/build/args.gni:7
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:55
+From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
@@ -2674,7 +2674,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:55
+From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
@@ -2684,7 +2684,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:58
+From //products/bringup.gni:60
 
 **Overridden from the default:** `[]`
 
@@ -2692,7 +2692,7 @@ From //BUILD.gn:47
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:58
+From //products/bringup.gni:60
 
 **Overridden from the default:** `[]`
 
@@ -2702,7 +2702,7 @@ From //BUILD.gn:47
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:61
+From //products/bringup.gni:63
 
 **Overridden from the default:** `[]`
 
@@ -2710,7 +2710,7 @@ From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:61
+From //products/bringup.gni:63
 
 **Overridden from the default:** `[]`
 
@@ -2742,7 +2742,7 @@ From //BUILD.gn:73
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
-From //products/bringup.gni:64
+From //products/bringup.gni:66
 
 **Overridden from the default:** `[]`
 
@@ -2750,7 +2750,7 @@ From //BUILD.gn:65
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
-From //products/bringup.gni:64
+From //products/bringup.gni:66
 
 **Overridden from the default:** `[]`
 
@@ -2943,7 +2943,7 @@ they must be separated into their own list.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -2951,7 +2951,7 @@ From //build/images/args.gni:88
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -3605,7 +3605,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:76
+From //products/bringup.gni:78
 
 **Overridden from the default:** `[]`
 
@@ -3613,7 +3613,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:76
+From //products/bringup.gni:78
 
 **Overridden from the default:** `[]`
 
@@ -3688,19 +3688,19 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:oom.reboot-timeout--low", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
-From //build/product.gni:7
+From //build/product.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:oom.reboot-timeout--low", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
-From //build/product.gni:7
+From //build/product.gni:11
 
 ### product_bootfs_packages
 A list of packages to be included in the bootfs as
@@ -3708,7 +3708,7 @@ meta.fars and content-id'd blobs.
 
 **Current value (from the default):** `[]`
 
-From //build/product.gni:17
+From //build/product.gni:21
 
 ### product_build
 This is a product build (vs. sdk).  If a product is set (fx set <product>.)
@@ -3735,21 +3735,21 @@ A human readable product description.
 
 **Current value (from the default):** `""`
 
-From //build/product.gni:20
+From //build/product.gni:24
 
 ### product_host_labels
 A list of binary host tool labels to also build.
 
 **Current value (from the default):** `[]`
 
-From //build/product.gni:13
+From //build/product.gni:17
 
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
 
 **Current value (from the default):** `[]`
 
-From //build/product.gni:10
+From //build/product.gni:14
 
 ### profile_source_files
 List of GN paths to source files to be instrumented by `profile` variants.
@@ -4075,7 +4075,7 @@ an extension mechanism for SDK bits outside of the main repository.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:78
+From //products/bringup.gni:80
 
 **Overridden from the default:** `[]`
 
@@ -4083,7 +4083,7 @@ From //BUILD.gn:89
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:78
+From //products/bringup.gni:80
 
 **Overridden from the default:** `[]`
 
@@ -4165,7 +4165,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1747
+From //build/config/BUILDCONFIG.gn:1746
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -4174,7 +4174,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1752
+From //build/config/BUILDCONFIG.gn:1751
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -4224,7 +4224,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1550
+From //build/config/BUILDCONFIG.gn:1549
 
 ### size_checker_input
 The input to the size checker.
@@ -4329,15 +4329,6 @@ Whether wayland protocol logging should be enabled
 **Current value (from the default):** `false`
 
 From //src/proc/bin/starnix/BUILD.gn:12
-
-### sysmgr_golden_warn_override
-Used by config_package().
-If true, then overrides the value of the sysmgr_golden_warn template
-parameter to true regardless of whether it is specified on a target.
-
-**Current value (from the default):** `false`
-
-From //build/config.gni:13
 
 ### target_cpu
 
@@ -4558,7 +4549,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1534
+From //build/config/BUILDCONFIG.gn:1533
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4593,6 +4584,26 @@ package.
 **Current value (from the default):** `[]`
 
 From //build/images/args.gni:40
+
+### use_bringup_assembly
+Is the `assemble_system()` instantiation used by the product the standard
+one or the bringup one?
+
+**Current value for `target_cpu = "arm64"`:** `true`
+
+From //products/bringup.gni:10
+
+**Overridden from the default:** `false`
+
+From //build/product.gni:8
+
+**Current value for `target_cpu = "x64"`:** `true`
+
+From //products/bringup.gni:10
+
+**Overridden from the default:** `false`
+
+From //build/product.gni:8
 
 ### use_cast_runner_canary
 Whether to use the most recent (canary) version of the CastRunner prebuilt.
@@ -4935,7 +4946,7 @@ between similar virtual device's using different configuration's such as
 
 **Current value (from the default):** `""`
 
-From //build/product.gni:48
+From //build/product.gni:52
 
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
