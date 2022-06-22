@@ -275,7 +275,6 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   }
 
   void RunCallbacks() FXL_LOCKS_EXCLUDED(mutex_) {
-    bool callback_run = false;
     while (true) {
       DoCallback callback;
 
@@ -292,11 +291,6 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
         }
 
         if (callbacks_to_run_.empty()) {
-          if (callback_run) {
-            // If we ran at least 1 callback, and the service is still connected, then we should
-            // reset the backoff.
-            backoff_.Reset();
-          }
           return;
         }
 
@@ -304,7 +298,6 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
         callbacks_to_run_.pop();
       }
 
-      callback_run = true;
       callback(service_client_);
     }
   }
