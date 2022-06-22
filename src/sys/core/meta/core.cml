@@ -390,8 +390,6 @@
         {
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
                 "fuchsia.logger.Log",
             ],
             from: "parent",
