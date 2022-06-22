@@ -1,0 +1,22 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "persistence",
+            "--startup-delay-seconds",
+            "0"
+        ],
+        "binary": "bin/launcher"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.logger.Log"
+        ]
+    }
+}

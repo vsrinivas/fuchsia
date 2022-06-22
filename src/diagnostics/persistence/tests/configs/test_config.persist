@@ -1,0 +1,22 @@
+[
+    {
+        tag: 'test-component-metric',
+        service_name: 'test-service',
+        max_bytes: 10000,
+        min_seconds_between_fetch: 1,
+        selectors: [
+            'INSPECT:test_component.cmx:root:extra_number',
+            'INSPECT:test_component.cmx:root:lazy-double',
+        ],
+    },
+    {
+        tag: 'test-component-too-big',
+        service_name: 'test-service',
+        max_bytes: 10,
+        min_seconds_between_fetch: 1,
+        selectors: [
+            'INSPECT:test_component.cmx:root:extra_number',
+            'INSPECT:test_component.cmx:root:lazy-double',
+        ],
+    },
+]

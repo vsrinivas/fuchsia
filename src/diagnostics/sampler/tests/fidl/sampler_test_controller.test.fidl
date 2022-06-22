@@ -11,10 +11,6 @@ type SamplingError = strict enum : int32 {
 protocol SamplerTestController {
     IncrementInt(struct {
         property_id uint16;
-    }) -> ();
-    SetOptional(struct {
-        value int64;
-    }) -> ();
-    RemoveOptional() -> ();
+    });
     WaitForSample() -> (struct {}) error SamplingError;
 };

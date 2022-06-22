@@ -17,23 +17,25 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_zircon::{Duration, Time},
+    fuchsia_zircon::Duration,
     futures::{future::join, FutureExt, StreamExt},
     persist_server::PersistServer,
-    persistence_component_config::Config as ComponentConfig,
     tracing::*,
 };
 
 /// The name of the subcommand and the logs-tag.
 pub const PROGRAM_NAME: &str = "persistence";
 pub const PERSIST_NODE_NAME: &str = "persist";
-/// Added after persisted data is fully published
-pub const PUBLISHED_TIME_KEY: &str = "published";
 
 /// Command line args
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "persistence")]
-pub struct CommandLine {}
+pub struct CommandLine {
+    /// how long to wait before we start offering persistence
+    /// functionality.
+    #[argh(option)]
+    startup_delay_seconds: i64,
+}
 
 // on_error logs any errors from `value` and then returns a Result.
 // value must return a Result; error_message must contain one {} to put the error in.
@@ -47,19 +49,18 @@ macro_rules! on_error {
     };
 }
 
-pub async fn main(_args: CommandLine) -> Result<(), Error> {
+pub async fn main(args: CommandLine) -> Result<(), Error> {
     info!("Starting Diagnostics Persistence Service service");
     let config = on_error!(config::load_configuration_files(), "Error loading configs: {}")?;
-    let inspector = component::inspector();
-    let component_config = ComponentConfig::take_from_startup_handle();
-    component_config.record_inspect(inspector.root());
-    let startup_delay_duration = Duration::from_seconds(component_config.startup_delay_seconds);
+
+    let startup_delay_duration = Duration::from_seconds(args.startup_delay_seconds);
 
     info!("Rotating directories");
     file_handler::shuffle_at_boot();
 
     let mut fs = ServiceFs::new();
 
+    let inspector = component::inspector();
     component::health().set_starting_up();
 
     // Add a persistence fidl service for each service defined in the config files.
@@ -73,7 +74,7 @@ pub async fn main(_args: CommandLine) -> Result<(), Error> {
     // is correct behavior - we don't want to remember anything from before the cache was cleared.
     info!(
         "Diagnostics Persistence Service delaying startup for {} seconds...",
-        component_config.startup_delay_seconds
+        args.startup_delay_seconds
     );
     let publish_fut = fasync::Timer::new(fasync::Time::after(startup_delay_duration)).then(|_| {
         async move {
@@ -89,7 +90,6 @@ pub async fn main(_args: CommandLine) -> Result<(), Error> {
                 component::health().set_ok();
                 info!("Diagnostics Persistence Service ready");
             });
-            inspector.root().record_int(PUBLISHED_TIME_KEY, Time::get_monotonic().into_nanos());
         }
     });
 

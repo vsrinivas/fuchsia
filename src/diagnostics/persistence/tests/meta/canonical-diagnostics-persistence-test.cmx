@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/canonical_diagnostics_persistence_test_bin"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.diagnostics.persist.DataPersistence-test-service",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

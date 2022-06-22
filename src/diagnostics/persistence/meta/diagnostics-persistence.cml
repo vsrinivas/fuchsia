@@ -9,8 +9,17 @@
     program: {
         runner: "elf",
         binary: "bin/launcher",
-        args: [ "persistence" ],
+        args: [
+            "persistence",
+            "--startup-delay-seconds",
+            "120",
+        ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+        },
+    ],
     use: [
         {
             protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
@@ -21,19 +30,19 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
-
-        // Persistence also uses /cache but needs it declared differently in production and test.
-        // TODO(fxb/100608): Put /cache here when possible.
+        {
+            storage: "cache",
+            path: "/cache",
+        },
     ],
     expose: [
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
         },
-
-        // Persistence exposes services declared in "-for-production" and "-for-test" CML files.
+        {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+            from: "self",
+        },
     ],
-    config: {
-        startup_delay_seconds: { type: "int64" },
-    },
 }
