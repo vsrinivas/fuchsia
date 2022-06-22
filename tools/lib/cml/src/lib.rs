@@ -23,7 +23,7 @@ use {
     lazy_static::lazy_static,
     maplit::{hashmap, hashset},
     reference_doc::ReferenceDoc,
-    serde::{de, Deserialize},
+    serde::{de, Deserialize, Serialize},
     serde_json::{Map, Value},
     std::{
         collections::{BTreeMap, HashMap, HashSet},
@@ -526,7 +526,7 @@ pub struct OneOrManyOfferFromRefs;
 pub struct OneOrManyEventScope;
 
 /// The stop timeout configured in an environment.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct StopTimeoutMs(pub u32);
 
 impl<'de> de::Deserialize<'de> for StopTimeoutMs {
@@ -694,7 +694,7 @@ pub enum OfferToRef {
 }
 
 /// A reference in an `offer to`.
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SourceAvailability {
     Required,
@@ -739,14 +739,14 @@ pub enum RegistrationRef {
     Self_,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct EventSubscription {
     pub event: OneOrMany<Name>,
 }
 
 /// A right or bundle of rights to apply to a directory.
-#[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Right {
     // Individual
@@ -885,7 +885,7 @@ impl Right {
 /// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
 ///
 /// ## Top-level keys
-#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Document {
     /// The optional `include` property describes zero or more other component manifest
@@ -930,6 +930,7 @@ pub struct Document {
     /// Include paths cannot have cycles. For instance this is invalid:
     /// A includes B, B includes A.
     /// A cycle such as the above will result in a compile-time error.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub include: Option<Vec<String>>,
 
     /// Components that are executable include a `program` section. The `program`
@@ -967,6 +968,7 @@ pub struct Document {
     ///
     /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
     #[reference_doc(json_type = "object")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub program: Option<Program>,
 
     /// The `children` section declares child component instances as described in
@@ -974,11 +976,13 @@ pub struct Document {
     ///
     /// [doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<Child>>,
 
     /// The `collections` section declares collections as described in
     /// [Component collections][doc-collections].
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub collections: Option<Vec<Collection>>,
 
     /// The `environments` section declares environments as described in
@@ -986,6 +990,7 @@ pub struct Document {
     ///
     /// [doc-environments]: /docs/concepts/components/v2/environments.md
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub environments: Option<Vec<Environment>>,
 
     /// The `capabilities` section defines capabilities that are provided by this component.
@@ -996,6 +1001,7 @@ pub struct Document {
     ///
     /// [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub capabilities: Option<Vec<Capability>>,
 
     /// For executable components, declares capabilities that this
@@ -1007,6 +1013,7 @@ pub struct Document {
     /// [fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
     /// [glossary.namespace]: /docs/glossary/README.md#namespace
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#use: Option<Vec<Use>>,
 
     /// Declares the capabilities that are made available to the parent component or to the
@@ -1014,16 +1021,19 @@ pub struct Document {
     ///
     /// One and only one of the capability type keys (`protocol`, `directory`, `service`, ...) is required.
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub expose: Option<Vec<Expose>>,
 
     /// Declares the capabilities that are made available to a [child component][doc-children]
     /// instance or a [child collection][doc-collections].
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub offer: Option<Vec<Offer>>,
 
     /// Contains metadata that components may interpret for their own purposes. The component
     /// framework enforces no schema for this section, but third parties may expect their facets to
     /// adhere to a particular schema.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
 
     /// The configuration schema as defined by a component. Each key represents a single field
@@ -1080,6 +1090,7 @@ pub struct Document {
     /// }
     /// ```
     #[reference_doc(json_type = "object")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<BTreeMap<ConfigKey, ConfigValueType>>,
 }
 
@@ -1423,7 +1434,7 @@ impl Document {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EnvironmentExtends {
     Realm,
@@ -1453,7 +1464,7 @@ pub enum EnvironmentExtends {
 ///     },
 /// ],
 /// ```
-#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Environment {
@@ -1465,31 +1476,36 @@ pub struct Environment {
     /// How the environment should extend this realm's environment.
     /// -   `realm`: Inherit all properties from this compenent's environment.
     /// -   `none`: Start with an empty environment, do not inherit anything.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extends: Option<EnvironmentExtends>,
 
     /// The runners registered in the environment. An array of objects
     /// with the following properties:
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runners: Option<Vec<RunnerRegistration>>,
 
     /// The resolvers registered in the environment. An array of
     /// objects with the following properties:
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub resolvers: Option<Vec<ResolverRegistration>>,
 
     /// Debug protocols available to any component in this environment acquired
     /// through `use from debug`.
     #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub debug: Option<Vec<DebugRegistration>>,
 
     /// The number of milliseconds to wait, after notifying a component in this environment that it
     /// should terminate, before forcibly killing it.
     #[serde(rename(deserialize = "__stop_timeout_ms"))]
     #[reference_doc(json_type = "number")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_timeout_ms: Option<StopTimeoutMs>,
 }
 
-#[derive(Clone, Hash, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Hash, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize)]
 pub struct ConfigKey(String);
 
 impl ConfigKey {
@@ -1571,7 +1587,7 @@ impl<'de> de::Deserialize<'de> for ConfigKey {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Serialize)]
 #[serde(tag = "type", deny_unknown_fields, rename_all = "lowercase")]
 pub enum ConfigValueType {
     Bool,
@@ -1614,7 +1630,7 @@ impl ConfigValueType {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Serialize)]
 #[serde(tag = "type", deny_unknown_fields, rename_all = "lowercase")]
 pub enum ConfigNestedValueType {
     Bool,
@@ -1651,7 +1667,7 @@ impl ConfigNestedValueType {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list")]
 pub struct RunnerRegistration {
@@ -1670,7 +1686,7 @@ pub struct RunnerRegistration {
     pub r#as: Option<Name>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list")]
 pub struct ResolverRegistration {
@@ -1690,34 +1706,42 @@ pub struct ResolverRegistration {
     pub scheme: cm_types::UrlScheme,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list")]
 pub struct Capability {
     /// The [name](#name) for this service capability. Specifying `path` is valid
     /// only when this value is a string.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub service: Option<OneOrMany<Name>>,
 
     /// The [name](#name) for this protocol capability. Specifying `path` is valid
     /// only when this value is a string.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<OneOrMany<Name>>,
 
     /// The [name](#name) for this directory capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub directory: Option<Name>,
 
     /// The [name](#name) for this storage capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<Name>,
 
     /// The [name](#name) for this runner capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runner: Option<Name>,
 
     /// The [name](#name) for this resolver capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub resolver: Option<Name>,
 
     /// The [name](#name) for this event capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event: Option<Name>,
 
     /// The [name](#name) for this event_stream capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_stream: Option<OneOrMany<Name>>,
 
     /// The path within the [outgoing directory][glossary.outgoing directory] of the component's
@@ -1735,10 +1759,12 @@ pub struct Capability {
     ///
     /// For `resolver`, the target of the path MUST be a channel and MUST speak
     /// the protocol `fuchsia.component.resolution.Resolver`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<Path>,
 
     /// (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set
     /// when using this directory.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
 
     /// (`storage` only) The source component of an existing directory capability backing this
@@ -1747,14 +1773,17 @@ pub struct Capability {
     /// -   `self`: This component.
     /// -   `#<child-name>`: A [reference](#references) to a child component
     ///     instance.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub from: Option<CapabilityFromRef>,
 
     /// (`storage` only) The [name](#name) of the directory capability backing the storage. The
     /// capability must be available from the component referenced in `from`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub backing_dir: Option<Name>,
 
     /// (`storage` only) A subdirectory within `backing_dir` where per-component isolated storage
     /// directories are created
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subdir: Option<RelativePath>,
 
     /// (`storage only`) The identifier used to isolated storage for a component, one of:
@@ -1765,10 +1794,11 @@ pub struct Capability {
     ///     component ID index, the instance ID is used as the key for a component's
     ///     storage. Otherwise, the component's relative moniker from the storage
     ///     capability is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_id: Option<StorageId>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list")]
 pub struct DebugRegistration {
@@ -1804,9 +1834,11 @@ impl Deref for EventSubscriptions {
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Serialize)]
 pub struct Program {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runner: Option<Name>,
+    #[serde(flatten)]
     pub info: Map<String, Value>,
 }
 
@@ -1903,29 +1935,36 @@ impl<'de> de::Deserialize<'de> for Program {
 ///     },
 /// ],
 /// ```
-#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Use {
     /// When using a service capability, the [name](#name) of a [service capability][doc-service].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub service: Option<OneOrMany<Name>>,
 
     /// When using a protocol capability, the [name](#name) of a [protocol capability][doc-protocol].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<OneOrMany<Name>>,
 
     /// When using a directory capability, the [name](#name) of a [directory capability][doc-directory].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub directory: Option<Name>,
 
     /// When using a storage capability, the [name](#name) of a [storage capability][doc-storage].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<Name>,
 
     /// When using an event capability, the [name](#name) of an [event capability][doc-event].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event: Option<OneOrMany<Name>>,
 
     /// Deprecated.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_stream_deprecated: Option<Name>,
 
     /// When using an event stream capability, the [name](#name) of an [event stream capability][doc-event].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_stream: Option<OneOrMany<Name>>,
 
     /// The source of the capability. Defaults to `parent`.  One of:
@@ -1938,31 +1977,39 @@ pub struct Use {
     ///     requested capability is derived.
     /// -   `#<child-name>`: A [reference](#references) to a child component
     ///     instance.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub from: Option<UseFromRef>,
 
     /// The path at which to install the capability in the component's namespace. For protocols,
     /// defaults to `/svc/${protocol}`.  Required for `directory` and `storage`. This property is
     /// disallowed for declarations with arrays of capability names.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<Path>,
 
     /// (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
     /// the directory in the component's namespace.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
 
     /// (`directory` only) A subdirectory within the directory capability to provide in the
     /// component's namespace.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subdir: Option<RelativePath>,
 
     /// TODO(fxb/96705): Document events features.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#as: Option<Name>,
 
     /// TODO(fxb/96705): Document events features.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<OneOrMany<EventScope>>,
 
     /// TODO(fxb/96705): Document events features.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub filter: Option<Map<String, Value>>,
 
     /// TODO(fxb/96705): Document events features.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subscriptions: Option<EventSubscriptions>,
 
     /// `dependency` _(optional)_: The type of dependency between the source and
@@ -1976,10 +2023,12 @@ pub struct Use {
     ///     handle these dependencies becoming unavailable. This type exists to keep
     ///     track of weak dependencies that resulted from migrations into v2
     ///     components.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dependency: Option<DependencyType>,
 
     /// Determines whether this capability is required to be available, or if its presence is
     /// optional.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub availability: Option<Availability>,
 }
 
@@ -2014,23 +2063,28 @@ pub struct Use {
 ///     },
 /// ],
 /// ```
-#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Expose {
     /// When routing a service, the [name](#name) of a [service capability][doc-service].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub service: Option<OneOrMany<Name>>,
 
     /// When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<OneOrMany<Name>>,
 
     /// When routing a directory, the [name](#name) of a [directory capability][doc-directory].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub directory: Option<OneOrMany<Name>>,
 
     /// When routing a runner, the [name](#name) of a [runner capability][doc-runners].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runner: Option<OneOrMany<Name>>,
 
     /// When routing a resolver, the [name](#name) of a [resolver capability][doc-resolvers].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub resolver: Option<OneOrMany<Name>>,
 
     /// `from`: The source of the capability, one of:
@@ -2044,23 +2098,29 @@ pub struct Expose {
     /// The [name](#name) for the capability as it will be known by the target. If omitted,
     /// defaults to the original name. `as` cannot be used when an array of multiple capability
     /// names is provided.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#as: Option<Name>,
 
     /// The capability target. Either `parent` or `framework`. Defaults to `parent`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub to: Option<ExposeToRef>,
 
     /// (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
     /// the exposed directory capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
 
     /// (`directory` only) the relative path of a subdirectory within the source directory
     /// capability to route.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subdir: Option<RelativePath>,
 
     /// TODO(fxb/96705): Complete.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_stream: Option<OneOrMany<Name>>,
 
     /// TODO(fxb/96705): Complete.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<OneOrMany<EventScope>>,
 }
 
@@ -2116,29 +2176,36 @@ pub struct Expose {
 ///     },
 /// ],
 /// ```
-#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Offer {
     /// When routing a service, the [name](#name) of a [service capability][doc-service].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub service: Option<OneOrMany<Name>>,
 
     /// When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<OneOrMany<Name>>,
 
     /// When routing a directory, the [name](#name) of a [directory capability][doc-directory].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub directory: Option<OneOrMany<Name>>,
 
     /// When routing a runner, the [name](#name) of a [runner capability][doc-runners].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runner: Option<OneOrMany<Name>>,
 
     /// When routing a resolver, the [name](#name) of a [resolver capability][doc-resolvers].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub resolver: Option<OneOrMany<Name>>,
 
     /// When routing a storage capability, the [name](#name) of a [storage capability][doc-storage].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<OneOrMany<Name>>,
 
     /// When routing an event, the [name](#name) of the [event][doc-event].
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event: Option<OneOrMany<Name>>,
 
     /// `from`: The source of the capability, one of:
@@ -2161,6 +2228,7 @@ pub struct Offer {
     /// An explicit [name](#name) for the capability as it will be known by the target. If omitted,
     /// defaults to the original name. `as` cannot be used when an array of multiple names is
     /// provided.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#as: Option<Name>,
 
     /// The type of dependency between the source and
@@ -2174,32 +2242,40 @@ pub struct Offer {
     ///     handle these dependencies becoming unavailable. This type exists to keep
     ///     track of weak dependencies that resulted from migrations into v2
     ///     components.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dependency: Option<DependencyType>,
 
     /// (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
     /// the offered directory capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
 
     /// (`directory` only) the relative path of a subdirectory within the source directory
     /// capability to route.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subdir: Option<RelativePath>,
 
     /// TODO(fxb/96705): Complete.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub filter: Option<Map<String, Value>>,
 
     /// TODO(fxb/96705): Complete.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_stream: Option<OneOrMany<Name>>,
 
     /// TODO(fxb/96705): Complete.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<OneOrMany<EventScope>>,
 
     /// Whether or not this capability must be present. Defaults to `required`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub availability: Option<Availability>,
 
     /// Whether or not the source of this offer must exist. If set to `unknown`, the source of this
     /// offer will be rewritten to `void` if the source does not exist (i.e. is not defined in this
     /// manifest). The availability must be set to `optional` when `source_availability` is set to
     /// `unknown`. Defaults to `required`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_availability: Option<SourceAvailability>,
 }
 
@@ -2226,7 +2302,7 @@ pub struct Offer {
 /// [component-url]: /docs/concepts/components/component_urls.md
 /// [doc-eager]: /docs/development/components/connect.md#eager
 /// [doc-reboot-on-terminate]: /docs/development/components/connect.md#reboot-on-terminate
-#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Child {
@@ -2244,6 +2320,7 @@ pub struct Child {
     /// -   [`eager`][doc-eager]: Start the component instance as soon as its parent
     ///     starts.
     #[serde(default)]
+    #[serde(skip_serializing_if = "StartupMode::is_lazy")]
     pub startup: StartupMode,
 
     /// Determines the fault recovery policy to apply if this component terminates.
@@ -2252,15 +2329,17 @@ pub struct Child {
     ///     any reason. This is a special feature for use only by a narrow set of
     ///     components; see [Termination policies][doc-reboot-on-terminate] for more
     ///     information.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub on_terminate: Option<OnTerminate>,
 
     /// If present, the name of the environment to be assigned to the child component instance, one
     /// of [`environments`](#environments). If omitted, the child will inherit the same environment
     /// assigned to this component.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub environment: Option<EnvironmentRef>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, ReferenceDoc)]
+#[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 /// Example:
@@ -3586,5 +3665,94 @@ mod tests {
     ) {
         my.merge_from(&mut other, &path::Path::new("some/path")).unwrap();
         assert_eq!(my, result);
+    }
+
+    #[test_case(&Right::Connect; "connect right")]
+    #[test_case(&Right::Enumerate; "enumerate right")]
+    #[test_case(&Right::Execute; "execute right")]
+    #[test_case(&Right::GetAttributes; "getattr right")]
+    #[test_case(&Right::ModifyDirectory; "modifydir right")]
+    #[test_case(&Right::ReadBytes; "readbytes right")]
+    #[test_case(&Right::Traverse; "traverse right")]
+    #[test_case(&Right::UpdateAttributes; "updateattrs right")]
+    #[test_case(&Right::WriteBytes; "writebytes right")]
+    #[test_case(&Right::ReadAlias; "r right")]
+    #[test_case(&Right::WriteAlias; "w right")]
+    #[test_case(&Right::ExecuteAlias; "x right")]
+    #[test_case(&Right::ReadWriteAlias; "rw right")]
+    #[test_case(&Right::ReadExecuteAlias; "rx right")]
+    #[test_case(&OfferFromRef::Self_; "offer from self")]
+    #[test_case(&OfferFromRef::Parent; "offer from parent")]
+    #[test_case(&OfferFromRef::Named(Name::new("child".to_string()).unwrap()); "offer from named")]
+    #[test_case(
+        &document(json!({}));
+        "empty document"
+    )]
+    #[test_case(
+        &document(json!({ "use": [{ "protocol": "foo.bar.Baz", "from": "self"}]}));
+        "use one from self"
+    )]
+    #[test_case(
+        &document(json!({ "use": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self"}]}));
+        "use multiple from self"
+    )]
+    #[test_case(
+        &document(json!({ "use": [{ "event": "EventFoo", "from": "self"}]}));
+        "use event from self"
+    )]
+    #[test_case(
+        &document(json!({ "use": [{ "event": ["EventFoo", "EventBar"], "from": "self"}]}));
+        "use events from self"
+    )]
+    #[test_case(
+        &document(json!({
+            "offer": [{ "protocol": "foo.bar.Baz", "from": "self", "to": "#elements"}],
+            "collections" :[{"name": "elements", "durability": "transient" }]
+        }));
+        "offer from self to collection"
+    )]
+    #[test_case(
+        &document(json!({
+            "offer": [
+                { "service": "foo.bar.Baz", "from": "self", "to": "#elements" },
+                { "service": "some.other.Service", "from": "self", "to": "#elements"},
+            ],
+            "collections":[ {"name": "elements", "durability": "transient"} ]}));
+        "service offers"
+    )]
+    #[test_case(
+        &document(json!({
+            "offer": [{ "event": "EventFoo", "from": "self", "to": "#elements"}],
+            "collections" :[{"name": "elements", "durability": "transient" }]}));
+        "offer event to collection"
+    )]
+    #[test_case(
+        &document(json!({ "expose": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self"}]}));
+        "expose protocols from self"
+    )]
+    #[test_case(
+        &document(json!({ "expose": [{ "service": ["foo.bar.Baz", "some.other.Service"], "from": "self"}]}));
+        "expose service from self"
+    )]
+    #[test_case(
+        &document(json!({ "capabilities": [{ "protocol": "foo.bar.Baz", "from": "self"}]}));
+        "capabilities from self"
+    )]
+    #[test_case(
+        &document(json!({ "facets": { "my.key": "my.value" } }));
+        "facets"
+    )]
+    #[test_case(
+        &document(json!({ "program": { "binary": "bin/hello_world", "runner": "elf" } }));
+        "elf runner program"
+    )]
+    fn serialize_roundtrips<T>(val: &T)
+    where
+        T: serde::de::DeserializeOwned + Serialize + PartialEq + std::fmt::Debug,
+    {
+        let raw = serde_json::to_string(val).expect("serializing `val` should work");
+        let parsed: T =
+            serde_json::from_str(&raw).expect("must be able to parse back serialized value");
+        assert_eq!(val, &parsed, "parsed value must equal original value");
     }
 }

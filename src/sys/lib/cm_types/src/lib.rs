@@ -574,6 +574,12 @@ pub enum StartupMode {
     Eager,
 }
 
+impl StartupMode {
+    pub fn is_lazy(&self) -> bool {
+        matches!(self, StartupMode::Lazy)
+    }
+}
+
 symmetrical_enums!(StartupMode, fdecl::StartupMode, Lazy, Eager);
 
 impl Default for StartupMode {

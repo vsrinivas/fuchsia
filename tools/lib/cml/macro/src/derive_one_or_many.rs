@@ -15,20 +15,20 @@ use {
 pub fn impl_derive_one_or_many(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
     let attrs = parse_one_or_many_attributes(&ast)?;
 
-    struct Deserialize<'a> {
+    struct DeserializeAndSerialize<'a> {
         inner_type: &'a syn::Path,
         expected: &'a syn::LitStr,
         min_length: Option<usize>,
         unique_items: bool,
     }
-    impl ToTokens for Deserialize<'_> {
+    impl ToTokens for DeserializeAndSerialize<'_> {
         fn to_tokens(&self, tokens: &mut TokenStream2) {
             let inner_type = self.inner_type;
             let expected = self.expected;
             let min_length = self.min_length;
             let unique_items = self.unique_items;
-            let visit_str = gen_visit_str(Some(quote!(OneOrMany::One)), expected);
-            let visit_seq = gen_visit_seq(
+            let de_visit_str = gen_visit_str(Some(quote!(OneOrMany::One)), expected);
+            let de_visit_seq = gen_visit_seq(
                 quote!(OneOrMany::Many),
                 inner_type,
                 expected,
@@ -52,24 +52,36 @@ pub fn impl_derive_one_or_many(ast: syn::DeriveInput) -> Result<TokenStream2, sy
                                 formatter.write_str(#expected)
                             }
 
-                            #visit_str
+                            #de_visit_str
 
-                            #visit_seq
+                            #de_visit_seq
                         }
                         deserializer.deserialize_any(Visitor)
+                    }
+                }
+
+                impl serde::ser::Serialize for OneOrMany<#inner_type> {
+                    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    where
+                        S: serde::ser::Serializer
+                    {
+                        match self {
+                            OneOrMany::One(one) => one.serialize(serializer),
+                            OneOrMany::Many(many) => many.serialize(serializer),
+                        }
                     }
                 }
             });
         }
     }
-    let deserialize = Deserialize {
+    let deserialize_and_serialize = DeserializeAndSerialize {
         inner_type: &attrs.inner_type,
         expected: &attrs.expected,
         min_length: attrs.min_length,
         unique_items: attrs.unique_items,
     };
     let tokens = quote! {
-        #deserialize
+        #deserialize_and_serialize
     };
     Ok(tokens)
 }

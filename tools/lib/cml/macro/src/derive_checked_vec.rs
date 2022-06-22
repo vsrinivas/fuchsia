@@ -14,14 +14,14 @@ use {
 pub fn impl_derive_checked_vec(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
     let attrs = parse_checked_vec_attributes(&ast)?;
 
-    struct Deserialize<'a> {
+    struct DeserializeAndSerialize<'a> {
         ty: &'a syn::Path,
         inner_type: &'a syn::Path,
         expected: &'a syn::LitStr,
         min_length: Option<usize>,
         unique_items: bool,
     }
-    impl ToTokens for Deserialize<'_> {
+    impl ToTokens for DeserializeAndSerialize<'_> {
         fn to_tokens(&self, tokens: &mut TokenStream2) {
             let ty = self.ty;
             let inner_type = self.inner_type;
@@ -52,10 +52,19 @@ pub fn impl_derive_checked_vec(ast: syn::DeriveInput) -> Result<TokenStream2, sy
                         deserializer.deserialize_seq(Visitor)
                     }
                 }
+
+                impl serde::ser::Serialize for #ty {
+                    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    where
+                        S: serde::ser::Serializer,
+                    {
+                        self.0.serialize(serializer)
+                    }
+                }
             });
         }
     }
-    let deserialize = Deserialize {
+    let deserialize_and_serialize = DeserializeAndSerialize {
         ty: &attrs.ty,
         inner_type: &attrs.inner_type,
         expected: &attrs.expected,
@@ -63,7 +72,7 @@ pub fn impl_derive_checked_vec(ast: syn::DeriveInput) -> Result<TokenStream2, sy
         unique_items: attrs.unique_items,
     };
     let tokens = quote! {
-        #deserialize
+        #deserialize_and_serialize
     };
     Ok(tokens)
 }

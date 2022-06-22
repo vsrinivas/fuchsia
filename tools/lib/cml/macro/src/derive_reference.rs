@@ -193,11 +193,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
         }
     }
 
-    struct Deserialize<'a> {
+    struct DeserializeAndSerialize<'a> {
         name: &'a Ident,
         expected: &'a syn::LitStr,
     }
-    impl ToTokens for Deserialize<'_> {
+    impl ToTokens for DeserializeAndSerialize<'_> {
         fn to_tokens(&self, tokens: &mut TokenStream2) {
             let name = self.name;
             let expected = self.expected;
@@ -221,6 +221,15 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                         deserializer.deserialize_str(RefVisitor)
                     }
                 }
+
+                impl serde::ser::Serialize for #name {
+                    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    where
+                        S: serde::ser::Serializer
+                    {
+                        self.to_string().serialize(serializer)
+                    }
+                }
             });
         }
     }
@@ -228,7 +237,8 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
     let display = Display { name: &attrs.name, variants: &attrs.variants };
     let from_str = FromStr { name: &attrs.name, variants: &attrs.variants };
     let anyref_from = AnyRefFrom { name: &attrs.name, variants: &attrs.variants };
-    let deserialize = Deserialize { name: &attrs.name, expected: &attrs.expected };
+    let deserialize_and_serialize =
+        DeserializeAndSerialize { name: &attrs.name, expected: &attrs.expected };
     let tokens = quote! {
         #display
 
@@ -236,7 +246,7 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
 
         #anyref_from
 
-        #deserialize
+        #deserialize_and_serialize
     };
     Ok(tokens)
 }
