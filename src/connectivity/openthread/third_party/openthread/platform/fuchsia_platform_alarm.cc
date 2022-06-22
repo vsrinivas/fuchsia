@@ -31,10 +31,10 @@ void FuchsiaPlatformAlarm::SetSpeedUpFactor(uint32_t speed_up_factor) {
 uint32_t FuchsiaPlatformAlarm::GetRemainingTimeMicroSec() {
   int64_t remaining_time_us = INT32_MAX;
   uint32_t now = GetNowMicroSec();
+  uint32_t now_ms = GetNowMilliSec();
 
   if (is_ms_running_) {
-    int32_t remaining_time_ms =
-        (ms_alarm_ - static_cast<uint32_t>(now / kMicroSecondsPerMilliSecond));
+    int32_t remaining_time_ms = (ms_alarm_ - static_cast<uint32_t>(now_ms));
     if (remaining_time_ms <= 0) {
       // Note - code makes an assumption that we'll never set an
       // alarm which is more than INT32_MAX msec in future.
@@ -42,7 +42,6 @@ uint32_t FuchsiaPlatformAlarm::GetRemainingTimeMicroSec() {
       return 0;
     }
     remaining_time_us = remaining_time_ms * kMicroSecondsPerMilliSecond;
-    remaining_time_us -= (now % kMicroSecondsPerMilliSecond);
   }
 
   if (is_us_running_) {
@@ -53,11 +52,11 @@ uint32_t FuchsiaPlatformAlarm::GetRemainingTimeMicroSec() {
     }
   }
 
-  remaining_time_us /= speed_up_factor_;
-
-  if (remaining_time_us == 0) {
+  if (remaining_time_us <= 0 || remaining_time_us > INT32_MAX) {
     remaining_time_us = 1;
   }
+
+  remaining_time_us /= speed_up_factor_;
 
   return remaining_time_us;
 }
