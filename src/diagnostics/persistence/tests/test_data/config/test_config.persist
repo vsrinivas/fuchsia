@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+[
+    {
+        tag: 'test-component-metric',
+        service_name: 'test-service',
+        max_bytes: 10000,
+        min_seconds_between_fetch: 1,
+        selectors: [
+            'INSPECT:realm*/single_counter:root/samples:optional',
+            'INSPECT:realm*/single_counter:root/samples:integer_1',
+        ],
+    },
+    {
+        tag: 'test-component-too-big',
+        service_name: 'test-service',
+        max_bytes: 10,
+        min_seconds_between_fetch: 1,
+        selectors: [
+            'INSPECT:realm*/single_counter:root/samples:optional',
+            'INSPECT:realm*/single_counter:root/samples:integer_1',
+        ],
+    },
+]

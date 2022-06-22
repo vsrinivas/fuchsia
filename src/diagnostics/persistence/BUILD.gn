@@ -17,7 +17,10 @@ rustc_library("lib") {
   ]
 
   deps = [
+    ":persistence-component-config",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/persistence/fidl:persist-rustc",
@@ -28,6 +31,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/injectable-time",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -61,38 +65,45 @@ rustc_library("lib") {
   test_deps = [ "//src/lib/fuchsia" ]
 }
 
-fuchsia_component("diagnostics-persistence-component") {
-  component_name = "diagnostics-persistence"
-  deps = [
-    "//src/diagnostics/config/persistence",
-    "//src/diagnostics/launcher:bin",
-  ]
-  manifest = "meta/diagnostics-persistence.cml"
+# Rules defining the Persistence component.
+fuchsia_component_manifest("persistence-manifest") {
+  component_name = "persistence"
+  manifest = "meta/persistence-for-production.cml"
 }
 
-fuchsia_component("diagnostics-persistence-v1") {
-  component_name = "diagnostics-persistence"
-  manifest = "meta/diagnostics-persistence.cmx"
+fuchsia_structured_config_rust_lib("persistence-component-config") {
+  cm_label = ":persistence-manifest"
+}
+
+fuchsia_component("diagnostics-persistence-component") {
+  cm_label = ":persistence-manifest"
   deps = [
-    ":lib",
     "//src/diagnostics/config/persistence",
     "//src/diagnostics/launcher:bin",
   ]
+}
+
+fuchsia_structured_config_values("production-structured-config") {
+  values_source = "structured-config/production.json5"
+  cm_label = ":persistence-manifest"
 }
 
 fuchsia_package("diagnostics-persistence") {
-  deps = [ ":diagnostics-persistence-component" ]
+  deps = [
+    ":diagnostics-persistence-component",
+    ":production-structured-config",
+  ]
 }
 
-fuchsia_unittest_package("diagnostics-persistence-tests") {
-  manifest = "meta/diagnostics-persistence-tests.cmx"
+fuchsia_unittest_package("diagnostics-persistence-unittests") {
+  manifest = "meta/diagnostics-persistence-unittests.cml"
   deps = [ ":lib_test" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":diagnostics-persistence-tests",
-    "tests:diagnostics-persistence-integration-tests",
+    ":diagnostics-persistence-unittests",
+    "tests:tests",
   ]
 }

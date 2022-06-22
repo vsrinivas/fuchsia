@@ -1,24 +1,27 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use diagnostics_data::LifecycleType;
-use diagnostics_reader::{ArchiveReader, Lifecycle};
-use fidl_fuchsia_diagnostics_persist::{DataPersistenceMarker, PersistResult};
-use fidl_fuchsia_sys::ComponentControllerEvent;
-use fuchsia_component::client::{launcher, App, AppBuilder};
+
+use diagnostics_reader::{ArchiveReader, Inspect};
+use fidl_fuchsia_component::BinderMarker;
+use fidl_fuchsia_diagnostics_persist::{
+    DataPersistenceMarker, DataPersistenceProxy, PersistResult,
+};
+use fidl_fuchsia_samplertestcontroller::{SamplerTestControllerMarker, SamplerTestControllerProxy};
+use fuchsia_component_test::RealmInstance;
 use fuchsia_zircon::{Duration, Time};
-use futures::StreamExt;
-use inspect_fetcher::InspectFetcher;
 use serde_json::{self, Value};
-use std::fs::{create_dir, File};
+use std::fs::File;
 use std::io::Read;
 use std::{thread, time};
 use tracing::*;
 
+mod mock_filesystems;
+mod test_topology;
+
 // When to give up on polling for a change and fail the test. DNS if less than 120 sec.
 static GIVE_UP_POLLING_SECS: i64 = 120;
 
-// The metadata contains a timestamp that needs to be zeroed for exact comparison.
 static METADATA_KEY: &str = "metadata";
 static TIMESTAMP_METADATA_KEY: &str = "timestamp";
 
@@ -29,20 +32,12 @@ static PERSIST_KEY: &str = "persist";
 static TIMESTAMP_STRUCT_KEY: &str = "@timestamps";
 static BEFORE_MONOTONIC_KEY: &str = "before_monotonic";
 static AFTER_MONOTONIC_KEY: &str = "after_monotonic";
+static PUBLISHED_TIME_KEY: &str = "published";
 static TIMESTAMP_STRUCT_ENTRIES: [&str; 4] =
     ["before_utc", BEFORE_MONOTONIC_KEY, "after_utc", AFTER_MONOTONIC_KEY];
-static PERSISTENCE_INJECTED_PATH: &str = "/cache";
-static INJECTED_STORAGE_DIR: &str = "/tmp/injected_storage";
 
-const PERSISTENCE_URL: &str = "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/diagnostics-persistence.cmx";
-const INSPECT_PROVIDER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/test_component.cmx";
-
-const TEST_PERSISTENCE_SERVICE_NAME: &str =
+pub(crate) const TEST_PERSISTENCE_SERVICE_NAME: &str =
     "fuchsia.diagnostics.persist.DataPersistence-test-service";
-
-// The capability name for the Inspect reader
-const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor";
 
 enum Published {
     Nothing,
@@ -65,39 +60,43 @@ struct FileChange<'a> {
     file_name: &'a str,
 }
 
-/// Runs the persistence persistor and a test component that can have its inspect properties
-/// manipulated by the test via fidl. Then just trigger persistence on diagnostics-persistence.
+struct TestRealm {
+    instance: RealmInstance,
+    persistence: DataPersistenceProxy,
+    inspect: SamplerTestControllerProxy,
+}
+
+/// Runs Persistene and a test component that can have its inspect properties
+/// manipulated by the test via fidl.
 #[fuchsia::test]
 async fn diagnostics_persistence_integration() {
-    setup();
-    let persisted_data_path = "/tmp/injected_storage/current/test-service/test-component-metric";
-    let persisted_too_big_path =
-        "/tmp/injected_storage/current/test-service/test-component-too-big";
+    crate::mock_filesystems::setup_backing_directories();
+    let persisted_data_path = "/tmp/cache/current/test-service/test-component-metric";
+    let persisted_too_big_path = "/tmp/cache/current/test-service/test-component-too-big";
 
-    let mut diagnostics_persistence_app = persistence().await;
+    // Verify that the backoff mechanism works by observing the time between first and second
+    // persistence to verify that the change doesn't happen too soon.
+    // backoff_time should be the same as "min_seconds_between_fetch" in
+    // TEST_CONFIG_CONTENTS.
+    let backoff_time = Time::get_monotonic() + Duration::from_seconds(1);
 
-    let diagnostics_persistence_service = diagnostics_persistence_app
-        .connect_to_named_protocol::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
-        .unwrap();
+    // For development it may be convenient to set this to 5. For production, slow virtual devices
+    // may cause test flakes even with surprisingly long timeouts.
+    assert!(GIVE_UP_POLLING_SECS >= 120);
 
-    let mut example_app = inspect_source(Some(19i32)).await;
-    // Contacting the wrong service, or giving the wrong name to the right service, should return
-    // an error and not persist anything.
-    assert_eq!(
-        diagnostics_persistence_service.persist("wrong-component-metric").await.unwrap(),
-        PersistResult::BadName
-    );
+    let realm = TestRealm::create().await;
+    realm.set_inspect(Some(19i64)).await;
+    assert_eq!(realm.request_persistence("wrong_component_metric").await, PersistResult::BadName);
+
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::None,
         file_name: persisted_data_path,
         after: None,
     });
-    // Verify that the backoff mechanism works by observing the time between first and second
-    // persistence. The duration should be the same as "min_seconds_between_fetch" in
-    // test_config.persist.
-    let backoff_time = Time::get_monotonic() + Duration::from_seconds(1);
-    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
+
+    assert_eq!(realm.request_persistence("test-component-metric").await, PersistResult::Queued);
+
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::Int(19),
@@ -106,20 +105,18 @@ async fn diagnostics_persistence_integration() {
     });
 
     // Valid data can be replaced by missing data.
-    example_app.kill().unwrap();
-    let mut example_app = inspect_source(None).await;
-    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
+    realm.set_inspect(None).await;
+    assert_eq!(realm.request_persistence("test-component-metric").await, PersistResult::Queued);
     expect_file_change(FileChange {
         old: FileState::Int(19),
         new: FileState::NoInt,
         file_name: persisted_data_path,
         after: Some(backoff_time),
     });
-    example_app.kill().unwrap();
 
     // Missing data can be replaced by new data.
-    let _example_app = inspect_source(Some(42i32)).await;
-    diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
+    realm.set_inspect(Some(42i64)).await;
+    assert_eq!(realm.request_persistence("test-component-metric").await, PersistResult::Queued);
     expect_file_change(FileChange {
         old: FileState::NoInt,
         new: FileState::Int(42),
@@ -127,10 +124,11 @@ async fn diagnostics_persistence_integration() {
         after: None,
     });
 
-    // The persisted data shouldn't be published until Diagnostics Persistence is killed and restarted.
+    // The persisted data shouldn't be published until Diagnostics Persistence is killed and
+    // restarted.
     verify_diagnostics_persistence_publication(Published::Nothing).await;
-    diagnostics_persistence_app.kill().unwrap();
-    let mut diagnostics_persistence_app = persistence().await;
+
+    let realm = realm.restart().await;
     verify_diagnostics_persistence_publication(Published::Int(42)).await;
     expect_file_change(FileChange {
         old: FileState::None,
@@ -140,14 +138,11 @@ async fn diagnostics_persistence_integration() {
     });
 
     // After another restart, no data should be published.
-    diagnostics_persistence_app.kill().unwrap();
-    let mut diagnostics_persistence_app = persistence().await;
+    let realm = realm.restart().await;
     verify_diagnostics_persistence_publication(Published::Nothing).await;
+
     // The "too-big" tag should save a short error string instead of the data.
-    let diagnostics_persistence_service = diagnostics_persistence_app
-        .connect_to_named_protocol::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
-        .unwrap();
-    diagnostics_persistence_service.persist("test-component-too-big").await.unwrap();
+    assert_eq!(realm.request_persistence("test-component-too-big").await, PersistResult::Queued);
     expect_file_change(FileChange {
         old: FileState::None,
         new: FileState::TooBig,
@@ -155,89 +150,61 @@ async fn diagnostics_persistence_integration() {
         after: None,
     });
 
-    diagnostics_persistence_app.kill().unwrap();
-    let mut diagnostics_persistence_app = persistence().await;
+    let _realm = realm.restart().await;
     verify_diagnostics_persistence_publication(Published::SizeError).await;
-    diagnostics_persistence_app.kill().unwrap();
 }
 
-// Starts and returns an Diagnostics Persistence app. Assumes:
-//  - The INJECTED_STORAGE_DIR has been created.
-//  - No other Diagnostics Persistence app is running in that directory.
-async fn persistence() -> App {
-    AppBuilder::new(PERSISTENCE_URL)
-        .add_dir_to_namespace(
-            PERSISTENCE_INJECTED_PATH.into(),
-            File::open(INJECTED_STORAGE_DIR).unwrap(),
-        )
-        .unwrap()
-        .spawn(&launcher().unwrap())
-        .unwrap()
-}
-
-fn setup() {
-    // For development it may be convenient to set this to 5. For production, slow virtual devices
-    // may cause test flakes even with surprisingly long timeouts.
-    assert!(GIVE_UP_POLLING_SECS >= 120);
-
-    create_dir(INJECTED_STORAGE_DIR).unwrap();
-}
-
-async fn inspect_source(data: Option<i32>) -> App {
-    let mut arguments =
-        vec!["--rows=5".to_string(), "--columns=3".to_string(), "--only-new".to_string()];
-
-    if let Some(number) = data {
-        arguments.push(format!("--extra-number={}", number));
+impl TestRealm {
+    async fn create() -> TestRealm {
+        let instance = test_topology::create().await.expect("initialized topology");
+        // Start up the Persistence component during realm creation - as happens during startup
+        // in a real system - so that it can publish the previous boot's stored data, if any.
+        let _persistence_binder = instance
+            .root
+            .connect_to_named_protocol_at_exposed_dir::<BinderMarker>(
+                "fuchsia.component.PersistenceBinder",
+            )
+            .unwrap();
+        // `inspect` is the source of Inspect data that Persistence will read and persist.
+        let inspect = instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<SamplerTestControllerMarker>()
+            .unwrap();
+        // `persistence` is the connection to ask for new data to be read and persisted.
+        let persistence = instance
+            .root
+            .connect_to_named_protocol_at_exposed_dir::<DataPersistenceMarker>(
+                TEST_PERSISTENCE_SERVICE_NAME,
+            )
+            .unwrap();
+        TestRealm { instance, persistence, inspect }
     }
 
-    let example_app =
-        AppBuilder::new(INSPECT_PROVIDER_URL).args(arguments).spawn(&launcher().unwrap()).unwrap();
-
-    let mut component_stream = example_app.controller().take_event_stream();
-
-    match component_stream
-        .next()
-        .await
-        .expect("component event stream has ended before termination event")
-        .unwrap()
-    {
-        ComponentControllerEvent::OnDirectoryReady {} => {}
-        ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-            panic!(
-                "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                return_code, termination_reason
-            );
-        }
+    /// Set the `optional` value to a given number, or remove it from the Inspect tree.
+    async fn set_inspect(&self, value: Option<i64>) {
+        match value {
+            Some(value) => {
+                self.inspect.set_optional(value).await.expect("set_optional should work")
+            }
+            None => self.inspect.remove_optional().await.expect("remove_optional should work"),
+        };
     }
 
-    wait_for_inspect_ready().await;
+    /// Ask for a tag's associated data to be persisted.
+    async fn request_persistence(&self, tag: &str) -> PersistResult {
+        self.persistence.persist(tag).await.unwrap()
+    }
 
-    example_app
-}
-
-async fn wait_for_inspect_ready() {
-    loop {
-        let results = ArchiveReader::new()
-            .snapshot::<Lifecycle>()
-            .await
-            .unwrap()
-            .into_iter()
-            .filter(|e| {
-                e.moniker.starts_with("test_component")
-                    && e.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady
-            })
-            .collect::<Vec<_>>();
-
-        if !results.is_empty() {
-            break;
-        }
-        thread::sleep(time::Duration::from_secs(1));
+    /// Tear down the realm to make sure everything is gone before you restart it.
+    /// Then create and return a new realm.
+    async fn restart(self) -> TestRealm {
+        self.instance.destroy().await.expect("destroy should work");
+        TestRealm::create().await
     }
 }
 
-// Given a mut map from a JSON object, if it contains a timestamp record entry,
-// this function zeros the expected fields if they're present.
+/// Given a mut map from a JSON object that's presumably sourced from Inspect, if it contains a
+/// timestamp record entry, this function validates that "before" <= "after", then zeros them.
 fn clean_and_test_timestamps(map: &mut serde_json::Map<String, Value>) {
     if let Some(Value::Object(map)) = map.get_mut(TIMESTAMP_STRUCT_KEY) {
         if let (Some(Value::Number(before)), Some(Value::Number(after))) =
@@ -252,6 +219,28 @@ fn clean_and_test_timestamps(map: &mut serde_json::Map<String, Value>) {
             if let Some(Value::Number(_)) = map.get_mut(&key) {
                 map.insert(key, serde_json::json!(0));
             }
+        }
+    }
+    let matcher = regex::Regex::new("realm_builder\\\\:auto-[a-f0-9]*?/").unwrap();
+    let keys = map
+        .keys()
+        .filter_map(|key| if matcher.is_match(key) { Some(key.to_owned()) } else { None })
+        .collect::<Vec<_>>();
+    for key in keys {
+        let value = map.remove(&key).unwrap();
+        let new_key = matcher.replace(&key, "realm_builder/").to_string();
+        map.insert(new_key, value);
+    }
+}
+
+/// The number of bytes reported in the "too big" case may vary. It should be a 2-digit
+/// number. Replace with underscores.
+fn unbrittle_too_big_message(contents: Option<String>) -> Option<String> {
+    match contents {
+        None => None,
+        Some(contents) => {
+            let matcher = regex::Regex::new(r"Data too big: \d{2} > max length 10").unwrap();
+            Some(matcher.replace(&contents, "Data too big: __ > max length 10").to_string())
         }
     }
 }
@@ -322,7 +311,8 @@ fn expect_file_change(rules: FileChange<'_>) {
 
     loop {
         assert!(start_time + Duration::from_seconds(GIVE_UP_POLLING_SECS) > Time::get_monotonic());
-        let contents = zero_file_timestamps(file_contents(rules.file_name));
+        let contents =
+            unbrittle_too_big_message(zero_file_timestamps(file_contents(rules.file_name)));
         if rules.old != rules.new && strings_match(&contents, &old_string, "old file (likely OK)") {
             thread::sleep(time::Duration::from_millis(100));
             continue;
@@ -401,6 +391,9 @@ fn zero_and_test_timestamps(contents: &str) -> String {
                 let payload_obj = obj.get_mut(PAYLOAD_KEY).unwrap();
                 if let Value::Object(map) = payload_obj {
                     if let Some(Value::Object(map)) = map.get_mut(ROOT_KEY) {
+                        if map.contains_key(PUBLISHED_TIME_KEY) {
+                            map.insert(PUBLISHED_TIME_KEY.to_string(), serde_json::json!(0));
+                        }
                         if let Some(Value::Object(persist_contents)) = map.get_mut(PERSIST_KEY) {
                             for_all_entries(persist_contents, |service_contents| {
                                 for_all_entries(service_contents, clean_and_test_timestamps);
@@ -419,17 +412,25 @@ fn zero_and_test_timestamps(contents: &str) -> String {
     format!("[{}]", string_result_array.join(","))
 }
 
+fn collapse_realm_builder_strings(data: &str) -> String {
+    let matcher = regex::Regex::new("realm([_-])builder.*?/persistence").unwrap();
+    matcher.replace_all(data, "realm${1}builder/persistence").to_string()
+}
+
+/// Verify that the expected data is published by Persistence in its Inspect hierarchy.
 async fn verify_diagnostics_persistence_publication(published: Published) {
-    let mut inspect_fetcher = InspectFetcher::create(
-        INSPECT_SERVICE_PATH,
-        vec!["INSPECT:diagnostics-persistence.cmx:root".to_string()],
-    )
-    .unwrap();
+    let mut inspect_fetcher = ArchiveReader::new();
+    inspect_fetcher.retry_if_empty(false);
+    inspect_fetcher.add_selector("realm_builder*/persistence:root");
     loop {
-        let published_inspect = inspect_fetcher.fetch().await.unwrap();
-        if published_inspect != "[]" {
+        let published_inspect =
+            inspect_fetcher.snapshot_raw::<Inspect>().await.unwrap().to_string();
+        if published_inspect.contains(PUBLISHED_TIME_KEY) {
             assert!(json_strings_match(
-                &zero_and_test_timestamps(&published_inspect),
+                &collapse_realm_builder_strings(
+                    &unbrittle_too_big_message(Some(zero_and_test_timestamps(&published_inspect)),)
+                        .unwrap()
+                ),
                 &expected_diagnostics_persistence_inspect(published),
                 "persistence publication"
             ));
@@ -442,10 +443,10 @@ async fn verify_diagnostics_persistence_publication(published: Published) {
 fn expected_stored_data(number: Option<i32>) -> String {
     let variant = match number {
         None => "".to_string(),
-        Some(number) => format!("\"extra_number\": {},", number),
+        Some(number) => format!("\"optional\": {},", number),
     };
     r#"
-  {"test_component.cmx": { %VARIANT% "lazy-double":3.25},
+  {"realm_builder/single_counter": { "samples" : { %VARIANT% "integer_1": 10 } },
    "@timestamps": {"before_utc":0, "after_utc":0, "before_monotonic":0, "after_monotonic":0}
   }
     "#
@@ -453,9 +454,10 @@ fn expected_stored_data(number: Option<i32>) -> String {
 }
 
 fn expected_size_error() -> String {
+    // unbrittle_too_big_message() will replace a 2-digit number after "big: " with __
     r#"{
         ":error": {
-            "description": "Data too big: 61 > max length 10"
+            "description": "Data too big: __ > max length 10"
         },
         "@timestamps": {
             "before_utc":0, "after_utc":0, "before_monotonic":0, "after_monotonic":0
@@ -475,7 +477,7 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
         .replace("%SIZE_ERROR%", &expected_size_error()),
         Published::Int(_) => {
             let number_text = match published {
-                Published::Int(number) => format!("\"extra_number\": {},", number),
+                Published::Int(number) => format!("\"optional\": {},", number),
                 _ => "".to_string(),
             };
             r#"
@@ -487,9 +489,11 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
                             "before_monotonic":0,
                             "after_monotonic":0
                         },
-                        "test_component.cmx": {
-                            %NUMBER_TEXT%
-                            "lazy-double": 3.25
+                        "realm_builder/single_counter": {
+                            "samples": {
+                                %NUMBER_TEXT%
+                                "integer_1": 10
+                            }
                         }
                     }
                 }
@@ -501,14 +505,16 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
   {
     "data_source": "Inspect",
     "metadata": {
-      "component_url": "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/diagnostics-persistence.cmx",
+      "component_url": "realm-builder/persistence",
       "filename": "fuchsia.inspect.Tree",
       "timestamp": 0
     },
-    "moniker": "diagnostics-persistence.cmx",
+    "moniker": "realm_builder/persistence",
     "payload": {
       "root": {
-        "persist":{%VARIANT%}
+        "published":0,
+        "persist":{%VARIANT%},
+        "startup_delay_seconds": 1
       }
     },
     "version": 1

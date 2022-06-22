@@ -32,7 +32,7 @@ async fn event_count_sampler_test() {
         .connect_to_named_protocol_at_exposed_dir::<BinderMarker>("fuchsia.component.SamplerBinder")
         .unwrap();
 
-    test_app_controller.increment_int(1).unwrap();
+    test_app_controller.increment_int(1).await.unwrap();
     let events = utils::gather_sample_group(
         utils::LogQuerierConfig { project_id: 5, expected_batch_size: 3 },
         &logger_querier,
@@ -67,7 +67,7 @@ async fn event_count_sampler_test() {
         &events,
         utils::ExpectedEvent { metric_id: 102, value: 10 }
     ));
-    test_app_controller.increment_int(1).unwrap();
+    test_app_controller.increment_int(1).await.unwrap();
 
     test_app_controller.wait_for_sample().await.unwrap().unwrap();
 
@@ -133,7 +133,7 @@ async fn reboot_server_crashed_test() {
     // Crash the reboot server to verify that sampler continues to sample.
     reboot_controller.crash_reboot_channel().await.unwrap().unwrap();
 
-    test_app_controller.increment_int(1).unwrap();
+    test_app_controller.increment_int(1).await.unwrap();
 
     let events = utils::gather_sample_group(
         utils::LogQuerierConfig { project_id: 5, expected_batch_size: 3 },
