@@ -144,10 +144,10 @@ class RootDriver {
       .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
   };
 
+  component::OutgoingDirectory outgoing_;
   compat::Interop interop_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
   std::optional<compat::Child> child_;
-  component::OutgoingDirectory outgoing_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

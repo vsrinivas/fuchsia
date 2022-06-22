@@ -4,17 +4,8 @@
 
 # The allowlist of components that can use the "services" feature in CML.
 group("services") {
-  visibility = [
-    "//examples/components/services:*",
-    "//examples/fidl/*",
-    "//sdk/lib/sys/component/cpp/tests/*",
-    "//sdk/lib/sys/component/llcpp/tests/*",
-    "//src/devices/tests/*",
-    "//src/storage/ext4/server/*",
-    "//src/sys/component_manager/tests/services:*",
-    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
-    "//tools/cmc:*",
-  ]
+  # This allowlist is empty as all drivers are using services.
+  # This group still exists because a component has to manually opt-in to services.
 }
 
 # The allowlist of components that can use the "dynamic_offers" feature in CML.

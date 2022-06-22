@@ -17,6 +17,7 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
+#include "src/devices/lib/compat/connect.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/loader.h"
 
@@ -98,27 +99,6 @@ promise<void, zx_status_t> GetAndAddMetadata(
   return bridge.consumer.promise_or(error(ZX_ERR_INTERNAL));
 }
 
-std::vector<std::string> GetFragmentNames(
-    fuchsia_driver_framework::wire::DriverStartArgs& start_args) {
-  std::vector<std::string> fragments;
-  for (auto entry : start_args.ns()) {
-    if (entry.has_path() && entry.path().size() > sizeof(fuchsia_driver_compat::Service::Name)) {
-      std::string_view path(entry.path().data(), entry.path().size());
-      if (strncmp(&path[1], fuchsia_driver_compat::Service::Name,
-                  sizeof(fuchsia_driver_compat::Service::Name) - 1) == 0) {
-        size_t index = path.rfind('/');
-        if (index != std::string::npos) {
-          std::string_view fragment = path.substr(index + 1);
-          if (fragment != "default") {
-            fragments.emplace_back(fragment);
-          }
-        }
-      }
-    }
-  }
-  return fragments;
-}
-
 DriverList global_driver_list;
 
 zx_driver_t* DriverList::ZxDriver() { return static_cast<zx_driver_t*>(this); }
@@ -177,15 +157,9 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
 
   auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
 
-  std::vector<std::string> fragments = GetFragmentNames(start_args);
-
   auto driver = std::make_unique<Driver>(dispatcher->async_dispatcher(), std::move(node),
                                          std::move(ns), std::move(logger), start_args.url().get(),
                                          *compat_device, ops, std::move(outgoing));
-
-  if (!fragments.empty()) {
-    driver->device_.set_fragments(std::move(fragments));
-  }
 
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {
@@ -207,32 +181,16 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   }
   interop_ = std::move(*interop);
 
-  // Connect to our parent. It is not an error if this fails.
-  auto parent_client = ConnectToParentDevice(dispatcher_, &ns_);
-  if (parent_client.is_error()) {
-    FDF_LOG(WARNING, "Connecting to compat service failed with %s",
-            zx_status_get_string(parent_client.error_value()));
-  } else {
-    parent_client_ = std::move(parent_client.value());
-  }
-
-  for (auto& fragment : device_.fragments()) {
-    auto client = ConnectToParentDevice(dispatcher_, &ns_, fragment);
-    if (client.is_error()) {
-      FDF_LOG(WARNING, "Connecting to compat service failed with %s", client.status_string());
-      continue;
-    }
-    parent_clients_.insert({fragment, std::move(*client)});
-  }
-
-  auto compat_connect = Driver::GetDeviceInfo().then(
-      [this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
-        if (result.is_error()) {
-          FDF_LOG(WARNING, "Getting DeviceInfo failed with: %s",
-                  zx_status_get_string(result.error()));
-        }
-        return ok();
-      });
+  auto compat_connect =
+      Driver::ConnectToParentDevices()
+          .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))
+          .then([this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
+            if (result.is_error()) {
+              FDF_LOG(WARNING, "Getting DeviceInfo failed with: %s",
+                      zx_status_get_string(result.error()));
+            }
+            return ok();
+          });
 
   auto root_resource =
       fpromise::make_result_promise<zx::resource, zx_status_t>(error(ZX_ERR_ALREADY_BOUND)).box();
@@ -485,6 +443,40 @@ result<> Driver::StopDriver(const zx_status_t& status) {
   return ok();
 }
 
+fpromise::promise<void, zx_status_t> Driver::ConnectToParentDevices() {
+  bridge<void, zx_status_t> bridge;
+  compat::ConnectToParentDevices(
+      dispatcher_, &ns_,
+      [this, completer = std::move(bridge.completer)](
+          zx::status<std::vector<compat::ParentDevice>> devices) mutable {
+        if (devices.is_error()) {
+          completer.complete_error(devices.error_value());
+          return;
+        }
+        std::vector<std::string> parents_names;
+        for (auto& device : devices.value()) {
+          if (device.name == "default") {
+            parent_client_ = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
+                std::move(device.client), dispatcher_);
+            continue;
+          }
+
+          // TODO(fxbug.dev/100985): When services stop adding extra instances
+          // separated by ',' then remove this check.
+          if (device.name.find(',') != std::string::npos) {
+            continue;
+          }
+
+          parents_names.push_back(device.name);
+          parent_clients_[device.name] = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
+              std::move(device.client), dispatcher_);
+        }
+        device_.set_fragments(std::move(parents_names));
+        completer.complete_ok();
+      });
+  return bridge.consumer.promise_or(error(ZX_ERR_INTERNAL));
+}
+
 promise<void, zx_status_t> Driver::GetDeviceInfo() {
   if (!parent_client_) {
     return fpromise::make_result_promise<void, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
@@ -498,6 +490,7 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
           fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
               result) mutable {
         if (!result.ok()) {
+          FDF_LOG(ERROR, "Failed to get topo path %s", zx_status_get_string(result.status()));
           return;
         }
         auto* response = result.Unwrap();

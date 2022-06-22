@@ -58,11 +58,6 @@ import("//tools/cmc/build/cmc.gni")
 #     If this is true, the driver will be given access to sysmem.
 #     Type: bool
 #     Default: false
-#   composite_nodes (optional)
-#     If this is set, then the driver has this list of composite
-#     nodes, and the driver's CML file will accept capabilities from each.
-#     Type: array of strings
-#     Default: []
 #   default_dispatcher_opts (optional)
 #     If this is set, then the default dispatcher for the driver will be
 #     created with these options.
@@ -137,10 +132,6 @@ template("fuchsia_driver_component") {
         }
         if (defined(invoker.uses_sysmem) && invoker.uses_sysmem) {
           args += [ "--sysmem" ]
-        }
-        if (defined(invoker.composite_nodes)) {
-          args += [ "--composite" ]
-          args += invoker.composite_nodes
         }
 
         # TODO(fxbug.dev/99310): set allow_sync_calls for v1 drivers
@@ -235,6 +226,10 @@ template("fuchsia_driver_component") {
         manifest_deps += [ ":${full_manifest_target}" ]
         manifest = get_target_outputs(":${full_manifest_target}")
         manifest = manifest[0]
+        if (!defined(restricted_features)) {
+          restricted_features = []
+        }
+        restricted_features += [ "services" ]
       }
       if (!defined(deps)) {
         deps = []

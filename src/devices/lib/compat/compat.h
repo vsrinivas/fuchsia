@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fit/defer.h>
@@ -35,19 +36,24 @@ struct ProtocolOffer {
   std::shared_ptr<fit::deferred_callback> remove_protocol_callback;
 };
 
-// This represents a service instance that a driver is offering to a child driver.
-struct ServiceInstanceOffer {
+// This represents a service that a driver is offering to a child driver.
+struct ServiceOffer {
+  struct RenamedInstance {
+    std::string source_name;
+    std::string target_name;
+  };
   // The name of the service being offered. The driver is responsible for
   // making sure this service has been exported in its outgoing directory.
   std::string service_name;
-  // The name of the instance being offered. The driver is responsible
-  // for making sure this instance exists in the service it has exported.
-  std::string instance_name;
-  // Optional: If this exists, then this is the instance name the child
-  // driver will see.
-  std::optional<std::string> renamed_instance_name;
-  // A callback that will be called when this offer is going out of scope.
-  // This is useful if a driver is exposing an instance to multiple children,
+  // The list of instance names that the driver wishes to perform while offering
+  // the service.
+  std::vector<RenamedInstance> renamed_instances;
+  // The list of instances the driver wishes to offer with this service.
+  // If this is empty, all instances will be included.
+  // NOTE: If a rename is happening, this should be the list of new names.
+  std::vector<std::string> included_instances;
+  // A callback that will be called when this service offer is going out of scope.
+  // This is useful if a driver is exposing a service to multiple children,
   // and would like to perform cleanup if all children are removed.
   std::shared_ptr<fit::deferred_callback> remove_service_callback;
 };
@@ -56,15 +62,13 @@ class ChildOffers {
  public:
   void AddProtocol(ProtocolOffer offer) { protocol_offers_.push_back(std::move(offer)); }
 
-  void AddServiceInstance(ServiceInstanceOffer offer) {
-    instance_offers_.push_back(std::move(offer));
-  }
+  void AddService(ServiceOffer offer) { service_offers_.push_back(std::move(offer)); }
 
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
 
  private:
   std::vector<ProtocolOffer> protocol_offers_;
-  std::vector<ServiceInstanceOffer> instance_offers_;
+  std::vector<ServiceOffer> service_offers_;
 };
 
 using Metadata = std::vector<uint8_t>;
@@ -120,7 +124,6 @@ class Interop {
 
   std::unique_ptr<fs::SynchronousVfs> vfs_;
   fbl::RefPtr<fs::PseudoDir> devfs_exports_;
-  fbl::RefPtr<fs::PseudoDir> compat_service_;
   driver::DevfsExporter exporter_;
 };
 

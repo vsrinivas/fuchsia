@@ -71,10 +71,6 @@ fuchsia_driver_component("i2c-hid-dfv2") {
     ":i2c-hid-driver",
     ":i2c_hid_bind_dfv2",
   ]
-  composite_nodes = [
-    "acpi",
-    "i2c",
-  ]
   info = "i2c-hid-info.json"
   colocate = true
 }

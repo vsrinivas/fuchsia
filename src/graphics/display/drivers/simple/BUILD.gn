@@ -93,10 +93,6 @@ template("simple_fuchsia_driver") {
 
     if (driver_name == "intel") {
       # TODO(fxbug.dev/93333): remove this once DFv2 is stabilised.
-      composite_nodes = [
-        "pci",
-        "sysmem",
-      ]
       default_dispatcher_opts = [ "allow_sync_calls" ]
     }
   }

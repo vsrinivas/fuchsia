@@ -12,15 +12,11 @@
         bind: "meta/bind/root.bindbc",
     },
     capabilities: [
-        {
-            directory: "fuchsia.driver.compat.Service",
-            rights: [ "rw*" ],
-            path: "/fuchsia.driver.compat.Service",
-        },
+        { service: "fuchsia.driver.compat.Service" },
     ],
     expose: [
         {
-            directory: "fuchsia.driver.compat.Service",
+            service: "fuchsia.driver.compat.Service",
             from: "self",
         },
     ],

@@ -4,8 +4,12 @@
 
 #include "compat.h"
 
+#include <dirent.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/watcher.h>
+
+#include <fbl/unique_fd.h>
 
 #include "lib/fpromise/promise.h"
 
@@ -104,7 +108,6 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   interop.outgoing_ = outgoing;
   interop.vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
   interop.devfs_exports_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  interop.compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
@@ -113,6 +116,9 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   // Start the devfs exporter.
   auto serve_status = interop.vfs_->Serve(interop.devfs_exports_, endpoints->server.TakeChannel(),
                                           fs::VnodeConnectionOptions::ReadWrite());
+  if (serve_status != ZX_OK) {
+    return zx::error(serve_status);
+  }
 
   auto exporter = driver::DevfsExporter::Create(
       *interop.ns_, interop.dispatcher_,
@@ -121,44 +127,27 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
     return zx::error(exporter.error_value());
   }
   interop.exporter_ = std::move(*exporter);
-
-  endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-
-  serve_status = interop.vfs_->Serve(interop.compat_service_, endpoints->server.TakeChannel(),
-                                     fs::VnodeConnectionOptions::ReadWrite());
-  if (serve_status != ZX_OK) {
-    return zx::error(serve_status);
-  }
-  auto status = interop.outgoing_->AddDirectory(std::move(endpoints->client),
-                                                "fuchsia.driver.compat.Service");
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
   return zx::ok(std::move(interop));
 }
 
 zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
     async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name) {
-  auto result = ns->OpenService<fuchsia_driver_compat::Service>(name);
+  auto result =
+      ns->Connect<fuchsia_driver_compat::Device>(std::string("/svc/")
+                                                     .append(fuchsia_driver_compat::Service::Name)
+                                                     .append("/")
+                                                     .append(name)
+                                                     .append("/device"));
   if (result.is_error()) {
     return result.take_error();
   }
-  auto connection = result.value().connect_device();
-  if (connection.is_error()) {
-    return connection.take_error();
-  }
-  return zx::ok(fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(connection.value()),
-                                                                      dispatcher));
+  return zx::ok(
+      fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(result.value()), dispatcher));
 }
 
 fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
                                                           fbl::RefPtr<fs::Vnode> dev_node) {
-  // Expose the fuchsia.driver.compat.Service instance.
-  service::ServiceHandler handler;
+  component::ServiceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this,
                  child](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
@@ -169,16 +158,22 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
   if (status.is_error()) {
     return fpromise::make_error_promise(status.error_value());
   }
-  compat_service_->AddEntry(child->name(), handler.TakeDirectory());
-  ServiceInstanceOffer instance_offer;
-  instance_offer.service_name = "fuchsia.driver.compat.Service";
-  instance_offer.instance_name = child->name();
-  instance_offer.renamed_instance_name = "default";
-  instance_offer.remove_service_callback = std::make_shared<fit::deferred_callback>(
-      [service = this->compat_service_, name = std::string(child->name())]() {
-        service->RemoveEntry(name);
+  status = outgoing_->AddService<fuchsia_driver_compat::Service>(std::move(handler), child->name());
+  if (status.is_error()) {
+    return fpromise::make_error_promise(status.error_value());
+  }
+  ServiceOffer instance_offer;
+  instance_offer.service_name = fuchsia_driver_compat::Service::Name,
+  instance_offer.renamed_instances.push_back(ServiceOffer::RenamedInstance{
+      .source_name = std::string(child->name()),
+      .target_name = "default",
+  });
+  instance_offer.included_instances.push_back("default");
+  instance_offer.remove_service_callback =
+      std::make_shared<fit::deferred_callback>([this, name = std::string(child->name())]() {
+        (void)outgoing_->RemoveService<fuchsia_driver_compat::Service>(name);
       });
-  child->offers().AddServiceInstance(std::move(instance_offer));
+  child->offers().AddService(std::move(instance_offer));
 
   // Expose the child in /dev/.
   if (!dev_node) {
@@ -205,17 +200,24 @@ std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::Arena
 
 std::vector<fuchsia_component_decl::wire::Offer> ChildOffers::CreateOffers(fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;
-  for (auto& instance : instance_offers_) {
-    auto dir_offer = fcd::wire::OfferDirectory::Builder(arena);
-    dir_offer.source_name(arena, instance.service_name);
-    if (instance.renamed_instance_name) {
-      dir_offer.target_name(arena, instance.service_name + "-" + *instance.renamed_instance_name);
-    }
-    dir_offer.rights(fuchsia_io::wire::kRwStarDir);
-    dir_offer.subdir(arena, instance.instance_name);
-    dir_offer.dependency_type(fcd::wire::DependencyType::kStrong);
+  for (auto& service : service_offers_) {
+    auto offer = fcd::wire::OfferService::Builder(arena);
+    offer.source_name(arena, service.service_name);
+    offer.target_name(arena, service.service_name);
 
-    offers.push_back(fcd::wire::Offer::WithDirectory(arena, dir_offer.Build()));
+    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, service.renamed_instances.size());
+    for (size_t i = 0; i < service.renamed_instances.size(); i++) {
+      mappings[i].source_name = fidl::StringView(arena, service.renamed_instances[i].source_name);
+      mappings[i].target_name = fidl::StringView(arena, service.renamed_instances[i].target_name);
+    }
+    offer.renamed_instances(mappings);
+
+    fidl::VectorView<fidl::StringView> includes(arena, service.included_instances.size());
+    for (size_t i = 0; i < service.included_instances.size(); i++) {
+      includes[i] = fidl::StringView(arena, service.included_instances[i]);
+    }
+    offer.source_instance_filter(includes);
+    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
   }
   // XXX: Do protocols.
   return offers;

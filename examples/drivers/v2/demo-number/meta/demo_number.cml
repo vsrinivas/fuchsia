@@ -13,10 +13,6 @@
     },
     use: [
         { protocol: "fuchsia.device.fs.Exporter" },
-        {
-            directory: "fuchsia.driver.compat.Service-default",
-            rights: [ 'rw*' ],
-            path: "/fuchsia.driver.compat.Service/default",
-        },
+        { service: "fuchsia.driver.compat.Service" },
     ],
 }

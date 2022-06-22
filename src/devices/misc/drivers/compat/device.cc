@@ -590,7 +590,7 @@ zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* p
     }
   }
 
-  auto connect_string = std::string("/")
+  auto connect_string = std::string("/svc/")
                             .append(fuchsia_driver_compat::Service::Name)
                             .append("/")
                             .append(fragment_name)

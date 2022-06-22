@@ -54,11 +54,6 @@ def main():
         'Whether or not to give the driver access to fuchsia.sysmem.Allocator',
     )
     parser.add_argument(
-        '--composite',
-        nargs="*",
-        help='A space separated list of composite parents',
-    )
-    parser.add_argument(
         '--default_dispatcher_opts',
         nargs="*",
         help=
@@ -114,40 +109,23 @@ def main():
         manifest['use'] = [
             {
                 'protocol': "fuchsia.device.fs.Exporter"
-            },
-            {
+            }, {
+                'service': "fuchsia.driver.compat.Service"
+            }, {
                 'protocol': "fuchsia.boot.Items"
-            },
-            {
-                'directory': "fuchsia.driver.compat.Service-default",
-                'rights': ['rw*'],
-                'path': "/fuchsia.driver.compat.Service/default",
-            },
+            }
         ]
         manifest['capabilities'] = [
             {
-                'directory': "fuchsia.driver.compat.Service",
-                'rights': ["rw*"],
-                'path': "/fuchsia.driver.compat.Service",
+                'service': "fuchsia.driver.compat.Service"
             }
         ]
         manifest['expose'] = [
             {
-                'directory': "fuchsia.driver.compat.Service",
+                'service': "fuchsia.driver.compat.Service",
                 'from': "self",
             }
         ]
-        if args.composite:
-            for composite in args.composite:
-                manifest['use'] += [
-                    {
-                        'directory':
-                            "fuchsia.driver.compat.Service-" + composite,
-                        'rights': ['rw*'],
-                        'path':
-                            "/fuchsia.driver.compat.Service/" + composite,
-                    }
-                ]
     else:
         manifest["program"]["binary"] = program
 

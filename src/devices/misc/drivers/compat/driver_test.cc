@@ -287,23 +287,6 @@ class DriverTest : public gtest::TestLoopFixture {
     });
     fidl::BindServer(dispatcher(), std::move(pkg_endpoints->server), &pkg_directory_);
 
-    // Setup and bind "/fuchsia.driver.compat.Service" directory.
-    compat_service_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
-      // We cheat here. Instead of creating a second TestDirectory for 'default', we open ourselves
-      // again.
-      if (request->path.get() == "default") {
-        fidl::ServerEnd<fio::Directory> server_end(request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &compat_service_directory_);
-      } else if (request->path.get() == "device") {
-        fidl::ServerEnd<fuchsia_driver_compat::Device> server_end(request->object.TakeChannel());
-        fidl::BindServer(dispatcher(), std::move(server_end), &test_device_);
-      } else {
-        FAIL() << "Unexpected service: " << request->path.get();
-      }
-    });
-    fidl::BindServer(dispatcher(), std::move(compat_service_endpoints->server),
-                     &compat_service_directory_);
-
     // Setup and bind "/svc" directory.
     {
       auto svc = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -342,22 +325,30 @@ class DriverTest : public gtest::TestLoopFixture {
             return ZX_OK;
           }));
 
+      auto compat_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto compat_default_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      compat_default_dir->AddEntry(
+          "device", fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+            fidl::ServerEnd<fuchsia_driver_compat::Device> server_end(std::move(server));
+            fidl::BindServer(dispatcher(), std::move(server_end), &test_device_);
+            return ZX_OK;
+          }));
+      compat_dir->AddEntry("default", compat_default_dir);
+      svc->AddEntry("fuchsia.driver.compat.Service", compat_dir);
+
       vfs_.emplace(dispatcher());
       vfs_->ServeDirectory(svc, std::move(svc_endpoints->server));
     }
 
     // Setup the namespace.
     fidl::Arena arena;
-    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 3);
+    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
     ns_entries[0].Allocate(arena);
     ns_entries[0].set_path(arena, "/pkg");
     ns_entries[0].set_directory(std::move(pkg_endpoints->client));
     ns_entries[1].Allocate(arena);
     ns_entries[1].set_path(arena, "/svc");
     ns_entries[1].set_directory(std::move(svc_endpoints->client));
-    ns_entries[2].Allocate(arena);
-    ns_entries[2].set_path(arena, "/fuchsia.driver.compat.Service");
-    ns_entries[2].set_directory(std::move(compat_service_endpoints->client));
     auto ns = driver::Namespace::Create(ns_entries);
     EXPECT_EQ(ZX_OK, ns.status_value());
 
@@ -422,7 +413,6 @@ class DriverTest : public gtest::TestLoopFixture {
   TestFile v1_test_file_;
   TestFile firmware_file_;
   TestDirectory pkg_directory_;
-  TestDirectory compat_service_directory_;
   TestExporter exporter_;
   std::optional<fs::ManagedVfs> vfs_;
 
@@ -708,31 +698,4 @@ TEST_F(DriverTest, GetDeadlineProfile) {
   ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
-}
-
-TEST(GetFragmentNames, TestEdgeCases) {
-  fidl::Arena<> arena;
-  auto args = fdf::wire::DriverStartArgs::Builder(arena);
-  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> entries(arena, 3);
-
-  auto entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
-  entry.path(arena, "/short-path");
-  entries[0] = entry.Build();
-
-  entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
-  entry.path(arena,
-             std::string("/").append(fuchsia_driver_compat::Service::Name).append("/default"));
-  entries[1] = entry.Build();
-
-  entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
-  entry.path(arena, std::string("/").append(fuchsia_driver_compat::Service::Name).append("/test"));
-  entries[2] = entry.Build();
-
-  args.ns(entries);
-  auto built_args = args.Build();
-  auto fragments = compat::GetFragmentNames(built_args);
-
-  // We only have one fragment because default is skipped.
-  ASSERT_EQ(fragments.size(), 1ul);
-  ASSERT_EQ(fragments[0], "test");
 }

@@ -18,15 +18,6 @@ namespace fio = fuchsia_io;
 
 namespace {
 
-zx::status<fidl::ClientEnd<fuchsia_driver_compat::Device>> ConnectToParentDevice(
-    const driver::Namespace* ns, std::string_view name) {
-  auto result = ns->OpenService<fuchsia_driver_compat::Service>(name);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  return result.value().connect_device();
-}
-
 class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
  public:
   DemoNumber(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf2::Node> node,
@@ -66,7 +57,8 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
     exporter_ = fidl::WireClient(std::move(*exporter), dispatcher_);
 
     // Connect to parent.
-    auto parent = ConnectToParentDevice(&ns_, "default");
+    auto parent = ns_.Connect<fuchsia_driver_compat::Device>(
+        "/svc/fuchsia.driver.compat.Service/default/device");
     if (parent.status_value() != ZX_OK) {
       return parent.take_error();
     }

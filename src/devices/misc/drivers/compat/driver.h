@@ -94,6 +94,7 @@ class Driver {
   // Stops the DFv1 driver if there was a failure.
   fpromise::result<> StopDriver(const zx_status_t& status);
 
+  fpromise::promise<void, zx_status_t> ConnectToParentDevices();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;

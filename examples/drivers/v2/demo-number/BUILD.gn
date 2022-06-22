@@ -37,6 +37,7 @@ fuchsia_driver_component("component") {
   manifest = "meta/demo_number.cml"
   deps = [ ":driver" ]
   info = "component-info.json"
+  restricted_features = [ "services" ]
 }
 
 test("demo_number_test") {
