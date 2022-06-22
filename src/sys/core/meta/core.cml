@@ -67,6 +67,11 @@
             url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cm",
             startup: "eager",
         },
+        {
+            name: "linux_runner",
+            url: "fuchsia-pkg://fuchsia.com/linux_runner#meta/linux_runner.cm",
+            environment: "#full-resolver-env",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -433,6 +438,7 @@
                 "#feedback",
                 "#font_provider",
                 "#hwinfo",
+                "#linux_runner",
                 "#log-stats",
                 "#mdns",
                 "#metrics-logger",
@@ -1031,6 +1037,7 @@
                 "#cobalt_system_metrics",
                 "#debian-guest-manager",
                 "#feedback",
+                "#linux_runner",
                 "#metrics-logger",
                 "#session-manager",
                 "#starnix_manager",
@@ -1045,6 +1052,27 @@
             // expected to be used for observability, such as in the bringup
             // product and non-eng builds of any product.
             source_availability: "unknown",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#linux_runner" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#linux_runner",
+        },
+        {
+            protocol: [ "fuchsia.ui.scenic.Scenic" ],
+            from: "self",
+            to: [ "#linux_runner" ],
+        },
+        {
+            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
+            from: "#termina-guest-manager",
+            to: [ "#linux_runner" ],
+            dependency: "weak_for_migration",
         },
     ],
     expose: [

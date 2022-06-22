@@ -154,7 +154,7 @@ fuchsia_package_with_single_component("linux_runner_pkg") {
     ":extras_img",
   ]
 
-  manifest = "meta/linux_runner.cmx"
+  manifest = "meta/linux_runner.cml"
 }
 
 group("linux_runner") {
@@ -162,20 +162,7 @@ group("linux_runner") {
     testonly = true
   }
 
-  public_deps = [
-    ":configs",
-    ":linux_runner_pkg",
-  ]
-}
-
-group("configs") {
-  deps = [ ":linux_runner_config" ]
-}
-
-config_data("linux_runner_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "linux_runner.config" ]
-  sources = [ "services.config" ]
+  public_deps = [ ":linux_runner_pkg" ]
 }
 
 executable("linux_runner_unittests") {

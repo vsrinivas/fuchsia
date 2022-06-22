@@ -17,13 +17,7 @@
         },
         {
             instance_id: "ee4b67bc694a8b1f502d0d73377c4e0b7a7a102470fc6abb7b1bb25a38bcda01",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/linux_runner#meta/linux_runner.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/linux_runner",
         },
         {
             instance_id: "325b7490f2c61039b4e3e0c7a413c0197e18b1e6f83d1ba69b47790f18223432",

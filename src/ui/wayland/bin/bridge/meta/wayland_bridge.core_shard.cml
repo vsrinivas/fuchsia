@@ -22,6 +22,11 @@
             to: "#wayland_bridge",
         },
         {
+            protocol: [ "fuchsia.wayland.Server" ],
+            from: "#wayland_bridge",
+            to: [ "#linux_runner" ],
+        },
+        {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
             from: "#session-manager",
             to: [ "#wayland_bridge" ],

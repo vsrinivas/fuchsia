@@ -82,11 +82,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.update.channelcontrol.ChannelControl",
-                "fuchsia.virtualization.DebianGuestManager",
-                "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.Manager",
-                "fuchsia.virtualization.TerminaGuestManager",
-                "fuchsia.virtualization.ZirconGuestManager",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
             ],
@@ -230,6 +226,11 @@
         {
             protocol: "fuchsia.virtualization.DebianGuestManager",
             from: "#debian-guest-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.LinuxManager",
+            from: "#linux_runner",
+            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
@@ -528,11 +529,7 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
-                "fuchsia.virtualization.DebianGuestManager",
-                "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.Manager",
-                "fuchsia.virtualization.TerminaGuestManager",
-                "fuchsia.virtualization.ZirconGuestManager",
             ],
             from: "self",
         },
@@ -547,6 +544,22 @@
         {
             directory: "hub-legacy",
             from: "#appmgr",
+        },
+        {
+            protocol: [ "fuchsia.virtualization.DebianGuestManager" ],
+            from: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.virtualization.ZirconGuestManager" ],
+            from: "#zircon-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
+            from: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.virtualization.LinuxManager" ],
+            from: "#linux_runner",
         },
     ],
 }
