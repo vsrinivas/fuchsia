@@ -20,9 +20,10 @@ class GenReferenceDocsTest(unittest.TestCase):
     def test_run_helpdocs(self):
         out_path = os.path.join(self.temp_dir, 'gen', 'test.tar.gz')
         src_dir = os.path.join(self.temp_dir, 'scripts')
+        depfile = os.path.join(self.temp_dir, 'depfile')
 
         fx_bin = os.path.join(src_dir, "scripts/fx")
         with mock.patch.object(gen_helpdocs.subprocess, 'run') as mock_run:
             gen_helpdocs.run_fx_helpdoc(src_dir, out_path)
             mock_run.assert_called_once_with(
-                [fx_bin, "helpdoc", "--archive", out_path])
+                [fx_bin, "helpdoc", "--depfile", depfile, "--archive", out_path])

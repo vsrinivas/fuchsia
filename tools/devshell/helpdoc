@@ -24,6 +24,7 @@
 ##     --archive                 creates a compressed archive at OUTPUT_PATH.
 ##                                 If specified, output will be compressed
 ##                                 and OUTPUT_PATH must end with .tgz or .tar.gz.
+##     --depfile                 creates a depfile for helpdoc generation. Must be run with archive
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
@@ -37,6 +38,7 @@ function main {
   archive_output=0
   archive_path=
   toc_prefix="/reference/tools/fx"
+  create_depfile=0
   while [[ $# -ne 0 ]]; do
     case $1 in
       --vendor)
@@ -50,6 +52,16 @@ function main {
         fi
         shift
         toc_prefix="$1"
+        ;;
+      --depfile)
+        if [[ $# -lt 2 ]]; then
+          fx-error "Invalid syntax"
+          fx-command-help
+          exit 1
+        fi
+        shift
+        depfile_prefix="$1"
+        create_depfile=1
         ;;
       --no-deprecated)
         show_deprecated=0
@@ -95,6 +107,32 @@ function main {
     base_out="${base_out}/helpdoc"
     mkdir "$base_out"
     trap 'cleanup' ERR INT TERM EXIT
+  fi
+
+  if [[ "${create_depfile}" -eq 1 ]]; then
+          if [[ "${archive_output}" -eq 0 ]]; then
+            fx-error "depfile currently not supported without archive_output"
+            fx-command-help
+            exit 1
+          fi
+    initial_deps=""${archive_path}":  ../../scripts/fx ../../scripts/fx-help.awk
+"${archive_path}":  ../../tools/devshell/lib/fx-cmd-locator.sh ../../tools/devshell/lib/vars.sh
+"${archive_path}":  ../../tools/devshell/lib/fx-optional-features.sh ../../tools/devshell/lib/metrics.sh
+"${archive_path}":  ../../tools/devshell/lib/platform.sh "
+    echo -n "$initial_deps" >> "${depfile_prefix}"
+    for vendor_dir in "${FUCHSIA_DIR}"/vendor/*/scripts/devshell; do
+      for d in "${vendor_dir}"/*; do
+          echo "vendor file ${d}"
+          if [[ "${d}" != *"/*" ]]; then
+            if hash realpath >/dev/null 2>&1; then
+              rel_path=`realpath --relative-to="${PWD}" "$d"`
+            else
+              rel_path="$(realpath_relative_to_pwd "${d}")"
+            fi
+            printf %s ""${rel_path}" " >> "${depfile_prefix}"
+          fi
+      done
+    done
   fi
 
   mkdir -p "${base_out}/cmd"
@@ -174,6 +212,24 @@ function main {
 
 }
 
+function realpath_relative_to_pwd {
+  local path="$1"
+  local rp
+  local -i status
+
+  local source target
+  source="${PWD}"
+  target="${path}"
+  back=
+  common_part="${source}"
+  while [[ "${target#$common_part}" == "${target}" ]]; do
+    common_part="$(dirname "${common_part}")"
+    back="../${back}"
+  done
+  rp="${back}${target#$common_part/}"
+  echo "${rp}"
+}
+
 function cleanup {
   if [[ -d "$temp_dir" ]]; then
     rm -Rf "$temp_dir"
@@ -208,6 +264,15 @@ function handle-directory {
   local files=( "${d}"/* )
   local cmds=()
   for f in "${files[@]}"; do
+    if [[ "${create_depfile}" -eq 1 ]]; then
+      if hash realpath >/dev/null 2>&1; then
+        rel_path=`realpath --relative-to="${PWD}" "$f"`
+      else
+        rel_path="$(realpath_relative_to_pwd "${f}")"
+      fi
+      printf %s ""${rel_path}" " >> "${depfile_prefix}"
+    fi
+
     if [[ -f "${f}" && ( -x "${f}" || "${f: -3}" == ".fx" ) ]]; then
       cmds+=( "${f}" )
     fi

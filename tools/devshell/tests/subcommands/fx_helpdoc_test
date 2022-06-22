@@ -108,4 +108,21 @@ TEST_check-paths() {
   BT_EXPECT_EMPTY "$(find "helpdoc_out" -name "*_toc.yaml" | xargs grep -E "^\s*(path|include):" | grep -v -E "\s${prefix}")"
 }
 
+
+# ensure that depfile is created correctly and contains subcommand along with other fx deps
+TEST_check-depfile() {
+  local subcommand="my_fake_subcommand"
+  local category="Category UpperCASE 1"
+  local norm_category="Category uppercase 1"
+  _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "summary1" "line1" "line2" "${category}"
+
+  local out="${BT_TEMP_DIR}/_fx_helpdoc_output"
+  local depfile="${BT_TEMP_DIR}/_depfile"
+  local _dirout="${BT_TEMP_DIR}/helpdoc_out.tar.gz"
+
+  BT_EXPECT "${fx}" helpdoc --depfile "${depfile}" "--archive" "${_dirout}"  > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${depfile}" "../../my_fake_subcommand"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${depfile}" "../../scripts/fx-help.awk"
+}
+
 BT_RUN_TESTS "$@"
