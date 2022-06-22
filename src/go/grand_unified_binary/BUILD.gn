@@ -6,10 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("lib") {
-  deps = [
-    "//src/connectivity/network/netstack:lib",
-    "//src/sys/pkg/bin/pkgfs:pmd",
-  ]
+  deps = [ "//src/connectivity/network/netstack:lib" ]
   sources = [ "gub.go" ]
 }
 

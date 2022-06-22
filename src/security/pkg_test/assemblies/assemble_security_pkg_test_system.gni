@@ -105,7 +105,6 @@ template("assemble_security_pkg_test_system") {
     assembly_image_assembler = "${assembly_name}.image_assembler"
     assembly_partitions_config = "${assembly_name}_partitions_config"
     base_packages = "${assembly_name}.base_packages"
-    empty_pkgfs = "${assembly_name}_empty_pkgfs"
     build_info = "${assembly_name}_build_info"
     repository_config = "${assembly_name}_repository_config"
     packages_json = "${assembly_name}_packages_json"
@@ -184,13 +183,6 @@ template("assemble_security_pkg_test_system") {
     not_needed(invoker, [ "root_ssl_cert" ])
   }
 
-  # `assembled_system(...) { base_packages }` requires a package with the name
-  # "pkgfs".
-  fuchsia_package(labels.empty_pkgfs) {
-    testonly = true
-    package_name = "pkgfs"
-  }
-
   # Test-only root SSL certificates for domain names that may be used in tests.
   fuchsia_package(labels.root_ssl_certificates) {
     testonly = true
@@ -220,7 +212,7 @@ template("assemble_security_pkg_test_system") {
                             # use.
                             "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
                           ] + invoker.base_packages
-  all_base_packages = packages_for_assembly + [ ":${labels.empty_pkgfs}" ]
+  all_base_packages = packages_for_assembly
   packages_for_update = all_base_packages + [
                           ":${labels.update_package}",
                           ":${labels.meta_packages}",
@@ -233,7 +225,6 @@ template("assemble_security_pkg_test_system") {
     board_name = invoker.board_name
     bootfs_labels = []
     base_packages = packages_for_assembly
-    pkgfs_package_label = ":${labels.empty_pkgfs}"
   }
 
   # Process packages.json to use a custom domain name. This mirrors the domain

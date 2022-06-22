@@ -23,7 +23,6 @@ group("tests") {
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
-    "pkgfs:tests",
     "pm:tests",
     "system-update-checker:tests",
     "system-update-committer:tests",

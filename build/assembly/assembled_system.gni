@@ -84,8 +84,7 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #
 #   devmgr_config (default: [])
 #     [list of strings] List of arguments to add to /boot/config/devmgr.
-#     These arguments come after synthesized arguments to configure blobfs and
-#     pkgfs.
+#     These arguments come after synthesized arguments to configure blobfs.
 #
 #   fshost_config (default: {})
 #     [scope] Arguments to add to fshost's configuration. These
@@ -113,10 +112,6 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [string] The name to give the base package. For prime builds this
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
-#
-#   pkgfs_package_label (optional; default: //src/sys/pkg/bin/pkgfs/pkgfs)
-#     [GN label] The pkgfs implementation to use, for those assemblies that
-#     require one.
 #
 # Board parameters:
 #
@@ -236,7 +231,6 @@ template("assembled_system") {
     config_data = "${image_name}.config-data"
     shell_commands = "${image_name}.shell_commands"
     fshost_config = "${image_name}.fshost_config"
-    pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
     compare_command_logs = "${image_name}.compare_command_logs"
     compare_images_manifests = "${image_name}.compare_images_manifests"
     platform_aib = "//build/assembly"
@@ -494,13 +488,6 @@ template("assembled_system") {
     if (generate_fvm) {
       base_packages = _base_packages
       base_packages += _meta_packages
-
-      if (defined(invoker.pkgfs_package_label)) {
-        base_packages += [ invoker.pkgfs_package_label ]
-      } else {
-        base_packages += [ labels.pkgfs_package_label ]
-      }
-
       cache_packages = _cache_packages
     }
 
@@ -518,7 +505,7 @@ template("assembled_system") {
     bootfs_labels += [ "//zircon/kernel" ]
     bootfs_labels += [ ":${labels.fshost_config}" ]
 
-    # Only builds with an FVM need base-resolver for pkgfs.
+    # Only builds with an FVM need base-resolver/pkg-cache-resolver.
     if (generate_fvm) {
       bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
     }

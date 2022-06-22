@@ -33,7 +33,6 @@ group("core") {
   public_deps = [
     "bin/pkg-cache",
     "bin/pkg-resolver",
-    "bin/pkgfs",
     "bin/system-update-committer",
     "bin/system-updater",
   ]

@@ -7,12 +7,6 @@ import("//build/components/fuchsia_package.gni")
 import("//build/config.gni")
 import("//build/testing/host_test_data.gni")
 
-# `assembled_system` requires a package with the name "pkgfs".
-fuchsia_package("empty_pkgfs") {
-  testonly = true
-  package_name = "pkgfs"
-}
-
 # `assembled_system` needs at least one package in base_packages.
 fuchsia_package("empty-pkg") {
   testonly = true
@@ -34,7 +28,6 @@ assembled_system(_assemble_system_target_name) {
     ":empty-pkg",
     ":empty_config",
   ]
-  pkgfs_package_label = ":empty_pkgfs"
 }
 
 # `assembled_system` builds a zbi, specifying `ramdisk_fvm_in_zbi = true`
@@ -49,7 +42,6 @@ assembled_system(_assemble_system_recovery_target_name) {
     ":empty-pkg",
     ":empty_config",
   ]
-  pkgfs_package_label = ":empty_pkgfs"
 }
 
 if (is_host) {

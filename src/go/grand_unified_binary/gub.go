@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
 
 func main() {
@@ -29,8 +28,6 @@ func main() {
 	name := filepath.Base(os.Args[0])
 	name = strings.SplitN(name, ".", 2)[0]
 	switch name {
-	case "pkgsvr":
-		pkgsvr.Main()
 	case "netstack":
 		netstack.Main()
 	default:

@@ -4,7 +4,7 @@
 
 use crate::base_package::BasePackage;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_images_manifest::{Image, ImagesManifest};
@@ -49,27 +49,10 @@ pub fn construct_zbi(
         zbi_builder.add_boot_arg("devmgr.require-system=true");
 
         // Specify how to launch pkgfs: bin/pkgsvr <base-merkle>
+        // This is still needed even though pkgfs has been removed because pkg-cache and
+        // pkg-cache-resolver use it to obtain the base_package hash.
         zbi_builder
             .add_boot_arg(&format!("zircon.system.pkgfs.cmd=bin/pkgsvr+{}", &base_package.merkle));
-
-        // Add the pkgfs blobs to the boot arguments, so that pkgfs can be bootstrapped out of blobfs,
-        // before the blobfs service is available.
-        let pkgfs_manifest: PackageManifest = product
-            .base
-            .iter()
-            .find_map(|p| {
-                if let Ok(m) = PackageManifest::try_load_from(p) {
-                    if m.name().as_ref() == "pkgfs" {
-                        return Some(m);
-                    }
-                }
-                return None;
-            })
-            .context("Failed to find pkgfs in the base packages")?;
-
-        pkgfs_manifest.into_blobs().into_iter().filter(|b| b.path != "meta/").for_each(|b| {
-            zbi_builder.add_boot_arg(&format!("zircon.system.pkgfs.file.{}={}", b.path, b.merkle));
-        });
     }
 
     // Add the command line.
