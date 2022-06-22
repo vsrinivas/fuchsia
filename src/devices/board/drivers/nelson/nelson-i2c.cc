@@ -7,6 +7,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
+#include <soc/aml-common/aml-i2c.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 
@@ -32,10 +33,11 @@ static const pbus_mmio_t i2c_mmios[] = {
     },
 };
 
-static const uint32_t i2c_clock_delays[] = {
-    0,    // Ignore I2C AO
-    131,  // Set I2C 2 (touch) to 400 kHz
-    0,    // Ignore I2C 3
+static const aml_i2c_delay_values i2c_delays[] = {
+    // These are based on a core clock rate of 166 Mhz (fclk_div4 / 3).
+    {819, 417},  // I2C_AO 100 kHz
+    {152, 125},  // I2C_2 400 kHz
+    {152, 125},  // I2C_3 400 kHz
 };
 
 static const pbus_irq_t i2c_irqs[] = {
@@ -154,8 +156,8 @@ zx_status_t Nelson::I2cInit() {
       {.type = DEVICE_METADATA_I2C_CHANNELS, .data_buffer = data.data(), .data_size = data.size()},
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_clock_delays),
-          .data_size = sizeof(i2c_clock_delays),
+          .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_delays),
+          .data_size = sizeof(i2c_delays),
       },
   };
   i2c_dev.metadata_list = i2c_metadata;

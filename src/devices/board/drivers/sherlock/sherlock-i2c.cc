@@ -34,12 +34,6 @@ static const pbus_mmio_t i2c_mmios[] = {
     },
 };
 
-static const uint32_t luis_i2c_clock_delays[] = {
-    0,    // Ignore I2C AO
-    104,  // Set I2C 2 (touch) to 400 kHz
-    0,    // Ignore I2C 3
-};
-
 static const pbus_irq_t i2c_irqs[] = {
     {
         .irq = T931_I2C_AO_0_IRQ,
@@ -249,11 +243,6 @@ zx_status_t Sherlock::I2cInit() {
   } else {
     channels = luis_ernie_i2c_channels;
     channel_count = std::size(luis_ernie_i2c_channels);
-    metadata.emplace_back(pbus_metadata_t{
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&luis_i2c_clock_delays),
-        .data_size = sizeof(luis_i2c_clock_delays),
-    });
   };
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(
