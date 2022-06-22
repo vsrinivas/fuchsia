@@ -316,8 +316,7 @@ class Encoder {
 };
 
 const size_t kMaxTags = 4;  // Legacy from ulib/syslog. Might be worth rethinking.
-// Compiler thinks this is unused even though WriteLogToSocket uses it.
-__UNUSED const char kMessageFieldName[] = "message";
+const char kMessageFieldName[] = "message";
 const char kPrintfFieldName[] = "printf";
 const char kVerbosityFieldName[] = "verbosity";
 const char kPidFieldName[] = "pid";
