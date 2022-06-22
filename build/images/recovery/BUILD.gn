@@ -171,7 +171,6 @@ assembled_system("recovery-eng") {
   forward_variables_from(recovery_base, "*")
   base_packages = recovery_eng_packages + [ ":core-eng" ]
   system_image_deps = recovery_system_image_deps
-  sysmgr_golden = "sysmgr-eng-golden.json"
 
   # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
   metadata = {
@@ -232,8 +231,6 @@ assembled_system("recovery-fdr") {
     "//src/sys/component_manager:component_manager_bootfs_config",
   ]
 
-  sysmgr_golden = "sysmgr-fdr-golden.json"
-
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script
     zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
@@ -249,7 +246,6 @@ assembled_system("recovery-installer") {
   forward_variables_from(recovery_base, "*")
   base_packages = recovery_installer_packages + [ ":core-eng" ]
   system_image_deps = recovery_system_image_deps
-  sysmgr_golden = "sysmgr-installer-golden.json"
 
   # The installer needs to see all partitions on the system so that it can
   #determine the installation source and destination

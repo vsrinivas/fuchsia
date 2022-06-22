@@ -136,6 +136,4 @@ assembled_system("guest") {
   }
 
   include_component_id_index = true
-
-  sysmgr_golden = "sysmgr-golden.json"
 }
