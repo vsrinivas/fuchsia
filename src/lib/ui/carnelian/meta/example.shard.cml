@@ -6,6 +6,14 @@
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+                "test.placeholders.Echo",
+            ],
+        },
+    ],
     use: [
         {
             protocol: [
@@ -45,6 +53,13 @@
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+                "test.placeholders.Echo",
+            ],
+            from: "self",
         },
     ],
 }
