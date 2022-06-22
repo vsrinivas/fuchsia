@@ -181,7 +181,8 @@ class MockMetrics final : public metrics::Metrics {
   }
 
   void LogLatchToActualPresentation(
-      std::optional<cobalt_registry::ScenicLatchToActualPresentationMetricDimensionFrameStatus>
+      std::optional<
+          cobalt_registry::ScenicLatchToActualPresentationMigratedMetricDimensionFrameStatus>
           frame_status,
       std::vector<fuchsia_metrics::HistogramBucket> histogram) override {
     counts_->log_latch_to_actual_presentation_count += 1;
