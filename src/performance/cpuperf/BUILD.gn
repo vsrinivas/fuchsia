@@ -54,7 +54,6 @@ executable("bin") {
 }
 
 fuchsia_shell_package("cpuperf") {
-  manifest = "meta/cpuperf.cmx"
   deps = [
     ":bin",
     ":cpuperf_resources",
