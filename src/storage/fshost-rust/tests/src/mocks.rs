@@ -61,6 +61,9 @@ async fn run_boot_items(mut stream: fboot::ItemsRequestStream) {
                 assert_eq!(extra, 0);
                 responder.send(None, 0).unwrap();
             }
+            fboot::ItemsRequest::Get2 { .. } => {
+                unimplemented!();
+            }
             fboot::ItemsRequest::GetBootloaderFile { .. } => {
                 panic!(
                     "unexpectedly called GetBootloaderFile on {}",

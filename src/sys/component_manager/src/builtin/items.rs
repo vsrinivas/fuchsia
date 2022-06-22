@@ -103,6 +103,10 @@ impl BuiltinCapability for Items {
                         Err(_) => responder.send(None, 0)?,
                     }
                 }
+                fboot::ItemsRequest::Get2 { responder, .. } => {
+                    // Unimplemented, see fxbug.dev/102804.
+                    responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+                }
                 fboot::ItemsRequest::GetBootloaderFile { filename, responder } => {
                     match self.bootloader_files.get(&filename) {
                         Some(bytes) => {
