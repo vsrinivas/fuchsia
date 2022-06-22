@@ -17,6 +17,7 @@ mod get_element_attributes;
 mod get_play_status;
 mod inform_battery_status;
 mod notification;
+mod play_item;
 pub mod player_application_settings;
 mod rejected;
 mod set_absolute_volume;
@@ -24,8 +25,8 @@ mod set_absolute_volume;
 pub use {
     self::browsing::*, self::continuation::*, self::get_capabilities::*,
     self::get_element_attributes::*, self::get_play_status::*, self::inform_battery_status::*,
-    self::notification::*, self::player_application_settings::*, self::rejected::*,
-    self::set_absolute_volume::*,
+    self::notification::*, self::play_item::*, self::player_application_settings::*,
+    self::rejected::*, self::set_absolute_volume::*,
 };
 
 /// The error types for packet parsing.

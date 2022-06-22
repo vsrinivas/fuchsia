@@ -61,6 +61,7 @@ rustc_binary("bin") {
     "src/packets/inform_battery_status.rs",
     "src/packets/mod.rs",
     "src/packets/notification.rs",
+    "src/packets/play_item.rs",
     "src/packets/player_application_settings/get_attribute_text.rs",
     "src/packets/player_application_settings/get_current_settings.rs",
     "src/packets/player_application_settings/get_value_text.rs",
