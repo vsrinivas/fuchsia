@@ -100,13 +100,20 @@ impl<T: Resolver> EagerPackageManager<T> {
         pkg_cache: cache::Client,
         data_proxy: &fio::DirectoryProxy,
     ) -> Result<(), Error> {
-        let file_proxy = fuchsia_fs::directory::open_file(
+        let file_proxy = match fuchsia_fs::directory::open_file(
             data_proxy,
             EAGER_PACKAGE_PERSISTENT_FIDL_NAME,
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await
-        .context("while opening eager_packages.pf")?;
+        {
+            Ok(proxy) => proxy,
+            Err(fuchsia_fs::node::OpenError::OpenError(s)) if s == zx::Status::NOT_FOUND => {
+                return Ok(())
+            }
+            Err(e) => Err(e).context("while opening eager_packages.pf")?,
+        };
+
         let persistent_packages =
             fuchsia_fs::read_file_fidl::<PersistentEagerPackages>(&file_proxy)
                 .await
@@ -430,17 +437,18 @@ impl EagerPackageConfigs {
         match fuchsia_fs::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
             Ok(json) => Ok(serde_json::from_slice(&json).context("parsing eager package config")?),
             Err(e) => match e.into_inner() {
-                fuchsia_fs::file::ReadError::Open(fuchsia_fs::node::OpenError::OpenError(e))
-                    if e == zx::Status::NOT_FOUND =>
-                {
-                    // This error is only reachable if /config/data exists, but the file is missing.
+                fuchsia_fs::file::ReadError::Open(fuchsia_fs::node::OpenError::OpenError(
+                    status,
+                ))
+                | fuchsia_fs::file::ReadError::Fidl(fidl::Error::ClientChannelClosed {
+                    status,
+                    ..
+                }) if status == zx::Status::NOT_FOUND => {
                     Ok(EagerPackageConfigs { packages: Vec::new() })
                 }
-                err => Err(anyhow!(
-                    "Error reading eager package config file {}: {}",
-                    EAGER_PACKAGE_CONFIG_PATH,
-                    err
-                )),
+                err => Err(err).with_context(|| {
+                    format!("Error reading eager package config file {EAGER_PACKAGE_CONFIG_PATH}")
+                }),
             },
         }
     }
