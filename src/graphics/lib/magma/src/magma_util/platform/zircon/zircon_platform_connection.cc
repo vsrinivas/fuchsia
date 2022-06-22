@@ -21,6 +21,17 @@ std::optional<magma::PlatformObject::Type> GetObjectType(fuchsia_gpu_magma::Obje
   }
 }
 
+std::optional<int> GetBufferOp(fuchsia_gpu_magma::BufferOp fidl_type) {
+  switch (fidl_type) {
+    case fuchsia_gpu_magma::wire::BufferOp::kPopulateTables:
+      return MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
+    case fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables:
+      return MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
+    default:
+      return std::nullopt;
+  }
+}
+
 }  // namespace
 
 namespace magma {
@@ -471,22 +482,17 @@ void ZirconPlatformConnection::UnmapBufferGpu(UnmapBufferGpuRequestView request,
 
 void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
                                              BufferRangeOpCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(request->op));
+  DLOG("ZirconPlatformConnection:::BufferOp");
   FlowControl();
-  uint32_t buffer_op;
-  switch (request->op) {
-    case fuchsia_gpu_magma::wire::BufferOp::kPopulateTables:
-      buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
-      break;
-    case fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables:
-      buffer_op = MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
-      break;
-    default:
-      SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-      return;
+
+  std::optional<int> buffer_op = GetBufferOp(request->op);
+  if (!buffer_op) {
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+    return;
   }
+
   magma::Status status =
-      delegate_->BufferRangeOp(request->buffer_id, buffer_op, request->offset, request->length);
+      delegate_->BufferRangeOp(request->buffer_id, *buffer_op, request->offset, request->length);
 
   if (!status) {
     SetError(&completer, status.get());

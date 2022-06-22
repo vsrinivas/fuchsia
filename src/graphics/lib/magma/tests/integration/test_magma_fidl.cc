@@ -467,6 +467,15 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
     ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
     EXPECT_EQ(size, info.committed_bytes);
   }
+
+  // Check invalid range op
+  {
+    constexpr auto kInvalidBufferRangeOp = fuchsia_gpu_magma::BufferOp(1000);
+    auto wire_result =
+        primary_->BufferRangeOp(buffer_id, kInvalidBufferRangeOp, 0 /*start_bytes*/, size);
+    EXPECT_TRUE(wire_result.ok());
+    EXPECT_TRUE(CheckForUnbind());
+  }
 }
 
 TEST_F(TestMagmaFidl, FlowControl) {

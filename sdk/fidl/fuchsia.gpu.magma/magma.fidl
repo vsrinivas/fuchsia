@@ -148,7 +148,7 @@ type ObjectType = flexible enum : uint32 {
     BUFFER = 11;
 };
 
-type BufferOp = strict enum {
+type BufferOp = flexible enum : uint32 {
     /// Populate the GPU page tables with the pages mapping in this range, committing pages as
     /// needed. This is not needed for allocations mapped GROWABLE, since the page tables will
     /// be populated on demand.
