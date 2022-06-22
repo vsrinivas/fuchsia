@@ -29,6 +29,8 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ImportBufferCollection");
+
   if (!token.is_valid()) {
     FX_LOGS(WARNING) << "ImportBufferCollection called with invalid token";
     return false;
@@ -55,6 +57,8 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
 
 void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
     allocation::GlobalBufferCollectionId collection_id) {
+  TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection");
+
   auto collection_itr = buffer_collection_infos_.find(collection_id);
 
   // If the collection is not in the map, then there's nothing to do.

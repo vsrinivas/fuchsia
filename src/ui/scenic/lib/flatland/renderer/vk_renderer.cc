@@ -99,15 +99,18 @@ VkRenderer::~VkRenderer() {
 bool VkRenderer::ImportBufferCollection(
     GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  TRACE_DURATION("gfx", "flatland::VkRenderer::ImportBufferCollection");
   return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
                             escher::RectangleCompositor::kTextureUsageFlags);
 }
 
 void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
+  TRACE_DURATION("gfx", "flatland::VkRenderer::ReleaseBufferCollection");
+
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock<std::mutex> lock(mutex_);
 
   auto collection_itr = collections_.find(collection_id);
 
@@ -214,7 +217,7 @@ bool VkRenderer::RegisterCollection(
   // Multiple threads may be attempting to read/write from |collections_|
   // so we lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock<std::mutex> lock(mutex_);
   collections_[collection_id] = {
       .collection = std::move(buffer_collection),
       .vk_collection = std::move(collection),
@@ -223,7 +226,7 @@ bool VkRenderer::RegisterCollection(
 }
 
 bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock<std::mutex> lock(mutex_);
 
   // The metadata can't have an invalid collection id.
   if (metadata.collection_id == allocation::kInvalidId) {
@@ -292,7 +295,7 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
 }
 
 void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock<std::mutex> lock(mutex_);
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
     pending_textures_.erase(image_id);
@@ -456,7 +459,7 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   // to be accessed via a lock. We're just doing a shallow copy via the copy assignment
   // operator since the texture and render target data is just referenced through pointers.
   // We manually unlock the lock after copying over the data.
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock<std::mutex> lock(mutex_);
   const auto local_texture_map = texture_map_;
   const auto local_render_target_map = render_target_map_;
   const auto local_depth_target_map = depth_target_map_;

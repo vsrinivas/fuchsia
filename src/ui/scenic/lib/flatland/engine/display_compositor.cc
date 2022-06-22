@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
+#include <lib/trace/event.h>
 #include <zircon/pixelformat.h>
 
 #include <cstdint>
@@ -131,6 +132,7 @@ bool DisplayCompositor::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferCollection");
   FX_DCHECK(display_controller_);
 
   // Create a duped renderer token.
@@ -237,6 +239,7 @@ bool DisplayCompositor::ImportBufferCollection(
 
 void DisplayCompositor::ReleaseBufferCollection(
     allocation::GlobalBufferCollectionId collection_id) {
+  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferCollection");
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);

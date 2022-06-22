@@ -81,7 +81,8 @@ class VkRenderer final : public Renderer {
     bool is_render_target;
   };
 
-  // Generic helper function used by both |ImportBufferCollection| and |RegisterTextureCollection|.
+  // Generic helper function used by both |ImportBufferCollection| and
+  // |RegisterRenderTargetCollection|.
   bool RegisterCollection(allocation::GlobalBufferCollectionId collection_id,
                           fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
@@ -102,7 +103,7 @@ class VkRenderer final : public Renderer {
   escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collections_|.
-  mutable std::mutex lock_;
+  mutable std::mutex mutex_;
   std::unordered_map<allocation::GlobalBufferCollectionId, CollectionData> collections_;
 
   std::unordered_map<GlobalImageId, escher::TexturePtr> texture_map_;

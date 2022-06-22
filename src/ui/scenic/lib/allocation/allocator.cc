@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <memory>
 
@@ -46,6 +47,7 @@ Allocator::~Allocator() {
 void Allocator::RegisterBufferCollection(
     fuchsia::ui::composition::RegisterBufferCollectionArgs args,
     RegisterBufferCollectionCallback callback) {
+  TRACE_DURATION("gfx", "allocation::Allocator::RegisterBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
   // It's okay if there's no specified RegisterBufferCollectionUsage. In that case, assume it is
@@ -190,6 +192,7 @@ void Allocator::RegisterBufferCollection(
 }
 
 void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
+  TRACE_DURATION("gfx", "allocation::Allocator::ReleaseBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
   auto usage = buffer_collections_[collection_id];

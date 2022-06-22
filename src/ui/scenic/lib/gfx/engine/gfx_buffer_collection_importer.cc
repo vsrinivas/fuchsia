@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/engine/gfx_buffer_collection_importer.h"
 
 #include <lib/async/default.h>
+#include <lib/trace/event.h>
 #include <zircon/assert.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -37,6 +38,7 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  TRACE_DURATION("gfx", "GfxBufferCollectionImporter::ImportBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
   if (buffer_collection_infos_.find(collection_id) != buffer_collection_infos_.end()) {
@@ -123,6 +125,7 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
 
 void GfxBufferCollectionImporter::ReleaseBufferCollection(
     allocation::GlobalBufferCollectionId collection_id) {
+  TRACE_DURATION("gfx", "GfxBufferCollectionImporter::ReleaseBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
   auto itr = buffer_collection_infos_.find(collection_id);
