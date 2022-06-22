@@ -54,7 +54,48 @@ class SklCoreDisplayClock final : public CoreDisplayClock {
   bool ChangeFreq(uint32_t freq_khz);
   bool PostChangeFreq(uint32_t freq_khz);
 
+  static uint32_t FreqToVoltageLevel(uint32_t freq_khz);
+
   fdf::MmioBuffer* mmio_space_ = nullptr;
+};
+
+// Tiger Lake CD Clock
+
+class TglCoreDisplayClock final : public CoreDisplayClock {
+ public:
+  explicit TglCoreDisplayClock(fdf::MmioBuffer* mmio_space);
+  ~TglCoreDisplayClock() override = default;
+
+  // Clients could set |freq_khz| to 0 to disable the CDCLK PLL, or
+  // set it to a non-zero value to enable the PLL; |freq_khz| should
+  // match the device's reference clock frequency (see
+  // intel-gfx-prm-osrc-tgl-vol12-displayengine_0.pdf P178).
+  bool CheckFrequency(uint32_t freq_khz) override;
+  bool SetFrequency(uint32_t freq_khz) override;
+
+ private:
+  struct State {
+    uint32_t cd2x_divider = 1;
+    uint32_t pll_ratio = 1;
+  };
+  std::optional<State> FreqToState(uint32_t freq_khz) const;
+
+  bool LoadState() override;
+
+  bool PreChangeFreq();
+  bool ChangeFreq(uint32_t freq_khz);
+  bool PostChangeFreq(uint32_t freq_khz);
+
+  static uint32_t FreqToVoltageLevel(uint32_t freq_khz);
+
+  bool Disable();
+  bool Enable(uint32_t freq_khz, State state);
+
+  fdf::MmioBuffer* mmio_space_ = nullptr;
+
+  uint32_t ref_clock_khz_ = 0;
+  State state_ = {};
+  bool enabled_ = false;
 };
 
 }  // namespace i915

@@ -1219,19 +1219,19 @@ bool Controller::CheckDisplayLimits(cpp20::span<const display_config_t*> display
 
     uint64_t max_pipe_pixel_rate;
     auto cd_freq = registers::CdClockCtl::Get().ReadFrom(mmio_space()).cd_freq_decimal();
-    if (cd_freq == registers::CdClockCtl::kFreqDecimal30857) {
+    if (cd_freq == registers::CdClockCtl::FreqDecimal(308570)) {
       max_pipe_pixel_rate = 308570000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal3375) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(337500)) {
       max_pipe_pixel_rate = 337500000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal432) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(432000)) {
       max_pipe_pixel_rate = 432000000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal450) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(450000)) {
       max_pipe_pixel_rate = 450000000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal540) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(540000)) {
       max_pipe_pixel_rate = 540000000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal61714) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(617140)) {
       max_pipe_pixel_rate = 617140000;
-    } else if (cd_freq == registers::CdClockCtl::kFreqDecimal675) {
+    } else if (cd_freq == registers::CdClockCtl::FreqDecimal(675000)) {
       max_pipe_pixel_rate = 675000000;
     } else {
       ZX_ASSERT(false);

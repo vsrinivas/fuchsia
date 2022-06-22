@@ -55,6 +55,20 @@ class BaseDsm : public hwreg::RegisterBase<BaseDsm, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<BaseDsm>(0); }
 };
 
+// DSSM
+class Dssm : public hwreg::RegisterBase<Dssm, uint32_t> {
+ public:
+  enum class RefFrequency : uint8_t {
+    k24Mhz = 0,
+    k19_2Mhz = 1,
+    k38_4Mhz = 2,
+  };
+  DEF_FIELD(31, 29, ref_frequency);
+  RefFrequency GetRefFrequency() const { return static_cast<RefFrequency>(ref_frequency()); }
+
+  static auto Get() { return hwreg::RegisterAddr<Dssm>(0x51004); }
+};
+
 // MASTER_INT_CTL
 class MasterInterruptControl : public hwreg::RegisterBase<MasterInterruptControl, uint32_t> {
  public:
@@ -241,22 +255,42 @@ class AudioPinEldCPReadyStatus : public hwreg::RegisterBase<AudioPinEldCPReadySt
 // CLCLK_CTL
 class CdClockCtl : public hwreg::RegisterBase<CdClockCtl, uint32_t> {
  public:
-  DEF_FIELD(27, 26, cd_freq_select);
+  DEF_FIELD(27, 26, skl_cd_freq_select);
   static constexpr uint32_t kFreqSelect4XX = 0;
   static constexpr uint32_t kFreqSelect540 = 1;
   static constexpr uint32_t kFreqSelect3XX = 2;
   static constexpr uint32_t kFreqSelect6XX = 3;
 
+  DEF_FIELD(23, 22, icl_cd2x_divider_select);
+  static constexpr uint32_t kCd2xDivider1 = 0;
+  static constexpr uint32_t kCd2xDivider2 = 1;
+
+  DEF_FIELD(21, 19, icl_cd2x_pipe_select);
+
   DEF_FIELD(10, 0, cd_freq_decimal);
-  static constexpr uint32_t kFreqDecimal30857 = 0b01001100111;
-  static constexpr uint32_t kFreqDecimal3375 = 0b01010100001;
-  static constexpr uint32_t kFreqDecimal432 = 0b01101011110;
-  static constexpr uint32_t kFreqDecimal450 = 0b01110000010;
-  static constexpr uint32_t kFreqDecimal540 = 0b10000110110;
-  static constexpr uint32_t kFreqDecimal61714 = 0b10011010000;
-  static constexpr uint32_t kFreqDecimal675 = 0b10101000100;
+  // This returns binary representation of CD clock frequency (MHz) in
+  // U10.1 format (cd_freq_decimal field). To calculate its value, we first
+  // round the frequency to 0.5MHz and then minus it by one.
+  static constexpr uint32_t FreqDecimal(uint32_t khz) {
+    // Truncate the frequency to 0.25MHz for rounding.
+    uint32_t mhz_4x_trunc = khz / 250;
+    // Round the frequency to 0.5 MHz.
+    uint32_t mhz_2x_round = mhz_4x_trunc / 2 + (mhz_4x_trunc & 0x1);
+    // Return rounded value minus 1 (0x2 in U10.1 format).
+    return mhz_2x_round - 2;
+  }
 
   static auto Get() { return hwreg::RegisterAddr<CdClockCtl>(0x46000); }
+};
+
+// CDCLK_PLL_ENABLE on ICL+
+class IclCdClkPllEnable : public hwreg::RegisterBase<IclCdClkPllEnable, uint32_t> {
+ public:
+  DEF_BIT(31, pll_enable);
+  DEF_BIT(30, pll_lock);
+  DEF_FIELD(7, 0, pll_ratio);
+
+  static auto Get() { return hwreg::RegisterAddr<IclCdClkPllEnable>(0x46070); }
 };
 
 // DBUF_CTL
