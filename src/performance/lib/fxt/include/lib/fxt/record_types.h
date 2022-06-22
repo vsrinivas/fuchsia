@@ -5,8 +5,8 @@
 // FXT Record constants for FXT as defined in
 // docs/reference/tracing/trace-format.md
 
-#ifndef SRC_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_
-#define SRC_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_
+#ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_
+#define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_
 
 #include <zircon/syscalls/object.h>
 
@@ -141,4 +141,4 @@ enum class LargeBlobFormat { kMetadata = 0, kNoMetadata = 1 };
 
 }  // namespace fxt
 
-#endif  // SRC_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_
+#endif  // SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_RECORD_TYPES_H_

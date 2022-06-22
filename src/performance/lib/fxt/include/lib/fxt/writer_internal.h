@@ -7,8 +7,8 @@
 // don't need to dynamically switch between them, so we enforce the required
 // methods through type traits, rather than, say, an abstract class.
 
-#ifndef SRC_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
-#define SRC_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
+#ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
+#define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
 
 #include <lib/zx/status.h>
 
@@ -117,4 +117,4 @@ template <typename W>
 using EnableIfWriter = std::enable_if_t<WriterTraits<W>::value, int>;
 }  // namespace fxt::internal
 
-#endif  // SRC_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
+#endif  // SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_

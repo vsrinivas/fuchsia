@@ -5,8 +5,8 @@
 // Record field declarations for FXT as defined in
 // docs/reference/tracing/trace-format.md
 
-#ifndef SRC_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_
-#define SRC_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_
+#ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_
+#define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_
 
 #include <cstdint>
 #include <type_traits>
@@ -181,4 +181,4 @@ struct BlobFormatEventFields {
 
 }  // namespace fxt
 
-#endif  // SRC_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_
+#endif  // SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_FIELDS_H_

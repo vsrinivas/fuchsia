@@ -31,8 +31,8 @@ test("fxt_unittests") {
     "serializer_test.cc",
   ]
   deps = [
+    ":fxt",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/fxt",
     "//third_party/googletest:gtest",
   ]
 }

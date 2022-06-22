@@ -8,8 +8,8 @@
 // Based heavily on libTrace in zircon/system/ulib/trace to allow compatibility,
 // but modified to enable passing in an arbitrary buffering system.
 
-#ifndef SRC_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
-#define SRC_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
+#ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
+#define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
 
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
@@ -1113,4 +1113,4 @@ zx_status_t WriteLargeBlobRecordWithNoMetadata(Writer* writer,
 
 }  // namespace fxt
 
-#endif  // SRC_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
+#endif  // SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
