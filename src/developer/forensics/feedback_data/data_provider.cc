@@ -144,61 +144,44 @@ void DataProvider::GetSnapshotInternal(
   using result_t = decltype(join)::value_type;
 
   auto promise =
-      join.and_then([this](result_t& results) mutable {
-            FX_CHECK(std::get<0>(results).is_ok()) << "Impossible annotation collection failure";
-            FX_CHECK(std::get<1>(results).is_ok()) << "Impossible attachment collection failure";
+      join.and_then([this, timer_id, callback = std::move(callback)](result_t& results) mutable {
+        FX_CHECK(std::get<0>(results).is_ok()) << "Impossible annotation collection failure";
+        FX_CHECK(std::get<1>(results).is_ok()) << "Impossible attachment collection failure";
 
-            const auto& annotations = std::get<0>(results).value();
-            const auto& attachments = std::get<1>(results).value();
-            std::map<std::string, std::string> snapshot_files;
+        const auto& annotations = std::get<0>(results).value();
+        const auto& attachments = std::get<1>(results).value();
+        std::map<std::string, std::string> snapshot_files;
 
-            // Add the annotations to |snapshot_files|
-            if (const auto& result = std::get<0>(results); result.is_ok()) {
-              auto file = feedback::Encode<std::string>(annotations);
-              snapshot_files[kAttachmentAnnotations] = std::move(file);
-            } else {
-              FX_LOGS(WARNING) << "Failed to retrieve any annotations";
-            }
+        // Add the annotations to |snapshot_files|
+        auto file = feedback::Encode<std::string>(annotations);
+        snapshot_files[kAttachmentAnnotations] = std::move(file);
 
-            // Add the attachments to |snapshot_files|
-            if (const auto& result = std::get<1>(results); result.is_ok()) {
-              for (const auto& [key, value] : result.value()) {
-                if (value.HasValue()) {
-                  snapshot_files[key] = value.Value();
-                }
-              }
-            } else {
-              FX_LOGS(WARNING) << "Failed to retrieve any snapshot files";
-            }
+        // Add the attachments to |snapshot_files|
+        for (const auto& [key, value] : attachments) {
+          if (value.HasValue()) {
+            snapshot_files[key] = value.Value();
+          }
+        }
 
-            snapshot_files[kAttachmentMetadata] =
-                metadata_.MakeMetadata(annotations, attachments, uuid::Generate(),
-                                       annotation_manager_->IsMissingNonPlatformAnnotations());
+        snapshot_files[kAttachmentMetadata] =
+            metadata_.MakeMetadata(annotations, attachments, uuid::Generate(),
+                                   annotation_manager_->IsMissingNonPlatformAnnotations());
 
-            fsl::SizedVmo archive;
+        fsl::SizedVmo archive;
 
-            // We bundle the attachments into a single archive.
-            if (!snapshot_files.empty()) {
-              std::map<std::string, ArchiveFileStats> file_size_stats;
-              if (Archive(snapshot_files, &archive, &file_size_stats)) {
-                inspect_data_budget_->UpdateBudget(file_size_stats);
-                cobalt_->LogCount(SnapshotVersion::kCobalt, archive.size());
-              }
-            }
-            return ::fpromise::ok(std::pair(annotations, std::move(archive)));
-          })
-          .then([this, timer_id, callback = std::move(callback)](
-                    ::fpromise::result<std::pair<feedback::Annotations, fsl::SizedVmo>>&
-                        result) mutable {
-            if (result.is_error()) {
-              cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
-              callback(feedback::Annotations(), fsl::SizedVmo());
-            } else {
-              cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kSuccess, timer_id);
-              auto& [annotations, vmo] = result.value();
-              callback(annotations, std::move(vmo));
-            }
-          });
+        // We bundle the attachments into a single archive.
+        if (std::map<std::string, ArchiveFileStats> file_size_stats;
+            Archive(snapshot_files, &archive, &file_size_stats)) {
+          inspect_data_budget_->UpdateBudget(file_size_stats);
+          cobalt_->LogCount(SnapshotVersion::kCobalt, archive.size());
+          cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kSuccess, timer_id);
+        } else {
+          cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
+          archive.vmo().reset();
+        }
+        callback(annotations, std::move(archive));
+        return ::fpromise::ok();
+      });
 
   executor_.schedule_task(std::move(promise));
 }
