@@ -19,6 +19,7 @@ mod element_manager;
 use {
     crate::element_manager::ElementManager,
     anyhow::Error,
+    element_config::Config,
     fidl_connector::ServiceReconnector,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys,
@@ -26,6 +27,7 @@ use {
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
     std::rc::Rc,
+    tracing::info,
 };
 
 /// This enum allows the session to match on incoming messages.
@@ -33,17 +35,21 @@ enum ExposedServices {
     Manager(felement::ManagerRequestStream),
 }
 
-/// The child collection to add elements to. This must match a collection name declared in
-/// element_manager's CML file.
-const ELEMENT_COLLECTION_NAME: &str = "elements";
-
 /// The maximum number of concurrent requests.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
+    info!("Starting.");
+    let config = Config::take_from_startup_handle();
+    let inspector = fuchsia_inspect::component::inspector();
+    inspector.root().record_child("config", |config_node| config.record_inspect(config_node));
+
+    info!("Element collection name set to \"#{}\"", config.elements_collection_name);
+
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Failed to connect to Realm service");
+
     let sys_launcher = connect_to_protocol::<fsys::LauncherMarker>()
         .expect("Failed to connect to fuchsia.sys.Launcher service");
     let graphical_presenter =
@@ -60,7 +66,7 @@ async fn main() -> Result<(), Error> {
         realm,
         Some(graphical_presenter),
         sys_launcher,
-        ELEMENT_COLLECTION_NAME,
+        config.elements_collection_name.as_str(),
         scenic_uses_flatland,
     ));
 
@@ -87,7 +93,6 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use {
-        super::ELEMENT_COLLECTION_NAME,
         crate::element_manager::ElementManager,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl::endpoints::{ProtocolMarker, Proxy},
@@ -98,6 +103,8 @@ mod tests {
         session_testing::spawn_directory_server,
         test_util::Counter,
     };
+
+    const ELEMENT_COLLECTION_NAME: &str = "elements";
 
     /// Spawns a local `Manager` server.
     ///

@@ -2,33 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
-    program: {
-        runner: "elf",
-        binary: "bin/element_manager",
-    },
+    include: [ "//src/session/bin/element_manager/meta/base.shard.cml" ],
     collections: [
         {
             name: "elements",
             durability: "transient",
         },
     ],
-    capabilities: [
-        {
-            protocol: [ "fuchsia.element.Manager" ],
-        },
-    ],
     use: [
         {
             protocol: "fuchsia.component.Realm",
             from: "framework",
-        },
-        {
-            protocol: [
-                "fuchsia.element.GraphicalPresenter",
-                "fuchsia.sys.Launcher",
-                "fuchsia.ui.scenic.Scenic",
-            ],
         },
     ],
     offer: [
@@ -45,12 +29,6 @@
             ],
             from: "parent",
             to: "#elements",
-        },
-    ],
-    expose: [
-        {
-            protocol: [ "fuchsia.element.Manager" ],
-            from: "self",
         },
     ],
 }

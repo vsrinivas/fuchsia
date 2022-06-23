@@ -43,6 +43,7 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
     ":reference-scenic",
     ":reference-session",
     "//src/session/bin/element_manager:element_manager_comp",
+    "//src/session/bin/element_manager:sc_values",
   ]
 }
 

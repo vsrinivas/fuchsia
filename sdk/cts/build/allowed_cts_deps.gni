@@ -16,6 +16,7 @@ ALLOWED_CTS_DEPS = [
   # TODO(77889): Determine if this can be in the CTS.
   "//zircon/system/public:public",
   "//src/session/bin/element_manager:element_manager_comp",
+  "//src/session/bin/element_manager:sc_values",
 ]
 
 # Individual Rust dependencies that correspond to an SDK element.

@@ -11,6 +11,7 @@ rustc_binary("element_manager_bin") {
   edition = "2021"
 
   deps = [
+    ":element_config",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
@@ -21,6 +22,7 @@ rustc_binary("element_manager_bin") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//src/lib/async-utils",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -54,14 +56,64 @@ rustc_binary("element_manager_bin") {
   ]
 }
 
-fuchsia_component("element_manager_comp") {
+fuchsia_component_manifest("base_manifest") {
+  manifest = "meta/base.shard.cml"
+}
+
+fuchsia_structured_config_rust_lib("element_config") {
+  cm_label = ":base_manifest"
+}
+
+# The Element Manager component is undergoing a breaking change. Previous
+# versions consumed the `fuchsia.component.Realm` protocol from the framework.
+# However, this behavior has been changed to instead consume the protocol
+# from parent, delegating the necessary routing to the session. All clients of
+# the Element Manager component are to move to use this version. In order to
+# facilitate this transition, the deprecated version of the component is kept.
+#
+# TODO(http://fxbug.dev/95841): Remove `meta/base.shard.cml`
+# and deprecated component manifest.
+fuchsia_component_manifest("manifest") {
   component_name = "element_manager"
   manifest = "meta/element_manager.cml"
+}
+
+fuchsia_structured_config_values("sc_values") {
+  cm_label = ":manifest"
+  values = {
+    elements_collection_name = "elements"
+  }
+}
+
+fuchsia_component("element_manager_comp") {
+  cm_label = ":manifest"
+  deps = [ ":element_manager_bin" ]
+}
+
+fuchsia_component_manifest("new_element_manager_manifest") {
+  component_name = "new_element_manager"
+  manifest = "meta/new_element_manager.cml"
+}
+
+fuchsia_structured_config_values("new_element_manager_sc_values") {
+  cm_label = ":new_element_manager_manifest"
+  values = {
+    elements_collection_name = "elements"
+  }
+}
+
+fuchsia_component("new_element_manager_comp") {
+  cm_label = ":new_element_manager_manifest"
   deps = [ ":element_manager_bin" ]
 }
 
 fuchsia_package("element_manager") {
-  deps = [ ":element_manager_comp" ]
+  deps = [
+    ":element_manager_comp",
+    ":new_element_manager_comp",
+    ":new_element_manager_sc_values",
+    ":sc_values",
+  ]
 }
 
 fuchsia_unittest_package("element_manager_tests") {
