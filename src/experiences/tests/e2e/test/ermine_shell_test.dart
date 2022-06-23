@@ -65,9 +65,9 @@ void main() {
     await ermine.launch(terminalUrl);
     await ermine.waitForView(terminalUrl, testForFocus: true);
 
-    // Launch spinning_square_view, it should have focus.
+    // Launch spinning-square-rs, it should have focus.
     const spinningSquareViewUrl =
-        'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
+        'fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx';
     await ermine.launch(spinningSquareViewUrl);
     await ermine.waitForView(spinningSquareViewUrl, testForFocus: true);
 

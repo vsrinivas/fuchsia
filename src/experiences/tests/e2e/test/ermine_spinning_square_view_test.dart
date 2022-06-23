@@ -11,7 +11,7 @@ import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
 /// Tests that the DUT running ermine can do the following:
-///  - Launch `spinning_square_view` ephemeral package.
+///  - Launch `spinning-square-rs` ephemeral package.
 ///  - Verify it is show by taking its screenshot.
 void main() {
   late Sl4f sl4f;
@@ -48,7 +48,7 @@ void main() {
 
   test('Verify spinning square view is shown', () async {
     const componentUrl =
-        'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
+        'fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx';
     await ermine.launch(componentUrl);
     expect(
         await ermine.waitFor(() async {
@@ -67,7 +67,7 @@ void main() {
     expect(screenshot, isNotNull);
     final histogram = ermine.histogram(screenshot!);
 
-    // spinning_square_view displays a red square on purple background.
+    // spinning-square-rs displays a red square on purple background.
     const purple = 0xffb73a67; //  (0xAABBGGRR)
     const red = 0xff5700f5; //  (0xAABBGGRR)
     // We should find atleast 2 colors (the visible cursor adds its own color).
