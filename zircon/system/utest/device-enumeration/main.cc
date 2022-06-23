@@ -153,6 +153,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/00:00:29",  // registers device
       "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc",
+      "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
       "spi-1/aml-spi-1/spi/spi-1-0",
       "pwm-init",
   };

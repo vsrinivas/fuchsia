@@ -19,6 +19,18 @@ driver_bind_rules("av400-emmc-bind") {
   ]
 }
 
+driver_bind_rules("av400-sdio-bind") {
+  rules = "av400-sdio.bind"
+  header_output = "av400-sdio-bind.h"
+  bind_output = "av400-sdio-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 driver_bind_rules("pwm_init_bind") {
   rules = "pwm_init.bind"
   header_output = "pwm_init_bind.h"
@@ -66,12 +78,14 @@ fuchsia_driver("av400-driver") {
     "av400-i2c.cc",
     "av400-pwm.cc",
     "av400-registers.cc",
+    "av400-sdio.cc",
     "av400-spi.cc",
     "av400.cc",
   ]
   deps = [
     ":av400-bind",
     ":av400-emmc-bind_header",
+    ":av400-sdio-bind_header",
     ":pwm_init_bind_header",
     ":spi_1_bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",

@@ -74,6 +74,7 @@ class Av400 : public Av400Type {
   zx_status_t RegistersInit();
   zx_status_t EmmcInit();
   zx_status_t SpiInit();
+  zx_status_t SdioInit();
 
   int Thread();
 

@@ -43,7 +43,8 @@ static constexpr pbus_irq_t gpio_irqs[] = {
 
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
-    {A5_GPIOB(12)}, {A5_GPIOB(13)}, {A5_GPIOB(9)}, {A5_GPIOT(10)}, {A5_GPIOX(16)}, {A5_GPIOX(17)},
+    {A5_GPIOB(12)}, {A5_GPIOB(13)}, {A5_GPIOB(9)}, {A5_GPIOT(10)},
+    {A5_GPIOX(16)}, {A5_GPIOX(17)}, {A5_GPIOX(6)},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
