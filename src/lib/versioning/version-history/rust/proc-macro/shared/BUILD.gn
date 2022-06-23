@@ -8,17 +8,13 @@ import("//build/rust/rustc_library.gni")
 # Rust looks for files included with `include_str` relative to the callsite. Rebase the
 # version_history.json relative to the files in src/.
 rebased_version_history_path = rebase_path("//sdk/version_history.json", "src")
-config("env") {
-  rustenv = [ "SDK_VERSION_HISTORY=$rebased_version_history_path" ]
-}
 
 rustc_library("version-history-shared") {
   edition = "2018"
   with_unit_tests = true
-  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
-  configs += [ ":env" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
+  rustenv = [ "SDK_VERSION_HISTORY=$rebased_version_history_path" ]
 
   deps = [
     "//third_party/rust_crates:serde",

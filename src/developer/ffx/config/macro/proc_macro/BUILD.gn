@@ -23,23 +23,18 @@ if (is_host) {
   # callsite. Rebase the config path relative to the files in src/.
   rebased_config_path = rebase_path(config_path, "src")
 
-  config("env") {
+  rustc_macro("config-proc-macros") {
+    name = "config_proc_macros"
+    version = "0.1.0"
+    edition = "2018"
+
     rustenv = [ "FFX_DEFAULT_CONFIG_JSON=$rebased_config_path" ]
 
     # The config_path file is referenced from the source dir *to* the
     # output dir, which means the output dir leaks into the command.
     # This command will only succeed with a matching output dir,
     # so we must disable working-dir canonicalization.
-    configs = [ "//build/config/rust:output_dir_sensitive" ]
-  }
-
-  rustc_macro("config-proc-macros") {
-    name = "config_proc_macros"
-    version = "0.1.0"
-    edition = "2018"
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
-
-    configs += [ ":env" ]
+    configs += [ "//build/config/rust:output_dir_sensitive" ]
 
     deps = [
       ":config.json",

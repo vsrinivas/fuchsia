@@ -26,7 +26,6 @@ rustc_binary("jq5") {
 }
 
 rustc_test("jq5_bin_test") {
-  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
   edition = "2018"
   deps = [
     ":jq_for_test",
@@ -45,10 +44,6 @@ rustc_test("jq5_bin_test") {
     "src/traverser.rs",
   ]
 
-  configs += [ ":jq5_bin_test_assets" ]
-}
-
-config("jq5_bin_test_assets") {
   jq_path_init = "${target_out_dir}/jq5_tests/jq"
   jq_path = rebase_path(jq_path_init, root_build_dir)
 
