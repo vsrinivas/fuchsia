@@ -261,7 +261,7 @@ async fn copy_with_mutator(
             return Ok(());
         }
         let write = mutator(Vec::from(&buf[0..n]));
-        tx.write(&write).await?;
+        tx.write_all(&write).await?;
     }
 }
 

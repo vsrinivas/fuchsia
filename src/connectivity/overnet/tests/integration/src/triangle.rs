@@ -160,10 +160,9 @@ fn has_peer_conscript(peers: &[Peer], peer_id: NodeId) -> bool {
                 .as_ref()
                 .unwrap()
                 .iter()
-                .find(|name| *name == triangle::ConscriptMarker::PROTOCOL_NAME)
-                .is_some()
+                .any(|name| *name == triangle::ConscriptMarker::PROTOCOL_NAME)
     };
-    peers.iter().find(|p| is_peer_ready(p)).is_some()
+    peers.iter().any(|p| is_peer_ready(p))
 }
 
 fn connect_peer(
