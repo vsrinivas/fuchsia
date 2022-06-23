@@ -60,9 +60,9 @@ zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
 
   waiting_for_impl_id_ = false;
 
-  // TODO(johngro) : Don't base this setup behavior on exact matches in the
-  // implementation ID register.  We should move in the direction of
-  // implementing a universal driver which depends mostly on codec VID/DID and
+  // TODO(72652): Generic HDA codec graph traversal such that we don't base this
+  // setup behavior on exact matches in the implementation ID register.
+  // We should have a generic driver which depends mostly on codec VID/DID and
   // BIOS provided configuration hints to make the majority of configuration
   // decisions, and to rely on the impl ID as little as possible.
   //
@@ -77,6 +77,10 @@ zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     case 0x80862063:  // Skylake NUC Impl ID
     case 0x80862074:  // Coffee Lake NUC Impl ID
       res = SetupIntelNUC();
+      break;
+
+    case 0x17aa2293:
+      res = SetupLenovoX1();
       break;
 
     case 0x1025111e:
@@ -206,7 +210,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
       // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
       // the headphone output to be destroyed.
       //
-      // TODO(johngro) : figure out why
+      // TODO(103178) : figure out why
       {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
 
       // Power up the top level Audio Function group.
@@ -273,6 +277,79 @@ zx_status_t RealtekCodec::SetupAcer12() {
   return ZX_OK;
 }
 
+zx_status_t RealtekCodec::SetupLenovoX1() {
+  zx_status_t res;
+
+  DEBUG_LOG("Setting up for Lenovo X1");
+
+  res = SetupCommon();
+  if (res != ZX_OK)
+    return res;
+
+  static const CommandListEntry START_CMDS[] = {
+      // Set up the routing that we will use for the headphone output.
+      {13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0)},  // Mix NID 13, In-0 (nid 3) un-muted.
+      {13u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 1, 0)},   // Mix NID 13, In-1 (nid 11) muted.
+      {33u, SET_CONNECTION_SELECT_CONTROL(1u)},            // HP Pin source from ndx 0 (nid 13).
+
+      // Set up the routing that we will use for the speaker output.
+      {12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0)},  // Mix NID 12, In-0 (nid 2) un-muted.
+      {12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 1, 0)},   // Mix NID 12, In-1 (nid 11) muted.
+
+      // Enable MIC2's input. Failure to keep this enabled causes headphone output to not work.
+      // TODO(103178) : figure out why.
+      {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
+
+      // Power up the top level Audio Function group.
+      {1u, SET_POWER_STATE(HDA_PS_D0)},
+  };
+
+  res = RunCommandList(START_CMDS, std::size(START_CMDS));
+  if (res != ZX_OK) {
+    LOG("Failed to send startup command for Acer12 (res %d)", res);
+    return res;
+  }
+
+  // Create and publish the streams we will use.
+  static const StreamProperties STREAMS[] = {
+      // Headphones output.
+      {
+          .stream_id = 1,
+          .afg_nid = 1,
+          .conv_nid = 3,
+          .pc_nid = 33,
+          .is_input = false,
+          .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
+          .default_pc_gain = 0.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+          .mfr_name = "Lenovo",
+          .product_name = "Headphone Jack",
+      },
+
+      // Speakers.
+      {
+          .stream_id = 2,
+          .afg_nid = 1,
+          .conv_nid = 2,
+          .pc_nid = 20,
+          .is_input = false,
+          .default_conv_gain = DEFAULT_SPEAKER_GAIN,
+          .default_pc_gain = 0.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
+          .mfr_name = "Lenovo",
+          .product_name = "Built-in Speakers",
+      },
+  };
+
+  res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
+  if (res != ZX_OK) {
+    LOG("Failed to create and publish streams for Lenovo X1 (res %d)", res);
+    return res;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t RealtekCodec::SetupIntelNUC() {
   zx_status_t res;
 
@@ -299,7 +376,7 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
       // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
       // the headphone output to be destroyed.
       //
-      // TODO(johngro) : figure out why
+      // TODO(103178) : figure out why.
       {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
 
       // Power up the top level Audio Function group.

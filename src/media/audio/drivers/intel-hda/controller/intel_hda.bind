@@ -8,6 +8,7 @@ fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
 
 accept fuchsia.BIND_PCI_DID {
+  0x02C8,  // Intel 10th Gen (Cometlake)
   0x2668,  // Standard (Spec Rev 1.0a; 2010-06-17)
   0x9CA0,  // Intel Broadwell PCH
   0x9D70,  // Intel 6th Gen (Skylake) PCH-U/Y I/O Datasheet

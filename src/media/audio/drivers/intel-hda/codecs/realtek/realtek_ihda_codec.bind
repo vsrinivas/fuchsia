@@ -11,4 +11,5 @@ accept fuchsia.BIND_IHDA_CODEC_DID {
   0x0235,  // ALC235
   0x0255,  // ALC255
   0x0283,  // ALC283
+  0x0285,  // ALC285
 }
