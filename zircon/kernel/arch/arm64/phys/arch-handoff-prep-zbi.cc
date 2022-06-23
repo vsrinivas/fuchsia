@@ -76,6 +76,10 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
           ZX_ASSERT(payload.size() == 0);
           arch_handoff.as370_power_driver = true;
           break;
+        case KDRV_MOTMOT_POWER:
+          ZX_ASSERT(payload.size() == 0);
+          arch_handoff.motmot_power_driver = true;
+          break;
       }
       break;
     }

@@ -35,6 +35,9 @@ struct ArchPhysHandoff {
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_AS370_POWER) payload.
   bool as370_power_driver = false;
+
+  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_MOTMOT_POWER) payload.
+  bool motmot_power_driver = false;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_PHYS_INCLUDE_PHYS_ARCH_ARCH_HANDOFF_H_

@@ -182,6 +182,8 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
                    sizeof(timer_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_GENERIC_32BIT_WATCHDOG, &watchdog_driver,
                    sizeof(watchdog_driver));
+  uint32_t junk = 0;
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_MOTMOT_POWER, &junk, 0);
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
