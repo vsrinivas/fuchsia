@@ -123,7 +123,6 @@
                             "deprecated-misc-storage",
                             "deprecated-shell",
                             "durable-data",
-                            "factory-data",
                             "hub",
                             "isolated-cache-storage",
                             "isolated-persistent-storage",

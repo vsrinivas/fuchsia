@@ -118,43 +118,6 @@ fuchsia-pkg://fuchsia.com/indubitably-durable#meta/indubitably_durable.cmx
   EXPECT_FALSE(policy_checker.Check(sandbox, fp));
 }
 
-TEST_F(PolicyCheckerTest, FactoryDataPolicy) {
-  static constexpr char kFile[] = R"F(
-fuchsia-pkg://fuchsia.com/fastidious-factory#meta/fastidious_factory.cmx
-)F";
-
-  SandboxMetadata sandbox{};
-  sandbox.AddFeature("factory-data");
-
-  // Stub out a dispatcher.  We won't actually run anything on it, but some
-  // things in PolicyChecker assert they can grab the implicit default eventloop, so
-  // keep them happy.
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  std::string dir;
-  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
-
-  // Add the allowlist.
-  ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
-  auto filename = NewFile(dir, "allowlist/factory_data.txt", kFile);
-
-  FuchsiaPkgUrl fp;
-  PolicyChecker policy_checker(std::move(dirfd));
-
-  // "Vanilla" package url, without variant or hash
-  fp.Parse("fuchsia-pkg://fuchsia.com/fastidious-factory#meta/fastidious_factory.cmx");
-  EXPECT_TRUE(policy_checker.Check(sandbox, fp));
-
-  // Variants and hashes should be thrown away
-  fp.Parse("fuchsia-pkg://fuchsia.com/fastidious-factory/0?hash=123#meta/fastidious_factory.cmx");
-  EXPECT_TRUE(policy_checker.Check(sandbox, fp));
-
-  // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
-  EXPECT_FALSE(policy_checker.Check(sandbox, fp));
-}
-
 TEST_F(PolicyCheckerTest, HubPolicy) {
   static constexpr char kFile[] = R"F(
   fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx

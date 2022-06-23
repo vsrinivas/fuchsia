@@ -194,8 +194,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPathAs(isolated_temp_path_factory().value(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
-    } else if (feature == "factory-data") {
-      PushDirectoryFromPath("/factory");
     } else if (feature == "durable-data") {
       PushDirectoryFromPath("/durable");
       // Begin allowlisted namespace features

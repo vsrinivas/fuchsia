@@ -19,7 +19,6 @@ constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_p
 constexpr char kCr50AllowList[] = "allowlist/cr50.txt";
 constexpr char kDebugResourceAllowList[] = "allowlist/debug_resource.txt";
 constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
-constexpr char kFactoryDataAllowList[] = "allowlist/factory_data.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
 constexpr char kHypervisorResourceAllowList[] = "allowlist/hypervisor_resource.txt";
 constexpr char kInfoResourceAllowList[] = "allowlist/info_resource.txt";
@@ -69,11 +68,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("durable-data") && !CheckDurableData(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "durable-data.";
-    return std::nullopt;
-  }
-  if (sandbox.HasFeature("factory-data") && !CheckFactoryData(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "factory-data.";
     return std::nullopt;
   }
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
@@ -222,11 +216,6 @@ bool PolicyChecker::CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckDurableData(const FuchsiaPkgUrl& pkg_url) {
   AllowList durable_data_allow_list(config_, kDurableDataAllowList);
   return durable_data_allow_list.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckFactoryData(const FuchsiaPkgUrl& pkg_url) {
-  AllowList factory_data_allow_list(config_, kFactoryDataAllowList);
-  return factory_data_allow_list.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
