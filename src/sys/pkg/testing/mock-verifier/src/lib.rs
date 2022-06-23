@@ -3,30 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_update_verify::{
-        BlobfsVerifierMarker, BlobfsVerifierProxy, BlobfsVerifierRequestStream,
-        VerifierVerifyResult, VerifyOptions,
-    },
+    fidl_fuchsia_update_verify as fidl,
     fuchsia_async::Task,
-    futures::{
-        future::{self, BoxFuture},
-        prelude::*,
-        TryStreamExt,
-    },
+    futures::{future, FutureExt as _, StreamExt as _},
     std::sync::Arc,
 };
 
 /// A call hook that can be used to inject responses into the Verifier service.
 pub trait Hook: Send + Sync {
     /// Describes what the verify call will return.
-    fn verify(&self, options: VerifyOptions) -> BoxFuture<'static, VerifierVerifyResult>;
+    fn verify(
+        &self,
+        options: fidl::VerifyOptions,
+    ) -> future::BoxFuture<'static, fidl::VerifierVerifyResult>;
 }
 
 impl<F> Hook for F
 where
-    F: Fn(VerifyOptions) -> VerifierVerifyResult + Send + Sync,
+    F: Fn(fidl::VerifyOptions) -> fidl::VerifierVerifyResult + Send + Sync,
 {
-    fn verify(&self, options: VerifyOptions) -> BoxFuture<'static, VerifierVerifyResult> {
+    fn verify(
+        &self,
+        options: fidl::VerifyOptions,
+    ) -> future::BoxFuture<'static, fidl::VerifierVerifyResult> {
         future::ready(self(options)).boxed()
     }
 }
@@ -42,9 +41,9 @@ impl MockVerifierService {
     }
 
     /// Spawns an `fasync::Task` which serves fuchsia.update.verify/BlobfsVerifier.
-    pub fn spawn_blobfs_verifier_service(self: Arc<Self>) -> (BlobfsVerifierProxy, Task<()>) {
+    pub fn spawn_blobfs_verifier_service(self: Arc<Self>) -> (fidl::BlobfsVerifierProxy, Task<()>) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<BlobfsVerifierMarker>().unwrap();
+            ::fidl::endpoints::create_proxy_and_stream::<fidl::BlobfsVerifierMarker>().unwrap();
 
         let task = Task::spawn(self.run_blobfs_verifier_service(stream));
 
@@ -54,19 +53,16 @@ impl MockVerifierService {
     /// Serves fuchsia.update.verify/BlobfsVerifier.Verify requests on the given request stream.
     pub async fn run_blobfs_verifier_service(
         self: Arc<Self>,
-        mut stream: BlobfsVerifierRequestStream,
+        stream: fidl::BlobfsVerifierRequestStream,
     ) {
-        while let Some(event) = stream.try_next().await.expect("received Verifier request") {
-            match event {
-                fidl_fuchsia_update_verify::BlobfsVerifierRequest::Verify {
-                    options,
-                    responder,
-                } => {
-                    let mut res = self.call_hook.verify(options).await;
-                    responder.send(&mut res).unwrap();
-                }
-            }
-        }
+        let Self { call_hook } = &*self;
+        stream
+            .for_each(|request| match request.expect("received verifier request") {
+                fidl::BlobfsVerifierRequest::Verify { options, responder } => call_hook
+                    .verify(options)
+                    .map(|mut res| responder.send(&mut res).expect("sent verifier response")),
+            })
+            .await
     }
 }
 
@@ -84,8 +80,7 @@ mod tests {
         let mock = Arc::new(MockVerifierService::new(|_| Ok(())));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
-        let verify_result =
-            proxy.verify(VerifyOptions { ..VerifyOptions::EMPTY }).await.expect("made fidl call");
+        let verify_result = proxy.verify(fidl::VerifyOptions::EMPTY).await.expect("made fidl call");
 
         assert_eq!(verify_result, Ok(()));
     }
@@ -95,8 +90,7 @@ mod tests {
         let mock = Arc::new(MockVerifierService::new(|_| Err(VerifyError::Internal)));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
-        let verify_result =
-            proxy.verify(VerifyOptions { ..VerifyOptions::EMPTY }).await.expect("made fidl call");
+        let verify_result = proxy.verify(fidl::VerifyOptions::EMPTY).await.expect("made fidl call");
 
         assert_eq!(verify_result, Err(VerifyError::Internal));
     }
@@ -111,8 +105,7 @@ mod tests {
         }));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
-        let verify_result =
-            proxy.verify(VerifyOptions { ..VerifyOptions::EMPTY }).await.expect("made fidl call");
+        let verify_result = proxy.verify(fidl::VerifyOptions::EMPTY).await.expect("made fidl call");
 
         assert_eq!(verify_result, Ok(()));
         assert_eq!(called.load(Ordering::SeqCst), 1);
