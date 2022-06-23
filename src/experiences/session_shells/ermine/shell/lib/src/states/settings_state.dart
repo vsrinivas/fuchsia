@@ -7,6 +7,7 @@ import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/channel_service.dart';
 import 'package:ermine/src/services/settings/data_sharing_consent_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
+import 'package:ermine/src/services/settings/keyboard_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
@@ -46,7 +47,8 @@ enum SettingsPage {
   feedback,
   opensource,
   brightness,
-  about
+  about,
+  keyboard
 }
 
 typedef DisplayDialogCallback = void Function(DialogInfo);
@@ -93,6 +95,7 @@ abstract class SettingsState implements TaskService {
   bool get clientConnectionsMonitor;
   int get wifiToggleMillisecondsPassed;
   bool get dataSharingConsentEnabled;
+  String get currentKeyboardMap;
 
   factory SettingsState.from(
       {required Map<String, Set<String>> shortcutBindings,
@@ -111,6 +114,7 @@ abstract class SettingsState implements TaskService {
       channelService: ChannelService(),
       volumeService: VolumeService(),
       wifiService: WiFiService(),
+      keyboardService: KeyboardService(),
     ) as SettingsState;
   }
 

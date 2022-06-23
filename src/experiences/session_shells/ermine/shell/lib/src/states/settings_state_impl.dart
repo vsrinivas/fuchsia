@@ -9,6 +9,7 @@ import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/channel_service.dart';
 import 'package:ermine/src/services/settings/data_sharing_consent_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
+import 'package:ermine/src/services/settings/keyboard_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
@@ -182,6 +183,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       TextEditingController();
 
   @override
+  String get currentKeyboardMap => _currentKeyboardMap.value;
+  set currentKeyboardMap(String value) => _currentKeyboardMap.value = value;
+  final Observable<String> _currentKeyboardMap = Observable<String>('');
+
+  @override
   final List<NetworkInformation> availableNetworks =
       ObservableList<NetworkInformation>();
 
@@ -244,6 +250,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final ChannelService channelService;
   final VolumeService volumeService;
   final WiFiService wifiService;
+  final KeyboardService keyboardService;
 
   SettingsStateImpl({
     required this.shortcutBindings,
@@ -258,6 +265,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
+    required this.keyboardService,
   })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dataSharingConsentService.onChanged =
@@ -383,6 +391,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         wifiToggleMillisecondsPassed = wifiService.toggleMillisecondsPassed;
       });
     };
+    keyboardService.onChanged = () {
+      runInAction(() {
+        currentKeyboardMap = keyboardService.currentKeyMap;
+      });
+    };
   }
 
   @override
@@ -398,6 +411,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       channelService.start(),
       volumeService.start(),
       wifiService.start(),
+      keyboardService.start(),
     ]);
   }
 
@@ -412,6 +426,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await batteryWatcherService.stop();
     await channelService.stop();
     await wifiService.stop();
+    keyboardService.stop();
     _dateTimeNow = null;
   }
 
@@ -428,6 +443,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     channelService.dispose();
     volumeService.dispose();
     wifiService.dispose();
+    keyboardService.dispose();
   }
 
   @override

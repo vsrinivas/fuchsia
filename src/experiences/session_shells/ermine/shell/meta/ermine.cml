@@ -58,6 +58,7 @@
                 "fuchsia.power.battery.BatteryManager",
                 "fuchsia.power.button.Monitor",
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
                 "fuchsia.ui.activity.Provider",
