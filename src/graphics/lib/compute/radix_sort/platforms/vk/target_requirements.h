@@ -64,9 +64,7 @@ union radix_sort_vk_target_extensions
 // See Section `38.1 Feature Requirements` to understand how enabling certain
 // extensions guarantees support of some related features.
 //
-#define RS_VK_TARGET_FEATURES_VK10()                                                               \
-  RS_VK_TARGET_FEATURE_VK10(shaderInt64)                                                           \
-  RS_VK_TARGET_FEATURE_VK10(shaderInt16)
+#define RS_VK_TARGET_FEATURES_VK10() RS_VK_TARGET_FEATURE_VK10(shaderInt64)
 
 #define RS_VK_TARGET_FEATURES_VK11()  // No VK 1.1 features for now
 

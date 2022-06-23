@@ -22,7 +22,6 @@ const struct radix_sort_vk_target_header kRodata =
   },
 
   .features.named = {
-    .shaderInt16                  = 1,
     .shaderInt64                  = 1,
     .bufferDeviceAddress          = 1,
     .vulkanMemoryModel            = 1,
