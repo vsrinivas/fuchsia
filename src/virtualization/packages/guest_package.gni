@@ -162,25 +162,9 @@ template("guest_package") {
     }
   }
 
-  # TODO(fxbug.dev/72386)
-  # CFv2 migration in progress
-  # v2 component is being used in migrated integration tests
-  # v1 component is being used in prod code and non-migrated integration tests
-  component_target_name_v1 = "${target_name}_component_v1"
+  component_target_name = "${target_name}_component"
   component_name = target_name
-  fuchsia_component(component_target_name_v1) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    component_name = component_name
-    manifest = "//src/virtualization/packages/meta/guest_package.cmx"
-    deps = resources
-  }
-
-  component_target_name_v2 = "${target_name}_component_v2"
-  fuchsia_component(component_target_name_v2) {
+  fuchsia_component(component_target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -190,6 +174,7 @@ template("guest_package") {
     manifest = "//src/virtualization/packages/meta/guest_package.cml"
     deps = resources + [ "//src/virtualization/packages:guest_package_bin" ]
   }
+
   fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
@@ -197,11 +182,7 @@ template("guest_package") {
                              "metadata",
                              "visibility",
                            ])
-
-    deps = [
-      ":${component_target_name_v1}",
-      ":${component_target_name_v2}",
-    ]
+    deps = [ ":${component_target_name}" ]
   }
 }
 
