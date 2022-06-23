@@ -385,6 +385,13 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: serialconstants.FailedToFindCursorMsg,
 			Type:   swarmingOutputType,
 		},
+		// For fxbug.dev/103197. Usually indicates an issue with the bot. If the bots
+		// with the failures have been consistently failing with the same error, file
+		// a go/fxif-bug for the suspected bad bots.
+		&stringInLogCheck{
+			String: "server canceled transfer: could not open file for writing",
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg),
