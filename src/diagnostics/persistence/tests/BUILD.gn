@@ -3,60 +3,80 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 
 # Integration test binary for Diagnostics Persistence service.
-rustc_test("test-bin") {
+rustc_test("integration-bin") {
   edition = "2021"
   testonly = true
-  name = "canonical-diagnostics-persistence-test-bin"
+  name = "persistence_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/diagnostics/lib/inspect-fetcher",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/diagnostics/persistence/fidl:persist-rustc",
     "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
-    "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
 
-  data_deps = [ "//src/diagnostics/persistence:lib" ]
+  source_root = "lib.rs"
 
-  source_root = "integration.rs"
-  sources = [ "integration.rs" ]
+  sources = [
+    "lib.rs",
+    "mock_filesystems.rs",
+    "test_topology.rs",
+  ]
+  inputs = [ "test_data/config/test_config.persist" ]
 }
 
-# Test component for diagnostics-persistence service integration test.
-fuchsia_component("canonical-diagnostics-persistence-test") {
-  testonly = true
-  manifest = "meta/canonical-diagnostics-persistence-test.cmx"
+fuchsia_unittest_component("persistence-integration-test") {
+  manifest = "meta/integration-test.cml"
+  deps = [ ":integration-bin" ]
+}
+
+fuchsia_structured_config_values("persistence-test-config") {
+  values_source = "config/integration-test-persistence.json5"
+  component_name = "persistence"
+  cm_label = ":persistence-manifest-for-test"
+}
+
+# Rules defining the Persistence component.
+fuchsia_component_manifest("persistence-manifest-for-test") {
+  component_name = "persistence"
+  manifest = "meta/persistence-for-test.cml"
+}
+
+fuchsia_component("persistence-component-for-test") {
+  cm_label = ":persistence-manifest-for-test"
+  deps = [ "//src/diagnostics/launcher:bin" ]
+}
+
+fuchsia_test_package("persistence-integration-tests") {
+  test_components = [
+    # TODO before submitting: ":config-validation-test",
+    ":persistence-integration-test",
+  ]
   deps = [
-    ":test-bin",
-    "//src/diagnostics/iquery/test/test_component:test_component_v1",
-    "//src/diagnostics/lib/inspect-fetcher",
-    "//src/diagnostics/persistence:diagnostics-persistence-v1",
+    ":persistence-component-for-test",
+    ":persistence-test-config",
+    "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }
 
-# Config-data for the integration test. Whatever is in this file should map to the
-# test component you are using to perturbe inspect state.
-config_data("test-config") {
-  for_pkg = "diagnostics-persistence-integration-tests"
-  sources = [ "configs/test_config.persist" ]
-
-  # You need to map this config to whereever/whatever diagnostics-persistence is expecting it as.
-  outputs = [ "test_config.persist" ]
-}
-
-fuchsia_test_package("diagnostics-persistence-integration-tests") {
-  test_components = [ ":canonical-diagnostics-persistence-test" ]
-  deps = [ ":test-config" ]
+group("tests") {
+  testonly = true
+  deps = [ ":persistence-integration-tests" ]
 }

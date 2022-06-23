@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/diagnostics/persistence/meta/diagnostics-persistence.shard.cml" ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+        },
+    ],
+    use: [
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+            from: "self",
+        },
+    ],
+}
