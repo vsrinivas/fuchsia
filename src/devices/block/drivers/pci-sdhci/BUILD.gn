@@ -21,7 +21,7 @@ fuchsia_driver("pci-sdhci-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "pci-sdhci.c" ]
+  sources = [ "pci-sdhci.cc" ]
   deps = [
     ":pci-sdhci-bind_header",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
