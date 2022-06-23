@@ -1,0 +1,49 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/testing/environments.gni")
+
+# Defines a component that runs a VP9 conformance test. The output of the VP9 stream
+# will be decoded into a YUV 4:2:0 stream. Once the decoding is complete the outputted
+# stream's md5 hash will be checked against the truth located in the md5_file parameter.
+#
+# Parameters
+#
+#   ivf_file (required)
+#     The path to the vp9 stream encapsulated in an ivf file.
+#     Type: string
+#
+#   md5_file (required)
+#     The path to the md5 file that contains the md5 hash of the decoded YUV 4:2:0 stream.
+#     Type: string
+#
+#   test_specs (optional)
+#     Additional test specifications to apply to the test defined above.
+#     See `test_spec.gni`.
+#     Type: scope
+#
+template("vp9_file_decoder_conformance_test") {
+  ivf_resource_name = "${invoker.target_name}_ivf"
+  resource(ivf_resource_name) {
+    sources = [ invoker.ivf_file ]
+    outputs = [ "data/vp9.ivf" ]
+  }
+
+  md5_resource_name = "${invoker.target_name}_md5"
+  resource(md5_resource_name) {
+    sources = [ invoker.md5_file ]
+    outputs = [ "data/vp9.md5" ]
+  }
+
+  fuchsia_unittest_package(target_name) {
+    forward_variables_from(invoker, [ "test_specs" ])
+    manifest = "//src/media/codec/examples/use_media_decoder/meta/vp9_decoder_conformance_test.cml"
+    deps = [
+      ":${ivf_resource_name}",
+      ":${md5_resource_name}",
+      "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
+    ]
+  }
+}

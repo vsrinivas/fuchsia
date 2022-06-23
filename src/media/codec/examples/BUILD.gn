@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/testing/environments.gni")
+import("use_media_decoder/test/vp9_file_decoder_conformance_test.gni")
 
 declare_args() {
   build_all_vp9_file_decoder_conformance_tests = false
@@ -559,39 +560,6 @@ fuchsia_unittest_package("use_vp9_decoder_secure_input_output_test") {
   }
 }
 
-template("vp9_file_decoder_conformance_test") {
-  ivf_resource_name = "${invoker.target_name}_ivf"
-  resource(ivf_resource_name) {
-    sources = [ invoker.ivf_file ]
-    outputs = [ "data/vp9.ivf" ]
-  }
-
-  md5_resource_name = "${invoker.target_name}_md5"
-  resource(md5_resource_name) {
-    sources = [ invoker.md5_file ]
-    outputs = [ "data/vp9.md5" ]
-  }
-
-  fuchsia_unittest_package(target_name) {
-    manifest = "use_media_decoder/meta/vp9_decoder_conformance_test.cmx"
-    deps = [
-      ":${ivf_resource_name}",
-      ":${md5_resource_name}",
-      "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
-    ]
-
-    test_specs = {
-      # This should pass when run on VIM2 or astro, and will fail in any env
-      # that lacks VP9 decode.
-      # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
-      environments = [
-        sherlock_env,
-        vim3_env,
-      ]
-    }
-  }
-}
-
 #
 # Tests that don't run on CQ yet.
 #
@@ -642,6 +610,12 @@ package_name = "vp9-decoder-conformance-test--bear-vp9"
 vp9_file_decoder_conformance_test(package_name) {
   ivf_file = "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
   md5_file = "use_media_decoder/test/bear-vp9.i420.md5"
+  test_specs = {
+    environments = [
+      sherlock_env,
+      vim3_env,
+    ]
+  }
 }
 _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
 
@@ -689,6 +663,17 @@ if (build_all_vp9_file_decoder_conformance_tests) {
     vp9_file_decoder_conformance_test(package_name) {
       ivf_file = "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
       md5_file = "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
+      test_specs = {
+        # This should pass when run on VIM2 or astro, and will fail in any env
+        # that lacks VP9 decode.
+        # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
+        environments = [
+          sherlock_env,
+          vim3_env,
+          nuc_env,
+          atlas_env,
+        ]
+      }
     }
     _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
   }
