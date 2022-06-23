@@ -1002,10 +1002,10 @@ async fn test_timeout(reporter: TestMuxMuxReporter, output: TestOutputView, _: t
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
-[RUNNING]	LongRunningTest.LongRunning
-[TIMED_OUT]	LongRunningTest.LongRunning
+[RUNNING]	long_running
+[TIMED_OUT]	long_running
 
-Failed tests: LongRunningTest.LongRunning
+Failed tests: long_running
 0 out of 1 tests passed...
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
 ";
@@ -1039,10 +1039,10 @@ async fn test_timeout_multiple_times(
     assert_eq!(outcome, Outcome::Timedout);
 
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
-[RUNNING]	LongRunningTest.LongRunning
-[TIMED_OUT]	LongRunningTest.LongRunning
+[RUNNING]	long_running
+[TIMED_OUT]	long_running
 
-Failed tests: LongRunningTest.LongRunning
+Failed tests: long_running
 0 out of 1 tests passed...
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
 ";
@@ -1069,10 +1069,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
             directory::Outcome::Timedout,
         )
         .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new(
-            "LongRunningTest.LongRunning",
-            directory::Outcome::Timedout,
-        )),
+        .with_case(ExpectedTestCase::new("long_running", directory::Outcome::Timedout)),
     );
 
     assert_eq!(not_started_suites.len(), 9);
@@ -1147,10 +1144,7 @@ async fn test_continue_on_timeout(
             directory::Outcome::Timedout,
         )
         .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new(
-            "LongRunningTest.LongRunning",
-            directory::Outcome::Timedout,
-        )),
+        .with_case(ExpectedTestCase::new("long_running", directory::Outcome::Timedout)),
     );
 
     assert_eq!(passing_suites.len(), 10);

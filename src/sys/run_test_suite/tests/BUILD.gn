@@ -102,15 +102,16 @@ rustc_test("stdout_ansi_test_bin") {
   sources = [ "stdout_ansi_test.rs" ]
 }
 
-executable("long_running_test_bin") {
-  output_name = "long_running_test"
+rustc_test("long_running_test_bin") {
+  edition = "2021"
+  source_root = "long_running_test.rs"
+  name = "long_running_test"
   testonly = true
-  sources = [ "long_running_test.cc" ]
-
   deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
   ]
+  sources = [ "long_running_test.rs" ]
 }
 
 fuchsia_component("long_running_test") {
