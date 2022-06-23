@@ -19,20 +19,20 @@ use {
     },
 };
 
-pub(crate) struct MetaSubdir {
-    root_dir: Arc<RootDir>,
+pub(crate) struct MetaSubdir<S: crate::NonMetaStorage> {
+    root_dir: Arc<RootDir<S>>,
     // The object relative path expression of the subdir relative to the package root with a
     // trailing slash appended.
     path: String,
 }
 
-impl MetaSubdir {
-    pub(crate) fn new(root_dir: Arc<RootDir>, path: String) -> Self {
+impl<S: crate::NonMetaStorage> MetaSubdir<S> {
+    pub(crate) fn new(root_dir: Arc<RootDir<S>>, path: String) -> Self {
         MetaSubdir { root_dir, path }
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for MetaSubdir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaSubdir<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -105,7 +105,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaSubdir {
 }
 
 #[async_trait]
-impl vfs::directory::entry_container::Directory for MetaSubdir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry_container::Directory for MetaSubdir<S> {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -176,7 +176,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, MetaSubdir) {
+        async fn new() -> (Self, MetaSubdir<blobfs::Client>) {
             let pkg = PackageBuilder::new("pkg")
                 .add_resource_at("meta/dir/dir/file", &b"contents"[..])
                 .build()

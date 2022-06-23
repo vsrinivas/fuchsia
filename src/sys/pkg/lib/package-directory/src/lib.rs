@@ -58,17 +58,51 @@ impl Error {
     }
 }
 
+/// The storage that provides the non-meta files (accessed by hash) of a package-directory (e.g.
+/// blobfs).
+pub trait NonMetaStorage: Send + Sync + 'static {
+    /// Open a non-meta file by hash.
+    fn open(
+        &self,
+        blob: &fuchsia_hash::Hash,
+        flags: fio::OpenFlags,
+        mode: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fuchsia_fs::node::OpenError>;
+}
+
+impl NonMetaStorage for blobfs::Client {
+    fn open(
+        &self,
+        blob: &fuchsia_hash::Hash,
+        flags: fio::OpenFlags,
+        mode: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fuchsia_fs::node::OpenError> {
+        self.forward_open(blob, flags, mode, server_end)
+            .map_err(fuchsia_fs::node::OpenError::SendOpenRequest)
+    }
+}
+
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
 /// The connection rights are set by `flags`, used the same as the `flags` parameter of
 ///   fuchsia.io/Directory.Open.
 pub fn serve(
     scope: vfs::execution_scope::ExecutionScope,
-    blobfs: blobfs::Client,
+    non_meta_storage: impl NonMetaStorage,
     meta_far: fuchsia_hash::Hash,
     flags: fio::OpenFlags,
     server_end: ServerEnd<fio::DirectoryMarker>,
 ) -> impl futures::Future<Output = Result<(), Error>> {
-    serve_path(scope, blobfs, meta_far, flags, 0, VfsPath::dot(), server_end.into_channel().into())
+    serve_path(
+        scope,
+        non_meta_storage,
+        meta_far,
+        flags,
+        0,
+        VfsPath::dot(),
+        server_end.into_channel().into(),
+    )
 }
 
 /// Serves a sub-`path` of a package directory for the package with hash `meta_far` on `server_end`.
@@ -78,14 +112,14 @@ pub fn serve(
 ///   response with an error status if requested.
 pub async fn serve_path(
     scope: vfs::execution_scope::ExecutionScope,
-    blobfs: blobfs::Client,
+    non_meta_storage: impl NonMetaStorage,
     meta_far: fuchsia_hash::Hash,
     flags: fio::OpenFlags,
     mode: u32,
     path: VfsPath,
     server_end: ServerEnd<fio::NodeMarker>,
 ) -> Result<(), Error> {
-    let root_dir = match RootDir::new(blobfs, meta_far).await {
+    let root_dir = match RootDir::new(non_meta_storage, meta_far).await {
         Ok(d) => d,
         Err(e) => {
             let () = send_on_open_with_error(flags, server_end, e.to_zx_status());

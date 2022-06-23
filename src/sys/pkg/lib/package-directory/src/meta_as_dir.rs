@@ -19,17 +19,17 @@ use {
     },
 };
 
-pub(crate) struct MetaAsDir {
-    root_dir: Arc<RootDir>,
+pub(crate) struct MetaAsDir<S: crate::NonMetaStorage> {
+    root_dir: Arc<RootDir<S>>,
 }
 
-impl MetaAsDir {
-    pub(crate) fn new(root_dir: Arc<RootDir>) -> Self {
+impl<S: crate::NonMetaStorage> MetaAsDir<S> {
+    pub(crate) fn new(root_dir: Arc<RootDir<S>>) -> Self {
         MetaAsDir { root_dir }
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for MetaAsDir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsDir<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -104,7 +104,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsDir {
 }
 
 #[async_trait]
-impl vfs::directory::entry_container::Directory for MetaAsDir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry_container::Directory for MetaAsDir<S> {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -171,7 +171,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, MetaAsDir) {
+        async fn new() -> (Self, MetaAsDir<blobfs::Client>) {
             let pkg = PackageBuilder::new("pkg")
                 .add_resource_at("meta/dir/file", &b"contents"[..])
                 .build()

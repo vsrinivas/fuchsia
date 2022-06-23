@@ -11,7 +11,7 @@ use {
         non_meta_subdir::NonMetaSubdir,
         Error,
     },
-    anyhow::{anyhow, Context as _},
+    anyhow::Context as _,
     async_trait::async_trait,
     async_utils::async_once::Once,
     fidl::endpoints::ServerEnd,
@@ -35,8 +35,8 @@ use {
 
 /// The root directory of Fuchsia package.
 #[derive(Debug)]
-pub struct RootDir {
-    pub(crate) blobfs: blobfs::Client,
+pub struct RootDir<S: crate::NonMetaStorage> {
+    pub(crate) non_meta_storage: S,
     pub(crate) hash: fuchsia_hash::Hash,
     pub(crate) meta_far: fio::FileProxy,
     // The keys are object relative path expressions.
@@ -46,11 +46,12 @@ pub struct RootDir {
     meta_far_vmo: Once<zx::Vmo>,
 }
 
-impl RootDir {
-    /// Loads the package metadata given by `hash` from `blobfs`, returning an object representing
-    /// the package, backed by `blobfs`.
-    pub async fn new(blobfs: blobfs::Client, hash: fuchsia_hash::Hash) -> Result<Self, Error> {
-        let meta_far = blobfs.open_blob_for_read_no_describe(&hash).map_err(Error::OpenMetaFar)?;
+impl<S: crate::NonMetaStorage> RootDir<S> {
+    /// Loads the package metadata given by `hash` from `non_meta_storage`, returning an object
+    /// representing the package, backed by `non_meta_storage`.
+    pub async fn new(non_meta_storage: S, hash: fuchsia_hash::Hash) -> Result<Self, Error> {
+        let meta_far =
+            open_for_read_no_describe(&non_meta_storage, &hash).map_err(Error::OpenMetaFar)?;
 
         let reader = fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far));
         let mut async_reader = AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(reader))
@@ -85,18 +86,16 @@ impl RootDir {
 
         let meta_far_vmo = Default::default();
 
-        Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
+        Ok(RootDir { non_meta_storage, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
     }
 
     /// Returns the contents, if present, of the file at object relative path expression `path`.
     /// https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
     pub async fn read_file(&self, path: &str) -> Result<Vec<u8>, ReadFileError> {
         if let Some(hash) = self.non_meta_files.get(path) {
-            let blob = self
-                .blobfs
-                .open_blob_for_read_no_describe(hash)
-                .map_err(ReadFileError::BlobfsOpen)?;
-            return fuchsia_fs::file::read(&blob).await.map_err(ReadFileError::BlobfsRead);
+            let blob = open_for_read_no_describe(&self.non_meta_storage, hash)
+                .map_err(ReadFileError::Open)?;
+            return fuchsia_fs::file::read(&blob).await.map_err(ReadFileError::Read);
         }
 
         if let Some(location) = self.meta_files.get(path) {
@@ -148,10 +147,10 @@ impl RootDir {
 #[derive(thiserror::Error, Debug)]
 pub enum ReadFileError {
     #[error("opening blob")]
-    BlobfsOpen(#[source] fuchsia_fs::node::OpenError),
+    Open(#[source] fuchsia_fs::node::OpenError),
 
     #[error("reading blob")]
-    BlobfsRead(#[source] fuchsia_fs::file::ReadError),
+    Read(#[source] fuchsia_fs::file::ReadError),
 
     #[error("reading part of a blob")]
     PartialBlobRead(#[source] std::io::Error),
@@ -160,7 +159,7 @@ pub enum ReadFileError {
     NoFileAtPath { path: String },
 }
 
-impl vfs::directory::entry::DirectoryEntry for RootDir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for RootDir<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -254,9 +253,13 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         }
 
         if let Some(blob) = self.non_meta_files.get(canonical_path) {
-            let () = self.blobfs.forward_open(blob, flags, mode, server_end).unwrap_or_else(|e| {
-                fx_log_err!("Error forwarding content blob open to blobfs: {:#}", anyhow!(e))
-            });
+            let () =
+                self.non_meta_storage.open(blob, flags, mode, server_end).unwrap_or_else(|e| {
+                    fx_log_err!(
+                        "Error forwarding content blob open to blobfs: {:#}",
+                        anyhow::anyhow!(e)
+                    )
+                });
             return;
         }
 
@@ -283,7 +286,7 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
 }
 
 #[async_trait]
-impl vfs::directory::entry_container::Directory for RootDir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry_container::Directory for RootDir<S> {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -347,10 +350,27 @@ fn open_meta_as_file(flags: fio::OpenFlags, mode: u32) -> bool {
     open_as_file || !open_as_dir
 }
 
+// Open a non-meta file by hash with flags of OPEN_RIGHT_READABLE and return the proxy.
+fn open_for_read_no_describe(
+    non_meta_storage: &impl crate::NonMetaStorage,
+    blob: &fuchsia_hash::Hash,
+) -> Result<fio::FileProxy, fuchsia_fs::node::OpenError> {
+    let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()
+        .map_err(fuchsia_fs::node::OpenError::CreateProxy)?;
+    let () = non_meta_storage.open(
+        blob,
+        fio::OpenFlags::RIGHT_READABLE,
+        0,
+        server_end.into_channel().into(),
+    )?;
+    Ok(file)
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        anyhow::anyhow,
         assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, Proxy as _},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
@@ -365,7 +385,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, RootDir) {
+        async fn new() -> (Self, RootDir<blobfs::Client>) {
             let pkg = PackageBuilder::new("base-package-0")
                 .add_resource_at("resource", "blob-contents".as_bytes())
                 .add_resource_at("dir/file", "bloblob".as_bytes())

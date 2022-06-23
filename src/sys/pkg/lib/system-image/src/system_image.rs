@@ -24,7 +24,7 @@ pub enum ExecutabilityRestrictions {
 
 /// System image package.
 pub struct SystemImage {
-    root_dir: RootDir,
+    root_dir: RootDir<blobfs::Client>,
 }
 
 impl SystemImage {
@@ -39,7 +39,7 @@ impl SystemImage {
     }
 
     /// Make a `SystemImage` from a `RootDir` for the `system_image` package.
-    pub fn from_root_dir(root_dir: RootDir) -> Self {
+    pub fn from_root_dir(root_dir: RootDir<blobfs::Client>) -> Self {
         Self { root_dir }
     }
 
@@ -100,7 +100,7 @@ impl SystemImage {
     }
 
     /// Consume self and return the contained `package_directory::RootDir`.
-    pub fn into_root_dir(self) -> RootDir {
+    pub fn into_root_dir(self) -> RootDir<blobfs::Client> {
         self.root_dir
     }
 }

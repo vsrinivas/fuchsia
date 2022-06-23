@@ -14,12 +14,12 @@ use {
     },
 };
 
-pub(crate) struct MetaAsFile {
-    root_dir: Arc<RootDir>,
+pub(crate) struct MetaAsFile<S: crate::NonMetaStorage> {
+    root_dir: Arc<RootDir<S>>,
 }
 
-impl MetaAsFile {
-    pub(crate) fn new(root_dir: Arc<RootDir>) -> Self {
+impl<S: crate::NonMetaStorage> MetaAsFile<S> {
+    pub(crate) fn new(root_dir: Arc<RootDir<S>>) -> Self {
         MetaAsFile { root_dir }
     }
 
@@ -28,7 +28,7 @@ impl MetaAsFile {
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsFile<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -73,7 +73,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
 }
 
 #[async_trait]
-impl vfs::file::File for MetaAsFile {
+impl<S: crate::NonMetaStorage> vfs::file::File for MetaAsFile<S> {
     async fn open(&self, _flags: fio::OpenFlags) -> Result<(), zx::Status> {
         Ok(())
     }
@@ -159,7 +159,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, MetaAsFile) {
+        async fn new() -> (Self, MetaAsFile<blobfs::Client>) {
             let pkg = PackageBuilder::new("pkg").build().await.unwrap();
             let (metafar_blob, _) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();

@@ -25,14 +25,14 @@ pub(crate) struct MetaFileLocation {
     pub(crate) length: u64,
 }
 
-pub(crate) struct MetaFile {
-    root_dir: Arc<RootDir>,
+pub(crate) struct MetaFile<S: crate::NonMetaStorage> {
+    root_dir: Arc<RootDir<S>>,
     location: MetaFileLocation,
     vmo: OnceCell<zx::Vmo>,
 }
 
-impl MetaFile {
-    pub(crate) fn new(root_dir: Arc<RootDir>, location: MetaFileLocation) -> Self {
+impl<S: crate::NonMetaStorage> MetaFile<S> {
+    pub(crate) fn new(root_dir: Arc<RootDir<S>>, location: MetaFileLocation) -> Self {
         MetaFile { root_dir, location, vmo: OnceCell::new() }
     }
 
@@ -61,7 +61,7 @@ impl MetaFile {
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for MetaFile {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaFile<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -106,7 +106,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
 }
 
 #[async_trait]
-impl vfs::file::File for MetaFile {
+impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
     async fn open(&self, _flags: fio::OpenFlags) -> Result<(), zx::Status> {
         Ok(())
     }
@@ -201,7 +201,7 @@ impl vfs::file::File for MetaFile {
             mode: fio::MODE_TYPE_FILE
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
-                    true, // write
+                    true,  // write
                     false, // execute
                 ),
             id: 1,
@@ -249,7 +249,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, MetaFile) {
+        async fn new() -> (Self, MetaFile<blobfs::Client>) {
             let pkg = PackageBuilder::new("pkg")
                 .add_resource_at("meta/file", &TEST_FILE_CONTENTS[..])
                 .build()

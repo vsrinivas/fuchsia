@@ -21,20 +21,20 @@ use {
         path::Path as VfsPath,
     },
 };
-pub(crate) struct NonMetaSubdir {
-    root_dir: Arc<RootDir>,
+pub(crate) struct NonMetaSubdir<S: crate::NonMetaStorage> {
+    root_dir: Arc<RootDir<S>>,
     // The object relative path expression of the subdir relative to the package root with a
     // trailing slash appended.
     path: String,
 }
 
-impl NonMetaSubdir {
-    pub(crate) fn new(root_dir: Arc<RootDir>, path: String) -> Self {
+impl<S: crate::NonMetaStorage> NonMetaSubdir<S> {
+    pub(crate) fn new(root_dir: Arc<RootDir<S>>, path: String) -> Self {
         NonMetaSubdir { root_dir, path }
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for NonMetaSubdir<S> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -81,8 +81,8 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
         if let Some(blob) = self.root_dir.non_meta_files.get(&file_path) {
             let () = self
                 .root_dir
-                .blobfs
-                .forward_open(blob, flags, mode, server_end)
+                .non_meta_storage
+                .open(blob, flags, mode, server_end)
                 .unwrap_or_else(|e| {
                     fx_log_err!("Error forwarding content blob open to blobfs: {:#}", anyhow!(e))
                 });
@@ -107,7 +107,7 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
 }
 
 #[async_trait]
-impl vfs::directory::entry_container::Directory for NonMetaSubdir {
+impl<S: crate::NonMetaStorage> vfs::directory::entry_container::Directory for NonMetaSubdir<S> {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -177,7 +177,7 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, NonMetaSubdir) {
+        async fn new() -> (Self, NonMetaSubdir<blobfs::Client>) {
             let pkg = PackageBuilder::new("pkg")
                 .add_resource_at("dir0/dir1/file", "bloblob".as_bytes())
                 .build()
