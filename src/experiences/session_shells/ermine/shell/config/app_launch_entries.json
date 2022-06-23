@@ -8,7 +8,7 @@
     {
         "icon": "images/SpinningSquare-icon-2x.png",
         "title": "Spinning Square",
-        "url": "fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx"
+        "url": "fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cm"
     },
     {
         "icon": "images/Terminal-icon-2x.png",
