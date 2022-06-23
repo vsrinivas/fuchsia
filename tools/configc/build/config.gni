@@ -346,3 +346,57 @@ template("validate_packaged_config") {
     ]
   }
 }
+
+# Dump a component's structured configuration values into human-readable JSON.
+#
+# Parameters
+#
+#  cm (path)
+#    Path to the output of the `cm` or `fuchsia_component_manifest` templates.
+#
+#  cvf (path)
+#    Path to the output of the `cvf` or `fuchsia_structured_config_values` templates.
+#
+#  output (path)
+#    Path to which to write the human-readable values.
+#
+#  deps (optional)
+#  metadata (optional)
+#  testonly (optional)
+#  visibility (optional)
+template("dump_structured_config") {
+  assert(defined(invoker.cm),
+         "must define `cm` as a path to a compiled manifest")
+  assert(defined(invoker.cvf), "must define `cvf` as a path to a values file")
+  assert(defined(invoker.output),
+         "must provide an `output` path for dumped json")
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "metadata",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/configc"
+    tool_output_name = "configc"
+
+    inputs = [
+      invoker.cm,
+      invoker.cvf,
+    ]
+    outputs = [ invoker.output ]
+
+    args = [
+      "dump-values",
+      "--cm",
+      rebase_path(invoker.cm, root_build_dir),
+      "--cvf",
+      rebase_path(invoker.cvf, root_build_dir),
+      "--output",
+      rebase_path(invoker.output, root_build_dir),
+    ]
+  }
+}

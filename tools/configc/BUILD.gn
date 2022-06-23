@@ -15,10 +15,12 @@ if (is_host) {
     name = "configc"
 
     deps = [
+      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//src/lib/assembly/validate_product",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_rust",
+      "//src/sys/lib/config_encoder",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
@@ -34,6 +36,7 @@ if (is_host) {
       "src/client_rust.rs",
       "src/common.rs",
       "src/cvf.rs",
+      "src/dump_values.rs",
       "src/main.rs",
       "src/validate_package.rs",
     ]
@@ -135,6 +138,34 @@ golden_file("cpp_driver_config_lib_h_golden_test") {
   testonly = true
 }
 
+_cm = get_target_outputs(":config_manifest")
+_cm = _cm[0]
+cvf("example_values") {
+  cm = _cm
+  value_file = "goldens/config_values.json5"
+  deps = [ ":config_manifest" ]
+}
+
+_cvf = get_target_outputs(":example_values")
+_cvf = _cvf[0]
+_dumped_values = "$target_out_dir/dumped_values.json"
+dump_structured_config("dump_example_values") {
+  cm = _cm
+  cvf = _cvf
+  output = _dumped_values
+  deps = [
+    ":config_manifest",
+    ":example_values",
+  ]
+}
+
+golden_file("value_dump_golden_test") {
+  golden = "goldens/dumped_values.json.golden"
+  current = _dumped_values
+  deps = [ ":dump_example_values" ]
+  testonly = true
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -144,6 +175,7 @@ group("tests") {
     ":cpp_elf_config_lib_h_golden_test",
     ":fidl_config_lib_golden_test",
     ":rust_config_lib_golden_test",
+    ":value_dump_golden_test",
   ]
 }
 

@@ -7,6 +7,7 @@ mod client_fidl;
 mod client_rust;
 mod common;
 mod cvf;
+mod dump_values;
 mod validate_package;
 
 use anyhow::Error;
@@ -15,6 +16,7 @@ use client_cpp::GenerateCppSource;
 use client_fidl::GenerateFidlSource;
 use client_rust::GenerateRustSource;
 use cvf::GenerateValueFile;
+use dump_values::DumpValues;
 use validate_package::ValidatePackage;
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -32,6 +34,7 @@ enum Subcommand {
     GenerateRustSource(GenerateRustSource),
     GenerateCppSource(GenerateCppSource),
     ValidatePackage(ValidatePackage),
+    DumpValues(DumpValues),
 }
 
 fn main() -> Result<(), Error> {
@@ -43,5 +46,6 @@ fn main() -> Result<(), Error> {
         Subcommand::GenerateRustSource(cmd) => cmd.generate(),
         Subcommand::GenerateCppSource(cmd) => cmd.generate(),
         Subcommand::ValidatePackage(cmd) => cmd.validate(),
+        Subcommand::DumpValues(cmd) => cmd.dump(),
     }
 }
