@@ -35,8 +35,6 @@ template("sdk_documentation") {
                            [
                              "category",
                              "files",
-                             "non_sdk_deps",
-                             "testonly",
                            ])
 
     id = "sdk://docs/${invoker.name}"

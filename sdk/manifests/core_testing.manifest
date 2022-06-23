@@ -1,5 +1,4 @@
 sdk://docs/metadata_schemas
-sdk://docs/ref_docs
 sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.component.config
 sdk://fidl/fuchsia.component.decl

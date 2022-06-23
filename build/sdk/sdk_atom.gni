@@ -237,6 +237,7 @@ template("sdk_atom") {
           "--output",
           rebase_path(current_api_file, root_build_dir),
         ]
+
         deps = gn_deps
 
         foreach(file, invoker.api_contents) {
