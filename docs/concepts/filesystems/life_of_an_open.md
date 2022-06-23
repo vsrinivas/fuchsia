@@ -198,7 +198,6 @@ implementations:
     implementation.
   * [SDK C++ VFS](/sdk/lib/vfs/cpp): A somewhat simplified version of of the "in-tree" C++ version
     for SDK users. This is most commonly used for simpler uses like service discovery.
-  * [Rpc package of ThinFS](/src/lib/thinfs/zircon/rpc/rpc.go): Go VFS implementation.
 
 The VFS layer defines the interface of operations that may be routed to the
 underlying filesystem, including:

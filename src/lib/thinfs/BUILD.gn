@@ -93,8 +93,6 @@ go_library("thinfs_lib") {
     "mbr/signature_string.go",
     "thinio/conductor.go",
     "thinio/conductor_test.go",
-    "zircon/rpc/rpc.go",
-    "zircon/rpc/rpc_test.go",
   ]
 }
 
@@ -140,21 +138,10 @@ go_test("thinfs_thinio_test") {
   deps = [ ":thinfs_lib" ]
 }
 
-go_test("thinfs_zircon_rpc_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/thinfs/zircon/rpc" ]
-
-  deps = [ ":thinfs_lib" ]
-}
-
-fuchsia_unittest_package("thinfs-zircon-rpc-test") {
-  deps = [ ":thinfs_zircon_rpc_test" ]
-}
-
 group("tests") {
   testonly = true
 
   deps = [
-    ":thinfs-zircon-rpc-test",
     ":thinfs_bitops_test($host_toolchain)",
     ":thinfs_block_fake_test($host_toolchain)",
     ":thinfs_block_file_test($host_toolchain)",
