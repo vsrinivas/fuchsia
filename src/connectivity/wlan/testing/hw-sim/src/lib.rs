@@ -703,6 +703,7 @@ pub async fn connect_to_ap<F, R>(
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
+    timeout: Option<i64>,
 ) -> R
 where
     F: Future<Output = R> + Unpin,
@@ -715,7 +716,7 @@ where
     let phy = helper.proxy();
     helper
         .run_until_complete_or_timeout(
-            30.seconds(),
+            timeout.unwrap_or(30).seconds(),
             format!("connecting to {} ({:02X?})", ap_ssid.to_string_not_redactable(), ap_bssid),
             |event| {
                 handle_connect_events(
@@ -796,6 +797,7 @@ pub async fn connect_with_security_type(
         &bss_protection,
         &mut authenticator,
         &mut update_sink,
+        None,
     )
     .await;
 }

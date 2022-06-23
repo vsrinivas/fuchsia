@@ -71,6 +71,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &Protection::Wpa2Personal,
             &mut authenticator,
             &mut Some(wlan_rsn::rsna::UpdateSink::default()),
+            None,
         )
         .await;
         info!("As expected, the connection failed.");
@@ -104,6 +105,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &Protection::Wpa1,
             &mut authenticator,
             &mut Some(wlan_rsn::rsna::UpdateSink::default()),
+            None,
         )
         .await;
         info!("As expected, the connection failed.");
@@ -129,6 +131,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &Protection::Wep,
             &mut None,
             &mut None,
+            None,
         )
         .await;
         info!("As expected, the connection failed.");
@@ -154,6 +157,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &Protection::Open,
             &mut None,
             &mut None,
+            None,
         )
         .await;
         info!("As expected, the connection failed.");
