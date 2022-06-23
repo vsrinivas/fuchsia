@@ -177,8 +177,6 @@ void SetupWatchpoint(zx::thread& crash_thread) {
   // that bits 63:49 be a sign extension of bit 48 (that is, it cannot be tagged)
   // (D13.3.12).
   debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uintptr_t>(&gVariableToChange);
-  ZX_ASSERT((debug_regs.hw_wps[0].dbgwvr & 0b111) == 0 &&
-            "The lowest 3 bits of DBGWVR must not be set");
 
   ASSERT_OK(crash_thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs)));
 }
