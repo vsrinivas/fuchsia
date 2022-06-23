@@ -161,6 +161,19 @@ static const pbus_dev_t xhci_dev = []() {
   return dev;
 }();
 
+static const zx_bind_inst_t xhci_phy_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
+};
+static const device_fragment_part_t xhci_phy_fragment[] = {
+    {std::size(xhci_phy_match), xhci_phy_match},
+};
+static const device_fragment_t xhci_fragments[] = {
+    {"xhci-phy", std::size(xhci_phy_fragment), xhci_phy_fragment},
+};
+
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
 static pbus_metadata_t usb_metadata[] = {
@@ -238,9 +251,8 @@ zx_status_t Vim3::UsbInit() {
     return status;
   }
 
-  // Power on USB and wait for 30 ms (sleep duration derived from trial and error).
+  // Power on USB.
   gpio_impl_.ConfigOut(VIM3_USB_PWR, 1);
-  zx::nanosleep(zx::deadline_after(zx::msec(30)));
 
   // Create USB Phy Device
   status = pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
@@ -280,9 +292,10 @@ zx_status_t Vim3::UsbInit() {
   }
 
   // Create XHCI device.
-  status = pbus_.DeviceAdd(&xhci_dev);
+  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
+                                    std::size(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd(xhci) failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
   }
 

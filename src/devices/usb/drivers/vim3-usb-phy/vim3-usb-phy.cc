@@ -215,13 +215,8 @@ void Vim3UsbPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
     PLL_REGISTER::Get(0x34).FromValue(pll_settings_[5]).WriteTo(phy_mmio);
   }
 
-  if (mode == UsbMode::HOST) {
-    AddXhciDevice();
-    RemoveDwc2Device(std::move(completion));
-  } else {
-    AddDwc2Device();
-    RemoveXhciDevice(std::move(completion));
-  }
+  AddXhciDevice();
+  AddDwc2Device();
 }
 
 int Vim3UsbPhy::IrqThread() {
