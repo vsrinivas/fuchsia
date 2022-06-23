@@ -365,6 +365,7 @@ sdk_molecule("core_testing_idk") {
     "//sdk/fidl:fidl_testing",
     "//sdk/lib/sys/component/cpp/testing:cpp_library_sdk",
     "//sdk/lib/sys/cpp/testing:cpp_sdk",
+    "//tools/docsgen:ref_docs_sdk",
     "//zircon/system/ulib/async-testing:async-testing_sdk",
   ]
 }
