@@ -117,7 +117,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell run_yuv_to_image_pipe_benchmark.sh"
     "shell run-test-component"
     "shell run-test-suite"
-    "shell runmany"
     "shell scp"
     "shell screencap"
     "shell sed"

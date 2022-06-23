@@ -43,7 +43,6 @@ group("tools") {
     "//src/sys/run_test_suite",
     "//src/sys/tools/activity-ctl",
     "//src/sys/tools/log",
-    "//src/sys/tools/runmany",
     "//src/ui/tools:scenic",
     "//src/ui/tools/tiles_ctl",
     "//third_party/boringssl:boringssl_tool",

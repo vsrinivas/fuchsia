@@ -28,7 +28,6 @@ group("core-tools") {
     "//src/graphics/lib/magma:magma-tools",
     "//src/recovery/factory_reset:tools",
     "//src/sys/pkg/bin/pm:host",
-    "//src/sys/tools/runmany",
     "//src/ui/tools:scenic",
     "//src/ui/tools/tiles_ctl",
     "//third_party/curl",
