@@ -196,6 +196,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     input_queue_.StopAllWaits();
     free_output_packets_.StopAllWaits();
 
+    // If we are waiting for a mid stream output buffer reconfiguration, stop.
+    // CoreCodecMidStreamOutputBufferReConfigFinish() will not be called.
+    {
+      std::lock_guard<std::mutex> guard(lock_);
+      is_stream_stopped_ = true;
+    }
+    surface_buffer_manager_cv_.notify_all();
+
     // It is possible a stream was started by no input packets were provided which means that the
     // surface buffer manager was never constructed.
     if (surface_buffer_manager_) {
@@ -611,6 +619,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   std::unique_ptr<SurfaceBufferManager> surface_buffer_manager_;
   std::condition_variable surface_buffer_manager_cv_;
   bool mid_stream_output_buffer_reconfig_finish_ FXL_GUARDED_BY(lock_) = false;
+  bool is_stream_stopped_ /* FXL_GUARDED_BY(lock_) */ = false;
 
   // Buffers the client has added but that we cannot use until configuration is
   // complete.

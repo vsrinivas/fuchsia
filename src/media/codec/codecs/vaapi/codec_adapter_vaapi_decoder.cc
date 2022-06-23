@@ -700,6 +700,11 @@ void CodecAdapterVaApiDecoder::CoreCodecStartStream() {
   input_queue_.Reset();
   free_output_packets_.Reset(/*keep_data=*/true);
 
+  {
+    std::lock_guard<std::mutex> guard(lock_);
+    is_stream_stopped_ = false;
+  }
+
   // If the stream has initialized then reset
   if (surface_buffer_manager_) {
     surface_buffer_manager_->Reset();
@@ -747,7 +752,8 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
       // Trigger a mid stream output constraints change
       // TODO(fxbug.dev/102737): We always request a output reconfiguration. This may or may not be
       // needed.
-      events_->onCoreCodecMidStreamOutputConstraintsChange(true);
+      bool output_re_config_required = true;
+      events_->onCoreCodecMidStreamOutputConstraintsChange(output_re_config_required);
 
       gfx::Size pic_size = media_decoder_->GetPicSize();
       VAContextID context_id;
@@ -760,13 +766,20 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
       }
       context_id_.emplace(context_id);
 
-      // Wait for the stream reconfiguration to finish before continuing to increment the surface
-      // generation value
-      {
+      // Only wait if an output reconfiguration was required. Otherwise the buffers will be kept and
+      // only the new output constraints will be sent.
+      if (output_re_config_required) {
+        // Wait for the stream reconfiguration to finish before continuing to increment the surface
+        // generation value
         std::unique_lock<std::mutex> lock(lock_);
         surface_buffer_manager_cv_.wait(lock, [this]() FXL_REQUIRE(lock_) {
-          return mid_stream_output_buffer_reconfig_finish_;
+          return mid_stream_output_buffer_reconfig_finish_ || is_stream_stopped_;
         });
+
+        // If the stream is stopped, exit immediately
+        if (is_stream_stopped_) {
+          return;
+        }
       }
 
       // Increment surface generation so all existing surfaces will be freed
