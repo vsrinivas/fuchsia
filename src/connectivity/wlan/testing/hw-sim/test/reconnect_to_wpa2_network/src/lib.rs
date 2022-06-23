@@ -67,7 +67,9 @@ fn handle_phy_event(
         WlantapPhyEvent::Tx { args } => handle_tx_event(
             &args,
             phy,
+            ssid,
             bssid,
+            protection,
             authenticator,
             update_sink,
             |authenticator,

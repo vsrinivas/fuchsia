@@ -473,7 +473,9 @@ pub fn handle_set_channel_event(
 pub fn handle_tx_event<F>(
     args: &TxArgs,
     phy: &WlantapPhyProxy,
+    ssid: &Ssid,
     bssid: &Bssid,
+    protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
     mut process_auth_update: F,
@@ -586,6 +588,13 @@ pub fn handle_tx_event<F>(
                         );
                     }
                 }
+                Some(mac::MgmtBody::ProbeReq { .. }) => {
+                    // Normally, the AP would only send probe response on the channel it's
+                    // on, but our TestHelper doesn't have that feature yet and it
+                    // does not affect any current tests.
+                    send_probe_resp(&CHANNEL, &bssid, ssid, protection, None, &phy, -10)
+                        .expect("Error sending fake probe response frame");
+                }
                 _ => {}
             }
         }
@@ -642,16 +651,25 @@ pub fn handle_connect_events(
                 Some(_) => handle_tx_event(
                     &args,
                     phy,
+                    ssid,
                     bssid,
+                    protection,
                     authenticator,
                     update_sink,
                     process_tx_auth_updates,
                 ),
                 None => panic!("No UpdateSink provided with Authenticator."),
             },
-            None => {
-                handle_tx_event(&args, phy, bssid, &mut None, &mut None, process_tx_auth_updates)
-            }
+            None => handle_tx_event(
+                &args,
+                phy,
+                ssid,
+                bssid,
+                protection,
+                &mut None,
+                &mut None,
+                process_tx_auth_updates,
+            ),
         },
         _ => (),
     }
