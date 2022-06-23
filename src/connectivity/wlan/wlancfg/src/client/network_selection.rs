@@ -1005,7 +1005,7 @@ mod tests {
         // build our expected result
         let failure_time = test_values
             .saved_network_manager
-            .lookup(test_id_1.clone().into())
+            .lookup(&test_id_1.clone().into())
             .await
             .get(0)
             .expect("failed to get config")

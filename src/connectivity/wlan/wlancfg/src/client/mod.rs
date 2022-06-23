@@ -245,7 +245,7 @@ async fn handle_client_request_connect(
     network: &fidl_policy::NetworkIdentifier,
 ) -> Result<oneshot::Receiver<()>, Error> {
     let network_config = saved_networks
-        .lookup(NetworkIdentifier::new(
+        .lookup(&NetworkIdentifier::new(
             client_types::Ssid::from_bytes_unchecked(network.ssid.clone()),
             network.type_.into(),
         ))
@@ -820,8 +820,8 @@ mod tests {
 
         // Unknown network should not have been saved by saved networks manager
         // since we did not successfully connect.
-        let lookup_fut =
-            test_values.saved_networks.lookup(NetworkIdentifier::new(ssid, SecurityType::None));
+        let id = NetworkIdentifier::new(ssid, SecurityType::None);
+        let lookup_fut = test_values.saved_networks.lookup(&id);
         assert!(exec.run_singlethreaded(lookup_fut).is_empty());
     }
 
@@ -1378,7 +1378,7 @@ mod tests {
         let target_id = NetworkIdentifier::from(network_id);
         let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false)
             .expect("Failed to create network config");
-        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(&target_id)), vec![target_config]);
     }
 
     #[fuchsia::test]
@@ -1460,7 +1460,7 @@ mod tests {
         let target_id = NetworkIdentifier::from(network_id);
         let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false)
             .expect("Failed to create network config");
-        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(&target_id)), vec![target_config]);
     }
 
     #[fuchsia::test]
@@ -1606,7 +1606,7 @@ mod tests {
 
         // Check that the value was was not saved in saved networks manager.
         let target_id = NetworkIdentifier::from(bad_network_id);
-        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![]);
+        assert_eq!(exec.run_singlethreaded(saved_networks.lookup(&target_id)), vec![]);
     }
 
     #[fuchsia::test]
@@ -1684,7 +1684,7 @@ mod tests {
         });
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert!(exec.run_singlethreaded(saved_networks.lookup(network_id)).is_empty());
+        assert!(exec.run_singlethreaded(saved_networks.lookup(&network_id)).is_empty());
 
         // Removing a network that is not saved should not trigger a disconnect.
         let mut remove_fut = controller.remove_network(network_config.clone());
@@ -2158,7 +2158,7 @@ mod tests {
         cred: Credential,
     ) -> Option<NetworkConfig> {
         let mut cfgs = saved_networks
-            .lookup(id)
+            .lookup(&id)
             .await
             .into_iter()
             .filter(|cfg| cfg.credential == cred)

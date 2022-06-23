@@ -25,7 +25,7 @@ async fn fuzz_saved_networks_manager_store(id: NetworkIdentifier, credential: Cr
     // exist yet
     let saved_networks = create_saved_networks(stash_id).await;
 
-    assert!(saved_networks.lookup(id.clone()).await.is_empty());
+    assert!(saved_networks.lookup(&id).await.is_empty());
     assert_eq!(0, saved_networks.known_network_count().await);
 
     // Store a fuzzed network identifier and credential.
@@ -34,7 +34,7 @@ async fn fuzz_saved_networks_manager_store(id: NetworkIdentifier, credential: Cr
         .await
         .expect("storing network failed")
         .is_none());
-    assert_variant!(saved_networks.lookup(id.clone()).await.as_slice(),
+    assert_variant!(saved_networks.lookup(&id).await.as_slice(),
         [network_config] => {
             assert_eq!(network_config.ssid, id.ssid);
             assert_eq!(network_config.security_type, id.security_type);
@@ -45,7 +45,7 @@ async fn fuzz_saved_networks_manager_store(id: NetworkIdentifier, credential: Cr
 
     // Saved networks should persist when we create a saved networks manager with the same ID.
     let saved_networks = create_saved_networks(stash_id).await;
-    assert_variant!(saved_networks.lookup(id.clone()).await.as_slice(),
+    assert_variant!(saved_networks.lookup(&id).await.as_slice(),
         [network_config] => {
             assert_eq!(network_config.ssid, id.ssid);
             assert_eq!(network_config.security_type, id.security_type);

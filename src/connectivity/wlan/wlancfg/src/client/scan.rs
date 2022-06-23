@@ -1499,7 +1499,7 @@ mod tests {
             saved_networks_manager.update_hidden_prob(network_id.clone().into(), 0.0),
         );
         let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(network_id.clone().into()))
+            .run_singlethreaded(saved_networks_manager.lookup(&network_id.clone().into()))
             .pop()
             .expect("failed to lookup");
         assert_eq!(config.hidden_probability, 0.0);
@@ -1675,7 +1675,7 @@ mod tests {
             saved_networks_manager.update_hidden_prob(unseen_network.clone().into(), 1.0),
         );
         let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(unseen_network.clone().into()))
+            .run_singlethreaded(saved_networks_manager.lookup(&unseen_network.clone().into()))
             .pop()
             .expect("failed to lookup");
         assert_eq!(config.hidden_probability, 1.0);

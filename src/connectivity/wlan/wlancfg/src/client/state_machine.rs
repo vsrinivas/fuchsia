@@ -1168,7 +1168,7 @@ mod tests {
 
         // Check that the saved networks manager has the expected initial data
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_request.target.network.clone().into()),
         );
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
@@ -1253,7 +1253,7 @@ mod tests {
 
         // Check that the saved networks manager has the connection recorded
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_request.target.network.clone().into()),
         );
         assert_eq!(true, saved_networks[0].has_ever_connected);
         assert_eq!(
@@ -1533,7 +1533,7 @@ mod tests {
 
         // Check that the saved networks manager has the expected initial data
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_request.target.network.clone().into()),
         );
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
@@ -2442,7 +2442,7 @@ mod tests {
         });
 
         // Check that failure was recorded in SavedNetworksManager
-        let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(config_net_id));
+        let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(&config_net_id));
         let network_config = configs.pop().expect("Failed to get saved network");
         let mut failures =
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
@@ -2593,7 +2593,7 @@ mod tests {
         });
 
         // Check that failure was recorded in SavedNetworksManager
-        let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(config_net_id));
+        let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(&config_net_id));
         let network_config = configs.pop().expect("Failed to get saved network");
         let mut failures =
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);

@@ -157,8 +157,8 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         unimplemented!()
     }
 
-    async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
-        self.saved_networks.lock().await.entry(id).or_default().iter().map(Clone::clone).collect()
+    async fn lookup(&self, id: &NetworkIdentifier) -> Vec<NetworkConfig> {
+        self.saved_networks.lock().await.get(id).cloned().unwrap_or_default()
     }
 
     async fn lookup_compatible(
