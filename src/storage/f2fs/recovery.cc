@@ -138,8 +138,8 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
 }
 
 void F2fs::DestroyFsyncDnodes(FsyncInodeList &inode_list) {
-  for (auto &entry : inode_list) {
-    inode_list.erase(entry);
+  while (!inode_list.is_empty()) {
+    inode_list.pop_front();
   }
 }
 
@@ -303,21 +303,20 @@ void F2fs::RecoverFsyncData() {
   FsyncInodeList inode_list;
 
   // Step #1: find fsynced inode numbers
-  auto result = FindFsyncDnodes(inode_list);
-
-  // Step #2: recover data
-  if (result == ZX_OK && !inode_list.is_empty()) {
-    superblock_info.SetOnRecovery();
-    RecoverData(inode_list, CursegType::kCursegWarmNode);
-    superblock_info.ClearOnRecovery();
-    ZX_ASSERT(inode_list.is_empty());
+  if (auto result = FindFsyncDnodes(inode_list); result == ZX_OK) {
+    // Step #2: recover data
+    if (!inode_list.is_empty()) {
+      superblock_info.SetOnRecovery();
+      RecoverData(inode_list, CursegType::kCursegWarmNode);
+      superblock_info.ClearOnRecovery();
+      ZX_DEBUG_ASSERT(inode_list.is_empty());
+      GetMetaVnode().InvalidatePages(GetSegmentManager().GetMainAreaStartBlock());
+      WriteCheckpoint(false, false);
+    }
   }
-
-  DestroyFsyncDnodes(inode_list);
-  // Remove meta pages used for recovery.
+  // TODO: Handle error cases
   GetMetaVnode().InvalidatePages(GetSegmentManager().GetMainAreaStartBlock());
-
-  WriteCheckpoint(false, false);
+  DestroyFsyncDnodes(inode_list);
 }
 
 }  // namespace f2fs
