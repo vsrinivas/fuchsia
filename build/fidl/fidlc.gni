@@ -37,7 +37,7 @@ template("fidlc") {
   assert(defined(invoker.fidl_deps), "fidl_deps is required")
   assert(defined(invoker.sources), "sources is required")
 
-  experimental_flags = []
+  experimental_flags = [ "no_optional_structs" ]
   if (defined(invoker.experimental_flags)) {
     experimental_flags += invoker.experimental_flags
   }
@@ -136,13 +136,11 @@ template("fidlc") {
       inputs = dep_libraries
     }
 
-    if (defined(experimental_flags)) {
-      foreach(flag, experimental_flags) {
-        args += [
-          "--experimental-flag",
-          flag,
-        ]
-      }
+    foreach(flag, experimental_flags) {
+      args += [
+        "--experimental",
+        flag,
+      ]
     }
   }
 

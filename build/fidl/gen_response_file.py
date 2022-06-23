@@ -66,8 +66,8 @@ def main():
     parser.add_argument(
         "--dep-libraries", help="List of dependent libraries", nargs="*")
     parser.add_argument(
-        "--experimental-flag",
-        help="List of experimental flags",
+        "--experimental",
+        help="An experimental flag to enable",
         action="append")
     args = parser.parse_args()
 
@@ -84,9 +84,6 @@ def main():
     write_libraries(args.out_libraries, target_libraries)
 
     response_file = []
-
-    response_file.append('--experimental new_syntax_only')
-    response_file.append('--experimental no_optional_structs')
 
     response_file.append(
         "--available {platform}:{api_level}".format(
@@ -121,12 +118,11 @@ def main():
     if args.depfile:
         response_file.append("--depfile %s" % args.depfile)
 
-    if args.experimental_flag:
-        for experimental_flag in args.experimental_flag:
-            response_file.append("--experimental %s" % experimental_flag)
+    if args.experimental:
+        response_file.extend(
+            "--experimental %s" % flag for flag in args.experimental)
 
-    response_file.extend(
-        ["--files %s" % library for library in target_libraries])
+    response_file.extend("--files %s" % library for library in target_libraries)
 
     with open(args.out_response_file, "w+") as f:
         f.write(" ".join(response_file))

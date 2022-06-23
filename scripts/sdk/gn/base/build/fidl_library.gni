@@ -25,6 +25,9 @@ import("config/config.gni")
 #     Optional: List of other fidl_library() targets that this
 #               FIDL library depends on.
 #
+#   experimental_flags
+#     Optional: List of experimental flags to pass to fidlc.
+#
 template("fidl_library") {
   forward_variables_from(invoker, [ "namespace" ])
 
@@ -90,6 +93,15 @@ template("fidl_library") {
         "--target-api-level",
         "${fuchsia_target_api_level}",
       ]
+    }
+
+    if (defined(invoker.experimental_flags)) {
+      foreach(flag, invoker.experimental_flags) {
+        args += [
+          "--experimental",
+          flag,
+        ]
+      }
     }
 
     if (defined(invoker.deps) || defined(invoker.public_deps)) {

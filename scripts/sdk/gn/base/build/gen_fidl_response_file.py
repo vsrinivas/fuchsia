@@ -51,6 +51,10 @@ def main(args_list=None):
         "--dep-libraries", help="List of dependent libraries", nargs="*")
     parser.add_argument(
         "--target-api-level", help="The target Fuchsia API level", type=int)
+    parser.add_argument(
+        "--experimental",
+        help="An experimental flag to enable",
+        action="append")
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -69,8 +73,6 @@ def main(args_list=None):
 
     response_file = []
 
-    response_file.append('--experimental new_syntax_only')
-
     if args.json:
         response_file.append("--json %s" % args.json)
 
@@ -81,11 +83,13 @@ def main(args_list=None):
         response_file.append("--name %s" % args.name)
 
     if args.target_api_level:
-        response_file.append("--available fuchsia:%d" %
-                             args.target_api_level)
+        response_file.append("--available fuchsia:%d" % args.target_api_level)
 
-    response_file.extend(
-        ["--files %s" % library for library in target_libraries])
+    if args.experimental:
+        response_file.extend(
+            "--experimental %s" % flag for flag in args.experimental)
+
+    response_file.extend("--files %s" % library for library in target_libraries)
 
     with open(args.out_response_file, "w+") as f:
         f.write(" ".join(response_file))

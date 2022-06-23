@@ -54,7 +54,6 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 		dotJSONFile = filepath.Join(base, "main.fidl.json")
 		params      = []string{
 			"--json", dotJSONFile,
-			"--experimental", "new_syntax_only",
 		}
 	)
 

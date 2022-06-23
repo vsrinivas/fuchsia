@@ -111,7 +111,7 @@ do
   fi
 
   echo "Regenerating $filename"
-  $FIDLC --experimental new_syntax_only --json "${FIDL_IR_FILE}" $dependencies --files $f
+  $FIDLC --json "${FIDL_IR_FILE}" $dependencies --files $f
   if [ $with_c = true ]; then
     $FIDLGEN_BANJO --backend C --output "$C_FILES/$filename.h" --ir "${FIDL_IR_FILE}"
   fi
