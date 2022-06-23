@@ -38,6 +38,9 @@ impl ProcDirectory {
             },
             &b"self"[..] => SelfSymlink::new(fs),
             &b"thread-self"[..] => ThreadSelfSymlink::new(fs),
+            // TODO(tbodt): Put actual data in /proc/meminfo. Android is currently satistified by
+            // an empty file though.
+            &b"meminfo"[..] => fs.create_node_with_ops(ByteVecFile::new(vec![]), mode!(IFREG, 0o444), FsCred::root()),
         };
 
         Arc::new(ProcDirectory { kernel, nodes })
