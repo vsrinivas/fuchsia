@@ -24,6 +24,19 @@ source_set("fake_logger_lib") {
   ]
 }
 
+source_set("stub_metric_event_logger_lib") {
+  testonly = true
+  sources = [
+    "stub_metric_event_logger.cc",
+    "stub_metric_event_logger.h",
+  ]
+
+  public_deps = [
+    ":log_metric_method",
+    "//sdk/fidl/fuchsia.metrics",
+  ]
+}
+
 source_set("fake_clock_lib") {
   testonly = true
   sources = [ "fake_clock.h" ]
@@ -34,6 +47,14 @@ source_set("fake_clock_lib") {
 source_set("log_method") {
   testonly = true
   sources = [ "log_method.h" ]
+}
+
+source_set("log_metric_method") {
+  testonly = true
+  sources = [
+    "log_metric_method.cc",
+    "log_metric_method.h",
+  ]
 }
 
 source_set("fake_http_loader") {
