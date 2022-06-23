@@ -510,12 +510,6 @@ zbi_executable("physboot") {
     "//zircon/system/ulib/zbitl",
   ]
 
-  # TODO(fxbug.dev/79992): Work around LTO compilation bugs.
-  # Remove this when the compiler issues are resolved.
-  if (current_cpu == "arm64") {
-    exclude_toolchain_tags = [ "lto" ]
-  }
-
   # Used as a bias when patching kernel code.
   defines = [ "KERNEL_LINK_ADDRESS=${kernel_base}" ]
 }
