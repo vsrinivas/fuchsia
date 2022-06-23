@@ -323,59 +323,67 @@ where
 
         // Cobalt mocks so we can assert that we emit the correct events
         let logger_factory = Arc::new(MockLoggerFactory::new());
-        let logger_factory_clone = Arc::clone(&logger_factory);
-        local_child_svc_dir
-            .add_entry(
-                fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
-                vfs::service::host(move |stream| {
-                    Arc::clone(&logger_factory_clone).run_logger_factory(stream)
-                }),
-            )
-            .unwrap();
+        {
+            let logger_factory = Arc::clone(&logger_factory);
+            local_child_svc_dir
+                .add_entry(
+                    fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
+                    vfs::service::host(move |stream| {
+                        Arc::clone(&logger_factory).run_logger_factory(stream)
+                    }),
+                )
+                .unwrap();
+        }
 
         // Paver service, so we can verify that we submit the expected requests and so that
         // we can verify if the paver service returns errors, that we handle them correctly.
         let paver_service = Arc::new(
             self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new()).build(),
         );
-        let paver_service_clone = Arc::clone(&paver_service);
-        local_child_svc_dir
-            .add_entry(
-                fidl_fuchsia_paver::PaverMarker::PROTOCOL_NAME,
-                vfs::service::host(move |stream| {
-                    Arc::clone(&paver_service_clone)
-                        .run_paver_service(stream)
-                        .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e)))
-                }),
-            )
-            .unwrap();
+        {
+            let paver_service = Arc::clone(&paver_service);
+            local_child_svc_dir
+                .add_entry(
+                    fidl_fuchsia_paver::PaverMarker::PROTOCOL_NAME,
+                    vfs::service::host(move |stream| {
+                        Arc::clone(&paver_service).run_paver_service(stream).unwrap_or_else(|e| {
+                            panic!("error running paver service: {:#}", anyhow!(e))
+                        })
+                    }),
+                )
+                .unwrap();
+        }
 
         // Set up verifier service so we can verify that we reject GC until after the verifier
         // commits this boot/slot as successful, lest we break rollbacks.
         let verifier_service = Arc::new(MockVerifierService::new(|_| Ok(())));
-        let verifier_service_clone = Arc::clone(&verifier_service);
-        local_child_svc_dir
-            .add_entry(
-                fidl_fuchsia_update_verify::BlobfsVerifierMarker::PROTOCOL_NAME,
-                vfs::service::host(move |stream| {
-                    Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream)
-                }),
-            )
-            .unwrap();
+        {
+            let verifier_service = Arc::clone(&verifier_service);
+            local_child_svc_dir
+                .add_entry(
+                    fidl_fuchsia_update_verify::BlobfsVerifierMarker::PROTOCOL_NAME,
+                    vfs::service::host(move |stream| {
+                        Arc::clone(&verifier_service).run_blobfs_verifier_service(stream)
+                    }),
+                )
+                .unwrap();
+        }
 
         // fuchsia.boot/Arguments service to supply the hash of the system_image package.
         let mut arguments_service = MockBootArgumentsService::new(HashMap::new());
         system_image.map(|hash| arguments_service.insert_pkgfs_boot_arg(hash));
         let arguments_service = Arc::new(arguments_service);
-        let arguments_service_clone = Arc::clone(&arguments_service);
-        local_child_svc_dir
-            .add_entry(
-                fidl_fuchsia_boot::ArgumentsMarker::PROTOCOL_NAME,
-                vfs::service::host(move |stream| {
-                    Arc::clone(&arguments_service_clone).handle_request_stream(stream)
-                }),
-            )
-            .unwrap();
+        {
+            let arguments_service = Arc::clone(&arguments_service);
+            local_child_svc_dir
+                .add_entry(
+                    fidl_fuchsia_boot::ArgumentsMarker::PROTOCOL_NAME,
+                    vfs::service::host(move |stream| {
+                        Arc::clone(&arguments_service).handle_request_stream(stream)
+                    }),
+                )
+                .unwrap();
+        }
 
         let local_child_out_dir = vfs::pseudo_directory! {
             "blob" => vfs::remote::remote_dir(blobfs.root_proxy()),

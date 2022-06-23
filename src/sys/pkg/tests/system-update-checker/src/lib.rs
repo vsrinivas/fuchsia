@@ -98,28 +98,34 @@ impl TestEnvBuilder {
         .unwrap();
         fs.dir("pkgfs").add_remote("system", pkgfs_system);
 
+        let mut svc = fs.dir("svc");
+
         // Setup the mock resolver service.
         let resolver = Arc::new(MockResolverService::new(None));
-        let resolver_clone = Arc::clone(&resolver);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&resolver_clone)
-                    .run_resolver_service(stream)
-                    .unwrap_or_else(|e| panic!("error running resolver service {:?}", e)),
-            )
-            .detach()
-        });
+        {
+            let resolver = Arc::clone(&resolver);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&resolver)
+                        .run_resolver_service(stream)
+                        .unwrap_or_else(|e| panic!("error running resolver service {:?}", e)),
+                )
+                .detach()
+            });
+        }
 
         // Setup the mock installer service.
         let installer = Arc::new(self.installer);
-        let installer_clone = Arc::clone(&installer);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
-        });
+        {
+            let installer = Arc::clone(&installer);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(Arc::clone(&installer).run_service(stream)).detach()
+            });
+        }
 
         // Setup the mock paver service
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
-        fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
+        svc.add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
@@ -131,23 +137,27 @@ impl TestEnvBuilder {
         // Setup the mock space service
         let space =
             Arc::new(self.space.unwrap_or_else(|| MockSpaceService::new(Box::new(|| Ok(())))));
-        let space_clone = Arc::clone(&space);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&space_clone)
-                    .run_space_service(stream)
-                    .unwrap_or_else(|e| panic!("error running space service {:?}", e)),
-            )
-            .detach()
-        });
+        {
+            let space = Arc::clone(&space);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&space)
+                        .run_space_service(stream)
+                        .unwrap_or_else(|e| panic!("error running space service {:?}", e)),
+                )
+                .detach()
+            });
+        }
 
         // Setup the mock verifier service.
         let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
-        let verifier_clone = Arc::clone(&verifier);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
-                .detach()
-        });
+        {
+            let verifier = Arc::clone(&verifier);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(Arc::clone(&verifier).run_blobfs_verifier_service(stream))
+                    .detach()
+            });
+        }
 
         let fs_holder = Mutex::new(Some(fs));
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
@@ -600,11 +610,13 @@ async fn test_monitor_all_updates() {
 #[fasync::run_singlethreaded(test)]
 async fn test_update_manager_out_of_space_gc_succeeds() {
     let called = Arc::new(AtomicU32::new(0));
-    let called_clone = Arc::clone(&called);
-    let space = MockSpaceService::new(Box::new(move || {
-        called_clone.fetch_add(1, Ordering::SeqCst);
-        Ok(())
-    }));
+    let space = {
+        let called = Arc::clone(&called);
+        MockSpaceService::new(Box::new(move || {
+            called.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }))
+    };
 
     let env = TestEnvBuilder::new().space(space).build().await;
 
@@ -660,11 +672,13 @@ async fn test_update_manager_out_of_space_gc_succeeds() {
 #[fasync::run_singlethreaded(test)]
 async fn test_update_manager_out_of_space_gc_fails() {
     let called = Arc::new(AtomicU32::new(0));
-    let called_clone = Arc::clone(&called);
-    let space = MockSpaceService::new(Box::new(move || {
-        called_clone.fetch_add(1, Ordering::SeqCst);
-        Err(ErrorCode::Internal)
-    }));
+    let space = {
+        let called = Arc::clone(&called);
+        MockSpaceService::new(Box::new(move || {
+            called.fetch_add(1, Ordering::SeqCst);
+            Err(ErrorCode::Internal)
+        }))
+    };
 
     let env = TestEnvBuilder::new().space(space).build().await;
 
@@ -721,18 +735,20 @@ async fn test_update_manager_out_of_space_gc_fails() {
 async fn test_installation_deferred() {
     let (throttle_hook, throttler) = mphooks::throttle();
     let config_status_response = Arc::new(Mutex::new(Some(paver::ConfigurationStatus::Pending)));
-    let config_status_response_clone = Arc::clone(&config_status_response);
-    let env = TestEnvBuilder::new()
-        .paver(
-            MockPaverServiceBuilder::new()
-                .insert_hook(throttle_hook)
-                .insert_hook(mphooks::config_status(move |_| {
-                    Ok(config_status_response_clone.lock().as_ref().unwrap().clone())
-                }))
-                .build(),
-        )
-        .build()
-        .await;
+    let env = {
+        let config_status_response = Arc::clone(&config_status_response);
+        TestEnvBuilder::new()
+            .paver(
+                MockPaverServiceBuilder::new()
+                    .insert_hook(throttle_hook)
+                    .insert_hook(mphooks::config_status(move |_| {
+                        Ok(config_status_response.lock().as_ref().unwrap().clone())
+                    }))
+                    .build(),
+            )
+            .build()
+            .await
+    };
 
     env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies

@@ -70,44 +70,52 @@ impl TestEnvBuilder {
         .unwrap();
         fs.dir("config").add_remote("data", config_data_proxy);
 
+        let mut svc = fs.dir("svc");
+
         // Set up paver service.
         let paver_service_builder =
             self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new());
         let paver_service = Arc::new(paver_service_builder.build());
-        let paver_service_clone = Arc::clone(&paver_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&paver_service_clone)
-                    .run_paver_service(stream)
-                    .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e))),
-            )
-            .detach()
-        });
+        {
+            let paver_service = Arc::clone(&paver_service);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&paver_service).run_paver_service(stream).unwrap_or_else(|e| {
+                        panic!("error running paver service: {:#}", anyhow!(e))
+                    }),
+                )
+                .detach()
+            });
+        }
 
         // Set up reboot service.
         let reboot_service = Arc::new(self.reboot_service.unwrap_or_else(|| {
             MockRebootService::new(Box::new(|_| panic!("unexpected call to reboot")))
         }));
-        let reboot_service_clone = Arc::clone(&reboot_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&reboot_service_clone)
-                    .run_reboot_service(stream)
-                    .unwrap_or_else(|e| panic!("error running reboot service: {:#}", anyhow!(e))),
-            )
-            .detach()
-        });
+        {
+            let reboot_service = Arc::clone(&reboot_service);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&reboot_service).run_reboot_service(stream).unwrap_or_else(|e| {
+                        panic!("error running reboot service: {:#}", anyhow!(e))
+                    }),
+                )
+                .detach()
+            });
+        }
 
         // Set up verifier service.
         let verifier_service =
             Arc::new(self.verifier_service.unwrap_or_else(|| MockVerifierService::new(|_| Ok(()))));
-        let verifier_service_clone = Arc::clone(&verifier_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
-            )
-            .detach()
-        });
+        {
+            let verifier_service = Arc::clone(&verifier_service);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&verifier_service).run_blobfs_verifier_service(stream),
+                )
+                .detach()
+            });
+        }
 
         let fs_holder = Mutex::new(Some(fs));
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");

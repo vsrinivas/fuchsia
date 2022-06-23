@@ -272,8 +272,10 @@ impl TestEnvBuilder {
             mounts.write_eager_package_config(json.to_string());
         }
 
+        let mut svc = fs.dir("svc");
+
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
-        fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
+        svc.add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
@@ -283,31 +285,34 @@ impl TestEnvBuilder {
         });
 
         let resolver = Arc::new(MockResolverService::new(None));
-        let resolver_clone = resolver.clone();
-        fs.dir("svc").add_fidl_service(move |stream: PackageResolverRequestStream| {
-            let resolver_clone = resolver_clone.clone();
-            fasync::Task::spawn(
-                Arc::clone(&resolver_clone)
-                    .run_resolver_service(stream)
-                    .unwrap_or_else(|e| panic!("error running resolver service {:#}", anyhow!(e))),
-            )
-            .detach()
-        });
+        {
+            let resolver = resolver.clone();
+            svc.add_fidl_service(move |stream: PackageResolverRequestStream| {
+                fasync::Task::spawn(
+                    Arc::clone(&resolver).run_resolver_service(stream).unwrap_or_else(|e| {
+                        panic!("error running resolver service {:#}", anyhow!(e))
+                    }),
+                )
+                .detach()
+            });
+        }
 
         let cache = Arc::new(MockCache::new());
-        let cache_clone = cache.clone();
-        fs.dir("svc").add_fidl_service(move |stream: PackageCacheRequestStream| {
-            fasync::Task::spawn(Arc::clone(&cache_clone).run_cache_service(stream)).detach()
-        });
+        {
+            let cache = cache.clone();
+            svc.add_fidl_service(move |stream: PackageCacheRequestStream| {
+                fasync::Task::spawn(Arc::clone(&cache).run_cache_service(stream)).detach()
+            });
+        }
 
         let config_optout = Arc::new(fuchsia_update_config_optout::Mock::new());
-        fs.dir("svc").add_fidl_service({
+        svc.add_fidl_service({
             let config_optout = Arc::clone(&config_optout);
             move |stream| fasync::Task::spawn(Arc::clone(&config_optout).serve(stream)).detach()
         });
 
         let cup = Arc::new(fuchsia_pkg_cup::Mock::new(self.cup_info_map));
-        fs.dir("svc").add_fidl_service({
+        svc.add_fidl_service({
             let cup = Arc::clone(&cup);
             move |stream| fasync::Task::spawn(Arc::clone(&cup).serve(stream)).detach()
         });
@@ -319,7 +324,7 @@ impl TestEnvBuilder {
             send.lock().take().unwrap().send(()).unwrap();
             Ok(())
         })));
-        fs.dir("svc").add_fidl_service(move |stream| {
+        svc.add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&reboot_service)
                     .run_reboot_service(stream)
@@ -330,32 +335,36 @@ impl TestEnvBuilder {
 
         // Set up verifier service.
         let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
-        let verifier_clone = Arc::clone(&verifier);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
-                .detach()
-        });
+        {
+            let verifier = Arc::clone(&verifier);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(Arc::clone(&verifier).run_blobfs_verifier_service(stream))
+                    .detach()
+            });
+        }
 
         // Set up crash reporter service.
         let crash_reporter = Arc::new(
             self.crash_reporter.unwrap_or_else(|| MockCrashReporterService::new(|_| Ok(()))),
         );
-        let crash_reporter_clone = Arc::clone(&crash_reporter);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&crash_reporter_clone).run_crash_reporter_service(stream),
-            )
-            .detach()
-        });
+        {
+            let crash_reporter = Arc::clone(&crash_reporter);
+            svc.add_fidl_service(move |stream| {
+                fasync::Task::spawn(Arc::clone(&crash_reporter).run_crash_reporter_service(stream))
+                    .detach()
+            });
+        }
 
         let mut use_real_system_updater = true;
         if let Some(installer) = self.installer {
             use_real_system_updater = false;
             let installer = Arc::new(installer);
-            let installer_clone = Arc::clone(&installer);
-            fs.dir("svc").add_fidl_service(move |stream| {
-                fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
-            });
+            {
+                let installer = Arc::clone(&installer);
+                svc.add_fidl_service(move |stream| {
+                    fasync::Task::spawn(Arc::clone(&installer).run_service(stream)).detach()
+                });
+            }
         }
 
         let fs_holder = Mutex::new(Some(fs));
@@ -1530,19 +1539,21 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
 async fn test_omaha_client_installation_deferred() {
     let (throttle_hook, throttler) = mphooks::throttle();
     let config_status_response = Arc::new(Mutex::new(Some(paver::ConfigurationStatus::Pending)));
-    let config_status_response_clone = Arc::clone(&config_status_response);
-    let env = TestEnvBuilder::new()
-        .paver(
-            MockPaverServiceBuilder::new()
-                .insert_hook(throttle_hook)
-                .insert_hook(mphooks::config_status(move |_| {
-                    Ok(config_status_response_clone.lock().as_ref().unwrap().clone())
-                }))
-                .build(),
-        )
-        .default_with_response(OmahaResponse::Update)
-        .build()
-        .await;
+    let env = {
+        let config_status_response = Arc::clone(&config_status_response);
+        TestEnvBuilder::new()
+            .paver(
+                MockPaverServiceBuilder::new()
+                    .insert_hook(throttle_hook)
+                    .insert_hook(mphooks::config_status(move |_| {
+                        Ok(config_status_response.lock().as_ref().unwrap().clone())
+                    }))
+                    .build(),
+            )
+            .default_with_response(OmahaResponse::Update)
+            .build()
+            .await
+    };
 
     // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
     // few enough to guarantee the commit is still pending.
