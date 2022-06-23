@@ -39,6 +39,79 @@ foreach(font_pkgs_path, font_pkgs_paths) {
   }
 }
 
+# Define a `config_data` target to bundle all of the given font files into the
+# font server's "/config/data".
+#
+# Parameters
+#
+#   asset_names
+#     Required: List of font file names, e.g. [ "Roboto-Regular.ttf" ]
+#     Type: list(file)
+#
+#   font_service_pkg
+#     Optional: Name of the Fuchsia package containing the font service
+#     component, used in `config_data` rules to provide data files to that
+#     package.
+#     Default: "fonts"
+#     Type: string
+template("local_font_bundle") {
+  forward_variables_from(invoker,
+                         [
+                           "asset_names",
+                           "font_service_pkg",
+                         ])
+  assert(defined(asset_names))
+
+  if (!defined(font_service_pkg)) {
+    font_service_pkg = _default_font_service_pkg
+  }
+
+  local_asset_paths = []
+  not_found_asset_names = []
+
+  foreach(asset_name, asset_names) {
+    found = false
+    foreach(entry, font_pkg_entries) {
+      if (asset_name == entry.file_name) {
+        found = true
+        asset_path = entry.path_prefix
+        if (asset_path != "") {
+          asset_path = "${asset_path}/"
+        }
+        asset_path = "${fonts_dir}/${asset_path}${entry.file_name}"
+        local_asset_paths += [ asset_path ]
+      }
+    }
+    if (!found) {
+      not_found_asset_names += [ asset_name ]
+    }
+  }
+
+  assert(not_found_asset_names == [],
+         "font_pkg_entries not found for ${not_found_asset_names}")
+
+  config_data_label = "_${target_name}_config_data"
+  config_data(config_data_label) {
+    forward_variables_from(invoker, [ "testonly" ])
+    for_pkg = font_service_pkg
+    sources = local_asset_paths
+    outputs = [ "assets/{{source_file_part}}" ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${config_data_label}" ]
+    metadata = {
+      local_font_file_names = asset_names
+      font_barrier = []
+    }
+  }
+}
+
 # Generate all of the `config_data` targets needed for a target product's font
 # collection.
 #
@@ -126,7 +199,8 @@ template("font_collection") {
   }
 
   assert(
-      !(invoker.testonly && manifest_prefix == _default_manifest_prefix),
+      !(invoker.testonly && manifest_prefix == _default_manifest_prefix &&
+            font_service_pkg == _default_font_service_pkg),
       "Can't use default manifest_prefix '${manifest_prefix}' with a testonly font_collection.")
 
   # The font resolver in pkg_resolver expects a hard-coded location in
@@ -299,78 +373,5 @@ template("font_package_group") {
                              "testonly",
                            ])
     deps = font_package_labels
-  }
-}
-
-# Define a `config_data` target to bundle all of the given font files into the
-# font server's "/config/data".
-#
-# Parameters
-#
-#   asset_names
-#     Required: List of font file names, e.g. [ "Roboto-Regular.ttf" ]
-#     Type: list(file)
-#
-#   font_service_pkg
-#     Optional: Name of the Fuchsia package containing the font service
-#     component, used in `config_data` rules to provide data files to that
-#     package.
-#     Default: "fonts"
-#     Type: string
-template("local_font_bundle") {
-  forward_variables_from(invoker,
-                         [
-                           "asset_names",
-                           "font_service_pkg",
-                         ])
-  assert(defined(asset_names))
-
-  if (!defined(font_service_pkg)) {
-    font_service_pkg = _default_font_service_pkg
-  }
-
-  local_asset_paths = []
-  not_found_asset_names = []
-
-  foreach(asset_name, asset_names) {
-    found = false
-    foreach(entry, font_pkg_entries) {
-      if (asset_name == entry.file_name) {
-        found = true
-        asset_path = entry.path_prefix
-        if (asset_path != "") {
-          asset_path = "${asset_path}/"
-        }
-        asset_path = "${fonts_dir}/${asset_path}${entry.file_name}"
-        local_asset_paths += [ asset_path ]
-      }
-    }
-    if (!found) {
-      not_found_asset_names += [ asset_name ]
-    }
-  }
-
-  assert(not_found_asset_names == [],
-         "font_pkg_entries not found for ${not_found_asset_names}")
-
-  config_data_label = "_${target_name}_config_data"
-  config_data(config_data_label) {
-    forward_variables_from(invoker, [ "testonly" ])
-    for_pkg = font_service_pkg
-    sources = local_asset_paths
-    outputs = [ "assets/{{source_file_part}}" ]
-  }
-
-  group(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    deps = [ ":${config_data_label}" ]
-    metadata = {
-      local_font_file_names = asset_names
-      font_barrier = []
-    }
   }
 }
