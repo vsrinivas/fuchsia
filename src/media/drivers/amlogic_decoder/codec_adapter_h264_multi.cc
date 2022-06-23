@@ -256,17 +256,18 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  // The output port is the one we really care about for is_secure of the
-  // decoder, since the HW can read from secure or non-secure even when in
-  // secure mode, but can only write to secure memory when in secure mode.
-  auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
-
-  if (codec_diagnostics_) {
-    decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
-  }
-
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    // The output port is the one we really care about for is_secure of the decoder, since the HW
+    // can read from secure or non-secure even when in secure mode, but can only write to secure
+    // memory when in secure mode.
+    //
+    // Must create under lock to ensure that a potential other instance that incremented power
+    // ref(s) first is fully done un-gating clocks.
+    auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
+    if (codec_diagnostics_) {
+      decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
+    }
     if (decoder->InitializeBuffers() != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeBuffers() failed");
       return;

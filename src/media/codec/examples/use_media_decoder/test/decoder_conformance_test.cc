@@ -22,6 +22,8 @@
 #include "../in_stream_file.h"
 #include "../in_stream_http.h"
 #include "../in_stream_peeker.h"
+#include "src/media/codec/examples/use_media_decoder/use_video_decoder.h"
+#include "src/media/codec/examples/use_media_decoder/util.h"
 #include "../use_video_decoder.h"
 #include "../util.h"
 #include "src/lib/fxl/command_line.h"

@@ -176,8 +176,9 @@ void Vdec1::PowerOn() {
       .set_vdec_en(true)
       .set_vdec_sel(clock_sel)
       .WriteTo(mmio()->hiubus);
+  // This driver doesn't currently reverse this setting during PowerOff(), but perhaps ideally it
+  // would.
   owner_->ToggleClock(ClockType::kGclkVdec, true);
-
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   {
@@ -434,7 +435,6 @@ zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure)
 zx_status_t Vdec1::SaveInputContext(InputContext* context) {
   // Not sure why there are dirty cache lines corresponding to the input context.
   context->buffer->CacheFlush(0, context->buffer->size());
-  BarrierAfterFlush();
 
   // No idea what this does.
   VldMemVififoControl::Get().FromValue(1 << 15).WriteTo(mmio()->dosbus);

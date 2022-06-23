@@ -29,6 +29,7 @@ group("hw_dependent_tests") {
   testonly = true
   deps = [
     "//src/media/codec/examples:h264_decoder_fuzzer_tests",
+    "//src/media/codec/examples:use_h264_and_vp9_decoders_and_pcmm_stress_test",
     "//src/media/codec/examples:use_h264_decoder_frame_num_gaps_tests",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
     "//src/media/codec/examples:use_h264_decoder_secure_output_tests",

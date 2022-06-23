@@ -53,10 +53,19 @@ class DecoderCore {
 
     [[nodiscard]] virtual MmioRegisters* mmio() = 0;
 
+    // Increment the powered refcount by one, and if was 0, ungate clocks.
     virtual void UngateClocks() = 0;
 
+    // Decrement the powered refcount by one, and if now 0, gate clocks.
     virtual void GateClocks() = 0;
 
+    // Set a clock enabled or disabled.  In contrast to UngateClocks() / GateClocks(), this has no
+    // refcount, so should only be used (via this interface) for clocks that are unique to only one
+    // DecoderCore and which do not impact another DecoderCore.  An implementation of
+    // DecoderCore::Owner is also free to use the implementation of this method as part of the
+    // implementation of UngageClocks() / GateClocks(), but that detail is internal to those
+    // implementations, not the concern of this interface (and the refcount on those calls still
+    // applies).
     virtual void ToggleClock(ClockType type, bool enable) = 0;
 
     [[nodiscard]] virtual DeviceType device_type() = 0;
@@ -104,8 +113,6 @@ class DecoderCore {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  virtual void PowerOn() __TA_REQUIRES(power_ref_lock_) = 0;
-  virtual void PowerOff() __TA_REQUIRES(power_ref_lock_) = 0;
   void IncrementPowerRef() {
     std::lock_guard<std::mutex> lock(power_ref_lock_);
     if (power_ref_count_++ == 0) {
@@ -119,6 +126,10 @@ class DecoderCore {
       PowerOff();
     }
   }
+
+ protected:
+  virtual void PowerOn() __TA_REQUIRES(power_ref_lock_) = 0;
+  virtual void PowerOff() __TA_REQUIRES(power_ref_lock_) = 0;
 
  private:
   std::mutex power_ref_lock_;

@@ -513,16 +513,16 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     ZX_DEBUG_ASSERT(queued_frame_sizes_.empty());
   }  // ~lock
 
-  auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
-                                              false, IsOutputSecure());
-  decoder->SetFrameDataProvider(this);
-
-  if (codec_diagnostics_) {
-    decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
-  }
-
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    // Must create under lock to ensure that a potential other instance that incremented power
+    // ref(s) first is fully done un-gating clocks.
+    auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
+                                                false, IsOutputSecure());
+    decoder->SetFrameDataProvider(this);
+    if (codec_diagnostics_) {
+      decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
+    }
     status = decoder->InitializeBuffers();
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("video_->video_decoder_->Initialize() failed");
@@ -624,10 +624,10 @@ std::list<CodecInputItem> CodecAdapterVp9::CoreCodecStopStreamInternal() {
     // interval.
     {  // scope lock
       std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+      // If the decoder's still running this will stop it as well.
+      video_->RemoveDecoderLocked(decoder_to_remove);
       decoder_ = nullptr;
     }  // ~lock
-    // If the decoder's still running this will stop it as well.
-    video_->RemoveDecoder(decoder_to_remove);
   }
 
   queued_frame_sizes_.clear();

@@ -175,7 +175,9 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
       if (test_params->golden_sha256 || test_params->per_frame_golden_sha256) {
         SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
         std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
-        LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
+        LOGF("%s frame_index: %u SHA256 so far: %s",
+             test_params->mime_type ? test_params->mime_type->c_str() : "<no mime type>",
+             frame_index, sha256_so_far.c_str());
         if (test_params->per_frame_golden_sha256) {
           ZX_ASSERT(test_params->per_frame_golden_sha256[frame_index]);
           std::string expected_sha256(test_params->per_frame_golden_sha256[frame_index]);
@@ -322,6 +324,10 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
             "FINISHING UP\n\n\n");
         emit_frame_failure_seen = true;
       }
+    } else {
+      LOGF("%s frame_index: %u",
+           test_params->mime_type ? test_params->mime_type->c_str() : "<no mime type>",
+           frame_index);
     }
     // ~increment_frame_index
   };
@@ -418,6 +424,8 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     }
   } else if (is_secure_output) {
     printf("Can't check output data sha256 because output is secure.\n");
+  } else if (test_params->skip_formatting_output_pixels) {
+    printf("Can't check output data sha256 because skip_formatting_output_pixels\n");
   } else {
     printf("No output data received");
     return -1;

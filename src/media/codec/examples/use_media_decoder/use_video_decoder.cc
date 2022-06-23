@@ -396,6 +396,12 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
     }
     ZX_DEBUG_ASSERT(find_end_iter > nal_start_offset);
     size_t nal_length = find_end_iter - nal_start_offset;
+    if (params_.test_params->per_frame_debug_output) {
+      LOGF("H264 input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64
+           " input_pts_counter: %" PRIu64 " frame_header.size_bytes: 0x%zx",
+           stream_lifetime_ordinal, stream_frame_ordinal, input_pts_counter,
+           start_code_size_bytes + nal_length);
+    }
     if (!queue_access_unit(&peek[0], start_code_size_bytes + nal_length)) {
       // only reached on error
       break;
@@ -461,6 +467,22 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
     packet->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
     packet->set_start_offset(0);
     packet->set_valid_length_bytes(byte_count);
+
+    constexpr zx::duration kComplainInterval = zx::sec(5);
+    zx::time complain_time = zx::clock::get_monotonic() + kComplainInterval;
+    // Wait until max_output_pts_seen_ increases to within the threshold, or time out while
+    // complaining every 5 seconds.
+    while (static_cast<int64_t>(input_pts_counter) >
+           max_output_pts_seen_ + params_.test_params->max_num_reorder_frames_threshold) {
+      zx::time now = zx::clock::get_monotonic();
+      if (now >= complain_time) {
+        fprintf(stderr,
+                "max_num_reorder_frames_threshold not satisfied? - keep waiting - may time "
+                "out...\n");
+        complain_time = now + kComplainInterval;
+      }
+      zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    }
 
     // We don't use frame_header->presentation_timestamp, because we want to
     // send through frame index in timestamp_ish field instead, for consistency
@@ -584,8 +606,8 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
     if (params_.test_params->per_frame_debug_output) {
-      LOGF("input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
-           " frame_header.size_bytes: %u",
+      LOGF("VP9 input stream: %" PRIu64 " stream_frame_ordinal: %" PRId64
+           " input_pts_counter: %" PRIu64 " frame_header.size_bytes: 0x%x",
            stream_lifetime_ordinal, stream_frame_ordinal, input_pts_counter,
            frame_header.size_bytes);
     }

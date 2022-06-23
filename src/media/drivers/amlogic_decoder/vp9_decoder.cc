@@ -707,8 +707,10 @@ void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
   DLOG("size: 0x%x", size);
 
   uint32_t old_decode_size = HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value();
-  DLOG("old_decode_size: 0x%x size: 0x%x", old_decode_size, size);
-  HevcDecodeSize::Get().FromValue(old_decode_size + size).WriteTo(owner_->dosbus());
+  uint32_t new_decode_size = old_decode_size + size;
+  DLOG("old_decode_size: 0x%x size: 0x%x new_decode_size: 0x%x", old_decode_size, size,
+       new_decode_size);
+  HevcDecodeSize::Get().FromValue(new_decode_size).WriteTo(owner_->dosbus());
 
   if (state_ == DecoderState::kStoppedWaitingForInput) {
     DLOG("kVp9ActionDone (kStoppedWaitingForInput)");
@@ -822,7 +824,19 @@ void Vp9Decoder::HandleInterrupt() {
     frame_done_count_++;
 
     owner_->TryToReschedule();
-    if (state_ != DecoderState::kSwappedOut && state_ != DecoderState::kRunning) {
+
+    // The kInitialWaitingForInput part of this condition is for tests where we force swapping out
+    // but then swap the decoder back during TryToReschedule() before getting here.  In that case
+    // the HW doesn't expect kVp9ActionDone and there's a ProcessInput() already kicked during
+    // TryToReschedule().
+    //
+    // The kRunning part doesn't seem useful (AFAICT), but also doesn't seem harmful.  We should
+    // consider removing that part at some point.
+    //
+    // The kSwappedOut part just checks if TryToReschedule() swapped out this decoder.
+    if (state_ != DecoderState::kSwappedOut && state_ != DecoderState::kRunning &&
+        state_ != DecoderState::kInitialWaitingForInput) {
+      DLOG("not swapped out state_: %u", static_cast<uint32_t>(state_));
       // TODO: Avoid running the decoder if there's no input data or output
       // buffers available. Once it starts running we don't let it swap out, so
       // one decoder could hang indefinitely in this case without being swapped
@@ -832,6 +846,7 @@ void Vp9Decoder::HandleInterrupt() {
       HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
       owner_->watchdog()->Start();
     }
+
     return;
   }
 
@@ -1063,22 +1078,19 @@ bool Vp9Decoder::CanBeSwappedIn() {
   if (have_fatal_error_)
     return false;
 
-  if (valid_frames_count_ == 0) {
-    // We can start decoding without output frames allocated.  This is normal
-    // when starting the first stream, as output format detection requires some
-    // input data.
-    return true;
-  }
-
-  bool has_available_output_frames = false;
-  for (uint32_t i = 0; i < valid_frames_count_; i++) {
-    if (frames_[i]->refcount == 0) {
-      has_available_output_frames = true;
-      break;
+  // We can start decoding without output frames allocated (if other conditions are met).  This is
+  // normal when starting the first stream, as output format detection requires some input data.
+  if (valid_frames_count_) {
+    bool has_available_output_frames = false;
+    for (uint32_t i = 0; i < valid_frames_count_; i++) {
+      if (frames_[i]->refcount == 0) {
+        has_available_output_frames = true;
+        break;
+      }
     }
-  }
-  if (!has_available_output_frames) {
-    return false;
+    if (!has_available_output_frames) {
+      return false;
+    }
   }
 
   if (!client_->IsOutputReady()) {
@@ -1718,12 +1730,9 @@ void Vp9Decoder::InitializeParser() {
       break;
   }
   DecodeMode::Get().FromValue(decode_mode).WriteTo(owner_->dosbus());
-  // For multi-stream UpdateDecodeSize() should be called before
-  // StartDecoding(), because the hardware treats size 0 as infinite.
-  if (input_type_ == InputType::kSingleStream) {
-    HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
-    HevcDecodeCount::Get().FromValue(0).WriteTo(owner_->dosbus());
-  }
+
+  HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
+  HevcDecodeCount::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   HevcParserCmdWrite::Get().FromValue(1 << 16).WriteTo(owner_->dosbus());
 

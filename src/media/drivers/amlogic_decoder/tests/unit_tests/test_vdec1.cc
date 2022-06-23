@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "amlogic-video.h"
+#include "src/media/drivers/amlogic_decoder/decoder_core.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
 
@@ -121,15 +122,15 @@ TEST_F(Vdec1UnitTest, PowerOn) {
 
   HhiVdecClkCntl::Get().FromValue(0xffff0000).WriteTo(fake_owner.mmio()->hiubus);
   DosGclkEn::Get().FromValue(0xfffffc00).WriteTo(fake_owner.mmio()->dosbus);
-  decoder->PowerOn();
-  // confirm non vdec bits weren't touched
-  EXPECT_EQ(0xffff0000,
-            HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
-  EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
-  EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
-  EXPECT_FALSE(fake_owner.clocks_gated());
-
-  decoder->PowerOff();
+  {  // scope power_ref
+    PowerReference power_ref(decoder.get());
+    // confirm non vdec bits weren't touched
+    EXPECT_EQ(0xffff0000,
+              HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
+    EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
+    EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
+    EXPECT_FALSE(fake_owner.clocks_gated());
+  }  // ~power_ref
   EXPECT_TRUE(fake_owner.clocks_gated());
 }
 
@@ -143,20 +144,20 @@ TEST_F(Vdec1UnitTest, PowerOnSm1) {
   AoRtiGenPwrSleep0::Get().FromValue(0xffffffff).WriteTo(fake_owner.mmio()->aobus);
   HhiVdecClkCntl::Get().FromValue(0xffff0000).WriteTo(fake_owner.mmio()->hiubus);
   DosGclkEn::Get().FromValue(0xfffffc00).WriteTo(fake_owner.mmio()->dosbus);
-  decoder->PowerOn();
-  // confirm non vdec bits weren't touched
-  EXPECT_EQ(0xffff0000,
-            HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
-  EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
-  EXPECT_EQ(0xffffffffu & ~2,
-            AoRtiGenPwrIso0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
-  EXPECT_EQ(0xffffffffu & ~2,
-            AoRtiGenPwrSleep0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
+  {  // scope power_ref
+    PowerReference power_ref(decoder.get());
+    // confirm non vdec bits weren't touched
+    EXPECT_EQ(0xffff0000,
+              HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
+    EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
+    EXPECT_EQ(0xffffffffu & ~2,
+              AoRtiGenPwrIso0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
+    EXPECT_EQ(0xffffffffu & ~2,
+              AoRtiGenPwrSleep0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
 
-  EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
-  EXPECT_FALSE(fake_owner.clocks_gated());
-
-  decoder->PowerOff();
+    EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
+    EXPECT_FALSE(fake_owner.clocks_gated());
+  }  // ~power_ref
 
   EXPECT_TRUE(fake_owner.clocks_gated());
   EXPECT_EQ(0xffffffffu, AoRtiGenPwrIso0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());

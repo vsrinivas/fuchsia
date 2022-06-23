@@ -119,17 +119,21 @@ class Vp9Decoder : public VideoDecoder {
                          uint32_t stride) override;
   __WARN_UNUSED_RESULT bool CanBeSwappedIn() override;
   __WARN_UNUSED_RESULT bool CanBeSwappedOut() const override {
+    // We don't include kInitialWaitingForInput here, because we're only in that state if
+    // CanBeSwappedIn(), which means we have some input data to give the HW, and we don't want to
+    // be swapping back out before we've done that.
     return state_ == DecoderState::kFrameJustProduced ||
+           state_ == DecoderState::kStoppedWaitingForInput ||
            state_ == DecoderState::kPausedAtEndOfStream;
   }
   bool IsUtilizingHardware() const override {
     switch (static_cast<DecoderState>(state_)) {
       case DecoderState::kInitialWaitingForInput:
-      case DecoderState::kStoppedWaitingForInput:
       case DecoderState::kRunning:
       case DecoderState::kPausedAtHeader:
       case DecoderState::kFailed:
         return true;
+      case DecoderState::kStoppedWaitingForInput:
       case DecoderState::kFrameJustProduced:
       case DecoderState::kPausedAtEndOfStream:
       case DecoderState::kSwappedOut:

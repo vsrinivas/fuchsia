@@ -108,8 +108,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // DecoderCore::Owner implementation.
   [[nodiscard]] MmioRegisters* mmio() override { return registers_.get(); }
-  void UngateClocks() override;
-  void GateClocks() override;
+
+  void UngateClocks() override __TA_REQUIRES(video_decoder_lock_);
+  void GateClocks() override __TA_REQUIRES(video_decoder_lock_);
+
   void ToggleClock(ClockType type, bool enable) override;
 
   // CanvasEntry::Owner implementation.
@@ -285,6 +287,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // destruction happens with the video decoder lock held.
   __TA_GUARDED(video_decoder_lock_)
   Watchdog watchdog_{this};
+
+  // Clocks are ungated while this is non-zero, gated while 0.  See UngateClocks() / GateClocks().
+  __TA_GUARDED(video_decoder_lock_)
+  uint32_t clock_ungate_ref_ = 0;
 };
 
 }  // namespace amlogic_decoder

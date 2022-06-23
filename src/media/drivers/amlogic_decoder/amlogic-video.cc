@@ -14,6 +14,7 @@
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <memory.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -127,13 +128,21 @@ void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instan
   swapped_out_instances_.push_back(std::move(instance));
 }
 
+// video_decoder_lock_ held
 void AmlogicVideo::UngateClocks() {
   TRACE_DURATION("media", "AmlogicVideo::UngateClocks");
-  ToggleClock(ClockType::kClkDos, true);
-  HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_aiu(0xff).set_demux(true).set_audio_in(true).WriteTo(
-      &*hiubus_);
-  HhiGclkMpeg2::Get().ReadFrom(&*hiubus_).set_vpu_interrupt(true).WriteTo(&*hiubus_);
-  UngateParserClock();
+  ++clock_ungate_ref_;
+  if (clock_ungate_ref_ == 1) {
+    ToggleClock(ClockType::kClkDos, true);
+    HhiGclkMpeg1::Get()
+        .ReadFrom(&*hiubus_)
+        .set_aiu(0xff)
+        .set_demux(true)
+        .set_audio_in(true)
+        .WriteTo(&*hiubus_);
+    HhiGclkMpeg2::Get().ReadFrom(&*hiubus_).set_vpu_interrupt(true).WriteTo(&*hiubus_);
+    UngateParserClock();
+  }
 }
 
 void AmlogicVideo::UngateParserClock() {
@@ -142,18 +151,23 @@ void AmlogicVideo::UngateParserClock() {
   HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_u_parser_top(true).WriteTo(&*hiubus_);
 }
 
+// video_decoder_lock_ held
 void AmlogicVideo::GateClocks() {
   TRACE_DURATION("media", "AmlogicVideo::GateClocks");
-  // Keep VPU interrupt enabled, as it's used for vsync by the display.
-  HhiGclkMpeg1::Get()
-      .ReadFrom(&*hiubus_)
-      .set_u_parser_top(false)
-      .set_aiu(0)
-      .set_demux(false)
-      .set_audio_in(false)
-      .WriteTo(&*hiubus_);
-  ToggleClock(ClockType::kClkDos, false);
-  GateParserClock();
+  ZX_ASSERT(clock_ungate_ref_ > 0);
+  --clock_ungate_ref_;
+  if (clock_ungate_ref_ == 0) {
+    // Keep VPU interrupt enabled, as it's used for vsync by the display.
+    HhiGclkMpeg1::Get()
+        .ReadFrom(&*hiubus_)
+        .set_u_parser_top(false)
+        .set_aiu(0)
+        .set_demux(false)
+        .set_audio_in(false)
+        .WriteTo(&*hiubus_);
+    ToggleClock(ClockType::kClkDos, false);
+    GateParserClock();
+  }
 }
 
 void AmlogicVideo::GateParserClock() {
@@ -469,7 +483,7 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   // split across packets are handled.  In other words, it's how the h264_multi_decoder handles
   // stream-based input.
   bool should_save = current_instance_->decoder()->ShouldSaveInputContext();
-  DLOG("should_save: %d", should_save);
+  DLOG("Swapping out %p should_save: %d", current_instance_->decoder(), should_save);
   if (should_save) {
     if (!current_instance_->input_context()) {
       current_instance_->InitializeInputContext();
@@ -493,6 +507,7 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   stream_buffer_ = nullptr;
   core_->StopDecoding();
   core_->WaitForIdle();
+
   core_ = nullptr;
   // Round-robin; place at the back of the line.
   swapped_out_instances_.push_back(std::move(current_instance_));

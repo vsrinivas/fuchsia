@@ -95,6 +95,9 @@ zx_status_t HevcDec::LoadFirmware(InternalBuffer& buffer) {
 
 void HevcDec::PowerOn() {
   ZX_DEBUG_ASSERT(!powered_on_);
+
+  owner_->UngateClocks();
+
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~hevc_sleep_bits());
@@ -104,8 +107,6 @@ void HevcDec::PowerOn() {
 
   DosSwReset3::Get().FromValue(0xffffffff).WriteTo(mmio()->dosbus);
   DosSwReset3::Get().FromValue(0).WriteTo(mmio()->dosbus);
-
-  owner_->UngateClocks();
 
   enum {
     kGxmFclkDiv4 = 0,  // 500 MHz
@@ -296,8 +297,19 @@ void HevcDec::WaitForIdle() {
   });
 }
 
+void HevcDec::ResetForNewStream() {
+  // This reset is needed at the start of a new stream.  Without this reset, with another VP9 stream
+  // decode active, we _sometimes_ see the VP9 SW watchdog fire (even with good input data) after
+  // the FW/HW is told to decode frame 0 of a new stream.  With this reset, the VP9 HW decoder
+  // finishes decoding frame 0 and the driver receives an interrupt from the HW as expected.
+  DosSwReset3::Get().FromValue(0xffffffff).WriteTo(mmio()->dosbus);
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+  DosSwReset3::Get().FromValue(0).WriteTo(mmio()->dosbus);
+}
+
 void HevcDec::InitializeStreamInput(bool use_parser, uint32_t buffer_address,
                                     uint32_t buffer_size) {
+  ResetForNewStream();
   HevcStreamControl::Get()
       .ReadFrom(mmio()->dosbus)
       .set_stream_fetch_enable(false)

@@ -26,8 +26,6 @@ class HevcDec : public DecoderCore {
                                                                    uint32_t len) override;
   [[nodiscard]] zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) override;
   [[nodiscard]] zx_status_t LoadFirmware(InternalBuffer& buffer) override;
-  void PowerOn() override;
-  void PowerOff() override;
   void StartDecoding() override;
   void StopDecoding() override;
   void WaitForIdle() override;
@@ -43,7 +41,13 @@ class HevcDec : public DecoderCore {
   zx_status_t SaveInputContext(InputContext* context) override;
   zx_status_t RestoreInputContext(InputContext* context) override;
 
+ protected:
+  void PowerOn() override;
+  void PowerOff() override;
+
  private:
+  void ResetForNewStream();
+
   MmioRegisters* mmio() const { return owner_->mmio(); }
 
   uint32_t hevc_sleep_bits();

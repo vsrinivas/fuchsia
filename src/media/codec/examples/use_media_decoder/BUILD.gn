@@ -173,6 +173,22 @@ test("use_h264_multi_decoder_concurrent_stream_switching_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_h264_and_vp9_decoders_and_pcmm_stress_test") {
+  testonly = true
+
+  output_name = "use_h264_and_vp9_decoders_and_pcmm_stress_test"
+
+  sources = [ "test/use_h264_and_vp9_decoders_and_pcmm_stress_test.cc" ]
+
+  deps = [
+    ":use_media_decoder_source_set",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/lib/fidl/llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
 test("use_h264_decoder_secure_output_test") {
   testonly = true
 

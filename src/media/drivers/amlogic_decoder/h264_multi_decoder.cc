@@ -1806,18 +1806,6 @@ void H264MultiDecoder::HandleSliceHeadDone() {
           // Force swap out so we can restore from saved state later when we have another free
           // output frame.  Don't attempt to save (saving in the middle of a slice header isn't a
           // thing for this HW).
-          //
-          //
-          //
-          // Force swap out, and do save input state, to persist the progress we just made decoding
-          // a frame.
-          //
-          // In part this can be thought of as forcing a checkpoint of the successful work
-          // accomplished so far.  We'll potentially restore from this checkpoint multiple times
-          // until we have enough input data to completely decode the next frame (so we need to save
-          // here so we can restore back to here if the next frame decode doesn't complete with
-          // input data available so far).  Typically we'll have enough input data to avoid
-          // excessive re-decodes.
           ZX_DEBUG_ASSERT(!force_swap_out_);
           force_swap_out_ = true;
           ZX_DEBUG_ASSERT(!should_save_input_context_);
