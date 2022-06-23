@@ -64,6 +64,14 @@ type AllCounters = table {
     ///
     /// Reset the counters to clear this flag.
     5: coex_saturated bool;
+
+    /// IP Counters for TX.
+    @available(added=8)
+    6: ip_tx IpCounters;
+
+    /// IP Counters for RX.
+    @available(added=8)
+    7: ip_rx IpCounters;
 };
 
 /// Counters associated with the MAC layer.
@@ -199,4 +207,14 @@ type CoexCounters = table {
     ///
     /// Receive only.
     9: grant_none uint64;
+};
+
+/// Counters associated with the IP layer.
+@available(added=8)
+type IpCounters = table {
+    /// The number of IPv6 packets successfully transmitted/received.
+    1: success uint32;
+
+    /// The number of IPv6 packets failed to transmit/receive.
+    2: failure uint32;
 };

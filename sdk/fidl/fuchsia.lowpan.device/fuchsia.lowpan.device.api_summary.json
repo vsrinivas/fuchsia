@@ -15,6 +15,16 @@
         "name": "fuchsia.lowpan.device/AllCounters.coex_tx"
     },
     {
+        "declaration": "fuchsia.lowpan.device/IpCounters",
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.ip_rx"
+    },
+    {
+        "declaration": "fuchsia.lowpan.device/IpCounters",
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.ip_tx"
+    },
+    {
         "declaration": "fuchsia.lowpan.device/MacCounters",
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.mac_rx"
@@ -319,6 +329,20 @@
     {
         "kind": "table",
         "name": "fuchsia.lowpan.device/Identity"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/IpCounters.failure"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/IpCounters.success"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/IpCounters"
     },
     {
         "declaration": "uint16",
