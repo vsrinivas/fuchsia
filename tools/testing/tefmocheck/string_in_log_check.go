@@ -391,6 +391,9 @@ func infraToolLogChecks() []FailureModeCheck {
 		&stringInLogCheck{
 			String: "server canceled transfer: could not open file for writing",
 			Type:   swarmingOutputType,
+			// This error may appear as part of a test, so ignore unless it happens
+			// during device setup which will cause a task failure.
+			SkipPassedTask: true,
 		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{
