@@ -133,17 +133,21 @@ impl SetUiFacade {
         match input_proxy.watch().await?.devices {
             Some(input_device) => {
                 let mut muted = false;
-                let device = input_device
+                if let Some(device) = input_device
                     .into_iter()
                     .find(|device| device.device_type == Some(fsettings::DeviceType::Microphone))
-                    .unwrap();
-                match device.state {
-                    Some(state) => {
-                        muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::MUTED);
+                {
+                    match device.state {
+                        Some(state) => {
+                            muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::MUTED);
+                        }
+                        _ => (),
                     }
-                    _ => (),
+                    return Ok(to_value(muted)?);
+                } else {
+                    // There is no microphone on device, always return unmuted
+                    return Ok(to_value(false)?);
                 }
-                return Ok(to_value(muted)?);
             }
             _ => Err(format_err!("isMicMuted - cannot read input state.")),
         }
@@ -221,7 +225,7 @@ impl SetUiFacade {
         let mic_state: MicStates = from_value(args)?;
 
         // If mic is already in desired state, then nothing left to execute.
-        let is_muted = self.is_mic_muted().await?.as_bool().unwrap();
+        let is_muted = self.is_mic_muted().await?.as_bool().unwrap_or(false);
         let mut mute_mic: bool = false;
         match mic_state {
             MicStates::Muted => {

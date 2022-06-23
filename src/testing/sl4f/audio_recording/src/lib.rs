@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Error};
-use base64;
+use anyhow::{anyhow, format_err, Context, Error};
+use async_lock::RwLock;
 use fdio;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media::*;
@@ -13,13 +13,10 @@ use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::lock::Mutex;
 use futures::{select, StreamExt, TryFutureExt, TryStreamExt};
-use parking_lot::RwLock;
-use serde_json::{to_value, Value};
 use std::convert::{TryFrom, TryInto};
 use std::io::Write;
 use std::sync::Arc;
-
-use fuchsia_syslog::macros::*;
+use tracing::trace;
 
 // Fixed configuration for our virtual output device.
 const OUTPUT_SAMPLE_FORMAT: AudioSampleFormat = AudioSampleFormat::Signed16;
@@ -108,13 +105,11 @@ impl OutputWorker {
 
         let frames_per_millisecond = u64::from(frames_per_second / 1000);
         self.frames_per_notification = frames_per_millisecond * 50;
-
-        fx_log_info!(
-            "AudioFacade::OutputWorker: configuring with {:?} fps, {:?} bpf",
-            frames_per_second,
-            self.frame_size
+        trace!(
+            fps = frames_per_second,
+            bpf = self.frame_size,
+            "AudioFacade::OutputWorker: configuring"
         );
-
         Ok(())
     }
 
@@ -132,7 +127,7 @@ impl OutputWorker {
         let target_notifications_per_ring = target_notifications_per_ring.try_into()?;
 
         va_output.set_notification_frequency(target_notifications_per_ring)?;
-        fx_log_info!(
+        trace!(
             "AudioFacade::OutputWorker: created buffer with {:?} frames, {:?} notifications",
             num_ring_buffer_frames,
             target_notifications_per_ring
@@ -157,7 +152,7 @@ impl OutputWorker {
         if capturing && self.next_read != self.next_read_end {
             let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
 
-            fx_log_info!(
+            trace!(
                 "AudioFacade::OutputWorker read byte {:?} to {:?}",
                 self.next_read,
                 self.next_read_end
@@ -219,7 +214,7 @@ impl OutputWorker {
                             return Err(format_err!("Got None ExtractMsg Event, exiting worker"));
                         },
                         Some(ExtractMsg::Stop { mut out_sender }) => {
-                            fx_log_info!("AudioFacade::OutputWorker: Stop capture");
+                            trace!("AudioFacade::OutputWorker: Stop capture");
                             self.capturing = false;
                             let mut ret_data = vec![0u8; 0];
 
@@ -228,7 +223,7 @@ impl OutputWorker {
                             out_sender.try_send(ret_data)?;
                         }
                         Some(ExtractMsg::Start) => {
-                            fx_log_info!("AudioFacade::OutputWorker: Start capture");
+                            trace!("AudioFacade::OutputWorker: Start capture");
                             self.extracted_data.clear();
                             self.capturing = true;
                         }
@@ -251,14 +246,14 @@ impl OutputWorker {
                         },
                         Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStart { start_time }) => {
                             if self.capturing && last_timestamp > zx::Time::from_nanos(0) {
-                                fx_log_info!("AudioFacade::OutputWorker: Extraction OnPositionNotify received before OnStart");
+                                trace!("AudioFacade::OutputWorker: Extraction OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
                         Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!(
+                                trace!(
                                     "AudioFacade::OutputWorker: Extraction OnPositionNotify timestamp cleared before OnStop");
                             }
                             last_timestamp = zx::Time::from_nanos(0);
@@ -271,7 +266,7 @@ impl OutputWorker {
                             // To minimize logspam, log glitches only when capturing.
                             if self.capturing {
                                 if last_timestamp == zx::Time::from_nanos(0) {
-                                    fx_log_info!(
+                                    trace!(
                                         "AudioFacade::OutputWorker: Extraction OnStart not received before OnPositionNotify");
                                 }
 
@@ -280,12 +275,12 @@ impl OutputWorker {
                                 // audio from the system and/or extracting it for analysis.
                                 let timestamp_interval = monotonic_zx_time - last_timestamp;
                                 if  timestamp_interval > zx::Duration::from_millis(100) {
-                                    fx_log_info!(
+                                    trace!(
                                         "AudioFacade::OutputWorker: Extraction position timestamp jumped by more than 100ms ({:?}ms). Expect glitches.",
                                         timestamp_interval.into_millis());
                                 }
                                 if  monotonic_zx_time < last_timestamp {
-                                    fx_log_info!(
+                                    trace!(
                                         "AudioFacade::OutputWorker: Extraction position timestamp moved backwards ({:?}ms). Expect glitches.",
                                         timestamp_interval.into_millis());
                                 }
@@ -296,7 +291,7 @@ impl OutputWorker {
                                 // for analysis.
                                 let observed_interval = now - last_event_time;
                                 if  observed_interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!(
+                                    trace!(
                                         "AudioFacade::OutputWorker: Extraction position not updated for 150ms ({:?}ms). Expect glitches.",
                                         observed_interval.into_millis());
                                 }
@@ -308,7 +303,7 @@ impl OutputWorker {
                             self.on_position_notify(monotonic_time, ring_position, self.capturing)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("AudioFacade::OutputWorker: Got unknown DeviceEvent {:?}", evt);
+                            trace!("AudioFacade::OutputWorker: Got unknown DeviceEvent {:?}", evt);
                         }
                     }
                 },
@@ -496,7 +491,7 @@ impl InputWorker {
         // 28 bytes for wave fmt block
         // 8 bytes for data header
         self.inj_data.write(&data[44..])?;
-        fx_log_info!("AudioFacade::InputWorker: Injecting {:?} bytes", self.inj_data.len());
+        trace!("AudioFacade::InputWorker: Injecting {:?} bytes", self.inj_data.len());
         Ok(())
     }
 
@@ -513,7 +508,7 @@ impl InputWorker {
 
         let frames_per_millisecond = frames_per_second / 1000;
 
-        fx_log_info!(
+        trace!(
             "AudioFacade::InputWorker: configuring with {:?} fps, {:?} bpf",
             frames_per_second,
             self.frame_size
@@ -564,7 +559,7 @@ impl InputWorker {
         self.last_ring_offset = 0;
         self.vmo = Some(ring_buffer);
 
-        fx_log_info!(
+        trace!(
             "AudioFacade::InputWorker: created buffer with {:?} frames, {:?} notifications, {:?} target frames per write",
             num_ring_buffer_frames,
             target_notifications_per_ring,
@@ -648,14 +643,14 @@ impl InputWorker {
                         },
                         Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStart { start_time }) => {
                             if last_timestamp > zx::Time::from_nanos(0) {
-                                fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify received before OnStart");
+                                trace!("AudioFacade::InputWorker: Injection OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
                         Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify timestamp cleared before OnStop");
+                                trace!("AudioFacade::InputWorker: Injection OnPositionNotify timestamp cleared before OnStop");
                             }
                             last_timestamp = zx::Time::from_nanos(0);
                             last_event_time = zx::Time::from_nanos(0);
@@ -667,7 +662,7 @@ impl InputWorker {
                             // To minimize logspam, log glitches only when writing audio.
                             if self.inj_data.len() > 0 {
                                 if last_timestamp == zx::Time::from_nanos(0) {
-                                    fx_log_info!("AudioFacade::InputWorker: Injection OnStart not received before OnPositionNotify");
+                                    trace!("AudioFacade::InputWorker: Injection OnStart not received before OnPositionNotify");
                                 }
 
                                 // Log if our timestamps had a gap of more than 100ms. This is highly
@@ -676,11 +671,11 @@ impl InputWorker {
                                 let timestamp_interval = monotonic_zx_time - last_timestamp;
 
                                 if  timestamp_interval > zx::Duration::from_millis(100) {
-                                    fx_log_info!("AudioFacade::InputWorker: Injection position timestamp jumped by more than 100ms ({:?}ms). Expect glitches.",
+                                    trace!("AudioFacade::InputWorker: Injection position timestamp jumped by more than 100ms ({:?}ms). Expect glitches.",
                                         timestamp_interval.into_millis());
                                 }
                                 if  monotonic_zx_time < last_timestamp {
-                                    fx_log_info!("AudioFacade::InputWorker: Injection position timestamp moved backwards ({:?}ms). Expect glitches.",
+                                    trace!("AudioFacade::InputWorker: Injection position timestamp moved backwards ({:?}ms). Expect glitches.",
                                         timestamp_interval.into_millis());
                                 }
 
@@ -691,7 +686,7 @@ impl InputWorker {
                                 let observed_interval = now - last_event_time;
 
                                 if  observed_interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!("AudioFacade::InputWorker: Injection position not updated for 150ms ({:?}ms). Expect glitches.",
+                                    trace!("AudioFacade::InputWorker: Injection position not updated for 150ms ({:?}ms). Expect glitches.",
                                         observed_interval.into_millis());
                                 }
                             }
@@ -701,7 +696,7 @@ impl InputWorker {
                             self.on_position_notify(monotonic_time, ring_position)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("AudioFacade::InputWorker: Got unknown DeviceEvent {:?}", evt);
+                            trace!("AudioFacade::InputWorker: Got unknown DeviceEvent {:?}", evt);
                         }
                     }
                 },
@@ -831,8 +826,8 @@ impl AudioFacade {
             // Make sure there are no other virtual devices to ensure that audio_core
             // will connect to our new virtual devices.
             self.vad_control.remove_all(zx::Time::INFINITE)?;
-            self.audio_input.write().start_input(&self.vad_control)?;
-            self.audio_output.write().start_output(&self.vad_control)?;
+            self.audio_input.write().await.start_input(&self.vad_control)?;
+            self.audio_output.write().await.start_output(&self.vad_control)?;
             *(initialized) = true;
         }
         Ok(())
@@ -864,31 +859,30 @@ impl AudioFacade {
         Ok(AudioFacade { vad_control, audio_output, audio_input, initialized })
     }
 
-    pub async fn start_output_save(&self) -> Result<Value, Error> {
+    pub async fn start_output_save(&self) -> Result<bool, Error> {
         self.ensure_initialized().await?;
-        let capturing = self.audio_output.read().capturing.clone();
+        let capturing = self.audio_output.read().await.capturing.clone();
         let mut capturing = capturing.lock().await;
         if !*capturing {
-            let mut write = self.audio_output.write();
+            let mut write = self.audio_output.write().await;
             let sender = write
                 .output_sender
                 .as_mut()
                 .ok_or(format_err!("Failed unwrapping output sender"))?;
             sender.try_send(ExtractMsg::Start)?;
             *(capturing) = true;
-
-            Ok(to_value(true)?)
+            Ok(true)
         } else {
             return Err(format_err!("Cannot StartOutputSave, already started."));
         }
     }
 
-    pub async fn stop_output_save(&self) -> Result<Value, Error> {
+    pub async fn stop_output_save(&self) -> Result<bool, Error> {
         self.ensure_initialized().await?;
-        let capturing = self.audio_output.read().capturing.clone();
+        let capturing = self.audio_output.read().await.capturing.clone();
         let mut capturing = capturing.lock().await;
         if *capturing {
-            let mut write = self.audio_output.write();
+            let mut write = self.audio_output.write().await;
             write.extracted_data.clear();
 
             let sender = write
@@ -909,65 +903,71 @@ impl AudioFacade {
 
             write.extracted_data.append(&mut saved_audio);
             *(capturing) = false;
-            Ok(to_value(true)?)
+            Ok(true)
         } else {
             return Err(format_err!("Cannot StopOutputSave, not started."));
         }
     }
 
-    pub async fn get_output_audio(&self) -> Result<Value, Error> {
+    pub async fn get_output_audio(&self) -> Result<zx::Vmo, Error> {
         self.ensure_initialized().await?;
-        let capturing = self.audio_output.read().capturing.clone();
+        let capturing = self.audio_output.read().await.capturing.clone();
         let capturing = capturing.lock().await;
         if !*capturing {
-            Ok(to_value(base64::encode(&self.audio_output.read().extracted_data))?)
+            let a = &self.audio_output.read().await.extracted_data;
+            let vmo = zx::Vmo::create(a.len() as u64).unwrap();
+            vmo.write(a, 0)?;
+            Ok(vmo)
         } else {
             return Err(format_err!("GetOutputAudio failed, still saving."));
         }
     }
 
-    pub async fn put_input_audio(&self, args: Value) -> Result<Value, Error> {
+    pub async fn put_input_audio(
+        &self,
+        mut wave_data_vec: Vec<u8>,
+        sample_index: usize,
+    ) -> Result<i32, Error> {
         self.ensure_initialized().await?;
-        let data = args.get("data").ok_or(format_err!("PutInputAudio failed, no data"))?;
-        let data = data.as_str().ok_or(format_err!("PutInputAudio failed, data not string"))?;
-
-        let mut wave_data_vec = base64::decode(data)?;
-        let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
-        let sample_index = sample_index.try_into()?;
 
         // TODO(perley): check wave format for correct bits per sample and float/int.
-        let byte_cnt = wave_data_vec.len();
+        let byte_count = wave_data_vec.len();
         {
-            let mut write = self.audio_input.write();
+            let mut write = self.audio_input.write().await;
             // Make sure we have somewhere to store the wav data.
             if write.injection_data.len() <= sample_index {
                 write.injection_data.resize(sample_index + 1, vec![]);
             }
 
-            write.injection_data[sample_index].clear();
             write.injection_data[sample_index].append(&mut wave_data_vec);
             write.have_data = true;
         }
-        Ok(to_value(byte_cnt)?)
+        Ok(byte_count.try_into().unwrap())
     }
 
-    pub async fn start_input_injection(&self, args: Value) -> Result<Value, Error> {
+    pub async fn clear_input_audio(&self, sample_index: usize) -> Result<bool, Error> {
+        self.ensure_initialized().await?;
+        let mut write = self.audio_input.write().await;
+        if write.injection_data.len() > sample_index {
+            write.injection_data[sample_index].clear();
+        }
+        Ok(true)
+    }
+
+    pub async fn start_input_injection(&self, sample_index: usize) -> Result<bool, Error> {
         self.ensure_initialized().await?;
         {
-            let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
-            let sample_index = sample_index.try_into()?;
-
-            if !self.audio_input.read().have_data {
+            if !self.audio_input.read().await.have_data {
                 return Err(format_err!("StartInputInjection failed, no Audio data to inject."));
             }
-            self.audio_input.write().play(sample_index)?;
+            self.audio_input.write().await.play(sample_index)?;
         }
-        Ok(to_value(true)?)
+        Ok(true)
     }
 
-    pub async fn stop_input_injection(&self) -> Result<Value, Error> {
+    pub async fn stop_input_injection(&self) -> Result<bool, Error> {
         self.ensure_initialized().await?;
-        self.audio_input.write().stop()?;
-        Ok(to_value(true)?)
+        self.audio_input.write().await.stop()?;
+        Ok(true)
     }
 }
