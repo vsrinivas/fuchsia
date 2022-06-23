@@ -33,6 +33,7 @@
 #include "src/storage/fvm/driver/diagnostics.h"
 #include "src/storage/fvm/driver/slice_extent.h"
 #include "src/storage/fvm/driver/vpartition.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/metadata.h"
 
@@ -45,7 +46,7 @@ class VPartitionManager;
 using ManagerDeviceType =
     ddk::Device<VPartitionManager, ddk::Initializable,
                 ddk::Messageable<fuchsia_hardware_block_volume::VolumeManager>::Mixin,
-                ddk::Unbindable>;
+                ddk::Unbindable, ddk::ChildPreReleaseable>;
 
 class VPartitionManager : public ManagerDeviceType {
  public:
@@ -97,6 +98,7 @@ class VPartitionManager : public ManagerDeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+  void DdkChildPreRelease(void* child);
 
   VPartitionManager(zx_device_t* parent, const block_info_t& info, size_t block_op_size,
                     const block_impl_protocol_t* bp);
@@ -136,7 +138,7 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t Upgrade(const uint8_t* old_guid, const uint8_t* new_guid) TA_EXCL(lock_);
 
   // Given a VPartition object, add a corresponding ddk device.
-  zx_status_t AddPartition(std::unique_ptr<VPartition> vp) const;
+  zx_status_t AddPartition(std::unique_ptr<VPartition> vp) TA_EXCL(lock_);
 
   // Update, hash, and write back the current copy of the FVM metadata.
   // Automatically handles alternating writes to primary / backup copy of FVM.
@@ -200,6 +202,15 @@ class VPartitionManager : public ManagerDeviceType {
   // to keep the max size without changing the on-disk format. fshost will set these on startup
   // when configured to do so.
   uint64_t max_partition_sizes_[fvm::kMaxVPartitions] TA_GUARDED(lock_) = {0};
+
+  // Keeps track of which FVM entries currently have running devices to prevent duplicate device
+  // names. The VPartition devices are named after their partition name and FVM entry index. When a
+  // partition is destroyed, the entry in FVM is cleared before the device is removed. If a new
+  // partition is created with the same name as a partition that was just destroyed but before the
+  // previous partition's device is removed then it will likely get the same FVM entry index and
+  // have the same device name. This field is used to prevent reusing an FVM entry for the brief
+  // period of time when the entry is clear but the device hasn't been removed yet.
+  bool device_bound_at_entry_[fvm::kMaxVPartitions] TA_GUARDED(lock_) = {};
 
   // Block Protocol
   const size_t block_op_size_;

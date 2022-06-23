@@ -114,7 +114,7 @@ void VPartitionManager::DdkInit(ddk::InitTxn txn) {
   // device visible and able to be unbound.
 }
 
-zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) const {
+zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) {
   const std::string name =
       GetAllocatedVPartEntry(vp->entry_index())->name() + "-p-" + std::to_string(vp->entry_index());
 
@@ -122,6 +122,8 @@ zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) cons
   if ((status = vp->DdkAdd(name.c_str())) != ZX_OK) {
     return status;
   }
+  fbl::AutoLock lock(&lock_);
+  device_bound_at_entry_[vp->entry_index()] = true;
 
   // The VPartition object was added to the DDK and is now owned by it. It will be deleted when the
   // device is released.
@@ -436,7 +438,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
 zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     const VPartitionEntry* entry = GetVPartEntryLocked(i);
-    if (entry->IsFree()) {
+    if (entry->IsFree() && !device_bound_at_entry_[i]) {
       *out = i;
       return ZX_OK;
     }
@@ -905,6 +907,12 @@ void VPartitionManager::DdkRelease() {
     thrd_join(initialization_thread_, nullptr);
   }
   delete this;
+}
+
+void VPartitionManager::DdkChildPreRelease(void* child) {
+  VPartition* vp = static_cast<VPartition*>(child);
+  fbl::AutoLock lock(&lock_);
+  device_bound_at_entry_[vp->entry_index()] = false;
 }
 
 zx_driver_ops_t driver_ops = {
