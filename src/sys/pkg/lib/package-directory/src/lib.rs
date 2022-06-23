@@ -84,6 +84,20 @@ impl NonMetaStorage for blobfs::Client {
     }
 }
 
+/// Assumes the directory is a flat container and the files are named after their hashes.
+impl NonMetaStorage for fio::DirectoryProxy {
+    fn open(
+        &self,
+        blob: &fuchsia_hash::Hash,
+        flags: fio::OpenFlags,
+        mode: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fuchsia_fs::node::OpenError> {
+        self.open(flags, mode, blob.to_string().as_str(), server_end)
+            .map_err(fuchsia_fs::node::OpenError::SendOpenRequest)
+    }
+}
+
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
 /// The connection rights are set by `flags`, used the same as the `flags` parameter of
 ///   fuchsia.io/Directory.Open.
