@@ -1,0 +1,67 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":pkg" ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [ ":component" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "nonbindable.bind"
+  header_output = "nonbindable-bind.h"
+  bind_output = "nonbindable.bindbc"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.test",
+  ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "test-nonbindable"
+  sources = [ "nonbindable.cc" ]
+  deps = [
+    ":bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "test-nonbindable"
+  deps = [ ":driver" ]
+  info = "component-info.json"
+  colocate = true
+}
+
+test("nonbindable-test") {
+  sources = [ "test.cc" ]
+  deps = [
+    ":component",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/misc/drivers/test-parent",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_unittest_package("pkg") {
+  package_name = "nonbindable-test"
+  deps = [ ":nonbindable-test" ]
+}

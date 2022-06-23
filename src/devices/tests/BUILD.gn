@@ -32,6 +32,7 @@ group("tests") {
     "fx-logger:tests",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
+    "nonbindable:tests",
     "string-bind-test",
     "v2:tests",
   ]
@@ -70,6 +71,7 @@ group("drivers") {
     "fidl-protocol:parent",
     "isolateddevmgr:isolateddevmgr-test-driver",
     "mock-device:mock-device",
+    "nonbindable:drivers",
     "string-bind-test:child-driver",
     "string-bind-test:parent-driver",
     "sysdev:sysdev",

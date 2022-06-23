@@ -223,6 +223,7 @@
 //src/devices/tests/fidl-protocol:parent-driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
 //src/devices/tests/mock-device:mock-device-driver
+//src/devices/tests/nonbindable:driver
 //src/devices/tests/string-bind-test:child-driver-driver
 //src/devices/tests/string-bind-test:parent-driver-driver
 //src/devices/tests/sysdev:sysdev-driver
