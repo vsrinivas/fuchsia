@@ -25,7 +25,6 @@ group("all") {
     ":bluetooth_intel",
     ":bluetooth_profiles",
     ":broadcom",
-    ":chrealm",
     ":cmdutils",
     ":cobalt_client",
     ":cpuperf",
@@ -128,11 +127,6 @@ group("broadcom") {
     "//src/connectivity/wlan/drivers/wlanif",
     "//src/connectivity/wlan/drivers/wlanphy",
   ]
-}
-
-group("chrealm") {
-  testonly = true
-  public_deps = [ "//src/sys/tools/chrealm" ]
 }
 
 group("cmdutils") {

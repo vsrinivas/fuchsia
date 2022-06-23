@@ -169,8 +169,6 @@ group("core_base_packages") {
     "//src/sys/test_runners/legacy_test/test_data:legacy_test_runner_examples",
     "//src/sys/test_runners/rust/test_data:rust-test-runner-example",
     "//src/sys/test_runners/starnix:starnix-test-runners",
-    "//src/sys/tools/chrealm:chrealm",
-    "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message",
     "//src/testing/fidl/echo_client_placeholder",
     "//src/testing/fidl/echo_server_placeholder($default_toolchain)",
     "//src/testing/fidl/intl_property_manager",

@@ -77,8 +77,6 @@ group("all") {
     "//src/sys/device_settings:device_settings_manager",
     "//src/sys/sysmgr/integration_tests",
     "//src/sys/sysmgr/test:sysmgr-tests",
-    "//src/sys/tools/chrealm/integration_tests:chrealm_integrationtests",
-    "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message",
     "//src/sys/tools/run/test",
     "//src/ui/a11y/bundles:tests",
     "//src/ui/bin/shortcut:tests",
