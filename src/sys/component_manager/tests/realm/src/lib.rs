@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fidl_examples_routing_echo::EchoMarker;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys2::{InstanceState, RealmExplorerMarker, RealmQueryMarker};
 use fuchsia_component::client::*;
 
@@ -21,8 +22,24 @@ pub async fn query_self() {
     let started = resolved.started.unwrap();
     started.out_dir.unwrap();
 
-    // Test runners are not providing the runtime directory for test components
-    assert!(started.runtime_dir.is_none());
+    // Test runners should provide "elf/job_id".
+    let runtime_dir = started.runtime_dir.unwrap().into_proxy().unwrap();
+    let job_id_content = fuchsia_fs::directory::open_file(
+        &runtime_dir,
+        "elf/job_id",
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .expect("cannot open elf/job_id")
+    .read(fio::MAX_BUF)
+    .await
+    .expect("failed to read elf/job_id")
+    .expect("failed to read elf/job_id");
+
+    let _job_id: u64 = String::from_utf8(job_id_content)
+        .expect("cannot parse job_id")
+        .parse()
+        .expect("cannot parse job_id");
 }
 
 #[fuchsia::test]

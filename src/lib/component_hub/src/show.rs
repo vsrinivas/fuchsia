@@ -256,8 +256,8 @@ async fn get_config_fields(config_dir: Directory) -> Result<Vec<ConfigField>> {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
 pub struct ElfRuntime {
-    pub job_id: u32,
-    pub process_id: Option<u32>,
+    pub job_id: u64,
+    pub process_id: Option<u64>,
     pub process_start_time: Option<i64>,
     pub process_start_time_utc_estimate: Option<String>,
 }
@@ -271,9 +271,12 @@ impl ElfRuntime {
             elf_dir.read_file("process_start_time_utc_estimate"),
         );
 
-        let job_id = job_id?.parse::<u32>().context("Job ID is not u32")?;
+        let job_id = job_id?.parse::<u64>().context("Job ID is not u64")?;
 
-        let process_id = Some(process_id?.parse::<u32>().context("Process ID is not u32")?);
+        let process_id = match process_id {
+            Ok(id) => Some(id.parse::<u64>().context("Process ID is not u64")?),
+            Err(_) => None,
+        };
 
         let process_start_time =
             process_start_time.ok().map(|time_string| time_string.parse::<i64>().ok()).flatten();
@@ -287,10 +290,10 @@ impl ElfRuntime {
         let (job_id, process_id) =
             futures::join!(hub_dir.read_file("job-id"), hub_dir.read_file("process-id"),);
 
-        let job_id = job_id?.parse::<u32>().context("Job ID is not u32")?;
+        let job_id = job_id?.parse::<u64>().context("Job ID is not u64")?;
 
         let process_id = if hub_dir.exists("process-id").await? {
-            Some(process_id?.parse::<u32>().context("Process ID is not u32")?)
+            Some(process_id?.parse::<u64>().context("Process ID is not u64")?)
         } else {
             None
         };

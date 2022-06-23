@@ -5,7 +5,7 @@
 use {
     super::SuiteServer,
     crate::errors::ArgumentError,
-    anyhow::Context,
+    anyhow::{anyhow, Context},
     async_trait::async_trait,
     fidl::endpoints::create_proxy,
     fidl::endpoints::{ProtocolMarker, Proxy, ServerEnd},
@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_test_runner::{
         LibraryLoaderCacheBuilderMarker, LibraryLoaderCacheMarker, LibraryLoaderCacheProxy,
     },
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
@@ -32,11 +32,20 @@ use {
         sync::{Arc, Mutex},
     },
     thiserror::Error,
-    tracing::{error, info},
+    tracing::{error, info, warn},
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_static, tree_builder::TreeBuilder,
+    },
     zx::{HandleBased, Task},
 };
 
 static PKG_PATH: &'static str = "/pkg";
+
+// Maximum time that the runner will wait for break_on_start eventpair to signal.
+// This is set to prevent debuggers from blocking us for too long, either intentionally
+// or unintentionally.
+const MAX_WAIT_BREAK_ON_START: zx::Duration = zx::Duration::from_millis(300);
 
 /// Error encountered running test component
 #[derive(Debug, Error)]
@@ -53,6 +62,9 @@ pub enum ComponentError {
     #[error("Cannot run test {}, as no outgoing directory was supplied.", _0)]
     MissingOutDir(String),
 
+    #[error("Cannot run test {}, as no runtime directory was supplied.", _0)]
+    MissingRuntimeDir(String),
+
     #[error("Cannot run test {}, as no /pkg directory was supplied.", _0)]
     MissingPkg(String),
 
@@ -67,6 +79,9 @@ pub enum ComponentError {
 
     #[error("Cannot run suite server: {:?}", _0)]
     ServeSuite(anyhow::Error),
+
+    #[error("Cannot serve runtime directory: {:?}", _0)]
+    ServeRuntimeDir(anyhow::Error),
 
     #[error("{}: {:?}", _0, _1)]
     Fidl(String, fidl::Error),
@@ -92,11 +107,13 @@ impl ComponentError {
             Self::InvalidArgs(_, _) => fcomponent::Error::InvalidArguments,
             Self::MissingNamespace(_) => fcomponent::Error::InvalidArguments,
             Self::MissingOutDir(_) => fcomponent::Error::InvalidArguments,
+            Self::MissingRuntimeDir(_) => fcomponent::Error::InvalidArguments,
             Self::MissingPkg(_) => fcomponent::Error::InvalidArguments,
             Self::LibraryLoadError(_, _) => fcomponent::Error::Internal,
             Self::LoadingExecutable(_, _) => fcomponent::Error::InstanceCannotStart,
             Self::VmoChild(_, _) => fcomponent::Error::Internal,
             Self::ServeSuite(_) => fcomponent::Error::Internal,
+            Self::ServeRuntimeDir(_) => fcomponent::Error::Internal,
             Self::Fidl(_, _) => fcomponent::Error::Internal,
             Self::CreateJob(_) => fcomponent::Error::ResourceUnavailable,
             Self::CreateChannel(_) => fcomponent::Error::ResourceUnavailable,
@@ -167,7 +184,10 @@ impl Component {
     pub async fn new<F>(
         start_info: fcrunner::ComponentStartInfo,
         validate_args: F,
-    ) -> Result<(Self, ServerEnd<fio::DirectoryMarker>), ComponentError>
+    ) -> Result<
+        (Self, ServerEnd<fio::DirectoryMarker>, ServerEnd<fio::DirectoryMarker>),
+        ComponentError,
+    >
     where
         F: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     {
@@ -199,6 +219,9 @@ impl Component {
         let outgoing_dir =
             start_info.outgoing_dir.ok_or_else(|| ComponentError::MissingOutDir(url.clone()))?;
 
+        let runtime_dir =
+            start_info.runtime_dir.ok_or_else(|| ComponentError::MissingRuntimeDir(url.clone()))?;
+
         let (pkg_proxy, lib_proxy) = get_pkg_and_lib_proxy(&ns, &url)?;
 
         let executable_vmo = library_loader::load_vmo(pkg_proxy, &binary)
@@ -228,6 +251,7 @@ impl Component {
                 lib_loader_cache,
             },
             outgoing_dir,
+            runtime_dir,
         ))
     }
 
@@ -419,7 +443,7 @@ where
 }
 
 async fn start_component_inner<F, U, S>(
-    start_info: fcrunner::ComponentStartInfo,
+    mut start_info: fcrunner::ComponentStartInfo,
     server_end: &mut ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
     validate_args: U,
@@ -429,8 +453,36 @@ where
     U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
-    let (component, outgoing_dir) = Component::new(start_info, validate_args).await?;
+    let break_on_start = start_info.break_on_start.take();
+    let (component, outgoing_dir, runtime_dir) = Component::new(start_info, validate_args).await?;
     let component = Arc::new(component);
+
+    // Debugger support:
+    // 1. Serve the runtime directory providing the "elf/job_id" entry.
+    let mut runtime_dir_builder = TreeBuilder::empty_dir();
+    let job_id = component
+        .job
+        .get_koid()
+        .map_err(|s| ComponentError::ServeRuntimeDir(anyhow!("cannot get job koid: {}", s)))?
+        .raw_koid();
+    runtime_dir_builder
+        .add_entry(&["elf", "job_id"], read_only_static(job_id.to_string()))
+        .map_err(|e| ComponentError::ServeRuntimeDir(anyhow!("cannot add elf/job_id: {}", e)))?;
+    runtime_dir_builder.build().open(
+        ExecutionScope::new(),
+        fio::OpenFlags::RIGHT_READABLE,
+        0,
+        vfs::path::Path::dot(),
+        ServerEnd::<fio::NodeMarker>::new(runtime_dir.into_channel()),
+    );
+    // 2. Wait on `break_on_start` before spawning any processes.
+    if let Some(break_on_start) = break_on_start {
+        fasync::OnSignals::new(&break_on_start, zx::Signals::OBJECT_PEER_CLOSED)
+            .on_timeout(MAX_WAIT_BREAK_ON_START, || Err(zx::Status::TIMED_OUT))
+            .await
+            .err()
+            .map(|e| warn!("Failed to wait break_on_start on {}: {}", component.name, e));
+    }
 
     let job_runtime_dup = component
         .job

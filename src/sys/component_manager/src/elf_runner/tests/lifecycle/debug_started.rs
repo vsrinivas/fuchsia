@@ -56,7 +56,7 @@ async fn test_debug_started() {
     let job_id: u64 = String::from_utf8(job_id_content)
         .expect("cannot parse job_id")
         .parse()
-        .expect("cannot pase job_id");
+        .expect("cannot parse job_id");
 
     // Ideally we want to get the job handle from the job_id, and install an exception channel
     // to check that break_on_start really works. But that requires access to RootJob which is
