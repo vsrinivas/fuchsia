@@ -27,8 +27,7 @@ pub struct ProductAssemblyConfig {
 /// platform itself, not anything provided by the product.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
-    #[serde(default)]
-    pub build_type: Option<BuildType>,
+    pub build_type: BuildType,
 
     /// List of logging tags to forward to the serial console.
     ///
@@ -53,12 +52,6 @@ pub enum BuildType {
 
     #[serde(rename = "user")]
     User,
-}
-
-impl Default for BuildType {
-    fn default() -> Self {
-        BuildType::Eng
-    }
 }
 
 /// The Product-provided configuration details.
@@ -150,7 +143,7 @@ impl ProductAssemblyConfig {
             patches
                 .package("configured_by_assembly")
                 .component("meta/to_configure.cm")
-                .field("enable_foo", matches!(self.platform.build_type, Some(BuildType::Eng)));
+                .field("enable_foo", matches!(self.platform.build_type, BuildType::Eng));
         }
 
         // Configure the session URL.
@@ -262,7 +255,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, Some(BuildType::Eng));
+        assert_eq!(config.platform.build_type, BuildType::Eng);
     }
 
     #[test]
@@ -278,7 +271,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, Some(BuildType::UserDebug));
+        assert_eq!(config.platform.build_type, BuildType::UserDebug);
     }
 
     #[test]
@@ -294,7 +287,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, Some(BuildType::User));
+        assert_eq!(config.platform.build_type, BuildType::User);
     }
 
     #[test]
@@ -302,6 +295,7 @@ mod tests {
         let json5 = r#"
             {
               platform: {
+                build_type: "eng"
               },
               product: {
                   packages: {
@@ -318,7 +312,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, None);
+        assert_eq!(config.platform.build_type, BuildType::Eng);
         assert_eq!(config.product.packages.base, vec!["path/to/base/package_manifest.json"]);
         assert_eq!(config.product.packages.cache, vec!["path/to/cache/package_manifest.json"]);
     }

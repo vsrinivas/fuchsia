@@ -27,10 +27,6 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     let config: ProductAssemblyConfig =
         util::read_config(&product).context("Loading product configuration")?;
 
-    if config.platform.build_type.is_none() {
-        return Err(anyhow::anyhow!("platform build-type has not been specified."));
-    }
-
     let mut builder = ImageAssemblyConfigBuilder::default();
 
     let legacy_bundle_path = legacy_bundle_dir.join("legacy").join("assembly_config.json");
