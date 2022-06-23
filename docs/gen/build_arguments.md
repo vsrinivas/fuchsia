@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/55e847d2cad2f7999189e2a2f42ffeee5ba50bb4/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/64360def95659c24536158d85c8f1a2654c5be05/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/55e847d2cad2f7999189e2a2f42ffeee5ba50bb4/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/64360def95659c24536158d85c8f1a2654c5be05/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -656,7 +656,7 @@ From //build/images/args.gni:67
 
 **Current value (from the default):** `false`
 
-From //src/media/codec/examples/BUILD.gn:10
+From //src/media/codec/examples/BUILD.gn:11
 
 ### build_id_format
 Build ID algorithm to use for Fuchsia-target code.  This does not apply
