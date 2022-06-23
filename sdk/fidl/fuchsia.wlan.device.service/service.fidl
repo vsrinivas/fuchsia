@@ -75,6 +75,7 @@ type AddIfaceRequest = resource struct {
     phy_id uint16;
     assigned_iface_id uint16;
     iface client_end:fuchsia.wlan.mlme.MLME;
+    generic_sme server_end:fuchsia.wlan.sme.GenericSme;
 };
 
 type AddIfaceResponse = struct {
@@ -294,4 +295,21 @@ protocol DeviceMonitor {
     }) -> (struct {
         status int32;
     });
+
+    // SME methods
+    GetClientSme(struct {
+        iface_id uint16;
+    }) -> (resource struct {
+        sme client_end:fuchsia.wlan.sme.ClientSme;
+    }) error zx.status;
+    GetApSme(struct {
+        iface_id uint16;
+    }) -> (resource struct {
+        sme client_end:fuchsia.wlan.sme.ApSme;
+    }) error zx.status;
+    GetSmeTelemetry(struct {
+        iface_id uint16;
+    }) -> (resource struct {
+        sme client_end:fuchsia.wlan.sme.Telemetry;
+    }) error zx.status;
 };

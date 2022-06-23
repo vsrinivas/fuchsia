@@ -11,7 +11,7 @@ use {
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_dev,
     fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceMonitorRequest},
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::TryStreamExt,
     log::{error, info},
     std::sync::Arc,
@@ -61,7 +61,10 @@ pub(crate) async fn serve_monitor_requests(
                         info!("iface #{} started ({:?})", new_iface.id, new_iface.phy_ownership);
                         ifaces.insert(
                             new_iface.id,
-                            IfaceDevice { phy_ownership: new_iface.phy_ownership },
+                            IfaceDevice {
+                                phy_ownership: new_iface.phy_ownership,
+                                generic_sme: new_iface.generic_sme,
+                            },
                         );
 
                         let resp = fidl_svc::CreateIfaceResponse { iface_id: new_iface.id };
@@ -74,6 +77,18 @@ pub(crate) async fn serve_monitor_requests(
                 let result = destroy_iface(&phys, &ifaces, req.iface_id).await;
                 let status = into_status_and_opt(result).0;
                 responder.send(status.into_raw())
+            }
+            DeviceMonitorRequest::GetClientSme { iface_id, responder } => {
+                let result = get_client_sme(&ifaces, iface_id).await;
+                responder.send(&mut result.map_err(|e| e.into_raw()))
+            }
+            DeviceMonitorRequest::GetApSme { iface_id, responder } => {
+                let result = get_ap_sme(&ifaces, iface_id).await;
+                responder.send(&mut result.map_err(|e| e.into_raw()))
+            }
+            DeviceMonitorRequest::GetSmeTelemetry { iface_id, responder } => {
+                let result = get_sme_telemetry(&ifaces, iface_id).await;
+                responder.send(&mut result.map_err(|e| e.into_raw()))
             }
         }?;
     }
@@ -217,11 +232,22 @@ async fn create_iface(
     })?;
     zx::Status::ok(r.status)?;
 
+    let (generic_sme_client, generic_sme_server) = create_endpoints::<fidl_sme::GenericSmeMarker>()
+        .map_err(|e| {
+            error!("failed to create GenericSmeProxy: {}", e);
+            zx::Status::INTERNAL
+        })?;
+    let generic_sme_proxy = generic_sme_client.into_proxy().map_err(|e| {
+        error!("Error creating GenericSmeProxy: {}", e);
+        zx::Status::INTERNAL
+    })?;
+
     let (status, iface_id) = dev_svc
         .add_iface(&mut fidl_svc::AddIfaceRequest {
             phy_id,
             assigned_iface_id: r.iface_id,
             iface: mlme_client,
+            generic_sme: generic_sme_server,
         })
         .await
         .map_err(|e| {
@@ -234,6 +260,7 @@ async fn create_iface(
     Ok(NewIface {
         id: added_iface.iface_id,
         phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: r.iface_id },
+        generic_sme: generic_sme_proxy,
     })
 }
 
@@ -266,6 +293,45 @@ async fn destroy_iface(phys: &PhyMap, ifaces: &IfaceMap, id: u16) -> Result<(), 
     zx::Status::ok(r.status)
 }
 
+async fn get_client_sme(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl::endpoints::ClientEnd<fidl_sme::ClientSmeMarker>, zx::Status> {
+    info!("get_client_sme(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let result = iface.generic_sme.get_client_sme().await.map_err(|e| {
+        error!("Failed to request client SME: {}", e);
+        zx::Status::INTERNAL
+    })?;
+    result.map_err(|e| zx::Status::from_raw(e))
+}
+
+async fn get_ap_sme(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl::endpoints::ClientEnd<fidl_sme::ApSmeMarker>, zx::Status> {
+    info!("get_ap_sme(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let result = iface.generic_sme.get_ap_sme().await.map_err(|e| {
+        error!("Failed to request AP SME: {}", e);
+        zx::Status::INTERNAL
+    })?;
+    result.map_err(|e| zx::Status::from_raw(e))
+}
+
+async fn get_sme_telemetry(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl::endpoints::ClientEnd<fidl_sme::TelemetryMarker>, zx::Status> {
+    info!("get_sme_telemetry(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let result = iface.generic_sme.get_sme_telemetry().await.map_err(|e| {
+        error!("Failed to request SME telemetry: {}", e);
+        zx::Status::INTERNAL
+    })?;
+    result.map_err(|e| zx::Status::from_raw(e))
+}
+
 fn into_status_and_opt<T>(r: Result<T, zx::Status>) -> (zx::Status, Option<T>) {
     match r {
         Ok(x) => (zx::Status::OK, Some(x)),
@@ -278,7 +344,7 @@ mod tests {
     use {
         super::*,
         crate::device::PhyOwnership,
-        fidl::endpoints::create_proxy,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_wlan_common as fidl_wlan_common, fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         ieee80211::NULL_MAC_ADDR,
@@ -698,9 +764,14 @@ mod tests {
         pin_mut!(next_fut);
         assert_variant!(exec.run_until_stalled(&mut next_fut), Poll::Pending);
 
+        // Create a generic SME proxy but drop the server since we won't use it.
+        let (generic_sme, _) = create_proxy::<fidl_sme::GenericSmeMarker>()
+            .expect("Failed to create generic SME proxy");
         // Add an interface and make sure the update is received.
-        let fake_iface =
-            IfaceDevice { phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 } };
+        let fake_iface = IfaceDevice {
+            phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+            generic_sme,
+        };
         test_values.ifaces.insert(0, fake_iface);
         assert_variant!(exec.run_until_stalled(&mut watcher_fut), Poll::Pending);
         assert_variant!(
@@ -735,9 +806,14 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
+        // Create a generic SME proxy but drop the server since we won't use it.
+        let (generic_sme, _) = create_proxy::<fidl_sme::GenericSmeMarker>()
+            .expect("Failed to create generic SME proxy");
         // Add an interface before beginning to watch for devices.
-        let fake_iface =
-            IfaceDevice { phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 } };
+        let fake_iface = IfaceDevice {
+            phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+            generic_sme,
+        };
         test_values.ifaces.insert(0, fake_iface);
         assert_variant!(exec.run_until_stalled(&mut watcher_fut), Poll::Pending);
 
@@ -1206,9 +1282,15 @@ mod tests {
     ) -> fidl_dev::PhyRequestStream {
         let (phy, phy_stream) = fake_phy();
         phy_map.insert(10, phy);
+        // Create a generic SME proxy but drop the server since we won't use it.
+        let (proxy, _) = create_proxy::<fidl_sme::GenericSmeMarker>()
+            .expect("Failed to create generic SME proxy");
         iface_map.insert(
             42,
-            device::IfaceDevice { phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 } },
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: proxy,
+            },
         );
         phy_stream
     }
@@ -1310,5 +1392,107 @@ mod tests {
         let fut = super::destroy_iface(&test_values.phys, &test_values.ifaces, 43);
         pin_mut!(fut);
         assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
+    }
+
+    #[test]
+    fn get_client_sme() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, _phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+        let (generic_sme_proxy, mut generic_sme_stream) =
+            create_proxy_and_stream::<fidl_sme::GenericSmeMarker>()
+                .expect("Failed to create generic SME proxy and stream");
+
+        test_values.ifaces.insert(
+            42,
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: generic_sme_proxy,
+            },
+        );
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 42);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        let (client_sme_client, client_sme_server) =
+            create_endpoints::<fidl_sme::ClientSmeMarker>().expect("Failed to create client SME");
+
+        // Respond to a client SME request with a client endpoint.
+        assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { responder }))) => {
+                responder.send(&mut Ok(client_sme_client)).expect("Failed to send response");
+            }
+        );
+        let client_sme = assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(client_sme)) => client_sme);
+
+        // Verify that the correct endpoint was returned.
+        let client_sme_proxy = client_sme.into_proxy().expect("Failed to get client SME proxy");
+        let _status_req = client_sme_proxy.status();
+
+        let mut client_sme_stream =
+            client_sme_server.into_stream().expect("Failed to get client SME stream");
+        assert_variant!(
+            exec.run_until_stalled(&mut client_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { .. })))
+        );
+    }
+
+    #[test]
+    fn get_client_sme_fails() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, _phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+        let (generic_sme_proxy, generic_sme_server) = create_proxy::<fidl_sme::GenericSmeMarker>()
+            .expect("Failed to create generic SME proxy");
+
+        test_values.ifaces.insert(
+            42,
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: generic_sme_proxy,
+            },
+        );
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 42);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        // Respond to a client SME request with an error.
+        let mut generic_sme_stream =
+            generic_sme_server.into_stream().expect("Failed to create generic SME stream");
+        assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { responder }))) => {
+                responder.send(&mut Err(1)).expect("Failed to send response");
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
+    }
+
+    #[test]
+    fn get_client_sme_invalid_iface() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, _phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+        let (generic_sme_proxy, _generic_sme_server) = create_proxy::<fidl_sme::GenericSmeMarker>()
+            .expect("Failed to create generic SME proxy");
+
+        test_values.ifaces.insert(
+            42,
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: generic_sme_proxy,
+            },
+        );
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 1337);
+        pin_mut!(req_fut);
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
     }
 }

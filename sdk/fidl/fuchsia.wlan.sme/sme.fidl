@@ -8,6 +8,7 @@ using fuchsia.wlan.common;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.mesh;
+using fuchsia.wlan.stats;
 using zx;
 
 /// Security protection which should mirror the Protection enum defined in wlan lib common
@@ -295,4 +296,25 @@ protocol MeshSme {
         code GetMeshPathTableResultCode;
         path fuchsia.wlan.mesh.MeshPathTable;
     });
+};
+
+protocol Telemetry {
+    GetCounterStats() -> (struct {
+        stats fuchsia.wlan.stats.IfaceCounterStats;
+    }) error zx.status;
+    GetHistogramStats() -> (struct {
+        stats fuchsia.wlan.stats.IfaceHistogramStats;
+    }) error zx.status;
+};
+
+protocol GenericSme {
+    GetClientSme() -> (resource struct {
+        sme client_end:ClientSme;
+    }) error zx.status;
+    GetApSme() -> (resource struct {
+        sme client_end:ApSme;
+    }) error zx.status;
+    GetSmeTelemetry() -> (resource struct {
+        sme client_end:Telemetry;
+    }) error zx.status;
 };

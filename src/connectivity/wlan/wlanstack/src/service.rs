@@ -431,6 +431,7 @@ async fn add_iface(
         spectrum_management_support,
         dev_monitor_proxy,
         persistence_req_sender,
+        req.generic_sme,
     ) {
         Ok(fut) => fut,
         Err(e) => return AddIfaceResult::from_error(e, zx::sys::ZX_ERR_INTERNAL),
@@ -964,13 +965,19 @@ mod tests {
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
+        let (_generic_sme_proxy, generic_sme) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
             create_endpoints().expect("failed to create fake MLME proxy");
         let mut mlme_stream = mlme_receiver.into_stream().expect("failed to create MLME stream");
-        let req =
-            fidl_svc::AddIfaceRequest { phy_id: 123, assigned_iface_id: 456, iface: mlme_channel };
+        let req = fidl_svc::AddIfaceRequest {
+            phy_id: 123,
+            assigned_iface_id: 456,
+            iface: mlme_channel,
+            generic_sme,
+        };
         let fut = add_iface(
             req,
             &cfg,
@@ -1041,6 +1048,8 @@ mod tests {
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
+        let (_generic_sme_proxy, generic_sme) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
@@ -1049,8 +1058,12 @@ mod tests {
         // Drop the receiver so that the initial device info query fails.
         drop(mlme_receiver);
 
-        let req =
-            fidl_svc::AddIfaceRequest { phy_id: 123, assigned_iface_id: 456, iface: mlme_channel };
+        let req = fidl_svc::AddIfaceRequest {
+            phy_id: 123,
+            assigned_iface_id: 456,
+            iface: mlme_channel,
+            generic_sme,
+        };
         let fut = add_iface(
             req,
             &cfg,
@@ -1084,14 +1097,20 @@ mod tests {
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
+        let (_generic_sme_proxy, generic_sme) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
             create_endpoints().expect("failed to create fake MLME proxy");
         let mut mlme_stream = mlme_receiver.into_stream().expect("failed to create MLME stream");
 
-        let req =
-            fidl_svc::AddIfaceRequest { phy_id: 123, assigned_iface_id: 456, iface: mlme_channel };
+        let req = fidl_svc::AddIfaceRequest {
+            phy_id: 123,
+            assigned_iface_id: 456,
+            iface: mlme_channel,
+            generic_sme,
+        };
         let fut = add_iface(
             req,
             &cfg,

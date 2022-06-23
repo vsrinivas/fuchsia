@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_wlan_device as fidl_wlan_dev,
+    fidl_fuchsia_wlan_device as fidl_wlan_dev, fidl_fuchsia_wlan_sme as fidl_wlan_sme,
     fuchsia_inspect_contrib::inspect_log,
     futures::{
         future::FutureExt,
@@ -34,6 +34,8 @@ pub struct NewIface {
     pub id: u16,
     // Information about this iface's PHY.
     pub phy_ownership: PhyOwnership,
+    // The handle for connecting channels to this iface's SME.
+    pub generic_sme: fidl_wlan_sme::GenericSmeProxy,
 }
 
 pub struct PhyDevice {
@@ -43,6 +45,7 @@ pub struct PhyDevice {
 
 pub struct IfaceDevice {
     pub phy_ownership: PhyOwnership,
+    pub generic_sme: fidl_wlan_sme::GenericSmeProxy,
 }
 
 pub type PhyMap = WatchableMap<u16, PhyDevice>;

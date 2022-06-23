@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{auto_persist, inspect_log},
     futures::{channel::mpsc, future::Future},
     log::info,
@@ -89,6 +90,7 @@ pub fn create_and_serve_sme(
     spectrum_management_support: fidl_common::SpectrumManagementSupport,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
+    generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
     let (sme, sme_fut) = create_sme(
@@ -102,6 +104,7 @@ pub fn create_and_serve_sme(
         inspect_tree.hasher.clone(),
         persistence_req_sender,
         shutdown_receiver,
+        generic_sme,
     );
 
     info!("new iface #{} with role '{:?}'", id, device_info.role);
@@ -214,6 +217,8 @@ mod tests {
                 .expect("failed to create DeviceMonitor proxy");
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
+        let (generic_sme_proxy, generic_sme_server) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -232,6 +237,7 @@ mod tests {
             fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,
+            generic_sme_server,
         )
         .expect("failed to create SME");
 
@@ -256,6 +262,7 @@ mod tests {
         pin_mut!(close_fut);
         let fut_result = exec.run_until_stalled(&mut close_fut);
         assert_variant!(fut_result, Poll::Ready(_), "expected closing SME to succeed");
+        drop(generic_sme_proxy);
 
         // Insert iface back into map.
         let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
@@ -303,6 +310,8 @@ mod tests {
             .expect("failed to create DeviceMonitor request stream");
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
+        let (_generic_sme_proxy, generic_sme_server) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -321,6 +330,7 @@ mod tests {
             fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,
+            generic_sme_server,
         )
         .expect("failed to create SME");
 
