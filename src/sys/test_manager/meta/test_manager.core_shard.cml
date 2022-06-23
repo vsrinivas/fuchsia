@@ -45,15 +45,21 @@
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.media.Audio",
-                "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
             from: "self",
             to: "#test_manager",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+            ],
+            from: "#audio_core",
+            to: "#test_manager",
         },
         {
             protocol: [ "fuchsia.component.resolution.Resolver" ],

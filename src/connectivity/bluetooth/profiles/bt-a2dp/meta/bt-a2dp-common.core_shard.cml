@@ -17,7 +17,6 @@
     offer: [
         {
             protocol: [
-                "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
@@ -32,6 +31,11 @@
             protocol: "fuchsia.sysmem.Allocator",
             from: "#sysmem_connector",
             to: "#bt-a2dp",
+        },
+        {
+            protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
+            from: "#audio_core",
+            to: [ "#bt-a2dp" ],
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],

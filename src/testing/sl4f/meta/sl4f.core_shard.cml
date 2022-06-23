@@ -173,7 +173,6 @@
                 "fuchsia.developer.tiles.Controller", // test-only
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.lowpan.device.Lookup", // #appmgr
-                "fuchsia.media.ProfileProvider", // #appmgr
                 "fuchsia.sys.Launcher", // #appmgr
                 "fuchsia.tracing.controller.Controller", // #appmgr
                 "fuchsia.tracing.provider.Registry", // #appmgr
@@ -186,6 +185,11 @@
             from: "self",
             to: "#sl4f",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.media.ProfileProvider" ],
+            from: "#audio_core",
+            to: "#sl4f",
         },
         {
             protocol: [

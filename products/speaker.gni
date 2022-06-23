@@ -31,7 +31,6 @@ legacy_base_package_labels -= [
   "//src/intl/intl_services/config:sysmgr_small",
   "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/media/audio/bundles:services",
-  "//src/media/audio/bundles:audio_config",
   "//src/settings/service:setui_service",
   "//src/sys/activity",
 ]

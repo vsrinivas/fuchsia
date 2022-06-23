@@ -30,9 +30,8 @@
         },
         {
             protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
-            from: "self",
+            from: "#audio_core",
             to: [ "#bt-hfp-audio-gateway" ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],

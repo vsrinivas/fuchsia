@@ -53,5 +53,19 @@
             from: "parent",
             to: "#audio_core",
         },
+        {
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "#audio_core",
+            to: "#session-manager",
+        },
     ],
 }

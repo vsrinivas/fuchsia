@@ -174,11 +174,6 @@
             url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm",
         },
         {
-            name: "soundplayer",
-            url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
-            environment: "#full-resolver-env",
-        },
-        {
             name: "vulkan_loader",
             url: "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cm",
             environment: "#full-resolver-env",
@@ -426,7 +421,6 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
-                "#soundplayer",
                 "#ssh-key-manager",
                 "#starnix_manager",
                 "#stash",

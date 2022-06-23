@@ -69,9 +69,6 @@
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
-                "fuchsia.media.ActivityReporter",
-                "fuchsia.media.audio.EffectsController",
-                "fuchsia.media.AudioCore",
                 "fuchsia.media.drm.PlayReady",
                 "fuchsia.media.drm.Widevine",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -79,8 +76,6 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.media.sounds.Player",
-                "fuchsia.media.UsageGainReporter",
-                "fuchsia.media.UsageReporter",
                 "fuchsia.net.http.Loader",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.Publisher",
@@ -255,6 +250,21 @@
             to: "#session",
         },
         {
+            // Routed to session-manager via audio_core
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "parent",
+            to: "#session",
+        },
+        {
             // Routed to session-manager from core.cml in all products.
             // i.e. not via a core realm shard.
             protocol: [
@@ -267,9 +277,6 @@
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.intl.TimeZones",
                 "fuchsia.logger.LogSink",
-                "fuchsia.media.Audio",
-                "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.ProfileProvider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",

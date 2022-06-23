@@ -5,11 +5,13 @@
 {
     offer: [
         {
-            protocol: [
-                "fuchsia.media.AudioCore",
-                "fuchsia.ui.input.PointerCaptureListenerRegistry",
-            ],
+            protocol: [ "fuchsia.ui.input.PointerCaptureListenerRegistry" ],
             from: "self",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.media.AudioCore" ],
+            from: "#audio_core",
             to: [ "#session-manager" ],
         },
         {

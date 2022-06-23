@@ -64,7 +64,10 @@ legacy_cache_package_labels += [
 # QEMU images generated for the SDK, but in cache, so they can be updated.
 legacy_cache_package_labels += [ "//sdk/bundles:tools" ]
 
-core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
+core_realm_shards += [
+  "//src/media/codec:codec_factory_shard",
+  "//src/media/audio/audio_core/v2:core_shard",
+]
 
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]

@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "soundplayer",
+            url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
+        },
+    ],
+    use: [
+        // Route sound player APIs to CFv1 realm.
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "#soundplayer",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#soundplayer",
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "#audio_core",
+            to: "#soundplayer",
+        },
+    ],
+}

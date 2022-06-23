@@ -50,9 +50,7 @@
         },
         {
             protocol: [
-                "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.UsageReporter",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
@@ -64,6 +62,14 @@
         {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
+            to: "#setui_service",
+        },
+        {
+            protocol: [
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "#audio_core",
             to: "#setui_service",
         },
         {
