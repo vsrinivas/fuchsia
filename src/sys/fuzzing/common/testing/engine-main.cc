@@ -7,7 +7,7 @@
 
 #include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/controller-provider.h"
-#include "src/sys/fuzzing/testing/runner.h"
+#include "src/sys/fuzzing/common/testing/runner.h"
 
 namespace fuzzing {
 
@@ -17,7 +17,7 @@ zx_status_t RunTestEngine() {
   zx::channel registry_channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
 
   // Create the runner.
-  auto runner = SimpleFixedRunner::MakePtr(context->executor());
+  auto runner = FakeRunner::MakePtr(context->executor());
 
   // Serve |fuchsia.fuzzer.ControllerProvider| to the registry.
   ControllerProviderImpl provider(context->executor());

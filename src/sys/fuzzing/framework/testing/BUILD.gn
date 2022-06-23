@@ -43,26 +43,6 @@ executable("test-target") {
   ]
 }
 
-executable("test-fuzzer") {
-  testonly = true
-  output_name = "component_fuzzing_framework_test_fuzzer"
-  sources = [ "fuzzer.cc" ]
-  deps = [
-    "//src/sys/fuzzing/common/testing:sanitizer",
-    "//src/sys/fuzzing/framework/adapters:llvm",
-    "//src/sys/fuzzing/framework/target",
-  ]
-  exclude_toolchain_tags = [ "instrumented" ]
-}
-
-executable("test-fuzzer-uninstrumented") {
-  testonly = true
-  output_name = "component_fuzzing_framework_test_fuzzer_uninstrumented"
-  sources = [ "fuzzer.cc" ]
-  deps = [ "//src/sys/fuzzing/framework/adapters:llvm" ]
-  exclude_toolchain_tags = [ "instrumented" ]
-}
-
 executable("engine") {
   output_name = "component_fuzzing_test_engine"
   testonly = true

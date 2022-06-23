@@ -13,12 +13,10 @@ namespace fuzzing {
 FakeRegistrar::FakeRegistrar(ExecutorPtr executor)
     : binding_(this), executor_(std::move(executor)) {}
 
-zx::channel FakeRegistrar::Bind() {
-  zx::channel client, server;
-  auto status = zx::channel::create(0, &client, &server);
-  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  binding_.Bind(std::move(server), executor_->dispatcher());
-  return client;
+fidl::InterfaceHandle<Registrar> FakeRegistrar::NewBinding() {
+  auto handle = binding_.NewBinding(executor_->dispatcher());
+  FX_DCHECK(handle.is_valid());
+  return handle;
 }
 
 void FakeRegistrar::Register(ControllerProviderHandle provider, RegisterCallback callback) {

@@ -66,16 +66,16 @@ fuchsia_test_component("integration-tests") {
 fuchsia_test_component("test-fuzzer") {
   manifest = "meta/test-fuzzer.cml"
   deps = [
-    "testing:test-fuzzer",
     "testing/data:corpus",
+    "tests:fuzzer",
   ]
 }
 
 fuchsia_test_component("test-fuzzer-uninstrumented") {
   manifest = "meta/test-fuzzer-uninstrumented.cml"
   deps = [
-    "testing:test-fuzzer-uninstrumented",
     "testing/data:corpus",
+    "tests:fuzzer-uninstrumented",
   ]
 }
 

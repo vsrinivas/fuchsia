@@ -5,6 +5,11 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":unittests-pkg" ]
+}
+
 rustc_binary("bin") {
   name = "fuzz_manager"
   visibility = [ ":*" ]
@@ -55,7 +60,7 @@ fuchsia_component("unittests") {
   deps = [ ":bin_test" ]
 }
 
-fuchsia_test_package("tests") {
-  package_name = "fuzz-manager-tests"
+fuchsia_test_package("unittests-pkg") {
+  package_name = "fuzz-manager-unittests"
   test_components = [ ":unittests" ]
 }

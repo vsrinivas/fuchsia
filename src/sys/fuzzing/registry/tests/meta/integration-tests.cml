@@ -4,7 +4,7 @@
 {
     include: [ "//src/sys/fuzzing/common/meta/test.shard.cml" ],
     program: {
-        binary: "test/component_fuzzing_integration_tests",
+        binary: "test/registry_integration_tests",
     },
     use: [
         {

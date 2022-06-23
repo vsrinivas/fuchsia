@@ -8,23 +8,23 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":component-fuzzing-tests",
+    ":registry-integration-tests",
     "//src/sys/fuzzing/registry",
   ]
 }
 
-test("bin") {
-  output_name = "component_fuzzing_integration_tests"
+test("integration-tests-bin") {
+  output_name = "registry_integration_tests"
   testonly = true
-  sources = [ "registry-integration-test.cc" ]
+  sources = [ "integration-tests.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
-    "//src/sys/fuzzing/testing",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/sync",
   ]
@@ -34,8 +34,8 @@ fuchsia_test_component("integration-tests") {
   visibility = [ ":*" ]
   manifest = "meta/integration-tests.cml"
   deps = [
-    ":bin",
-    "//src/sys/fuzzing/testing:fuzzer",
+    ":integration-tests-bin",
+    "//src/sys/fuzzing/common/testing:fuzzer",
   ]
 }
 
@@ -45,7 +45,7 @@ fuchsia_test_component("test-realm") {
   deps = [ ":integration-tests" ]
 }
 
-fuchsia_test_package("component-fuzzing-tests") {
+fuchsia_test_package("registry-integration-tests") {
   test_components = [ ":test-realm" ]
   deps = [ "//src/sys/fuzzing/registry:fuzz-registry" ]
 }

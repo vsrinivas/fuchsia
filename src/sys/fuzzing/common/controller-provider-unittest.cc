@@ -32,8 +32,7 @@ class ControllerProviderTest : public AsyncTest {
 
   ControllerProviderPtr GetProvider() {
     ControllerProviderPtr provider;
-    auto channel = registrar_->Bind();
-    auto task = provider_->Serve(std::move(channel))
+    auto task = provider_->Serve(registrar_->NewBinding().TakeChannel())
                     .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
                     .and_then(registrar_->TakeProvider())
                     .and_then([this, &provider](ControllerProviderHandle& handle) -> ZxResult<> {

@@ -13,8 +13,28 @@ test("framework-integration-tests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
-    "//src/sys/fuzzing/testing",
     "//third_party/googletest:gtest",
   ]
+}
+
+executable("fuzzer") {
+  testonly = true
+  output_name = "component_fuzzing_framework_test_fuzzer"
+  sources = [ "fuzzer.cc" ]
+  deps = [
+    "//src/sys/fuzzing/common/testing:sanitizer",
+    "//src/sys/fuzzing/framework/adapters:llvm",
+    "//src/sys/fuzzing/framework/target",
+  ]
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+executable("fuzzer-uninstrumented") {
+  testonly = true
+  output_name = "component_fuzzing_framework_test_fuzzer_uninstrumented"
+  sources = [ "fuzzer.cc" ]
+  deps = [ "//src/sys/fuzzing/framework/adapters:llvm" ]
+  exclude_toolchain_tags = [ "instrumented" ]
 }

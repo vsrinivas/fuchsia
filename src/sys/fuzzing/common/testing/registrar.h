@@ -28,7 +28,7 @@ class FakeRegistrar final : public Registrar {
   ~FakeRegistrar() override = default;
 
   // Returns a channel to this object's implementation of |fuchsia.fuzzer.Registrar|.
-  zx::channel Bind();
+  fidl::InterfaceHandle<Registrar> NewBinding();
 
   // FIDL methods.
   void Register(ControllerProviderHandle provider, RegisterCallback callback) override;

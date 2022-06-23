@@ -4,7 +4,6 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
@@ -13,9 +12,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
-#include "src/sys/fuzzing/common/testing/integration-test-base.h"
-#include "src/sys/fuzzing/testing/runner.h"
+#include "src/sys/fuzzing/common/testing/process.h"
 
 namespace fuzzing {
 namespace {
@@ -31,28 +30,28 @@ using fuchsia::fuzzer::RegistryPtr;
 const char* kFuzzerUrl = "an arbitrary string";
 
 // This class maintains the component context and connection to the fuzz-registry.
-class RegistryIntegrationTest : public IntegrationTestBase {
+class RegistryIntegrationTest : public AsyncTest {
  protected:
   void SetUp() override {
-    IntegrationTestBase::SetUp();
-    context_ = sys::ComponentContext::Create();
+    AsyncTest::SetUp();
+    context_ = ComponentContext::CreateWithExecutor(executor());
   }
 
   // Launch a fuzzer and give it a channel to register itself with the fuzz-registry.
   void Register() {
     // Connect a channel to the fuzz-registry.
     fidl::InterfaceHandle<Registrar> handle;
-    auto status = context_->svc()->Connect(handle.NewRequest());
-    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    auto result = Start("/pkg/bin/component_fuzzing_test_fuzzer", handle.TakeChannel());
-    ASSERT_TRUE(result.is_ok());
+    ASSERT_EQ(context_->Connect(handle.NewRequest()), ZX_OK);
+    std::vector<zx::channel> channels;
+    channels.emplace_back(handle.TakeChannel());
+    ASSERT_EQ(StartProcess("component_fuzzing_test_fuzzer", std::move(channels), &process_), ZX_OK);
   }
 
   // Promises to connect the |controller| once a fuzzer is registered.
   ZxPromise<> Connect(ControllerPtr* controller, zx::duration timeout) {
-    auto status = context_->svc()->Connect(registry_.NewRequest());
-    if (status != ZX_OK) {
-      return fpromise::make_promise([status]() -> ZxResult<> { return fpromise::error(status); });
+    auto request = registry_.NewRequest(executor()->dispatcher());
+    if (auto status = context_->Connect(std::move(request)); status != ZX_OK) {
+      return fpromise::make_error_promise(status);
     }
     Bridge<zx_status_t> bridge;
     registry_->Connect(kFuzzerUrl, controller->NewRequest(), timeout.get(),
@@ -67,11 +66,17 @@ class RegistryIntegrationTest : public IntegrationTestBase {
     registry_->Disconnect(kFuzzerUrl, bridge.completer.bind());
     return bridge.consumer.promise()
         .then([](Result<zx_status_t>& result) { return AsZxResult(result); })
-        .and_then(AwaitTermination());
+        .and_then(AwaitTermination(std::move(process_), executor()));
+  }
+
+  void TearDown() override {
+    process_.kill();
+    AsyncTest::TearDown();
   }
 
  private:
-  std::unique_ptr<sys::ComponentContext> context_;
+  std::unique_ptr<ComponentContext> context_;
+  zx::process process_;
   RegistryPtr registry_;
 };
 

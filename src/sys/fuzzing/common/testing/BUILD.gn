@@ -9,12 +9,12 @@ source_set("testing") {
     "async-test.h",
     "corpus-reader.cc",
     "corpus-reader.h",
-    "integration-test-base.cc",
-    "integration-test-base.h",
     "module.cc",
     "module.h",
     "monitor.cc",
     "monitor.h",
+    "process.cc",
+    "process.h",
     "registrar.cc",
     "registrar.h",
     "runner.cc",
@@ -46,5 +46,17 @@ source_set("sanitizer") {
     "..:common",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+  ]
+}
+
+# A standalone fuzzer that uses a fake runner.
+executable("fuzzer") {
+  output_name = "component_fuzzing_test_fuzzer"
+  testonly = true
+  sources = [ "engine-main.cc" ]
+  deps = [
+    ":testing",
+    "//src/lib/fxl",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
   ]
 }
