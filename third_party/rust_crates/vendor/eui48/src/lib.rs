@@ -15,8 +15,9 @@
     html_favicon_url = "https://www.rust-lang.org/favicon.ico",
     html_root_url = "https://doc.rust-lang.org/eui48/"
 )]
-#![cfg_attr(test, deny(warnings))]
 
+extern crate regex;
+#[cfg(feature = "rustc-serialize")]
 extern crate rustc_serialize;
 #[cfg(feature = "serde")]
 extern crate serde;
@@ -28,6 +29,8 @@ use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
 
+use regex::Regex;
+#[cfg(feature = "rustc-serialize")]
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -64,29 +67,27 @@ pub enum MacAddressFormat {
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Ord, PartialOrd, Hash)]
 /// Parsing errors
 pub enum ParseError {
-    /// Length is incorrect (should be 14 or 17)
+    /// Length is incorrect (should be 11 to 17)
     InvalidLength(usize),
-    /// Character not [0-9a-fA-F]|'x'|'-'|':'|'.'
-    InvalidCharacter(char, usize),
+    /// The input string is invalid, usize bytes were found, and we put up to 6 bytes into Eui48
+    InvalidByteCount(usize, Eui48),
 }
 
 impl MacAddress {
     /// Create a new MacAddress from `[u8; 6]`.
-    pub fn new(eui: Eui48) -> MacAddress {
-        MacAddress { eui: eui }
+    pub const fn new(eui: Eui48) -> MacAddress {
+        MacAddress { eui }
     }
 
     /// Create a new MacAddress from a byte slice.
     ///
     /// Returns an error (without any description) if the slice doesn't have the proper length.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ParseError> {
         if bytes.len() != EUI48LEN {
-            return Err(());
+            return Err(ParseError::InvalidLength(bytes.len()));
         }
         let mut input: [u8; EUI48LEN] = Default::default();
-        for i in 0..EUI48LEN {
-            input[i] = bytes[i];
-        }
+        input[..EUI48LEN].clone_from_slice(&bytes[..EUI48LEN]);
         Ok(Self::new(input))
     }
 
@@ -177,10 +178,10 @@ impl MacAddress {
         )
     }
 
-    /// Returns a String representation in the IPv6 link local format 'ff80::0000:00ff:fe00:0000'
+    /// Returns a String representation in the IPv6 link local format 'fe80::0000:00ff:fe00:0000'
     pub fn to_link_local(&self) -> String {
         format!(
-            "ff80::{:02x}{:02x}:{:02x}ff:fe{:02x}:{:02x}{:02x}",
+            "fe80::{:02x}{:02x}:{:02x}ff:fe{:02x}:{:02x}{:02x}",
             (self.eui[0] ^ 0x02),
             self.eui[1],
             self.eui[2],
@@ -202,62 +203,35 @@ impl MacAddress {
 
     /// Parses a String representation from any format supported
     pub fn parse_str(s: &str) -> Result<MacAddress, ParseError> {
-        let mut offset = 0; // Offset into the u8 Eui48 vector
-        let mut hn: bool = false; // Have we seen the high nibble yet?
+        let re = Regex::new("(0x)?([0-9a-fA-F]{1,2})[:.-]?").unwrap();
         let mut eui: Eui48 = [0; EUI48LEN];
 
         match s.len() {
-            14 | 17 => {} // The formats are all 12 characters with 2 or 5 delims
-            _ => return Err(ParseError::InvalidLength(s.len())),
-        }
-
-        for (idx, c) in s.chars().enumerate() {
-            if offset >= EUI48LEN {
-                // We shouln't still be parsing
+            11..=17 => {}
+            _ => {
                 return Err(ParseError::InvalidLength(s.len()));
             }
+        }
 
-            match c {
-                '0'...'9' | 'a'...'f' | 'A'...'F' => {
-                    match hn {
-                        false => {
-                            // We will match '0' and run this even if the format is 0x
-                            hn = true; // Parsed the high nibble
-                            eui[offset] = (c.to_digit(16).unwrap() as u8) << 4;
-                        }
-                        true => {
-                            hn = false; // Parsed the low nibble
-                            eui[offset] += c.to_digit(16).unwrap() as u8;
-                            offset += 1;
-                        }
-                    }
-                }
-                '-' | ':' | '.' => {}
-                'x' | 'X' => {
-                    match idx {
-                        1 => {
-                            // If idx = 1, we are possibly parsing 0x1234567890ab format
-                            // Reset the offset to zero to ignore the first two characters
-                            offset = 0;
-                            hn = false;
-                        }
-                        _ => return Err(ParseError::InvalidCharacter(c, idx)),
-                    }
-                }
-                _ => return Err(ParseError::InvalidCharacter(c, idx)),
+        let mut i = 0;
+        for caps in re.captures_iter(s) {
+            // Fill the array and keep counting for InvalidByteCount
+            if i < EUI48LEN {
+                let matched_byte = caps.get(2).unwrap().as_str();
+                eui[i] = u8::from_str_radix(matched_byte, 16).unwrap();
             }
+            i += 1;
         }
 
-        if offset == EUI48LEN {
-            // A correctly parsed value is exactly 6 u8s
-            Ok(MacAddress::new(eui))
-        } else {
-            Err(ParseError::InvalidLength(s.len())) // Something slipped through
+        if i != EUI48LEN {
+            return Err(ParseError::InvalidByteCount(i, eui));
         }
+
+        Ok(MacAddress::new(eui))
     }
 
     /// Return the internal structure as a slice of bytes
-    pub fn as_bytes<'a>(&'a self) -> &'a [u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.eui
     }
 
@@ -303,7 +277,7 @@ impl fmt::Debug for MacAddress {
 }
 
 impl fmt::Display for MacAddress {
-    /// Display format is canonical format (00-00-00-00-00-00)
+    /// Display format is canonical format (00-00-00-00-00-00) by default
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let disp_fmt = MacAddress::get_display_format();
         write!(f, "{}", self.to_string(disp_fmt))
@@ -316,12 +290,15 @@ impl fmt::Display for ParseError {
         match *self {
             ParseError::InvalidLength(found) => write!(
                 f,
-                "Invalid length; expecting 14 or 17 chars, found {}",
+                "Invalid length; expecting 11 to 17 chars, found {}",
                 found
             ),
-            ParseError::InvalidCharacter(found, pos) => {
-                write!(f, "Invalid character; found `{}` at offset {}", found, pos)
-            }
+            ParseError::InvalidByteCount(found, eui) => write!(
+                f,
+                "Invalid byte count; Matched `{}` bytes ({:?})",
+                found,
+                &eui[..found]
+            ),
         }
     }
 }
@@ -333,13 +310,16 @@ impl Error for ParseError {
     }
 }
 
+#[cfg(feature = "rustc-serialize")]
 impl Encodable for MacAddress {
-    /// Encode a MacAddress as canonical form
+    /// Encode a MacAddress using the default format
     fn encode<E: Encoder>(&self, e: &mut E) -> Result<(), E::Error> {
-        e.emit_str(&self.to_canonical())
+        let disp_fmt = MacAddress::get_display_format();
+        e.emit_str(&self.to_string(disp_fmt))
     }
 }
 
+#[cfg(feature = "rustc-serialize")]
 impl Decodable for MacAddress {
     /// Decode a MacAddress from a string in canonical form
     fn decode<D: Decoder>(d: &mut D) -> Result<MacAddress, D::Error> {
@@ -348,15 +328,24 @@ impl Decodable for MacAddress {
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", not(feature = "serde_bytes")))]
 impl Serialize for MacAddress {
-    /// Serialize a MacAddress as canonical form using the serde crate
+    /// Serialize a MacAddress in the default format using the serde crate
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&self.to_canonical())
+        let disp_fmt = MacAddress::get_display_format();
+        serializer.serialize_str(&self.to_string(disp_fmt))
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "serde_bytes")]
+impl Serialize for MacAddress {
+    /// Serialize a MacAddress as raw bytes using the serde crate
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_bytes(self.as_bytes())
+    }
+}
+
+#[cfg(all(feature = "serde", not(feature = "serde_bytes")))]
 impl<'de> Deserialize<'de> for MacAddress {
     /// Deserialize a MacAddress from canonical form using the serde crate
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -364,22 +353,35 @@ impl<'de> Deserialize<'de> for MacAddress {
         impl<'de> de::Visitor<'de> for MacAddressVisitor {
             type Value = MacAddress;
 
-            fn visit_str<E: de::Error>(self, value: &str) -> Result<MacAddress, E> {
-                value.parse().map_err(|err| E::custom(&format!("{}", err)))
-            }
-
-            fn visit_bytes<E: de::Error>(self, value: &[u8]) -> Result<MacAddress, E> {
-                MacAddress::from_bytes(value).map_err(|_| E::invalid_length(value.len(), &self))
-            }
-
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(
-                    formatter,
-                    "either a string representation of a MAC address or 6-element byte array"
-                )
+                write!(formatter, "a string representation of a MAC address")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                value.parse().map_err(|err| E::custom(&format!("{}", err)))
             }
         }
         deserializer.deserialize_str(MacAddressVisitor)
+    }
+}
+
+#[cfg(feature = "serde_bytes")]
+impl<'de> Deserialize<'de> for MacAddress {
+    /// Deserialize a MacAddress from raw bytes using the serde crate
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct MacAddressVisitor;
+        impl<'de> de::Visitor<'de> for MacAddressVisitor {
+            type Value = MacAddress;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                write!(formatter, "6-element byte array")
+            }
+
+            fn visit_bytes<E: de::Error>(self, value: &[u8]) -> Result<Self::Value, E> {
+                MacAddress::from_bytes(value).map_err(|_| E::invalid_length(value.len(), &self))
+            }
+        }
+        deserializer.deserialize_bytes(MacAddressVisitor)
     }
 }
 
@@ -532,7 +534,7 @@ mod tests {
     fn test_to_link_local() {
         let eui: Eui48 = [0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF];
         let mac = MacAddress::new(eui);
-        assert_eq!("ff80::1034:56ff:feab:cdef", mac.to_link_local());
+        assert_eq!("fe80::1034:56ff:feab:cdef", mac.to_link_local());
     }
 
     #[test]
@@ -585,60 +587,68 @@ mod tests {
                 .unwrap()
                 .to_canonical()
         );
+        assert_eq!(
+            "12-34-56-78-90-0a",
+            MacAddress::parse_str("0x1234567890A")
+                .unwrap()
+                .to_canonical()
+        );
+        assert_eq!(
+            "12-34-56-ab-cd-ef",
+            MacAddress::parse_str("123456ABCDEF")
+                .unwrap()
+                .to_canonical()
+        );
+        assert_eq!(
+            "00-00-00-00-00-00",
+            MacAddress::parse_str("!0x00000000000")
+                .unwrap()
+                .to_canonical()
+        );
+        assert_eq!(
+            "00-00-00-00-00-00",
+            MacAddress::parse_str("0x00000000000!")
+                .unwrap()
+                .to_canonical()
+        );
         // Test error parsing
         assert_eq!(MacAddress::parse_str(""), Err(InvalidLength(0)));
         assert_eq!(MacAddress::parse_str("0"), Err(InvalidLength(1)));
         assert_eq!(
-            MacAddress::parse_str("123456ABCDEF"),
-            Err(InvalidLength(12))
-        );
-        assert_eq!(
             MacAddress::parse_str("1234567890ABCD"),
-            Err(InvalidLength(14))
+            Err(InvalidByteCount(7, [0x12, 0x34, 0x56, 0x78, 0x90, 0xAB]))
         );
         assert_eq!(
             MacAddress::parse_str("1234567890ABCDEF"),
-            Err(InvalidLength(16))
+            Err(InvalidByteCount(8, [0x12, 0x34, 0x56, 0x78, 0x90, 0xAB]))
         );
         assert_eq!(
             MacAddress::parse_str("01234567890ABCDEF"),
-            Err(InvalidLength(17))
-        );
-        assert_eq!(
-            MacAddress::parse_str("0x1234567890A"),
-            Err(InvalidLength(13))
+            Err(InvalidByteCount(9, [0x01, 0x23, 0x45, 0x67, 0x89, 0x0A]))
         );
         assert_eq!(
             MacAddress::parse_str("0x1234567890ABCDE"),
-            Err(InvalidLength(17))
+            Err(InvalidByteCount(8, [0x12, 0x34, 0x56, 0x78, 0x90, 0xAB]))
         );
         assert_eq!(
-            MacAddress::parse_str("0x00:00:00:00:"),
-            Err(InvalidLength(14))
+            MacAddress::parse_str("0x00:01:02:03:"),
+            Err(InvalidByteCount(4, [0, 1, 2, 3, 0, 0]))
         );
         assert_eq!(
-            MacAddress::parse_str("0x00:00:00:00:00:"),
-            Err(InvalidLength(17))
+            MacAddress::parse_str("0x00:01:02:03:04:"),
+            Err(InvalidByteCount(5, [0, 1, 2, 3, 4, 0]))
         );
         assert_eq!(
             MacAddress::parse_str("::::::::::::::"),
-            Err(InvalidLength(14))
+            Err(InvalidByteCount(0, [0, 0, 0, 0, 0, 0]))
         );
         assert_eq!(
             MacAddress::parse_str(":::::::::::::::::"),
-            Err(InvalidLength(17))
+            Err(InvalidByteCount(0, [0, 0, 0, 0, 0, 0]))
         );
         assert_eq!(
             MacAddress::parse_str("0x0x0x0x0x0x0x"),
-            Err(InvalidCharacter('x', 3))
-        );
-        assert_eq!(
-            MacAddress::parse_str("!0x00000000000"),
-            Err(InvalidCharacter('!', 0))
-        );
-        assert_eq!(
-            MacAddress::parse_str("0x00000000000!"),
-            Err(InvalidCharacter('!', 13))
+            Err(InvalidByteCount(4, [0, 0, 0, 0, 0, 0]))
         );
     }
 
@@ -655,20 +665,20 @@ mod tests {
     fn test_compare() {
         let m1 = MacAddress::nil();
         let m2 = MacAddress::broadcast();
-        assert!(m1 == m1);
-        assert!(m2 == m2);
-        assert!(m1 != m2);
-        assert!(m2 != m1);
+        assert_eq!(m1, m1);
+        assert_eq!(m2, m2);
+        assert_ne!(m1, m2);
+        assert_ne!(m2, m1);
     }
 
     #[test]
     fn test_clone() {
         let m1 = MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap();
-        let m2 = m1.clone();
-        assert!(m1 == m1);
-        assert!(m2 == m2);
-        assert!(m1 == m2);
-        assert!(m2 == m1);
+        let m2 = m1;
+        assert_eq!(m1, m1);
+        assert_eq!(m2, m2);
+        assert_eq!(m1, m2);
+        assert_eq!(m2, m1);
     }
 
     #[test]
@@ -676,16 +686,27 @@ mod tests {
         use rustc_serialize::json;
 
         let mac = MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap();
-        assert_eq!("\"12-34-56-ab-cd-ef\"", json::encode(&mac).unwrap());
+        // Format returned is base on compile time of feature(disp_hexstring)
+        if cfg!(feature = "disp_hexstring") {
+            assert_eq!("\"12:34:56:ab:cd:ef\"", json::encode(&mac).unwrap());
+        } else {
+            assert_eq!("\"12-34-56-ab-cd-ef\"", json::encode(&mac).unwrap());
+        }
     }
 
     #[test]
     fn test_deserialize() {
         use rustc_serialize::json;
 
-        let d = "\"12-34-56-AB-CD-EF\"";
         let mac = MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap();
-        assert_eq!(mac, json::decode(&d).unwrap());
+
+        if cfg!(feature = "disp_hexstring") {
+            let d = "\"12:34:56:AB:CD:EF\"";
+            assert_eq!(mac, json::decode(&d).unwrap());
+        } else {
+            let d = "\"12-34-56-AB-CD-EF\"";
+            assert_eq!(mac, json::decode(&d).unwrap());
+        }
     }
 
     #[test]
@@ -709,7 +730,7 @@ mod tests {
 
     #[test]
     fn test_fmt() {
-        let mac = MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap();
+        let mac = MacAddress::parse_str("0x123456ABCDEF").unwrap();
         match MacAddress::get_display_format() {
             MacAddressFormat::HexString => {
                 assert_eq!("12:34:56:ab:cd:ef".to_owned(), format!("{}", mac))
@@ -721,12 +742,12 @@ mod tests {
     #[test]
     fn test_fmt_parse_errors() {
         assert_eq!(
-            "Err(InvalidLength(12))".to_owned(),
-            format!("{:?}", MacAddress::parse_str("123456ABCDEF"))
+            "Err(InvalidByteCount(7, [18, 52, 86, 171, 205, 239]))".to_owned(),
+            format!("{:?}", MacAddress::parse_str("123456ABCDEF1"))
         );
         assert_eq!(
-            "Err(InvalidCharacter(\'#\', 2))".to_owned(),
-            format!("{:?}", MacAddress::parse_str("12#34#56#AB#CD#EF"))
+            "Err(InvalidLength(19))",
+            format!("{:?}", MacAddress::parse_str("12##45#67#89#AB#C#D"))
         );
     }
 
@@ -736,7 +757,11 @@ mod tests {
         use serde_json;
         let serialized =
             serde_json::to_string(&MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap()).unwrap();
-        assert_eq!("\"12-34-56-ab-cd-ef\"", serialized);
+        if cfg!(feature = "disp_hexstring") {
+            assert_eq!("\"12:34:56:ab:cd:ef\"", serialized);
+        } else {
+            assert_eq!("\"12-34-56-ab-cd-ef\"", serialized);
+        }
     }
 
     #[test]
@@ -749,6 +774,24 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Invalid length; expecting 11 to 17 chars, found 2")]
+    #[cfg(feature = "serde_json")]
+    fn test_serde_json_deserialize_panic() {
+        let _should_panic: MacAddress = serde_json::from_str("\"12\"").unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "serde_bytes")]
+    fn test_serde_bytes_serialization_roundtrip() {
+        use bincode;
+        let mac = MacAddress::parse_str("12:34:56:AB:CD:EF").unwrap();
+        let mut buffer = Vec::new();
+        bincode::serialize_into(&mut buffer, &mac).unwrap();
+        let deserialized: MacAddress = bincode::deserialize_from(&*buffer).unwrap();
+        assert_eq!(deserialized, mac);
+    }
+
+    #[test]
     fn test_macaddressformat_derive() {
         assert_eq!(MacAddressFormat::HexString, MacAddressFormat::HexString);
         assert_ne!(MacAddressFormat::HexString, MacAddressFormat::Canonical);
@@ -756,18 +799,13 @@ mod tests {
 
     #[test]
     fn test_parseerror_fmt() {
-        use std::error::Error;
         assert_eq!(
-            "Invalid length; expecting 14 or 17 chars, found 2".to_owned(),
+            "Invalid length; expecting 11 to 17 chars, found 2".to_owned(),
             format!("{}", ParseError::InvalidLength(2))
         );
         assert_eq!(
-            "Invalid character; found `@` at offset 2".to_owned(),
-            format!("{}", ParseError::InvalidCharacter('@', 2))
-        );
-        assert_eq!(
-            "MacAddress parse error".to_owned(),
-            format!("{}", ParseError::InvalidLength(2).description())
+            "Invalid length; expecting 11 to 17 chars, found 2".to_owned(),
+            ParseError::InvalidLength(2).to_string()
         );
     }
 

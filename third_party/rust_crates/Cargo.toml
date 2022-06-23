@@ -87,7 +87,7 @@ difference = "2.0.0"
 ecdsa = "0.13.4"
 elliptic-curve = { version = "0.11.12", features = [ "ecdh" ] }
 either = "1.5.0"
-eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
+eui48 = { version = "1.1.0", default-features = false, features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
 fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }

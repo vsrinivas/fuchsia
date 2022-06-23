@@ -253,7 +253,7 @@ if (current_os == "fuchsia") {
 }
 
 group("eui48") {
-  public_deps = [ ":eui48-v0_4_6" ]
+  public_deps = [ ":eui48-v1_1_0" ]
 }
 
 group("event-listener") {
@@ -3890,14 +3890,14 @@ rust_library("euclid-v0_22_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("eui48-v0_4_6") {
+rust_library("eui48-v1_1_0") {
   crate_name = "eui48"
   crate_root = "//third_party/rust_crates/vendor/eui48/src/lib.rs"
-  output_name = "eui48-82065d8958fea295"
+  output_name = "eui48-311e12b917d0daa"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":rustc-serialize-v0_3_24" ]
+  deps += [ ":regex-v1_5_6" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
@@ -3905,9 +3905,8 @@ rust_library("eui48-v0_4_6") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=82065d8958fea295",
-    "-Cextra-filename=-82065d8958fea295",
-    "--cfg=feature=\"default\"",
+    "-Cmetadata=311e12b917d0daa",
+    "-Cextra-filename=-311e12b917d0daa",
     "--cfg=feature=\"disp_hexstring\"",
     "--cfg=feature=\"serde\"",
   ]
@@ -8836,26 +8835,6 @@ rust_library("rustc-hash-v1_0_1") {
     "--edition=2015",
     "-Cmetadata=d18fd5c05c7b0ca4",
     "-Cextra-filename=-d18fd5c05c7b0ca4",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("rustc-serialize-v0_3_24") {
-  crate_name = "rustc_serialize"
-  crate_root = "//third_party/rust_crates/vendor/rustc-serialize/src/lib.rs"
-  output_name = "rustc_serialize-cf1d65d911e642f1"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cf1d65d911e642f1",
-    "-Cextra-filename=-cf1d65d911e642f1",
   ]
 
   visibility = [ ":*" ]

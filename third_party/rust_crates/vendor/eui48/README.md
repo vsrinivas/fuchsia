@@ -17,7 +17,7 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 
-eui48 = "0.4.6"
+eui48 = "1.0.1"
 ```
 
 and this to your crate root:
@@ -52,6 +52,19 @@ fn main() {
 }
 ```
 
+## Notes
+* The default display format is cannonical form `01-02-03-04-05-06` unless a compile time feature `disp_hexstring` is enabled, then the default format is of the form `01:02:03:04:05:06`.
+
+Version 1.0.0 and above allows a more flexible parsing of MAC address strings, compliments of Stan Drozd:
+* Enables the library's caller to parse the MACs that don't follow fixed-length MAC address convention (I'm looking at you, ebtables!). In general, the parsing function tries harder to interpret a given string than before.
+* Rewrite parse_str to use a regex and be more lenient (now it permits one-off string chopping errors and mixed delimiters are accepted as long as we manage to read 6 bytes)
+* Exchange the InvalidCharacter error enum value for InvalidByteCount - InvalidCharacter is no longer supported. See versions >=0.5.0 and < 1.0.0 if you need legacy behavior.
+
+## Serialization
+When using `serde` to serialize a MAC address the address is stored as a formatted string. This fits well for text-based protocols like JSON but creates overhead for binary serialization. The overhead gets even bigger when the string is deserialized again, as a full-grown parser is needed instead of reading raw bytes. To reduce this overhead use the `serde_bytes` feature when serializing and deserializing MAC addresses to binary protocols. 
+
+NOTE: `serde_bytes` and `serde_json` are mutually exclusive!
+
 ## References
 [Wikipedia: MAC address](https://en.wikipedia.org/wiki/MAC_address)
 
@@ -67,3 +80,11 @@ fn main() {
 - 0.4.4 Andrew Baumhauer - Update documentation
 - 0.4.5 Andrew Baumhauer - Improve code coverage and tests
 - 0.4.6 Jiwoong Lee - Add to_array() for compatibility, add feature disp_hexstring
+- 0.4.7 Adam Reichold - WASM updates
+- 0.4.8 @kamek-pf - respect disp_hexstring flag
+- 0.4.9 Sebastian Dietze - New const added
+- 0.5.0 Andrew Baumhauer - cleanup, update versions, fmt, merge PRs, update unit tests
+- 0.5.1 jrb0001 - Fixed incorrect IPv6 to_link_local for Link-Scoped Unicast
+- 1.0.0 Stan Drozd, @rlcomstock3, and Andrew Baumhauer - merged all forks and improvements back to this repo
+- 1.0.1 jrb0001 - Fixed incorrect IPv6 to_link_local for Link-Scoped Unicast
+- 1.1.0 Felix Schreiner - binary serialization optimization

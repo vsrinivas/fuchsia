@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -13,8 +13,8 @@
 [package]
 edition = "2018"
 name = "eui48"
-version = "0.4.6"
-authors = ["Andrew Baumhauer <andy@baumhauer.us>", "<rlcomstock3@github.com>", "Michal 'vorner' Vaner <vorner+github@vorner.cz>"]
+version = "1.1.0"
+authors = ["Andrew Baumhauer <andy@baumhauer.us>", "<rlcomstock3@github.com>", "Michal 'vorner' Vaner <vorner+github@vorner.cz>", "Stan Drozd <drozdziak1@gmail.com>"]
 exclude = [".gitignore", ".travis.yml", ".gitlab-ci.yml", ".travis/*"]
 description = "A library to generate and parse IEEE EUI-48 and EUI-64, also known as MAC-48 media access\ncontrol addresses. The IEEE claims trademarks on the names EUI-48 and EUI-64, in which EUI is an\nabbreviation for Extended Unique Identifier.\n"
 homepage = "https://github.com/abaumhauer/eui48"
@@ -23,20 +23,28 @@ keywords = ["EUI-48", "MAC", "MAC-48", "networking", "MACADDR"]
 categories = ["network-programming", "parser-implementations"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/abaumhauer/eui48"
+[dependencies.regex]
+version = "1.3.9"
+optional = false
+
 [dependencies.rustc-serialize]
 version = "0.3.24"
+optional = true
 
 [dependencies.serde]
-version = "1.0.80"
+version = "1.0.114"
 optional = true
 
 [dependencies.serde_json]
-version = "1.0.37"
+version = "1.0.56"
 optional = true
+[dev-dependencies.bincode]
+version = "1.3.1"
 
 [features]
-default = []
+default = ["rustc-serialize"]
 disp_hexstring = []
+serde_bytes = ["serde"]
 [badges.appveyor]
 branch = "master"
 repository = "abaumhauer/eui48"
