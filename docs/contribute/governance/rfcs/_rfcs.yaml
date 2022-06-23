@@ -2192,3 +2192,16 @@
   reviewers: ['crjohns@google.com', 'geb@google.com', 'shayba@google.com']
   submitted: '2022-05-17'
   reviewed: '2022-06-15'
+
+- name: 'RFC-0170'
+  title: 'Remove binary images from the update package'
+  short_description: 'Reorder image writes during an OTA to save space.'
+  authors: ['nolivia@google.com']
+  file: '0170_remove_binary_images_from_the_update_package.md'
+  area: ['Software Delivery']
+  issue: ['100214']
+  gerrit_change_id: ['678884']
+  status: 'Accepted'
+  reviewers: ['wittrock@google.com', 'jsankey@google.com', 'gtsai@google.com', 'awolter@google.com', 'kevinwells@google.com', 'ampearce@google.com', 'billstevenson@google.com']
+  submitted: '2022-05-12'
+  reviewed: '2022-06-22'
