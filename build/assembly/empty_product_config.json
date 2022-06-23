@@ -1,4 +1,6 @@
 {
-    "platform": {},
+    "platform": {
+        "build_type": "eng"
+    },
     "product": {}
 }

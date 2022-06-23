@@ -28,7 +28,7 @@ pub struct ProductAssemblyConfig {
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
     #[serde(default)]
-    pub build_type: BuildType,
+    pub build_type: Option<BuildType>,
 
     /// List of logging tags to forward to the serial console.
     ///
@@ -150,7 +150,7 @@ impl ProductAssemblyConfig {
             patches
                 .package("configured_by_assembly")
                 .component("meta/to_configure.cm")
-                .field("enable_foo", matches!(self.platform.build_type, BuildType::Eng));
+                .field("enable_foo", matches!(self.platform.build_type, Some(BuildType::Eng)));
         }
 
         // Configure the session URL.
@@ -262,7 +262,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.build_type, Some(BuildType::Eng));
     }
 
     #[test]
@@ -278,7 +278,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, BuildType::UserDebug);
+        assert_eq!(config.platform.build_type, Some(BuildType::UserDebug));
     }
 
     #[test]
@@ -294,7 +294,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, BuildType::User);
+        assert_eq!(config.platform.build_type, Some(BuildType::User));
     }
 
     #[test]
@@ -318,7 +318,7 @@ mod tests {
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.build_type, None);
         assert_eq!(config.product.packages.base, vec!["path/to/base/package_manifest.json"]);
         assert_eq!(config.product.packages.cache, vec!["path/to/cache/package_manifest.json"]);
     }

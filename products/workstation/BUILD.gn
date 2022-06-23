@@ -9,6 +9,9 @@ assert(
     "Product definitions and assemblies should only be defined in the fuchsia toolchain")
 
 product_assembly_configuration("workstation") {
+  platform = {
+    build_type = "eng"
+  }
   product = {
     session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
   }

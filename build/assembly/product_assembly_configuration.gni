@@ -104,6 +104,7 @@ template("product_assembly_configuration") {
       if (defined(invoker.platform)) {
         forward_variables_from(invoker.platform, "*")
       }
+      assert(defined(build_type), "The platform build-type must be specified.")
     }
 
     # Create the product configuration section from the caller's arguments.

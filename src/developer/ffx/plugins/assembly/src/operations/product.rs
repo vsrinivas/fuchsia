@@ -27,7 +27,21 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     let config: ProductAssemblyConfig =
         util::read_config(&product).context("Loading product configuration")?;
 
+    if config.platform.build_type.is_none() {
+        return Err(anyhow::anyhow!("platform build-type has not been specified."));
+    }
+
     let mut builder = ImageAssemblyConfigBuilder::default();
+
+    let legacy_bundle_path = legacy_bundle_dir.join("legacy").join("assembly_config.json");
+    let emulator_bundle_path =
+        input_bundles_dir.join("emulator_support").join("assembly_config.json");
+
+    for bundle_path in vec![legacy_bundle_path, emulator_bundle_path] {
+        builder
+            .add_bundle(&bundle_path)
+            .context(format!("Adding input bundle: {}", bundle_path.display()))?;
+    }
 
     // Set structured configuration
     builder.set_bootfs_structured_config(config.define_bootfs_config()?);
@@ -35,14 +49,6 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         builder.set_structured_config(package, config)?;
     }
 
-    let legacy_bundle_path = legacy_bundle_dir.join("legacy").join("assembly_config.json");
-    let emulator_bundle_path =
-        input_bundles_dir.join("emulator_support").join("assembly_config.json");
-    for bundle_path in vec![legacy_bundle_path, emulator_bundle_path] {
-        builder
-            .add_bundle(&bundle_path)
-            .context(format!("Adding input bundle: {}", bundle_path.display()))?;
-    }
     builder
         .add_product_packages(&config.product.packages)
         .context("Adding product-provided packages")?;

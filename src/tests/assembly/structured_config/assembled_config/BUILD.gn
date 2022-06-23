@@ -21,6 +21,7 @@ generated_file("config") {
   output_conversion = "json"
   contents = {
     platform = {
+      build_type = "eng"
     }
     product = {
     }
