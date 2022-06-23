@@ -6,6 +6,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/sanitizer.h>
@@ -34,24 +35,24 @@ namespace {
 // things eventually so that this uses only real vDSO entry points that can't
 // be interposed upon.
 void PrimeSyscallsBeforeTakingLocks() {
-  struct RanOnce {};
-  [[maybe_unused]] static RanOnce run_once = []() {
-    zx_handle_t invalid;
-    uintptr_t ignored;
-    (void)zx_system_get_page_size();
-    zx_object_get_child(_zx_process_self(), ZX_KOID_INVALID, 0, &invalid);
-    zx_object_get_info(_zx_process_self(), 0, nullptr, 0, nullptr, nullptr);
-    zx_object_wait_one(_zx_process_self(), 0, 0, nullptr);
-    zx_task_suspend_token(_zx_process_self(), &invalid);
-    zx_thread_read_state(zxr_thread_get_handle(&__pthread_self()->zxr_thread), 0, nullptr, 0);
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
-    zx_vmo_create(0, 0, &vmo);
-    zx_vmo_set_size(vmo, 0);
-    zx_vmar_map(_zx_vmar_root_self(), 0, 0, vmo, 0, 0, &ignored);
-    zx_vmar_unmap(_zx_vmar_root_self(), 0, 0);
-    zx_handle_close(vmo);
-    return RanOnce{};
-  }();
+  static once_flag flag = ONCE_FLAG_INIT;
+  call_once(
+      &flag, +[]() {
+        zx_handle_t invalid;
+        uintptr_t ignored;
+        (void)zx_system_get_page_size();
+        zx_object_get_child(_zx_process_self(), ZX_KOID_INVALID, 0, &invalid);
+        zx_object_get_info(_zx_process_self(), 0, nullptr, 0, nullptr, nullptr);
+        zx_object_wait_one(_zx_process_self(), 0, 0, nullptr);
+        zx_task_suspend_token(_zx_process_self(), &invalid);
+        zx_thread_read_state(zxr_thread_get_handle(&__pthread_self()->zxr_thread), 0, nullptr, 0);
+        zx_handle_t vmo = ZX_HANDLE_INVALID;
+        zx_vmo_create(0, 0, &vmo);
+        zx_vmo_set_size(vmo, 0);
+        zx_vmar_map(_zx_vmar_root_self(), 0, 0, vmo, 0, 0, &ignored);
+        zx_vmar_unmap(_zx_vmar_root_self(), 0, 0);
+        zx_handle_close(vmo);
+      });
 }
 
 // This is a simple container similar to std::vector but using only whole-page
