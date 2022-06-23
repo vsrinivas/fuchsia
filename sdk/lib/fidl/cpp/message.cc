@@ -166,16 +166,6 @@ HLCPPOutgoingBody& HLCPPOutgoingBody::operator=(HLCPPOutgoingBody&& other) {
   return *this;
 }
 
-zx_status_t HLCPPOutgoingBody::Encode(const fidl_type_t* type, const char** error_msg_out) {
-  uint32_t actual_handles = 0u;
-  zx_status_t status = fidl_encode_etc(type, bytes_.data(), bytes_.actual(), handles().data(),
-                                       handles().capacity(), &actual_handles, error_msg_out);
-  if (status == ZX_OK)
-    handles().set_actual(actual_handles);
-
-  return status;
-}
-
 zx_status_t HLCPPOutgoingBody::Validate(const internal::WireFormatVersion& wire_format_version,
                                         const fidl_type_t* type, const char** error_msg_out) const {
   zx_status_t status = CheckWireFormatVersion(wire_format_version, type, error_msg_out);
@@ -205,18 +195,6 @@ HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(HLCPPOutgoingMessage&& oth
   bytes_ = std::move(other.bytes_);
   body_view_ = std::move(other.body_view_);
   return *this;
-}
-
-zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** error_msg_out) {
-  uint8_t* trimmed_bytes = bytes_.data();
-  uint32_t trimmed_num_bytes = bytes_.actual();
-  zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
-      bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
-  if (unlikely(status) != ZX_OK) {
-    return status;
-  }
-
-  return body_view_.Encode(type, error_msg_out);
 }
 
 zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,

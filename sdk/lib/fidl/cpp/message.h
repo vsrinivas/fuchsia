@@ -247,13 +247,6 @@ class HLCPPOutgoingBody {
     return reinterpret_cast<T*>(bytes_.data());
   }
 
-  // Encodes the message body in-place.
-  //
-  // The message must previously have been in a decoded state, for example,
-  // either by being built in a decoded state using a |Builder| or having been
-  // decoded using the |Decode| method.
-  zx_status_t Encode(const fidl_type_t* type, const char** error_msg_out);
-
   // Validates the message body in-place.
   //
   // The message must already be in an encoded state, for example, either by
@@ -343,13 +336,6 @@ class HLCPPOutgoingMessage {
   // empty and the handle values are stored in the bytes().
   HandleDispositionPart& handles() { return body_view_.handles(); }
   const HandleDispositionPart& handles() const { return body_view_.handles(); }
-
-  // Encodes the transactional message body in-place.
-  //
-  // The message must previously have been in a decoded state, for example,
-  // either by being built in a decoded state using a |Builder| or having been
-  // decoded using the |Decode| method.
-  zx_status_t Encode(const fidl_type_t* type, const char** error_msg_out);
 
   // Validates the transactional message body in-place.
   //
