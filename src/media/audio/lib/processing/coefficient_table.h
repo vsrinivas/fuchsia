@@ -1,22 +1,23 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_PROCESSING_COEFFICIENT_TABLE_H_
+#define SRC_MEDIA_AUDIO_LIB_PROCESSING_COEFFICIENT_TABLE_H_
 
 #include <lib/stdcompat/span.h>
 
+#include <algorithm>
 #include <cmath>
-#include <map>
 #include <memory>
-#include <mutex>
+#include <optional>
+#include <tuple>
+#include <utility>
 #include <vector>
 
-#include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/fixed.h"
 
-// coefficient_table.h is included by gen_coefficient_tables.cc, which does not have access to
+// `coefficient_table.h` is included by `gen_coefficient_tables.cc`, which does not have access to
 // Fuchsia headers because it is compiled as a host binary.
 #ifndef BUILDING_FUCHSIA_AUDIO_HOST_TOOL
 #include <lib/syslog/cpp/macros.h>  // nogncheck
@@ -25,22 +26,22 @@
 #define FX_CHECK(cond) assert(cond)
 #endif
 
-namespace media::audio::mixer {
+namespace media_audio {
 
-// CoefficientTable is a shim around std::vector that maps indicies into a physical addressing
-// scheme that is most optimal WRT to how this table is typically accessed. Specifically accesses
-// are most commonly with an integral stride (that is 1 << frac_bits stride). Optimize for this use
-// case by placing these values physically contiguously in memory.
+// `CoefficientTable` is a shim around `std::vector` that maps indices into a physical addressing
+// scheme that is most optimal with respect to how this table is typically accessed. More
+// specifically, they are most commonly accessed with an integral stride (that is `1 << frac_bits`
+// stride). We optimize for this use case by placing these values physically contiguously in memory.
 //
 // Coefficient tables represent one side of a symmetric convolution filter. Coefficients cover the
-// entire discrete space of fractional position values, but for any calculation we reference only
-// a small subset of these values (see ReadSlice for an example).
+// entire discrete space of fractional position values, but for any calculation we reference only a
+// small subset of these values (see `ReadSlice` below for an example).
 class CoefficientTable {
  public:
-  // |width| is the filter width of this table, in fixed point format with |frac_bits| of fractional
-  // precision. The |width| will determine the number of entries in the table, which will be |width|
-  // rounded up to the nearest integer in the same fixed-point format. |data| provides the raw table
-  // data ordered by physical address. If |data| is empty, storage is allocated automatically.
+  // `width` is the filter width of this table, in fixed point format with `frac_bits` of fractional
+  // precision. The `width` will determine the number of entries in the table, which will be `width`
+  // rounded up to the nearest integer in the same fixed-point format. `data` provides the raw table
+  // data ordered by physical address. If `data` is empty, storage is allocated automatically.
   CoefficientTable(int64_t width, int32_t frac_bits, cpp20::span<const float> data)
       : stride_(ComputeStride(width, frac_bits)),
         frac_filter_width_(width),
@@ -48,22 +49,24 @@ class CoefficientTable {
         frac_mask_((1 << frac_bits_) - 1),
         storage_(data.empty() ? std::make_optional<std::vector<float>>(stride_ * (1 << frac_bits))
                               : std::nullopt),
-        table_(data.empty() ? cpp20::span<const float>(&(*storage_)[0], storage_->size()) : data) {
+        table_(data.empty() ? cpp20::span<const float>(storage_->begin(), storage_->end()) : data) {
     FX_CHECK(frac_filter_width_ >= 0);
     FX_CHECK(static_cast<int64_t>(table_.size()) == stride_ * (1 << frac_bits));
   }
 
   const float& operator[](int64_t offset) const { return table_[PhysicalIndex(offset)]; }
 
-  // Reads |num_coefficients| coefficients starting at |offset|. The result is a pointer to
-  // |num_coefficients| coefficients with the following semantics:
+  // Reads `num_coefficients` coefficients starting at `offset`. The result is a pointer to
+  // `num_coefficients` coefficients with the following semantics:
   //
+  // ```
   // auto c = new CoefficientTable(width, frac_bits);
   // auto f = c->ReadSlice(offset, size);
   // ASSERT_EQ(f[0], c[off + 0 << frac_bits]);
   // ASSERT_EQ(f[1], c[off + 1 << frac_bits]);
   //  ...
   // ASSERT_EQ(f[size], c[off + size << frac_bits]);
+  // ```
   const float* ReadSlice(int64_t offset, int64_t num_coefficients) const {
     if (num_coefficients <= 0 ||
         offset + ((num_coefficients - 1) << frac_bits_) > frac_filter_width_) {
@@ -103,8 +106,8 @@ class CoefficientTable {
   cpp20::span<const float> table_;
 };
 
-// CoefficientTableBuilder constructs a single CoefficientTable.
-// Once constructed, the CoefficientTable is immutable.
+// `CoefficientTableBuilder` constructs a single `CoefficientTable`.
+// Once constructed, the `CoefficientTable` is immutable.
 class CoefficientTableBuilder {
  public:
   CoefficientTableBuilder(int64_t width, int32_t frac_bits)
@@ -122,34 +125,10 @@ class CoefficientTableBuilder {
   std::unique_ptr<CoefficientTable> table_;
 };
 
-// Nearest-neighbor "zero-order interpolation" resampler, implemented using the convolution
-// filter. Length on both sides is half a frame + 1 subframe (expressed in our fixed-point
-// fractional scale), modulo the stretching effects of downsampling.
-//
-// Example: for frac_size 1000, filter_length would be 500, entailing coefficient values for
-// locations from that exact position, up to positions as much as 500 away. This means:
-// - Fractional source pos 1.499 requires frames between 0.999 and 1.999, thus source frame 1
-// - Fractional source pos 1.500 requires frames between 1.000 and 2.000, thus source frames 1 and 2
-// - Fractional source pos 1.501 requires frames between 1.001 and 2.001, thus source frame 2
-// For source pos .5, we average the pre- and post- values so as to achieve zero phase delay
-class PointFilterCoefficientTable {
- public:
-  struct Inputs {
-    int64_t side_length;
-    int32_t num_frac_bits;
-
-    bool operator<(const Inputs& rhs) const {
-      return std::tie(side_length, num_frac_bits) < std::tie(rhs.side_length, rhs.num_frac_bits);
-    }
-  };
-
-  static std::unique_ptr<CoefficientTable> Create(Inputs);
-};
-
 // Linear interpolation, implemented using the convolution filter.
 // Length on both sides is one frame, modulo the stretching effects of downsampling.
 //
-// Example: for frac_size 1000, filter_length would be 999, entailing coefficient values for
+// Example: for `frac_size` 1000, `filter_length` would be 999, entailing coefficient values for
 // locations from that exact position, up to positions as much as 999 away. This means:
 // -Fractional source pos 1.999 requires frames between 1.000 and 2.998, thus source frames 1 and 2
 // -Fractional source pos 2.001 requires frames between 1.002 and 3.000, thus source frames 2 and 3
@@ -166,6 +145,7 @@ class LinearFilterCoefficientTable {
     }
   };
 
+  // Creates linear-interpolation filter with frame-rate conversion.
   static std::unique_ptr<CoefficientTable> Create(Inputs);
 };
 
@@ -201,8 +181,8 @@ class SincFilterCoefficientTable {
           static_cast<int64_t>(std::ceil(static_cast<double>(filter_length * source_frame_rate) /
                                          static_cast<double>(dest_frame_rate)));
 
-      // For down-sampling ratios beyond kMaxDownsampleRatioForFullSideTaps the effective number of
-      // side taps decreases proportionally -- rate-conversion quality gracefully degrades.
+      // For down-sampling ratios beyond `kMaxDownsampleRatioForFullSideTaps` the effective number
+      // of side taps decreases proportionally -- rate-conversion quality gracefully degrades.
       filter_length = std::min(filter_length, kMaxFracSideLength);
     }
 
@@ -217,10 +197,11 @@ class SincFilterCoefficientTable {
     };
   }
 
+  // Creates windowed-sinc FIR filter with band-limited frame-rate conversion.
   static std::unique_ptr<CoefficientTable> Create(Inputs);
 };
 
-// These global structs This global struct describes a set of prebuilt coefficient tables.
+// This global struct describes a set of prebuilt coefficient tables.
 struct PrebuiltSincFilterCoefficientTable {
   int32_t source_rate;
   int32_t dest_rate;
@@ -228,11 +209,10 @@ struct PrebuiltSincFilterCoefficientTable {
 };
 
 // The list of prebuilt coefficient tables.
-// This uses std::array so it can directly reference data in .rodata without reallocating
-// (std::vector would allocate and copy from .rodata).
+// This uses `std::array` so it can directly reference data in `.rodata` without reallocating.
 extern const cpp20::span<const PrebuiltSincFilterCoefficientTable>
     kPrebuiltSincFilterCoefficientTables;
 
-}  // namespace media::audio::mixer
+}  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_PROCESSING_COEFFICIENT_TABLE_H_

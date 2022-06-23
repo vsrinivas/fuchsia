@@ -11,11 +11,13 @@
 
 #include "src/media/audio/audio_core/mixer/channel_strip.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/mixer/filter.h"
 #include "src/media/audio/audio_core/mixer/position_manager.h"
+#include "src/media/audio/lib/processing/filter.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
+
+using ::media_audio::SincFilter;
 
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {

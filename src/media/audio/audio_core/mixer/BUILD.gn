@@ -9,25 +9,9 @@ source_set("constants") {
   public_deps = [ "//src/media/audio/lib/format:constants" ]
 }
 
-source_set("coefficient_table") {
-  sources = [
-    "coefficient_table.cc",
-    "coefficient_table.h",
-  ]
-
-  public_deps = [
-    ":constants",
-    "//sdk/lib/stdcompat",
-    "//sdk/lib/syslog/cpp",
-  ]
-}
-
 source_set("mixer") {
   sources = [
     "channel_strip.h",
-    "coefficient_table_cache.h",
-    "filter.cc",
-    "filter.h",
     "gain.cc",
     "gain.h",
     "intersect.cc",
@@ -47,7 +31,6 @@ source_set("mixer") {
   ]
 
   public_deps = [
-    ":coefficient_table",
     ":constants",
     "//sdk/fidl/fuchsia.media",
     "//zircon/system/ulib/fbl",
@@ -86,25 +69,6 @@ group("tools") {
   deps = [ "tools" ]
 }
 
-# Any executable which uses :mixer (either directly or transitively) must also
-# include either prebuilt or empty coefficient tables, via one of the following
-# two build rules. The decision of which tables to include is usually left to
-# the top-most build rule (i.e., the executable), since that rule often has the
-# most insight into system constraints, such as code size.
-
-source_set("prebuilt_coefficient_tables") {
-  sources = [ "$target_gen_dir/coefficient_table_data_prebuilt.cc" ]
-  deps = [
-    ":build_coefficient_table_data_prebuilt_cc",
-    ":coefficient_table",
-  ]
-}
-
-source_set("empty_coefficient_tables") {
-  sources = [ "coefficient_table_data_empty.cc" ]
-  deps = [ ":coefficient_table" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
@@ -121,9 +85,6 @@ executable("mixer_unittest_bin") {
   sources = [
     "bookkeeping_unittest.cc",
     "channel_strip_unittest.cc",
-    "coefficient_table_cache_unittest.cc",
-    "coefficient_table_unittest.cc",
-    "filter_unittest.cc",
     "gain_unittest.cc",
     "intersect_unittest.cc",
     "no_op_unittest.cc",
@@ -137,10 +98,10 @@ executable("mixer_unittest_bin") {
   deps = [
     ":mixer",
     "//src/lib/fxl/test:gtest_main",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/format2",
     "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/lib/test:constants",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
@@ -162,7 +123,7 @@ executable("mixer_death_unittest_bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
   ]
 }
@@ -175,28 +136,4 @@ fuchsia_unittest_package("audio_mixer_death_unittests") {
       max_severity = "FATAL"
     }
   }
-}
-
-# This executable is run automatically as part of the build deps for
-# :prebuilt_coefficient_tables. It can be run manually -- the binary
-# can be found adjacent to other host tools.
-executable("gen_audio_filter_coefficient_tables") {
-  sources = [
-    "coefficient_table.cc",
-    "coefficient_table.h",
-    "constants.h",
-    "gen_coefficient_tables.cc",
-  ]
-  deps = [
-    "//sdk/lib/stdcompat",
-    "//src/media/audio/lib/format:constants",
-  ]
-  defines = [ "BUILDING_FUCHSIA_AUDIO_HOST_TOOL=1" ]
-}
-
-compiled_action("build_coefficient_table_data_prebuilt_cc") {
-  tool = ":gen_audio_filter_coefficient_tables"
-  outputs = [ "$target_gen_dir/coefficient_table_data_prebuilt.cc" ]
-  args = [ rebase_path(target_gen_dir, root_build_dir) +
-           "/coefficient_table_data_prebuilt.cc" ]
 }

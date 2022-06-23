@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/coefficient_table.h"
+#include "src/media/audio/lib/processing/coefficient_table.h"
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/fixed.h"
 
-namespace media::audio::mixer {
+namespace media_audio {
+namespace {
 
 TEST(CoefficientTableTest, AllIndicesAccessible) {
   Fixed width(10);
@@ -32,8 +33,8 @@ TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
                          cpp20::span<const float>{});
 
   for (int64_t fraction = 0; fraction < kOneFrame.raw_value(); ++fraction) {
-    // Each fractional value will have a block in the vector. Now check that
-    // every valid integral value is contiguous for this fractional value.
+    // Each fractional value will have a block in the vector. Now check that every valid integral
+    // value is contiguous for this fractional value.
     auto block_index = fraction * width.Ceiling();
     for (int64_t integer = 0; integer < width.Ceiling(); ++integer) {
       auto fixed_value = (integer << Fixed::Format::FractionalBits) + fraction;
@@ -62,4 +63,5 @@ TEST(CoefficientTableTest, ReadSlice) {
   }
 }
 
-}  // namespace media::audio::mixer
+}  // namespace
+}  // namespace media_audio

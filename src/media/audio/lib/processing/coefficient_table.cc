@@ -1,33 +1,15 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/coefficient_table.h"
+#include "src/media/audio/lib/processing/coefficient_table.h"
 
 #include <algorithm>
+#include <limits>
+#include <memory>
 
-namespace media::audio::mixer {
+namespace media_audio {
 
-// Calculate our nearest-neighbor filter. With it we perform frame-rate conversion.
-std::unique_ptr<CoefficientTable> PointFilterCoefficientTable::Create(Inputs inputs) {
-  CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
-
-  // kHalfFrameIdx should always be the last idx in the filter table, because our ctor sets
-  // side_length to (1 << (num_frac_bits - 1)), which == (frac_size >> 1)
-  const int64_t kHalfFrameIdx = 1 << (inputs.num_frac_bits - 1);  // frac_half
-  FX_CHECK(inputs.side_length == kHalfFrameIdx + 1);
-
-  // Just a rectangular window, with the exact midpoint performing averaging (for zero phase).
-  for (auto idx = 0; idx < kHalfFrameIdx; ++idx) {
-    table[idx] = 1.0f;
-  }
-
-  // Here we average, so that we are zero-phase
-  table[kHalfFrameIdx] = 0.5f;
-
-  return table.Build();
-}
-
-// Calculate our linear-interpolation filter. With it we perform frame-rate conversion.
 std::unique_ptr<CoefficientTable> LinearFilterCoefficientTable::Create(Inputs inputs) {
   CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
 
@@ -51,7 +33,6 @@ std::unique_ptr<CoefficientTable> LinearFilterCoefficientTable::Create(Inputs in
   return table.Build();
 }
 
-// Calculate our windowed-sinc FIR filter. With it we perform band-limited frame-rate conversion.
 std::unique_ptr<CoefficientTable> SincFilterCoefficientTable::Create(Inputs inputs) {
   CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
 
@@ -102,4 +83,4 @@ std::unique_ptr<CoefficientTable> SincFilterCoefficientTable::Create(Inputs inpu
   return table.Build();
 }
 
-}  // namespace media::audio::mixer
+}  // namespace media_audio

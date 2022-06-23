@@ -1,58 +1,15 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/filter.h"
+#include "src/media/audio/lib/processing/filter.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
-namespace media::audio::mixer {
+namespace media_audio {
 namespace {
-
-TEST(PointFilterTest, Construction) {
-  {
-    auto source_rate = 48000;
-    auto dest_rate = 48000;
-    int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
-    PointFilter filter(source_rate, dest_rate);
-    auto expected_side_length = (1 << (expected_num_frac_bits - 1)) + 1;
-
-    EXPECT_EQ(filter.source_rate(), source_rate);
-    EXPECT_EQ(filter.dest_rate(), dest_rate);
-    EXPECT_EQ(filter.num_frac_bits(), expected_num_frac_bits);
-    EXPECT_EQ(filter.side_length(), expected_side_length);
-    EXPECT_DOUBLE_EQ(filter.rate_conversion_ratio(), 1.0);
-  }
-
-  {
-    auto source_rate = 16000;
-    auto dest_rate = 48000;
-    int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
-    PointFilter filter(source_rate, dest_rate);
-    auto expected_side_length = (1 << (expected_num_frac_bits - 1)) + 1;
-
-    EXPECT_EQ(filter.source_rate(), source_rate);
-    EXPECT_EQ(filter.dest_rate(), dest_rate);
-    EXPECT_EQ(filter.num_frac_bits(), expected_num_frac_bits);
-    EXPECT_EQ(filter.side_length(), expected_side_length);
-    EXPECT_DOUBLE_EQ(filter.rate_conversion_ratio(), 3.0);
-  }
-
-  {
-    auto source_rate = 44100;
-    auto dest_rate = 22050;
-    int32_t num_frac_bits = 4;
-    PointFilter filter(source_rate, dest_rate, num_frac_bits);
-    auto expected_side_length = (1 << (num_frac_bits - 1)) + 1;
-
-    EXPECT_EQ(filter.source_rate(), source_rate);
-    EXPECT_EQ(filter.dest_rate(), dest_rate);
-    EXPECT_EQ(filter.num_frac_bits(), num_frac_bits);
-    EXPECT_EQ(filter.side_length(), expected_side_length);
-    EXPECT_DOUBLE_EQ(filter.rate_conversion_ratio(), 0.5);
-  }
-}
 
 TEST(LinearFilterTest, Construction) {
   {
@@ -160,24 +117,6 @@ TEST(SincFilterTest, Construction) {
   }
 }
 
-TEST(PointFilterTest, FilterCoefficients) {
-  auto source_rate = 48000;
-  auto dest_rate = 48000;
-  int32_t num_frac_bits = 4;
-  PointFilter filter(source_rate, dest_rate, num_frac_bits);
-
-  const auto frac_half = 1 << (num_frac_bits - 1);
-  const auto expected_side_length = frac_half + 1;
-  EXPECT_EQ(filter.side_length(), expected_side_length);
-
-  EXPECT_FLOAT_EQ(filter[0], 1.0f);
-  for (auto idx = 1; idx < frac_half; ++idx) {
-    EXPECT_FLOAT_EQ(filter[idx], 1.0f);
-  }
-
-  EXPECT_FLOAT_EQ(filter[frac_half], 0.5f);
-}
-
 TEST(LinearFilterTest, FilterCoefficients) {
   auto source_rate = 48000;
   auto dest_rate = 48000;
@@ -252,22 +191,6 @@ TEST(SincFilterTest, FilterCoefficients_UpSample) {
   EXPECT_DOUBLE_EQ(filter.rate_conversion_ratio(), 2.0);
 }
 
-// TODO(mpuryear): validate other rate-conversion ratios
-TEST(PointFilterTest, ComputeSample) {
-  auto source_rate = 48000;
-  auto dest_rate = 48000;
-  int32_t num_frac_bits = 4;
-  auto frac_size = 1 << num_frac_bits;
-  auto frac_half = frac_size >> 1;
-  PointFilter filter(source_rate, dest_rate, num_frac_bits);
-
-  float data[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-
-  EXPECT_FLOAT_EQ(filter.ComputeSample(0, &data[1]), data[1]);
-  EXPECT_FLOAT_EQ(filter.ComputeSample(frac_half, &data[2]), (data[2] + data[3]) / 2);
-  EXPECT_FLOAT_EQ(filter.ComputeSample(frac_size - 1, &data[3]), data[4]);
-}
-
 TEST(LinearFilterTest, ComputeSample) {
   auto source_rate = 48000;
   auto dest_rate = 48000;
@@ -289,7 +212,7 @@ void ValidateSincComputeSample(int32_t source_rate, int32_t dest_rate, int64_t s
                                int32_t num_frac_bits) {
   SincFilter filter(source_rate, dest_rate, side_length, num_frac_bits);
 
-  // If values outside indices [1,33] are used in ComputeSample, data compares will fail.
+  // If values outside indices [1,33] are used in `ComputeSample`, data compares will fail.
   float data[] = {
       999999.0f,                                             //
       0.1f,       0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f,  //
@@ -308,8 +231,8 @@ void ValidateSincComputeSample(int32_t source_rate, int32_t dest_rate, int64_t s
   SCOPED_TRACE("Compute(17.0) == [17]");
   EXPECT_FLOAT_EQ(filter.ComputeSample(0, &data[17]), data[17]);
 
-  // These values are only calculated to a specific quality tolerance (related to side_length and
-  // num_frac_bits), so the only SAFE things to do here are rough comparisons.
+  // These values are only calculated to a specific quality tolerance (related to `side_length` and
+  // `num_frac_bits`), so the only SAFE things to do here are rough comparisons.
   SCOPED_TRACE("[17] < Compute(17.25)");
   EXPECT_LT(data[17], filter.ComputeSample(frac_half, &data[17]));
 
@@ -359,4 +282,4 @@ TEST(SincFilterTest, ComputeSample) {
 }
 
 }  // namespace
-}  // namespace media::audio::mixer
+}  // namespace media_audio

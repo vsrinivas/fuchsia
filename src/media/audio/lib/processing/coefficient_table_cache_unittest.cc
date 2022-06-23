@@ -1,14 +1,16 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/coefficient_table_cache.h"
+#include "src/media/audio/lib/processing/coefficient_table_cache.h"
+
+#include <utility>
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/fixed.h"
 
-namespace media::audio::mixer {
+namespace media_audio {
 namespace {
 
 CoefficientTable* MakeCoefficientTable() {
@@ -111,4 +113,4 @@ TEST(LazySharedCoefficientTableTest, LazinessWorks) {
 }
 
 }  // namespace
-}  // namespace media::audio::mixer
+}  // namespace media_audio

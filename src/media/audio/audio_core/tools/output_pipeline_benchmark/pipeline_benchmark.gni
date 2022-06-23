@@ -79,12 +79,12 @@ template("audio_pipeline_benchmark") {
       "//sdk/fidl/fuchsia.media",
       "//src/lib/fxl",
       "//src/media/audio/audio_core:audio_core_lib",
-      "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
       "//src/media/audio/audio_core/testing",
       "//src/media/audio/lib/analysis",
       "//src/media/audio/lib/clock/testing",
       "//src/media/audio/lib/effects_loader",
       "//src/media/audio/lib/format",
+      "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
       "//src/performance/lib/profiler",
       "//zircon/system/ulib/perftest",
     ]

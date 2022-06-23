@@ -42,10 +42,10 @@ executable("audio_fidelity_test_bin") {
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]

@@ -86,16 +86,16 @@ audio_core_api_test_component("audio_core_fidelity_test") {
   source = "audio_core_fidelity_test.cc"
   executable_deps = [
     ":fidelity_results",
-    "//src/media/audio/audio_core/mixer:coefficient_table",
     "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/processing:coefficient_table",
   ]
 }
 
 audio_core_api_test_component("audio_core_thermal_test") {
   source = "audio_core_thermal_test.cc"
   executable_deps = [
-    "//src/media/audio/audio_core/mixer:coefficient_table",
     "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/processing:coefficient_table",
   ]
 }
 

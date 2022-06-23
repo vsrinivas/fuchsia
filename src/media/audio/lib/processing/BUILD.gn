@@ -9,6 +9,19 @@ group("tests") {
   deps = [ ":audio-libprocessing-unittests" ]
 }
 
+source_set("coefficient_table") {
+  sources = [
+    "coefficient_table.cc",
+    "coefficient_table.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/stdcompat",
+    "//sdk/lib/syslog/cpp",
+    "//src/media/audio/lib/format2:fixed",
+  ]
+}
+
 source_set("processing") {
   sources = [
     "gain_control.cc",
@@ -25,6 +38,9 @@ source_set("processing") {
 
 source_set("sampler") {
   sources = [
+    "coefficient_table_cache.h",
+    "filter.cc",
+    "filter.h",
     "gain.h",
     "point_sampler.cc",
     "point_sampler.h",
@@ -32,8 +48,10 @@ source_set("sampler") {
   ]
 
   deps = [
+    ":coefficient_table",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/format2",
+    "//zircon/system/ulib/trace",
   ]
 
   # Building without optimizations causes significant slowdowns for these components; the additional
@@ -53,12 +71,54 @@ source_set("sampler") {
   ]
 }
 
+# Any executable which uses `sampler` (either directly or transitively) must also include either
+# `prebuilt_coefficient_tables` or `empty_coefficient_tables` below. The decision of which tables to
+# include is usually left to the top-most build rule (i.e., the executable), since that rule often
+# has the most insight into system constraints, such as code size.
+source_set("prebuilt_coefficient_tables") {
+  sources = [ "$target_gen_dir/coefficient_table_data_prebuilt.cc" ]
+  deps = [
+    ":build_coefficient_table_data_prebuilt_cc",
+    ":coefficient_table",
+  ]
+}
+
+source_set("empty_coefficient_tables") {
+  sources = [ "coefficient_table_data_empty.cc" ]
+  deps = [ ":coefficient_table" ]
+}
+
+# This executable is run automatically as part of the build deps for `prebuilt_coefficient_tables`.
+# It can also be run manually - the binary can be found adjacent to other host tools.
+executable("gen_audio_filter_coefficient_tables") {
+  sources = [
+    "coefficient_table.cc",
+    "coefficient_table.h",
+    "gen_coefficient_tables.cc",
+  ]
+  deps = [
+    "//sdk/lib/stdcompat",
+    "//src/media/audio/lib/format2:fixed",
+  ]
+  defines = [ "BUILDING_FUCHSIA_AUDIO_HOST_TOOL=1" ]
+}
+
+compiled_action("build_coefficient_table_data_prebuilt_cc") {
+  tool = ":gen_audio_filter_coefficient_tables"
+  outputs = [ "$target_gen_dir/coefficient_table_data_prebuilt.cc" ]
+  args = [ rebase_path(target_gen_dir, root_build_dir) +
+           "/coefficient_table_data_prebuilt.cc" ]
+}
+
 executable("unittest-bin") {
   visibility = [ ":*" ]
   testonly = true
   output_name = "audio-libprocessing-unittests"
 
   sources = [
+    "coefficient_table_cache_unittest.cc",
+    "coefficient_table_unittest.cc",
+    "filter_unittest.cc",
     "gain_control_unittest.cc",
     "gain_unittest.cc",
     "point_sampler_unittest.cc",
@@ -66,9 +126,12 @@ executable("unittest-bin") {
   ]
 
   deps = [
+    ":coefficient_table",
     ":processing",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/format2",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
   ]
 }

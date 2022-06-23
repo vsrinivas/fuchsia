@@ -9,11 +9,11 @@
 
 #include "fuchsia/media/audio/cpp/fidl.h"
 #include "src/media/audio/audio_core/driver_output.h"
-#include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/test/api/fidelity_results.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_fidelity_test.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/processing/coefficient_table.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
@@ -39,7 +39,7 @@ class AudioCoreFidelityTest : public HermeticFidelityTest {
       AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
   static constexpr size_t kFilterWidthFrames =
-      mixer::SincFilterCoefficientTable::kMaxFracSideLength >> Fixed::Format::FractionalBits;
+      media_audio::SincFilterCoefficientTable::kMaxFracSideLength >> Fixed::Format::FractionalBits;
 
   static HermeticPipelineTest::PipelineConstants pipeline_constants(int32_t source_rate,
                                                                     int32_t num_mix_stages = 1) {

@@ -248,7 +248,7 @@ executable("audio_core_bin") {
   output_name = "audio_core"
   deps = [
     ":audio_core_main",
-    "//src/media/audio/audio_core/mixer:empty_coefficient_tables",
+    "//src/media/audio/lib/processing:empty_coefficient_tables",
   ]
 }
 
@@ -256,7 +256,7 @@ executable("audio_core_bin_with_prebuilt_coefficient_tables") {
   output_name = "audio_core_with_prebuilt_coefficient_tables"
   deps = [
     ":audio_core_main",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
   ]
 }
 
@@ -333,13 +333,13 @@ executable("unittest_bin") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/effects/test_effects:test_effects_v2",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -373,7 +373,7 @@ fuzzer("audio_core_fuzzer") {
   sources = [ "policy_loader_fuzzer.cc" ]
   deps = [
     ":audio_core_lib",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
   ]
 }
 

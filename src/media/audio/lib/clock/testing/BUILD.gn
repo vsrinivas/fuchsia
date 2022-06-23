@@ -37,7 +37,7 @@ executable("unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core:audio_core_lib",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
   ]
 }
 

@@ -10,8 +10,8 @@
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/filter.h"
 #include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/processing/filter.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::mixer {
@@ -433,8 +433,8 @@ TEST_F(SincSamplerPositionTest, FilterWidth) {
   auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
   ASSERT_NE(mixer, nullptr);
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), media_audio::SincFilter::kFracSideLength - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), media_audio::SincFilter::kFracSideLength - 1);
 }
 
 // Test basic position advancing, for integer rate and same-sized source and dest buffers.

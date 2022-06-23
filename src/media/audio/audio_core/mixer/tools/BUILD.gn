@@ -22,11 +22,11 @@ executable("profiler_bin") {
   deps = [
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/audio_core/mixer:empty_coefficient_tables",
     "//src/media/audio/audio_core/mixer/test:frequency_set",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:empty_coefficient_tables",
     "//src/performance/lib/profiler",
     "//zircon/system/ulib/perftest",
   ]

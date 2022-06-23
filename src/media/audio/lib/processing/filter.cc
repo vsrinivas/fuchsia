@@ -1,22 +1,31 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/filter.h"
+#include "src/media/audio/lib/processing/filter.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
 #include <iomanip>
+#include <ios>
+#include <limits>
 #include <memory>
-#include <mutex>
+#include <vector>
 
-#include "src/media/audio/audio_core/mixer/coefficient_table.h"
-#include "src/media/audio/audio_core/mixer/logging_flags.h"
+#include "src/media/audio/lib/processing/coefficient_table.h"
 
-namespace media::audio::mixer {
+namespace media_audio {
 
-// Display the filter table values.
+namespace {
+
+// Debug computation of output values (`ComputeSample`), from coefficients and input values.
+// Extremely verbose, only useful in a controlled unittest setting.
+constexpr bool kTraceFilterComputation = false;
+
+}  // namespace
+
 void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << "Filter: source rate " << source_rate_ << ", dest rate " << dest_rate_
                 << ", length 0x" << std::hex << side_length_;
@@ -45,12 +54,12 @@ void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << " **************************************************************";
 }
 
-// For frac_offset in [0.0, 1.0) we require source frames on each side depending on filter length.
-// Source frames are at integral positions, but we treat frac_offset as filter center, so source
+// For `frac_offset` in [0.0, 1.0) we require source frames on each side depending on filter length.
+// Source frames are at integral positions, but we treat `frac_offset` as filter center, so source
 // frames appear to be fractionally positioned.
 //
 // Filter coefficients cover the entire discrete space of fractional positions, but any calculation
-// references only a subset of these, using a one-frame stride (frac_size_). Coefficient tables
+// references only a subset of these, using a one-frame stride (`frac_size_`). Coefficient tables
 // internally store values with an integer stride contiguously, which is what these loops want.
 //   Ex:
 //     coefficient_ptr[1] == filter_coefficients[frac_offset + frac_size_];
@@ -167,23 +176,14 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   return cache;
 }
 
-// static
-PointFilter::CacheT* const PointFilter::cache_ =
-    new PointFilter::CacheT([](PointFilterCoefficientTable::Inputs inputs) {
-      TRACE_DURATION("audio", "CreatePointFilterTable");
-      return PointFilterCoefficientTable::Create(inputs).release();
-    });
-
-// static
 LinearFilter::CacheT* const LinearFilter::cache_ =
     new LinearFilter::CacheT([](LinearFilterCoefficientTable::Inputs inputs) {
       TRACE_DURATION("audio", "CreateLinearFilterTable");
       return LinearFilterCoefficientTable::Create(inputs).release();
     });
 
-// static
-// Must initialize persistent_cache_ first as it's used by the Create function.
+// Must initialize `persistent_cache_` first as it's used by the `Create` function.
 std::vector<SincFilter::CacheT::SharedPtr>* SincFilter::persistent_cache_ = nullptr;
 SincFilter::CacheT* const SincFilter::cache_ = CreateSincFilterCoefficientTableCache();
 
-}  // namespace media::audio::mixer
+}  // namespace media_audio
