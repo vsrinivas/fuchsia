@@ -77,10 +77,12 @@ protocol File2 {
     ///
     /// * The returned `actual_count` will never be greater than `data.length`.
     /// * If the server is unable to write all the data due to e.g. not enough
-    ///   space, `actual_count` may be less than `data.length`.
+    ///   space, `actual_count` may be less than `data.length`.  If no bytes
+    ///   could be written, an error is returned.
     /// * If `data.length` is zero, the server should perform all the checks
-    ///   ensuring write access without mutating the file. The seek offset
-    ///   is still updated if in append mode.
+    ///   ensuring write access without mutating the file and return a
+    ///   successful write of zero bytes.  The seek offset is still updated if
+    ///   in append mode.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
     @selector("fuchsia.io/File.Write")
@@ -129,9 +131,11 @@ protocol File2 {
     ///
     /// * The returned `actual_count` will never be greater than `data.length`.
     /// * If the server is unable to write all the data due to e.g. not enough
-    ///   space, `actual_count` may be less than `data.length`.
+    ///   space, `actual_count` may be less than `data.length`.  If no bytes
+    ///   could be written, an error is returned.
     /// * If `data.length` is zero, the server should perform all the checks
-    ///   ensuring write access without mutating the file.
+    ///   ensuring write access without mutating the file, and will return a
+    ///   successful write of zero bytes.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
     @selector("fuchsia.io/File.WriteAt")

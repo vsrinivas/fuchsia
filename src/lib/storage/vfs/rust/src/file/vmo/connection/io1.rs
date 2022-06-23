@@ -585,43 +585,45 @@ impl VmoFileConnection {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
+        if content.is_empty() {
+            return Ok(0);
+        }
 
         update_initialized_state! {
             match &mut *self.file.state().await;
             error: "handle_write_at" => return Err(zx::Status::INTERNAL);
             { vmo, vmo_size, size, capacity, .. } => {
                 let capacity = core::cmp::max(*size, *capacity);
-                match capacity.checked_sub(offset) {
-                    None => return Err(zx::Status::OUT_OF_RANGE),
-                    Some(capacity) => {
-                        assert_eq_size!(usize, u64);
-                        let capacity = capacity.try_into().unwrap();
-
-                        if content.len() > capacity {
-                            content = &content[..capacity];
-                        }
-
-                        let len = content.len().try_into().unwrap();
-                        let end = offset + len;
-                        if end > *size {
-                            if end > *vmo_size {
-                                vmo.set_size(end)?;
-                                // As VMO sizes are rounded, we do not really know the current size
-                                // of the VMO after the `set_size` call.  We need an additional
-                                // `get_size`, if we want to be aware of the exact size.  We can
-                                // probably do our own rounding, but it seems more fragile.
-                                // Hopefully, this extra syscall will be invisible, as it should not
-                                // happen too frequently.  It will be at least offset by 4 more
-                                // syscalls that happen for every `write_at` FIDL call.
-                                *vmo_size = vmo.get_size()?;
-                            }
-                            vmo.set_content_size(&end)?;
-                            *size = end;
-                        }
-                        vmo.write(content, offset)?;
-                        Ok(len)
-                    }
+                if offset >= capacity {
+                    return Err(zx::Status::OUT_OF_RANGE);
                 }
+                let capacity = capacity - offset;
+                assert_eq_size!(usize, u64);
+                let capacity = capacity.try_into().unwrap();
+
+                if content.len() > capacity {
+                    content = &content[..capacity];
+                }
+
+                let len = content.len().try_into().unwrap();
+                let end = offset + len;
+                if end > *size {
+                    if end > *vmo_size {
+                        vmo.set_size(end)?;
+                        // As VMO sizes are rounded, we do not really know the current size
+                        // of the VMO after the `set_size` call.  We need an additional
+                        // `get_size`, if we want to be aware of the exact size.  We can
+                        // probably do our own rounding, but it seems more fragile.
+                        // Hopefully, this extra syscall will be invisible, as it should not
+                        // happen too frequently.  It will be at least offset by 4 more
+                        // syscalls that happen for every `write_at` FIDL call.
+                        *vmo_size = vmo.get_size()?;
+                    }
+                    vmo.set_content_size(&end)?;
+                    *size = end;
+                }
+                vmo.write(content, offset)?;
+                Ok(len)
             }
         }
     }

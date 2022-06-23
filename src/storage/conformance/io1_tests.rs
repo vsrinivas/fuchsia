@@ -13,6 +13,7 @@ use {
     futures::StreamExt,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
     libc,
+    std::convert::TryInto,
 };
 
 const TEST_FILE: &str = "testing.txt";
@@ -1416,6 +1417,37 @@ async fn vmo_file_describe() {
     } else {
         panic!("Expected VmoFile, got {:?} instead!", node_info);
     }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn vmo_file_write_to_limits() {
+    let harness = TestHarness::new().await;
+    if !harness.config.supports_vmo_file.unwrap_or_default() {
+        return;
+    }
+
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let test_dir = harness
+        .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+    let file = open_node::<fio::FileMarker>(
+        &test_dir,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        fio::MODE_TYPE_FILE,
+        TEST_FILE,
+    )
+    .await;
+
+    file.describe().await.expect("describe failed");
+    let data = vec![0u8];
+    file.write_at(&data[..], TEST_FILE_CONTENTS.len().try_into().unwrap())
+        .await
+        .expect("fidl call failed")
+        .expect_err("Write at end of file limit should fail");
+    // An empty write should still succeed even if it targets an out-of-bounds offset.
+    file.write_at(&[], TEST_FILE_CONTENTS.len().try_into().unwrap())
+        .await
+        .expect("fidl call failed")
+        .expect("Zero-byte write at end of file limit should succeed");
 }
 
 #[fasync::run_singlethreaded(test)]
