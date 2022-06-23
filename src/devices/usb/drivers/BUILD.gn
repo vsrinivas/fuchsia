@@ -16,6 +16,7 @@ group("tests") {
     "usb-peripheral:tests",
     "usb-peripheral-test:tests",
     "usb-virtual-bus:tests",
+    "vim3-usb-phy:tests",
     "xhci:tests",
   ]
 }

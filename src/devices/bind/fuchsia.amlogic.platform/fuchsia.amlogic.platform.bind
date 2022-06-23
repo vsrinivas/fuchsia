@@ -70,6 +70,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   DAI_IN = 0x2A,
   HDMI = 0x2B,
   A5_CLK = 0x2C,
+  VIM3_USB_PHY = 0x2D,
 };
 
 extend uint fuchsia.BIND_REGISTER_ID {

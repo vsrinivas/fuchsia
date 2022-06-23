@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic USB PHY driver for vim3",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A311D"
+    ],
+    "areas": [
+        "USB"
+    ]
+}

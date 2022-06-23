@@ -77,9 +77,10 @@ static const pbus_metadata_t usb_phy_metadata[] = {
 
 static const pbus_dev_t usb_phy_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "aml-usb-phy-v2";
+  dev.name = "vim3-usb-phy";
+  dev.pid = PDEV_PID_VIM3;
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.did = PDEV_DID_AML_USB_PHY_V2;
+  dev.did = PDEV_DID_VIM3_USB_PHY;
   dev.mmio_list = usb_phy_mmios;
   dev.mmio_count = std::size(usb_phy_mmios);
   dev.irq_list = usb_phy_irqs;

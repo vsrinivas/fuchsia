@@ -18,6 +18,7 @@ group("drivers") {
     "drivers/usb-virtual-bus:usb-virtual-bus",
     "drivers/usb-virtual-bus:virtual-bus-tester",
     "drivers/usb-virtual-bus:virtual-bus-tester-function",
+    "drivers/vim3-usb-phy",
     "drivers/xhci",
     "tests/usb-hci-test:driver",
   ]

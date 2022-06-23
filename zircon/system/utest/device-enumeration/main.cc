@@ -187,8 +187,6 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "aml-nna",
       "sys/platform/00:00:29",  // registers device
-      "aml-usb-phy-v2",
-      "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
       "mali/aml-gpu",
       "sys/platform/05:00:10/aml-canvas",
       "display/amlogic-display/display-controller",
@@ -209,8 +207,10 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "fusb302",
 
       // USB
-      "sys/platform/00:00:2/xhci/usb-bus",
-      "sys/platform/00:00:2/xhci/usb-bus/000",  // USB 2.0 Hub
+      "vim3-usb-phy",
+      "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
+      "xhci/xhci",
+      "xhci/xhci/usb-bus/000/usb-hub",  // USB 2.0 Hub
 
       // Thermal
       "sys/platform/05:06:28",
