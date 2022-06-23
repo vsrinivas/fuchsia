@@ -118,7 +118,6 @@
                             "build-info",
                             "config-data",
                             "deprecated-global-data",
-                            "deprecated-global-dev",
                             "deprecated-global-hub",
                             "deprecated-global-tmp",
                             "deprecated-misc-storage",
