@@ -433,10 +433,11 @@ void FsManager::FileReport(fs_management::DiskFormat format, ReportReason reason
     auto client = fidl::BindSyncClient(std::move(*client_end));
 
     fidl::Arena allocator;
-    fuchsia_feedback::wire::CrashReport report(allocator);
-    report.set_program_name(allocator, allocator, fs_management::DiskFormatString(format));
-    report.set_crash_signature(allocator, allocator, report_reason);
-    report.set_is_fatal(false);
+    auto report = fuchsia_feedback::wire::CrashReport::Builder(allocator)
+                      .program_name(fs_management::DiskFormatString(format))
+                      .crash_signature(report_reason)
+                      .is_fatal(false)
+                      .Build();
 
     auto res = client->File(report);
     if (!res.ok()) {
