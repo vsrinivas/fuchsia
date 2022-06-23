@@ -92,7 +92,7 @@ impl TilesFacade {
     /// }
     /// Example:
     /// {
-    ///     "url": "fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx"
+    ///     "url": "fuchsia-pkg://fuchsia.com/flatland_examples#meta/flatland-view-provider.cmx"
     /// }
     pub async fn add_from_url(&self, args: Value) -> Result<Value, Error> {
         let add_request: AddTileInput = from_value(args)?;

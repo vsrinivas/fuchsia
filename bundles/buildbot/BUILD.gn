@@ -182,7 +182,6 @@ group("core_base_packages") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/text:text_manager",
-    "//src/ui/examples/bouncing_ball",
     "//src/ui/scenic:scenic_pkg",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",

@@ -7,19 +7,7 @@ import("//build/components.gni")
 group("examples") {
   public_deps = [
     ":flatland-examples",
-    "bouncing_ball",
-    "embedder",
-    "frame-compression",
-    "lab/direct_input",
-    "lab/direct_input/child",
-    "lab/pose_buffer_presenter",
-    "lab/scenic_dev_app",
-    "shadertoy",
     "simplest_app",
-    "simplest_embedder",
-    "spinning_square_view",
-    "standalone_app",
-    "tile_view",
     "yuv_to_image_pipe",
   ]
 }

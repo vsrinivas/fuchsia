@@ -54,8 +54,6 @@ legacy_cache_package_labels += _developer_packages
 legacy_universe_package_labels += [
   "//examples/fidl:tests",
   "//src/lib/ui/carnelian:examples",
-  "//src/ui/examples/bouncing_ball",
-  "//src/ui/examples/spinning_square_view",
 
   # TODO(fxb/102262): This is an anti-pattern, do not imitate. Remove when we are ready.
   "//bundles/drivers:conformance-tests",

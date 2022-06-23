@@ -11,7 +11,6 @@ group("tests") {
     ":swapchain_tests",
     ":unittests",
     "//src/graphics/examples:vkcube-on-scenic",
-    "//src/ui/examples/bouncing_ball",
   ]
 }
 

@@ -202,33 +202,13 @@ applications to see if there is any regression.
 
 There are some examples available:
 
-* **bouncing_ball**
-  - Basic example of creating `ViewProvider` and `View`, and creating a UI by using
-    Scenic commands.
-  - **Source:** [`//src/ui/examples/bouncing_ball`](/src/ui/examples/bouncing_ball)
-  - **Build dependency:** `//src/ui/examples/bouncing_ball`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx`
+* **flatland-view-provider**
+  - Basic example of serving `ViewProvider` and creating a UI using Flatland commands.
+  - **Source:** [`//src/ui/examples/flatland-view-provider`](/src/ui/examples/flatland-view-provider)
+  - **Build dependency:** `//src/ui/examples/flatland-view-provider`
+  - **Package URI:** `fuchsia-pkg://fuchsia.com/flatland-examples#meta/flatland-view-provider.cm`
 
-* **spinning_square_view**
-  - Example that shows the use of [`BaseView`](/src/lib/ui/base_view).
-  - **Source:** [`//src/ui/examples/spinning_square_view`](/src/ui/examples/spinning_square_view)
-  - **Build dependency:** `//src/ui/examples/spinning_square_view`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx`
-
-* **spinning_square_rs**
-  - An example written in Rust that shows the use of
-    [Carnelian](/src/lib/ui/carnelian/README.md),
-    a prototype framework for writing Fuchsia modules in Rust.
-  - **Source:** [`//src/lib/ui/carnelian/examples/spinning_square.rs`](/src/lib/ui/carnelian/examples/spinning_square.rs)
-  - **Build dependency:** `//src/lib/ui/carnelian:spinning-square-rs`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx`
-
-* **spinning_cube**
-  - An example written in Dart and Flutter, showing how to create a Flutter app in Fuchsia.
-  - **Source:** [`//src/experiences/examples/spinning_cube`](https://fuchsia.googlesource.com/experiences/+/main/examples/spinning_cube)
-  - **Build dependency:** `//src/experiences/examples/spinning_cube:spinning-cube`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-cube#meta/spinning_cube.cmx`
-
+#### Examples below this point are GFX and therefore deprecated, pending removal
 * **simplest_app**
   - An application that changes background color with every user touch input, which uses root
     presenter for its implementation of `BaseView`. It tracks input callbacks from Scenic and draws
@@ -247,90 +227,25 @@ To run these applications, you need to include the following dependency in your 
 configuration:
 
 ```shell
-fx set terminal.x64 --with "//src/ui/examples,//src/lib/ui/carnelian:examples,//src/experiences/examples/spinning_cube:spinning-cube"
+fx set workstation.x64 --with "//src/ui/examples"
 ```
-
-You can replace the product with `workstation.x64` as well; you can also use an all-in-one bundle
-`--with //bundles:kitchen_sink` to replace the `--with` argument above so that you can include all
-tests, tools and examples without any extra dependency.
-
 ### Running UI examples
 
 #### Running in shell
 
 You can launch the stories (modules) in any shell you are in:
 
-* In Ermine shell, you can run modules by typing in the package name (e.g. `simplest_app`, or
-  `spinning-cube`) in the [ASK] bar to run modules.
+* In Ermine shell, you can run modules by typing in the package name (e.g. `flatland-view-provider`) in the [ASK] bar to run modules.
 
-#### Running a module standalone
+* Or, use command `ffx session add <component_name>` command to launch a component in the shell.
 
-You can also launch a module standalone without any existing shells, this works for configurations
-where there's no existing shell (e.g. in `terminal` or `core` products).
-
-* Use command `present_view <mod_name>` command to launch a module standalone.
-
-  From your host workstations, run:
+  From your host workstation, run:
 
   ```shell
-  fx shell "present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx"
+  fx session add "fuchsia-pkg://fuchsia.com/flatland_examples#meta/flatland-view-provider.cm"
   ```
 
-  to present the `View` provided in `spinning_square_view` package.
-
-  The `present_view` command also allows command auto completion if there is only one package
-  matching the `<mod_name>`; so the command above is equivalent to
-
-  ```shell
-  fx shell present_view spinning_square_view
-  ```
-
-  Note: If this doesn't work, you may need to run `fx shell "killall scenic.cmx; killall root_presenter.cmx"`
-  from your host workstation to kill the existing Scenic session.
-
-* You can also use package `tiles` to create a tiled view and add or delete modules to the tile.
-
-  * In order to use `tiles`, first you need to ensure that you already have
-    `//src/ui/tools/tiles` and `//src/ui/tools/tiles_ctl` included in your `--with`
-    argument of `fx set` command.
-
-    Or you can use `--with //src/ui/tools` or `--with //bundles:tools` (huge
-    build may be expected) where `tiles` related packages will be included as
-    well.
-
-  * To display the tiles view, from your host workstations, run:
-
-    ```shell
-    fx shell "tiles_ctl start"
-    ```
-
-    This runs `tiles.cmx` package as a daemon.
-
-  * From your host workstation, run the following command to add tiles:
-
-    ```shell
-    fx shell "tiles_ctl add fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx"
-    ```
-
-    You can see outputs like:
-
-    ```shell
-    Tile added with key 1
-    ```
-
-    You can add as many shells as you want by running `tiles_ctl add` command.
-
-    Note: `tiles_ctl` doesn’t support command auto completion so you have to type in the complete
-    URI for the packages, which you can get by running `locate <search string>`.
-
-  * `tiles_ctl remove <key>` command removes existing tile by the given key value. For example,
-    you can run this command on host to remove the spinning square view we created previously:
-
-    ```shell
-    fx shell tiles_ctl remove 1
-    ```
-
-  * `tiles_ctl quit` command kills the `tiles` executable and all associated views.
+  to present the `View` provided in `flatland-view-provider` component.
 
 <!-- Reference links -->
 
