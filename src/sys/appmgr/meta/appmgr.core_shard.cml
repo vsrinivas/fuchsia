@@ -214,18 +214,6 @@
             from: "#starnix_manager",
         },
         {
-            protocol: "fuchsia.virtualization.ZirconGuestManager",
-            from: "#zircon-guest-manager",
-        },
-        {
-            protocol: "fuchsia.virtualization.TerminaGuestManager",
-            from: "#termina-guest-manager",
-        },
-        {
-            protocol: "fuchsia.virtualization.DebianGuestManager",
-            from: "#debian-guest-manager",
-        },
-        {
             protocol: "fuchsia.virtualization.LinuxManager",
             from: "#linux_runner",
             dependency: "weak_for_migration",
@@ -469,11 +457,8 @@
             protocol: [ "fuchsia.media.Audio" ],
             from: "self",
             to: [
-                "#debian-guest-manager",
                 "#session-manager",
                 "#soundplayer",
-                "#termina-guest-manager",
-                "#zircon-guest-manager",
             ],
             dependency: "weak_for_migration",
         },
@@ -499,20 +484,6 @@
             ],
             from: "self",
             to: "#feedback",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.policy.Presenter",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "self",
-            to: [
-                "#debian-guest-manager",
-                "#termina-guest-manager",
-                "#zircon-guest-manager",
-            ],
             dependency: "weak_for_migration",
         },
     ],
@@ -541,18 +512,6 @@
         {
             directory: "hub-legacy",
             from: "#appmgr",
-        },
-        {
-            protocol: [ "fuchsia.virtualization.DebianGuestManager" ],
-            from: "#debian-guest-manager",
-        },
-        {
-            protocol: [ "fuchsia.virtualization.ZirconGuestManager" ],
-            from: "#zircon-guest-manager",
-        },
-        {
-            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
-            from: "#termina-guest-manager",
         },
         {
             protocol: [ "fuchsia.virtualization.LinuxManager" ],

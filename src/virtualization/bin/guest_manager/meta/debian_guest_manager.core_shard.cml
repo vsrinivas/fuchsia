@@ -1,0 +1,102 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "debian-guest-manager",
+            url: "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    use: [
+        // Route sound player APIs to CFv1 realm.
+        {
+            protocol: "fuchsia.virtualization.DebianGuestManager",
+            from: "#debian-guest-manager",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-ethernet",
+            to: "#debian-guest-manager",
+            subdir: "class/ethernet",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#debian-guest-manager",
+            subdir: "class/gpu",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "#sysmem_connector",
+            to: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "#audio_core",
+            to: "#debian-guest-manager",
+            source_availability: "unknown", // audio may not be available on all products
+        },
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+            from: "#vulkan_loader",
+            to: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.ui.input.ImeService" ],
+            from: "#text_manager",
+            to: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.net.virtualization.Control" ],
+            from: "#network",
+            to: "#debian-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#debian-guest-manager",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            source_availability: "unknown",
+        },
+
+        // Route from CFv1 realm.
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: "#debian-guest-manager",
+            dependency: "weak_for_migration",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.DebianGuestManager" ],
+            from: "#debian-guest-manager",
+        },
+    ],
+}

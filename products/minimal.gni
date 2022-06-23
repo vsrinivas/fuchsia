@@ -46,6 +46,14 @@ core_realm_shards += [
   # needed in core.gni for tests that use the core image.
   "//src/intl/intl_services:intl_services_small_timezones_shard",
 ]
+
+# TODO(fxbug.dev/103301) Seems like virtualization shouldn't be needed by "minimal"
+core_realm_shards += [
+  "//src/virtualization/bin/guest_manager:debian_core_shard",
+  "//src/virtualization/bin/guest_manager:termina_core_shard",
+  "//src/virtualization/bin/guest_manager:zircon_core_shard",
+]
+
 core_realm_restrict_persistent_storage = true
 
 legacy_base_package_labels += [

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("packages") {
   deps = [
@@ -109,4 +110,16 @@ fuchsia_unittest_package("guest_manager_test") {
       max_severity = "ERROR"
     }
   }
+}
+
+core_shard("debian_core_shard") {
+  shard_file = "meta/debian_guest_manager.core_shard.cml"
+}
+
+core_shard("termina_core_shard") {
+  shard_file = "meta/termina_guest_manager.core_shard.cml"
+}
+
+core_shard("zircon_core_shard") {
+  shard_file = "meta/zircon_guest_manager.core_shard.cml"
 }

@@ -1,0 +1,108 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "termina-guest-manager",
+            url: "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    use: [
+        // Route sound player APIs to CFv1 realm.
+        {
+            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            from: "#termina-guest-manager",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-ethernet",
+            to: "#termina-guest-manager",
+            subdir: "class/ethernet",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#termina-guest-manager",
+            subdir: "class/gpu",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "#sysmem_connector",
+            to: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "#audio_core",
+            to: "#termina-guest-manager",
+            source_availability: "unknown", // audio may not be available on all products
+        },
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+            from: "#vulkan_loader",
+            to: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.ui.input.ImeService" ],
+            from: "#text_manager",
+            to: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.net.virtualization.Control" ],
+            from: "#network",
+            to: "#termina-guest-manager",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#termina-guest-manager",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
+            from: "#termina-guest-manager",
+            to: "#linux_runner",
+            dependency: "weak_for_migration",
+        },
+
+        // Route from CFv1 realm.
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: "#termina-guest-manager",
+            dependency: "weak_for_migration",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
+            from: "#termina-guest-manager",
+        },
+    ],
+}
