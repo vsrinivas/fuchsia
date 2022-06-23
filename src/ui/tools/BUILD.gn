@@ -9,7 +9,6 @@ group("scenic") {
     ":input",
     ":present_view",
     ":print_input",
-    ":screencap",
   ]
 }
 
@@ -18,7 +17,6 @@ group("tools") {
     ":input",
     ":present_view",
     ":print_input",
-    ":screencap",
     "paper_shader_compiler",
     "print-input-report",
     "tiles",
@@ -42,10 +40,7 @@ group("tests") {
 # follow the pattern:
 # name/meta/name.cmx contains the component manifest
 # name is the name of a subdirectory that builds the output binary `name`
-component_shell_tools = [
-  "present_view",
-  "screencap",
-]
+component_shell_tools = [ "present_view" ]
 foreach(tool, component_shell_tools) {
   fuchsia_shell_package(tool) {
     manifest = "$tool/meta/$tool.cmx"
