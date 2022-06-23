@@ -232,7 +232,6 @@ group("package_deps") {
     "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
 
     # These are used by storage_benchmarks_test
-    "//src/storage/bin/odu:odu",
     "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
 }

@@ -71,31 +71,9 @@ rustc_staticlib("libodu") {
   deps = odu_deps
 }
 
-rustc_binary("bin") {
-  edition = "2021"
-  name = "odu"
-  version = "0.1.0"
-
-  deps = [
-    ":lib",
-    "//third_party/rust_crates:anyhow",
-  ]
-  sources = [ "src/main.rs" ]
-}
-
-fuchsia_shell_package("odu") {
-  manifest = "meta/odu.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_unittest_package("odu_tests") {
   manifest = "meta/odu_lib_test.cml"
   deps = [ ":lib_test" ]
-}
-
-install_host_tools("odu_host") {
-  deps = [ ":bin($host_toolchain)" ]
-  outputs = [ "odu" ]
 }
 
 group("tests") {
