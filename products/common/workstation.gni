@@ -71,6 +71,8 @@ legacy_cache_package_labels += [
   # TODO(fxbug.dev/79542): Demote to universe when sysui handles pairing+connecting
   "//src/connectivity/bluetooth/tools/bt-cli",
   "//src/connectivity/bluetooth/tools/bt-pairing-tool",
+
+  "//src/chromium:chrome_browser",
 ]
 
 # Explicitly prefer wired networking on workstation
@@ -84,7 +86,6 @@ legacy_base_package_labels -=
     [ "//src/connectivity/network:network-legacy-deprecated" ]
 
 legacy_base_package_labels += [
-  "//src/chromium:chrome_browser",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",
   "//src/media/playback/bundles:services",

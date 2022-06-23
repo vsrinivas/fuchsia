@@ -34,7 +34,6 @@ _developer_packages = [
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",
-  "//src/chromium:chrome_browser",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",
   "//src/media/playback/bundles:services",

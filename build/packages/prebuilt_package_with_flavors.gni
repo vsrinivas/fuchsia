@@ -171,6 +171,7 @@ template("prebuilt_package_with_flavors") {
                              "testonly",
                              "visibility",
                              "package_name",
+                             "repository",
                            ])
 
     # setup the non-production-safe status of the package

@@ -43,6 +43,7 @@ template("generate_package_flavors") {
                              "testonly",
                              "visibility",
                              "package_name",
+                             "repository",
                            ])
 
     if (defined(invoker.package_name)) {
@@ -100,6 +101,7 @@ template("generate_package_flavors_and_config") {
                              "prebuilt_archive_base_path",
                              "selections",
                              "testonly",
+                             "repository",
                            ])
   }
   generate_config(target_name) {
