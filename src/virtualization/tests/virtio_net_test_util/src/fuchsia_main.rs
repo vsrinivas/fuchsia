@@ -5,6 +5,7 @@
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
 use fuchsia_async as fasync;
+use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use std::convert::TryInto as _;
@@ -150,14 +151,31 @@ async fn network_device_send(
         .attach(port, vec![fidl_fuchsia_hardware_network::FrameType::Ethernet])
         .await
         .expect("attach port");
-    let mut buffer = session.alloc_tx_buffer(config.length).await.expect("allocate tx buffer");
-    buffer.set_frame_type(fidl_fuchsia_hardware_network::FrameType::Ethernet);
-    buffer.set_port(port);
-    let write_scratch = vec![config.send_byte; config.length];
-    let written = buffer.write_at(0, &write_scratch).expect("write message");
-    assert_eq!(written, config.length);
-    session.send(buffer).expect("send");
-    let recv_buf = session.recv().await.expect("receive");
+
+    // It is possible that the device does not yet have rx buffers ready to receive frames, so we
+    // loop to ensure that we try sending after the device has its rx buffers ready.
+    let recv_buf = loop {
+        let mut buffer = session.alloc_tx_buffer(config.length).await.expect("allocate tx buffer");
+        buffer.set_frame_type(fidl_fuchsia_hardware_network::FrameType::Ethernet);
+        buffer.set_port(port);
+        let write_scratch = vec![config.send_byte; config.length];
+        let written = buffer.write_at(0, &write_scratch).expect("write message");
+        assert_eq!(written, config.length);
+        session.send(buffer).expect("send");
+
+        let recv_result = session
+            .recv()
+            .map(|result| Some(result.expect("recv failed")))
+            .on_timeout(fuchsia_async::Time::after(zx::Duration::from_seconds(1)), || None)
+            .await;
+        match recv_result {
+            Some(received_buffer) => {
+                break received_buffer;
+            }
+            None => println!("didn't receive any data, trying to send again..."),
+        }
+    };
+
     let mut scratch = vec![0; config.length];
     let read = recv_buf.read_at(0, &mut scratch).expect("read from buffer");
     assert_eq!(read, config.length, "expected length: {}, found: {}", config.length, read);

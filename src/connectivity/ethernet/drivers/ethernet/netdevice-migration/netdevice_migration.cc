@@ -181,10 +181,11 @@ void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data
       constexpr size_t N = 64;
       // Assert power of 2 to avoid incorrect behavior on overflow.
       static_assert(N != 0 && (N & (N - 1)) == 0);
-      // Use pre-increment to avoid logging on the first dropped packet.
-      const size_t v = ++no_rx_space_;
+      // Use post-increment to ensure we log on the first dropped packet.
+      const size_t v = no_rx_space_++;
       if (v % N == 0) {
-        zxlogf(ERROR, "received ethernet frames without queued rx buffers; %zu frames dropped", v);
+        zxlogf(ERROR, "received ethernet frames without queued rx buffers; %zu frames dropped",
+               v + 1);
       }
     } break;
     case ZX_ERR_BUFFER_TOO_SMALL:
