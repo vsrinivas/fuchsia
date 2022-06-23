@@ -1,0 +1,7 @@
+{
+    $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+    version: "1",
+    fallback_chain: [
+        "Roboto-Regular.ttf",
+    ],
+}

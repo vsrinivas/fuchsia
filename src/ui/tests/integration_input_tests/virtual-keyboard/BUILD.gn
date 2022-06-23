@@ -4,11 +4,19 @@
 
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
+import("//src/fonts/build/fonts.gni")
 
 fidl("test.virtualkeyboard") {
   sdk_category = "internal"
   sources = [ "input_position_listener.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
+}
+
+font_collection("single-font-collection") {
+  testonly = true
+  product_config_path = "single-font-collection.fontcfg.json5"
+  local_asset_names = [ "Roboto-Regular.ttf" ]
+  font_service_pkg = "virtual-keyboard-test"
 }
 
 executable("virtual-keyboard-test-bin") {
@@ -24,6 +32,7 @@ executable("virtual-keyboard-test-bin") {
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",
@@ -67,9 +76,11 @@ fuchsia_component("virtual-keyboard-test-component") {
 fuchsia_test_package("virtual-keyboard-test") {
   test_components = [ ":virtual-keyboard-test-component" ]
   deps = [
+    ":single-font-collection",
     "//src/connectivity/network/netstack:component",
     "//src/developer/build_info/testing:fake-build-info-component",
     "//src/developer/memory/monitor:component",
+    "//src/fonts:font_provider_cm",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/a11y/testing:fake-a11y-manager",
     "//src/ui/bin/root_presenter:component_v2_for_test",
@@ -180,7 +191,6 @@ group("tests") {
 
     # The deps below are necessary on minimal product configs.
     "//src/chromium:web_engine",
-    "//src/fonts:downstream_test_deps",
     "//src/graphics/bin/vulkan_loader",
   ]
 }
@@ -192,7 +202,6 @@ group("tests-product-webengine") {
   deps = [
     ":virtual-keyboard-test",
     ":virtual-keyboard-test-ip",
-    "//src/fonts:downstream_test_deps",
     "//src/graphics/bin/vulkan_loader",
   ]
 }

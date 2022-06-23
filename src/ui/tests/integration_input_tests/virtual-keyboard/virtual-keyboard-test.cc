@@ -9,6 +9,7 @@
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -76,6 +77,7 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
+using component_testing::Directory;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
@@ -412,7 +414,6 @@ class WebEngineTest : public VirtualKeyboardBase {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
-        std::make_pair(kFontsProvider, kFontsProviderUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
   }
@@ -420,6 +421,7 @@ class WebEngineTest : public VirtualKeyboardBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+        std::make_pair(kFontsProvider, kFontsProviderUrl),
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
@@ -470,6 +472,13 @@ class WebEngineTest : public VirtualKeyboardBase {
         {.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
          .source = ChildRef{kFontsProvider},
          .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_},
+                          Protocol{fuchsia::logger::LogSink::Name_},
+                          Directory{.name = "config-data",
+                                    .rights = fuchsia::io::R_STAR_DIR,
+                                    .path = "/config/data"}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kFontsProvider}}},
         {.capabilities = {Protocol{fuchsia::ui::input3::Keyboard::Name_},
                           Protocol{fuchsia::ui::input::ImeService::Name_}},
          .source = ChildRef{kTextManager},
@@ -524,7 +533,7 @@ class WebEngineTest : public VirtualKeyboardBase {
 
  private:
   static constexpr auto kFontsProvider = "fonts_provider";
-  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
+  static constexpr auto kFontsProviderUrl = "#meta/fonts.cm";
 
   static constexpr auto kTextManager = "text_manager";
   static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
