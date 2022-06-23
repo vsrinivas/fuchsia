@@ -12,19 +12,13 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "constants.h"
+
 namespace {
 
 constexpr char kBusName[] = "test-bus";
 constexpr char kTestClientName[] = "client";
 constexpr char kTestServerName[] = "server";
-
-constexpr char kClientIpv4Addr1[] = "192.168.0.1";
-constexpr char kClientIpv4Addr2[] = "192.168.0.2";
-constexpr char kServerIpv4Addr[] = "192.168.0.254";
-constexpr char kClientIpv6Addr1[] = "a::1";
-constexpr char kClientIpv6Addr2[] = "a::2";
-constexpr char kServerIpv6Addr[] = "a::ffff";
-constexpr uint16_t kServerPort = 1234;
 
 void TestUdpPing(int domain, const sockaddr* bind_addr, socklen_t bind_addr_len,
                  const sockaddr* connect_addr, socklen_t connect_addr_len) {

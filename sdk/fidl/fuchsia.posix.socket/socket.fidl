@@ -533,6 +533,25 @@ type NetworkSocketSendControlData = table {
         /// The Hop Limit value to set in the IPv6 header of an outgoing
         /// packet.
         2: hoplimit uint8;
+
+        /// Information controlling the local interface and/or address used when
+        /// sending an IPv6 packet.
+        //
+        // This is a structure instead of a table as it is meant to match
+        // `in6_pktinfo` which is not expected to grow.
+        3: pktinfo @generated_name("Ipv6PktInfoSendControlData") struct {
+            /// The interface index from which the IPv6 packet should be sent.
+            ///
+            /// 0 indicates that the local interface is unspecified and the
+            /// stack may choose an appropriate interface.
+            iface fuchsia.net.interface_id;
+            /// The source address from which the IPv6 packet should be sent.
+            ///
+            /// All zeroes indicates that the local address is unspecified and
+            /// the stack may choose an appropriate address (i.e. the local
+            /// address to which the socket is bound).
+            local_addr fuchsia.net.Ipv6Address;
+        };
     };
 };
 

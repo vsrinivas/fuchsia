@@ -1943,9 +1943,17 @@ func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlD
 	if in.HasIpv6() {
 		inIpv6 := in.GetIpv6()
 		if inIpv6.HasHoplimit() {
-			hoplimit := inIpv6.GetHoplimit()
-			out.HopLimit = hoplimit
+			out.HopLimit = inIpv6.GetHoplimit()
 			out.HasHopLimit = true
+		}
+
+		if inIpv6.HasPktinfo() {
+			pktInfo := inIpv6.GetPktinfo()
+			out.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+				NIC:  tcpip.NICID(pktInfo.Iface),
+				Addr: toTcpIpAddressDroppingUnspecifiedv6(pktInfo.LocalAddr),
+			}
+			out.HasIPv6PacketInfo = true
 		}
 	}
 

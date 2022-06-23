@@ -295,8 +295,9 @@ int16_t ParseIpLevelControlMessage(fsocket::wire::IpSendControlData& fidl_ip, in
   }
 }
 
-int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ipv6, int type,
-                                     const void* data, socklen_t data_len) {
+int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ipv6,
+                                     fidl::AnyArena& allocator, int type, const void* data,
+                                     socklen_t data_len) {
   switch (type) {
     case IPV6_HOPLIMIT: {
       int hoplimit;
@@ -313,6 +314,21 @@ int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ip
       if (hoplimit != -1) {
         fidl_ipv6.set_hoplimit(static_cast<uint8_t>(hoplimit));
       }
+      return 0;
+    }
+    case IPV6_PKTINFO: {
+      in6_pktinfo pktinfo;
+      if (data_len != sizeof(pktinfo)) {
+        return EINVAL;
+      }
+      memcpy(&pktinfo, data, sizeof(pktinfo));
+      fsocket::wire::Ipv6PktInfoSendControlData fidl_pktinfo{
+          .iface = static_cast<uint64_t>(pktinfo.ipi6_ifindex),
+      };
+      static_assert(sizeof(pktinfo.ipi6_addr) == sizeof(fidl_pktinfo.local_addr.addr),
+                    "mismatch between size of FIDL and in6_pktinfo IPv6 addresses");
+      memcpy(fidl_pktinfo.local_addr.addr.data(), &pktinfo.ipi6_addr, sizeof(pktinfo.ipi6_addr));
+      fidl_ipv6.set_pktinfo(allocator, fidl_pktinfo);
       return 0;
     }
     default:
@@ -350,7 +366,7 @@ int16_t ParseControlMessage(fsocket::wire::NetworkSocketSendControlData& fidl_ne
       if (!fidl_net.has_ipv6()) {
         fidl_net.set_ipv6(allocator, fsocket::wire::Ipv6SendControlData(allocator));
       }
-      return ParseIpv6LevelControlMessage(fidl_net.ipv6(), type, data, data_len);
+      return ParseIpv6LevelControlMessage(fidl_net.ipv6(), allocator, type, data, data_len);
     default:
       return 0;
   }

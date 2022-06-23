@@ -7,7 +7,10 @@ import("//build/test.gni")
 
 test("bin") {
   output_name = "multi_nic_test_client"
-  sources = [ "main.cc" ]
+  sources = [
+    "main.cc",
+    "socket_test.cc",
+  ]
 
   deps = [
     "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_llcpp",
