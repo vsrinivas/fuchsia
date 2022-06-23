@@ -286,8 +286,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
       fuchsia_posix_socket::wire::Ipv6PktInfoRecvControlData fidl_pktinfo = {
           .iface = pktinfo.if_index,
       };
-      const cpp20::span<const uint8_t> from_addr(pktinfo.addr,
-                                                 sizeof(pktinfo.addr) / sizeof(pktinfo.addr[0]));
+      const cpp20::span<const uint8_t> from_addr(pktinfo.addr);
       cpp20::span<uint8_t> to_addr(fidl_pktinfo.header_destination_addr.addr.data(),
                                    decltype(fidl_pktinfo.header_destination_addr.addr)::size());
       copy_into(to_addr, from_addr);

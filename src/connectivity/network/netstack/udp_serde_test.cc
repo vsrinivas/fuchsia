@@ -59,6 +59,9 @@ class span : public cpp20::span<const uint8_t> {
  public:
   span(const uint8_t* data, size_t size) : cpp20::span<const uint8_t>(data, size) {}
 
+  template <std::size_t N>
+  constexpr span(element_type (&arr)[N]) noexcept : cpp20::span<const uint8_t>(arr) {}
+
   bool operator==(const span& other) const {
     return std::equal(begin(), end(), other.begin(), other.end());
   }
@@ -245,9 +248,7 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       EXPECT_EQ(ipv6_control.pktinfo().iface, cmsg_set.ipv6_pktinfo.if_index);
       span found_pktinfo_addr(ipv6_control.pktinfo().header_destination_addr.addr.data(),
                               ipv6_control.pktinfo().header_destination_addr.addr.size());
-      span expected_pktinfo_addr(
-          cmsg_set.ipv6_pktinfo.addr,
-          sizeof(cmsg_set.ipv6_pktinfo.addr) / sizeof(cmsg_set.ipv6_pktinfo.addr[0]));
+      span expected_pktinfo_addr(cmsg_set.ipv6_pktinfo.addr);
       EXPECT_EQ(found_pktinfo_addr, expected_pktinfo_addr);
       EXPECT_FALSE(network_control.has_ip());
     }
