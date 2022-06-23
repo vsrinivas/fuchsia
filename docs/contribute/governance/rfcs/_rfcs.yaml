@@ -1060,7 +1060,7 @@
   short_description: 'This document proposes a mechanism for running unmodified Linux programs on Fuchsia.'
   authors: ['abarth@google.com']
   file: '0082_starnix.md'
-  area: ['PosixCompat']
+  area: ['Foreign ABI Compatibility']
   issue: ['70225']
   gerrit_change_id: ['485181']
   status: 'Accepted'
