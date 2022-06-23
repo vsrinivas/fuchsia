@@ -224,6 +224,7 @@ group("cmx_allowlist") {
     "//src/graphics/lib/compute/radix_sort/platforms/vk/tests/radix_sort_vk_bench:*",
     "//src/graphics/lib/compute/radix_sort/platforms/vk/tests/radix_sort_vk_bench/tests:*",
     "//src/graphics/lib/compute/spinel-vk-rs/tests:*",
+    "//src/graphics/lib/compute/spinel/platforms/vk/tests/spinel_vk_bench:*",
     "//src/graphics/lib/compute/spinel/platforms/vk/tests/spinel_vk_tests:*",
     "//src/graphics/lib/compute/tools/bench/platforms/vk:*",
     "//src/graphics/lib/compute/tools/bench/platforms/vk/tests:*",
