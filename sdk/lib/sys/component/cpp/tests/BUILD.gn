@@ -203,7 +203,6 @@ fuchsia_component("echo_service_server") {
   testonly = true
   deps = [ ":echo_service_server_bin" ]
   manifest = "meta/echo_service_server.cml"
-  restricted_features = [ "services" ]
 }
 
 fuchsia_component("echo_server_legacy") {

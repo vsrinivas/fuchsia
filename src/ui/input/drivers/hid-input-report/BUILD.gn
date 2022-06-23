@@ -92,7 +92,6 @@ fuchsia_driver_component("hid-input-report-v2") {
   manifest = "meta/hid-input-report.cml"
   deps = [ ":hid-input-report-driver-v2" ]
   info = "hid-input-report-info.json"
-  restricted_features = [ "services" ]
 }
 
 test("hid-input-report-test-bin") {

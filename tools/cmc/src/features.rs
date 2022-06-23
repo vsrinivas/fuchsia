@@ -40,9 +40,6 @@ impl From<Vec<Feature>> for FeatureSet {
 /// A feature that can be enabled/opt-into.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Feature {
-    /// Enables unified services support in CML.
-    Services,
-
     /// Allows `ComponentDecl.allowed_offers` to be specified in CML.
     DynamicOffers,
 
@@ -60,7 +57,6 @@ impl FromStr for Feature {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "services" => Ok(Feature::Services),
             "dynamic_offers" => Ok(Feature::DynamicOffers),
             "structured_config" => Ok(Feature::StructuredConfig),
             "hub" => Ok(Feature::Hub),
@@ -73,7 +69,6 @@ impl FromStr for Feature {
 impl fmt::Display for Feature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            Feature::Services => "services",
             Feature::DynamicOffers => "dynamic_offers",
             Feature::StructuredConfig => "structured_config",
             Feature::Hub => "hub",
@@ -88,7 +83,6 @@ mod tests {
 
     #[test]
     fn feature_is_parsed() {
-        assert_eq!(Feature::Services, "services".parse::<Feature>().unwrap());
         assert_eq!(Feature::DynamicOffers, "dynamic_offers".parse::<Feature>().unwrap());
         assert_eq!(Feature::StructuredConfig, "structured_config".parse::<Feature>().unwrap());
         assert_eq!(Feature::Hub, "hub".parse::<Feature>().unwrap());
@@ -97,7 +91,6 @@ mod tests {
 
     #[test]
     fn feature_is_printed() {
-        assert_eq!("services", Feature::Services.to_string());
         assert_eq!("dynamic_offers", Feature::DynamicOffers.to_string());
         assert_eq!("structured_config", Feature::StructuredConfig.to_string());
         assert_eq!("hub", Feature::Hub.to_string());
@@ -107,18 +100,18 @@ mod tests {
     #[test]
     fn feature_set_has() {
         let set = FeatureSet::empty();
-        assert!(!set.has(&Feature::Services));
+        assert!(!set.has(&Feature::DynamicOffers));
 
-        let set = FeatureSet::from(vec![Feature::Services]);
-        assert!(set.has(&Feature::Services));
+        let set = FeatureSet::from(vec![Feature::DynamicOffers]);
+        assert!(set.has(&Feature::DynamicOffers));
     }
 
     #[test]
     fn feature_set_check() {
         let set = FeatureSet::empty();
-        assert_matches!(set.check(Feature::Services), Err(Error::RestrictedFeature(f)) if f == "services");
+        assert_matches!(set.check(Feature::DynamicOffers), Err(Error::RestrictedFeature(f)) if f == "dynamic_offers");
 
-        let set = FeatureSet::from(vec![Feature::Services]);
-        assert_matches!(set.check(Feature::Services), Ok(()));
+        let set = FeatureSet::from(vec![Feature::DynamicOffers]);
+        assert_matches!(set.check(Feature::DynamicOffers), Ok(()));
     }
 }

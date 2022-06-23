@@ -49,7 +49,6 @@ fuchsia_driver_component("root") {
   manifest = "meta/root.cml"
   deps = [ ":root_driver" ]
   info = "root-info.json"
-  restricted_features = [ "services" ]
 }
 
 driver_bind_rules("interop_v1_bind") {

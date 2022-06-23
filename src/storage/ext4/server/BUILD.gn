@@ -74,7 +74,6 @@ group("server") {
 fuchsia_component("ext4_readonly_comp") {
   component_name = "ext4_readonly"
   manifest = "meta/ext4_readonly.cml"
-  restricted_features = [ "services" ]
   deps = [ ":bin" ]
 }
 
@@ -102,7 +101,6 @@ fuchsia_component("ext4_server_integration_test_comp") {
   testonly = true
   component_name = "ext4_server_integration_test"
   manifest = "meta/ext4_server_integration_test.cml"
-  restricted_features = [ "services" ]
   deps = [
     ":ext4_server_integration_test",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",

@@ -345,9 +345,6 @@ impl<'a> ValidationContext<'a> {
         capability: &'a cml::Capability,
         used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
-        if capability.service.is_some() {
-            self.features.check(Feature::Services)?;
-        }
         if capability.directory.is_some() && capability.path.is_none() {
             return Err(Error::validate("\"path\" should be present with \"directory\""));
         }
@@ -407,7 +404,6 @@ impl<'a> ValidationContext<'a> {
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
         if use_.service.is_some() {
-            self.features.check(Feature::Services)?;
             if use_.r#as.is_some() {
                 return Err(Error::validate("\"as\" cannot be used with \"service\""));
             }
@@ -601,7 +597,6 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure that services exposed from self are defined in `capabilities`.
         if let Some(service) = expose.service.as_ref() {
-            self.features.check(Feature::Services)?;
             for service in service {
                 if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                     if !self.all_services.contains(service) {
@@ -752,7 +747,6 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure that services offered from self are defined in `services`.
         if let Some(service) = offer.service.as_ref() {
-            self.features.check(Feature::Services)?;
             for service in service {
                 if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                     if !self.all_services.contains(service) {
@@ -5329,8 +5323,8 @@ mod tests {
         ),
     }
 
-    // Tests the use of services when the "services" feature is set.
-    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::Services]), {
+    // Tests for services.
+    test_validate_cml! {
         test_cml_validate_use_service(
             json!({
                 "use": [
@@ -5568,55 +5562,6 @@ mod tests {
                 ],
             }),
             Ok(())
-        ),
-    }}
-
-    // Tests that the use of services fail when the "services" feature is not set.
-    test_validate_cml! {
-        test_cml_use_service_without_feature(
-            json!({
-                "use": [
-                    { "service": "my.service.Service" },
-                ],
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "services"
-        ),
-        test_cml_offer_service_without_feature(
-            json!({
-                "offer": [
-                    {
-                        "service": "my.service.Service",
-                        "from": "parent",
-                        "to": [ "#child" ],
-                    },
-                ],
-                "children": [
-                    { "name": "child", "url": "fuchsia-pkg://child" }
-                ],
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "services"
-        ),
-        test_cml_expose_service_without_feature(
-            json!({
-                "expose": [
-                    {
-                        "service": "my.service.Service",
-                        "from": "#child",
-                    },
-                ],
-                "children": [
-                    { "name": "child", "url": "fuchsia-pkg://child" }
-                ],
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "services"
-        ),
-        test_cml_capability_service_without_feature(
-            json!({
-                "capabilities": [
-                    { "service": "my.service.Service" },
-                ]
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "services"
         ),
     }
 

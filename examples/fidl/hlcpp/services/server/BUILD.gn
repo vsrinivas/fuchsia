@@ -20,5 +20,4 @@ fuchsia_component("echo-server") {
   component_name = "echo_server"
   manifest = "meta/server.cml"
   deps = [ ":bin" ]
-  restricted_features = [ "services" ]
 }

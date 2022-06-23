@@ -33,7 +33,6 @@ rustc_binary("service-routing-branch-bin") {
 
 fuchsia_test_component("service-routing-branch") {
   manifest = "meta/service-routing-branch.cml"
-  restricted_features = [ "services" ]
   deps = [ ":service-routing-branch-bin" ]
 }
 
@@ -64,7 +63,6 @@ rustc_test("service-routing-test-bin") {
 
 fuchsia_test_component("service-routing-test") {
   manifest = "meta/service-routing-test.cml"
-  restricted_features = [ "services" ]
   deps = [ ":service-routing-test-bin" ]
 }
 
@@ -96,10 +94,7 @@ rustc_test("filtered-service-routing-test-bin") {
 
 fuchsia_test_component("filtered-service-routing-test") {
   manifest = "meta/filtered-service-routing-test.cml"
-  restricted_features = [
-    "services",
-    "dynamic_offers",
-  ]
+  restricted_features = [ "dynamic_offers" ]
   deps = [ ":filtered-service-routing-test-bin" ]
 }
 
@@ -127,7 +122,6 @@ rustc_binary("service-routing-client-bin") {
 
 fuchsia_test_component("echo-service-client") {
   manifest = "meta/echo-service-client.cml"
-  restricted_features = [ "services" ]
   deps = [ ":service-routing-client-bin" ]
 }
 
@@ -151,7 +145,6 @@ rustc_binary("multi_instance_echo_service_bin") {
 
 fuchsia_test_component("multi-instance-echo-provider") {
   manifest = "meta/multi-instance-echo-provider.cml"
-  restricted_features = [ "services" ]
   deps = [ ":multi_instance_echo_service_bin" ]
 }
 

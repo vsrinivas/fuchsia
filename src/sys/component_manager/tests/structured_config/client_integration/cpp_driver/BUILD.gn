@@ -39,7 +39,6 @@ fuchsia_component_manifest("receiver_manifest") {
   testonly = true
   component_name = "cpp_driver_receiver"
   manifest = "meta/receiver.cml"
-  restricted_features = [ "services" ]
 }
 
 fuchsia_driver_component("receiver_component") {
@@ -100,10 +99,7 @@ cmc_merge("realm.cml") {
 
 fuchsia_test_component("realm") {
   manifest = "${target_out_dir}/realm.cml"
-  restricted_features = [
-    "dynamic_offers",
-    "services",
-  ]
+  restricted_features = [ "dynamic_offers" ]
   manifest_deps = [ ":realm.cml" ]
 }
 

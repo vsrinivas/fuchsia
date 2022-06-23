@@ -170,7 +170,7 @@ mod tests {
         fdecl::Component::EMPTY
     }
 
-    test_compile_with_features! { FeatureSet::from(vec![Feature::Services]), {
+    test_compile_with_features! { FeatureSet::from(vec![]), {
         test_compile_service_capabilities => {
             input = json!({
                 "capabilities": [

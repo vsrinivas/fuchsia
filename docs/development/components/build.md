@@ -1071,8 +1071,8 @@ In order to use an restricted feature, add the `restricted_features` property:
 ```gn
 fuchsia_component("my-component") {
   manifest = "meta/my-component.cml"
-  # This component opts-in to the restricted "services" feature.
-  restricted_features = [ "services" ]
+  # This component opts-in to the restricted "allow_long_names" feature.
+  restricted_features = [ "allow_long_names" ]
   deps = [ ... ]
 }
 ```

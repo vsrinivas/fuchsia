@@ -8,7 +8,6 @@ import("//build/rust/rustc_test.gni")
 # Realm component used to launch FIDL examples
 fuchsia_component("echo_realm") {
   manifest = "meta/echo_realm.cml"
-  restricted_features = [ "services" ]
 }
 
 # Integration testing components for FIDL examples

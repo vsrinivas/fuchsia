@@ -229,7 +229,6 @@ template("fuchsia_driver_component") {
         if (!defined(restricted_features)) {
           restricted_features = []
         }
-        restricted_features += [ "services" ]
       }
       if (!defined(deps)) {
         deps = []
