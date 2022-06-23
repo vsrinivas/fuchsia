@@ -156,9 +156,9 @@ with an actual example.
 
 These entries are used to indicate that a given regular entry should be
 installed at an alternative destination location. This is useful for certain
-programs (e.g. `busybox`, `grand_unified_binary`) which will behave differently,
-depending on the program name used to launch them. The `renamed_binary()` GN
-template relies on them. Their schema is:
+programs (e.g. `busybox`) which will behave differently, depending on the
+program name used to launch them. The `renamed_binary()` GN template relies on
+them. Their schema is:
 
 - `destination`: A destination path string (REQUIRED).
 

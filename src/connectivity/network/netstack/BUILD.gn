@@ -8,12 +8,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/test.gni")
-import("//src/go/grand_unified_binary/gub.gni")
 import("gentool/generated.gni")
 import("tracing/go_tracing_include_dirs.gni")
 
-grand_unified_binary("bin") {
-  output_name = "netstack"
+go_binary("bin") {
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  output_name = string_replace(target_name, "bin", "netstack")
+
+  deps = [ "stub" ]
 }
 
 fuchsia_component("component") {

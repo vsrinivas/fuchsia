@@ -46,11 +46,6 @@ def main():
         dest = dist["destination"]
         if not dest.startswith("bin/"):
             continue
-        if dest == "bin/grand_unified_binary":
-            # This binary may arrive via multiple deps because it's commonly
-            # renamed and reused. Ignore it so as not to create conflicting
-            # shebang files.
-            continue
         shebang_file = os.path.join(
             args.output_directory, "__untraced_shebangs__", dest)
         shebang_files.append(shebang_file)
