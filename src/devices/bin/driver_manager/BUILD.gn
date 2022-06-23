@@ -20,6 +20,23 @@ group("tests") {
   }
 }
 
+# TODO(fxb/38132): Migrate to the new bind rules and delete the below
+source_set("binding") {
+  sources = [
+    "binding.cc",
+    "binding.h",
+  ]
+  public_deps = [
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//zircon/system/ulib/fbl",
+  ]
+  deps = [
+    "//src/devices/lib/bind:bind-lib",
+    "//src/devices/lib/log",
+  ]
+}
+
 source_set("manifest_parser") {
   sources = [
     "manifest_parser.cc",
@@ -46,7 +63,7 @@ source_set("lib") {
     "base_package_resolver.h",
     "bind_driver_manager.cc",
     "bind_driver_manager.h",
-    "binding.cc",
+    "binding_internal.cc",
     "binding_internal.h",
     "builtin_devices.cc",
     "builtin_devices.h",
@@ -100,6 +117,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":binding",
     ":manifest_parser",
     "v2:driver_runner",
     "//sdk/fidl/fuchsia.boot",

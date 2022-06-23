@@ -329,8 +329,4 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
 };
 
-bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
-                     const fbl::Array<const zx_device_prop_t>& props,
-                     const fbl::Array<const StrProperty>& str_props, bool autobind);
-
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_

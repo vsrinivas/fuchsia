@@ -6,6 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "binding_internal.h"
 #include "coordinator.h"
 #include "src/devices/lib/bind/ffi_bindings.h"
 

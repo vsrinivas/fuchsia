@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
+#include "src/devices/bin/driver_manager/binding_internal.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/lib/log/log.h"
 
