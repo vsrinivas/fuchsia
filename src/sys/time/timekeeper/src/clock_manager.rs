@@ -15,13 +15,13 @@ use {
     },
     chrono::prelude::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    log::{error, info},
     std::{
         cmp,
         fmt::{self, Debug},
         sync::Arc,
     },
     time_util::Transform,
+    tracing::{error, info},
 };
 
 /// One million for PPM calculations

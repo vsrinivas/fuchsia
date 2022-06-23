@@ -13,9 +13,9 @@ use {
     fuchsia_zircon::{self as zx, DurationNum},
     futures::TryFutureExt,
     lazy_static::lazy_static,
-    log::error,
     std::{fs, path::PathBuf},
     thiserror::Error,
+    tracing::error,
 };
 #[cfg(test)]
 use {parking_lot::Mutex, std::sync::Arc};

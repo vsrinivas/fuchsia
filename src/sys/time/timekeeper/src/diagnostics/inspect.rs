@@ -20,9 +20,9 @@ use {
     futures::FutureExt,
     inspect_writable::{InspectWritable, InspectWritableNode},
     lazy_static::lazy_static,
-    log::warn,
     parking_lot::Mutex,
     std::{collections::HashMap, sync::Arc},
+    tracing::warn,
 };
 
 const ONE_MILLION: i32 = 1_000_000;

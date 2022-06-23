@@ -5,16 +5,13 @@
 use fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd};
 use fidl_fuchsia_time_external::PushSourceMarker;
 use fidl_test_time::TimeSourceControlMarker;
-use fuchsia_async as fasync;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use fuchsia_zircon as zx;
 use futures::StreamExt;
-use log::info;
+use tracing::info;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags=["time"])]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["time"]).expect("failed to initialize logging");
-
     let time_source_control = connect_to_protocol::<TimeSourceControlMarker>()
         .expect("failed to connect to control service");
 

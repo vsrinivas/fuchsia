@@ -10,8 +10,8 @@ use {
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon as zx,
     futures::{FutureExt as _, StreamExt as _},
-    log::{error, info, warn},
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 /// Sets the maximum rate at which Timekeeper is willing to accept new updates from a time source in

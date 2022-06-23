@@ -34,9 +34,9 @@ use {
         future::{self, OptionFuture},
         stream::StreamExt as _,
     },
-    log::{error, info, warn},
     std::sync::Arc,
     time_metrics_registry::TimeMetricDimensionExperiment,
+    tracing::{error, info, warn},
 };
 
 /// A definition which time sources to install, along with the URL for each.
@@ -87,10 +87,8 @@ struct Options {
     disable_delays: bool,
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging").unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
     let options = argh::from_env::<Options>();
 
     info!("retrieving UTC clock handle");

@@ -15,9 +15,9 @@ use {
     frequency::FrequencyEstimator,
     fuchsia_zircon as zx,
     kalman_filter::KalmanFilter,
-    log::{info, warn},
     std::sync::Arc,
     time_util::Transform,
+    tracing::{info, warn},
 };
 
 /// The standard deviation of the system oscillator frequency error in parts per million, used to

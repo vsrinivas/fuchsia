@@ -7,9 +7,12 @@ use {
     fidl_fuchsia_time_external::{self as ftexternal, PushSourceProxy, Status},
     fuchsia_component::client::{launch, launcher, App},
     fuchsia_zircon as zx,
-    futures::{stream::Select, FutureExt, Stream, StreamExt, TryFutureExt},
-    log::info,
+    futures::{
+        stream::{Select, Stream},
+        FutureExt, StreamExt, TryFutureExt,
+    },
     std::{fmt::Debug, pin::Pin, sync::Arc},
+    tracing::info,
 };
 
 /// A time sample received from a source of time.
