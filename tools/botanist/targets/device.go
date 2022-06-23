@@ -445,5 +445,5 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 }
 
 func neededForFlashing(img *bootserver.Image) bool {
-	return img.IsFlashable || img.Name == "script_flash-script" || img.Name == "exe.linux-x64_fastboot"
+	return img.IsFlashable || img.Name == "script_flash-script" || img.Name == "exe.linux-x64_fastboot" || img.Name == "script_fastboot-boot-script"
 }
