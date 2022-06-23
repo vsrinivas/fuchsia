@@ -7,11 +7,14 @@ use {
         errors::{VerifyError, VerifyFailureReason},
         inspect::write_to_inspect,
     },
-    anyhow::anyhow,
-    fidl_fuchsia_update_verify::{BlobfsVerifierProxy, VerifyOptions},
-    fuchsia_async as fasync, fuchsia_inspect as finspect,
-    futures::prelude::*,
-    std::time::{Duration, Instant},
+    fidl_fuchsia_update_verify as fidl,
+    fuchsia_async::TimeoutExt as _,
+    fuchsia_inspect as finspect,
+    futures::future::{FutureExt as _, TryFutureExt as _},
+    std::{
+        future::Future,
+        time::{Duration, Instant},
+    },
 };
 
 // Each health verification should time out after 1 minute. This value should be at least 100X
@@ -23,22 +26,20 @@ const VERIFY_TIMEOUT: Duration = Duration::from_secs(60);
 /// verified execution; health verification is a different process we use to determine if we should
 /// give up on the backup slot.
 pub fn do_health_verification<'a>(
-    proxy: &'a BlobfsVerifierProxy,
+    proxy: &'a fidl::BlobfsVerifierProxy,
     node: &'a finspect::Node,
 ) -> impl Future<Output = Result<(), VerifyError>> + 'a {
     let now = Instant::now();
-    let mut timer_fut = fasync::Timer::new(VERIFY_TIMEOUT).fuse();
-    let mut verify_fut = proxy.verify(VerifyOptions { ..VerifyOptions::EMPTY }).fuse();
-
-    // Report the blobfs verify result. If we add more verifications, we can factor each
-    // verification into its own function and run all of them asynchronously.
+    let fut = proxy
+        .verify(fidl::VerifyOptions::EMPTY)
+        .map(|res| {
+            let res = res.map_err(VerifyFailureReason::Fidl)?;
+            res.map_err(VerifyFailureReason::Verify)
+        })
+        .on_timeout(VERIFY_TIMEOUT, || Err(VerifyFailureReason::Timeout))
+        .map_err(VerifyError::BlobFs);
     async move {
-        let res = futures::select! {
-            verify_res = verify_fut => verify_res
-                .map_err(|e| VerifyError::BlobFs(VerifyFailureReason::Fidl(e)))?
-                .map_err(|e| VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("{:?}", e)))),
-            _ = timer_fut => Err(VerifyError::BlobFs(VerifyFailureReason::Timeout)),
-        };
+        let res = fut.await;
         let () = write_to_inspect(node, &res, now.elapsed());
         res
     }
@@ -49,7 +50,7 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_update_verify as fidl,
+        fuchsia_async as fasync,
         futures::{future::BoxFuture, pin_mut, task::Poll},
         mock_verifier::{Hook, MockVerifierService},
         std::sync::Arc,

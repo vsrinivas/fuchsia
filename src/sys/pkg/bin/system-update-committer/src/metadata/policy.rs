@@ -97,9 +97,8 @@ mod tests {
     use {
         super::*,
         crate::metadata::errors::VerifyFailureReason,
-        anyhow::anyhow,
         assert_matches::assert_matches,
-        fuchsia_async as fasync,
+        fidl_fuchsia_update_verify as verify, fuchsia_async as fasync,
         fuchsia_zircon::Status,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
@@ -257,7 +256,8 @@ mod tests {
 
     fn test_blobfs_verify_errors(config: ComponentConfig, expect_err: bool) {
         let timeout_err = Err(VerifyError::BlobFs(VerifyFailureReason::Timeout));
-        let verify_err = Err(VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("foo"))));
+        let verify_err =
+            Err(VerifyError::BlobFs(VerifyFailureReason::Verify(verify::VerifyError::Internal)));
         let fidl_err = Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(fidl::Error::OutOfRange)));
 
         assert_eq!(PolicyEngine::apply_config(timeout_err, &config).is_err(), expect_err);

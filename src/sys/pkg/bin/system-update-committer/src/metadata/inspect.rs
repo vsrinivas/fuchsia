@@ -24,9 +24,12 @@ pub(super) fn write_to_inspect(
         Ok(()) => node.record_child("ota_verification_duration", |duration_node| {
             duration_node.record_uint("success", duration_u64)
         }),
-        Err(VerifyError::BlobFs(reason)) => {
+        Err(error) => {
+            let (name, reason) = match error {
+                VerifyError::BlobFs(reason) => ("failure_blobfs", reason),
+            };
             node.record_child("ota_verification_duration", |duration_node| {
-                duration_node.record_uint("failure_blobfs", duration_u64)
+                duration_node.record_uint(name, duration_u64)
             });
             node.record_child("ota_verification_failure", |reason_node| match reason {
                 VerifyFailureReason::Fidl(_) => reason_node.record_uint("fidl", 1),
@@ -41,7 +44,7 @@ pub(super) fn write_to_inspect(
 mod tests {
     use {
         super::*,
-        anyhow::anyhow,
+        fidl_fuchsia_update_verify as verify,
         fuchsia_inspect::{assert_data_tree, Inspector},
         proptest::prelude::*,
     };
@@ -114,7 +117,7 @@ mod tests {
 
         let () = write_to_inspect(
             inspector.root(),
-            &Err(VerifyError::BlobFs(VerifyFailureReason::Verify(anyhow!("foo")))),
+            &Err(VerifyError::BlobFs(VerifyFailureReason::Verify(verify::VerifyError::Internal))),
             Duration::from_micros(2),
         );
 

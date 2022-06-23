@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_paver as paver, fuchsia_zircon::Status, thiserror::Error};
+use {
+    fidl_fuchsia_paver as paver, fidl_fuchsia_update_verify as verify, fuchsia_zircon::Status,
+    thiserror::Error,
+};
 
 /// Error condition that may be returned by a boot manager client.
 #[derive(Error, Debug)]
@@ -47,8 +50,8 @@ pub enum VerifyFailureReason {
     #[error("the verify request timed out")]
     Timeout,
 
-    #[error("the verification failed")]
-    Verify(#[source] anyhow::Error),
+    #[error("the verification failed: {0:?}")]
+    Verify(verify::VerifyError),
 }
 
 /// Error condition that may be returned by `put_metadata_in_happy_state`.
