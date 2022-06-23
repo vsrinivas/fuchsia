@@ -7,10 +7,13 @@ import("//build/testing/bootfs_test.gni")
 
 group("sanitizer") {
   testonly = true
-  deps = [ ":sanitizer-utils" ]
+  deps = [
+    ":lsan-bootfs-test",
+    ":sanitizer-utils-bootfs-test",
+  ]
 }
 
-test("sanitizer-utils") {
+test("sanitizer-utils-test") {
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -32,14 +35,10 @@ test("sanitizer-utils") {
 }
 
 executable("sanitizer-exit-hook-test-helper") {
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   visibility = [ ":*" ]
   sources = [ "exit-hook-test-helper.cc" ]
+  configs -= [ "//build/config/fuchsia:fdio_config" ]
+  exclude_toolchain_tags = [ "instrumentation-runtime" ]
 }
 
 source_set("memory-snapshot-test") {
@@ -71,7 +70,58 @@ shared_library("sanitizer-memory-snapshot-test-dlopen-dso") {
   sources = [ "sanitizer-memory-snapshot-test-dlopen-dso.cc" ]
 }
 
+test("lsan-test") {
+  sources = [ "lsan-test.cc" ]
+  deps = [
+    ":lsan-thread-race-test",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  # Add the lsan config whether or not the current variant already includes it.
+  lsan_config = [ "//build/config/sanitizers:lsan" ]
+  configs += lsan_config
+  configs -= lsan_config
+  configs += lsan_config
+
+  # LSan requires frame pointers.  First make sure that none of the related
+  # configs is in the list, then add the one enabling frame pointers.
+  fp_configs = [
+    "//build/config:default_frame_pointers",
+    "//build/config:frame_pointers",
+    "//build/config:no_frame_pointers",
+  ]
+  configs += fp_configs
+  configs -= fp_configs
+  configs += [ "//build/config:frame_pointers" ]
+}
+
+executable("lsan-thread-race-test") {
+  sources = [ "lsan-thread-race-test.cc" ]
+
+  # Add the lsan config whether or not the current variant already includes it.
+  lsan_config = [ "//build/config/sanitizers:lsan" ]
+  configs += lsan_config
+  configs -= lsan_config
+  configs += lsan_config
+
+  # LSan requires frame pointers.  First make sure that none of the related
+  # configs is in the list, then add the one enabling frame pointers.
+  fp_configs = [
+    "//build/config:default_frame_pointers",
+    "//build/config:frame_pointers",
+    "//build/config:no_frame_pointers",
+  ]
+  configs += fp_configs
+  configs -= fp_configs
+  configs += [ "//build/config:frame_pointers" ]
+}
+
 bootfs_test("sanitizer-utils-bootfs-test") {
-  name = "sanitizer-utils"
-  deps = [ ":sanitizer-utils" ]
+  name = "sanitizer-utils-test"
+  deps = [ ":sanitizer-utils-test" ]
+}
+
+bootfs_test("lsan-bootfs-test") {
+  name = "lsan-test"
+  deps = [ ":lsan-test" ]
 }

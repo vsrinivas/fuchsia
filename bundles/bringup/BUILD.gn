@@ -35,7 +35,7 @@ group("tests") {
     "//src/zircon/tests/vdso:vdso-base-bootfs-test",
     "//src/zircon/tests/vdso:vdso-bootfs-test",
     "//src/zircon/tests/vdso:vdso-variant-bootfs-test",
-    "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils-bootfs-test",
+    "//zircon/system/ulib/c/test/sanitizer",
     "//zircon/system/ulib/elf-search/test:elf-search-bootfs-test",
     "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
     "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",

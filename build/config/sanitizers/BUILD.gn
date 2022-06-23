@@ -180,6 +180,24 @@ variant("rust-asan") {
   rustflags = [ "-Zsanitizer=address" ]
 }
 
+# TODO(fxbug.dev/43710): Building with this variant alone can still lead to
+# some build errors, but this is still needed for lsan tests (see
+# //zircon/system/ulib/c/test/sanitizer:lsan-test).
+variant("lsan") {
+  ldflags = [ "-fsanitize=leak" ]
+
+  # LSan wants frame pointers because it captures stack traces
+  # on allocations and such, not just on errors.
+  configs = [ "//build/config:frame_pointers" ]
+
+  if (is_fuchsia) {
+    # The LSan runtime is statically linked but depends on libzircon.
+    libs = [ "zircon" ]
+  }
+
+  deps = [ ":lsan_default_options" ]
+}
+
 variant("ubsan") {
   common_flags = [ "-fsanitize=undefined" ]
 
