@@ -264,6 +264,11 @@ impl TcpStream {
         self.io.local_addr()
     }
 
+    /// Returns the value of the `SO_ERROR` option.
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        self.io.take_error()
+    }
+
     /// Returns the remote address that this stream is connected to.
     ///
     /// # Examples
@@ -968,7 +973,9 @@ impl TcpStream {
         interest: Interest,
         f: impl FnOnce() -> io::Result<R>,
     ) -> io::Result<R> {
-        self.io.registration().try_io(interest, f)
+        self.io
+            .registration()
+            .try_io(interest, || self.io.try_io(f))
     }
 
     /// Receives data on the socket from the remote address to which it is

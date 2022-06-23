@@ -323,11 +323,11 @@ pub mod error {
     use std::fmt;
 
     /// Error returned by the `Future` implementation for `Receiver`.
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Clone)]
     pub struct RecvError(pub(super) ());
 
     /// Error returned by the `try_recv` function on `Receiver`.
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Clone)]
     pub enum TryRecvError {
         /// The send half of the channel has not yet sent a value.
         Empty,
@@ -526,7 +526,7 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     let rx = Receiver {
         inner: Some(inner),
         #[cfg(all(tokio_unstable, feature = "tracing"))]
-        resource_span: resource_span,
+        resource_span,
         #[cfg(all(tokio_unstable, feature = "tracing"))]
         async_op_span,
         #[cfg(all(tokio_unstable, feature = "tracing"))]

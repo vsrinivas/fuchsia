@@ -908,7 +908,7 @@ group("thiserror") {
 }
 
 group("tokio") {
-  public_deps = [ ":tokio-v1_17_0" ]
+  public_deps = [ ":tokio-v1_19_2" ]
 }
 
 if (current_os == "fuchsia") {
@@ -5022,7 +5022,7 @@ rust_library("hyper-v0_14_16") {
   deps += [ ":httpdate-v1_0_2" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
-  deps += [ ":tokio-v1_17_0" ]
+  deps += [ ":tokio-v1_19_2" ]
   deps += [ ":tower-service-v0_3_0" ]
   deps += [ ":tracing-v0_1_29" ]
   deps += [ ":want-v0_3_0" ]
@@ -5055,7 +5055,7 @@ rust_library("hyper-rustls-v0_22_1") {
   deps += [ ":log-v0_4_11" ]
   deps += [ ":rustls-v0_19_1" ]
   deps += [ ":rustls-native-certs-v0_5_0" ]
-  deps += [ ":tokio-v1_17_0" ]
+  deps += [ ":tokio-v1_19_2" ]
   deps += [ ":tokio-rustls-v0_22_0" ]
   deps += [ ":webpki-v0_21_0" ]
 
@@ -10596,10 +10596,10 @@ rust_library("tinyvec_macros-v0_1_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("tokio-v1_17_0") {
+rust_library("tokio-v1_19_2") {
   crate_name = "tokio"
   crate_root = "//third_party/rust_crates/vendor/tokio/src/lib.rs"
-  output_name = "tokio-6f23cbd082f0fe53"
+  output_name = "tokio-93e9171240b81c17"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -10610,8 +10610,8 @@ rust_library("tokio-v1_17_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=6f23cbd082f0fe53",
-    "-Cextra-filename=-6f23cbd082f0fe53",
+    "-Cmetadata=93e9171240b81c17",
+    "-Cextra-filename=-93e9171240b81c17",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"sync\"",
   ]
@@ -10627,7 +10627,7 @@ rust_library("tokio-rustls-v0_22_0") {
 
   deps = []
   deps += [ ":rustls-v0_19_1" ]
-  deps += [ ":tokio-v1_17_0" ]
+  deps += [ ":tokio-v1_19_2" ]
   deps += [ ":webpki-v0_21_0" ]
 
   rustenv = []

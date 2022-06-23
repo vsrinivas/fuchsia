@@ -5,7 +5,7 @@ use crate::park::{Park, Unpark};
 use crate::runtime::context::EnterGuard;
 use crate::runtime::driver::Driver;
 use crate::runtime::task::{self, JoinHandle, OwnedTasks, Schedule, Task};
-use crate::runtime::Callback;
+use crate::runtime::{Callback, HandleInner};
 use crate::runtime::{MetricsBatch, SchedulerMetrics, WorkerMetrics};
 use crate::sync::notify::Notify;
 use crate::util::atomic_cell::AtomicCell;
@@ -48,7 +48,7 @@ struct Core {
     spawner: Spawner,
 
     /// Current tick
-    tick: u8,
+    tick: u32,
 
     /// Runtime driver
     ///
@@ -57,6 +57,12 @@ struct Core {
 
     /// Metrics batch
     metrics: MetricsBatch,
+
+    /// How many ticks before pulling a task from the global/remote queue?
+    global_queue_interval: u32,
+
+    /// How many ticks before yielding to the driver for timer and I/O events?
+    event_interval: u32,
 }
 
 #[derive(Clone)]
@@ -77,6 +83,9 @@ struct Shared {
 
     /// Indicates whether the blocked on thread was woken.
     woken: AtomicBool,
+
+    /// Handle to I/O driver, timer, blocking pool, ...
+    handle_inner: HandleInner,
 
     /// Callback for a worker parking itself
     before_park: Option<Callback>,
@@ -104,23 +113,17 @@ struct Context {
 /// Initial queue capacity.
 const INITIAL_CAPACITY: usize = 64;
 
-/// Max number of tasks to poll per tick.
-#[cfg(loom)]
-const MAX_TASKS_PER_TICK: usize = 4;
-#[cfg(not(loom))]
-const MAX_TASKS_PER_TICK: usize = 61;
-
-/// How often to check the remote queue first.
-const REMOTE_FIRST_INTERVAL: u8 = 31;
-
 // Tracks the current BasicScheduler.
 scoped_thread_local!(static CURRENT: Context);
 
 impl BasicScheduler {
     pub(crate) fn new(
         driver: Driver,
+        handle_inner: HandleInner,
         before_park: Option<Callback>,
         after_unpark: Option<Callback>,
+        global_queue_interval: u32,
+        event_interval: u32,
     ) -> BasicScheduler {
         let unpark = driver.unpark();
 
@@ -130,6 +133,7 @@ impl BasicScheduler {
                 owned: OwnedTasks::new(),
                 unpark,
                 woken: AtomicBool::new(false),
+                handle_inner,
                 before_park,
                 after_unpark,
                 scheduler_metrics: SchedulerMetrics::new(),
@@ -143,6 +147,8 @@ impl BasicScheduler {
             tick: 0,
             driver: Some(driver),
             metrics: MetricsBatch::new(),
+            global_queue_interval,
+            event_interval,
         })));
 
         BasicScheduler {
@@ -365,12 +371,12 @@ impl Context {
 
 impl Spawner {
     /// Spawns a future onto the basic scheduler
-    pub(crate) fn spawn<F>(&self, future: F) -> JoinHandle<F::Output>
+    pub(crate) fn spawn<F>(&self, future: F, id: super::task::Id) -> JoinHandle<F::Output>
     where
         F: crate::future::Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let (handle, notified) = self.shared.owned.bind(future, self.shared.clone());
+        let (handle, notified) = self.shared.owned.bind(future, self.shared.clone(), id);
 
         if let Some(notified) = notified {
             self.shared.schedule(notified);
@@ -396,6 +402,10 @@ impl Spawner {
     // reset woken to false and return original value
     pub(crate) fn reset_woken(&self) -> bool {
         self.shared.woken.swap(false, AcqRel)
+    }
+
+    pub(crate) fn as_handle_inner(&self) -> &HandleInner {
+        &self.shared.handle_inner
     }
 }
 
@@ -505,12 +515,12 @@ impl CoreGuard<'_> {
                     }
                 }
 
-                for _ in 0..MAX_TASKS_PER_TICK {
+                for _ in 0..core.event_interval {
                     // Get and increment the current tick
                     let tick = core.tick;
                     core.tick = core.tick.wrapping_add(1);
 
-                    let entry = if tick % REMOTE_FIRST_INTERVAL == 0 {
+                    let entry = if tick % core.global_queue_interval == 0 {
                         core.spawner.pop().or_else(|| core.tasks.pop_front())
                     } else {
                         core.tasks.pop_front().or_else(|| core.spawner.pop())

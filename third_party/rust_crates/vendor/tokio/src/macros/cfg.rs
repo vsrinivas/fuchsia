@@ -195,6 +195,22 @@ macro_rules! cfg_not_metrics {
     }
 }
 
+macro_rules! cfg_not_rt_and_metrics_and_net {
+    ($($item:item)*) => {
+        $( #[cfg(not(all(feature = "net", feature = "rt", all(tokio_unstable, not(loom)))))]$item )*
+    }
+}
+
+macro_rules! cfg_net_or_process {
+    ($($item:item)*) => {
+        $(
+            #[cfg(any(feature = "net", feature = "process"))]
+            #[cfg_attr(docsrs, doc(cfg(any(feature = "net", feature = "process"))))]
+            $item
+        )*
+    }
+}
+
 macro_rules! cfg_net {
     ($($item:item)*) => {
         $(
