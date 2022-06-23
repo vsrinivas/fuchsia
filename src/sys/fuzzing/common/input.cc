@@ -18,6 +18,13 @@
 
 namespace fuzzing {
 
+Input::Input(SharedMemory& shmem) {
+  if (auto status = shmem.Read(); status != ZX_OK) {
+    FX_LOGS(FATAL) << "Failed to read shared memory: " << zx_status_get_string(status);
+  }
+  Allocate(shmem.size(), shmem.data(), shmem.size());
+}
+
 void Input::Allocate(size_t capacity, const void* data, size_t size) {
   if (capacity_ != capacity) {
     capacity_ = capacity;

@@ -50,13 +50,7 @@ class TargetAdapterClient final {
 
   // Signals the target adapter to start a fuzzing iteration using the given |test_input|.
   // Returns a promise that completes when the target adapter indicates the fuzzing run is complete.
-  // Callers must either wait for the promise to complete or call |Clear| before calling this method
-  // again.
   Promise<> TestOneInput(const Input& test_input);
-
-  // Clears the last |test_input|, and allows |TestOneInput| to be called again. This is useful if
-  // the promise returned by that method is abandoned because of an error.
-  void Clear();
 
   // Disconnects the adapter.
   void Disconnect();

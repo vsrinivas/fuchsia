@@ -27,10 +27,12 @@ void FakeTargetAdapter::GetParameters(GetParametersCallback callback) {
   callback(std::vector<std::string>(parameters_.begin(), parameters_.end()));
 }
 
-void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
+void FakeTargetAdapter::Connect(zx::eventpair eventpair, zx::vmo test_input,
                                 ConnectCallback callback) {
   eventpair_.Pair(std::move(eventpair));
-  test_input_.LinkReserved(std::move(test_input));
+  if (auto status = test_input_.Link(std::move(test_input)); status != ZX_OK) {
+    FX_LOGS(FATAL) << "Failed to link test input: " << zx_status_get_string(status);
+  }
   suspended_.resume_task();
   callback();
 }

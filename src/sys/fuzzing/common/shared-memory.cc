@@ -18,23 +18,6 @@
 #include <sanitizer/asan_interface.h>
 
 namespace fuzzing {
-namespace {
-
-// These are the flags that the shared memory should be mapped with.
-const zx_vm_option_t kOptions =
-    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE | ZX_VM_REQUIRE_NON_RESIZABLE;
-
-// If size is |kInlinedSize|, buffer starts with an inline header.
-const char* kInlineMagic = "INLINED";
-
-}  // namespace
-
-// Helper function to suppress linter warning.
-template <typename T>
-void Cast(zx_vaddr_t addr, T** out) {
-  // NOLINTNEXTLINE(performance-no-int-to-ptr)
-  *out = reinterpret_cast<T*>(addr);
-}
 
 // Public methods
 
@@ -42,111 +25,84 @@ SharedMemory::~SharedMemory() { Reset(); }
 
 SharedMemory& SharedMemory::operator=(SharedMemory&& other) noexcept {
   vmo_ = std::move(other.vmo_);
-  mapped_addr_ = other.mapped_addr_;
-  mapped_size_ = other.mapped_size_;
+  mirror_ = other.mirror_;
   data_ = other.data_;
   size_ = other.size_;
-  header_ = other.header_;
-  mirror_ = other.mirror_;
-  poisoning_ = other.poisoning_;
-  unpoisoned_size_ = other.unpoisoned_size_;
-  other.mapped_addr_ = 0;
-  other.poisoning_ = false;
+  mapped_size_ = other.mapped_size_;
+  other.mapped_size_ = 0;
   other.Reset();
   return *this;
 }
 
-size_t SharedMemory::size() {
-  if (header_ && header_->size != size_) {
-    size_ = header_->size;
-    PoisonAfter(size_);
+zx_status_t SharedMemory::Reserve(size_t capacity) {
+  if (auto status = Create(capacity); status != ZX_OK) {
+    return status;
   }
-  return size_;
+  return Resize(0);
 }
 
-void SharedMemory::Reserve(size_t capacity) {
-  Create(sizeof(InlineHeader) + capacity);
-  Map();
-  Cast(mapped_addr_, &header_);
-  memcpy(header_->magic, kInlineMagic, sizeof(header_->magic));
-  header_->size = 0;
-  Cast(mapped_addr_ + sizeof(InlineHeader), &data_);
-  size_ = 0;
-  unpoisoned_size_ = this->capacity();
-}
-
-void SharedMemory::Mirror(void* data, size_t size) {
-  FX_CHECK(data && size);
-  Create(size);
-  Map();
+zx_status_t SharedMemory::Mirror(void* data, size_t size) {
+  if (!data || !size) {
+    FX_LOGS(ERROR) << "Cannot mirror empty buffer.";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (auto status = Create(size); status != ZX_OK) {
+    return status;
+  }
   mirror_ = data;
-  Cast(mapped_addr_, &data_);
-  size_ = size;
-  unpoisoned_size_ = capacity();
+  if (auto status = Resize(size); status != ZX_OK) {
+    return status;
+  }
   Update();
+  return ZX_OK;
 }
 
-Buffer SharedMemory::Share() {
-  Buffer buf;
-  buf.size = header_ ? mapped_size_ : size_;
-  auto status = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &buf.vmo);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to duplicate VMO: " << zx_status_get_string(status);
+zx_status_t SharedMemory::Share(zx::vmo* out) const {
+  if (auto status = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, out); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate VMO: " << zx_status_get_string(status);
+    return status;
   }
-  return buf;
+  return ZX_OK;
 }
 
-void SharedMemory::LinkReserved(Buffer&& buf) {
+zx_status_t SharedMemory::Link(zx::vmo vmo) {
   Reset();
-  Map(std::move(buf));
-  Cast(mapped_addr_, &header_);
-  if (strncmp(header_->magic, kInlineMagic, sizeof(header_->magic)) != 0) {
-    FX_LOGS(FATAL) << "Bad inline header: magic=0x" << std::hex << header_->magic << std::dec;
+  vmo_ = std::move(vmo);
+  if (auto status = Map(); status != ZX_OK) {
+    return status;
   }
-  Cast(mapped_addr_ + sizeof(InlineHeader), &data_);
-  unpoisoned_size_ = capacity();
-}
-
-void SharedMemory::LinkMirrored(Buffer&& buf) {
-  Reset();
-  size_ = buf.size;
-  Map(std::move(buf));
-  Cast(mapped_addr_, &data_);
-  unpoisoned_size_ = capacity();
-}
-
-void SharedMemory::SetPoisoning(bool enable) {
-  if (enable != poisoning_) {
-    PoisonAfter(enable ? size_ : capacity());
-    poisoning_ = enable;
+  if (auto status = Read(); status != ZX_OK) {
+    return status;
   }
+  return ZX_OK;
 }
 
-void SharedMemory::Resize(size_t size) {
-  FX_DCHECK(header_);
-  FX_DCHECK(size <= capacity());
-  size_ = size;
-  header_->size = size_;
-}
-
-void SharedMemory::Write(uint8_t one_byte) {
-  FX_DCHECK(header_);
-  FX_DCHECK(sizeof(*header_) + size_ < mapped_size_);
-  FX_DCHECK(!poisoning_);
-  data_[size_++] = one_byte;
-  header_->size = size_;
-}
-
-void SharedMemory::Write(const void* data, size_t size) {
-  if (!size) {
-    return;
+zx_status_t SharedMemory::Read() {
+  FX_DCHECK(!mirror_);
+  size_t size;
+  if (auto status = vmo_.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get size from VMO: " << zx_status_get_string(status);
+    return status;
   }
-  FX_DCHECK(header_);
-  FX_DCHECK(sizeof(*header_) + size_ + size <= mapped_size_);
-  FX_DCHECK(!poisoning_);
-  memcpy(data_ + size_, data, size);
-  size_ += size;
-  header_->size = size_;
+  Resize(size);
+  return ZX_OK;
+}
+
+zx_status_t SharedMemory::Write(const void* data, size_t size) {
+  FX_DCHECK(!mirror_);
+  if (mapped_size_ < size) {
+    FX_LOGS(ERROR) << "Failed to write to VMO: need " << size << " bytes, have " << mapped_size_
+                   << ".";
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  if (auto status = Resize(size); status != ZX_OK) {
+    return status;
+  }
+  if (size) {
+    memcpy(data_, data, size);
+  }
+  return ZX_OK;
 }
 
 void SharedMemory::Update() {
@@ -155,66 +111,74 @@ void SharedMemory::Update() {
 }
 
 void SharedMemory::Clear() {
-  if (header_) {
-    SetPoisoning(false);
-    Resize(0);
-  } else {
-    memset(mirror_, 0, size_);
-  }
+  FX_DCHECK(mirror_);
+  memset(mirror_, 0, size_);
 }
 
 // Private methods
 
 void SharedMemory::Reset() {
-  SetPoisoning(false);
-  if (is_mapped()) {
-    zx::vmar::root_self()->unmap(mapped_addr_, mapped_size_);
-  }
   vmo_.reset();
-  mapped_addr_ = 0;
-  mapped_size_ = 0;
+  if (mapped_size_) {
+    Unpoison(mapped_size_);
+    auto mapped_addr = reinterpret_cast<zx_vaddr_t>(data_);
+    zx::vmar::root_self()->unmap(mapped_addr, mapped_size_);
+  }
+  mirror_ = nullptr;
   data_ = nullptr;
   size_ = 0;
-  header_ = nullptr;
-  mirror_ = nullptr;
-  unpoisoned_size_ = 0;
+  mapped_size_ = 0;
 }
 
-void SharedMemory::Create(size_t capacity) {
+zx_status_t SharedMemory::Create(size_t capacity) {
   Reset();
-  mapped_size_ = fbl::round_up(capacity, zx_system_get_page_size());
-  auto status = zx::vmo::create(mapped_size_, 0, &vmo_);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to create VMO: " << zx_status_get_string(status);
+  auto mapped_size = fbl::round_up(capacity, zx_system_get_page_size());
+  if (auto status = zx::vmo::create(mapped_size, 0, &vmo_); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create VMO: " << zx_status_get_string(status);
+    return status;
   }
+  return Map();
 }
 
-void SharedMemory::Map(Buffer&& buf) {
-  vmo_ = std::move(buf.vmo);
-  mapped_size_ = fbl::round_up(buf.size, zx_system_get_page_size());
-  Map();
+zx_status_t SharedMemory::Map() {
+  if (auto status = vmo_.get_size(&mapped_size_); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get size of VMO: " << zx_status_get_string(status);
+    return status;
+  }
+  zx_vaddr_t mapped_addr;
+  if (auto status = zx::vmar::root_self()->map(
+          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE | ZX_VM_REQUIRE_NON_RESIZABLE, 0,
+          vmo_, 0, mapped_size_, &mapped_addr);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to map VMO: " << zx_status_get_string(status);
+    return status;
+  }
+  data_ = reinterpret_cast<uint8_t*>(mapped_addr);
+  size_ = mapped_size_;
+  return ZX_OK;
 }
 
-void SharedMemory::Map() {
-  FX_DCHECK(!mapped_addr_);
-  auto status = zx::vmar::root_self()->map(kOptions, 0, vmo_, 0, mapped_size_, &mapped_addr_);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to map VMO: " << zx_status_get_string(status);
+zx_status_t SharedMemory::Resize(size_t size) {
+  if (size == size_) {
+    return ZX_OK;
   }
+  Unpoison(size);
+  size_ = size;
+  if (auto status = vmo_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size_, sizeof(size_));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to set size for VMO: " << zx_status_get_string(status);
+    return status;
+  }
+  return ZX_OK;
 }
 
-void SharedMemory::PoisonAfter(size_t size) {
-  auto max_size = capacity();
-  if (unpoisoned_size_ == size) {
-    return;
+void SharedMemory::Unpoison(size_t size) {
+  if (size_ < mapped_size_) {
+    ASAN_UNPOISON_MEMORY_REGION(data_ + size_, mapped_size_ - size_);
   }
-  if (unpoisoned_size_ < max_size) {
-    ASAN_UNPOISON_MEMORY_REGION(data_ + unpoisoned_size_, max_size - unpoisoned_size_);
+  if (size < mapped_size_) {
+    ASAN_POISON_MEMORY_REGION(data_ + size, mapped_size_ - size);
   }
-  if (size < max_size) {
-    ASAN_POISON_MEMORY_REGION(data_ + size, max_size - size);
-  }
-  unpoisoned_size_ = size;
 }
 
 }  // namespace fuzzing

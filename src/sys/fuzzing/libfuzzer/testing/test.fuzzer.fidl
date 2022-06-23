@@ -13,16 +13,16 @@
 /// fuzzers to connect to the unit tests regardless of how their processes were started.
 library test.fuzzer;
 
-using fuchsia.mem;
 using zx;
 
-/// Buffers associated with an eventpair that can be used to signal when they are readable. The
-/// fuzzer should write the |test_input| received from libFuzzer into the first buffer, while the
-/// unit test should provide the simulated fuzzing |feedback| using the second buffer.
+/// VMOs associated with an eventpair that can be used to signal when they are readable. The fuzzer
+/// should write the |test_input| received from libFuzzer into the first VMO, while the unit test
+///  should provide the simulated fuzzing |feedback| using the second VMO. Both VMOs must have the
+/// ZX_PROP_VMO_CONTENT_SIZE property set.
 type SignaledBuffer = resource struct {
     eventpair zx.handle:EVENTPAIR;
-    test_input fuchsia.mem.Buffer;
-    feedback fuchsia.mem.Buffer;
+    test_input zx.handle:VMO;
+    feedback zx.handle:VMO;
 };
 
 /// Relays test data from unit test to test fuzzer.

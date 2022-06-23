@@ -48,13 +48,14 @@ void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallba
   callback();
   SharedMemory counters;
   auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
-  counters.LinkMirrored(std::move(*inline_8bit_counters));
+  auto status = counters.Link(std::move(*inline_8bit_counters));
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   auto id = llvm_module.id();
   ids_[id[0]] = id[1];
   auto* module = pool_->Get(id, counters.size());
   module->Add(counters.data(), counters.size());
   counters_.push_back(std::move(counters));
-  auto status = SignalPeer(kSync);
+  status = SignalPeer(kSync);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 

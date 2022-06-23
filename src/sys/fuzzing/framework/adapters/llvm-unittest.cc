@@ -61,9 +61,11 @@ TEST_F(LLVMTargetAdapterTest, Connect) {
 
   AsyncEventPair eventpair(executor());
   SharedMemory test_input;
-  test_input.Reserve(1 << 12);
+  EXPECT_EQ(test_input.Reserve(1 << 12), ZX_OK);
   Bridge<> bridge;
-  ptr->Connect(eventpair.Create(), test_input.Share(), bridge.completer.bind());
+  zx::vmo vmo;
+  EXPECT_EQ(test_input.Share(&vmo), ZX_OK);
+  ptr->Connect(eventpair.Create(), std::move(vmo), bridge.completer.bind());
   FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()));
   RunUntilIdle();
 }
@@ -80,11 +82,13 @@ TEST_F(LLVMTargetAdapterTest, Run) {
   std::vector<std::string> strings{"foo", "bar", "baz"};
   AsyncEventPair eventpair(executor());
   SharedMemory test_input;
-  test_input.Reserve(1 << 12);
+  EXPECT_EQ(test_input.Reserve(1 << 12), ZX_OK);
   Bridge<> bridge;
 
   // Connect...
-  ptr->Connect(eventpair.Create(), test_input.Share(), bridge.completer.bind());
+  zx::vmo vmo;
+  EXPECT_EQ(test_input.Share(&vmo), ZX_OK);
+  ptr->Connect(eventpair.Create(), std::move(vmo), bridge.completer.bind());
   auto task = bridge.consumer.promise_or(fpromise::error())
                   .and_then([&, run = 0U, finish = ZxFuture<zx_signals_t>()](
                                 Context& context) mutable -> Result<> {
@@ -92,8 +96,8 @@ TEST_F(LLVMTargetAdapterTest, Run) {
                     while (run < strings.size()) {
                       auto& s = strings[run];
                       if (!finish) {
-                        test_input.Clear();
-                        test_input.Write(s.data(), s.size() + 1);  // Include null terminator.
+                        // Include null terminator.
+                        EXPECT_EQ(test_input.Write(s.data(), s.size() + 1), ZX_OK);
                         EXPECT_EQ(eventpair.SignalPeer(0, kStart), ZX_OK);
                         finish = eventpair.WaitFor(kFinish);
                       }

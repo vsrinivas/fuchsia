@@ -52,8 +52,8 @@ class LibFuzzerRunnerTest : public RunnerTest {
     runner_ = LibFuzzerRunner::MakePtr(executor());
     context_ = ComponentContext::CreateWithExecutor(executor());
     eventpair_ = std::make_unique<AsyncEventPair>(executor());
-    test_input_buffer_.Reserve(kDefaultMaxInputSize);
-    feedback_buffer_.Mirror(&feedback_, sizeof(feedback_));
+    ASSERT_EQ(test_input_vmo_.Reserve(kDefaultMaxInputSize), ZX_OK);
+    ASSERT_EQ(feedback_vmo_.Mirror(&feedback_, sizeof(feedback_)), ZX_OK);
     // Convince libFuzzer that the code is instrumented.
     // See |Fuzzer::ReadAndExecuteSeedCorpora|.
     SetCoverage(Input("\n"), {{255, 255}});
@@ -108,8 +108,12 @@ class LibFuzzerRunnerTest : public RunnerTest {
             // Exchange shared objects with the fuzzer via the relay.
             SignaledBuffer data;
             data.eventpair = eventpair_->Create();
-            data.test_input = test_input_buffer_.Share();
-            data.feedback = feedback_buffer_.Share();
+            if (auto status = test_input_vmo_.Share(&data.test_input); status != ZX_OK) {
+              return fpromise::error(status);
+            }
+            if (auto status = feedback_vmo_.Share(&data.feedback); status != ZX_OK) {
+              return fpromise::error(status);
+            }
             Bridge<> bridge;
             relay->SetTestData(std::move(data), bridge.completer.bind());
             connect = bridge.consumer.promise_or(fpromise::error());
@@ -128,7 +132,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
           if (auto status = eventpair_->SignalSelf(kStart, 0); status != ZX_OK) {
             return fpromise::error(status);
           }
-          auto input = Input(test_input_buffer_);
+          auto input = Input(test_input_vmo_);
           return fpromise::ok(std::move(input));
         })
         .wrap_with(scope_);
@@ -146,7 +150,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
                feedback_.counters[i].value = static_cast<uint8_t>(value);
                ++i;
              }
-             feedback_buffer_.Update();
+             feedback_vmo_.Update();
              return AsZxResult(eventpair_->SignalPeer(0, kStart));
            })
         .and_then(eventpair_->WaitFor(kFinish))
@@ -179,8 +183,8 @@ class LibFuzzerRunnerTest : public RunnerTest {
   RunnerPtr runner_;
   std::unique_ptr<ComponentContext> context_;
   std::unique_ptr<AsyncEventPair> eventpair_;
-  SharedMemory test_input_buffer_;
-  SharedMemory feedback_buffer_;
+  SharedMemory test_input_vmo_;
+  SharedMemory feedback_vmo_;
   RelayedFeedback feedback_;
   Scope scope_;
 };

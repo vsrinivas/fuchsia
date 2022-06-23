@@ -4,7 +4,6 @@
 
 library fuchsia.fuzzer;
 
-using fuchsia.mem;
 using zx;
 
 /// |LlvmModule|s are uniquely identified by a pair of 64 bit keys based on their PC tables.
@@ -20,10 +19,11 @@ type LlvmModule = resource table {
     // the code counters are combined.
     1: id Identifier;
 
-    /// The provided VMOs contain inline 8-bit code-coverage edge counters for an LLVM module.
+    /// The provided VMOs contain inline 8-bit code-coverage edge counters for an LLVM module. The
+    /// VMO must have the ZX_PROP_VMO_CONTENT_SIZE property set.
     /// See also:
     ///     https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
-    2: inline_8bit_counters fuchsia.mem.Buffer;
+    2: inline_8bit_counters zx.handle:VMO;
 };
 
 /// Represents an instrumented target process under test.

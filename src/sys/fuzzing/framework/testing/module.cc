@@ -4,6 +4,9 @@
 
 #include "src/sys/fuzzing/framework/testing/module.h"
 
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
+
 namespace fuzzing {
 
 FakeFrameworkModule::FakeFrameworkModule(uint32_t seed) : FakeModule(seed) {
@@ -21,19 +24,14 @@ FakeFrameworkModule& FakeFrameworkModule::operator=(FakeFrameworkModule&& other)
   return *this;
 }
 
-Identifier FakeFrameworkModule::id() const { return module_->id(); }
-
-Buffer FakeFrameworkModule::Share() { return module_->Share(); }
-
 LlvmModule FakeFrameworkModule::GetLlvmModule() {
   LlvmModule llvm_module;
   llvm_module.set_id(id());
-  llvm_module.set_inline_8bit_counters(Share());
+  zx::vmo inline_8bit_counters;
+  auto status = Share(&inline_8bit_counters);
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+  llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
   return llvm_module;
 }
-
-void FakeFrameworkModule::Update() { module_->Update(); }
-
-void FakeFrameworkModule::Clear() { module_->Clear(); }
 
 }  // namespace fuzzing

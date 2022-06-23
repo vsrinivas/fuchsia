@@ -54,15 +54,22 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
                   return fpromise::error(ZX_ERR_PEER_CLOSED);
                 }
                 auto signaled_buffer = connect.take_value();
-                test_input_buffer_.LinkReserved(std::move(signaled_buffer.test_input));
-                feedback_buffer_.LinkMirrored(std::move(signaled_buffer.feedback));
+                if (auto status = test_input_buffer_.Link(std::move(signaled_buffer.test_input));
+                    status != ZX_OK) {
+                  return fpromise::error(status);
+                }
+                if (auto status = feedback_buffer_.Link(std::move(signaled_buffer.feedback));
+                    status != ZX_OK) {
+                  return fpromise::error(status);
+                }
                 eventpair_->Pair(std::move(signaled_buffer.eventpair));
                 relay->Finish();
                 return fpromise::ok();
               })
                   .and_then([this, data, size] {
-                    test_input_buffer_.Clear();
-                    test_input_buffer_.Write(data, size);
+                    if (auto status = test_input_buffer_.Write(data, size); status != ZX_OK) {
+                      return AsZxResult(status);
+                    }
                     // Notify the unit test that the test input is ready, and wait for its
                     // notification that feedback is ready.
                     return AsZxResult(eventpair_->SignalPeer(0, kStart));

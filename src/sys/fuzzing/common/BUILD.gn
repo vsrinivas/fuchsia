@@ -43,7 +43,6 @@ source_set("common") {
   ]
   public_deps = [
     "../fidl:fuchsia.fuzzer",
-    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

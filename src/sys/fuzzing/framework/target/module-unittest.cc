@@ -56,8 +56,10 @@ TEST(ModuleTest, UpdateAndClear) {
   }
   std::vector<uint8_t> expected(module.counters(), module.counters_end());
 
+  zx::vmo vmo;
+  EXPECT_EQ(module.Share(&vmo), ZX_OK);
   SharedMemory shmem;
-  shmem.LinkMirrored(module.Share());
+  EXPECT_EQ(shmem.Link(std::move(vmo)), ZX_OK);
   auto* data = shmem.data();
 
   module.Update();

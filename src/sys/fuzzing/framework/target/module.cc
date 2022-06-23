@@ -5,6 +5,7 @@
 #include "src/sys/fuzzing/framework/target/module.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 
 #include "src/sys/fuzzing/common/module.h"
 
@@ -43,7 +44,9 @@ Identifier Module::Identify(const uintptr_t* pcs, size_t num_pcs) {
 
 Module::Module(uint8_t* counters, const uintptr_t* pcs, size_t num_pcs) {
   FX_CHECK(counters && pcs && num_pcs);
-  counters_.Mirror(counters, num_pcs);
+  if (auto status = counters_.Mirror(counters, num_pcs); status != ZX_OK) {
+    FX_LOGS(FATAL) << "Failed to create module: " << zx_status_get_string(status);
+  }
   id_ = Module::Identify(pcs, num_pcs);
 }
 
@@ -56,7 +59,11 @@ Module& Module::operator=(Module&& other) noexcept {
 LlvmModule Module::GetLlvmModule() {
   LlvmModule llvm_module;
   llvm_module.set_id(id());
-  llvm_module.set_inline_8bit_counters(Share());
+  zx::vmo inline_8bit_counters;
+  if (auto status = Share(&inline_8bit_counters); status != ZX_OK) {
+    FX_LOGS(FATAL) << "Failed to share LLVM module: " << zx_status_get_string(status);
+  }
+  llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
   return llvm_module;
 }
 

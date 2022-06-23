@@ -41,7 +41,7 @@ class FakeTargetAdapter final : public TargetAdapter {
 
   // FIDL methods.
   void GetParameters(GetParametersCallback callback) override;
-  void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
+  void Connect(zx::eventpair eventpair, zx::vmo test_input, ConnectCallback callback) override;
 
   // Returns a promise to |AwaitStart| and then |Finish|.
   ZxPromise<Input> TestOneInput();

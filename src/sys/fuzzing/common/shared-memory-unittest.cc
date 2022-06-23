@@ -59,109 +59,108 @@ std::vector<T> PickVector(size_t size) {
 TEST(SharedMemoryTest, Reserve) {
   SharedMemory shmem;
 
-  shmem.Reserve(kCapacity);
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), kCapacity);
-  auto buffer = shmem.Share();
-  EXPECT_TRUE(buffer.vmo.is_valid());
-  EXPECT_GE(buffer.size, shmem.capacity());
+  EXPECT_EQ(shmem.Reserve(kCapacity), ZX_OK);
+  zx::vmo vmo;
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
+  EXPECT_TRUE(vmo.is_valid());
+  size_t size;
+  EXPECT_EQ(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(size, 0U);
 
-  // Can recreate
-  shmem.Reserve(kCapacity * 2);
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), kCapacity * 2);
-  buffer = shmem.Share();
-  EXPECT_TRUE(buffer.vmo.is_valid());
-  EXPECT_GE(buffer.size, shmem.capacity());
+  size_t mapped_size;
+  EXPECT_EQ(vmo.get_size(&mapped_size), ZX_OK);
+  EXPECT_POISONED(shmem.data(), mapped_size);
+
+  // Can recreate.
+  EXPECT_EQ(shmem.Reserve(kCapacity * 2), ZX_OK);
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
+  EXPECT_TRUE(vmo.is_valid());
+  EXPECT_EQ(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(size, 0U);
+
+  EXPECT_EQ(vmo.get_size(&mapped_size), ZX_OK);
+  EXPECT_POISONED(shmem.data(), mapped_size);
 }
 
 TEST(SharedMemoryTest, Mirror) {
   SharedMemory shmem;
   uint8_t region[kCapacity * 2];
 
-  shmem.Mirror(region, sizeof(region));
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), sizeof(region));
-  auto buffer = shmem.Share();
-  EXPECT_TRUE(buffer.vmo.is_valid());
-  EXPECT_GE(buffer.size, shmem.capacity());
+  EXPECT_EQ(shmem.Mirror(region, sizeof(region)), ZX_OK);
+  EXPECT_EQ(shmem.size(), sizeof(region));
+  zx::vmo vmo;
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
+  EXPECT_TRUE(vmo.is_valid());
 
-  // Can recreate
-  shmem.Mirror(&region[kCapacity], kCapacity * sizeof(region[0]));
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), kCapacity);
-  buffer = shmem.Share();
-  EXPECT_TRUE(buffer.vmo.is_valid());
-  EXPECT_GE(buffer.size, shmem.capacity());
+  size_t size;
+  EXPECT_EQ(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(size, shmem.size());
+  EXPECT_UNPOISONED(shmem.data(), shmem.size());
+
+  // Can recreate. Pick a size that should have at least one ASAN alignment boundary between it and
+  // the next page boundary.
+  size = kCapacity + (zx_system_get_page_size() / 2);
+  EXPECT_EQ(shmem.Mirror(region, size * sizeof(region[0])), ZX_OK);
+  EXPECT_EQ(shmem.size(), size);
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
+  EXPECT_TRUE(vmo.is_valid());
+  EXPECT_EQ(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(size, shmem.size());
+
+  EXPECT_EQ(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(size, shmem.size());
+  EXPECT_UNPOISONED(shmem.data(), shmem.size());
+
+  size_t mapped_size;
+  EXPECT_EQ(vmo.get_size(&mapped_size), ZX_OK);
+  EXPECT_POISONED(shmem.data() + size, mapped_size - size);
 }
 
 TEST(SharedMemoryTest, Link) {
   SharedMemory shmem;
 
-  Buffer buffer1;
-  buffer1.size = kCapacity;
-  EXPECT_EQ(zx::vmo::create(buffer1.size, 0, &buffer1.vmo), ZX_OK);
-  shmem.LinkMirrored(std::move(buffer1));
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), kCapacity);
+  zx::vmo vmo;
+  EXPECT_EQ(zx::vmo::create(kCapacity, 0, &vmo), ZX_OK);
+  size_t size = kCapacity;
+  EXPECT_EQ(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(shmem.Link(std::move(vmo)), ZX_OK);
+  EXPECT_GE(shmem.size(), kCapacity);
 
   // Can remap.
-  Buffer buffer2;
-  buffer2.size = kCapacity * 2;
-  EXPECT_EQ(zx::vmo::create(buffer2.size, 0, &buffer2.vmo), ZX_OK);
-  shmem.LinkMirrored(std::move(buffer2));
-  EXPECT_TRUE(shmem.is_mapped());
-  EXPECT_GE(shmem.capacity(), kCapacity * 2);
-}
-
-TEST(SharedMemoryTest, Resize) {
-  SharedMemory shmem;
-  SharedMemory other;
-
-  shmem.Reserve(kCapacity / 2);
-  auto capacity = shmem.capacity();
-  other.LinkReserved(shmem.Share());
-
-  EXPECT_EQ(shmem.size(), 0u);
-  EXPECT_EQ(other.size(), 0u);
-
-  shmem.Resize(1);
-  EXPECT_EQ(shmem.size(), 1u);
-  EXPECT_EQ(other.size(), 1u);
-
-  shmem.Resize(capacity - 1);
-  EXPECT_EQ(shmem.size(), capacity - 1);
-  EXPECT_EQ(other.size(), capacity - 1);
-
-  shmem.Resize(capacity);
-  EXPECT_EQ(shmem.size(), capacity);
-  EXPECT_EQ(other.size(), capacity);
+  EXPECT_EQ(zx::vmo::create(kCapacity * 2, 0, &vmo), ZX_OK);
+  size = kCapacity / 2;
+  EXPECT_EQ(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)), ZX_OK);
+  EXPECT_EQ(shmem.Link(std::move(vmo)), ZX_OK);
+  EXPECT_GE(shmem.size(), kCapacity / 2);
 }
 
 TEST(SharedMemoryTest, Write) {
   SharedMemory shmem;
 
-  shmem.Reserve(kCapacity);
-  auto expected = PickVector(shmem.capacity());
-  size_t half = expected.size() / 2;
+  EXPECT_EQ(shmem.Reserve(kCapacity), ZX_OK);
+  auto bytes = PickVector(shmem.size());
+  size_t half = bytes.size() / 2;
 
-  // Can write in chunks, and before sharing.
+  // Can write before sharing...
   EXPECT_EQ(shmem.size(), 0u);
-  shmem.Write(expected.data(), half);
+  EXPECT_EQ(shmem.Write(bytes.data(), half), ZX_OK);
   EXPECT_EQ(shmem.size(), half);
 
-  // Or by bytes, and after sharing
-  auto buffer = shmem.Share();
+  zx::vmo vmo;
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
   SharedMemory other;
-  other.LinkReserved(std::move(buffer));
-  auto* data = expected.data();
-  for (size_t i = half; i < expected.size(); ++i) {
-    shmem.Write(data[i]);
-  }
+  EXPECT_EQ(other.Link(std::move(vmo)), ZX_OK);
 
-  // Either way, the contents make it.
-  EXPECT_EQ(other.size(), expected.size());
-  std::vector<uint8_t> actual(other.data(), other.data() + other.size());
+  auto actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
+  auto expected = std::vector(bytes.data(), bytes.data() + half);
+  EXPECT_EQ(actual, expected);
+
+  // ...and after sharing
+  EXPECT_EQ(shmem.Write(bytes.data(), bytes.size()), ZX_OK);
+  EXPECT_EQ(other.Read(), ZX_OK);
+
+  actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
+  expected = std::move(bytes);
   EXPECT_EQ(actual, expected);
 }
 
@@ -170,14 +169,15 @@ TEST(SharedMemoryTest, Update) {
   auto expected = PickVector(kCapacity);
 
   // Valid
-  shmem.Mirror(expected.data(), expected.size());
+  EXPECT_EQ(shmem.Mirror(expected.data(), expected.size()), ZX_OK);
   EXPECT_EQ(shmem.size(), kCapacity);
-  auto buffer = shmem.Share();
+  zx::vmo vmo;
+  EXPECT_EQ(shmem.Share(&vmo), ZX_OK);
 
   SharedMemory other;
-  other.LinkMirrored(std::move(buffer));
+  EXPECT_EQ(other.Link(std::move(vmo)), ZX_OK);
   EXPECT_EQ(other.size(), expected.size());
-  std::vector<uint8_t> actual(other.data(), other.data() + other.size());
+  auto actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
   EXPECT_EQ(actual, expected);
 
   //  Change source data, but don't update. Uses |cksum| to verify |expected| did in fact change.
@@ -193,50 +193,6 @@ TEST(SharedMemoryTest, Update) {
   shmem.Update();
   actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
   EXPECT_EQ(actual, expected);
-}
-
-TEST(SharedMemoryTest, Clear) {
-  SharedMemory shmem;
-  auto expected = PickVector(kCapacity);
-
-  shmem.Reserve(kCapacity);
-  shmem.Write(expected.data(), expected.size());
-  auto buffer = shmem.Share();
-
-  SharedMemory other;
-  other.LinkReserved(std::move(buffer));
-  std::vector<uint8_t> actual(other.data(), other.data() + other.size());
-  EXPECT_EQ(actual, expected);
-
-  // Valid
-  shmem.Clear();
-  EXPECT_EQ(shmem.size(), 0u);
-
-  // Can write after clearing.
-  expected = PickVector(kCapacity);
-  shmem.Write(expected.data(), expected.size());
-  actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
-  EXPECT_EQ(actual, expected);
-}
-
-TEST(SharedMemoryTest, SetPoisoning) {
-  SharedMemory src, dst;
-  src.Reserve(kCapacity);
-  auto buffer = src.Share();
-  dst.LinkReserved(std::move(buffer));
-  EXPECT_UNPOISONED(dst.data(), dst.capacity());
-
-  dst.SetPoisoning(true);
-  EXPECT_POISONED(dst.data(), dst.capacity());
-
-  auto v = PickVector(kCapacity / 2);
-  src.Write(v.data(), v.size());
-  EXPECT_EQ(dst.size(), v.size());
-  EXPECT_UNPOISONED(dst.data(), dst.size());
-  EXPECT_POISONED(dst.data(), dst.capacity());
-
-  dst.SetPoisoning(false);
-  EXPECT_UNPOISONED(dst.data(), dst.capacity());
 }
 
 }  // namespace

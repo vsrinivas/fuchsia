@@ -202,8 +202,10 @@ TEST(ModuleProxyTest, FromModule) {
   auto module = std::make_unique<Module>(fake.counters(), fake.pcs(), fake.num_pcs());
 
   // Share it.
+  zx::vmo vmo;
+  EXPECT_EQ(module->Share(&vmo), ZX_OK);
   auto shmem = std::make_unique<SharedMemory>();
-  shmem->LinkMirrored(module->Share());
+  EXPECT_EQ(shmem->Link(std::move(vmo)), ZX_OK);
 
   // Add module to a proxy.
   ModuleProxy proxy(module->id(), shmem->size());

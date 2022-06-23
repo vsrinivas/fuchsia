@@ -47,7 +47,6 @@ source_set("engine-lib") {
   ]
   public_deps = [
     ":adapter-client",
-    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
     "//src/lib/fxl",

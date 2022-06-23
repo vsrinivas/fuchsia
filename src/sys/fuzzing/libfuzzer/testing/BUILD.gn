@@ -9,7 +9,7 @@ fidl("test.fuzzer") {
   visibility = [ "../*" ]
   testonly = true
   sources = [ "test.fuzzer.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 # This config allows linking against libFuzzer regardless of the toolchain variant, which is useful

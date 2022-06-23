@@ -85,8 +85,8 @@ TEST(InputTest, StringConstructor) {
 TEST(InputTest, SharedMemoryConstructor) {
   Input input1({0xde, 0xad, 0xbe, 0xef});
   SharedMemory shmem;
-  shmem.Reserve(input1.size());
-  shmem.Write(input1.data(), input1.size());
+  EXPECT_EQ(shmem.Reserve(input1.size()), ZX_OK);
+  EXPECT_EQ(shmem.Write(input1.data(), input1.size()), ZX_OK);
   Input input2(shmem);
   EXPECT_EQ(input1.ToHex(), input2.ToHex());
 }

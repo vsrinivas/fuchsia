@@ -94,7 +94,10 @@ zx_status_t ProcessProxy::AddLlvmModule(LlvmModule llvm_module) {
   }
   SharedMemory counters;
   auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
-  counters.LinkMirrored(std::move(*inline_8bit_counters));
+  if (auto status = counters.Link(std::move(*inline_8bit_counters)); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to link module: " << zx_status_get_string(status);
+    return status;
+  }
   auto* module_proxy = pool_->Get(llvm_module.id(), counters.size());
   module_proxy->Add(counters.data(), counters.size());
   modules_[module_proxy] = std::move(counters);

@@ -43,7 +43,7 @@ class LLVMTargetAdapter final : public TargetAdapter {
 
   // FIDL methods.
   void GetParameters(GetParametersCallback callback) override;
-  void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
+  void Connect(zx::eventpair eventpair, zx::vmo test_input, ConnectCallback callback) override;
 
   // Returns a promise to perform fuzzing runs in a loop. The promise completes when the engine
   // disconnects. If the engine is not connected when this method is called, it will not complete

@@ -824,10 +824,7 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
            }
            return fpromise::ok(leak_suspected);
          })
-      .inspect([this](const Result<bool, uint64_t>& ignored) {
-        futures_.clear();
-        target_adapter_.Clear();
-      })
+      .inspect([this](const Result<bool, uint64_t>& ignored) { futures_.clear(); })
       .or_else([this](const uint64_t& target_id) { return GetFuzzResult(target_id); });
 }
 

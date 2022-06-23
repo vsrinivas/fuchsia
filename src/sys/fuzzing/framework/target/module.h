@@ -40,7 +40,7 @@ class Module final {
   const Identifier& id() const { return id_; }
 
   // Shares the VMO containing the code coverage as a |fuchsia.mem.Buffer|.
-  Buffer Share() { return counters_.Share(); }
+  __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) { return counters_.Share(out); }
 
   // Shares the VMO containing the code coverage as an |fuchsia.fuzzer.LlvmModule|.
   LlvmModule GetLlvmModule();

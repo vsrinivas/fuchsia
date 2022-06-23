@@ -20,7 +20,9 @@ void TargetAdapterClient::AddDefaults(Options* options) {
 
 void TargetAdapterClient::Configure(const OptionsPtr& options) {
   FX_CHECK(options);
-  test_input_.Reserve(options->max_input_size());
+  if (auto status = test_input_.Reserve(options->max_input_size()); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to reserve test input: " << zx_status_get_string(status);
+  }
 }
 
 Promise<> TargetAdapterClient::Connect() {
@@ -34,8 +36,13 @@ Promise<> TargetAdapterClient::Connect() {
 
              ptr_.set_error_handler([](zx_status_t status) {});
 
+             zx::vmo test_input;
+             if (auto status = test_input_.Share(&test_input); status != ZX_OK) {
+               FX_LOGS(WARNING) << "Failed to share test input: " << zx_status_get_string(status);
+               return fpromise::error();
+             }
              Bridge<> bridge;
-             ptr_->Connect(eventpair_.Create(), test_input_.Share(), bridge.completer.bind());
+             ptr_->Connect(eventpair_.Create(), std::move(test_input), bridge.completer.bind());
              connect = bridge.consumer.promise_or(fpromise::error());
            }
            if (!connect(context)) {
@@ -69,8 +76,10 @@ std::vector<std::string> TargetAdapterClient::GetSeedCorpusDirectories(
 }
 
 Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
-  FX_CHECK(test_input_.size() == 0);
-  test_input_.Write(test_input.data(), test_input.size());
+  if (auto status = test_input_.Write(test_input.data(), test_input.size()); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to write test input: " << zx_status_get_string(status);
+    return fpromise::make_error_promise();
+  }
   return Connect()
       .inspect([](const Result<>& result) {})
       .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
@@ -85,11 +94,8 @@ Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
         }
         return fpromise::ok();
       })
-      .inspect([this](const Result<>& result) { test_input_.Clear(); })
       .wrap_with(scope_);
 }
-
-void TargetAdapterClient::Clear() { test_input_.Clear(); }
 
 void TargetAdapterClient::Disconnect() {
   eventpair_.Reset();
