@@ -447,5 +447,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.CommandExceededTimeoutMsg),
 			Type:   swarmingOutputType,
 		},
+		// This error is emitted by `fastboot` when it fails to write an image
+		// to the disk. It is generally caused by ECC errors.
+		&stringInLogCheck{
+			String: "FAILED (remote: 'error writing the image')",
+			Type:   swarmingOutputType,
+		},
 	}
 }
