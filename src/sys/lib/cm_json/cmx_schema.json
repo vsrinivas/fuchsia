@@ -122,7 +122,6 @@
                             "deprecated-global-tmp",
                             "deprecated-misc-storage",
                             "deprecated-shell",
-                            "durable-data",
                             "hub",
                             "isolated-cache-storage",
                             "isolated-persistent-storage",

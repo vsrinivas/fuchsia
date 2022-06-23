@@ -180,7 +180,6 @@ this section to migrate directory access:
 
 Feature                 | Description                                 | Directory Capability    | Path
 ----------------------- | ------------------------------------------- | ----------------------- | ----
-`durable-data`          | Persistent data that survives factory reset | `durable`               | `/durable`
 `shell-commands`        | Executable directory of shell binaries      | `bin`                   | `/bin`
 `root-ssl-certificates` | Read-only root certificate data             | `root-ssl-certificates` | `/config/ssl`
 

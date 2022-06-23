@@ -18,7 +18,6 @@ constexpr char kAccountManagerAllowList[] = "allowlist/account_manager.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
 constexpr char kCr50AllowList[] = "allowlist/cr50.txt";
 constexpr char kDebugResourceAllowList[] = "allowlist/debug_resource.txt";
-constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
 constexpr char kHypervisorResourceAllowList[] = "allowlist/hypervisor_resource.txt";
 constexpr char kInfoResourceAllowList[] = "allowlist/info_resource.txt";
@@ -63,11 +62,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("deprecated-shell") && !CheckDeprecatedShell(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "deprecated-shell. go/fx-hermetic-sandboxes";
-    return std::nullopt;
-  }
-  if (sandbox.HasFeature("durable-data") && !CheckDurableData(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "durable-data.";
     return std::nullopt;
   }
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
@@ -211,11 +205,6 @@ bool PolicyChecker::CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url) {
   AllowList deprecated_shell_allowlist(config_, kDeprecatedShellAllowList);
   return deprecated_shell_allowlist.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckDurableData(const FuchsiaPkgUrl& pkg_url) {
-  AllowList durable_data_allow_list(config_, kDurableDataAllowList);
-  return durable_data_allow_list.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
