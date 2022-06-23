@@ -514,24 +514,52 @@ pub fn sys_getrlimit(
     resource: u32,
     user_rlimit: UserRef<rlimit>,
 ) -> Result<(), Errno> {
-    let limit = match resource {
-        resource if resource == RLIMIT_NOFILE => {
-            Ok(rlimit { rlim_cur: RLIMIT_NOFILE_MAX, rlim_max: RLIMIT_NOFILE_MAX })
-        }
-        resource if resource == RLIMIT_STACK => {
-            // The stack size is fixed at the moment, but
-            // if MAP_GROWSDOWN is implemented this should
-            // report the limit that it can be grown.
-            let mm_state = current_task.mm.state.read();
-            let stack_size = mm_state.stack_size as u64;
-            Ok(rlimit { rlim_cur: stack_size, rlim_max: stack_size })
-        }
-        _ => {
-            not_implemented!("getrlimit: {:?}", resource);
-            error!(ENOSYS)
-        }
-    }?;
-    current_task.mm.write_object(user_rlimit, &limit)?;
+    sys_prlimit64(current_task, 0, resource, Default::default(), user_rlimit)
+}
+
+pub fn sys_setrlimit(
+    current_task: &CurrentTask,
+    resource: u32,
+    user_rlimit: UserRef<rlimit>,
+) -> Result<(), Errno> {
+    sys_prlimit64(current_task, 0, resource, user_rlimit, Default::default())
+}
+
+pub fn sys_prlimit64(
+    current_task: &CurrentTask,
+    pid: pid_t,
+    resource: u32,
+    new_limit: UserRef<rlimit>,
+    old_limit: UserRef<rlimit>,
+) -> Result<(), Errno> {
+    if pid != 0 {
+        not_implemented!("prlimit64 with non 0 pid");
+        return error!(ENOSYS);
+    }
+    if !new_limit.is_null() {
+        not_implemented!("prlimit64 to edit limits");
+        return error!(ENOSYS);
+    }
+    if !old_limit.is_null() {
+        let limit = match resource {
+            resource if resource == RLIMIT_NOFILE => {
+                Ok(rlimit { rlim_cur: RLIMIT_NOFILE_MAX, rlim_max: RLIMIT_NOFILE_MAX })
+            }
+            resource if resource == RLIMIT_STACK => {
+                // The stack size is fixed at the moment, but
+                // if MAP_GROWSDOWN is implemented this should
+                // report the limit that it can be grown.
+                let mm_state = current_task.mm.state.read();
+                let stack_size = mm_state.stack_size as u64;
+                Ok(rlimit { rlim_cur: stack_size, rlim_max: stack_size })
+            }
+            _ => {
+                not_implemented!("getrlimit: {:?}", resource);
+                error!(ENOSYS)
+            }
+        }?;
+        current_task.mm.write_object(old_limit, &limit)?;
+    }
     Ok(())
 }
 
