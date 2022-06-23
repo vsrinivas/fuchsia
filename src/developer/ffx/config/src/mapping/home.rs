@@ -9,29 +9,22 @@ use {
     serde_json::Value,
 };
 
-pub(crate) fn home<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+pub(crate) fn home(value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$(HOME)").unwrap();
     }
 
-    Box::new(move |value| -> Option<Value> {
-        match preprocess(&value)
-            .as_ref()
-            .map(|s| {
-                replace(s, &*REGEX, |v| {
-                    Ok(home::home_dir().map_or(v.to_string(), |home_path| {
-                        home_path.to_str().map_or(v.to_string(), |s| s.to_string())
-                    }))
-                })
+    preprocess(&value)
+        .as_ref()
+        .map(|s| {
+            replace(s, &*REGEX, |v| {
+                Ok(home::home_dir().map_or(v.to_string(), |home_path| {
+                    home_path.to_str().map_or(v.to_string(), |s| s.to_string())
+                }))
             })
-            .map(postprocess)
-        {
-            Some(v) => next(v),
-            None => next(value),
-        }
-    })
+        })
+        .map(postprocess)
+        .or(Some(value))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +32,6 @@ pub(crate) fn home<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
 
     fn home_dir(default: &str) -> String {
         home::home_dir().map_or(default.to_string(), |home_path| {
@@ -51,19 +43,19 @@ mod test {
     fn test_mapper() {
         let value = home_dir("$HOME");
         let test = Value::String("$HOME".to_string());
-        assert_eq!(home(&identity)(test), Some(Value::String(value.to_string())));
+        assert_eq!(home(test), Some(Value::String(value.to_string())));
     }
 
     #[test]
     fn test_mapper_multiple() {
         let value = home_dir("$HOME");
         let test = Value::String("$HOME/$HOME".to_string());
-        assert_eq!(home(&identity)(test), Some(Value::String(format!("{}/{}", value, value))));
+        assert_eq!(home(test), Some(Value::String(format!("{}/{}", value, value))));
     }
 
     #[test]
     fn test_mapper_returns_pass_through() {
         let test = Value::String("$WHATEVER".to_string());
-        assert_eq!(home(&identity)(test), Some(Value::String("$WHATEVER".to_string())));
+        assert_eq!(home(test), Some(Value::String("$WHATEVER".to_string())));
     }
 }

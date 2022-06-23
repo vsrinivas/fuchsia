@@ -7,14 +7,12 @@ use {
     regex::Regex, serde_json::Value,
 };
 
-pub(crate) fn config<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+pub(crate) fn config(value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$(CONFIG)").unwrap();
     }
 
-    replace(&*REGEX, get_config_base_path, next)
+    replace(&*REGEX, get_config_base_path, value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +20,6 @@ pub(crate) fn config<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
 
     fn config_dir(default: &str) -> String {
         match get_config_base_path() {
@@ -35,19 +32,19 @@ mod test {
     fn test_mapper() {
         let value = config_dir("$CONFIG");
         let test = Value::String("$CONFIG".to_string());
-        assert_eq!(config(&identity)(test), Some(Value::String(value.to_string())));
+        assert_eq!(config(test), Some(Value::String(value.to_string())));
     }
 
     #[test]
     fn test_mapper_multiple() {
         let value = config_dir("$CONFIG");
         let test = Value::String("$CONFIG/$CONFIG".to_string());
-        assert_eq!(config(&identity)(test), Some(Value::String(format!("{}/{}", value, value))));
+        assert_eq!(config(test), Some(Value::String(format!("{}/{}", value, value))));
     }
 
     #[test]
     fn test_mapper_returns_pass_through() {
         let test = Value::String("$WHATEVER".to_string());
-        assert_eq!(config(&identity)(test), Some(Value::String("$WHATEVER".to_string())));
+        assert_eq!(config(test), Some(Value::String("$WHATEVER".to_string())));
     }
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::mapping;
+use crate::nested::nested_set;
 use anyhow::{anyhow, bail, Context, Result};
 use serde_json::{Map, Value};
 use std::{fs::File, io::BufReader, path::Path};
@@ -13,7 +13,7 @@ fn try_split_name_value_pairs(config: &String) -> Result<Option<Value>> {
         let s: Vec<&str> = pair.trim().split('=').collect();
         if s.len() == 2 {
             let key_vec: Vec<&str> = s[0].split('.').collect();
-            mapping::nested_set(
+            nested_set(
                 &mut runtime_config,
                 key_vec[0],
                 &key_vec[1..],

@@ -13,6 +13,7 @@ pub enum SelectMode {
     All,
 }
 
+#[derive(Debug, Clone)]
 pub struct ConfigQuery<'a> {
     pub name: Option<&'a str>,
     pub level: Option<ConfigLevel>,

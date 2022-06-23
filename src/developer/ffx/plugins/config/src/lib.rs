@@ -6,8 +6,8 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_bail_with_code},
     ffx_config::{
-        add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, get,
-        print_config, raw, remove, set, set_metrics_status, show_metrics_status, ConfigLevel,
+        add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, file,
+        get, print_config, raw, remove, set, set_metrics_status, show_metrics_status, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
@@ -77,6 +77,10 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
             MappingMode::Substitute => {
                 let value: std::result::Result<Vec<Value>, _> = get(query).await;
                 output_array(writer, value)
+            }
+            MappingMode::File => {
+                let value = file(query).await?;
+                output(writer, value)
             }
         },
         None => print_config(writer, &get_cmd.build_dir).await,

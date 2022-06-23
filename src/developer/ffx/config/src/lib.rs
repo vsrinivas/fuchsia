@@ -14,8 +14,9 @@ use {
     crate::environment::Environment,
     crate::mapping::{
         cache::cache, config::config, data::data, env_var::env_var, file_check::file_check,
-        home::home, identity::identity, runtime::runtime,
+        home::home, runtime::runtime,
     },
+    crate::nested::RecursiveMap,
     crate::paths::get_default_user_file_path,
     crate::storage::Config,
     analytics::{is_opted_in, set_opt_in_status},
@@ -38,6 +39,7 @@ pub mod sdk;
 
 mod cache;
 mod mapping;
+mod nested;
 mod paths;
 mod runtime;
 mod storage;
@@ -84,7 +86,11 @@ where
 {
     let converted_query = query.into();
     T::validate_query(&converted_query)?;
-    get_config(converted_query, &validate_type::<T>).await.map_err(|e| e.into())?.try_into()
+    get_config(converted_query)
+        .await
+        .map_err(|e| e.into())?
+        .recursive_map(&validate_type::<T>)
+        .try_into()
 }
 
 pub async fn get<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
@@ -95,14 +101,19 @@ where
 {
     let converted_query = query.into();
     T::validate_query(&converted_query)?;
-    let env_var_mapper = env_var(&validate_type::<T>);
-    let home_mapper = home(&env_var_mapper);
-    let config_mapper = config(&home_mapper);
-    let data_mapper = data(&config_mapper);
-    let cache_mapper = cache(&data_mapper);
-    let runtime_mapper = runtime(&cache_mapper);
-    let array_env_var_mapper = T::handle_arrays(&runtime_mapper);
-    get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
+
+    get_config(converted_query)
+        .await
+        .map_err(|e| e.into())?
+        .recursive_map(&runtime)
+        .recursive_map(&cache)
+        .recursive_map(&data)
+        .recursive_map(&config)
+        .recursive_map(&home)
+        .recursive_map(&env_var)
+        .recursive_map(&T::handle_arrays)
+        .recursive_map(&validate_type::<T>)
+        .try_into()
 }
 
 pub async fn file<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
@@ -113,15 +124,18 @@ where
 {
     let converted_query = query.into();
     T::validate_query(&converted_query)?;
-    let file_check_mapper = file_check(&identity);
-    let env_var_mapper = env_var(&file_check_mapper);
-    let home_mapper = home(&env_var_mapper);
-    let config_mapper = config(&home_mapper);
-    let data_mapper = data(&config_mapper);
-    let cache_mapper = cache(&data_mapper);
-    let runtime_mapper = runtime(&cache_mapper);
-    let array_env_var_mapper = T::handle_arrays(&runtime_mapper);
-    get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
+    get_config(converted_query)
+        .await
+        .map_err(|e| e.into())?
+        .recursive_map(&runtime)
+        .recursive_map(&cache)
+        .recursive_map(&data)
+        .recursive_map(&config)
+        .recursive_map(&home)
+        .recursive_map(&env_var)
+        .recursive_map(&T::handle_arrays)
+        .recursive_map(&file_check)
+        .try_into()
 }
 
 pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
@@ -218,7 +232,7 @@ pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result
     check_config_files(&level, &config_query.build_dir.map(String::from))?;
     let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
-    let config_changed = if let Some(mut current) = (*write_guard).get(&config_query, &identity) {
+    let config_changed = if let Some(mut current) = (*write_guard).get(&config_query) {
         if current.is_object() {
             bail!("cannot add a value to a subtree");
         } else {

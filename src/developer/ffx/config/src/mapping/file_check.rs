@@ -4,18 +4,15 @@
 
 use {serde_json::Value, std::path::PathBuf};
 
-pub(crate) fn file_check<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + 'a + Send + Sync> {
-    Box::new(move |value| -> Option<Value> {
-        value.as_str().map(|s| s.to_string()).and_then(|s| {
-            if PathBuf::from(s.clone()).exists() {
-                next(value)
-            } else {
-                None
-            }
-        })
-    })
+/// Filters for config values that map to files that are reachable. Returns None
+/// for strings that don't correspond to files discoverable by [`PathBuf::exists`],
+/// but maps to the same value for anything else.
+pub(crate) fn file_check(value: Value) -> Option<Value> {
+    match &value {
+        Value::String(s) if PathBuf::from(s).exists() => Some(value),
+        Value::String(_) => None, // filter out strings that don't correspond to existing files.
+        _ => Some(value),         // but let any other type through.
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -23,7 +20,6 @@ pub(crate) fn file_check<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
     use anyhow::{bail, Result};
     use serde_json::json;
     use tempfile::NamedTempFile;
@@ -33,7 +29,7 @@ mod test {
         let file = NamedTempFile::new()?;
         if let Some(path) = file.path().to_str() {
             let test = Value::String(path.to_string());
-            assert_eq!(file_check(&identity)(test), Some(Value::String(path.to_string())));
+            assert_eq!(file_check(test), Some(Value::String(path.to_string())));
             Ok(())
         } else {
             bail!("Unable to get temp file path");
@@ -43,7 +39,7 @@ mod test {
     #[test]
     fn test_file_mapper_returns_none() -> Result<()> {
         let test = json!("/fake_path/should_not_exist");
-        assert_eq!(file_check(&identity)(test), None);
+        assert_eq!(file_check(test), None);
         Ok(())
     }
 }

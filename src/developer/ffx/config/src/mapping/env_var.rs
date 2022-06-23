@@ -28,29 +28,22 @@ fn check(value: &String, regex: &Regex) -> bool {
     true
 }
 
-pub(crate) fn env_var<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+pub(crate) fn env_var(value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$([A-Z][A-Z0-9_]*)").unwrap();
     }
 
-    Box::new(move |value| -> Option<Value> {
-        let env_string = preprocess(&value);
-        if let Some(ref e) = env_string {
-            if !check(e, &*REGEX) {
-                return None;
-            }
+    let env_string = preprocess(&value);
+    if let Some(ref e) = env_string {
+        if !check(e, &*REGEX) {
+            return None;
         }
-        match env_string
-            .as_ref()
-            .map(|s| replace(s, &*REGEX, |v| env::var(v).map_err(|_| anyhow!(""))))
-            .map(postprocess)
-        {
-            Some(v) => next(v),
-            None => next(value),
-        }
-    })
+    }
+    env_string
+        .as_ref()
+        .map(|s| replace(s, &*REGEX, |v| env::var(v).map_err(|_| anyhow!(""))))
+        .map(postprocess)
+        .or(Some(value))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +51,6 @@ pub(crate) fn env_var<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
 
     fn setup_test(env_vars: Vec<(&'static str, &'static str)>) -> Box<dyn FnOnce() -> ()> {
         env_vars.iter().for_each(|(var, val)| env::set_var(var, val));
@@ -72,7 +64,7 @@ mod test {
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_MAPPER", "test")]);
         let test = Value::String("$FFX_TEST_ENV_VAR_MAPPER".to_string());
-        assert_eq!(env_var(&identity)(test), Some(Value::String("test".to_string())));
+        assert_eq!(env_var(test), Some(Value::String("test".to_string())));
         cleanup();
     }
 
@@ -83,14 +75,14 @@ mod test {
         let test = Value::String(
             "$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE/$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE".to_string(),
         );
-        assert_eq!(env_var(&identity)(test), Some(Value::String(format!("{}/{}", "test", "test"))));
+        assert_eq!(env_var(test), Some(Value::String(format!("{}/{}", "test", "test"))));
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_returns_none() {
         let test = Value::String("$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
-        assert_eq!(env_var(&identity)(test), None);
+        assert_eq!(env_var(test), None);
     }
 
     #[test]
@@ -98,19 +90,19 @@ mod test {
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_EXISTS", "test")]);
         let test = Value::String("$HOME/$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
-        assert_eq!(env_var(&identity)(test), None);
+        assert_eq!(env_var(test), None);
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_escapes_dollar_sign() {
         let test = Value::String("$$HOME".to_string());
-        assert_eq!(env_var(&identity)(test), Some(Value::String("$HOME".to_string())));
+        assert_eq!(env_var(test), Some(Value::String("$HOME".to_string())));
     }
 
     #[test]
     fn test_env_var_returns_value_if_not_string() {
         let test = Value::Bool(false);
-        assert_eq!(env_var(&identity)(test), Some(Value::Bool(false)));
+        assert_eq!(env_var(test), Some(Value::Bool(false)));
     }
 }

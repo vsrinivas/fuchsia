@@ -7,14 +7,12 @@ use {
     regex::Regex, serde_json::Value,
 };
 
-pub(crate) fn runtime<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+pub(crate) fn runtime(value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$(RUNTIME)").unwrap();
     }
 
-    replace(&*REGEX, get_runtime_base_path, next)
+    replace(&*REGEX, get_runtime_base_path, value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +20,6 @@ pub(crate) fn runtime<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
 
     fn runtime_dir(default: &str) -> String {
         match get_runtime_base_path() {
@@ -35,19 +32,19 @@ mod test {
     fn test_mapper() {
         let value = runtime_dir("$RUNTIME");
         let test = Value::String("$RUNTIME".to_string());
-        assert_eq!(runtime(&identity)(test), Some(Value::String(value.to_string())));
+        assert_eq!(runtime(test), Some(Value::String(value.to_string())));
     }
 
     #[test]
     fn test_mapper_multiple() {
         let value = runtime_dir("$RUNTIME");
         let test = Value::String("$RUNTIME/$RUNTIME".to_string());
-        assert_eq!(runtime(&identity)(test), Some(Value::String(format!("{}/{}", value, value))));
+        assert_eq!(runtime(test), Some(Value::String(format!("{}/{}", value, value))));
     }
 
     #[test]
     fn test_mapper_returns_pass_through() {
         let test = Value::String("$WHATEVER".to_string());
-        assert_eq!(runtime(&identity)(test), Some(Value::String("$WHATEVER".to_string())));
+        assert_eq!(runtime(test), Some(Value::String("$WHATEVER".to_string())));
     }
 }

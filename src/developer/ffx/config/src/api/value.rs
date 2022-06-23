@@ -8,6 +8,7 @@ use {
         ConfigError,
     },
     crate::mapping::{filter::filter, flatten::flatten},
+    crate::nested::RecursiveMap,
     anyhow::anyhow,
     serde_json::{Map, Value},
     std::{
@@ -24,11 +25,23 @@ const _ADDITIVE_LEVEL_ERR: &str =
 #[derive(Debug)]
 pub struct ConfigValue(pub(crate) Option<Value>);
 
+// See RecursiveMap for why the value version is the main implementation.
+impl RecursiveMap for ConfigValue {
+    type Output = ConfigValue;
+    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> ConfigValue {
+        ConfigValue(self.0.recursive_map(mapper))
+    }
+}
+impl RecursiveMap for &ConfigValue {
+    type Output = ConfigValue;
+    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> ConfigValue {
+        ConfigValue(self.0.clone()).recursive_map(mapper)
+    }
+}
+
 pub trait ValueStrategy {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
+    fn handle_arrays(value: Value) -> Option<Value> {
+        flatten(value)
     }
 
     fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
@@ -52,10 +65,8 @@ impl From<Option<Value>> for ConfigValue {
 }
 
 impl ValueStrategy for Value {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        Box::new(move |value| -> Option<Value> { next(value) })
+    fn handle_arrays(value: Value) -> Option<Value> {
+        Some(value)
     }
 
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
@@ -72,10 +83,8 @@ impl TryFrom<ConfigValue> for Value {
 }
 
 impl ValueStrategy for Option<Value> {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        Box::new(move |value| -> Option<Value> { next(value) })
+    fn handle_arrays(value: Value) -> Option<Value> {
+        Some(value)
     }
 
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
@@ -224,10 +233,8 @@ impl TryFrom<ConfigValue> for Option<PathBuf> {
 }
 
 impl<T: TryFrom<ConfigValue>> ValueStrategy for Vec<T> {
-    fn handle_arrays<'a, F: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a F,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        filter(next)
+    fn handle_arrays(value: Value) -> Option<Value> {
+        filter(value)
     }
 
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
@@ -260,10 +267,8 @@ impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
 }
 
 impl ValueStrategy for Map<String, Value> {
-    fn handle_arrays<'a, F: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a F,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        filter(next)
+    fn handle_arrays(value: Value) -> Option<Value> {
+        filter(value)
     }
 
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {

@@ -7,14 +7,12 @@ use {
     regex::Regex, serde_json::Value,
 };
 
-pub(crate) fn data<'a, T: Fn(Value) -> Option<Value> + Sync>(
-    next: &'a T,
-) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+pub(crate) fn data(value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$(DATA)").unwrap();
     }
 
-    replace(&*REGEX, get_data_base_path, next)
+    replace(&*REGEX, get_data_base_path, value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +20,6 @@ pub(crate) fn data<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::identity::identity;
 
     fn data_dir(default: &str) -> String {
         match get_data_base_path() {
@@ -35,19 +32,19 @@ mod test {
     fn test_mapper() {
         let value = data_dir("$DATA");
         let test = Value::String("$DATA".to_string());
-        assert_eq!(data(&identity)(test), Some(Value::String(value.to_string())));
+        assert_eq!(data(test), Some(Value::String(value.to_string())));
     }
 
     #[test]
     fn test_mapper_multiple() {
         let value = data_dir("$DATA");
         let test = Value::String("$DATA/$DATA".to_string());
-        assert_eq!(data(&identity)(test), Some(Value::String(format!("{}/{}", value, value))));
+        assert_eq!(data(test), Some(Value::String(format!("{}/{}", value, value))));
     }
 
     #[test]
     fn test_mapper_returns_pass_through() {
         let test = Value::String("$WHATEVER".to_string());
-        assert_eq!(data(&identity)(test), Some(Value::String("$WHATEVER".to_string())));
+        assert_eq!(data(test), Some(Value::String("$WHATEVER".to_string())));
     }
 }

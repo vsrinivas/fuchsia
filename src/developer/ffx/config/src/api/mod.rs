@@ -26,13 +26,10 @@ impl ConfigError {
     }
 }
 
-pub(crate) async fn get_config<'a, T: Fn(Value) -> Option<Value>>(
-    query: ConfigQuery<'a>,
-    mapper: &T,
-) -> ConfigResult {
+pub(crate) async fn get_config<'a>(query: ConfigQuery<'a>) -> ConfigResult {
     let config = load_config(&query.build_dir.map(String::from)).await?;
     let read_guard = config.read().await;
-    Ok((*read_guard).get(&query, mapper).into())
+    Ok((*read_guard).get(&query).into())
 }
 
 pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
