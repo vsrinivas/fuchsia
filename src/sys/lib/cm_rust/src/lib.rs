@@ -2460,7 +2460,7 @@ mod tests {
                                collection: None,
                            }
                         )),
-                        target_name: Some("mynetstack".to_string()),
+                        target_name: Some("mynetstack1".to_string()),
                         availability: Some(fdecl::Availability::Required),
                         ..fdecl::OfferService::EMPTY
                     }),
@@ -2473,7 +2473,7 @@ mod tests {
                                collection: None,
                            }
                         )),
-                        target_name: Some("mynetstack".to_string()),
+                        target_name: Some("mynetstack2".to_string()),
                         availability: Some(fdecl::Availability::Optional),
                         ..fdecl::OfferService::EMPTY
                     }),
@@ -2486,7 +2486,7 @@ mod tests {
                                collection: None,
                            }
                         )),
-                        target_name: Some("mynetstack".to_string()),
+                        target_name: Some("mynetstack3".to_string()),
                         source_instance_filter: Some(vec!["allowedinstance".to_string()]),
                         renamed_instances: Some(vec![fdecl::NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
                         availability: Some(fdecl::Availability::Required),
@@ -2835,7 +2835,7 @@ mod tests {
                                     source_instance_filter: None,
                                     renamed_instances: None,
                             target: OfferTarget::static_child("echo".to_string()),
-                            target_name: "mynetstack".try_into().unwrap(),
+                            target_name: "mynetstack1".try_into().unwrap(),
                             availability: Availability::Required,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -2844,7 +2844,7 @@ mod tests {
                                     source_instance_filter: None,
                                     renamed_instances: None,
                             target: OfferTarget::static_child("echo".to_string()),
-                            target_name: "mynetstack".try_into().unwrap(),
+                            target_name: "mynetstack2".try_into().unwrap(),
                             availability: Availability::Optional,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
@@ -2853,7 +2853,7 @@ mod tests {
                                     source_instance_filter: Some(vec!["allowedinstance".to_string()]),
                                     renamed_instances: Some(vec![NameMapping{source_name: "default".to_string(), target_name: "allowedinstance".to_string()}]),
                             target: OfferTarget::static_child("echo".to_string()),
-                            target_name: "mynetstack".try_into().unwrap(),
+                            target_name: "mynetstack3".try_into().unwrap(),
                             availability: Availability::Required,
                         }),
                         OfferDecl::EventStream (

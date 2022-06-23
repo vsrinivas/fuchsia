@@ -69,6 +69,8 @@ pub enum Error {
 
     #[error("The `availability` field in {0} for {1} must be set to \"optional\" because the source is \"void\".")]
     AvailabilityMustBeOptional(DeclField, String),
+    #[error("Invalid aggregate offer: {0}")]
+    InvalidAggregateOffer(String),
 }
 
 impl Error {
@@ -256,6 +258,10 @@ impl Error {
             DeclField { decl: decl_type.into(), field: keyword.into() },
             source_name.cloned().unwrap_or("<unnamed>".to_string()),
         )
+    }
+
+    pub fn invalid_aggregate_offer(info: impl Into<String>) -> Self {
+        Error::InvalidAggregateOffer(info.into())
     }
 }
 

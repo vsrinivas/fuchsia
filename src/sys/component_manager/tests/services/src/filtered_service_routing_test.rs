@@ -369,7 +369,9 @@ async fn aggregate_instances_test() {
         fdecl::Offer::Service(offer_service_decl_0),
         fdecl::Offer::Service(offer_service_decl_1),
     ];
-    create_dynamic_service_client_from_offers(dynamic_child_name, dynamic_offers).await;
+    create_dynamic_service_client_from_offers(dynamic_child_name, dynamic_offers)
+        .await
+        .expect("Failed to create dynamic service client");
     let filtered_exposed_dir = client::open_childs_exposed_directory(
         dynamic_child_name,
         Some(TEST_COLLECTION_NAME.to_string()),
@@ -451,7 +453,9 @@ async fn aggregate_instances_renamed_test() {
             ..fdecl::OfferService::EMPTY
         }),
     ];
-    create_dynamic_service_client_from_offers(dynamic_child_name, offers).await;
+    create_dynamic_service_client_from_offers(dynamic_child_name, offers)
+        .await
+        .expect("Failed to create dynamic service client");
     let filtered_exposed_dir = client::open_childs_exposed_directory(
         dynamic_child_name,
         Some(TEST_COLLECTION_NAME.to_string()),
@@ -529,21 +533,10 @@ async fn aggregate_service_fails_without_filter_test() {
             ..fdecl::OfferService::EMPTY
         }),
     ];
-    create_dynamic_service_client_from_offers(dynamic_child_name, offers).await;
-    let filtered_exposed_dir = client::open_childs_exposed_directory(
-        dynamic_child_name,
-        Some(TEST_COLLECTION_NAME.to_string()),
-    )
-    .await
-    .expect("Failed to get child expose directory.");
-
-    let aggregated_service_dir_proxy =
-        client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
-            .expect("failed to open service in expose dir.");
-    let read_dir_result = fuchsia_fs::directory::readdir(&aggregated_service_dir_proxy).await;
-    // This directory read is intended to fail because source_instance_filter is None for at least one of the service
-    // offers being aggregated.
-    assert!(matches!(read_dir_result, Err(_)));
+    let create_child_result =
+        create_dynamic_service_client_from_offers(dynamic_child_name, offers).await;
+    // Creating this child is intended to fail since the source_instance_filter is not set on at least one of the offers.
+    assert!(matches!(create_child_result, Err(_)));
 }
 
 // Send the echo_string as the request to the regular echo protocol which is part of the EchoService.
@@ -617,7 +610,7 @@ async fn verify_original_service(exposed_dir: &fio::DirectoryProxy) -> Vec<Strin
 async fn create_dynamic_service_client_from_offers(
     child_name: &str,
     dynamic_offers: Vec<fdecl::Offer>,
-) {
+) -> Result<(), fcomponent::Error> {
     let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");
     let mut collection_ref = fdecl::CollectionRef { name: TEST_COLLECTION_NAME.to_string() };
@@ -628,7 +621,7 @@ async fn create_dynamic_service_client_from_offers(
         startup: Some(fdecl::StartupMode::Lazy),
         ..fdecl::Child::EMPTY
     };
-    let _ = realm
+    realm
         .create_child(
             &mut collection_ref,
             child_decl,
@@ -640,7 +633,6 @@ async fn create_dynamic_service_client_from_offers(
         )
         .await
         .expect("Failed to create dynamiic child service client.")
-        .expect("Failed to create dynamic child");
 }
 
 async fn create_dynamic_service_client(
@@ -659,7 +651,9 @@ async fn create_dynamic_service_client(
     };
 
     let dynamic_offers = vec![fdecl::Offer::Service(offer_service_decl)];
-    create_dynamic_service_client_from_offers(child_name, dynamic_offers).await
+    create_dynamic_service_client_from_offers(child_name, dynamic_offers)
+        .await
+        .expect("Failed to create dynamic service client")
 }
 
 async fn create_dynamic_service_provider(child_name: &str) {
