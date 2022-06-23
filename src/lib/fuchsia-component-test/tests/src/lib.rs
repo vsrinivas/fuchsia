@@ -367,6 +367,49 @@ async fn local_component_route_to_parent_in_sub_realm() -> Result<(), Error> {
 }
 
 #[fuchsia::test]
+async fn local_component_stop_notifier() -> Result<(), Error> {
+    let (send_stop_notifier_registered, mut receive_stop_notifier_registered) = mpsc::channel(1);
+    let (send_stop_notifier_called, mut receive_stop_notifier_called) = mpsc::channel(1);
+
+    let builder = RealmBuilder::new().await?;
+    let _child = builder
+        .add_local_child(
+            "child",
+            move |handles| {
+                let mut send_stop_notifier_registered = send_stop_notifier_registered.clone();
+                let mut send_stop_notifier_called = send_stop_notifier_called.clone();
+                async move {
+                    let stop_notifier = handles.register_stop_notifier().await;
+                    send_stop_notifier_registered
+                        .send(())
+                        .await
+                        .expect("failed to send that the stop notifier was registered");
+                    stop_notifier.await.expect("failed to wait for stop notification");
+                    send_stop_notifier_called
+                        .send(())
+                        .await
+                        .expect("failed to send that the stop notifier was registered");
+                    Ok(())
+                }
+                .boxed()
+            },
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    let instance = builder.build().await?;
+    assert!(
+        receive_stop_notifier_registered.next().await.is_some(),
+        "failed to observe the local component register a stop notifier"
+    );
+    drop(instance);
+    assert!(
+        receive_stop_notifier_called.next().await.is_some(),
+        "failed to observe the local component receive notice with the stop notifier"
+    );
+    Ok(())
+}
+
+#[fuchsia::test]
 async fn get_and_replace_realm_decl() -> Result<(), Error> {
     let builder = RealmBuilder::new().await?;
     let mut root_decl = builder.get_realm_decl().await?;
