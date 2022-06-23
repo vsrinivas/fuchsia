@@ -5,7 +5,9 @@
 pub mod component_instance;
 pub mod component_model;
 pub mod environment;
+pub mod node_path;
 pub mod route;
+pub mod serde_ext;
 
 use {
     crate::{
@@ -223,7 +225,7 @@ impl ComponentInstanceVisitor for ModelMappingVisitor {
         &mut self,
         instance: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<(), anyhow::Error> {
-        self.visited.push((instance.abs_moniker().to_string(), instance.url().to_string()));
+        self.visited.push((instance.node_path().to_string(), instance.url().to_string()));
         Ok(())
     }
 }

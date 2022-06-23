@@ -6,6 +6,7 @@ use {
     crate::{
         component_instance::{ComponentInstanceForAnalyzer, TopInstanceForAnalyzer},
         component_model::{BuildAnalyzerModelError, Child},
+        node_path::NodePath,
     },
     cm_rust::{EnvironmentDecl, RegistrationSource, ResolverRegistration},
     fidl_fuchsia_component_internal as component_internal,
@@ -151,7 +152,7 @@ impl EnvironmentForAnalyzer {
                     .ok_or(BuildAnalyzerModelError::EnvironmentNotFound(
                         child_env_name.clone(),
                         child.child_moniker.name.clone(),
-                        parent.abs_moniker().to_string(),
+                        NodePath::from(parent.abs_moniker().clone()).to_string(),
                     ))?;
                 Self::new_from_decl(parent, env_decl)
             }

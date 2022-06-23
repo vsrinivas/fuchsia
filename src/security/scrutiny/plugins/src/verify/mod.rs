@@ -16,12 +16,15 @@ use {
             route_sources::RouteSourcesController,
         },
     },
-    cm_fidl_analyzer::route::{CapabilityRouteError, RouteSegment},
+    cm_fidl_analyzer::{
+        node_path::NodePath,
+        route::{CapabilityRouteError, RouteSegment},
+        serde_ext::ErrorWithMessage,
+    },
     cm_rust::{CapabilityName, CapabilityTypeName},
-    moniker::AbsoluteMoniker,
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
-    std::{collections::HashSet, error::Error, path::PathBuf, sync::Arc},
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
 };
 
 pub use controller::route_sources::{
@@ -44,44 +47,6 @@ plugin!(
     ),
     vec![PluginDescriptor::new("CorePlugin")]
 );
-
-/// Error for use with serialization: Stores both structured error and message,
-/// and assesses equality using structured error.
-#[derive(Clone, Default, Deserialize, Serialize)]
-pub struct ErrorWithMessage<E: Clone + Error + Serialize> {
-    pub error: E,
-    #[serde(default)]
-    pub message: String,
-}
-
-impl<E: Clone + Error + PartialEq + Serialize> PartialEq<ErrorWithMessage<E>>
-    for ErrorWithMessage<E>
-{
-    fn eq(&self, other: &Self) -> bool {
-        // Ignore `message` when comparing.
-        self.error == other.error
-    }
-}
-
-impl<'de, E> From<E> for ErrorWithMessage<E>
-where
-    E: Clone + Deserialize<'de> + Error + Serialize,
-{
-    fn from(error: E) -> Self {
-        Self::from(&error)
-    }
-}
-
-impl<'de, E> From<&E> for ErrorWithMessage<E>
-where
-    E: Clone + Deserialize<'de> + Error + Serialize,
-{
-    fn from(error: &E) -> Self {
-        let message = error.to_string();
-        let error = error.clone();
-        Self { error, message }
-    }
-}
 
 /// Top-level result type for `CapabilityRouteController` query result.
 #[derive(Deserialize, Serialize)]
@@ -112,7 +77,7 @@ pub struct ResultsBySeverity {
 /// Error-severity results from `CapabilityRouteController`.
 #[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct ErrorResult {
-    pub using_node: AbsoluteMoniker,
+    pub using_node: NodePath,
     pub capability: CapabilityName,
     pub error: ErrorWithMessage<CapabilityRouteError>,
 }
@@ -120,7 +85,7 @@ pub struct ErrorResult {
 /// Warning-severity results from `CapabilityRouteController`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct WarningResult {
-    pub using_node: AbsoluteMoniker,
+    pub using_node: NodePath,
     pub capability: CapabilityName,
     pub warning: ErrorWithMessage<CapabilityRouteError>,
 }
@@ -128,7 +93,7 @@ pub struct WarningResult {
 /// Ok-severity results from `CapabilityRouteController`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OkResult {
-    pub using_node: AbsoluteMoniker,
+    pub using_node: NodePath,
     pub capability: CapabilityName,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub route: Vec<RouteSegment>,
@@ -1213,7 +1178,7 @@ mod tests {
                                       "target_path": "/",
                                       "type": "directory"
                                   },
-                                  "abs_moniker": "/child"
+                                  "node_path": "/child"
                               },
                               {
                                   "action": "offer_by",
@@ -1233,7 +1198,7 @@ mod tests {
                                       "target_name": "good_dir",
                                       "type": "directory"
                                   },
-                                  "abs_moniker": "/"
+                                  "node_path": "/"
                               },
                               {
                                   "action": "declare_by",
@@ -1243,7 +1208,7 @@ mod tests {
                                       "source_path": null,
                                       "type": "directory"
                                   },
-                                  "abs_moniker": "/"
+                                  "node_path": "/"
                               }
                           ],
                           "using_node": "/child"

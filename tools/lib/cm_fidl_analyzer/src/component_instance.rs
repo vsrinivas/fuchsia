@@ -6,12 +6,13 @@ use {
     crate::{
         component_model::{BuildAnalyzerModelError, Child},
         environment::EnvironmentForAnalyzer,
+        node_path::NodePath,
         route::RouteMapper,
     },
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_rust::{CapabilityDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
         component_id_index::ComponentIdIndex,
@@ -50,6 +51,13 @@ impl ComponentInstanceForAnalyzer {
     /// Exposes the component's ComponentDecl. This is referenced directly in tests.
     pub fn decl_for_testing(&self) -> &ComponentDecl {
         &self.decl
+    }
+
+    /// Returns a representation of the instance's position in the component instance tree.
+    pub fn node_path(&self) -> NodePath {
+        NodePath::absolute_from_vec(
+            self.abs_moniker.path().into_iter().map(|m| m.as_str()).collect(),
+        )
     }
 
     // Creates a new root component instance.

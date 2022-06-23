@@ -10,6 +10,7 @@ use {
         component_instance::ComponentInstanceForAnalyzer,
         component_model::{AnalyzerModelError, ComponentModelForAnalyzer, ModelBuilderForAnalyzer},
         environment::{BOOT_RESOLVER_NAME, BOOT_SCHEME},
+        node_path::NodePath,
         route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
@@ -468,14 +469,14 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     type C = ComponentInstanceForAnalyzer;
 
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let target = self.model.get_instance(&moniker).expect("target instance not found");
+        let target_id = NodePath::new(moniker.path().clone());
+        let target = self.model.get_instance(&target_id).expect("target instance not found");
         let scope =
             if let CheckUse::EventStream { path: _, ref scope, name: _, expected_res: _ } = check {
                 Some(scope.clone())
             } else {
                 None
             };
-
         let (find_decl, expected) = self.find_matching_use(check, target.decl_for_testing());
 
         // If `find_decl` is not OK, check that `expected` has a matching error.
@@ -524,7 +525,8 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     }
 
     async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let target = self.model.get_instance(&moniker).expect("target instance not found");
+        let target =
+            self.model.get_instance(&NodePath::from(moniker)).expect("target instance not found");
 
         let (find_decl, expected) = self.find_matching_expose(check, target.decl_for_testing());
 
@@ -569,7 +571,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         &self,
         moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, anyhow::Error> {
-        self.model.get_instance(&moniker).map_err(|err| anyhow!(err))
+        self.model.get_instance(&NodePath::from(moniker.clone())).map_err(|err| anyhow!(err))
     }
 
     // File and directory operations
@@ -1374,7 +1376,7 @@ mod tests {
 
         let result = test.model.check_resolver(&b_component);
         assert!(result.result.is_ok());
-        assert_eq!(result.using_node, AbsoluteMoniker::parse_str("/b").unwrap());
+        assert_eq!(result.using_node, NodePath::absolute_from_vec(vec!["b"]));
         assert_eq!(result.capability, "base");
     }
 
@@ -1533,15 +1535,15 @@ mod tests {
             route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: offer_decl
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
             ]
@@ -1589,13 +1591,16 @@ mod tests {
         assert_eq!(
             route_map,
             vec![
-                RouteSegment::UseBy { abs_moniker: AbsoluteMoniker::root(), capability: use_decl },
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: use_decl
+                },
                 RouteSegment::ExposeBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: expose_decl
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
             ]
@@ -1630,9 +1635,12 @@ mod tests {
         assert_eq!(
             route_map,
             vec![
-                RouteSegment::UseBy { abs_moniker: AbsoluteMoniker::root(), capability: use_decl },
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: use_decl
+                },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
             ]
@@ -1724,23 +1732,23 @@ mod tests {
             route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/c").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: a_offer_decl
                 },
                 RouteSegment::ExposeBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: b_expose_decl
                 },
                 RouteSegment::ExposeBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b/d").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "d"]),
                     capability: d_expose_decl
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b/d").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "d"]),
                     capability: CapabilityDecl::Directory(directory_decl),
                 }
             ]
@@ -1803,15 +1811,15 @@ mod tests {
             route_map,
             vec![
                 RouteSegment::RequireRunner {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     runner: "hobbit".into(),
                 },
                 RouteSegment::RegisterBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Runner(runner_reg)
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Runner(runner_decl)
                 },
             ]
@@ -1881,15 +1889,15 @@ mod tests {
             storage_route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_storage_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: offer_storage_decl
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Storage(storage_decl.clone())
                 }
             ]
@@ -1898,11 +1906,11 @@ mod tests {
             backing_directory_route_map,
             vec![
                 RouteSegment::RegisterBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Storage(storage_decl.into())
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Directory(directory_decl)
                 }
             ]
@@ -1987,11 +1995,11 @@ mod tests {
             event_route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: offer_event_decl
                 },
                 RouteSegment::ProvideFromFramework { capability: "started".into() }
@@ -2008,11 +2016,11 @@ mod tests {
             event_source_route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_source_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: offer_event_source_decl
                 },
                 RouteSegment::ProvideAsBuiltin { capability: event_source_decl }
@@ -2071,11 +2079,11 @@ mod tests {
             route_map,
             vec![
                 RouteSegment::UseBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: offer_decl
                 },
                 RouteSegment::ProvideFromNamespace { capability: capability_decl }
@@ -2142,25 +2150,25 @@ mod tests {
 
         let route_map = test.model.check_resolver(&b_component);
 
-        assert_eq!(route_map.using_node, AbsoluteMoniker::parse_str("/b").unwrap(),);
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
         assert_eq!(route_map.capability, "base");
         assert_eq!(
             route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: "base".to_string(),
                 },
                 RouteSegment::RegisterBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Resolver(registration_decl)
                 },
                 RouteSegment::ExposeBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/c").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: expose_decl
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::parse_str("/c").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
             ]
@@ -2220,21 +2228,21 @@ mod tests {
 
         let route_map = test.model.check_resolver(&c_component);
 
-        assert_eq!(route_map.using_node, AbsoluteMoniker::parse_str("/b/c").unwrap());
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b", "c"]));
         assert_eq!(route_map.capability, "base");
         assert_eq!(
             route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b/c").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "c"]),
                     scheme: "base".to_string(),
                 },
                 RouteSegment::RegisterBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Resolver(registration_decl)
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
             ]
@@ -2275,13 +2283,13 @@ mod tests {
 
         let route_map = test.model.check_resolver(&b_component);
 
-        assert_eq!(route_map.using_node, AbsoluteMoniker::parse_str("/b").unwrap());
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
         assert_eq!(route_map.capability, BOOT_RESOLVER_NAME);
         assert_eq!(
             route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: BOOT_SCHEME.to_string(),
                 },
                 RouteSegment::ProvideAsBuiltin { capability: boot_resolver_decl }
@@ -2333,21 +2341,21 @@ mod tests {
 
         let route_map = test.model.check_resolver(&b_component);
 
-        assert_eq!(route_map.using_node, AbsoluteMoniker::parse_str("/b").unwrap());
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
         assert_eq!(route_map.capability, "test");
         assert_eq!(
             route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: "test".to_string(),
                 },
                 RouteSegment::RegisterBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Resolver(resolver_registration)
                 },
                 RouteSegment::DeclareBy {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
             ]
@@ -2386,7 +2394,7 @@ mod tests {
             route_map,
             vec![
                 RouteSegment::RequireRunner {
-                    abs_moniker: AbsoluteMoniker::root(),
+                    node_path: NodePath::absolute_from_vec(vec![]),
                     runner: "elf".into(),
                 },
                 RouteSegment::ProvideAsBuiltin { capability: elf_runner_decl },
@@ -2522,19 +2530,19 @@ mod tests {
         assert_eq!(
             directories,
             &vec![VerifyRouteResult {
-                using_node: AbsoluteMoniker::parse_str("/b").unwrap(),
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
                 capability: "bar_data".into(),
                 result: Ok(vec![
                     RouteSegment::UseBy {
-                        abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
                         capability: use_directory_decl,
                     },
                     RouteSegment::OfferBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: offer_directory_decl,
                     },
                     RouteSegment::DeclareBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: CapabilityDecl::Directory(directory_decl),
                     }
                 ])
@@ -2545,19 +2553,19 @@ mod tests {
         assert_eq!(
             runners,
             &vec![VerifyRouteResult {
-                using_node: AbsoluteMoniker::parse_str("/b").unwrap(),
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
                 capability: "dwarf".into(),
                 result: Ok(vec![
                     RouteSegment::RequireRunner {
-                        abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
                         runner: "dwarf".into(),
                     },
                     RouteSegment::RegisterBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: RegistrationDecl::Runner(runner_registration_decl)
                     },
                     RouteSegment::DeclareBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: CapabilityDecl::Runner(runner_decl)
                     }
                 ])
@@ -2569,19 +2577,19 @@ mod tests {
         assert_eq!(
             resolvers,
             &vec![VerifyRouteResult {
-                using_node: AbsoluteMoniker::parse_str("/b").unwrap(),
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
                 capability: "base_resolver".into(),
                 result: Ok(vec![
                     RouteSegment::RequireResolver {
-                        abs_moniker: AbsoluteMoniker::parse_str("/b").unwrap(),
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
                         scheme: "base".to_string(),
                     },
                     RouteSegment::RegisterBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: RegistrationDecl::Resolver(resolver_registration_decl)
                     },
                     RouteSegment::DeclareBy {
-                        abs_moniker: AbsoluteMoniker::root(),
+                        node_path: NodePath::absolute_from_vec(vec![]),
                         capability: CapabilityDecl::Resolver(resolver_decl)
                     }
                 ])
@@ -2593,7 +2601,7 @@ mod tests {
         assert_eq!(
             protocols,
             &vec![VerifyRouteResult {
-                using_node: AbsoluteMoniker::parse_str("/b").unwrap(),
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
                 capability: "bad_protocol".into(),
                 result: Err(CapabilityRouteError::AnalyzerModelError(
                     AnalyzerModelError::RoutingError(

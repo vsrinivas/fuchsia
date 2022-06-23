@@ -11,33 +11,33 @@ use {
     std::{collections::HashSet, fs, path::PathBuf},
 };
 
-type Moniker = String;
+type NodePath = String;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct ComponentResolversRequest {
     scheme: String,
-    moniker: Moniker,
+    moniker: NodePath,
     protocol: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 struct ComponentResolversResponse {
     deps: HashSet<PathBuf>,
-    monikers: Vec<Moniker>,
+    monikers: Vec<NodePath>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct AllowListEntry {
     #[serde(flatten)]
     query: ComponentResolversRequest,
-    components: Vec<Moniker>,
+    components: Vec<NodePath>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct AllowList(Vec<AllowListEntry>);
 
 impl AllowList {
-    pub fn iter(&self) -> impl Iterator<Item = (ComponentResolversRequest, &[Moniker])> {
+    pub fn iter(&self) -> impl Iterator<Item = (ComponentResolversRequest, &[NodePath])> {
         self.0.iter().map(|entry| (entry.query.clone(), entry.components.as_slice()))
     }
 }
@@ -49,7 +49,7 @@ trait QueryComponentResolvers {
     fn query(
         &self,
         scheme: String,
-        moniker: Moniker,
+        moniker: NodePath,
         protocol: String,
     ) -> Result<ComponentResolversResponse>;
 }
@@ -67,7 +67,7 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
     fn query(
         &self,
         scheme: String,
-        moniker: Moniker,
+        moniker: NodePath,
         protocol: String,
     ) -> Result<ComponentResolversResponse> {
         let request = ComponentResolversRequest { scheme, moniker, protocol };
@@ -110,7 +110,7 @@ fn verify_component_resolvers(
     let mut deps = HashSet::new();
 
     for (query, allowed_monikers) in allowlist.iter() {
-        let allowed_monikers: HashSet<&Moniker> = allowed_monikers.into_iter().collect();
+        let allowed_monikers: HashSet<&NodePath> = allowed_monikers.into_iter().collect();
 
         let response = scrutiny
             .query(query.scheme.clone(), query.moniker.clone(), query.protocol.clone())
@@ -176,7 +176,7 @@ mod tests {
 
     #[derive(Debug)]
     struct MockQueryComponentResolvers {
-        responses: HashMap<(String, Moniker, String), String>,
+        responses: HashMap<(String, NodePath, String), String>,
     }
 
     impl MockQueryComponentResolvers {
@@ -186,8 +186,8 @@ mod tests {
 
         fn with_response(
             self,
-            query: (String, Moniker, String),
-            response: Vec<Moniker>,
+            query: (String, NodePath, String),
+            response: Vec<NodePath>,
             response_deps: Vec<String>,
         ) -> Self {
             let raw_response = serde_json::to_string(&ComponentResolversResponse {
@@ -198,7 +198,11 @@ mod tests {
             self.with_raw_response(query, raw_response)
         }
 
-        fn with_raw_response(mut self, query: (String, Moniker, String), response: String) -> Self {
+        fn with_raw_response(
+            mut self,
+            query: (String, NodePath, String),
+            response: String,
+        ) -> Self {
             self.responses.insert(query, response);
             self
         }
@@ -208,7 +212,7 @@ mod tests {
         fn query(
             &self,
             scheme: String,
-            moniker: Moniker,
+            moniker: NodePath,
             protocol: String,
         ) -> Result<ComponentResolversResponse> {
             let key = (scheme, moniker, protocol);
