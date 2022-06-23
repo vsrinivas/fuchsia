@@ -252,7 +252,7 @@ impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
     }
 
     fn address(&self) -> ComponentAddress {
-        ComponentAddress::new_absolute("", "", "", None)
+        ComponentAddress::new_absolute("", "", "", None, None)
     }
 
     fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext> {
