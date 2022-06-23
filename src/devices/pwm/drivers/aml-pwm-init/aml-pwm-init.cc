@@ -4,6 +4,7 @@
 
 #include "aml-pwm-init.h"
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <unistd.h>
 
 #include <ddk/metadata/init-step.h>
@@ -57,6 +58,15 @@ zx_status_t PwmInitDevice::Init() {
   if (((status = wifi_gpio_.SetAltFunction(1)) != ZX_OK)) {
     zxlogf(ERROR, "%s: could not initialize GPIO for WIFI", __func__);
     return ZX_ERR_NO_RESOURCES;
+  }
+
+  // Enable PWM_CLK_* for WIFI 32K768
+  ddk::ClockProtocolClient wifi_32k768_clk(parent(), "wifi-32k768-clk");
+  if (wifi_32k768_clk.is_valid()) {
+    if ((status = wifi_32k768_clk.Enable()) != ZX_OK) {
+      zxlogf(ERROR, "%s: could not enable clk for wifi_32k768", __func__);
+      return status;
+    }
   }
 
   if ((status = pwm_.Enable()) != ZX_OK) {

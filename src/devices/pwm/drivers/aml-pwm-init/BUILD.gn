@@ -24,6 +24,7 @@ fuchsia_driver("aml-pwm-init-driver") {
   sources = [ "aml-pwm-init.cc" ]
   deps = [
     ":aml-pwm-init-bind",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",
     "//src/devices/lib/amlogic",
@@ -51,6 +52,7 @@ test("aml-pwm-init-test-bin") {
   ]
   deps = [
     ":aml-pwm-init-bind",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",

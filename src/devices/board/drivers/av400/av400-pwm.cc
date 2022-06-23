@@ -12,6 +12,7 @@
 #include <soc/aml-a5/a5-pwm.h>
 
 #include "av400.h"
+#include "src/devices/board/drivers/av400/pwm_init_bind.h"
 
 namespace av400 {
 
@@ -65,6 +66,32 @@ zx_status_t Av400::PwmInit() {
     zxlogf(ERROR, "%s: DeviceAdd failed %s", __func__, zx_status_get_string(status));
     return status;
   }
+
+  // Add a composite device for pwm init driver.
+  const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_A5},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_PWM_INIT},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = std::size(props),
+      .fragments = pwm_init_fragments,
+      .fragments_count = std::size(pwm_init_fragments),
+      .primary_fragment = "pwm",
+      .spawn_colocated = false,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("pwm-init", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
+    return status;
+  }
+
+  zxlogf(INFO, "Added PwmInitDevice");
 
   return ZX_OK;
 }

@@ -55,4 +55,5 @@ uint AXG_CLK_ID {
 // Values taken from <soc/aml-meson/a5-clk.h>
 uint A5_CLK_ID {
   CLK_NAND_SEL = 0x4000b,
+  CLK_PWM_G = 0x1001f,
 };

@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite pwm_init;
+
+using fuchsia.pwm;
+using fuchsia.amlogic.platform.a5;
+using fuchsia.gpio;
+using fuchsia.amlogic.platform.meson;
+using fuchsia.clock;
+
+primary node "pwm" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.a5.BIND_PWM_ID.PWM_G; // WIFI_32K768
+}
+
+node "gpio-wifi" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.a5.GPIOX_PIN_ID.PIN_16;  // GPIO_SOC_WIFI_LPO_32k768
+}
+
+node "gpio-bt" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.a5.GPIOX_PIN_ID.PIN_17;  // GPIO_SOC_BT_REG_ON
+}
+
+node "wifi-32k768-clk" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.A5_CLK_ID.CLK_PWM_G;  // CLK_PWM_G
+}
