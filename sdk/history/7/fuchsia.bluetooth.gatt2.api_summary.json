@@ -1,6 +1,0 @@
-[
-    {
-        "kind": "library",
-        "name": "fuchsia.bluetooth.gatt2"
-    }
-]

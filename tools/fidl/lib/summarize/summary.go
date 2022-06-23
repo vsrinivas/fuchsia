@@ -8,6 +8,7 @@
 package summarize
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,78 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
+
+type summary []Element
+
+// SummaryFormat is a representation of a FIDL API summary.
+//
+// SummaryFormat implements flag.Setter for convenient use in command-line tools.
+type SummaryFormat string
+
+// SummaryFormat constants.
+const (
+	TextSummaryFormat SummaryFormat = "text"
+	JSONSummaryFormat SummaryFormat = "json"
+)
+
+// String implements flag.Setter.
+func (f *SummaryFormat) String() string {
+	return string(*f)
+}
+
+// Set implements flag.Setter.
+func (f *SummaryFormat) Set(value string) error {
+	format := SummaryFormat(value)
+	if _, err := format.formatter(); err != nil {
+		return err
+	}
+	*f = format
+	return nil
+}
+
+func (f SummaryFormat) formatter() (func(io.Writer, summary) error, error) {
+	switch f {
+	case TextSummaryFormat:
+		return formatTextSummary, nil
+	case JSONSummaryFormat:
+		return formatJSONSummary, nil
+	}
+	return nil, fmt.Errorf("unimplemented summary format %q", string(f))
+}
+
+// GenerateSummary summarizes root and returns the serialized result in the given format.
+func GenerateSummary(root fidlgen.Root, format SummaryFormat) ([]byte, error) {
+	var b bytes.Buffer
+	if err := WriteSummary(&b, root, format); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// WriteSummary summarizes root and writes the serialized result to the given Writer.
+func WriteSummary(w io.Writer, root fidlgen.Root, format SummaryFormat) error {
+	s := summarize(root)
+	f, err := format.formatter()
+	if err != nil {
+		return err
+	}
+	return f(w, s)
+}
+
+func formatTextSummary(w io.Writer, s summary) error {
+	for _, e := range s {
+		fmt.Fprintf(w, "%v\n", e)
+	}
+	return nil
+}
+
+func formatJSONSummary(w io.Writer, s summary) error {
+	e := json.NewEncoder(w)
+	// 4-level indent is chosen to match `fx format-code`.
+	e.SetIndent("", "    ")
+	e.SetEscapeHTML(false)
+	return e.Encode(serialize([]Element(s)))
+}
 
 // Element describes a single platform surface element.  Use Summarize to
 // convert a FIDL AST into Elements.
@@ -116,25 +189,6 @@ func (s *summarizer) registerPayloads(payloads payloadDict) {
 	s.symbols.addPayloads(payloads)
 }
 
-// Write produces an API summary for the FIDL AST from the root into the supplied
-// writer.
-func Write(root fidlgen.Root, out io.Writer) error {
-	for _, e := range Elements(root) {
-		fmt.Fprintf(out, "%v\n", e)
-	}
-	return nil
-}
-
-// WriteJSON produces an API summary for the FIDL AST from the root into the
-// supplied writer, and formats the data as JSON.
-func WriteJSON(root fidlgen.Root, out io.Writer) error {
-	e := json.NewEncoder(out)
-	// 4-level indent is chosen to match `fx format-code`.
-	e.SetIndent("", "    ")
-	e.SetEscapeHTML(false)
-	return e.Encode(serialize(Elements(root)))
-}
-
 func serialize(e []Element) []ElementStr {
 	var ret []ElementStr
 	for _, l := range e {
@@ -192,7 +246,7 @@ func processUnions(unions []fidlgen.Union, mtum fidlgen.MethodTypeUsageMap, payl
 
 // Elements returns the API elements found in the supplied AST root in a
 // canonical ordering.
-func Elements(root fidlgen.Root) []Element {
+func summarize(root fidlgen.Root) summary {
 	var s summarizer
 
 	// Do a first pass of the protocols, creating a map of all names of types that
@@ -220,5 +274,5 @@ func Elements(root fidlgen.Root) []Element {
 	s.addProtocols(root.Protocols)
 	s.addElement(library{r: root})
 
-	return s.Elements()
+	return summary(s.Elements())
 }

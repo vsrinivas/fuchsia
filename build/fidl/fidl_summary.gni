@@ -117,6 +117,7 @@ template("fidl_summary_json") {
       rebase_path(_json_representation, root_build_dir),
       "--output-file",
       rebase_path(_summary_file_json, root_build_dir),
+      "--suppress-empty-library",
     ]
     metadata = {
       # Refer to //sdk/cts/plasa/plasa_artifacts.gni for the explanation of

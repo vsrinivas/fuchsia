@@ -5,12 +5,10 @@
 package summarize
 
 import (
-	"io"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
@@ -48,7 +46,7 @@ type summaryTestCase struct {
 	expected string
 }
 
-func TestWrite(t *testing.T) {
+func TestTextSummaryFormat(t *testing.T) {
 	tests := []summaryTestCase{
 		{
 			name: "library only",
@@ -670,10 +668,10 @@ library l
 `,
 		},
 	}
-	runWriteTests(t, tests, Write)
+	runGenerateSummaryTests(t, tests, TextSummaryFormat)
 }
 
-func TestWriteJSON(t *testing.T) {
+func TestJSONSummaryFormat(t *testing.T) {
 	tests := []summaryTestCase{
 		{
 			name: "library only",
@@ -1884,10 +1882,10 @@ type T = table {
 `,
 		},
 	}
-	runWriteTests(t, tests, WriteJSON)
+	runGenerateSummaryTests(t, tests, JSONSummaryFormat)
 }
 
-func runWriteTests(t *testing.T, tests []summaryTestCase, writeFn func(fidlgen.Root, io.Writer) error) {
+func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase, format SummaryFormat) {
 	t.Helper()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1896,17 +1894,18 @@ func runWriteTests(t *testing.T, tests []summaryTestCase, writeFn func(fidlgen.R
 				c = c.WithDependency(test.dep)
 			}
 			r := c.Single(test.fidl)
-			var sb strings.Builder
-			if err := writeFn(r, &sb); err != nil {
+			b, err := GenerateSummary(r, format)
+			if err != nil {
 				t.Fatalf("while summarizing file: %v", err)
 			}
-			actual := strings.Split(sb.String(), "\n")
+			summary := string(b)
+			actual := strings.Split(summary, "\n")
 			expected := strings.Split(test.expected, "\n")
 
 			if !cmp.Equal(expected, actual) {
 				t.Errorf("expected:\n---BEGIN---\n%+v\n---END---\n\n"+
 					"actual:\n---BEGIN---\n%+v\n---END---\n\ndiff:\n%v\n\nroot: %+v",
-					test.expected, sb.String(),
+					test.expected, summary,
 					cmp.Diff(expected, actual), r)
 			}
 		})

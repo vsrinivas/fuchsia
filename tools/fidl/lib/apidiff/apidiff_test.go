@@ -1248,7 +1248,7 @@ api_diff:
 func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	t.Helper()
 	var buf strings.Builder
-	if err := summarize.WriteJSON(r, &buf); err != nil {
+	if err := summarize.WriteSummary(&buf, r, summarize.JSONSummaryFormat); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()
