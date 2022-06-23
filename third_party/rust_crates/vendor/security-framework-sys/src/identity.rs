@@ -1,4 +1,6 @@
-use core_foundation_sys::base::{CFTypeID, CFTypeRef, OSStatus};
+#[cfg(target_os = "macos")]
+use core_foundation_sys::base::CFTypeRef;
+use core_foundation_sys::base::{CFTypeID, OSStatus};
 
 use crate::base::{SecCertificateRef, SecIdentityRef, SecKeyRef};
 

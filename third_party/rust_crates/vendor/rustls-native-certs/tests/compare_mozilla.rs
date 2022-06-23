@@ -37,6 +37,8 @@ fn stringify_x500name(subject: &[u8]) -> String {
             &[0x55, 0x04, 0x09] => "STREET",
             &[0x55, 0x04, 0x0a] => "O",
             &[0x55, 0x04, 0x0b] => "OU",
+            &[0x55, 0x04, 0x11] => "postalCode",
+            &[0x55, 0x04, 0x61] => "organizationIdentifier",
             &[0x09, 0x92, 0x26, 0x89, 0x93, 0xf2, 0x2c, 0x64, 0x01, 0x19] => "domainComponent",
             &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01] => "emailAddress",
             _ => panic!("unhandled x500 attr {:?}", oid)
@@ -83,6 +85,9 @@ fn test_does_not_have_many_roots_unknown_by_mozilla() {
         }
     }
 
+    #[cfg(windows)]
+    let threshold = 1.6; // no more than 160% extra roots; windows CI vm has lots of extra roots
+    #[cfg(not(windows))]
     let threshold = 0.5; // no more than 50% extra roots
     let diff = (missing_in_moz_roots as f64) / (mozilla.len() as f64);
     println!("mozilla: {:?}", mozilla.len());

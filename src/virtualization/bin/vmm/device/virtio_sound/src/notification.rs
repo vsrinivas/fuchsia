@@ -28,7 +28,7 @@ impl Notification {
     pub fn set(&self) {
         // This cannot fail unless all receiver handles are dropped, but self must
         // outlive at least one receiver handle.
-        let _ = self.inner.send.broadcast(true);
+        let _ = self.inner.send.send(true);
     }
 
     /// Reports whether the notification has been set.
@@ -51,12 +51,13 @@ impl Notification {
         //
         // Hence if the first recv call returns false, we should try again.
         loop {
-            match recv.recv().await {
-                Some(true) => return,
-                Some(false) => continue,
-                // Cannot happen: None means the sender was dropped, but self must
-                // outlive the sender.
-                None => panic!("impossible"),
+            // Cannot happen: Err means the sender was dropped, but self must
+            // outlive the sender.
+            recv.changed().await.expect("sender to not be dropped");
+            if *recv.borrow_and_update() {
+                return;
+            } else {
+                continue;
             }
         }
     }

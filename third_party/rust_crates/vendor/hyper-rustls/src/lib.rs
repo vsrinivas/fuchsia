@@ -5,31 +5,24 @@
 //! ## Example
 //!
 //! ```no_run
-//! # #[cfg(all(any(feature = "rustls-native-certs", feature = "webpki-roots"), feature = "tokio-runtime"))]
+//! # #[cfg(all(feature = "rustls-native-certs", feature = "tokio-runtime"))]
 //! # fn main() {
 //! use hyper::{Body, Client, StatusCode, Uri};
 //!
 //! let mut rt = tokio::runtime::Runtime::new().unwrap();
 //! let url = ("https://hyper.rs").parse().unwrap();
-//! let https = hyper_rustls::HttpsConnector::new();
+//! let https = hyper_rustls::HttpsConnector::with_native_roots();
 //!
 //! let client: Client<_, hyper::Body> = Client::builder().build(https);
 //!
 //! let res = rt.block_on(client.get(url)).unwrap();
 //! assert_eq!(res.status(), StatusCode::OK);
 //! # }
-//! # #[cfg(not(feature = "tokio-runtime"))]
+//! # #[cfg(not(all(feature = "rustls-native-certs", feature = "tokio-runtime")))]
 //! # fn main() {}
 //! ```
 
-#[cfg(all(
-    feature = "tokio-runtime",
-    any(not(feature = "rustls-native-certs"), feature = "webpki-roots"),
-    any(not(feature = "webpki-roots"), feature = "rustls-native-certs")
-))]
-compile_error!(
-    "Must enable exactly one of rustls-native-certs (default) or webpki-roots with tokio-runtime! (note: use `default-features = false' in a binary crate for one or other)"
-);
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod connector;
 mod stream;

@@ -62,7 +62,7 @@ impl Node {
 
         // If this node was at the head of the list, the next node is ready.
         match (&self.prev, &self.next) {
-            (None, Some(next)) => next.borrow().ready.notify(),
+            (None, Some(next)) => next.borrow().ready.notify_one(),
             _ => (),
         };
     }
@@ -98,7 +98,7 @@ impl Sequencer {
         // The first node gets notified immediately.
         if list.head.is_none() {
             list.head = Some(node.clone());
-            node.borrow().ready.notify();
+            node.borrow().ready.notify_one();
         }
 
         Ticket { node: Some(node) }

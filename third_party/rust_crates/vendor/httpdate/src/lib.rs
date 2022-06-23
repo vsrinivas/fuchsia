@@ -16,39 +16,26 @@
 //! and format timestamps. Convert a sytem time to `HttpDate` and vice versa.
 //! The `HttpType` (8 bytes) is smaller than `SystemTime` (16 bytes) and
 //! using the display impl avoids a temporary allocation.
+#![forbid(unsafe_code)]
 
 use std::error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
-use std::num::ParseIntError;
 use std::time::SystemTime;
 
-pub use httpdate::HttpDate;
+pub use date::HttpDate;
 
-mod httpdate;
+mod date;
 
 /// An opaque error type for all parsing errors.
 #[derive(Debug)]
 pub struct Error(());
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        "string contains no or an invalid date"
-    }
-    fn cause(&self) -> Option<&error::Error> {
-        None
-    }
-}
+impl error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        f.write_str(error::Error::description(self))
-    }
-}
-
-impl From<ParseIntError> for Error {
-    fn from(_: ParseIntError) -> Error {
-        Error(())
+        f.write_str("string contains no or an invalid date")
     }
 }
 
@@ -79,23 +66,29 @@ mod tests {
     use std::str;
     use std::time::{Duration, UNIX_EPOCH};
 
-    use super::{HttpDate, parse_http_date, fmt_http_date};
+    use super::{fmt_http_date, parse_http_date, HttpDate};
 
     #[test]
     fn test_rfc_example() {
         let d = UNIX_EPOCH + Duration::from_secs(784111777);
-        assert_eq!(d,
-                   parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT").expect("#1"));
-        assert_eq!(d,
-                   parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT").expect("#2"));
+        assert_eq!(
+            d,
+            parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT").expect("#1")
+        );
+        assert_eq!(
+            d,
+            parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT").expect("#2")
+        );
         assert_eq!(d, parse_http_date("Sun Nov  6 08:49:37 1994").expect("#3"));
     }
 
     #[test]
     fn test2() {
         let d = UNIX_EPOCH + Duration::from_secs(1475419451);
-        assert_eq!(d,
-                   parse_http_date("Sun, 02 Oct 2016 14:44:11 GMT").expect("#1"));
+        assert_eq!(
+            d,
+            parse_http_date("Sun, 02 Oct 2016 14:44:11 GMT").expect("#1")
+        );
         assert!(parse_http_date("Sun Nov 10 08:00:00 1000").is_err());
         assert!(parse_http_date("Sun Nov 10 08*00:00 2000").is_err());
         assert!(parse_http_date("Sunday, 06-Nov-94 08+49:37 GMT").is_err());
@@ -145,5 +138,23 @@ mod tests {
     #[test]
     fn size_of() {
         assert_eq!(::std::mem::size_of::<HttpDate>(), 8);
+    }
+
+    #[test]
+    fn test_date_comparison() {
+        let a = UNIX_EPOCH + Duration::from_secs(784111777);
+        let b = a + Duration::from_secs(30);
+        assert!(a < b);
+        let a_date: HttpDate = a.into();
+        let b_date: HttpDate = b.into();
+        assert!(a_date < b_date);
+        assert_eq!(a_date.cmp(&b_date), ::std::cmp::Ordering::Less)
+    }
+
+    #[test]
+    fn test_parse_bad_date() {
+        // 1994-11-07 is actually a Monday
+        let parsed = "Sun, 07 Nov 1994 08:48:37 GMT".parse::<HttpDate>();
+        assert!(parsed.is_err())
     }
 }

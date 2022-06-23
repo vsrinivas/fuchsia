@@ -537,7 +537,7 @@ async fn client_init(
 async fn parse_request(
     request: hyper::Request<hyper::Body>,
 ) -> Result<(RequestId, MethodId, Value), Error> {
-    use bytes::buf::ext::BufExt as _;
+    use bytes::Buf as _;
 
     let body = hyper::body::aggregate(request.into_body()).await.context("read request")?;
 

@@ -11,13 +11,14 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "security-framework"
-version = "0.4.4"
+version = "2.3.1"
 authors = ["Steven Fackler <sfackler@gmail.com>", "Kornel <kornel@geekhood.net>"]
 exclude = ["test/*"]
 description = "Security.framework bindings for macOS and iOS"
 homepage = "https://lib.rs/crates/security_framework"
-documentation = "https://kornelski.github.io/rust-security-framework/doc/security_framework/"
+documentation = "https://docs.rs/security_framework"
 readme = "README.md"
 keywords = ["iOS", "TLS", "SSL", "crypto", "keychain"]
 categories = ["os::macos-apis", "cryptography", "api-bindings"]
@@ -38,18 +39,26 @@ name = "set_internet_password"
 version = "1.2.1"
 
 [dependencies.core-foundation]
-version = "0.7"
+version = "0.9.1"
 
 [dependencies.core-foundation-sys]
-version = "0.7"
+version = "0.8.2"
 
 [dependencies.libc]
-version = "0.2.68"
+version = "0.2.95"
+
+[dependencies.log]
+version = "0.4.14"
+optional = true
 
 [dependencies.security-framework-sys]
-version = "0.4.3"
+version = "2.3.0"
+default-features = false
+[dev-dependencies.env_logger]
+version = "0.8.3"
+
 [dev-dependencies.hex]
-version = "0.4.2"
+version = "0.4.3"
 
 [dev-dependencies.tempdir]
 version = "0.3.7"
@@ -59,8 +68,10 @@ OSX_10_10 = ["OSX_10_9", "security-framework-sys/OSX_10_10"]
 OSX_10_11 = ["OSX_10_10", "security-framework-sys/OSX_10_11"]
 OSX_10_12 = ["OSX_10_11", "security-framework-sys/OSX_10_12"]
 OSX_10_13 = ["OSX_10_12", "security-framework-sys/OSX_10_13", "alpn", "session-tickets"]
+OSX_10_14 = ["OSX_10_13", "security-framework-sys/OSX_10_14"]
 OSX_10_9 = ["security-framework-sys/OSX_10_9"]
 alpn = []
+default = ["OSX_10_9"]
 nightly = []
 session-tickets = []
 [badges.maintenance]

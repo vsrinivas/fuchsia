@@ -7,9 +7,8 @@ use std::net::SocketAddr;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::{io, thread};
-use tokio::io::{copy, split};
+use tokio::io::{copy, split, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::prelude::*;
 use tokio::runtime;
 use tokio_rustls::{TlsAcceptor, TlsConnector};
 
@@ -31,17 +30,16 @@ lazy_static! {
         let (send, recv) = channel();
 
         thread::spawn(move || {
-            let mut runtime = runtime::Builder::new()
-                .basic_scheduler()
+            let runtime = runtime::Builder::new_current_thread()
                 .enable_io()
                 .build()
                 .unwrap();
-
-            let handle = runtime.handle().clone();
+            let runtime = Arc::new(runtime);
+            let runtime2 = runtime.clone();
 
             let done = async move {
                 let addr = SocketAddr::from(([127, 0, 0, 1], 0));
-                let mut listener = TcpListener::bind(&addr).await?;
+                let listener = TcpListener::bind(&addr).await?;
 
                 send.send(listener.local_addr()?).unwrap();
 
@@ -59,7 +57,7 @@ lazy_static! {
                     }
                     .unwrap_or_else(|err| eprintln!("server: {:?}", err));
 
-                    handle.spawn(fut);
+                    runtime2.spawn(fut);
                 }
             }
             .unwrap_or_else(|err: io::Error| eprintln!("server: {:?}", err));
@@ -102,7 +100,7 @@ async fn pass() -> io::Result<()> {
     // TcpStream::bind now returns a future it creates a race
     // condition until its ready sometimes.
     use std::time::*;
-    tokio::time::delay_for(Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     let mut config = ClientConfig::new();
     let mut chain = BufReader::new(Cursor::new(chain));

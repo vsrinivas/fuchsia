@@ -15,35 +15,43 @@ pub struct KeyType(CFStringRef);
 
 #[allow(missing_docs)]
 impl KeyType {
+    #[inline(always)]
     pub fn rsa() -> Self {
         unsafe { Self(kSecAttrKeyTypeRSA) }
     }
 
+    #[inline(always)]
     pub fn dsa() -> Self {
         unsafe { Self(kSecAttrKeyTypeDSA) }
     }
 
+    #[inline(always)]
     pub fn aes() -> Self {
         unsafe { Self(kSecAttrKeyTypeAES) }
     }
 
+    #[inline(always)]
     pub fn des() -> Self {
         unsafe { Self(kSecAttrKeyTypeDES) }
     }
 
+    #[inline(always)]
     pub fn triple_des() -> Self {
         unsafe { Self(kSecAttrKeyType3DES) }
     }
 
+    #[inline(always)]
     pub fn rc4() -> Self {
         unsafe { Self(kSecAttrKeyTypeRC4) }
     }
 
+    #[inline(always)]
     pub fn cast() -> Self {
         unsafe { Self(kSecAttrKeyTypeCAST) }
     }
 
     #[cfg(feature = "OSX_10_9")]
+    #[inline(always)]
     pub fn ec() -> Self {
         unsafe { Self(kSecAttrKeyTypeEC) }
     }
@@ -62,6 +70,7 @@ pub trait ItemSearchOptionsExt {
 }
 
 impl ItemSearchOptionsExt for ItemSearchOptions {
+    #[inline(always)]
     fn keychains(&mut self, keychains: &[SecKeychain]) -> &mut Self {
         ItemSearchOptionsInternals::keychains(self, keychains)
     }
@@ -69,14 +78,13 @@ impl ItemSearchOptionsExt for ItemSearchOptions {
 
 #[cfg(test)]
 mod test {
-    use tempdir::TempDir;
-
     use crate::item::*;
     use crate::os::macos::certificate::SecCertificateExt;
+    use crate::os::macos::item::ItemSearchOptionsExt;
     use crate::os::macos::test::keychain;
+    use tempdir::TempDir;
 
     #[test]
-    #[allow(deprecated)]
     fn find_certificate() {
         let dir = p!(TempDir::new("find_certificate"));
         let keychain = keychain(dir.path());

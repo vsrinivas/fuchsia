@@ -18,7 +18,8 @@ unsafe impl Sync for SecPolicy {}
 unsafe impl Send for SecPolicy {}
 
 impl fmt::Debug for SecPolicy {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    #[cold]
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("SecPolicy").finish()
     }
 }
@@ -30,10 +31,8 @@ impl SecPolicy {
     /// you are a client looking to validate a server's certificate chain).
     pub fn create_ssl(protocol_side: SslProtocolSide, hostname: Option<&str>) -> Self {
         let hostname = hostname.map(CFString::new);
-        let hostname = hostname
-            .as_ref()
-            .map(|s| s.as_concrete_TypeRef())
-            .unwrap_or(ptr::null_mut());
+        let hostname =
+            hostname.as_ref().map(|s| s.as_concrete_TypeRef()).unwrap_or(ptr::null_mut());
         let is_server = protocol_side == SslProtocolSide::SERVER;
         unsafe {
             let policy = SecPolicyCreateSSL(is_server as _, hostname);

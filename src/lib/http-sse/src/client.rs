@@ -51,7 +51,7 @@ pub enum ClientConnectError {
     CreateRequest(hyper::http::Error),
 
     #[error("error making http request: {}", _0)]
-    MakeRequest(hyper::error::Error),
+    MakeRequest(hyper::Error),
 
     #[error("http server responded with status other than OK: {}", _0)]
     HttpStatus(hyper::StatusCode),
@@ -86,7 +86,7 @@ impl Stream for Client {
 #[derive(Debug, Error)]
 pub enum ClientPollError {
     #[error("error downloading next chunk: {}", _0)]
-    NextChunk(hyper::error::Error),
+    NextChunk(hyper::Error),
 }
 
 #[cfg(test)]

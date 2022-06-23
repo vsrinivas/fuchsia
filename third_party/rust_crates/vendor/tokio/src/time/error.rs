@@ -1,3 +1,5 @@
+//! Time error types.
+
 use self::Kind::*;
 use std::error;
 use std::fmt;
@@ -13,7 +15,7 @@ use std::fmt;
 ///   succeed in the future.
 ///
 /// * `at_capacity` occurs when a timer operation is attempted, but the timer
-///   instance is currently handling its maximum number of outstanding delays.
+///   instance is currently handling its maximum number of outstanding sleep instances.
 ///   In this case, the operation is not able to be performed at the current
 ///   moment, and `at_capacity` is returned. This is a transient error, i.e., at
 ///   some point in the future, if the operation is attempted again, it might
@@ -21,14 +23,33 @@ use std::fmt;
 ///   way to do this would be dropping the future that issued the timer operation.
 ///
 /// [shed load]: https://en.wikipedia.org/wiki/Load_Shedding
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Error(Kind);
 
-#[derive(Debug)]
-enum Kind {
-    Shutdown,
-    AtCapacity,
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[repr(u8)]
+pub(crate) enum Kind {
+    Shutdown = 1,
+    AtCapacity = 2,
+    Invalid = 3,
 }
+
+impl From<Kind> for Error {
+    fn from(k: Kind) -> Self {
+        Error(k)
+    }
+}
+
+/// Errors returned by `Timeout`.
+#[derive(Debug, PartialEq)]
+pub struct Elapsed(());
+
+#[derive(Debug)]
+pub(crate) enum InsertError {
+    Elapsed,
+}
+
+// ===== impl Error =====
 
 impl Error {
     /// Creates an error representing a shutdown timer.
@@ -38,10 +59,7 @@ impl Error {
 
     /// Returns `true` if the error was caused by the timer being shutdown.
     pub fn is_shutdown(&self) -> bool {
-        match self.0 {
-            Kind::Shutdown => true,
-            _ => false,
-        }
+        matches!(self.0, Kind::Shutdown)
     }
 
     /// Creates an error representing a timer at capacity.
@@ -51,10 +69,17 @@ impl Error {
 
     /// Returns `true` if the error was caused by the timer being at capacity.
     pub fn is_at_capacity(&self) -> bool {
-        match self.0 {
-            Kind::AtCapacity => true,
-            _ => false,
-        }
+        matches!(self.0, Kind::AtCapacity)
+    }
+
+    /// Creates an error representing a misconfigured timer.
+    pub fn invalid() -> Error {
+        Error(Invalid)
+    }
+
+    /// Returns `true` if the error was caused by the timer being misconfigured.
+    pub fn is_invalid(&self) -> bool {
+        matches!(self.0, Kind::Invalid)
     }
 }
 
@@ -66,7 +91,30 @@ impl fmt::Display for Error {
         let descr = match self.0 {
             Shutdown => "the timer is shutdown, must be called from the context of Tokio runtime",
             AtCapacity => "timer is at capacity and cannot create a new entry",
+            Invalid => "timer duration exceeds maximum duration",
         };
         write!(fmt, "{}", descr)
+    }
+}
+
+// ===== impl Elapsed =====
+
+impl Elapsed {
+    pub(crate) fn new() -> Self {
+        Elapsed(())
+    }
+}
+
+impl fmt::Display for Elapsed {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "deadline has elapsed".fmt(fmt)
+    }
+}
+
+impl std::error::Error for Elapsed {}
+
+impl From<Elapsed> for std::io::Error {
+    fn from(_err: Elapsed) -> std::io::Error {
+        std::io::ErrorKind::TimedOut.into()
     }
 }

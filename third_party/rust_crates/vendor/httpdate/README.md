@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/pyfisch/httpdate.svg?branch=master)](https://travis-ci.org/pyfisch/httpdate)
 [![Crates.io](https://img.shields.io/crates/v/httpdate.svg)](https://crates.io/crates/httpdate)
-[Documentation](https://pyfisch.github.io/httpdate/httpdate/index.html)
+[![Documentation](https://docs.rs/httpdate/badge.svg)](https://docs.rs/httpdate)
 
 Multiple HTTP header fields store timestamps.
 For example a response created on May 15, 2015 may contain the header
@@ -15,6 +15,11 @@ This crate provides two public functions:
 
 * `parse_http_date` to parse a HTTP datetime string to a system time
 * `fmt_http_date` to format a system time to a IMF-fixdate
+
+In addition it exposes the `HttpDate` type that can be used to parse
+and format timestamps. Convert a sytem time to `HttpDate` and vice versa.
+The `HttpType` (8 bytes) is smaller than `SystemTime` (16 bytes) and
+using the display impl avoids a temporary allocation.
 
 Read the [blog post](https://pyfisch.org/blog/http-datetime-handling/) to learn
 more.

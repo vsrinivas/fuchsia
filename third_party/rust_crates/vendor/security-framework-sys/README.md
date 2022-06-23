@@ -1,8 +1,8 @@
-# rust-security-framework
+# macOS/iOS Security framework for Rust
 
 [![Latest Version](https://img.shields.io/crates/v/security-framework.svg)](https://lib.rs/crates/security-framework)
 
-[Documentation](https://kornelski.github.io/rust-security-framework/doc/security_framework/)
+[Documentation](https://docs.rs/security-framework)
 
 Bindings to the Apple's `Security.framework`. Allows use of TLS and Keychain from Rust.
 

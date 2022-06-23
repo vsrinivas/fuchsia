@@ -14,10 +14,12 @@ macro_rules! make_suites {
                 pub const $suite: Self = Self($suite);
             )+
 
+            #[inline(always)]
             pub fn from_raw(raw: SSLCipherSuite) -> Self {
                 Self(raw)
             }
 
+            #[inline(always)]
             pub fn to_raw(&self) -> SSLCipherSuite {
                 self.0
             }

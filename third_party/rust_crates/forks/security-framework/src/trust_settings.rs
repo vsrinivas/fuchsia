@@ -29,6 +29,7 @@ pub enum Domain {
 }
 
 impl Into<SecTrustSettingsDomain> for Domain {
+    #[inline]
     fn into(self) -> SecTrustSettingsDomain {
         match self {
             Self::User => kSecTrustSettingsDomainUser,
@@ -86,6 +87,7 @@ impl TrustSettings {
     ///
     /// Then you can call `tls_trust_settings_for_certificate()` with a given certificate
     /// to learn what the aggregate trust setting for that certificate within this domain.
+    #[inline(always)]
     pub fn new(domain: Domain) -> Self {
         Self { domain }
     }
@@ -121,14 +123,14 @@ impl TrustSettings {
     /// given domain `None` is returned.
     ///
     /// Otherwise, the specific trust settings are aggregated and returned.
-    pub fn tls_trust_settings_for_certificate(&self, cert: &SecCertificate)
-        -> Result<Option<TrustSettingsForCertificate>> {
+    pub fn tls_trust_settings_for_certificate(
+        &self,
+        cert: &SecCertificate,
+    ) -> Result<Option<TrustSettingsForCertificate>> {
         let trust_settings = unsafe {
             let mut array_ptr: CFArrayRef = ptr::null_mut();
             let cert_ptr = cert.as_CFTypeRef() as *mut _;
-            cvt(SecTrustSettingsCopyTrustSettings(cert_ptr,
-                                                  self.domain.into(),
-                                                  &mut array_ptr))?;
+            cvt(SecTrustSettingsCopyTrustSettings(cert_ptr, self.domain.into(), &mut array_ptr))?;
             CFArray::<CFDictionary>::wrap_under_create_rule(array_ptr)
         };
 
@@ -163,12 +165,14 @@ impl TrustSettings {
 
             // "Note that an empty Trust Settings array means "always trust this cert,
             //  with a resulting kSecTrustSettingsResult of kSecTrustSettingsResultTrustRoot"."
-            let trust_result = TrustSettingsForCertificate::new(maybe_trust_result
-                .unwrap_or(i64::from(kSecTrustSettingsResultTrustRoot)));
+            let trust_result = TrustSettingsForCertificate::new(
+                maybe_trust_result.unwrap_or(i64::from(kSecTrustSettingsResultTrustRoot)),
+            );
 
             match trust_result {
-                TrustSettingsForCertificate::Unspecified |
-                TrustSettingsForCertificate::Invalid => { continue; },
+                TrustSettingsForCertificate::Unspecified | TrustSettingsForCertificate::Invalid => {
+                    continue;
+                }
                 _ => return Ok(Some(trust_result)),
             }
         }
@@ -193,8 +197,7 @@ impl Iterator for TrustSettingsIter {
         if self.index >= self.array.len() {
             None
         } else {
-            let cert = self.array.get(self.index)
-                .unwrap();
+            let cert = self.array.get(self.index).unwrap();
             self.index += 1;
             Some(cert.clone())
         }
@@ -214,8 +217,7 @@ mod test {
     fn list_for_domain(domain: Domain) {
         println!("--- domain: {:?}", domain);
         let ts = TrustSettings::new(domain);
-        let iterator = ts.iter()
-            .unwrap();
+        let iterator = ts.iter().unwrap();
 
         for (i, cert) in iterator.enumerate() {
             println!("cert({:?}) = {:?}", i, cert);
@@ -250,12 +252,13 @@ mod test {
     #[test]
     fn test_isrg_root_exists_and_is_trusted() {
         let ts = TrustSettings::new(Domain::System);
-        assert_eq!(ts
-            .iter()
-            .unwrap()
-            .find(|cert| cert.subject_summary() == "ISRG Root X1")
-            .and_then(|cert| ts.tls_trust_settings_for_certificate(&cert).unwrap()),
-            None);
+        assert_eq!(
+            ts.iter()
+                .unwrap()
+                .find(|cert| cert.subject_summary() == "ISRG Root X1")
+                .and_then(|cert| ts.tls_trust_settings_for_certificate(&cert).unwrap()),
+            None
+        );
         // ^ this is a case where None means "always trust", according to Apple docs:
         //
         // "Note that an empty Trust Settings array means "always trust this cert,
@@ -266,10 +269,9 @@ mod test {
     fn test_unknown_cert_is_not_trusted() {
         let ts = TrustSettings::new(Domain::System);
         let cert = certificate();
-        assert_eq!(ts.tls_trust_settings_for_certificate(&cert)
-                   .err()
-                   .unwrap()
-                   .message(),
-                   Some("The specified item could not be found in the keychain.".into()));
+        assert_eq!(
+            ts.tls_trust_settings_for_certificate(&cert).err().unwrap().message(),
+            Some("The specified item could not be found in the keychain.".into())
+        );
     }
 }

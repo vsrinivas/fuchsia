@@ -19,30 +19,36 @@ pub struct Padding(CFStringRef);
 
 impl Padding {
     /// Do not pad.
+    #[inline(always)]
     pub fn none() -> Self {
         unsafe { Self(kSecPaddingNoneKey) }
     }
 
     /// Use PKCS#1 padding.
+    #[inline(always)]
     pub fn pkcs1() -> Self {
         unsafe { Self(kSecPaddingPKCS1Key) }
     }
 
     /// Use PKCS#5 padding.
+    #[inline(always)]
     pub fn pkcs5() -> Self {
         unsafe { Self(kSecPaddingPKCS5Key) }
     }
 
     /// Use PKCS#7 padding.
+    #[inline(always)]
     pub fn pkcs7() -> Self {
         unsafe { Self(kSecPaddingPKCS7Key) }
     }
 
     /// Use OAEP padding.
+    #[inline(always)]
     pub fn oaep() -> Self {
         unsafe { Self(kSecPaddingOAEPKey) }
     }
 
+    #[inline]
     fn to_str(self) -> CFString {
         unsafe { CFString::wrap_under_get_rule(self.0) }
     }
@@ -56,22 +62,27 @@ pub struct Mode(CFStringRef);
 
 #[allow(missing_docs)]
 impl Mode {
+    #[inline(always)]
     pub fn none() -> Self {
         unsafe { Self(kSecModeNoneKey) }
     }
 
+    #[inline(always)]
     pub fn ecb() -> Self {
         unsafe { Self(kSecModeECBKey) }
     }
 
+    #[inline(always)]
     pub fn cbc() -> Self {
         unsafe { Self(kSecModeCBCKey) }
     }
 
+    #[inline(always)]
     pub fn cfb() -> Self {
         unsafe { Self(kSecModeCFBKey) }
     }
 
+    #[inline(always)]
     pub fn ofb() -> Self {
         unsafe { Self(kSecModeOFBKey) }
     }
@@ -91,6 +102,7 @@ pub struct Builder {
 
 impl Builder {
     /// Creates a new `Builder` with a default configuration.
+    #[inline(always)]
     pub fn new() -> Self {
         Self::default()
     }
@@ -98,6 +110,7 @@ impl Builder {
     /// Selects the padding scheme to use.
     ///
     /// If not set, an appropriate scheme will be selected for you.
+    #[inline(always)]
     pub fn padding(&mut self, padding: Padding) -> &mut Self {
         self.padding = Some(padding);
         self
@@ -106,6 +119,7 @@ impl Builder {
     /// Selects the encryption mode to use.
     ///
     /// If not set, an appropriate mode will be selected for you.
+    #[inline(always)]
     pub fn mode(&mut self, mode: Mode) -> &mut Self {
         self.mode = Some(mode);
         self
@@ -114,6 +128,7 @@ impl Builder {
     /// Sets the initialization vector to use.
     ///
     /// If not set, an appropriate value will be supplied for you.
+    #[inline(always)]
     pub fn iv(&mut self, iv: CFData) -> &mut Self {
         self.iv = Some(iv);
         self
@@ -168,9 +183,7 @@ impl Builder {
             transform.set_attribute(&key, data)?;
 
             let result = transform.execute()?;
-            Ok(CFData::wrap_under_get_rule(
-                result.as_CFTypeRef() as CFDataRef
-            ))
+            Ok(CFData::wrap_under_get_rule(result.as_CFTypeRef() as CFDataRef))
         }
     }
 }

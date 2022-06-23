@@ -52,44 +52,36 @@ impl<IO> AsyncRead for TlsStream<IO>
 where
     IO: AsyncRead + AsyncWrite + Unpin,
 {
-    #[cfg(feature = "unstable")]
-    unsafe fn prepare_uninitialized_buffer(&self, _buf: &mut [std::mem::MaybeUninit<u8>]) -> bool {
-        // TODO
-        //
-        // https://doc.rust-lang.org/nightly/std/io/trait.Read.html#method.initializer
-        false
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         let this = self.get_mut();
         let mut stream =
             Stream::new(&mut this.io, &mut this.session).set_eof(!this.state.readable());
 
         match &this.state {
             TlsState::Stream | TlsState::WriteShutdown => {
+                let prev = buf.remaining();
+
                 match stream.as_mut_pin().poll_read(cx, buf) {
-                    Poll::Ready(Ok(0)) => {
-                        this.state.shutdown_read();
-                        Poll::Ready(Ok(0))
+                    Poll::Ready(Ok(())) => {
+                        if prev == buf.remaining() {
+                            this.state.shutdown_read();
+                        }
+
+                        Poll::Ready(Ok(()))
                     }
-                    Poll::Ready(Ok(n)) => Poll::Ready(Ok(n)),
                     Poll::Ready(Err(ref err)) if err.kind() == io::ErrorKind::ConnectionAborted => {
                         this.state.shutdown_read();
-                        if this.state.writeable() {
-                            stream.session.send_close_notify();
-                            this.state.shutdown_write();
-                        }
-                        Poll::Ready(Ok(0))
+                        Poll::Ready(Ok(()))
                     }
                     Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
                     Poll::Pending => Poll::Pending,
                 }
             }
-            TlsState::ReadShutdown | TlsState::FullyShutdown => Poll::Ready(Ok(0)),
+            TlsState::ReadShutdown | TlsState::FullyShutdown => Poll::Ready(Ok(())),
             #[cfg(feature = "early-data")]
             s => unreachable!("server TLS can not hit this state: {:?}", s),
         }

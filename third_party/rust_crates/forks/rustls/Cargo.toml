@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rustls"
-version = "0.17.0"
+version = "0.19.1"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 autobenches = false
 description = "Rustls is a modern TLS library written in Rust."

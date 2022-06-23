@@ -1,6 +1,9 @@
 use crate::sync::batch_semaphore::Semaphore;
 use tokio_test::*;
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
+
 #[test]
 fn poll_acquire_one_available() {
     let s = Semaphore::new(100);
@@ -167,6 +170,7 @@ fn poll_acquire_one_zero_permits() {
 
 #[test]
 #[should_panic]
+#[cfg(not(target_arch = "wasm32"))] // wasm currently doesn't support unwinding
 fn validates_max_permits() {
     use std::usize;
     Semaphore::new((usize::MAX >> 2) + 1);
@@ -236,7 +240,7 @@ fn close_semaphore_notifies_permit2() {
 #[test]
 fn cancel_acquire_releases_permits() {
     let s = Semaphore::new(10);
-    let _permit1 = s.try_acquire(4).expect("uncontended try_acquire succeeds");
+    s.try_acquire(4).expect("uncontended try_acquire succeeds");
     assert_eq!(6, s.available_permits());
 
     let mut acquire = task::spawn(s.acquire(8));

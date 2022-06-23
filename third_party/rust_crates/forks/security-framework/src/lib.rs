@@ -1,22 +1,10 @@
 //! Wrappers around the OSX Security Framework.
-
 #![warn(missing_docs)]
 #![allow(non_upper_case_globals)]
+#![allow(clippy::manual_non_exhaustive)] // MSRV
 
-extern crate security_framework_sys;
 #[macro_use]
 extern crate core_foundation;
-extern crate core_foundation_sys;
-#[cfg(target_os = "macos")]
-#[macro_use]
-extern crate bitflags;
-#[cfg(all(not(feature = "OSX_10_13"), any(feature = "alpn", feature = "session-tickets")))]
-extern crate libc;
-
-#[cfg(test)]
-extern crate hex;
-#[cfg(test)]
-extern crate tempdir;
 
 use core_foundation_sys::base::OSStatus;
 use security_framework_sys::base::errSecSuccess;
@@ -74,6 +62,7 @@ trait AsInner {
     fn as_inner(&self) -> Self::Inner;
 }
 
+#[inline(always)]
 fn cvt(err: OSStatus) -> Result<()> {
     match err {
         errSecSuccess => Ok(()),

@@ -16,7 +16,6 @@ use crate::import_export::Pkcs12ImportOptions;
 use crate::key::SecKey;
 use crate::os::macos::access::SecAccess;
 use crate::os::macos::keychain::SecKeychain;
-use crate::Pkcs12ImportOptionsInternals;
 
 /// An extension trait adding OSX specific functionality to `Pkcs12ImportOptions`.
 pub trait Pkcs12ImportOptionsExt {
@@ -30,12 +29,14 @@ pub trait Pkcs12ImportOptionsExt {
 }
 
 impl Pkcs12ImportOptionsExt for Pkcs12ImportOptions {
+    #[inline(always)]
     fn keychain(&mut self, keychain: SecKeychain) -> &mut Self {
-        Pkcs12ImportOptionsInternals::keychain(self, keychain)
+        crate::Pkcs12ImportOptionsInternals::keychain(self, keychain)
     }
 
+    #[inline(always)]
     fn access(&mut self, access: SecAccess) -> &mut Self {
-        Pkcs12ImportOptionsInternals::access(self, access)
+        crate::Pkcs12ImportOptionsInternals::access(self, access)
     }
 }
 
@@ -54,6 +55,7 @@ pub struct ImportOptions<'a> {
 
 impl<'a> ImportOptions<'a> {
     /// Creates a new builder with default options.
+    #[inline(always)]
     pub fn new() -> ImportOptions<'a> {
         ImportOptions::default()
     }
@@ -80,12 +82,14 @@ impl<'a> ImportOptions<'a> {
 
     /// If set, the user will be prompted to imput the passphrase used to
     /// decrypt the imported data.
+    #[inline(always)]
     pub fn secure_passphrase(&mut self, secure_passphrase: bool) -> &mut ImportOptions<'a> {
         self.secure_passphrase = secure_passphrase;
         self
     }
 
     /// If set, imported items will have no access controls imposed on them.
+    #[inline(always)]
     pub fn no_access_control(&mut self, no_access_control: bool) -> &mut ImportOptions<'a> {
         self.no_access_control = no_access_control;
         self
@@ -106,6 +110,7 @@ impl<'a> ImportOptions<'a> {
     }
 
     /// Sets the object into which imported items will be placed.
+    #[inline(always)]
     pub fn items(&mut self, items: &'a mut SecItems) -> &mut ImportOptions<'a> {
         self.items = Some(items);
         self
@@ -195,13 +200,11 @@ impl<'a> ImportOptions<'a> {
                             item.as_CFTypeRef() as *mut _,
                         ));
                     } else if type_id == SecIdentity::type_id() {
-                        items.identities.push(SecIdentity::wrap_under_get_rule(
-                            item.as_CFTypeRef() as *mut _,
-                        ));
-                    } else if type_id == SecKey::type_id() {
                         items
-                            .keys
-                            .push(SecKey::wrap_under_get_rule(item.as_CFTypeRef() as *mut _));
+                            .identities
+                            .push(SecIdentity::wrap_under_get_rule(item.as_CFTypeRef() as *mut _));
+                    } else if type_id == SecKey::type_id() {
+                        items.keys.push(SecKey::wrap_under_get_rule(item.as_CFTypeRef() as *mut _));
                     } else {
                         panic!("Got bad type from SecItemImport: {}", type_id);
                     }
@@ -238,11 +241,7 @@ mod test {
     fn certificate() {
         let data = include_bytes!("../../../test/server.der");
         let mut items = SecItems::default();
-        ImportOptions::new()
-            .filename("server.der")
-            .items(&mut items)
-            .import(data)
-            .unwrap();
+        ImportOptions::new().filename("server.der").items(&mut items).import(data).unwrap();
         assert_eq!(1, items.certificates.len());
         assert_eq!(0, items.identities.len());
         assert_eq!(0, items.keys.len());
@@ -252,11 +251,7 @@ mod test {
     fn key() {
         let data = include_bytes!("../../../test/server.key");
         let mut items = SecItems::default();
-        ImportOptions::new()
-            .filename("server.key")
-            .items(&mut items)
-            .import(data)
-            .unwrap();
+        ImportOptions::new().filename("server.key").items(&mut items).import(data).unwrap();
         assert_eq!(0, items.certificates.len());
         assert_eq!(0, items.identities.len());
         assert_eq!(1, items.keys.len());
@@ -310,8 +305,9 @@ mod test {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn pkcs12_import() {
+        use super::Pkcs12ImportOptionsExt;
+
         let dir = TempDir::new("pkcs12_import").unwrap();
         let keychain = keychain::CreateOptions::new()
             .password("password")

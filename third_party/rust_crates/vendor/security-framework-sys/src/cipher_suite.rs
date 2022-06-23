@@ -1,8 +1,11 @@
-#[cfg(not(target_os = "ios"))]
-pub type SSLCipherSuite = u32;
-
 #[cfg(target_os = "ios")]
 pub type SSLCipherSuite = u16;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub type SSLCipherSuite = u16;
+
+#[cfg(all(target_os = "macos", not(target_arch = "aarch64")))]
+pub type SSLCipherSuite = u32;
 
 pub const SSL_NULL_WITH_NULL_NULL: SSLCipherSuite = 0x0000;
 pub const SSL_RSA_WITH_NULL_MD5: SSLCipherSuite = 0x0001;

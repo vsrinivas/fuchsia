@@ -11,7 +11,6 @@ use std::{fmt, io};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::TlsConnector;
 use webpki::DNSNameRef;
-use log::warn;
 
 use crate::stream::MaybeHttpsStream;
 
@@ -24,44 +23,48 @@ pub struct HttpsConnector<T> {
     tls_config: Arc<ClientConfig>,
 }
 
-#[cfg(all(any(feature = "rustls-native-certs", feature = "webpki-roots"), feature = "tokio-runtime"))]
+#[cfg(all(
+    any(feature = "rustls-native-certs", feature = "webpki-roots"),
+    feature = "tokio-runtime"
+))]
 impl HttpsConnector<HttpConnector> {
-    /// Construct a new `HttpsConnector`.
-    ///
-    /// Takes number of DNS worker threads.
-    pub fn new() -> Self {
+    /// Construct a new `HttpsConnector` using the OS root store
+    #[cfg(feature = "rustls-native-certs")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "rustls-native-certs")))]
+    pub fn with_native_roots() -> Self {
+        let mut config = ClientConfig::new();
+        config.root_store = match rustls_native_certs::load_native_certs() {
+            Ok(store) => store,
+            Err((Some(store), err)) => {
+                log::warn!("Could not load all certificates: {:?}", err);
+                store
+            }
+            Err((None, err)) => Err(err).expect("cannot access native cert store"),
+        };
+        if config.root_store.is_empty() {
+            panic!("no CA certificates found");
+        }
+        Self::build(config)
+    }
+
+    /// Construct a new `HttpsConnector` using the `webpki_roots`
+    #[cfg(feature = "webpki-roots")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "webpki-roots")))]
+    pub fn with_webpki_roots() -> Self {
+        let mut config = ClientConfig::new();
+        config
+            .root_store
+            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+        Self::build(config)
+    }
+
+    fn build(mut config: ClientConfig) -> Self {
         let mut http = HttpConnector::new();
         http.enforce_http(false);
-        let mut config = ClientConfig::new();
+
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-        #[cfg(feature = "rustls-native-certs")] 
-        {
-            config.root_store = match rustls_native_certs::load_native_certs() {
-                Ok(store) => store,
-                Err((Some(store), err)) => {
-                    warn!("Could not load all certificates: {:?}", err);
-                    store
-                }
-                Err((None, err)) => {
-                    Err(err).expect("cannot access native cert store")
-                }
-            };
-        }
-        #[cfg(feature = "webpki-roots")] 
-        {
-            config
-                .root_store
-                .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-        }
         config.ct_logs = Some(&ct_logs::LOGS);
         (http, config).into()
-    }
-}
-
-#[cfg(all(any(feature = "rustls-native-certs", feature = "webpki-roots"), feature = "tokio-runtime"))]
-impl Default for HttpsConnector<HttpConnector> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -73,7 +76,7 @@ impl<T> fmt::Debug for HttpsConnector<T> {
 
 impl<H, C> From<(H, C)> for HttpsConnector<H>
 where
-    C: Into<Arc<ClientConfig>> 
+    C: Into<Arc<ClientConfig>>,
 {
     fn from((http, cfg): (H, C)) -> Self {
         HttpsConnector {

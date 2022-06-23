@@ -36,10 +36,7 @@ impl SecCertificateExt for SecCertificate {
     fn common_name(&self) -> Result<String, Error> {
         unsafe {
             let mut string = ptr::null();
-            cvt(SecCertificateCopyCommonName(
-                self.as_concrete_TypeRef(),
-                &mut string,
-            ))?;
+            cvt(SecCertificateCopyCommonName(self.as_concrete_TypeRef(), &mut string))?;
             Ok(CFString::wrap_under_create_rule(string).to_string())
         }
     }
@@ -47,10 +44,7 @@ impl SecCertificateExt for SecCertificate {
     fn public_key(&self) -> Result<SecKey, Error> {
         unsafe {
             let mut key = ptr::null_mut();
-            cvt(SecCertificateCopyPublicKey(
-                self.as_concrete_TypeRef(),
-                &mut key,
-            ))?;
+            cvt(SecCertificateCopyPublicKey(self.as_concrete_TypeRef(), &mut key))?;
             Ok(SecKey::wrap_under_create_rule(key))
         }
     }
@@ -75,9 +69,7 @@ impl SecCertificateExt for SecCertificate {
             let dictionary = SecCertificateCopyValues(self.as_concrete_TypeRef(), keys, &mut error);
 
             if error.is_null() {
-                Ok(CertificateProperties(CFDictionary::wrap_under_create_rule(
-                    dictionary,
-                )))
+                Ok(CertificateProperties(CFDictionary::wrap_under_create_rule(dictionary)))
             } else {
                 Err(CFError::wrap_under_create_rule(error))
             }
@@ -137,6 +129,7 @@ pub struct PropertySection(CFArray<CFDictionary>);
 
 impl PropertySection {
     /// Returns an iterator over the properties in this section.
+    #[inline(always)]
     pub fn iter(&self) -> PropertySectionIter<'_> {
         PropertySectionIter(self.0.iter())
     }
@@ -146,6 +139,7 @@ impl<'a> IntoIterator for &'a PropertySection {
     type IntoIter = PropertySectionIter<'a>;
     type Item = CertificateProperty;
 
+    #[inline(always)]
     fn into_iter(self) -> PropertySectionIter<'a> {
         self.iter()
     }
@@ -161,6 +155,7 @@ impl<'a> Iterator for PropertySectionIter<'a> {
         self.0.next().map(|t| CertificateProperty(t.clone()))
     }
 
+    #[inline(always)]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
     }
@@ -198,20 +193,15 @@ mod test {
     #[test]
     fn signature_algorithm() {
         let certificate = certificate();
-        let properties = certificate
-            .properties(Some(&[CertificateOid::x509_v1_signature_algorithm()]))
-            .unwrap();
-        let value = properties
-            .get(CertificateOid::x509_v1_signature_algorithm())
-            .unwrap();
+        let properties =
+            certificate.properties(Some(&[CertificateOid::x509_v1_signature_algorithm()])).unwrap();
+        let value = properties.get(CertificateOid::x509_v1_signature_algorithm()).unwrap();
         let section = match value.get() {
             PropertyType::Section(section) => section,
             _ => panic!(),
         };
-        let properties = section
-            .iter()
-            .map(|p| (p.label().to_string(), p.get()))
-            .collect::<HashMap<_, _>>();
+        let properties =
+            section.iter().map(|p| (p.label().to_string(), p.get())).collect::<HashMap<_, _>>();
         let algorithm = match properties["Algorithm"] {
             PropertyType::String(ref s) => s.to_string(),
             _ => panic!(),

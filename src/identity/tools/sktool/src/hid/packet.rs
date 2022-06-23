@@ -114,7 +114,7 @@ impl Packet {
                 /*channel*/ buf.get_u32(),
                 /*command*/ Command::try_from(buf.get_u8() & 0x7F)?,
                 /*message length*/ buf.get_u16(),
-                /*payload*/ buf.to_bytes(),
+                /*payload*/ buf.copy_to_bytes(buf.remaining()),
             )
         } else {
             // Continuation packet.
@@ -125,7 +125,7 @@ impl Packet {
             Packet::continuation(
                 /*channel*/ buf.get_u32(),
                 /*sequence*/ buf.get_u8(),
-                /*payload*/ buf.to_bytes(),
+                /*payload*/ buf.copy_to_bytes(buf.remaining()),
             )
         }
     }

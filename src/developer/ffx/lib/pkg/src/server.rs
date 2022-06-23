@@ -602,12 +602,16 @@ impl tokio::io::AsyncRead for ConnectionStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         match &mut *self {
-            ConnectionStream::Tcp(t) => Pin::new(t).poll_read(cx, buf),
-            ConnectionStream::Socket(t) => Pin::new(t).poll_read(cx, buf),
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_read(cx, buf.initialize_unfilled()),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_read(cx, buf.initialize_unfilled()),
         }
+        .map_ok(|sz| {
+            buf.advance(sz);
+            ()
+        })
     }
 }
 

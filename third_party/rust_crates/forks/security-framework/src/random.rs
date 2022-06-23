@@ -10,6 +10,7 @@ unsafe impl Sync for SecRandom {}
 unsafe impl Send for SecRandom {}
 
 impl Default for SecRandom {
+    #[inline(always)]
     fn default() -> Self {
         unsafe { Self(kSecRandomDefault) }
     }

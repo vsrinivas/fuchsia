@@ -221,7 +221,7 @@ impl QmiTransport {
                     if let Some(&MessageInterest::Discard) = (*interest_slab).get(raw_tx_id) {
                         interest_slab.remove(raw_tx_id);
                     } else if let Some(entry) = interest_slab.get_mut(raw_tx_id) {
-                        let dst: Vec<u8> = buf.bytes().to_vec();
+                        let dst: Vec<u8> = buf.chunk().to_vec();
                         let new_buf = zx::MessageBuf::new_with(dst, Vec::new());
                         let old_entry =
                             std::mem::replace(entry, MessageInterest::Received(new_buf));

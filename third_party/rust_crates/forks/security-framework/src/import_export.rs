@@ -45,11 +45,13 @@ pub struct Pkcs12ImportOptions {
 
 #[cfg(target_os = "macos")]
 impl crate::Pkcs12ImportOptionsInternals for Pkcs12ImportOptions {
+    #[inline(always)]
     fn keychain(&mut self, keychain: SecKeychain) -> &mut Self {
         self.keychain = Some(keychain);
         self
     }
 
+    #[inline(always)]
     fn access(&mut self, access: SecAccess) -> &mut Self {
         self.access = Some(access);
         self
@@ -58,6 +60,7 @@ impl crate::Pkcs12ImportOptionsInternals for Pkcs12ImportOptions {
 
 impl Pkcs12ImportOptions {
     /// Creates a new builder with default options.
+    #[inline(always)]
     pub fn new() -> Self {
         Self::default()
     }
@@ -65,28 +68,9 @@ impl Pkcs12ImportOptions {
     /// Specifies the passphrase to be used to decrypt the data.
     ///
     /// This must be specified, as unencrypted PKCS#12 data is not supported.
+    #[inline]
     pub fn passphrase(&mut self, passphrase: &str) -> &mut Self {
         self.passphrase = Some(CFString::new(passphrase));
-        self
-    }
-
-    /// Deprecated
-    ///
-    /// Replaced by `os::macos::import_export::Pkcs12ImportOptionsExt::keychain`.
-    #[cfg(target_os = "macos")]
-    #[deprecated(note = "Replaced by `os::macos::import_export::Pkcs12ImportOptionsExt::keychain`")]
-    pub fn keychain(&mut self, keychain: SecKeychain) -> &mut Self {
-        self.keychain = Some(keychain);
-        self
-    }
-
-    /// Deprecated
-    ///
-    /// Replaced by `os::macos::import_export::Pkcs12ImportOptionsExt::access`.
-    #[cfg(target_os = "macos")]
-    #[deprecated(note = "Replaced by `os::macos::import_export::Pkcs12ImportOptionsExt::access`")]
-    pub fn access(&mut self, access: SecAccess) -> &mut Self {
-        self.access = Some(access);
         self
     }
 
@@ -114,7 +98,8 @@ impl Pkcs12ImportOptions {
                 options.as_concrete_TypeRef(),
                 &mut raw_items,
             ))?;
-            let raw_items = CFArray::<CFDictionary<CFString, *const _>>::wrap_under_create_rule(raw_items);
+            let raw_items =
+                CFArray::<CFDictionary<CFString, *const _>>::wrap_under_create_rule(raw_items);
 
             let mut items = vec![];
 
@@ -128,26 +113,18 @@ impl Pkcs12ImportOptions {
                 let trust = raw_item
                     .find(kSecImportItemTrust)
                     .map(|trust| SecTrust::wrap_under_get_rule(*trust as *mut _));
-                let cert_chain = raw_item.find(kSecImportItemCertChain as *const _).map(
-                    |cert_chain| {
+                let cert_chain =
+                    raw_item.find(kSecImportItemCertChain as *const _).map(|cert_chain| {
                         CFArray::<SecCertificate>::wrap_under_get_rule(*cert_chain as *const _)
                             .iter()
                             .map(|c| c.clone())
                             .collect()
-                    },
-                );
+                    });
                 let identity = raw_item
                     .find(kSecImportItemIdentity)
                     .map(|identity| SecIdentity::wrap_under_get_rule(*identity as *mut _));
 
-                items.push(ImportedIdentity {
-                    label,
-                    key_id,
-                    trust,
-                    cert_chain,
-                    identity,
-                    _p: (),
-                });
+                items.push(ImportedIdentity { label, key_id, trust, cert_chain, identity, _p: () });
             }
 
             Ok(items)

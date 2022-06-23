@@ -9,9 +9,9 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
+use tokio::io::{AsyncRead, AsyncWriteExt, ReadBuf};
 use tokio::net::TcpStream;
-use tokio::prelude::*;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 use tokio_rustls::{client::TlsStream, TlsConnector};
 
 struct Read1<T>(T);
@@ -21,6 +21,7 @@ impl<T: AsyncRead + Unpin> Future for Read1<T> {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut buf = [0];
+        let mut buf = &mut ReadBuf::new(&mut buf);
         ready!(Pin::new(&mut self.0).poll_read(cx, &mut buf))?;
         Poll::Pending
     }
@@ -42,7 +43,8 @@ async fn send(
     // sleep 1s
     //
     // see https://www.mail-archive.com/openssl-users@openssl.org/msg84451.html
-    let sleep1 = delay_for(Duration::from_secs(1));
+    let sleep1 = sleep(Duration::from_secs(1));
+    futures_util::pin_mut!(sleep1);
     let mut stream = match future::select(Read1(stream), sleep1).await {
         future::Either::Right((_, Read1(stream))) => stream,
         future::Either::Left((Err(err), _)) => return Err(err),
@@ -77,7 +79,7 @@ async fn test_0rtt() -> io::Result<()> {
         .map(DropKill)?;
 
     // wait openssl server
-    delay_for(Duration::from_secs(1)).await;
+    sleep(Duration::from_secs(1)).await;
 
     let mut config = ClientConfig::new();
     let mut chain = BufReader::new(Cursor::new(include_str!("end.chain")));

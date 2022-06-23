@@ -37,7 +37,7 @@ async fn parse_ota_json(
     request: Request<Body>,
     remote_addr: IpAddr,
 ) -> Result<DevhostConfig, Error> {
-    use bytes::buf::ext::BufExt as _;
+    use bytes::Buf as _;
 
     let body = hyper::body::aggregate(request.into_body()).await.context("read request")?;
     let DevhostRequestInfo { port, authorized_keys } =

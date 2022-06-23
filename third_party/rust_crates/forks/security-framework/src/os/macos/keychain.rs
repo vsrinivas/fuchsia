@@ -1,7 +1,7 @@
 //! Keychain support.
 
 use core_foundation::base::{Boolean, TCFType};
-use security_framework_sys::base::SecKeychainRef;
+use security_framework_sys::base::{errSecSuccess, SecKeychainRef};
 use security_framework_sys::keychain::*;
 use std::ffi::CString;
 use std::os::raw::c_void;
@@ -9,9 +9,11 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr;
 
-use crate::base::Result;
+use crate::base::{Error, Result};
 use crate::cvt;
 use crate::os::macos::access::SecAccess;
+
+pub use security_framework_sys::keychain::SecPreferencesDomain;
 
 declare_TCFType! {
     /// A type representing a keychain.
@@ -22,44 +24,24 @@ impl_TCFType!(SecKeychain, SecKeychainRef, SecKeychainGetTypeID);
 unsafe impl Sync for SecKeychain {}
 unsafe impl Send for SecKeychain {}
 
-/// Deprecated.
-#[deprecated]
-pub trait SecKeychainExt {
-    /// Deprecated.
-    #[deprecated]
-    fn default() -> Result<SecKeychain>;
-
-    /// Deprecated.
-    #[deprecated]
-    fn open<P: AsRef<Path>>(path: P) -> Result<SecKeychain>;
-
-    /// Deprecated.
-    #[deprecated]
-    fn unlock(&mut self, password: Option<&str>) -> Result<()>;
-}
-
-#[allow(deprecated)]
-impl SecKeychainExt for SecKeychain {
-    fn default() -> Result<Self> {
-        Self::default()
-    }
-
-    fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::open(path)
-    }
-
-    fn unlock(&mut self, password: Option<&str>) -> Result<()> {
-        Self::unlock(self, password)
-    }
-}
-
 impl SecKeychain {
     /// Creates a `SecKeychain` object corresponding to the user's default
     /// keychain.
+    #[inline]
     pub fn default() -> Result<Self> {
         unsafe {
             let mut keychain = ptr::null_mut();
             cvt(SecKeychainCopyDefault(&mut keychain))?;
+            Ok(Self::wrap_under_create_rule(keychain))
+        }
+    }
+
+    /// Creates a `SecKeychain` object corresponding to the user's default
+    /// keychain for the given domain.
+    pub fn default_for_domain(domain: SecPreferencesDomain) -> Result<Self> {
+        unsafe {
+            let mut keychain = ptr::null_mut();
+            cvt(SecKeychainCopyDomainDefault(domain, &mut keychain))?;
             Ok(Self::wrap_under_create_rule(keychain))
         }
     }
@@ -97,12 +79,35 @@ impl SecKeychain {
     }
 
     /// Sets settings of the keychain.
+    #[inline]
     pub fn set_settings(&mut self, settings: &KeychainSettings) -> Result<()> {
-        unsafe {
-            cvt(SecKeychainSetSettings(
-                self.as_concrete_TypeRef(),
-                &settings.0,
-            ))
+        unsafe { cvt(SecKeychainSetSettings(self.as_concrete_TypeRef(), &settings.0)) }
+    }
+
+    #[cfg(target_os = "macos")]
+    /// Disables the user interface for keychain services functions that
+    /// automatically display a user interface.
+    pub fn disable_user_interaction() -> Result<KeychainUserInteractionLock> {
+        let code = unsafe { SecKeychainSetUserInteractionAllowed(0u8) };
+
+        if code != errSecSuccess {
+            Err(Error::from_code(code))
+        } else {
+            Ok(KeychainUserInteractionLock)
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    /// Indicates whether keychain services functions that normally display a
+    /// user interaction are allowed to do so.
+    pub fn user_interaction_allowed() -> Result<bool> {
+        let mut state: Boolean = 0;
+        let code = unsafe { SecKeychainGetUserInteractionAllowed(&mut state) };
+
+        if code != errSecSuccess {
+            Err(Error::from_code(code))
+        } else {
+            Ok(state != 0)
         }
     }
 }
@@ -117,11 +122,13 @@ pub struct CreateOptions {
 
 impl CreateOptions {
     /// Creates a new builder with default options.
+    #[inline(always)]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Sets the password to be used to protect the keychain.
+    #[inline]
     pub fn password(&mut self, password: &str) -> &mut Self {
         self.password = Some(password.into());
         self
@@ -129,12 +136,14 @@ impl CreateOptions {
 
     /// If set, the user will be prompted to provide a password used to
     /// protect the keychain.
+    #[inline(always)]
     pub fn prompt_user(&mut self, prompt_user: bool) -> &mut Self {
         self.prompt_user = prompt_user;
         self
     }
 
     /// Sets the access control applied to the keychain.
+    #[inline(always)]
     pub fn access(&mut self, access: SecAccess) -> &mut Self {
         self.access = Some(access);
         self
@@ -177,6 +186,7 @@ pub struct KeychainSettings(SecKeychainSettings);
 
 impl KeychainSettings {
     /// Creates a new `KeychainSettings` with default settings.
+    #[inline]
     pub fn new() -> Self {
         Self(SecKeychainSettings {
             version: SEC_KEYCHAIN_SETTINGS_VERS1,
@@ -189,6 +199,7 @@ impl KeychainSettings {
     /// If set, the keychain will automatically lock when the computer sleeps.
     ///
     /// Defaults to `false`.
+    #[inline(always)]
     pub fn set_lock_on_sleep(&mut self, lock_on_sleep: bool) {
         self.0.lockOnSleep = lock_on_sleep as Boolean;
     }
@@ -211,6 +222,26 @@ impl KeychainSettings {
     }
 }
 
+impl Default for KeychainSettings {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[must_use = "The user interaction is disabled for the lifetime of the returned object"]
+/// Automatically re-enables user interaction.
+pub struct KeychainUserInteractionLock;
+
+#[cfg(target_os = "macos")]
+impl Drop for KeychainUserInteractionLock {
+    #[inline(always)]
+    fn drop(&mut self) {
+        unsafe { SecKeychainSetUserInteractionAllowed(1u8) };
+    }
+}
+
 #[cfg(test)]
 mod test {
     use tempdir::TempDir;
@@ -227,5 +258,15 @@ mod test {
             .unwrap();
 
         keychain.set_settings(&KeychainSettings::new()).unwrap();
+    }
+
+    #[test]
+    fn disable_user_interaction() {
+        assert!(SecKeychain::user_interaction_allowed().unwrap());
+        {
+            let _lock = SecKeychain::disable_user_interaction().unwrap();
+            assert!(!SecKeychain::user_interaction_allowed().unwrap());
+        }
+        assert!(SecKeychain::user_interaction_allowed().unwrap());
     }
 }

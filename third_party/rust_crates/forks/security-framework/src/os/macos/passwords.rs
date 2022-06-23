@@ -28,7 +28,8 @@ pub struct SecKeychainItemPassword {
 }
 
 impl fmt::Debug for SecKeychainItemPassword {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    #[cold]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for _ in 0..self.data_len {
             f.write_char('•')?;
         }
@@ -45,12 +46,14 @@ impl AsRef<[u8]> for SecKeychainItemPassword {
 
 impl Deref for SecKeychainItemPassword {
     type Target = [u8];
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         self.as_ref()
     }
 }
 
 impl Drop for SecKeychainItemPassword {
+    #[inline]
     fn drop(&mut self) {
         unsafe {
             SecKeychainItemFreeContent(ptr::null_mut(), self.data as *mut _);
@@ -73,6 +76,7 @@ impl SecKeychainItem {
     }
 
     /// Delete this item from its keychain
+    #[inline]
     pub fn delete(self) {
         unsafe {
             SecKeychainItemDelete(self.as_CFTypeRef() as *mut _);
@@ -117,10 +121,7 @@ pub fn find_generic_password(
             &mut item,
         ))?;
         Ok((
-            SecKeychainItemPassword {
-                data: data as *const _,
-                data_len: data_len as usize,
-            },
+            SecKeychainItemPassword { data: data as *const _, data_len: data_len as usize },
             SecKeychainItem::wrap_under_create_rule(item),
         ))
     }
@@ -135,6 +136,7 @@ pub fn find_generic_password(
 /// * `port`: The TCP/IP port number.
 /// * `protocol`: The protocol associated with this password.
 /// * `authentication_type`: The authentication scheme used.
+#[allow(clippy::too_many_arguments)]
 pub fn find_internet_password(
     keychains: Option<&[SecKeychain]>,
     server: &str,
@@ -162,8 +164,7 @@ pub fn find_internet_password(
             server.len() as u32,
             server.as_ptr() as *const _,
             security_domain.map_or(0, |s| s.len() as u32),
-            security_domain
-                .map_or(ptr::null(), |s| s.as_ptr() as *const _),
+            security_domain.map_or(ptr::null(), |s| s.as_ptr() as *const _),
             account.len() as u32,
             account.as_ptr() as *const _,
             path.len() as u32,
@@ -176,10 +177,7 @@ pub fn find_internet_password(
             &mut item,
         ))?;
         Ok((
-            SecKeychainItemPassword {
-                data: data as *const _,
-                data_len: data_len as usize,
-            },
+            SecKeychainItemPassword { data: data as *const _, data_len: data_len as usize },
             SecKeychainItem::wrap_under_create_rule(item),
         ))
     }
@@ -187,6 +185,7 @@ pub fn find_internet_password(
 
 impl SecKeychain {
     /// Find application password in this keychain
+    #[inline]
     pub fn find_generic_password(
         &self,
         service: &str,
@@ -196,6 +195,8 @@ impl SecKeychain {
     }
 
     /// Find internet password in this keychain
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn find_internet_password(
         &self,
         server: &str,
@@ -219,6 +220,7 @@ impl SecKeychain {
     }
 
     /// Update existing or add new internet password
+    #[allow(clippy::too_many_arguments)]
     pub fn set_internet_password(
         &self,
         server: &str,
@@ -275,6 +277,7 @@ impl SecKeychain {
     /// Add application password to the keychain, without checking if it exists already
     ///
     /// See `set_generic_password()`
+    #[inline]
     pub fn add_generic_password(
         &self,
         service: &str,
@@ -299,6 +302,8 @@ impl SecKeychain {
     /// Add internet password to the keychain, without checking if it exists already
     ///
     /// See `set_internet_password()`
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn add_internet_password(
         &self,
         server: &str,
@@ -316,8 +321,7 @@ impl SecKeychain {
                 server.len() as u32,
                 server.as_ptr() as *const _,
                 security_domain.map_or(0, |s| s.len() as u32),
-                security_domain
-                    .map_or(ptr::null(), |s| s.as_ptr() as *const _),
+                security_domain.map_or(ptr::null(), |s| s.as_ptr() as *const _),
                 account.len() as u32,
                 account.as_ptr() as *const _,
                 path.len() as u32,
@@ -386,12 +390,9 @@ mod test {
         let account = "temp_this_is_the_test_account";
         let password = String::from("deadbeef").into_bytes();
 
-        keychain
-            .set_generic_password(service, account, &password)
-            .expect("set_generic_password");
-        let (found, item) = keychain
-            .find_generic_password(service, account)
-            .expect("find_generic_password");
+        keychain.set_generic_password(service, account, &password).expect("set_generic_password");
+        let (found, item) =
+            keychain.find_generic_password(service, account).expect("find_generic_password");
         assert_eq!(found.to_owned(), password);
 
         item.delete();
@@ -427,16 +428,12 @@ mod test {
         let pw1 = String::from("password1").into_bytes();
         let pw2 = String::from("password2").into_bytes();
 
-        keychains[0]
-            .set_generic_password(service, account, &pw1)
-            .expect("set_generic_password1");
+        keychains[0].set_generic_password(service, account, &pw1).expect("set_generic_password1");
         let (found, _) = find_generic_password(Some(&keychains), service, account)
             .expect("find_generic_password1");
         assert_eq!(found.as_ref(), &pw1[..]);
 
-        keychains[0]
-            .set_generic_password(service, account, &pw2)
-            .expect("set_generic_password2");
+        keychains[0].set_generic_password(service, account, &pw2).expect("set_generic_password2");
         let (found, item) = find_generic_password(Some(&keychains), service, account)
             .expect("find_generic_password2");
         assert_eq!(&*found, &pw2[..]);

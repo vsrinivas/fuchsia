@@ -3,6 +3,7 @@
 pub mod access;
 pub mod certificate;
 pub mod certificate_oids;
+pub mod code_signing;
 pub mod digest_transform;
 pub mod encrypt_transform;
 pub mod identity;
@@ -17,15 +18,14 @@ pub mod transform;
 
 #[cfg(test)]
 pub mod test {
+    use crate::identity::SecIdentity;
+    use crate::item::{ItemClass, ItemSearchOptions, Reference, SearchResult};
+    use crate::os::macos::item::ItemSearchOptionsExt;
+    use crate::os::macos::keychain::SecKeychain;
     use std::fs::File;
     use std::io::prelude::*;
     use std::path::Path;
 
-    use crate::identity::SecIdentity;
-    use crate::item::{ItemClass, ItemSearchOptions, Reference, SearchResult};
-    use crate::os::macos::keychain::SecKeychain;
-
-    #[allow(deprecated)]
     pub fn identity(dir: &Path) -> SecIdentity {
         // FIXME https://github.com/rust-lang/rust/issues/30018
         let keychain = keychain(dir);

@@ -45,7 +45,7 @@ bitflags = "1.3"
 blocking = "1.0.2"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
-bytes = "0.5.4"
+bytes = "1.0.1"
 camino = "1.0.5"
 # NB: morally we'd like to default-features = false here, but we have
 # transitive dependencies on this crate that *do* enable default features.
@@ -110,7 +110,10 @@ hex = "0.3.2"
 hmac = "0.11.0"
 humansize = "1.1.1"
 http = "0.2.4"
-hyper = { version = "0.13.10", default-features = false, features = ["stream"] }
+# TODO(fxbug.dev/100964): We intentionally did not enable http2, since we're
+# currently not using it on Fuchsia. Please see this ticket if you want to
+# enable it.
+hyper = { version = "0.14.16", default-features = false, features = ["stream", "http1", "client", "server"] }
 indexmap = "1.7.0"
 iota = "0.2.2"
 itertools = "0.10"
@@ -187,13 +190,13 @@ streaming-stats = "0.2.3"
 strsim = "0.10.0"
 structopt = "0.2.14"
 tempfile = "3.2"
-tuf = { version = "0.3.0-beta6", default-features = false, features = ["hyper_013"] }
+tuf = { version = "0.3.0-beta6", default-features = false, features = ["hyper_014"] }
 tui = "0.16.0"
 termion = "1.5.3"
 test-case = "1.1.0"
 textwrap = "0.11.0"
 thiserror = "1.0.23"
-tokio = { version = "0.2.16", default-features = false }
+tokio = { version = "1.17.0", default-features = false }
 toml = "0.5"
 toml_edit = "0.2.1"
 tracing = { version = "0.1.29", features = ["log"] }
@@ -233,7 +236,7 @@ features = ["registry", "tracing-log"]
 # ct-logs = "0.6"
 euclid = { version = "0.22.1", features = [ "serde" ] }
 getopts = "0.2"
-hyper-rustls = { version = "0.20.0", default-features = false }
+hyper-rustls = { version = "0.22.1", default-features = false }
 lipsum = "0.6.0"
 openat = "0.1.17"
 owning_ref = "0.4.0"
@@ -249,7 +252,7 @@ rust_icu_uenum = { version = "2.0.2", default-features = false, features = ["ren
 rust_icu_uloc = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
-tokio-rustls = "0.13.0"
+tokio-rustls = "0.22.0"
 trust-dns-proto = { version = "0.21.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }
 ttf-parser = "0.10.1"
@@ -271,7 +274,7 @@ easy-parallel = "3.1"
 fs_extra = "1.2.0"
 handlebars = "4.2.1"
 home = "0.5.3"
-hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
+hyper-rustls = { version = "0.22.1", default-features = false, features = ["rustls-native-certs"] }
 indoc = "1.0.3"
 # TODO(http://fxbug.dev/70292): Not for use on Fuchsia, this pulls in the
 # latest Tokio, which we're not ready to update yet.
@@ -288,7 +291,7 @@ polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.10"
 rustfix = "0.6.1"
-rustls-native-certs = "0.3.0"
+rustls-native-certs = "0.5.0"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 shared_child = "0.3.5"
 signal-hook = "0.3.8"
@@ -395,7 +398,7 @@ rustflags = ["--cfg=byteorder_i128"]
 [gn.package.camino."1.0.5"]
 rustflags = ["--cfg=path_buf_capacity"]
 
-[gn.package.core-foundation-sys."0.7.0".platform."cfg(target_os = \"macos\")"]
+[gn.package.core-foundation-sys."0.8.3".platform."cfg(target_os = \"macos\")"]
 rustflags = ["-lframework=CoreFoundation"]
 
 [gn.package.crc."1.8.1"]
@@ -442,6 +445,9 @@ rustflags = []
 [gn.package.httparse."1.7.1"]
 rustflags = ["--cfg=httparse_simd"]
 
+[gn.package.indexmap."1.7.0"]
+rustflags = ["--cfg=has_std"]
+
 [gn.package.js-sys."0.3.39"]
 env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.39", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
 
@@ -457,9 +463,6 @@ rustflags = [
   "--cfg=libc_non_exhaustive",
   "--cfg=libc_ptr_addr_of",
  ]
-
-[gn.package.indexmap."1.7.0"]
-rustflags = ["--cfg=has_std"]
 
 [gn.package.libc."0.2.116".platform."cfg(target_os = \"freebsd\")"]
 rustflags = ["--cfg=freebsd11"]

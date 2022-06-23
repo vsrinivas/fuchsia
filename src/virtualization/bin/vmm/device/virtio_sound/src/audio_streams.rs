@@ -295,22 +295,21 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
         // Wait until the renderer is configured. This is signalled by a non-zero lead time.
         loop {
             let deadline = zx::Duration::from_seconds(5).after_now();
-            match lead_time_recv.recv().on_timeout(deadline, || None).await {
-                Some(t) => {
-                    if t > zx::Duration::from_nanos(0) {
-                        // TODO(fxbug.dev/101220): temporary for debugging
-                        throttled_log::info!(
-                            "AudioOutput received non-zero lead_time {} ns",
-                            t.into_nanos()
-                        );
-                        break;
-                    }
+            if lead_time_recv.changed().map(|res| res.is_ok()).on_timeout(deadline, || false).await
+            {
+                let t = lead_time_recv.borrow_and_update();
+                if *t > zx::Duration::from_nanos(0) {
+                    // TODO(fxbug.dev/101220): temporary for debugging
+                    throttled_log::info!(
+                        "AudioOutput received non-zero lead_time {} ns",
+                        t.into_nanos()
+                    );
+                    break;
                 }
-                None => {
-                    return Err(anyhow!(
-                        "failed to create AudioRenderer: did not receive lead time before timeout"
-                    ));
-                }
+            } else {
+                return Err(anyhow!(
+                    "failed to create AudioRenderer: did not receive lead time before timeout"
+                ));
             }
         }
 
@@ -570,7 +569,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                                             + super::DEADLINE_PROFILE.period;
                                         // TODO(fxbug.dev/101220): temporary for debugging
                                         throttled_log::info!("AudioRenderer lead_time {} ns", lead_time.into_nanos());
-                                        job.lead_time.broadcast(lead_time)?;
+                                        job.lead_time.send(lead_time)?;
                                     },
                                     None => {
                                         // TODO(fxbug.dev/101220): temporary for debugging
@@ -682,13 +681,13 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
 
     async fn start(&self) -> Result<(), Error> {
         // This will cause on_receive_data to start sending capture requests.
-        self.running_send.broadcast(true)?;
+        self.running_send.send(true)?;
         Ok(())
     }
 
     async fn stop(&self) -> Result<(), Error> {
         // This will cause on_receive_data to stop sending capture requests.
-        self.running_send.broadcast(false)?;
+        self.running_send.send(false)?;
         Ok(())
     }
 
@@ -727,13 +726,14 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
         loop {
             let closing = closing.clone();
             futures::select! {
-                running = running.recv().fuse() => match running {
-                    Some(true) => break,
-                    Some(false) => continue,
-                    None => {
-                        // Cannot happen: None means the sender was dropped, but self
-                        // must outlive the sender.
-                        panic!("impossible");
+                res = running.changed().fuse() => {
+                    // Cannot happen: Error means the sender was dropped, but self
+                    // must outlive the sender.
+                    res.expect("sender to not be dropped");
+                    if *running.borrow_and_update() {
+                        break;
+                    } else {
+                        continue;
                     }
                 },
                 _ = closing.when_set().fuse() => {
@@ -910,7 +910,7 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
         }
 
         let latency = zx::Time::get_monotonic() - zx::Time::from_nanos(resp.pts);
-        inner.lead_time.broadcast(latency)?;
+        inner.lead_time.send(latency)?;
         reply_rxq::success(chain, inner.conn.latency_bytes())?;
         Ok(())
     }

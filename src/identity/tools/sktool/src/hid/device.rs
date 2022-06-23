@@ -164,8 +164,8 @@ impl<C: Connection, R: Rng> Device<C, R> {
         } else {
             Err(format_err!(
                 "Ping request did not match response: {:02x?} vs {:02x?}",
-                request.bytes(),
-                response.bytes()
+                request.chunk(),
+                response.chunk()
             ))
         }
     }
@@ -348,7 +348,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
                 } else if message.command() == Command::Error {
                     Err(format_err!(
                         "Received CTAPHID error {:?} in response to {:?} transaction",
-                        message.payload().bytes(),
+                        message.payload().chunk(),
                         command
                     ))
                 } else {
