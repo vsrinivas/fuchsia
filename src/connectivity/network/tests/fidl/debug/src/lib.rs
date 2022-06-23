@@ -33,9 +33,10 @@ async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
 
 #[fuchsia::test]
 async fn get_admin_unknown() {
+    // TODO(https://fxbug.dev/88797): Test against Netstack3.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm =
-        sandbox.create_netstack_realm::<Netstack2, _>("get_admin_unknown").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>("get_admin_unknown").expect("create realm");
 
     let id = get_loopback_id(&realm).await;
 
@@ -50,8 +51,52 @@ async fn get_admin_unknown() {
     assert_matches!(
         admin_control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
         // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
+        // TODO(https://fxbug.dev/88797): Verify epitaph from Nestack3 (Rust).
         Ok([])
     );
+}
+
+#[fuchsia::test]
+async fn get_admin_loopback() {
+    // TODO(https://fxbug.dev/88797): Test against Netstack3.
+    type N = Netstack2;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>("get_admin_loopback").expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+
+    let (admin_control, server_end) =
+        fidl::endpoints::create_proxy::<fnet_interfaces_admin::ControlMarker>()
+            .expect("create proxy");
+    let id = get_loopback_id(&realm).await;
+    debug_interfaces.get_admin(id, server_end).expect("get admin failed");
+
+    // Actuate the admin API to verify it's hooked up correctly.
+    assert_eq!(admin_control.get_id().await.expect("get id"), id);
+}
+
+#[variants_test]
+async fn get_admin_netemul_endpoint<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/88797): Test against Netstack3.
+    type N = Netstack2;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create netemul endpoint");
+    // Retain `_control` and `_device_control` to keep the FIDL channel open.
+    let (id, _control, _device_control) = device
+        .add_to_stack(&realm, netemul::InterfaceConfig::default())
+        .await
+        .expect("add to stack");
+    let (admin_control, server_end) =
+        fidl::endpoints::create_proxy::<fnet_interfaces_admin::ControlMarker>()
+            .expect("create proxy");
+
+    debug_interfaces.get_admin(id, server_end).expect("get admin failed");
+
+    // Actuate the admin API to verify it's hooked up correctly.
+    assert_eq!(admin_control.get_id().await.expect("get id"), id);
 }
 
 // Retrieve the MAC address for the given device id, expecting no FIDL errors.
