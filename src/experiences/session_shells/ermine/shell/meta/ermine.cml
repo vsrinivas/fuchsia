@@ -14,11 +14,21 @@
     children: [
         {
             name: "element_manager",
-            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+
+            // Temporarily refer to newer version of element_manager while
+            // soft transitioning.
+            // For more context, see http://fxbug.dev/95841.
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/new_element_manager.cm",
         },
         {
             name: "chrome",
             url: "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
         },
     ],
     capabilities: [
@@ -93,10 +103,9 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: "fuchsia.element.GraphicalPresenter",
             from: "self",
-            to: "#element_manager",
-            dependency: "weak",
+            to: "#elements",
         },
         {
             protocol: [
@@ -116,7 +125,27 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
+            to: "#elements",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
             to: "#element_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: "#element_manager",
+        },
+        {
+            protocol: "fuchsia.element.GraphicalPresenter",
+            from: "self",
+            to: "#element_manager",
+            dependency: "weak",
         },
 
         // Support Chrome as a static component.
