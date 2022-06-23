@@ -59,6 +59,7 @@ fuchsia_unittest_package("dash-launcher-unittests") {
 fuchsia_package("dash-launcher") {
   deps = [
     ":component",
+    "//src/sys/tools/chroot",
     "//third_party/sbase:bins",
     "//zircon/third_party/uapp/dash",
   ]
