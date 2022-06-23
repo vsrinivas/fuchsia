@@ -156,6 +156,8 @@ pub struct Builder {
     h1_writev: Option<bool>,
     h1_title_case_headers: bool,
     h1_preserve_header_case: bool,
+    #[cfg(feature = "ffi")]
+    h1_preserve_header_order: bool,
     h1_read_buf_exact_size: Option<usize>,
     h1_max_buf_size: Option<usize>,
     #[cfg(feature = "ffi")]
@@ -487,6 +489,23 @@ where
             Poll::Ready(Ok(conn.take().unwrap().into_parts()))
         })
     }
+
+    /// Returns whether the [extended CONNECT protocol][1] is enabled or not.
+    ///
+    /// This setting is configured by the server peer by sending the
+    /// [`SETTINGS_ENABLE_CONNECT_PROTOCOL` parameter][2] in a `SETTINGS` frame.
+    /// This method returns the currently acknowledged value received from the
+    /// remote.
+    ///
+    /// [1]: https://datatracker.ietf.org/doc/html/rfc8441#section-4
+    /// [2]: https://datatracker.ietf.org/doc/html/rfc8441#section-3
+    #[cfg(feature = "http2")]
+    pub fn http2_is_extended_connect_protocol_enabled(&self) -> bool {
+        match self.inner.as_ref().unwrap() {
+            ProtoClient::H1 { .. } => false,
+            ProtoClient::H2 { h2 } => h2.is_extended_connect_protocol_enabled(),
+        }
+    }
 }
 
 impl<T, B> Future for Connection<T, B>
@@ -541,6 +560,8 @@ impl Builder {
             h1_parser_config: Default::default(),
             h1_title_case_headers: false,
             h1_preserve_header_case: false,
+            #[cfg(feature = "ffi")]
+            h1_preserve_header_order: false,
             h1_max_buf_size: None,
             #[cfg(feature = "ffi")]
             h1_headers_raw: false,
@@ -598,6 +619,49 @@ impl Builder {
         self
     }
 
+    /// Set whether HTTP/1 connections will accept obsolete line folding for
+    /// header values.
+    ///
+    /// Newline codepoints (`\r` and `\n`) will be transformed to spaces when
+    /// parsing.
+    ///
+    /// You probably don't need this, here is what [RFC 7230 Section 3.2.4.] has
+    /// to say about it:
+    ///
+    /// > A server that receives an obs-fold in a request message that is not
+    /// > within a message/http container MUST either reject the message by
+    /// > sending a 400 (Bad Request), preferably with a representation
+    /// > explaining that obsolete line folding is unacceptable, or replace
+    /// > each received obs-fold with one or more SP octets prior to
+    /// > interpreting the field value or forwarding the message downstream.
+    ///
+    /// > A proxy or gateway that receives an obs-fold in a response message
+    /// > that is not within a message/http container MUST either discard the
+    /// > message and replace it with a 502 (Bad Gateway) response, preferably
+    /// > with a representation explaining that unacceptable line folding was
+    /// > received, or replace each received obs-fold with one or more SP
+    /// > octets prior to interpreting the field value or forwarding the
+    /// > message downstream.
+    ///
+    /// > A user agent that receives an obs-fold in a response message that is
+    /// > not within a message/http container MUST replace each received
+    /// > obs-fold with one or more SP octets prior to interpreting the field
+    /// > value.
+    ///
+    /// Note that this setting does not affect HTTP/2.
+    ///
+    /// Default is false.
+    ///
+    /// [RFC 7230 Section 3.2.4.]: https://tools.ietf.org/html/rfc7230#section-3.2.4
+    pub fn http1_allow_obsolete_multiline_headers_in_responses(
+        &mut self,
+        enabled: bool,
+    ) -> &mut Builder {
+        self.h1_parser_config
+            .allow_obsolete_multiline_headers_in_responses(enabled);
+        self
+    }
+
     /// Set whether HTTP/1 connections should try to use vectored writes,
     /// or always flatten into a single buffer.
     ///
@@ -641,6 +705,21 @@ impl Builder {
     /// Default is false.
     pub fn http1_preserve_header_case(&mut self, enabled: bool) -> &mut Builder {
         self.h1_preserve_header_case = enabled;
+        self
+    }
+
+    /// Set whether to support preserving original header order.
+    ///
+    /// Currently, this will record the order in which headers are received, and store this
+    /// ordering in a private extension on the `Response`. It will also look for and use
+    /// such an extension in any provided `Request`.
+    ///
+    /// Note that this setting does not affect HTTP/2.
+    ///
+    /// Default is false.
+    #[cfg(feature = "ffi")]
+    pub fn http1_preserve_header_order(&mut self, enabled: bool) -> &mut Builder {
+        self.h1_preserve_header_order = enabled;
         self
     }
 
@@ -890,6 +969,10 @@ impl Builder {
                     }
                     if opts.h1_preserve_header_case {
                         conn.set_preserve_header_case();
+                    }
+                    #[cfg(feature = "ffi")]
+                    if opts.h1_preserve_header_order {
+                        conn.set_preserve_header_order();
                     }
                     if opts.h09_responses {
                         conn.set_h09_responses();

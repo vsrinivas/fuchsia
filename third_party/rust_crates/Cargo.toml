@@ -113,7 +113,7 @@ http = "0.2.4"
 # TODO(fxbug.dev/100964): We intentionally did not enable http2, since we're
 # currently not using it on Fuchsia. Please see this ticket if you want to
 # enable it.
-hyper = { version = "0.14.16", default-features = false, features = ["stream", "http1", "client", "server"] }
+hyper = { version = "0.14.19", default-features = false, features = ["stream", "http1", "client", "server"] }
 indexmap = "1.7.0"
 iota = "0.2.2"
 itertools = "0.10"

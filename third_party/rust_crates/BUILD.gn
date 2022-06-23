@@ -369,7 +369,7 @@ group("humansize") {
 }
 
 group("hyper") {
-  public_deps = [ ":hyper-v0_14_16" ]
+  public_deps = [ ":hyper-v0_14_19" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -5005,10 +5005,10 @@ rust_library("humansize-v1_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("hyper-v0_14_16") {
+rust_library("hyper-v0_14_19") {
   crate_name = "hyper"
   crate_root = "//third_party/rust_crates/vendor/hyper/src/lib.rs"
-  output_name = "hyper-cc3283c916223115"
+  output_name = "hyper-cc7cc936a1c0e0fb"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -5020,7 +5020,7 @@ rust_library("hyper-v0_14_16") {
   deps += [ ":http-body-v0_4_4" ]
   deps += [ ":httparse-v1_7_1" ]
   deps += [ ":httpdate-v1_0_2" ]
-  deps += [ ":itoa-v0_4_3" ]
+  deps += [ ":itoa-v1_0_2" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
   deps += [ ":tokio-v1_19_2" ]
   deps += [ ":tower-service-v0_3_0" ]
@@ -5032,8 +5032,8 @@ rust_library("hyper-v0_14_16") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=cc3283c916223115",
-    "-Cextra-filename=-cc3283c916223115",
+    "-Cmetadata=cc7cc936a1c0e0fb",
+    "-Cextra-filename=-cc7cc936a1c0e0fb",
     "--cfg=feature=\"client\"",
     "--cfg=feature=\"http1\"",
     "--cfg=feature=\"server\"",
@@ -5051,7 +5051,7 @@ rust_library("hyper-rustls-v0_22_1") {
 
   deps = []
   deps += [ ":futures-util-v0_3_19" ]
-  deps += [ ":hyper-v0_14_16" ]
+  deps += [ ":hyper-v0_14_19" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":rustls-v0_19_1" ]
   deps += [ ":rustls-native-certs-v0_5_0" ]
@@ -5360,7 +5360,7 @@ rust_library("itertools-v0_8_0") {
 
 rust_library("itoa-v0_4_3") {
   crate_name = "itoa"
-  crate_root = "//third_party/rust_crates/vendor/itoa/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/itoa-0.4.3/src/lib.rs"
   output_name = "itoa-f3a32c9a05744438"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -5375,6 +5375,26 @@ rust_library("itoa-v0_4_3") {
     "-Cextra-filename=-f3a32c9a05744438",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("itoa-v1_0_2") {
+  crate_name = "itoa"
+  crate_root = "//third_party/rust_crates/vendor/itoa/src/lib.rs"
+  output_name = "itoa-23bc182ff9f7689d"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=23bc182ff9f7689d",
+    "-Cextra-filename=-23bc182ff9f7689d",
   ]
 
   visibility = [ ":*" ]
@@ -11037,7 +11057,7 @@ rust_library("tuf-v0_3_0-beta6") {
   deps += [ ":futures-io-v0_3_19" ]
   deps += [ ":futures-util-v0_3_19" ]
   deps += [ ":http-v0_2_4" ]
-  deps += [ ":hyper-v0_14_16" ]
+  deps += [ ":hyper-v0_14_19" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":percent-encoding-v2_1_0" ]
@@ -11061,7 +11081,7 @@ rust_library("tuf-v0_3_0-beta6") {
   ]
 
   aliased_deps = {
-    hyper_014 = ":hyper-v0_14_16"
+    hyper_014 = ":hyper-v0_14_19"
   }
   visibility = [ ":*" ]
 }

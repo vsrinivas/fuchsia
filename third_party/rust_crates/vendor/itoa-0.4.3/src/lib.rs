@@ -1,61 +1,56 @@
-//! [![github]](https://github.com/dtolnay/itoa)&ensp;[![crates-io]](https://crates.io/crates/itoa)&ensp;[![docs-rs]](https://docs.rs/itoa)
-//!
-//! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-//! [crates-io]: https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust
-//! [docs-rs]: https://img.shields.io/badge/docs.rs-66c2a5?style=for-the-badge&labelColor=555555&logoColor=white&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNmNWY1ZjUiIGQ9Ik00ODguNiAyNTAuMkwzOTIgMjE0VjEwNS41YzAtMTUtOS4zLTI4LjQtMjMuNC0zMy43bC0xMDAtMzcuNWMtOC4xLTMuMS0xNy4xLTMuMS0yNS4zIDBsLTEwMCAzNy41Yy0xNC4xIDUuMy0yMy40IDE4LjctMjMuNCAzMy43VjIxNGwtOTYuNiAzNi4yQzkuMyAyNTUuNSAwIDI2OC45IDAgMjgzLjlWMzk0YzAgMTMuNiA3LjcgMjYuMSAxOS45IDMyLjJsMTAwIDUwYzEwLjEgNS4xIDIyLjEgNS4xIDMyLjIgMGwxMDMuOS01MiAxMDMuOSA1MmMxMC4xIDUuMSAyMi4xIDUuMSAzMi4yIDBsMTAwLTUwYzEyLjItNi4xIDE5LjktMTguNiAxOS45LTMyLjJWMjgzLjljMC0xNS05LjMtMjguNC0yMy40LTMzLjd6TTM1OCAyMTQuOGwtODUgMzEuOXYtNjguMmw4NS0zN3Y3My4zek0xNTQgMTA0LjFsMTAyLTM4LjIgMTAyIDM4LjJ2LjZsLTEwMiA0MS40LTEwMi00MS40di0uNnptODQgMjkxLjFsLTg1IDQyLjV2LTc5LjFsODUtMzguOHY3NS40em0wLTExMmwtMTAyIDQxLjQtMTAyLTQxLjR2LS42bDEwMi0zOC4yIDEwMiAzOC4ydi42em0yNDAgMTEybC04NSA0Mi41di03OS4xbDg1LTM4Ljh2NzUuNHptMC0xMTJsLTEwMiA0MS40LTEwMi00MS40di0uNmwxMDItMzguMiAxMDIgMzguMnYuNnoiPjwvcGF0aD48L3N2Zz4K
-//!
-//! <br>
-//!
-//! This crate provides a fast conversion of integer primitives to decimal
-//! strings. The implementation comes straight from [libcore] but avoids the
-//! performance penalty of going through [`core::fmt::Formatter`].
-//!
-//! See also [`ryu`] for printing floating point primitives.
-//!
-//! [libcore]: https://github.com/rust-lang/rust/blob/b8214dc6c6fc20d0a660fb5700dca9ebf51ebe89/src/libcore/fmt/num.rs#L201-L254
-//! [`core::fmt::Formatter`]: https://doc.rust-lang.org/std/fmt/struct.Formatter.html
-//! [`ryu`]: https://github.com/dtolnay/ryu
-//!
-//! # Example
-//!
-//! ```
-//! fn main() {
-//!     let mut buffer = itoa::Buffer::new();
-//!     let printed = buffer.format(128u64);
-//!     assert_eq!(printed, "128");
-//! }
-//! ```
-//!
-//! # Performance (lower is better)
-//!
-//! ![performance](https://raw.githubusercontent.com/dtolnay/itoa/master/performance.png)
+// Copyright 2016 Itoa Developers
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/itoa/1.0.2")]
-#![no_std]
-#![allow(
-    clippy::cast_lossless,
-    clippy::cast_possible_truncation,
-    clippy::must_use_candidate,
-    clippy::unreadable_literal
+#![doc(html_root_url = "https://docs.rs/itoa/0.4.3")]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(cast_lossless, unreadable_literal)
 )]
 
+#[cfg(feature = "i128")]
 mod udiv128;
 
-use core::mem::{self, MaybeUninit};
-use core::{ptr, slice, str};
+#[cfg(feature = "std")]
+use std::{fmt, io, mem, ptr, slice, str};
 
-/// A correctly sized stack allocation for the formatted integer to be written
-/// into.
+#[cfg(not(feature = "std"))]
+use core::{fmt, mem, ptr, slice, str};
+
+/// Write integer to an `io::Write`.
+#[cfg(feature = "std")]
+#[inline]
+pub fn write<W: io::Write, V: Integer>(mut wr: W, value: V) -> io::Result<usize> {
+    let mut buf = Buffer::new();
+    let s = buf.format(value);
+    try!(wr.write_all(s.as_bytes()));
+    Ok(s.len())
+}
+
+/// Write integer to an `fmt::Write`.
+#[inline]
+pub fn fmt<W: fmt::Write, V: Integer>(mut wr: W, value: V) -> fmt::Result {
+    let mut buf = Buffer::new();
+    wr.write_str(buf.format(value))
+}
+
+/// A safe API for formatting integers to text.
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// let mut buffer = itoa::Buffer::new();
 /// let printed = buffer.format(1234);
 /// assert_eq!(printed, "1234");
 /// ```
+#[derive(Copy)]
 pub struct Buffer {
-    bytes: [MaybeUninit<u8>; I128_MAX_LEN],
+    bytes: [u8; I128_MAX_LEN],
 }
 
 impl Default for Buffer {
@@ -77,34 +72,37 @@ impl Buffer {
     /// for efficiency.
     #[inline]
     pub fn new() -> Buffer {
-        let bytes = [MaybeUninit::<u8>::uninit(); I128_MAX_LEN];
-        Buffer { bytes }
+        Buffer {
+            bytes: unsafe { mem::uninitialized() },
+        }
     }
 
-    /// Print an integer into this buffer and return a reference to its string
-    /// representation within the buffer.
+    /// Print an integer into this buffer and return a reference to its string representation
+    /// within the buffer.
     pub fn format<I: Integer>(&mut self, i: I) -> &str {
-        i.write(unsafe {
-            &mut *(&mut self.bytes as *mut [MaybeUninit<u8>; I128_MAX_LEN]
-                as *mut <I as private::Sealed>::Buffer)
-        })
+        i.write(self)
     }
 }
-
-/// An integer that can be written into an [`itoa::Buffer`][Buffer].
-///
-/// This trait is sealed and cannot be implemented for types outside of itoa.
-pub trait Integer: private::Sealed {}
 
 // Seal to prevent downstream implementations of the Integer trait.
 mod private {
-    pub trait Sealed: Copy {
-        type Buffer: 'static;
-        fn write(self, buf: &mut Self::Buffer) -> &str;
-    }
+    pub trait Sealed {}
 }
 
-const DEC_DIGITS_LUT: &[u8] = b"\
+/// An integer that can be formatted by `itoa::write` and `itoa::fmt`.
+///
+/// This trait is sealed and cannot be implemented for types outside of itoa.
+pub trait Integer: private::Sealed {
+    // Not public API.
+    #[doc(hidden)]
+    fn write<'a>(self, buf: &'a mut Buffer) -> &'a str;
+}
+
+trait IntegerPrivate<B> {
+    fn write_to(self, buf: &mut B) -> &[u8];
+}
+
+const DEC_DIGITS_LUT: &'static [u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
       4041424344454647484950515253545556575859\
@@ -113,16 +111,34 @@ const DEC_DIGITS_LUT: &[u8] = b"\
 
 // Adaptation of the original implementation at
 // https://github.com/rust-lang/rust/blob/b8214dc6c6fc20d0a660fb5700dca9ebf51ebe89/src/libcore/fmt/num.rs#L188-L266
+macro_rules! impl_IntegerCommon {
+    ($max_len:expr, $t:ident) => {
+        impl Integer for $t {
+            #[inline]
+            fn write<'a>(self, buf: &'a mut Buffer) -> &'a str {
+                unsafe {
+                    debug_assert!($max_len <= I128_MAX_LEN);
+                    let buf = mem::transmute::<&mut [u8; I128_MAX_LEN], &mut [u8; $max_len]>(
+                        &mut buf.bytes,
+                    );
+                    let bytes = self.write_to(buf);
+                    str::from_utf8_unchecked(bytes)
+                }
+            }
+        }
+
+        impl private::Sealed for $t {}
+    };
+}
+
 macro_rules! impl_Integer {
     ($($max_len:expr => $t:ident),* as $conv_fn:ident) => {$(
-        impl Integer for $t {}
+        impl_IntegerCommon!($max_len, $t);
 
-        impl private::Sealed for $t {
-            type Buffer = [MaybeUninit<u8>; $max_len];
-
+        impl IntegerPrivate<[u8; $max_len]> for $t {
             #[allow(unused_comparisons)]
             #[inline]
-            fn write(self, buf: &mut [MaybeUninit<u8>; $max_len]) -> &str {
+            fn write_to(self, buf: &mut [u8; $max_len]) -> &[u8] {
                 let is_nonnegative = self >= 0;
                 let mut n = if is_nonnegative {
                     self as $conv_fn
@@ -131,7 +147,7 @@ macro_rules! impl_Integer {
                     (!(self as $conv_fn)).wrapping_add(1)
                 };
                 let mut curr = buf.len() as isize;
-                let buf_ptr = buf.as_mut_ptr() as *mut u8;
+                let buf_ptr = buf.as_mut_ptr();
                 let lut_ptr = DEC_DIGITS_LUT.as_ptr();
 
                 unsafe {
@@ -178,8 +194,7 @@ macro_rules! impl_Integer {
                 }
 
                 let len = buf.len() - curr as usize;
-                let bytes = unsafe { slice::from_raw_parts(buf_ptr.offset(curr), len) };
-                unsafe { str::from_utf8_unchecked(bytes) }
+                unsafe { slice::from_raw_parts(buf_ptr.offset(curr), len) }
             }
         }
     )*};
@@ -214,16 +229,15 @@ impl_Integer!(I32_MAX_LEN => isize, U32_MAX_LEN => usize as u32);
 #[cfg(target_pointer_width = "64")]
 impl_Integer!(I64_MAX_LEN => isize, U64_MAX_LEN => usize as u64);
 
+#[cfg(all(feature = "i128"))]
 macro_rules! impl_Integer128 {
     ($($max_len:expr => $t:ident),*) => {$(
-        impl Integer for $t {}
+        impl_IntegerCommon!($max_len, $t);
 
-        impl private::Sealed for $t {
-            type Buffer = [MaybeUninit<u8>; $max_len];
-
+        impl IntegerPrivate<[u8; $max_len]> for $t {
             #[allow(unused_comparisons)]
             #[inline]
-            fn write(self, buf: &mut [MaybeUninit<u8>; $max_len]) -> &str {
+            fn write_to(self, buf: &mut [u8; $max_len]) -> &[u8] {
                 let is_nonnegative = self >= 0;
                 let n = if is_nonnegative {
                     self as u128
@@ -232,13 +246,13 @@ macro_rules! impl_Integer128 {
                     (!(self as u128)).wrapping_add(1)
                 };
                 let mut curr = buf.len() as isize;
-                let buf_ptr = buf.as_mut_ptr() as *mut u8;
+                let buf_ptr = buf.as_mut_ptr();
 
                 unsafe {
                     // Divide by 10^19 which is the highest power less than 2^64.
                     let (n, rem) = udiv128::udivmod_1e19(n);
-                    let buf1 = buf_ptr.offset(curr - U64_MAX_LEN as isize) as *mut [MaybeUninit<u8>; U64_MAX_LEN];
-                    curr -= rem.write(&mut *buf1).len() as isize;
+                    let buf1 = buf_ptr.offset(curr - U64_MAX_LEN as isize) as *mut [u8; U64_MAX_LEN];
+                    curr -= rem.write_to(&mut *buf1).len() as isize;
 
                     if n != 0 {
                         // Memset the base10 leading zeros of rem.
@@ -248,8 +262,8 @@ macro_rules! impl_Integer128 {
 
                         // Divide by 10^19 again.
                         let (n, rem) = udiv128::udivmod_1e19(n);
-                        let buf2 = buf_ptr.offset(curr - U64_MAX_LEN as isize) as *mut [MaybeUninit<u8>; U64_MAX_LEN];
-                        curr -= rem.write(&mut *buf2).len() as isize;
+                        let buf2 = buf_ptr.offset(curr - U64_MAX_LEN as isize) as *mut [u8; U64_MAX_LEN];
+                        curr -= rem.write_to(&mut *buf2).len() as isize;
 
                         if n != 0 {
                             // Memset the leading zeros.
@@ -270,15 +284,16 @@ macro_rules! impl_Integer128 {
                     }
 
                     let len = buf.len() - curr as usize;
-                    let bytes = slice::from_raw_parts(buf_ptr.offset(curr), len);
-                    str::from_utf8_unchecked(bytes)
+                    slice::from_raw_parts(buf_ptr.offset(curr), len)
                 }
             }
         }
     )*};
 }
 
+#[cfg(all(feature = "i128"))]
 const U128_MAX_LEN: usize = 39;
 const I128_MAX_LEN: usize = 40;
 
+#[cfg(all(feature = "i128"))]
 impl_Integer128!(I128_MAX_LEN => i128, U128_MAX_LEN => u128);
