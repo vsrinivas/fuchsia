@@ -73,10 +73,10 @@ import("//build/go/toolchain.gni")
 #     If set to false, the linting step is skipped.
 #
 #   lenient_api_summary (optional, boolean, default false)
-#     If set, the builder will check the generated FIDL API summary files against
-#     their checked in version.  If unset, or false, no such check will happen.
-#     This switch is used to deploy API summary checks across petals without
-#     breaking global integration. See fxb/68951 for details.
+#     If false, the builder will check the generated FIDL API summary files against
+#     their checked in version.  If true, the checks will emit warnings instead
+#     of errors. This switch is used to deploy API summary checks across petals
+#     without breaking global integration.
 #
 #   dart_analysis (optional, boolean, default false)
 #     If set to true, dart analysis is run on generated Dart bindings.
