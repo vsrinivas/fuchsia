@@ -2151,12 +2151,13 @@ mod tests {
 
             let result = proxy.match_driver(match_args).await.unwrap().unwrap();
             assert_eq!(
-                fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                    topological_path: Some("test/path".to_string()),
-                    node_index: Some(0),
-                    num_nodes: Some(1),
-                    node_names: Some(vec!["whimbrel".to_string()]),
-                    ..fdi::MatchedDeviceGroupInfo::EMPTY
+                fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                    device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
+                        topological_path: Some("test/path".to_string()),
+                        node_index: Some(0),
+                        ..fdi::MatchedDeviceGroupInfo::EMPTY
+                    }]),
+                    ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
                 }),
                 result
             );
@@ -2263,6 +2264,7 @@ mod tests {
 
             let result = proxy.match_drivers_v1(match_args).await.unwrap().unwrap();
             assert_eq!(2, result.len());
+
             assert_eq!(
                 vec![
                     fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
@@ -2274,12 +2276,13 @@ mod tests {
                         is_fallback: Some(false),
                         ..fdi::MatchedDriverInfo::EMPTY
                     }),
-                    fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                        topological_path: Some("test/path".to_string()),
-                        node_index: Some(0),
-                        num_nodes: Some(1),
-                        node_names: Some(vec!["whimbrel".to_string()]),
-                        ..fdi::MatchedDeviceGroupInfo::EMPTY
+                    fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                        device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
+                            topological_path: Some("test/path".to_string()),
+                            node_index: Some(0),
+                            ..fdi::MatchedDeviceGroupInfo::EMPTY
+                        }]),
+                        ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
                     })
                 ],
                 result

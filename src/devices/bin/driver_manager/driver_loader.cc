@@ -63,7 +63,7 @@ fuchsia_driver_development::wire::DriverInfo CopyDriverInfo(
 }
 
 zx::status<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::MatchedDriver driver) {
-  if (driver.is_device_group()) {
+  if (driver.is_device_group_node()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
@@ -105,41 +105,30 @@ MatchedCompositeDevice CreateMatchedCompositeDevice(
   return composite;
 }
 
-// TODO(fxb/95268): Move common composite device fields in driver_index.fidl
-// into a separate struct. This will allow us to reduce the duplicate code
-// between CreateMatchedDeviceGroupInfo() and CreateMatchedCompositeDevice().
 zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
-    fdi::wire::MatchedDeviceGroupInfo device_group_info) {
-  if (!device_group_info.has_topological_path()) {
+    fdi::wire::MatchedDeviceGroupNodeInfo device_group_node_info) {
+  // Currently we only support only one device group in the list.
+  // TODO(fxb/103208): Update the DFv1 device group implementation so it
+  // can handle multiple device groups.
+  if (!device_group_node_info.has_device_groups() ||
+      device_group_node_info.device_groups().count() != 1) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  MatchedCompositeDevice composite = {};
-  if (device_group_info.has_num_nodes()) {
-    composite.num_nodes = device_group_info.num_nodes();
+  auto device_group = device_group_node_info.device_groups().at(0);
+
+  if (!device_group.has_topological_path()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  if (device_group_info.has_node_index()) {
-    composite.node = device_group_info.node_index();
-  }
-
-  if (device_group_info.has_composite_name()) {
-    composite.name = std::string(device_group_info.composite_name().data(),
-                                 device_group_info.composite_name().size());
-  }
-
-  if (device_group_info.has_node_names()) {
-    std::vector<std::string> names;
-    for (auto& name : device_group_info.node_names()) {
-      names.push_back(std::string(name.data(), name.size()));
-    }
-    composite.node_names = std::move(names);
+  if (!device_group.has_node_index()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   return zx::ok(MatchedDeviceGroupInfo{
-      .topological_path = std::string(device_group_info.topological_path().data(),
-                                      device_group_info.topological_path().size()),
-      .composite = composite,
+      .topological_path = std::string(device_group.topological_path().data(),
+                                      device_group.topological_path().size()),
+      .node_index = device_group.node_index(),
   });
 }
 
@@ -408,8 +397,8 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   const auto& drivers = result->value()->drivers;
 
   for (auto driver : drivers) {
-    if (driver.is_device_group()) {
-      auto device_group = CreateMatchedDeviceGroupInfo(driver.device_group());
+    if (driver.is_device_group_node()) {
+      auto device_group = CreateMatchedDeviceGroupInfo(driver.device_group_node());
       if (device_group.is_error()) {
         LOGF(ERROR,
              "DriverIndex: MatchDriverV1 response is missing fields in MatchedDeviceGroupInfo");

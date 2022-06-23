@@ -39,7 +39,7 @@ struct MatchedCompositeDriverInfo {
 
 struct MatchedDeviceGroupInfo {
   std::string topological_path;
-  MatchedCompositeDevice composite;
+  uint32_t node_index;
 };
 
 using MatchedDriver =

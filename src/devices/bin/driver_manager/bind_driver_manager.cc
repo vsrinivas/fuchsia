@@ -337,7 +337,7 @@ zx_status_t BindDriverManager::BindDriverToDeviceGroup(const MatchedDeviceGroupI
 
   // Bind the matched fragment to the device.
   auto& composite = device_groups_[path];
-  auto status = composite->BindFragment(device_group.composite.node, dev);
+  auto status = composite->BindFragment(device_group.node_index, dev);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to BindFragment for '%.*s': %s", static_cast<uint32_t>(dev->name().size()),
          dev->name().data(), zx_status_get_string(status));

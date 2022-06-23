@@ -47,17 +47,22 @@ impl DeviceGroup {
         })
     }
 
+    // TODO(fxb/103206): Return a list of device groups in a MatchedDeviceGroupNode.
     pub fn matches(&self, properties: &DeviceProperties) -> Option<fdi::MatchedDriver> {
         for (index, node) in self.nodes.iter().enumerate() {
             if match_node(&node, properties) {
-                let node_names = self.nodes.iter().map(|node| node.name.clone()).collect();
-                return Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
+                let node_info = fdi::MatchedDeviceGroupInfo {
                     topological_path: Some(self.topological_path.clone()),
                     node_index: Some(index as u32),
-                    num_nodes: Some(self.nodes.len() as u32),
-                    node_names: Some(node_names),
                     ..fdi::MatchedDeviceGroupInfo::EMPTY
-                }));
+                };
+
+                return Some(fdi::MatchedDriver::DeviceGroupNode(
+                    fdi::MatchedDeviceGroupNodeInfo {
+                        device_groups: Some(vec![node_info]),
+                        ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+                    },
+                ));
             }
         }
 
@@ -207,13 +212,15 @@ mod tests {
             Symbol::StringValue("plover".to_string()),
         );
 
+        let expected_device_group = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(0),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
         assert_eq!(
-            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
-                node_index: Some(0),
-                num_nodes: Some(2),
-                node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdi::MatchedDeviceGroupInfo::EMPTY
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
             })),
             device_group.matches(&device_properties_1)
         );
@@ -231,13 +238,15 @@ mod tests {
             Symbol::EnumValue("Moon.Half".to_string()),
         );
 
+        let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(1),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
         assert_eq!(
-            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
-                node_index: Some(1),
-                num_nodes: Some(2),
-                node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdi::MatchedDeviceGroupInfo::EMPTY
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group_2]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
             })),
             device_group.matches(&device_properties_2)
         );
@@ -359,13 +368,16 @@ mod tests {
             PropertyKey::StringKey("plover".to_string()),
             Symbol::StringValue("lapwing".to_string()),
         );
+
+        let expected_device_group = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(0),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
         assert_eq!(
-            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
-                node_index: Some(0),
-                num_nodes: Some(2),
-                node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdi::MatchedDeviceGroupInfo::EMPTY
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
             })),
             device_group.matches(&device_properties_1)
         );
@@ -374,13 +386,15 @@ mod tests {
         let mut device_properties_2: DeviceProperties = HashMap::new();
         device_properties_2.insert(PropertyKey::NumberKey(5), Symbol::NumberValue(20));
 
+        let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(1),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
         assert_eq!(
-            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
-                topological_path: Some("test/path".to_string()),
-                node_index: Some(1),
-                num_nodes: Some(2),
-                node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdi::MatchedDeviceGroupInfo::EMPTY
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group_2]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
             })),
             device_group.matches(&device_properties_2)
         );
