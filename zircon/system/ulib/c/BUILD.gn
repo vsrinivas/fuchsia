@@ -154,6 +154,13 @@ if (zircon_toolchain == false) {
     configs -= default_shared_library_configs
     configs += default_common_binary_configs
 
+    # This directory contains just a libc++.a file that is a stub input linker
+    # script to prevent the real libc++.a from being found by the linker.
+    # Instead, it will find the empty file and any references to symbols
+    # defined in the real libc++.a (which includes libc++abi) will cause the
+    # link to fail.
+    lib_dirs = [ "libc++-stub" ]
+
     # At link time and in DT_SONAME, musl is known as libc.so.  But the
     # (only) place it needs to be installed at runtime is where the
     # PT_INTERP strings embedded in executables point, which is ld.so.1.

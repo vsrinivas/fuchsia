@@ -1,0 +1,11 @@
+/* Copyright 2022 The Fuchsia Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/*
+ * This is an empty input linker script that's named libc++.a in a directory in
+ * the -L search path for linking libc.so.  Its presence ensures the real
+ * libc++.a from the toolchain installation will never be consulted.  If the
+ * libc code refers to symbols not defined in libc itself, the link will fail.
+ */
