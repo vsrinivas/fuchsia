@@ -16,7 +16,7 @@ source_set("mvm") {
     "phy-ctxt.c",
     "power.c",
     "rateScaleMng.c",
-    "rs-ng.c",
+    "rs-ng.cc",
     "rx.c",
     "rxmq.c",
     "scan.c",

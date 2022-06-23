@@ -43,6 +43,11 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
 
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
+
 #define RS_MNG_INVALID_VAL ((U32)-1)
 #define RS_MNG_RATE_MIN_FAILURE_TH 3
 #define RS_MNG_RATE_MIN_SUCCESS_TH 8
@@ -411,5 +416,9 @@ void cmdHandlerTlcMngConfig(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
 #define rsMngGetSingleAntMsk(chainsEnabled)                                  \
   (_rsMngGetSingleAntMsk((chainsEnabled), staInfo->mvm->cfg->non_shared_ant, \
                          iwl_mvm_get_valid_tx_ant(staInfo->mvm)))
+
+#if defined(__cplusplus)
+}  // extern "C"
+#endif  // defined(__cplusplus)
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM__RATESCALEMNG_H_

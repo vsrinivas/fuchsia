@@ -37,6 +37,8 @@
 #include "mvm.h"
 #include "rs.h"
 
+extern "C" {
+
 #if 0   // NEEDS_PORTING
 
 static void iwl_start_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid) {
@@ -519,3 +521,4 @@ void rs_update_last_rssi(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
                          struct ieee80211_rx_status* rx_status) {}
 
 #endif  // NEEDS_PORTING
+}  // extern "C"
