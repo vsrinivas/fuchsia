@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::{bss_selection, network_selection, sme_credential_from_policy, types},
+        client::{bss_selection, network_selection, types},
         config_management::{self, PastConnectionData, SavedNetworksManagerApi},
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
@@ -525,12 +525,7 @@ async fn connecting_state<'a>(
                         ssid: options.connect_request.target.network.ssid.to_vec(),
                         bss_description,
                         multiple_bss_candidates,
-                        // TODO(fxbug.dev/95873): This code is temporary. It extracts a bare
-                        //                        credential from the authentication rather than
-                        //                        transmitting the authentication in its entirety.
-                        credential: sme_credential_from_policy(
-                            &authentication.credentials.map(|credentials| *credentials).into()
-                        ),
+                        authentication,
                         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
                     };
                     common_options.proxy.connect(&mut sme_connect_request, Some(remote)).map_err(|e| {
@@ -1198,7 +1193,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -1353,7 +1348,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description.clone().into());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
@@ -1598,7 +1593,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
             }
@@ -1822,7 +1817,7 @@ mod tests {
             poll_sme_req(&mut executor, &mut sme_req_future),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
                 assert_eq!(req.ssid, ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
             }
@@ -1939,7 +1934,7 @@ mod tests {
             poll_sme_req(&mut executor, &mut sme_req_future),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
                 assert_eq!(req.ssid, ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
             }
@@ -2287,7 +2282,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
@@ -2407,7 +2402,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -2557,7 +2552,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -2698,7 +2693,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential.clone()));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -4747,7 +4742,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(connect_request.target.credential, req.authentication.credentials.into());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.multiple_bss_candidates, true);

@@ -21,7 +21,7 @@ use wlan_common::{
     security::{
         wep::WepKey,
         wpa::credential::{Passphrase, Psk},
-        BareCredentials, SecurityError,
+        SecurityError,
     },
 };
 
@@ -175,23 +175,10 @@ pub async fn connect(
         bss: BssDescription::try_from(target_bss_desc.clone())?,
         unparsed_credential_bytes: target_pwd,
     })?;
-    // TODO(fxbug.dev/95873): This code is temporary. It converts the credentials of the negotiated
-    //                        `Authentication` into the `Credential` FIDL message used by SME. The
-    //                        `ConnectRequest::credential` field will be replaced by an
-    //                        `Authentication` field in the future, at which point the negotiated
-    //                        `Authentication` can be used directly to construct the
-    //                        `ConnectRequest`.
-    // Discard security protocol information and extract any credentials.
-    let credential = authentication
-        .credentials
-        .map(|credentials| {
-            BareCredentials::try_from(*credentials).expect("unknown credentials variant").into()
-        })
-        .unwrap_or_else(|| fidl_sme::Credential::None(fidl_sme::Empty));
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid.clone().into(),
         bss_description: target_bss_desc,
-        credential,
+        authentication,
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select an arbitrary value
     };
@@ -379,7 +366,6 @@ mod tests {
             assert_variant,
             channel::{Cbw, Channel},
             fake_fidl_bss_description,
-            security::AuthenticationExt as _,
         },
     };
 
@@ -937,13 +923,7 @@ mod tests {
                 bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
                 unparsed_credential_bytes: target_password.to_vec(),
             })
-            .unwrap()
-            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
-            //                        `Authentication` into an SME `Credential`. The `credential`
-            //                        field of `ConnectRequest` will be replaced by an
-            //                        `Authentication`, at which time the conversion will be
-            //                        unnecessary.
-            .into_sme_credential(),
+            .unwrap(),
             result_code,
         );
 
@@ -1001,13 +981,7 @@ mod tests {
                 bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
                 unparsed_credential_bytes: target_password.to_vec(),
             })
-            .unwrap()
-            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
-            //                        `Authentication` into an SME `Credential`. The `credential`
-            //                        field of `ConnectRequest` will be replaced by an
-            //                        `Authentication`, at which time the conversion will be
-            //                        unnecessary.
-            .into_sme_credential(),
+            .unwrap(),
             target_bss_desc,
         );
     }
@@ -1040,13 +1014,7 @@ mod tests {
                 bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
                 unparsed_credential_bytes: vec![],
             })
-            .unwrap()
-            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
-            //                        `Authentication` into an SME `Credential`. The `credential`
-            //                        field of `ConnectRequest` will be replaced by an
-            //                        `Authentication`, at which time the conversion will be
-            //                        unnecessary.
-            .into_sme_credential(),
+            .unwrap(),
             target_bss_desc,
         );
     }
@@ -1055,13 +1023,13 @@ mod tests {
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &Ssid,
-        expected_credential: fidl_sme::Credential,
+        expected_authentication: fidl_security::Authentication,
         expected_bss_desc: fidl_internal::BssDescription,
     ) {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid);
-                assert_eq!(req.credential, expected_credential);
+                assert_eq!(req.authentication, expected_authentication);
                 assert_eq!(req.bss_description, expected_bss_desc);
             }
             _ => panic!("expected a Connect request"),
@@ -1072,13 +1040,13 @@ mod tests {
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &Ssid,
-        expected_credential: fidl_sme::Credential,
+        expected_authentication: fidl_security::Authentication,
         connect_result: fidl_ieee80211::StatusCode,
     ) {
         let responder = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
-                assert_eq!(req.credential, expected_credential);
+                assert_eq!(req.authentication, expected_authentication);
                 txn.expect("expected a Connect transaction channel")
             }
             Poll::Pending => panic!("expected a request to be available"),

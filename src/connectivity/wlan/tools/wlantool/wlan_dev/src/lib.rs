@@ -31,7 +31,7 @@ use {
         security::{
             wep::WepKey,
             wpa::credential::{Passphrase, Psk},
-            AuthenticationExt as _, SecurityError,
+            SecurityError,
         },
     },
 };
@@ -481,11 +481,7 @@ async fn do_client_connect(
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.to_vec(),
         bss_description,
-        // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
-        //                        `Authentication` into an SME `Credential`. The `credential` field
-        //                        of `ConnectRequest` will be replaced by an `Authentication`, at
-        //                        which time the conversion will be unnecessary.
-        credential: authentication.into_sme_credential(),
+        authentication,
         deprecated_scan_type: scan_type.into(),
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };

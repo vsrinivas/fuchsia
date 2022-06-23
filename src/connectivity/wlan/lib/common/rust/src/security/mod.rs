@@ -48,7 +48,6 @@ pub mod wep;
 pub mod wpa;
 
 use fidl_fuchsia_wlan_common_security as fidl_security;
-use fidl_fuchsia_wlan_sme as fidl_sme;
 use std::convert::TryFrom;
 use thiserror::Error;
 
@@ -56,25 +55,6 @@ use crate::security::{
     wep::WepKey,
     wpa::credential::{Passphrase, PassphraseError, Psk, PskError},
 };
-
-// TODO(fxbug.dev/95873): This code is temporary. It is used to extract credentials from an
-//                        `Authentication` and convert those credentials into the `Credential` SME
-//                        FIDL message. The message will be removed in favor of `Authentication`.
-pub trait AuthenticationExt {
-    fn into_sme_credential(self) -> fidl_sme::Credential;
-}
-
-impl AuthenticationExt for fidl_security::Authentication {
-    /// Converts an `Authentication` into an SME `Credential`.
-    fn into_sme_credential(self) -> fidl_sme::Credential {
-        let fidl_security::Authentication { credentials, .. } = self;
-        credentials
-            .map(|credentials| {
-                BareCredentials::try_from(*credentials).expect("unknown credentials variant").into()
-            })
-            .unwrap_or_else(|| fidl_sme::Credential::None(fidl_sme::Empty))
-    }
-}
 
 /// Extension methods for the `Credentials` FIDL datagram.
 pub trait CredentialsExt {
@@ -177,22 +157,6 @@ impl From<BareCredentials> for fidl_security::Credentials {
             BareCredentials::WpaPsk(psk) => {
                 fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Psk(psk.into()))
             }
-        }
-    }
-}
-
-// TODO(fxbug.dev/95873): This code is temporary. It is used to extract credentials from an
-//                        `Authentication` or `SecurityAuthenticator` and convert those credentials
-//                        into the `Credential` SME FIDL message. The message will be removed in
-//                        favor of `Authentication`.
-impl From<BareCredentials> for fidl_sme::Credential {
-    fn from(credentials: BareCredentials) -> Self {
-        match credentials {
-            BareCredentials::WepKey(key) => fidl_sme::Credential::Password(key.into()),
-            BareCredentials::WpaPassphrase(passphrase) => {
-                fidl_sme::Credential::Password(passphrase.into())
-            }
-            BareCredentials::WpaPsk(psk) => fidl_sme::Credential::Psk(psk.into()),
         }
     }
 }

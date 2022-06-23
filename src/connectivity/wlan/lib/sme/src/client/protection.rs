@@ -6,14 +6,10 @@ use {
     crate::client::{rsn::Rsna, ClientConfig},
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_common_security::{
-        Authentication, Credentials, Protocol, WepCredentials, WpaCredentials,
-    },
     fidl_fuchsia_wlan_mlme::DeviceInfo,
-    fidl_fuchsia_wlan_sme::Credential,
     std::convert::{TryFrom, TryInto},
     wlan_common::{
-        bss::{self, BssDescription},
+        bss::BssDescription,
         ie::{
             self,
             rsn::rsne::{self, Rsne},
@@ -21,11 +17,7 @@ use {
         },
         security::{
             wep::{self, WepKey},
-            wpa::{
-                self,
-                credential::{Passphrase, Psk},
-            },
-            SecurityAuthenticator,
+            wpa, SecurityAuthenticator,
         },
     },
     wlan_rsn::{
@@ -66,53 +58,6 @@ impl Protection {
 pub enum ProtectionIe {
     Rsne(Vec<u8>),
     VendorIes(Vec<u8>),
-}
-
-// TODO(fxbug.dev/95873): This code is temporary. It primarily provides conversions between the SME
-//                        `Credential` FIDL message and the `Credentials` message used in
-//                        `Authentication`. See the `TryFrom<SecurityContext<'_, Credential>>`
-//                        implementation below.
-trait CredentialExt {
-    fn to_wep_credentials(&self) -> Result<Credentials, Error>;
-    fn to_wpa1_wpa2_personal_credentials(&self) -> Result<Credentials, Error>;
-    fn to_wpa3_personal_credentials(&self) -> Result<Credentials, Error>;
-    fn is_none(&self) -> bool;
-}
-
-impl CredentialExt for Credential {
-    fn to_wep_credentials(&self) -> Result<Credentials, Error> {
-        match self {
-            Credential::Password(ref password) => WepKey::parse(password.as_slice())
-                .map(|key| Credentials::Wep(WepCredentials { key: key.into() }))
-                .map_err(From::from),
-            _ => Err(format_err!("Failed to construct credential for WEP")),
-        }
-    }
-
-    fn to_wpa1_wpa2_personal_credentials(&self) -> Result<Credentials, Error> {
-        match self {
-            Credential::Password(ref password) => Passphrase::try_from(password.as_slice())
-                .map(|passphrase| Credentials::Wpa(WpaCredentials::Passphrase(passphrase.into())))
-                .map_err(From::from),
-            Credential::Psk(ref psk) => Psk::try_from(psk.as_slice())
-                .map(|psk| Credentials::Wpa(WpaCredentials::Psk(psk.into())))
-                .map_err(From::from),
-            _ => Err(format_err!("Failed to construct credential for WPA1 or WPA2")),
-        }
-    }
-
-    fn to_wpa3_personal_credentials(&self) -> Result<Credentials, Error> {
-        match self {
-            Credential::Password(ref password) => Passphrase::try_from(password.as_slice())
-                .map(|passphrase| Credentials::Wpa(WpaCredentials::Passphrase(passphrase.into())))
-                .map_err(From::from),
-            _ => Err(format_err!("Failed to construct credential for WPA3")),
-        }
-    }
-
-    fn is_none(&self) -> bool {
-        matches!(self, Credential::None(_))
-    }
 }
 
 /// Context for authentication.
@@ -234,78 +179,6 @@ impl<'a> SecurityContext<'a, wpa::Wpa3PersonalCredentials> {
                          handler"
                     ))
                 }
-            }
-        }
-    }
-}
-
-// TODO(fxbug.dev/95873): This code is temporary. It constructs an `Authentication` FIDL message
-//                        from a security context with a `Credential` from the SME `Connect` FIDL
-//                        API. The `Credential` in the `ConnectRequest` will be changed into an
-//                        `Authentication` in the future, and this code will no longer be
-//                        necessary. This code is effectively a port of the
-//                        `crate::client::get_protection` function.
-impl<'a> TryFrom<SecurityContext<'a, Credential>> for Authentication {
-    type Error = Error;
-
-    fn try_from(context: SecurityContext<'a, Credential>) -> Result<Self, Self::Error> {
-        use bss::Protection::*;
-
-        // Note that this `Protection` type is distinct from the type defined in this module. This
-        // type is strictly nominal and contains no metadata, credentials, etc.
-        let protection = context.bss.protection();
-        let credential = context.security;
-        match protection {
-            // Unsupported
-            // TODO(fxbug.dev/92693): Support WPA Enterprise.
-            Unknown | Wpa2Enterprise | Wpa3Enterprise => {
-                Err(format_err!("Unsupported security protocol: {:?}", protection))
-            }
-            Open => credential
-                .is_none()
-                .then(|| Authentication { protocol: Protocol::Open, credentials: None })
-                .ok_or_else(|| format_err!("Credential provided for open network")),
-            Wep => credential.to_wep_credentials().map(|credentials| Authentication {
-                protocol: Protocol::Wep,
-                credentials: Some(Box::new(credentials)),
-            }),
-            Wpa1 => {
-                credential.to_wpa1_wpa2_personal_credentials().map(|credentials| Authentication {
-                    protocol: Protocol::Wpa1,
-                    credentials: Some(Box::new(credentials)),
-                })
-            }
-            Wpa1Wpa2PersonalTkipOnly | Wpa1Wpa2Personal | Wpa2PersonalTkipOnly | Wpa2Personal => {
-                credential.to_wpa1_wpa2_personal_credentials().map(|credentials| Authentication {
-                    protocol: Protocol::Wpa2Personal,
-                    credentials: Some(Box::new(credentials)),
-                })
-            }
-            // Use WPA3 if possible, but use WPA2 if WPA3 is not supported by the client or the
-            // credential is incompatible with WPA3 (namely, if the credential is a PSK).
-            Wpa2Wpa3Personal => credential
-                .to_wpa3_personal_credentials()
-                .ok()
-                .and_then(|credentials| {
-                    context.config.wpa3_supported.then(|| Authentication {
-                        protocol: Protocol::Wpa3Personal,
-                        credentials: Some(Box::new(credentials)),
-                    })
-                })
-                .or_else(|| {
-                    credential.to_wpa1_wpa2_personal_credentials().ok().map(|credentials| {
-                        Authentication {
-                            protocol: Protocol::Wpa2Personal,
-                            credentials: Some(Box::new(credentials)),
-                        }
-                    })
-                })
-                .ok_or_else(|| format_err!("Failed to construct credential for WPA2 or WPA3")),
-            Wpa3Personal => {
-                credential.to_wpa3_personal_credentials().map(|credentials| Authentication {
-                    protocol: Protocol::Wpa3Personal,
-                    credentials: Some(Box::new(credentials)),
-                })
             }
         }
     }
@@ -867,94 +740,5 @@ mod tests {
         context
             .authentication_config()
             .expect_err("created WPA3 auth config for incompatible device");
-    }
-
-    #[test]
-    fn authentication_from_credential_wpa2_wpa3_transitional() {
-        let device = crate::test_utils::fake_device_info([1u8; 6]);
-        let mut security_support = fake_security_support_empty();
-        security_support.mfp.supported = true;
-        security_support.sae.driver_handler_supported = true;
-        security_support.sae.sme_handler_supported = true;
-        let bss = fake_bss_description!(Wpa2Wpa3);
-        let credential = Credential::Password("password".as_bytes().into());
-
-        // WPA3 Personal should be used for transitional networks when driver support is available.
-        let config = ClientConfig { wpa3_supported: true, ..Default::default() };
-        let authentication = Authentication::try_from(SecurityContext {
-            security: &credential,
-            device: &device,
-            security_support: &security_support,
-            config: &config,
-            bss: &bss,
-        })
-        .unwrap();
-        assert!(matches!(authentication.protocol, Protocol::Wpa3Personal));
-
-        // WPA2 Personal should be used for transitional networks when driver support is
-        // unavailable.
-        let config = ClientConfig { wpa3_supported: false, ..Default::default() };
-        let authentication = Authentication::try_from(SecurityContext {
-            security: &credential,
-            device: &device,
-            security_support: &security_support,
-            config: &config,
-            bss: &bss,
-        })
-        .unwrap();
-        assert!(matches!(authentication.protocol, Protocol::Wpa2Personal));
-    }
-
-    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
-    #[test]
-    fn to_wep_credentials() {
-        assert!(matches!(
-            Credential::Password(b"ABCDEF0000".to_vec()).to_wep_credentials(),
-            Ok(Credentials::Wep(_)),
-        ));
-        assert!(matches!(
-            Credential::Password(b"ABCDEF0000123ABCDEF0000123".to_vec()).to_wep_credentials(),
-            Ok(Credentials::Wep(_)),
-        ));
-        assert!(matches!(
-            Credential::Password(b"vwxyz".to_vec()).to_wep_credentials(),
-            Ok(Credentials::Wep(_)),
-        ));
-        assert!(matches!(
-            Credential::Password(b"nopqrstuvwxyz".to_vec()).to_wep_credentials(),
-            Ok(Credentials::Wep(_)),
-        ));
-
-        assert!(Credential::Password(b"ABCDEF0000F".to_vec()).to_wep_credentials().is_err());
-        assert!(Credential::Password(b"ABCDEFNOPE".to_vec()).to_wep_credentials().is_err());
-        assert!(Credential::Password(b"uvwxyz".to_vec()).to_wep_credentials().is_err());
-    }
-
-    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
-    #[test]
-    fn to_wpa1_wpa2_personal_credentials() {
-        assert!(matches!(
-            Credential::Password(b"password".to_vec()).to_wpa1_wpa2_personal_credentials(),
-            Ok(Credentials::Wpa(WpaCredentials::Passphrase(_))),
-        ));
-        assert!(matches!(
-            Credential::Psk(vec![0u8; PSK_SIZE_BYTES]).to_wpa1_wpa2_personal_credentials(),
-            Ok(Credentials::Wpa(WpaCredentials::Psk(_))),
-        ));
-
-        assert!(Credential::Password(b"no".to_vec()).to_wpa1_wpa2_personal_credentials().is_err());
-        assert!(Credential::Psk(vec![0u8; 8]).to_wpa1_wpa2_personal_credentials().is_err());
-    }
-
-    // TODO(fxbug.dev/95873): This code is temporary. See `CredentialExt`.
-    #[test]
-    fn to_wpa3_personal_credentials() {
-        assert!(matches!(
-            Credential::Password(b"password".to_vec()).to_wpa3_personal_credentials(),
-            Ok(Credentials::Wpa(WpaCredentials::Passphrase(_))),
-        ));
-
-        assert!(Credential::Password(b"no".to_vec()).to_wpa3_personal_credentials().is_err());
-        assert!(Credential::Psk(vec![0u8; PSK_SIZE_BYTES]).to_wpa3_personal_credentials().is_err());
     }
 }

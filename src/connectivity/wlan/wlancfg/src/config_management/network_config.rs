@@ -421,13 +421,12 @@ impl From<Credential> for fidl_policy::Credential {
     }
 }
 
-// TODO(fxbug.dev/95873): This code is temporary. It allows common FIDL credentials to be extracted
-//                        from an `Authentication` and converted back into the Policy `Credential`
-//                        type. This is used to discard the `Authentication` prior to changing the
-//                        SME FIDL APIs, which will directly accept it. Though `From`
-//                        implementations should generally not panic, this conversion panics if
-//                        unrecognized FIDL is encountered. This is very unlikely to occur, as this
-//                        code is used to roundtrip FIDL within the same binary.
+// TODO(fxbug.dev/102606): Remove this conversion. Once calls to `select_authentication_method` are
+//                         removed from the state machine, there will instead be an
+//                         `Authentication` (or `SecurityAuthenticator`) field in
+//                         `ScannedCandidate` which can be more directly compared to SME
+//                         `ConnectRequest`s in tests.
+#[cfg(test)]
 impl From<Option<fidl_security::Credentials>> for Credential {
     fn from(credentials: Option<fidl_security::Credentials>) -> Self {
         use fidl_security::{Credentials, WepCredentials, WpaCredentials};
@@ -442,6 +441,14 @@ impl From<Option<fidl_security::Credentials>> for Credential {
             },
             Some(_) => panic!("unrecognized FIDL variant"),
         }
+    }
+}
+
+// TODO(fxbug.dev/102606): Remove this conversion. See the similar conversion above.
+#[cfg(test)]
+impl From<Option<Box<fidl_security::Credentials>>> for Credential {
+    fn from(credentials: Option<Box<fidl_security::Credentials>>) -> Self {
+        credentials.map(|credentials| *credentials).into()
     }
 }
 

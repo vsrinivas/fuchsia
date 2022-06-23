@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.wlan.sme;
 
+using fuchsia.wlan.common.security;
 using fuchsia.wlan.common;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
@@ -158,27 +159,18 @@ type RadioConfig = struct {
     channel fuchsia.wlan.common.WlanChannel;
 };
 
-/// Empty struct used as credential value for open networks.
+/// Empty struct used for union variants with no associated data.
 type Empty = struct {};
-
-/// Information required to connect to a protected network.
-type Credential = flexible union {
-    /// The network does not use credentials (open networks).
-    1: none Empty;
-
-    /// Plaintext password (handled as binary data).
-    2: password bytes;
-
-    /// Hash representation of the network passphrase (handled as binary data).
-    3: psk bytes;
-};
 
 type ConnectRequest = struct {
     ssid ieee80211.Ssid;
     bss_description fuchsia.wlan.internal.BssDescription;
     /// Informs SME whether multiple candidates were available, for metrics.
     multiple_bss_candidates bool;
-    credential Credential;
+    /// Authentication method.
+    ///
+    /// Describes how SME authenticates when connecting to the target network.
+    authentication fuchsia.wlan.common.security.Authentication;
 
     /// Deprecated. SME makes internal decision on whether to perform a passive or active
     /// scan during connect. Setting this field will not affect anything for FullMAC, but

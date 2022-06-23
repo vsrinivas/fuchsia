@@ -11,10 +11,10 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_common_security as fidl_security,
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest, Credential},
+    fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
@@ -137,7 +137,10 @@ async fn multiple_clients_ap() {
             beacon_period: TimeUnit::DEFAULT_BEACON_INTERVAL.0 * 20u16,
             channel: WLANCFG_DEFAULT_AP_CHANNEL.into(),
         ),
-        credential: Credential::None(fidl_sme::Empty {}),
+        authentication: fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Open,
+            credentials: None,
+        },
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };
@@ -179,7 +182,10 @@ async fn multiple_clients_ap() {
             beacon_period: TimeUnit::DEFAULT_BEACON_INTERVAL.0 * 20u16,
             channel: WLANCFG_DEFAULT_AP_CHANNEL.into(),
         ),
-        credential: Credential::None(fidl_sme::Empty {}),
+        authentication: fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Open,
+            credentials: None,
+        },
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };

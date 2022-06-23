@@ -22,10 +22,9 @@ use {
         state::{ClientState, ConnectCommand},
     },
     crate::{responder::Responder, Config, MlmeRequest, MlmeSink, MlmeStream},
-    fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_common_security::Authentication,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::auto_persist::{self, AutoPersist},
     fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
@@ -531,23 +530,8 @@ impl ClientSme {
             return connect_txn_stream;
         }
 
-        // TODO(fxbug.dev/95873): This code is temporary. It attempts to construct an
-        //                        `Authentication` message from a security context using the
-        //                        `Credential` in the `ConnectRequest` message. In the future, the
-        //                        `Credential` field will be replaced with an `Authentication`
-        //                        field and this step will no longer be needed.
-        let authentication = Authentication::try_from(SecurityContext {
-            security: &req.credential,
-            device: &self.context.device_info,
-            security_support: &self.context.security_support,
-            config: &self.cfg,
-            bss: &bss_description,
-        });
-        let protection = match authentication
+        let protection = match SecurityAuthenticator::try_from(req.authentication)
             .map_err(From::from)
-            .and_then(|authentication| {
-                SecurityAuthenticator::try_from(authentication).map_err(From::from)
-            })
             .and_then(|authenticator| {
                 Protection::try_from(SecurityContext {
                     security: &authenticator,
@@ -778,6 +762,17 @@ mod tests {
             protocol: fidl_security::Protocol::Wep,
             credentials: Some(Box::new(fidl_security::Credentials::Wep(
                 fidl_security::WepCredentials { key: [1; WEP40_KEY_BYTES].into() },
+            ))),
+        }
+    }
+
+    fn authentication_wpa1_passphrase() -> fidl_security::Authentication {
+        fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa1,
+            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                fidl_security::WpaCredentials::Passphrase(
+                    b"password".as_slice().try_into().unwrap(),
+                ),
             ))),
         }
     }
@@ -1441,14 +1436,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(connect_req(
             Ssid::try_from("wpa2").unwrap(),
             bss_description,
-            // TODO(fxbug.dev/95873): The more interesting test case here is a WPA1 using
-            //                        credentials that are compatible with both WPA1 and WPA2.
-            //                        However, because the `Authentication`'s security protocol is
-            //                        ignored, this fails, because a passphrase is compatible with
-            //                        WPA2. Change this test case once `Authentication` is part of
-            //                        the SME `Connect` FIDL API.
-            //authentication_wpa1_passphrase(),
-            authentication_open(),
+            authentication_wpa1_passphrase(),
         ));
         assert_variant!(
             connect_txn_stream.try_next(),
@@ -1462,9 +1450,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(connect_req(
             Ssid::try_from("wpa3").unwrap(),
             bss_description,
-            // TODO(fxbug.dev/95873): See the TODO above.
-            //authentication_wpa2_personal_passphrase(),
-            authentication_wpa2_personal_psk(),
+            authentication_wpa2_personal_passphrase(),
         ));
         assert_variant!(
             connect_txn_stream.try_next(),
@@ -1728,38 +1714,11 @@ mod tests {
         bss_description: fidl_internal::BssDescription,
         authentication: fidl_security::Authentication,
     ) -> fidl_sme::ConnectRequest {
-        // TODO(fxbug.dev/95873): This code is temporary and allows tests to be written against
-        //                        `Authentication` rather than `Credential` prior to changes to the
-        //                        SME FIDL API. This should be removed once the `credential` field
-        //                        in `ConnectRequest` is replaced with an `authentication` field.
-        //                        Note that this means that security protocols specified in test
-        //                        code are not subject to the given `Authentication` but rather the
-        //                        heuristics used in `on_connect_command`.
-        // Discard information regarding security protocol.
-        let credential = if let Some(credentials) = authentication.credentials {
-            match *credentials {
-                fidl_security::Credentials::Wep(fidl_security::WepCredentials { key }) => {
-                    fidl_sme::Credential::Password(key)
-                }
-                fidl_security::Credentials::Wpa(wpa) => match wpa {
-                    fidl_security::WpaCredentials::Passphrase(passphrase) => {
-                        fidl_sme::Credential::Password(passphrase)
-                    }
-                    fidl_security::WpaCredentials::Psk(psk) => {
-                        fidl_sme::Credential::Psk(psk.to_vec())
-                    }
-                    _ => panic!("Unkown `WpaCredentials` variant"),
-                },
-                _ => panic!("Unknown `Credentials` variant"),
-            }
-        } else {
-            fidl_sme::Credential::None(fidl_sme::Empty)
-        };
         fidl_sme::ConnectRequest {
             ssid: ssid.to_vec(),
             bss_description,
             multiple_bss_candidates: true,
-            credential,
+            authentication,
             deprecated_scan_type: fidl_common::ScanType::Passive,
         }
     }

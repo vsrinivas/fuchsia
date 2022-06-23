@@ -16,7 +16,7 @@ use {
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{
         channel::oneshot,
         lock::{Mutex, MutexGuard},
@@ -417,15 +417,6 @@ async fn send_next_chunk(
     }
 }
 
-/// convert from policy fidl Credential to sme fidl Credential
-pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
-    match cred {
-        Credential::Password(pwd) => fidl_sme::Credential::Password(pwd.clone()),
-        Credential::Psk(psk) => fidl_sme::Credential::Psk(psk.clone()),
-        Credential::None => fidl_sme::Credential::None(fidl_sme::Empty {}),
-    }
-}
-
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
 async fn handle_listener_request(
     update_sender: listener::ClientListenerMessageSender,
@@ -492,7 +483,7 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
+            config_management::{self, Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
                 create_inspect_persistence_channel, create_mock_cobalt_sender, create_wlan_hasher,
@@ -501,7 +492,7 @@ mod tests {
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect},
         futures::{
             channel::{mpsc, oneshot},
@@ -605,7 +596,17 @@ mod tests {
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.to_vec(),
                 bss_description,
-                credential: sme_credential_from_policy(&connect_req.target.credential),
+                authentication: config_management::select_authentication_method(
+                    match connect_req.target.credential {
+                        Credential::None => client_types::SecurityTypeDetailed::Open,
+                        Credential::Password(_) | Credential::Psk(_) => {
+                            types::SecurityTypeDetailed::Wpa2Personal
+                        }
+                    },
+                    connect_req.target.credential,
+                    true,
+                )
+                .unwrap(),
                 deprecated_scan_type: fidl_common::ScanType::Passive,
                 multiple_bss_candidates: false,
             };
@@ -869,7 +870,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar", &req.ssid[..]);
-                assert_eq!(fidl_sme::Credential::None(fidl_sme::Empty), req.credential);
+                assert_eq!(None, req.authentication.credentials);
             }
         );
     }
@@ -919,7 +920,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-protected", &req.ssid[..]);
-                assert_eq!(fidl_sme::Credential::Password(b"supersecure".to_vec()), req.credential);
+                assert_eq!(Credential::Password(b"supersecure".to_vec()), req.authentication.credentials.into())
                 // TODO(hahnr): Send connection response.
             }
         );
@@ -970,7 +971,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-psk", &req.ssid[..]);
-                assert_eq!(fidl_sme::Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.credential);
+                assert_eq!(Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.authentication.credentials.into())
                 // TODO(hahnr): Send connection response.
             }
         );
