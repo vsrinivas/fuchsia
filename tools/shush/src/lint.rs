@@ -19,24 +19,29 @@ pub struct Lint {
     pub span: Span,
 }
 
-#[cfg(target_arch = "x86_64")]
-const HOST_ARCH: &str = "x64";
-#[cfg(target_arch = "aarch64")]
-const HOST_ARCH: &str = "arm64";
-#[cfg(target_os = "linux")]
-const HOST_OS: &str = "linux";
-#[cfg(target_os = "macos")]
-const HOST_OS: &str = "mac";
+#[allow(unused)]
+fn get_sysroot() -> String {
+    #[cfg(target_arch = "x86_64")]
+    const HOST_ARCH: &str = "x64";
+    #[cfg(target_arch = "aarch64")]
+    const HOST_ARCH: &str = "arm64";
+    #[cfg(target_os = "linux")]
+    const HOST_OS: &str = "linux";
+    #[cfg(target_os = "macos")]
+    const HOST_OS: &str = "mac";
+
+    #[cfg(test)]
+    let sysroot = env!("RUST_SYSROOT").to_owned();
+    #[cfg(not(test))]
+    let sysroot = format!("prebuilt/third_party/rust/{}-{}", HOST_OS, HOST_ARCH);
+
+    sysroot
+}
 
 /// Returns a mapping of the lint categories (all, style, etc.) to the individual
 /// names of the lints they contain by parsing the output of `clippy-driver -Whelp`.
 pub fn get_categories() -> HashMap<String, HashSet<String>> {
-    let sysroot = if cfg!(test) {
-        // TODO(josephry): update this to just use env! after http://fxrev.dev/667908 lands
-        option_env!("RUST_SYSROOT").unwrap().to_owned()
-    } else {
-        format!("prebuilt/third_party/rust/{}-{}", HOST_OS, HOST_ARCH)
-    };
+    let sysroot = get_sysroot();
     let output = Command::new(format!("{}/bin/clippy-driver", sysroot))
         .arg("--sysroot")
         .arg(&sysroot)
@@ -103,13 +108,11 @@ pub fn filter_lints<R: BufRead>(input: &mut R, filter: &[String]) -> HashMap<Str
         .filter_map(|d| d.code.as_ref().map(|c| filter_lints.contains(&c.code).then(|| d.clone())))
         .flatten()
         .for_each(|lint| {
-            // The primary span is always last in the list
-            // TODO(josephry): Once rustfix 0.6.1 releases, use Diagnostic::is_primary
-            let span = lint.spans.last().expect("no spans found");
+            let span = lint.spans.iter().find(|s| s.is_primary).expect("no primary span found");
             let file = &span.file_name;
             // ignore stuff in the build directory
             if file.starts_with("out/") {
-                eprintln!("Ignoring file inside build dir: {}", span.file_name);
+                eprintln!("Ignoring file inside build dir: {}", file);
             } else {
                 files
                     .entry(file.to_string())

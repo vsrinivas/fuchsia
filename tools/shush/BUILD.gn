@@ -5,43 +5,52 @@
 import("//build/rust/rustc_binary.gni")
 
 if (is_host) {
-  config("env") {
-    rustenv = [ "RUST_SYSROOT=$out_rustc_prefix" ]
-  }
+  _deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:proc-macro2",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:rustfix",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:syn",
+  ]
+
+  _sources = [
+    "src/allow.rs",
+    "src/fix.rs",
+    "src/lint.rs",
+    "src/main.rs",
+    "src/owners.rs",
+    "src/span.rs",
+  ]
 
   rustc_binary("shush") {
     edition = "2021"
-    with_unit_tests = true
-    deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:proc-macro2",
-      "//third_party/rust_crates:regex",
-      "//third_party/rust_crates:rustfix",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:syn",
-    ]
-    sources = [
-      "src/allow.rs",
-      "src/fix.rs",
-      "src/lint.rs",
-      "src/main.rs",
-      "src/owners.rs",
-      "src/span.rs",
-    ]
+    deps = _deps
+    sources = _sources
+    rustenv = [ "RUST_SYSROOT=$out_rustc_prefix" ]
+  }
 
-    # Specify clippy-driver path from our prebuilts for tests
+  rustc_test("shush_test") {
+    edition = "2021"
+    deps = _deps
+    sources = _sources
+    source_root = "src/main.rs"
+
     test_deps = [ "//build/rust:prebuilt_toolchain_host_test_data" ]
-
-    # TODO(josephry): update this to just use rustenv after http://fxrev.dev/667908 lands
-    configs += [ ":env" ]
+    rustenv = [ "RUST_SYSROOT=$out_rustc_prefix" ]
   }
 
   copy("install") {
     sources = [ "$root_out_dir/shush" ]
     deps = [ ":shush" ]
     outputs = [ "$root_build_dir/host-tools/{{source_file_part}}" ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":shush_test" ]
   }
 }

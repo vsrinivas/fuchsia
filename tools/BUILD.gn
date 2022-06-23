@@ -182,7 +182,7 @@ group("tests_no_e2e") {
     "//tools/qemu:tests($host_toolchain)",
     "//tools/rfc:tests",
     "//tools/sdk-tools:tests($host_toolchain)",
-    "//tools/shush:shush_test($host_toolchain)",
+    "//tools/shush:tests($host_toolchain)",
     "//tools/staticanalysis:tests",
     "//tools/symbol-index:tests",
     "//tools/symbolizer:tests",
