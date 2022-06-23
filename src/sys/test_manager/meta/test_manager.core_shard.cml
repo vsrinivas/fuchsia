@@ -126,7 +126,6 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.virtualization.Manager",
             ],
             from: "self",
             to: "#test_manager",

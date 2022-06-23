@@ -203,7 +203,6 @@
                 "fuchsia.virtualization.LinuxManager",
 
                 // Allow launching / managing guests from the console.
-                "fuchsia.virtualization.Manager",
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",
             ],

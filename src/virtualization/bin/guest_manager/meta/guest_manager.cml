@@ -8,7 +8,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/guest_manager_v2",
+        binary: "bin/guest_manager",
     },
     children: [
         {

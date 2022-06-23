@@ -119,7 +119,6 @@
                 "fuchsia.vboot.FirmwareParam",
                 "fuchsia.virtualization.DebianGuestManager",
                 "fuchsia.virtualization.LinuxManager",
-                "fuchsia.virtualization.Manager",
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",
             ],

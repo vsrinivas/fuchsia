@@ -10,7 +10,6 @@ group("bin") {
   deps = [
     "guest",
     "guest_manager:packages",
-    "guest_runner",
     "host_vsock",
     "linux_runner",
     "vmm",
