@@ -11,6 +11,11 @@
 
 namespace utils {
 
+using SysmemTokens = struct {
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+};
+
 constexpr std::array<float, 2> kDefaultPixelScale = {1.f, 1.f};
 
 // Helper for creating a Present2Args fidl struct.
@@ -52,6 +57,14 @@ bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
 // Create sysmem allocator.
 fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
     const std::string& debug_name_suffix = std::string());
+
+// Create local and dup tokens for sysmem.
+SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator);
+
+// Creates default constraints for |buffer_collection|
+fuchsia::sysmem::BufferCollectionConstraints CreateDefaultConstraints(uint32_t buffer_count,
+                                                                      uint32_t kWidth,
+                                                                      uint32_t kHeight);
 
 // Accounts for floating point rounding errors.
 bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y);

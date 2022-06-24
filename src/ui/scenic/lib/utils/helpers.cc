@@ -114,6 +114,48 @@ fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
   return sysmem_allocator;
 }
 
+SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+  status = local_token->Sync();
+  FX_DCHECK(status == ZX_OK);
+
+  return {std::move(local_token), std::move(dup_token)};
+}
+
+fuchsia::sysmem::BufferCollectionConstraints CreateDefaultConstraints(uint32_t buffer_count,
+                                                                      uint32_t width,
+                                                                      uint32_t height) {
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
+  constraints.min_buffer_count = buffer_count;
+
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+
+  image_constraints.required_min_coded_width = width;
+  image_constraints.required_min_coded_height = height;
+  image_constraints.required_max_coded_width = width;
+  image_constraints.required_max_coded_height = height;
+
+  image_constraints.bytes_per_row_divisor = 4;
+
+  return constraints;
+}
+
 bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
   constexpr float kEpsilon = 1e-3f;
   return rect.x - kEpsilon <= x && x <= rect.x + rect.width + kEpsilon && rect.y - kEpsilon <= y &&

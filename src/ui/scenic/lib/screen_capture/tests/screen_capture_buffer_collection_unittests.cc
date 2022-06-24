@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -13,14 +14,15 @@
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
+#include "src/ui/scenic/lib/allocation/id.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+namespace screen_capture::test {
+
 using allocation::BufferCollectionImporter;
 using fuchsia::sysmem::PixelFormatType;
-
-namespace screen_capture::test {
 
 class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessionTest {
  public:
@@ -28,6 +30,38 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
     VkSessionTest::SetUp();
     renderer_ = std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
     importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(renderer_);
+  }
+
+  fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo2WithConstraints(
+      fuchsia::sysmem::BufferCollectionConstraints constraints,
+      allocation::GlobalBufferCollectionId collection_id) {
+    zx_status_t status;
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+    // Create Sysmem tokens.
+    auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
+    // Import into ScreenCaptureBufferCollectionImporter.
+    bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
+                                                    std::move(dup_token));
+    EXPECT_TRUE(result);
+
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                    buffer_collection.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+
+    status = buffer_collection->SetConstraints(true, constraints);
+    EXPECT_EQ(status, ZX_OK);
+
+    // Wait for allocation.
+    zx_status_t allocation_status = ZX_OK;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+    status =
+        buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+    status = buffer_collection->Close();
+    EXPECT_EQ(status, ZX_OK);
+    return buffer_collection_info;
   }
 
  protected:
@@ -43,82 +77,35 @@ INSTANTIATE_TEST_SUITE_P(, ScreenCaptureBCTestParameterized,
 
 VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
   // Create Sysmem tokens.
+  zx_status_t status;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  status = local_token->Sync();
-  EXPECT_EQ(status, ZX_OK);
-
-  // Import into GfxBufferCollectionImporter.
+  // Create Sysmem tokens.
+  auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
+  // Import into ScreenCaptureBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
                                                   std::move(dup_token));
-  EXPECT_TRUE(result);
+
   EXPECT_TRUE(result);
 
   // Cleanup.
   importer_->ReleaseBufferCollection(collection_id);
 }
+
 VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  const auto pixel_format = GetParam();
-  // Create Sysmem tokens.
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  status = local_token->Sync();
-  EXPECT_EQ(status, ZX_OK);
 
-  // Import into ScreenCaptureBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                  std::move(dup_token));
-  EXPECT_TRUE(result);
-
   // Set constraints.
+  const auto pixel_format = GetParam();
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
+  const uint32_t buffer_count = 2;
+  fuchsia::sysmem::BufferCollectionConstraints constraints =
+      utils::CreateDefaultConstraints(buffer_count, kWidth, kHeight);
+  constraints.image_format_constraints[0].pixel_format.type = pixel_format;
 
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.cpu_domain_supported = true;
-  constraints.buffer_memory_constraints.ram_domain_supported = true;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = pixel_format;
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] =
-      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
-  image_constraints.pixel_format.has_format_modifier = true;
-  image_constraints.min_coded_width = kWidth;
-  image_constraints.max_coded_width = kWidth;
-  image_constraints.min_coded_height = kHeight;
-  image_constraints.max_coded_height = kHeight;
-  status = buffer_collection->SetConstraints(true, constraints);
-  EXPECT_EQ(status, ZX_OK);
-
-  // Wait for allocation.
-  zx_status_t allocation_status = ZX_OK;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(allocation_status, ZX_OK);
-  status = buffer_collection->Close();
-  EXPECT_EQ(status, ZX_OK);
-
+  CreateBufferCollectionInfo2WithConstraints(constraints, collection_id);
   // Extract image into the first Session.
   allocation::ImageMetadata metadata;
   metadata.width = kWidth;
@@ -130,6 +117,31 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
   // Verify image has been imported correctly.
   bool success = importer_->ImportBufferImage(metadata);
   EXPECT_TRUE(success);
+
+  // Cleanup.
+  importer_->ReleaseBufferCollection(collection_id);
+}
+
+VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCountFromCollectionId) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  // Set constraints.
+  const auto pixel_format = GetParam();
+  const uint32_t kWidth = 32;
+  const uint32_t kHeight = 32;
+  const uint32_t buffer_count = 2;
+  fuchsia::sysmem::BufferCollectionConstraints constraints =
+      utils::CreateDefaultConstraints(buffer_count, kWidth, kHeight);
+  constraints.image_format_constraints[0].pixel_format.type = pixel_format;
+
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
+      CreateBufferCollectionInfo2WithConstraints(constraints, collection_id);
+
+  std::optional<uint32_t> info = importer_->GetBufferCollectionBufferCount(collection_id);
+
+  EXPECT_NE(info, std::nullopt);
+  EXPECT_EQ(info.value(), buffer_count);
 
   // Cleanup.
   importer_->ReleaseBufferCollection(collection_id);
@@ -155,6 +167,26 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) 
         importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token2));
     EXPECT_FALSE(result);
   }
+}
+
+VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  // Set constraints.
+  const auto pixel_format = GetParam();
+  const uint32_t kWidth = 32;
+  const uint32_t kHeight = 32;
+  const uint32_t buffer_count = 2;
+  fuchsia::sysmem::BufferCollectionConstraints constraints =
+      utils::CreateDefaultConstraints(buffer_count, kWidth, kHeight);
+  constraints.image_format_constraints[0].pixel_format.type = pixel_format;
+
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
+      CreateBufferCollectionInfo2WithConstraints(constraints, collection_id);
+
+  zx_status_t status;
+  bool result;
 
   // Buffer collection id mismatch.
   {
@@ -181,6 +213,69 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) 
     result = importer_->ImportBufferImage(metadata);
     EXPECT_FALSE(result);
   }
+
+  // Buffer count is does not correspond with vmo_index
+  {
+    allocation::ImageMetadata metadata;
+    metadata.collection_id = collection_id;
+    metadata.width = 32;
+    metadata.height = 32;
+    metadata.vmo_index = 3;
+    result = importer_->ImportBufferImage(metadata);
+    EXPECT_FALSE(result);
+  }
+
+  // Cleanup.
+  importer_->ReleaseBufferCollection(collection_id);
+}
+
+VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_ErrorCases) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  // Set constraints.
+  const auto pixel_format = GetParam();
+  const uint32_t kWidth = 0;
+  const uint32_t kHeight = 0;
+  const uint32_t buffer_count = 2;
+  fuchsia::sysmem::BufferCollectionConstraints constraints =
+      utils::CreateDefaultConstraints(buffer_count, kWidth, kHeight);
+  constraints.image_format_constraints[0].pixel_format.type = pixel_format;
+
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
+      CreateBufferCollectionInfo2WithConstraints(constraints, collection_id);
+
+  // collection_id does not exist
+  {
+    auto new_collection_id = allocation::GenerateUniqueBufferCollectionId();
+    std::optional<uint32_t> info = importer_->GetBufferCollectionBufferCount(new_collection_id);
+    EXPECT_EQ(info, std::nullopt);
+  }
+
+  // Cleanup.
+  importer_->ReleaseBufferCollection(collection_id);
+}
+
+VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_BuffersNotAllocated) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  zx_status_t status;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
+  // Create Sysmem tokens.
+  auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
+  // Import into ScreenCaptureBufferCollectionImporter.
+  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
+                                                  std::move(dup_token));
+  EXPECT_TRUE(result);
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                  buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+
+  // CheckForBuffersAllocated will return false
+  std::optional<uint32_t> info = importer_->GetBufferCollectionBufferCount(collection_id);
+  EXPECT_EQ(info, std::nullopt);
 
   // Cleanup.
   importer_->ReleaseBufferCollection(collection_id);

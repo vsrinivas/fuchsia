@@ -14,7 +14,7 @@
 #include "screen_capture_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
-#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
+#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace screen_capture {
 
@@ -23,7 +23,7 @@ using ClientId = uint64_t;
 class ScreenCaptureManager {
  public:
   ScreenCaptureManager(std::shared_ptr<flatland::Engine> engine,
-                       std::shared_ptr<flatland::VkRenderer> renderer,
+                       std::shared_ptr<flatland::Renderer> renderer,
                        std::shared_ptr<flatland::FlatlandManager> flatland_manager,
                        std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
                            buffer_collection_importers);
@@ -33,7 +33,7 @@ class ScreenCaptureManager {
  private:
   // We need these for rendering the scene into the client supplied buffer.
   std::shared_ptr<flatland::Engine> engine_;
-  std::shared_ptr<flatland::VkRenderer> renderer_;
+  std::shared_ptr<flatland::Renderer> renderer_;
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 

@@ -153,35 +153,6 @@ class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
     flatland.events().OnFramePresented = nullptr;
   }
 
-  static fuchsia::sysmem::BufferCollectionConstraints CreateDefaultConstraints(
-      uint32_t buffer_count, uint32_t width, uint32_t height) {
-    fuchsia::sysmem::BufferCollectionConstraints constraints;
-    constraints.has_buffer_memory_constraints = true;
-    constraints.buffer_memory_constraints.cpu_domain_supported = true;
-    constraints.buffer_memory_constraints.ram_domain_supported = true;
-    constraints.usage.cpu =
-        fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
-    constraints.min_buffer_count = buffer_count;
-
-    constraints.image_format_constraints_count = 1;
-    auto& image_constraints = constraints.image_format_constraints[0];
-    image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] =
-        fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
-    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
-    image_constraints.pixel_format.has_format_modifier = true;
-    image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
-
-    image_constraints.required_min_coded_width = width;
-    image_constraints.required_min_coded_height = height;
-    image_constraints.required_max_coded_width = width;
-    image_constraints.required_max_coded_height = height;
-
-    image_constraints.bytes_per_row_divisor = 4;
-
-    return constraints;
-  }
-
   fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfoWithConstraints(
       fuchsia::sysmem::BufferCollectionConstraints constraints,
       allocation::BufferCollectionExportToken export_token,
@@ -411,7 +382,7 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   std::vector<uint32_t> write_values;
@@ -433,7 +404,8 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
@@ -493,7 +465,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, display_width_, display_height_),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, display_width_, display_height_),
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with half green, half red
@@ -523,7 +495,8 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
@@ -597,7 +570,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
@@ -656,7 +629,8 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
@@ -750,7 +724,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
@@ -809,7 +783,8 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
@@ -903,7 +878,8 @@ TEST_F(ScreenCaptureIntegrationTest, FilledRectScreenshot) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/1, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
@@ -969,7 +945,8 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
       CreateBufferCollectionInfoWithConstraints(
-          CreateDefaultConstraints(/*buffer_count=*/2, render_target_width, render_target_height),
+          utils::CreateDefaultConstraints(/*buffer_count=*/2, render_target_width,
+                                          render_target_height),
           std::move(scr_ref_pair.export_token), RegisterBufferCollectionUsage::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.

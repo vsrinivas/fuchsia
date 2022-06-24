@@ -11,11 +11,11 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
-#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
+#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace screen_capture {
 ScreenCaptureManager::ScreenCaptureManager(
-    std::shared_ptr<flatland::Engine> engine, std::shared_ptr<flatland::VkRenderer> renderer,
+    std::shared_ptr<flatland::Engine> engine, std::shared_ptr<flatland::Renderer> renderer,
     std::shared_ptr<flatland::FlatlandManager> flatland_manager,
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers)
     : engine_(engine),
