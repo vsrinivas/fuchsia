@@ -7,6 +7,7 @@
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/exception.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/features.h>
@@ -14,6 +15,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
+#include <algorithm>
+
+#include <mini-process/mini-process.h>
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
@@ -23,6 +27,7 @@ namespace {
 
 constexpr size_t kTagShift = 56;
 constexpr uint8_t kTestTag = 0xAB;
+constexpr size_t kThreadStackSize = ZIRCON_DEFAULT_STACK_SIZE;
 
 constexpr uint64_t AddTag(uintptr_t ptr, uint8_t tag) {
   constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
@@ -135,6 +140,79 @@ void CatchCrash(crash_function_t crash_function, uintptr_t arg1,
   // stack will also be freed by a destructor at the end of the function.)
   constexpr uint32_t kExceptionState = ZX_EXCEPTION_STATE_THREAD_EXIT;
   ASSERT_OK(exc.set_property(ZX_PROP_EXCEPTION_STATE, &kExceptionState, sizeof(kExceptionState)));
+}
+
+TEST(TopByteIgnoreTests, VmarTaggedAddress) {
+  // Write pattern via VMO and read it via zx_process_read_memory(). Each address argument in these
+  // syscalls must not be tagged, but user pointers can be tagged.
+  uint8_t buff[] = {1, 2, 3, 4};
+  constexpr size_t kVmoSize = sizeof(buff);
+  constexpr size_t kVmarSize = 4096;  // Must be page-aligned.
+  constexpr zx_vm_option_t kVmarOpts = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
+  constexpr zx_vm_option_t kMapOpts = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+
+  // Setup the VMO. User pointers provided to syscalls can be tagged and work properly.
+  zx::vmo vmo;
+  zx::vmar vmar;
+  zx_vaddr_t vmar_addr, map_addr;
+  ASSERT_OK(zx_vmo_create(kVmoSize, 0u, AddTag(vmo.reset_and_get_address(), kTestTag)));
+  ASSERT_OK(zx_vmar_allocate(zx_vmar_root_self(), kVmarOpts, 0u, kVmarSize,
+                             AddTag(vmar.reset_and_get_address(), kTestTag),
+                             AddTag(&vmar_addr, kTestTag)));
+  ASSERT_OK(vmar.map(kMapOpts, 0u, vmo, 0u, kVmoSize, AddTag(&map_addr, kTestTag)));
+
+  // Note that the mapopts were set when mapping meaning this would be a no-op,
+  // but this just checks we can't tag vmar_protect regardless.
+  ASSERT_STATUS(vmar.protect(kMapOpts, AddTag(map_addr, kTestTag), kVmarSize), ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(vmar.protect(kMapOpts, map_addr, kVmarSize));
+
+  auto IsUntagged = [](uintptr_t ptr) { return (ptr >> kTagShift) == 0; };
+  ASSERT_TRUE(IsUntagged(vmar_addr));
+  ASSERT_TRUE(IsUntagged(map_addr));
+
+  size_t actual = 0u;
+
+  // Write via the VMO...
+  ASSERT_OK(vmo.write(AddTag(buff, kTestTag), 0u, kVmoSize));
+
+  // ...then read via zx_process_read_memory. The kernel will treat a tagged vmar address normally,
+  // but fail when it sees there's no memory at the tagged address.
+  auto buf = std::make_unique<uint8_t[]>(kVmoSize);
+  ASSERT_STATUS(
+      zx::process::self()->read_memory(AddTag(vmar_addr, kTestTag), AddTag(buf.get(), kTestTag),
+                                       kVmoSize, AddTag(&actual, kTestTag)),
+      ZX_ERR_NO_MEMORY);
+  ASSERT_OK(zx::process::self()->read_memory(vmar_addr, AddTag(buf.get(), kTestTag), kVmoSize,
+                                             AddTag(&actual, kTestTag)));
+  ASSERT_EQ(actual, kVmoSize);
+  ASSERT_EQ(memcmp(buf.get(), buff, kVmoSize), 0);
+
+  // Shuffle the data that will be written.
+  std::reverse(buff, buff + kVmoSize);
+
+  // Now write via zx_process_write_memory...
+  ASSERT_STATUS(
+      zx::process::self()->write_memory(AddTag(vmar_addr, kTestTag), AddTag(buff, kTestTag),
+                                        kVmoSize, AddTag(&actual, kTestTag)),
+      ZX_ERR_NO_MEMORY);
+  ASSERT_OK(zx::process::self()->write_memory(vmar_addr, AddTag(buff, kTestTag), kVmoSize,
+                                              AddTag(&actual, kTestTag)));
+  ASSERT_EQ(actual, kVmoSize);
+
+  // ...then read via the VMO.
+  ASSERT_OK(vmo.read(AddTag(buf.get(), kTestTag), 0u, kVmoSize));
+  ASSERT_EQ(memcmp(buf.get(), buff, kVmoSize), 0);
+
+  // We're done with the vmo and vmar. Although they will be destroyed after
+  // exiting this scope, we can do some checks here on syscalls for unmapping and
+  // decommitting.
+  ASSERT_STATUS(
+      vmar.op_range(ZX_VMO_OP_DECOMMIT, AddTag(map_addr, kTestTag), kVmarSize, nullptr, 0u),
+      ZX_ERR_OUT_OF_RANGE);
+  ASSERT_OK(vmar.op_range(ZX_VMO_OP_DECOMMIT, map_addr, kVmarSize, nullptr, 0u));
+
+  ASSERT_STATUS(vmar.unmap(AddTag(vmar_addr, kTestTag), kVmarSize), ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(vmar.unmap(vmar_addr, kVmarSize));
 }
 
 #ifdef __clang__
@@ -324,6 +402,71 @@ TEST(TopByteIgnoreTests, InstructionAbortNoTag) {
   ASSERT_EQ(GetEC(report.context.arch.u.arm_64.esr),
             arch::ArmExceptionSyndromeRegister::ExceptionClass::kInstructionAbortLowerEl);
   EXPECT_EQ(report.context.arch.u.arm_64.far, reinterpret_cast<uintptr_t>(&kUdf0));
+}
+
+#ifdef __clang__
+[[clang::no_sanitize("all")]]
+#endif
+__NO_RETURN void
+DoNothing() {
+  zx_thread_exit();
+}
+
+TEST(TopByteIgnoreTests, ThreadStartTaggedAddress) {
+  std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
+  const uintptr_t pc = reinterpret_cast<uintptr_t>(DoNothing);
+  const uintptr_t sp = compute_initial_stack_pointer(
+      reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
+
+  auto run_thread = [](uintptr_t pc, uintptr_t sp) {
+    constexpr std::string_view kThreadName = "TBI tagged entry/stack";
+    zx::thread thread;
+    ASSERT_OK(zx::thread::create(*zx::process::self(), kThreadName.data(), kThreadName.size(), 0,
+                                 &thread));
+
+    ASSERT_OK(thread.start(pc, sp, 0, 0));
+    zx_signals_t observed;
+    ASSERT_OK(
+        thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), AddTag(&observed, kTestTag)));
+    ASSERT_TRUE(observed & ZX_THREAD_TERMINATED);
+  };
+
+  // Both the PC and SP can be tagged.
+  run_thread(AddTag(pc, kTestTag), sp);
+  run_thread(pc, AddTag(sp, kTestTag));
+}
+
+TEST(TopByteIgnoreTests, ProcessStartTaggedAddress) {
+  auto run_process = [](uint8_t pc_tag, uint8_t sp_tag) {
+    zx::process proc;
+    zx::thread thread;
+    zx::vmar vmar;
+
+    constexpr std::string_view kTestName = "TBI process";
+    ASSERT_OK(zx::process::create(*zx::job::default_job(), kTestName.data(), kTestName.size(), 0,
+                                  &proc, &vmar));
+    ASSERT_OK(zx::thread::create(proc, kTestName.data(), kTestName.size(), 0, &thread));
+
+    // The process will get no handles, but it can still make syscalls.
+    // The vDSO's e_entry points to zx_process_exit.  So the process will
+    // enter at `zx_process_exit(ZX_HANDLE_INVALID);`.
+    uintptr_t entry;
+    EXPECT_OK(mini_process_load_vdso(proc.get(), vmar.get(), nullptr, &entry));
+
+    // The vDSO ABI needs a stack, though zx_process_exit actually might not.
+    uintptr_t stack_base, sp;
+    EXPECT_OK(mini_process_load_stack(vmar.get(), false, &stack_base, &sp));
+    zx_handle_close(vmar.get());
+
+    ASSERT_OK(proc.start(thread, AddTag(entry, pc_tag), AddTag(sp, sp_tag), zx::handle(), 0));
+
+    zx_signals_t signals;
+    EXPECT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::deadline_after(zx::sec(1)), &signals));
+    EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+  };
+
+  run_process(kTestTag, 0);
+  run_process(0, kTestTag);
 }
 
 #elif defined(__x86_64__)

@@ -10,7 +10,6 @@ import("//build/testing/zbi_test_executable.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
-  "address-tagging",
   "bad-segsel",
   "c11-condvar",
   "c11-mutex",
@@ -70,6 +69,7 @@ core_tests_with_custom_manifests =
 # component even with additional configuration.
 bootfs_only = [
   # These tests require ZX_POL_NEW_PROCESS for many tests.
+  "address-tagging",
   "job",
   "object-info",
   "process",
