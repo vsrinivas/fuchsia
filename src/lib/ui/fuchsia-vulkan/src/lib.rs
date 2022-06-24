@@ -645,6 +645,13 @@ pub(crate) mod tests {
         instance
     }
 
+    fn destroy_vk_instance(instance: vk::Instance) {
+        let vk_i = super::instance_pointers(instance);
+        unsafe {
+            vk_i.DestroyInstance(instance, ptr::null());
+        }
+    }
+
     fn get_vk_physical_device(instance: vk::Instance) -> Option<vk::PhysicalDevice> {
         let vk_i = super::instance_pointers(instance);
         let physical_devices = {
@@ -805,6 +812,7 @@ pub(crate) mod tests {
         let device = create_vk_device(instance, vec![]);
         assert!(device.is_some());
         destroy_vk_device(instance, device.unwrap());
+        destroy_vk_instance(instance);
     }
 
     macro_rules! assert_fn_valid {
@@ -833,6 +841,9 @@ pub(crate) mod tests {
         assert_fn_valid!(vk_ext.SetBufferCollectionBufferConstraintsFUCHSIA);
         assert_fn_valid!(vk_ext.DestroyBufferCollectionFUCHSIA);
         assert_fn_valid!(vk_ext.GetBufferCollectionPropertiesFUCHSIA);
+
+        destroy_vk_device(instance, device);
+        destroy_vk_instance(instance);
     }
 
     #[test]
@@ -857,6 +868,9 @@ pub(crate) mod tests {
         assert_fn_valid!(vk_ext.DestroyBufferCollectionFUCHSIAX);
         assert_fn_valid!(vk_ext.GetBufferCollectionPropertiesFUCHSIAX);
         assert_fn_valid!(vk_ext.GetBufferCollectionProperties2FUCHSIAX);
+
+        destroy_vk_device(instance, device);
+        destroy_vk_instance(instance);
     }
 
     #[test]
@@ -876,6 +890,9 @@ pub(crate) mod tests {
 
         assert_fn_valid!(vk_ext.GetMemoryZirconHandleFUCHSIA);
         assert_fn_valid!(vk_ext.GetMemoryZirconHandlePropertiesFUCHSIA);
+
+        destroy_vk_device(instance, device);
+        destroy_vk_instance(instance);
     }
 
     #[test]
@@ -895,5 +912,8 @@ pub(crate) mod tests {
 
         assert_fn_valid!(vk_ext.ImportSemaphoreZirconHandleFUCHSIA);
         assert_fn_valid!(vk_ext.GetSemaphoreZirconHandleFUCHSIA);
+
+        destroy_vk_device(instance, device);
+        destroy_vk_instance(instance);
     }
 }
