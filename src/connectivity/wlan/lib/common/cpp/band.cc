@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
+
 namespace wlan {
 namespace common {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 
-wlan_band_t GetWlanBand(const wlan_channel_t& channel) {
+wlan_band_t GetWlanBand(const fuchsia_wlan_common::wire::WlanChannel& channel) {
   return Is2Ghz(channel) ? WLAN_BAND_TWO_GHZ : WLAN_BAND_FIVE_GHZ;
 }
 

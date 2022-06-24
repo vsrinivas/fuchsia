@@ -8,6 +8,8 @@
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/rates_elements.h>
 
+#include "fuchsia/wlan/common/c/banjo.h"
+
 namespace wlan {
 
 static void WriteSsid(BufferWriter* w, const BeaconConfig& config) {
@@ -72,7 +74,13 @@ static void WriteHtCapabilities(BufferWriter* w, const BeaconConfig& config) {
 
 static void WriteHtOperation(BufferWriter* w, const BeaconConfig& config) {
   if (config.ht.ready) {
-    HtOperation hto = BuildHtOperation(config.channel);
+    wlan_channel_t chan = {
+        .primary = config.channel.primary,
+        .cbw = static_cast<channel_bandwidth_t>(config.channel.cbw),
+        .secondary80 = config.channel.secondary80,
+    };
+
+    HtOperation hto = BuildHtOperation(chan);
     common::WriteHtOperation(w, hto);
   }
 }

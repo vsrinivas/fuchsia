@@ -6,6 +6,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
+#include <fidl/fuchsia.wlan.common/cpp/wire_types.h>
+
 #include <wlan/common/channel.h>
 #include <wlan/common/ieee80211.h>
 
@@ -18,9 +20,9 @@ struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee8
 }
 
 bool ieee80211_is_valid_chan(uint8_t primary) {
-  wlan_channel_t chan = {
+  fuchsia_wlan_common::wire::WlanChannel chan = {
       .primary = primary,
-      .cbw = CHANNEL_BANDWIDTH_CBW20,
+      .cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw20,
       .secondary80 = 0,
   };
 
@@ -28,9 +30,9 @@ bool ieee80211_is_valid_chan(uint8_t primary) {
 }
 
 uint16_t ieee80211_get_center_freq(uint8_t ch_num) {
-  wlan_channel_t chan = {
+  fuchsia_wlan_common::wire::WlanChannel chan = {
       .primary = ch_num,
-      .cbw = CHANNEL_BANDWIDTH_CBW20,
+      .cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw20,
       .secondary80 = 0,
   };
 

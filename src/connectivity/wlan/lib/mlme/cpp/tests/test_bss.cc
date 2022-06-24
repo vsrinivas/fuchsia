@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/buffer_writer.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/channel.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/write_element.h"
@@ -54,8 +55,14 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t channel) {
 
   std::vector<SubbandTriplet> subbands;
 
+  fuchsia_wlan_common::wire::WlanChannel chan = {
+      .primary = channel.primary,
+      .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(channel.cbw),
+      .secondary80 = channel.secondary80,
+  };
+
   // TODO(porce): Read from the AP's regulatory domain
-  if (wlan::common::Is2Ghz(channel)) {
+  if (wlan::common::Is2Ghz(chan)) {
     subbands.push_back({1, 11, 36});
   } else {
     subbands.push_back({36, 4, 36});

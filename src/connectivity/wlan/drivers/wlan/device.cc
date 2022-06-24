@@ -34,6 +34,7 @@
 #include <wlan/mlme/validate_frame.h>
 #include <wlan/mlme/wlan.h>
 
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
 #include "probe_sequence.h"
 
 namespace wlan {
@@ -322,8 +323,18 @@ zx_status_t Device::SetChannel(wlan_channel_t channel) __TA_NO_THREAD_SAFETY_ANA
   // function.
 
   char buf[80];
-  snprintf(buf, sizeof(buf), "channel set: from %s to %s",
-           common::ChanStr(state_->channel()).c_str(), common::ChanStr(channel).c_str());
+  fuchsia_wlan_common::wire::WlanChannel curr_chan = {
+      .primary = state_->channel().primary,
+      .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(state_->channel().cbw),
+      .secondary80 = state_->channel().secondary80,
+  };
+  fuchsia_wlan_common::wire::WlanChannel new_chan = {
+      .primary = channel.primary,
+      .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(channel.cbw),
+      .secondary80 = channel.secondary80,
+  };
+  snprintf(buf, sizeof(buf), "channel set: from %s to %s", common::ChanStr(curr_chan).c_str(),
+           common::ChanStr(new_chan).c_str());
 
   zx_status_t status = wlan_softmac_proxy_.SetChannel(&channel);
   if (status != ZX_OK) {

@@ -19,6 +19,7 @@
 #include <wlan/common/features.h>
 #include <wlan/common/phy.h>
 
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
 #include "utils.h"
 
 namespace wlan {
@@ -113,7 +114,13 @@ struct WlantapMacImpl : WlantapMac {
 
   static zx_status_t WlanSoftmacSetChannel(void* ctx, const wlan_channel_t* channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    if (!wlan::common::IsValidChan(*channel)) {
+    fuchsia_wlan_common::wire::WlanChannel chan = {
+        .primary = channel->primary,
+        .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(channel->cbw),
+        .secondary80 = channel->secondary80,
+    };
+
+    if (!wlan::common::IsValidChan(chan)) {
       return ZX_ERR_INVALID_ARGS;
     }
     self.listener_->WlantapMacSetChannel(self.id_, channel);

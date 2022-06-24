@@ -15,6 +15,8 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
+
 namespace wlan {
 namespace debug {
 
@@ -197,7 +199,9 @@ std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx) {
   oss << std::setw(3) << +tx_vec_idx << ": ";
   oss << Describe(tx_vec.phy) << " ";
   oss << Describe(tx_vec.gi) << " ";
-  oss << ::wlan::common::CbwStr(tx_vec.cbw) << " ";
+  oss << ::wlan::common::CbwStr(
+             static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(tx_vec.cbw))
+      << " ";
   oss << "NSS " << +tx_vec.nss << " ";
   oss << "MCS " << std::setw(2) << +tx_vec.mcs_idx;
   if (!tx_vec.IsValid()) {
@@ -336,7 +340,12 @@ std::string Describe(const wlan_rx_info_t& rxinfo) {
   BUFFER("valid_fields:0x%0x8", rxinfo.valid_fields);
   BUFFER("phy:%u", rxinfo.phy);
   BUFFER("data_rate:%u", rxinfo.data_rate);
-  BUFFER("channel:%s", common::ChanStr(rxinfo.channel).c_str());
+  fuchsia_wlan_common::wire::WlanChannel ch = {
+      .primary = rxinfo.channel.primary,
+      .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(rxinfo.channel.cbw),
+      .secondary80 = rxinfo.channel.secondary80,
+  };
+  BUFFER("channel:%s", common::ChanStr(ch).c_str());
   BUFFER("mcs:%u", rxinfo.mcs);
   BUFFER("rssi_dbm:%d", rxinfo.rssi_dbm);
   BUFFER("snr_dbh:%d", rxinfo.snr_dbh);

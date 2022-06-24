@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_BEACON_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_BEACON_H_
 
-#include <fuchsia/wlan/common/c/banjo.h>
-
 #include <wlan/mlme/ht.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ps_cfg.h>
+
+#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
 
 namespace wlan {
 
@@ -23,7 +23,7 @@ struct BeaconConfig {
   const uint8_t* rsne;
   size_t rsne_len;
   uint16_t beacon_period;
-  wlan_channel_t channel;
+  fuchsia_wlan_common::wire::WlanChannel channel;
   const PsCfg* ps_cfg;
   uint64_t timestamp;
   HtConfig ht;
