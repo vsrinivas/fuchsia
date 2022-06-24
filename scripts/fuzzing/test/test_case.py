@@ -168,7 +168,16 @@ class TestCaseWithFactory(TestCaseWithIO):
             '/fuchsia_dir/.jiri_root/bin/fx', 'ffx', '--machine', 'json',
             'component', 'show', '/core/appmgr/sys'
         ]
-        output = {"url": url, "execution": {"elf_runtime": {"job_id": 123}}}
+        output = {
+            "url": url,
+            "resolved": {
+                "started": {
+                    "elf_runtime": {
+                        "job_id": 123
+                    }
+                }
+            }
+        }
         end = None if not duration else self.host.elapsed + duration
         self.set_outputs(cmd, output, end=end, reset=False, raw=True)
         if refresh:

@@ -201,7 +201,11 @@ class Device(object):
             out = self.host.create_process(cmd).check_output()
             # Components that are not running can be either absent or have null
             # execution info
-            self._urls = [c["url"] for c in json.loads(out) if c["execution"]]
+            self._urls = [
+                c["url"]
+                for c in json.loads(out)
+                if "resolved" in c and "started" in c["resolved"]
+            ]
         return url in self._urls
 
     def isfile(self, pathname):
