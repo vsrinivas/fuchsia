@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/sys/fuzzing/common/meta/test.shard.cml" ],
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         binary: "test/registry_integration_tests",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.fuzzer.Registrar",
-                "fuchsia.fuzzer.Registry",
-            ],
-        },
+        { protocol: "fuchsia.fuzzer.Registrar" },
+        { protocol: "fuchsia.fuzzer.Registry" },
+        { protocol: "fuchsia.process.Launcher" },
     ],
 }

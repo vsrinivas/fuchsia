@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This manifest corresponds to the root of the realm used for the integration
+// tests.
+{
+    children: [
+        {
+            name: "coverage",
+            url: "#meta/coverage.cm",
+        },
+        {
+            name: "engine",
+            url: "#meta/engine.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.fuzzer.CoverageProvider",
+                "fuchsia.fuzzer.Instrumentation",
+            ],
+            from: "#coverage",
+            to: "#engine",
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: "#engine",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#coverage",
+                "#engine",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#engine",
+        },
+    ],
+}

@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This manifest corresponds to the "real" engine used by the integration tests.
+{
+    include: [
+        "//src/sys/fuzzing/framework/engine/default.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "test/component_fuzzing_framework_tests",
+    },
+    use: [
+        { protocol: "fuchsia.fuzzer.CoverageProvider" },
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.fuzzer.Instrumentation",
+            from: "parent",
+            to: "#fuzzer",
+        },
+    ],
+}

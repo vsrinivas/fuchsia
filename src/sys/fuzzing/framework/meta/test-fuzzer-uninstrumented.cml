@@ -1,9 +1,0 @@
-// Copyright 2022 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-{
-    include: [ "//src/sys/fuzzing/framework/meta/test-fuzzer.shard.cml" ],
-    program: {
-        binary: "bin/component_fuzzing_framework_test_fuzzer_uninstrumented",
-    },
-}

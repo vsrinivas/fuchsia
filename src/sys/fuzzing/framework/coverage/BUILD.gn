@@ -40,7 +40,7 @@ executable("coverage-bin") {
 
 fuchsia_component("coverage") {
   testonly = true
-  manifest = "../meta/coverage.cml"
+  manifest = "meta/coverage.cml"
   deps = [ ":coverage-bin" ]
 }
 
@@ -56,8 +56,8 @@ source_set("unittests") {
   ]
   deps = [
     ":coverage-lib",
-    "../testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/framework/testing",
     "//third_party/googletest:gtest",
   ]
 }

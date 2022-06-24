@@ -4,6 +4,9 @@
 
 import("//build/components/fuchsia_component.gni")
 
+# Both the "real" and "test" engines used in fuzzers and fuzzer tests,
+# respectively, use the adapter-client code to connect to the fuzz target
+# adapter component.
 source_set("adapter-client") {
   visibility = [ "../*" ]
   testonly = true
@@ -26,6 +29,8 @@ source_set("adapter-client") {
   ]
 }
 
+# This source set is the core of the "real" engine and includes the coverage
+# processing and input mutation.
 source_set("engine-lib") {
   visibility = [ "../*" ]
   testonly = true
@@ -71,7 +76,7 @@ executable("engine-bin") {
 
 fuchsia_component("engine") {
   testonly = true
-  manifest = "../meta/engine.cml"
+  manifest = "meta/engine.cml"
   deps = [ ":engine-bin" ]
 }
 
@@ -88,11 +93,12 @@ source_set("testing") {
   ]
   public_deps = [
     ":engine-lib",
-    "../target:no_hooks",
-    "../testing",
     "//src/sys/fuzzing/common:runner-unittests",
     "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/framework/coverage:coverage-lib",
+    "//src/sys/fuzzing/framework/target:no_hooks",
+    "//src/sys/fuzzing/framework/testing",
     "//third_party/googletest:gtest",
   ]
 }
@@ -113,9 +119,9 @@ source_set("unittests") {
   ]
   deps = [
     ":testing",
-    "../testing:test-target",
     "//src/lib/files",
     "//src/sys/fuzzing/common:runner-unittests",
+    "//src/sys/fuzzing/framework/testing:test-target",
   ]
 }
 
@@ -129,7 +135,7 @@ source_set("fatal-unittests") {
   ]
   deps = [
     ":testing",
-    "../testing:test-target",
     "//src/sys/fuzzing/common:runner-fatal-unittests",
+    "//src/sys/fuzzing/framework/testing:test-target",
   ]
 }

@@ -1,6 +1,9 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// This manifest shard corresponds to the fuzz target adapter component, which
+// maps test inputs from the engine to the target component(s) being fuzzed.
 {
     include: [
         "//sdk/lib/inspect/client.shard.cml",
@@ -8,15 +11,11 @@
     ],
     program: {
         runner: "elf",
-        args: [ "data/corpus" ],
     },
     capabilities: [
         {
             protocol: [ "fuchsia.fuzzer.TargetAdapter" ],
         },
-    ],
-    use: [
-        { protocol: "fuchsia.process.Launcher" },
     ],
     expose: [
         {

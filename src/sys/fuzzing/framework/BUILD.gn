@@ -8,12 +8,15 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":default-tests",
-    ":fatal-tests",
+    ":fatal-unittests-pkg",
+    ":unittests-pkg",
+    "tests",
   ]
 }
 
-test("unittests_bin") {
+# This package contains "normal" unit tests.
+
+test("unittests-bin") {
   output_name = "component_fuzzing_framework_unittests"
   visibility = [ ":*" ]
   testonly = true
@@ -26,7 +29,22 @@ test("unittests_bin") {
   ]
 }
 
-test("fatal_unittests_bin") {
+fuchsia_test_component("unittests") {
+  manifest = "meta/unittests.cml"
+  deps = [
+    ":unittests-bin",
+    "testing/data:corpus",
+  ]
+}
+
+fuchsia_test_package("unittests-pkg") {
+  package_name = "component-fuzzing-framework-tests"
+  test_components = [ ":unittests" ]
+}
+
+# This package contains unit tests that produce fatal error messages.
+
+test("fatal-unittests-bin") {
   output_name = "component_fuzzing_framework_fatal_unittests"
   visibility = [ "../*" ]
   testonly = true
@@ -36,81 +54,12 @@ test("fatal_unittests_bin") {
   ]
 }
 
-fuchsia_test_component("unittests") {
-  manifest = "meta/unittests.cml"
-  deps = [
-    ":unittests_bin",
-    "testing/data:corpus",
-  ]
-}
-
 fuchsia_test_component("fatal-unittests") {
   manifest = "meta/fatal-unittests.cml"
-  deps = [ ":fatal_unittests_bin" ]
+  deps = [ ":fatal-unittests-bin" ]
 }
 
-fuchsia_test_component("test-engine") {
-  manifest = "meta/test-engine.cml"
-  deps = [ "testing:engine" ]
-}
-
-fuchsia_test_component("integration-tests") {
-  visibility = [ ":*" ]
-  manifest = "meta/integration-tests.cml"
-  deps = [
-    "tests:framework-integration-tests",
-    "//src/sys/fuzzing/framework/engine:engine-bin",
-  ]
-}
-
-fuchsia_test_component("test-fuzzer") {
-  manifest = "meta/test-fuzzer.cml"
-  deps = [
-    "testing/data:corpus",
-    "tests:fuzzer",
-  ]
-}
-
-fuchsia_test_component("test-fuzzer-uninstrumented") {
-  manifest = "meta/test-fuzzer-uninstrumented.cml"
-  deps = [
-    "testing/data:corpus",
-    "tests:fuzzer-uninstrumented",
-  ]
-}
-
-# This component contains an integration test that uses the "real" fuzzing engine that generates
-# inputs to drive a simple test fuzzer, thereby imitating a real fuzzer.
-fuchsia_test_component("fuzzer-realm") {
-  manifest = "meta/fuzzer-realm.cml"
-  deps = [
-    ":integration-tests",
-    ":test-fuzzer",
-    "//src/sys/fuzzing/framework/coverage",
-  ]
-}
-
-# This component contains an integration test that uses a test "engine" that uses fixed inputs to
-# drive a simple test fuzzer, thereby imitating the auto-generated fuzzer tests that run in CQ.
-fuchsia_test_component("fuzzer-test-realm") {
-  manifest = "meta/fuzzer-test-realm.cml"
-  deps = [
-    ":test-engine",
-    ":test-fuzzer-uninstrumented",
-    "//src/sys/fuzzing/framework/coverage",
-  ]
-}
-
-fuchsia_test_package("default-tests") {
-  package_name = "component-fuzzing-framework-tests"
-  test_components = [
-    ":unittests",
-    ":fuzzer-realm",
-    ":fuzzer-test-realm",
-  ]
-}
-
-fuchsia_test_package("fatal-tests") {
+fuchsia_test_package("fatal-unittests-pkg") {
   package_name = "component-fuzzing-framework-fatal-tests"
 
   # Some tests involve handling intentional crashes.
