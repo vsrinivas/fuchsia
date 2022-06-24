@@ -596,16 +596,11 @@ async fn package_from_repo(
 }
 
 // Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
-// cache_packages manifest of the system_image package. The cache_packages manifest only includes
-// the package path and assumes all hosts are "fuchsia.com", so this fn can only succeed on
-// `AbsolutePackageUrl`s with a host of "fuchsia.com".
+// cache_packages manifest of the system_image package.
 fn hash_from_cache_packages_manifest<'a>(
     url: &AbsolutePackageUrl,
     system_cache_list: &'a CachePackages,
 ) -> Option<BlobId> {
-    if url.host() != "fuchsia.com" {
-        return None;
-    }
     // We are in the process of removing the concept of package variant
     // (generalizing fuchsia-pkg URL paths to be `(first-segment)(/more-segments)*`
     // instead of requiring that paths are `(name)/(variant)`. Towards this goal,
@@ -890,12 +885,20 @@ mod tests {
     fn test_hash_from_cache_packages_manifest() {
         let hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let cache_packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::new(
-            "fuchsia-pkg://fuchsia.com".parse().unwrap(),
-            "potato".parse().unwrap(),
-            None,
-            hash,
-        )]);
+        let cache_packages = CachePackages::from_entries(vec![
+            PinnedAbsolutePackageUrl::new_with_path(
+                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "/potato",
+                hash,
+            )
+            .unwrap(),
+            PinnedAbsolutePackageUrl::new_with_path(
+                "fuchsia-pkg://other.com".parse().unwrap(),
+                "/potato",
+                hash,
+            )
+            .unwrap(),
+        ]);
         let empty_cache_packages = CachePackages::from_entries(vec![]);
 
         let fuchsia_url = AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
@@ -903,7 +906,7 @@ mod tests {
             AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
         let variant_zero_fuchsia_url =
             AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let other_repo_url = AbsolutePackageUrl::parse("fuchsia-pkg://nope.com/potato").unwrap();
+        let other_repo_url = AbsolutePackageUrl::parse("fuchsia-pkg://other.com/potato").unwrap();
         assert_eq!(
             hash_from_cache_packages_manifest(&fuchsia_url, &cache_packages),
             Some(hash.into())
@@ -916,7 +919,10 @@ mod tests {
             hash_from_cache_packages_manifest(&variant_nonzero_fuchsia_url, &cache_packages),
             None
         );
-        assert_eq!(hash_from_cache_packages_manifest(&other_repo_url, &cache_packages), None);
+        assert_eq!(
+            hash_from_cache_packages_manifest(&other_repo_url, &cache_packages),
+            Some(hash.into())
+        );
         assert_eq!(hash_from_cache_packages_manifest(&fuchsia_url, &empty_cache_packages), None);
     }
 
