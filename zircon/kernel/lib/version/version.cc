@@ -23,7 +23,7 @@
 // This is allocated with sufficient size to be filled in later.  The contents
 // have to be nonzero so they get allocated but don't otherwise matter.  See
 // kernel-image.inc for more details.
-extern "C" const char kVersionString[VERSION_STRING_SIZE] = "...";
+extern "C" const char kVersionString[VERSION_STRING_SIZE];
 
 namespace {
 

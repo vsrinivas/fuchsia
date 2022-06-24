@@ -63,11 +63,15 @@ if (current_toolchain == default_toolchain) {
   }
 } else {
   zx_library("version") {
-    sources = [ "version.cc" ]
+    sources = [
+      "version-string.S",
+      "version.cc",
+    ]
     defines = [ "ARCH=\"$current_cpu\"" ]
     public_deps = [ ":version-string.h($default_toolchain)" ]
     public_configs = [ ":gen.config" ]
     deps = [
+      "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/init",
     ]
