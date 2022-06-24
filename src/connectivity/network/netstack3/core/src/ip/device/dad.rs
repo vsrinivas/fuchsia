@@ -10,10 +10,7 @@ use net_types::{
     ip::{Ipv6, Ipv6Addr},
     MulticastAddr, UnicastAddr, Witness as _,
 };
-use packet::{EmptyBuf, InnerPacketBuilder as _, Serializer};
-use packet_formats::icmp::ndp::{
-    options::NdpOptionBuilder, NeighborSolicitation, OptionSequenceBuilder,
-};
+use packet_formats::icmp::ndp::NeighborSolicitation;
 
 use crate::{
     context::{EventContext, TimerContext},
@@ -39,10 +36,6 @@ pub(super) trait Ipv6DeviceDadContext<C>: IpDeviceIdContext<Ipv6> {
 
     /// Returns the NDP retransmission timer configured on the device.
     fn retrans_timer(&self, ctx: &mut C, device_id: Self::DeviceId) -> Duration;
-
-    /// Returns the device's link-layer address bytes, if the device supports
-    /// link-layer addressing.
-    fn get_link_layer_addr_bytes(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<&[u8]>;
 }
 
 /// The IP layer context provided to DAD.
@@ -51,14 +44,13 @@ pub(super) trait Ipv6LayerDadContext<C>: IpDeviceIdContext<Ipv6> {
     ///
     /// The message will be sent with the unspecified (all-zeroes) source
     /// address.
-    fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
+    fn send_dad_packet(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
         dst_ip: MulticastAddr<Ipv6Addr>,
         message: NeighborSolicitation,
-        body: S,
-    ) -> Result<(), S>;
+    ) -> Result<(), ()>;
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -169,9 +161,24 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
                 //      process.
                 let retrans_timer = self.retrans_timer(ctx, device_id);
 
-                let src_ll = self.get_link_layer_addr_bytes(ctx, device_id).map(|a| a.to_vec());
                 let dst_ip = addr.to_solicited_node_address();
 
+                // Do not include the source link-layer option when the NS
+                // message as DAD messages are sent with the unspecified source
+                // address which must not hold a source link-layer option.
+                //
+                // As per RFC 4861 section 4.3,
+                //
+                //   Possible options:
+                //
+                //      Source link-layer address
+                //           The link-layer address for the sender. MUST NOT be
+                //           included when the source IP address is the
+                //           unspecified address. Otherwise, on link layers
+                //           that have addresses this option MUST be included in
+                //           multicast solicitations and SHOULD be included in
+                //           unicast solicitations.
+                //
                 // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
                 // can't happen statically.
                 let _: Result<(), _> = self.send_dad_packet(
@@ -179,14 +186,6 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
                     device_id,
                     dst_ip,
                     NeighborSolicitation::new(addr.get()),
-                    OptionSequenceBuilder::new(
-                        src_ll
-                            .as_ref()
-                            .map(AsRef::as_ref)
-                            .map(NdpOptionBuilder::SourceLinkLayerAddress)
-                            .iter(),
-                    )
-                    .into_serializer(),
                 );
 
                 assert_eq!(
@@ -212,7 +211,8 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
 
 #[cfg(test)]
 mod tests {
-    use packet_formats::icmp::ndp::{options::NdpOption, Options};
+    use packet::EmptyBuf;
+    use packet_formats::icmp::ndp::Options;
 
     use super::*;
     use crate::{
@@ -223,11 +223,10 @@ mod tests {
         ip::DummyDeviceId,
     };
 
-    struct MockDadContext<'a> {
+    struct MockDadContext {
         addr: UnicastAddr<Ipv6Addr>,
         state: AddressState,
         retrans_timer: Duration,
-        link_layer_bytes: Option<&'a [u8]>,
     }
 
     #[derive(Debug)]
@@ -238,17 +237,16 @@ mod tests {
 
     type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>, DadEvent<DummyDeviceId>, ()>;
 
-    type MockCtx<'a> = DummySyncCtx<MockDadContext<'a>, DadMessageMeta, DummyDeviceId>;
+    type MockCtx = DummySyncCtx<MockDadContext, DadMessageMeta, DummyDeviceId>;
 
-    impl<'a> Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx<'a> {
+    impl Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx {
         fn get_address_state_mut(
             &mut self,
             _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
         ) -> Option<&mut AddressState> {
-            let MockDadContext { addr, state, retrans_timer: _, link_layer_bytes: _ } =
-                self.get_mut();
+            let MockDadContext { addr, state, retrans_timer: _ } = self.get_mut();
             (*addr == request_addr).then(|| state)
         }
 
@@ -257,32 +255,21 @@ mod tests {
             _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
         ) -> Duration {
-            let MockDadContext { addr: _, state: _, retrans_timer, link_layer_bytes: _ } =
-                self.get_ref();
+            let MockDadContext { addr: _, state: _, retrans_timer } = self.get_ref();
             *retrans_timer
-        }
-
-        fn get_link_layer_addr_bytes(
-            &self,
-            _ctx: &mut MockNonSyncCtx,
-            DummyDeviceId: DummyDeviceId,
-        ) -> Option<&[u8]> {
-            let MockDadContext { addr: _, state: _, retrans_timer: _, link_layer_bytes } =
-                self.get_ref();
-            *link_layer_bytes
         }
     }
 
-    impl<'a> Ipv6LayerDadContext<MockNonSyncCtx> for MockCtx<'a> {
-        fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
+    impl Ipv6LayerDadContext<MockNonSyncCtx> for MockCtx {
+        fn send_dad_packet(
             &mut self,
             ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             dst_ip: MulticastAddr<Ipv6Addr>,
             message: NeighborSolicitation,
-            body: S,
-        ) -> Result<(), S> {
-            self.send_frame(ctx, DadMessageMeta { dst_ip, message }, body)
+        ) -> Result<(), ()> {
+            self.send_frame(ctx, DadMessageMeta { dst_ip, message }, EmptyBuf)
+                .map_err(|EmptyBuf| ())
         }
     }
 
@@ -299,7 +286,6 @@ mod tests {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
                 retrans_timer: Duration::default(),
-                link_layer_bytes: None,
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
@@ -317,7 +303,6 @@ mod tests {
                 addr: DAD_ADDRESS,
                 state: AddressState::Assigned,
                 retrans_timer: Duration::default(),
-                link_layer_bytes: None,
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
@@ -334,7 +319,6 @@ mod tests {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
                 retrans_timer: Duration::default(),
-                link_layer_bytes: None,
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
@@ -342,8 +326,7 @@ mod tests {
             DummyDeviceId,
             DAD_ADDRESS,
         );
-        let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
-            sync_ctx.get_ref();
+        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
             non_sync_ctx.take_events(),
@@ -355,15 +338,13 @@ mod tests {
         DadTimerId { addr: DAD_ADDRESS, device_id: DummyDeviceId };
 
     fn check_dad(
-        sync_ctx: &MockCtx<'_>,
+        sync_ctx: &MockCtx,
         non_sync_ctx: &MockNonSyncCtx,
         frames_len: usize,
         dad_transmits_remaining: Option<NonZeroU8>,
         retrans_timer: Duration,
-        expected_sll_bytes: Option<&[u8]>,
     ) {
-        let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
-            sync_ctx.get_ref();
+        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Tentative { dad_transmits_remaining });
         let frames = sync_ctx.frames();
         assert_eq!(frames.len(), frames_len, "frames = {:?}", frames);
@@ -374,24 +355,16 @@ mod tests {
         assert_eq!(*message, NeighborSolicitation::new(DAD_ADDRESS.get()));
 
         let options = Options::parse(&frame[..]).expect("parse NDP options");
-        assert_eq!(
-            options.iter().find_map(|o| match o {
-                NdpOption::SourceLinkLayerAddress(a) => Some(a),
-                _ => None,
-            }),
-            expected_sll_bytes
-        );
+        assert_eq!(options.iter().count(), 0);
         non_sync_ctx
             .timer_ctx()
             .assert_timers_installed([(DAD_TIMER_ID, non_sync_ctx.now() + retrans_timer)]);
     }
 
-    fn perform_dad(link_layer_bytes: Option<(&[u8], &[u8])>) {
+    #[test]
+    fn perform_dad() {
         const DAD_TRANSMITS_REQUIRED: u8 = 2;
         const RETRANS_TIMER: Duration = Duration::from_secs(1);
-
-        let (link_layer_bytes, expected_sll_bytes) =
-            link_layer_bytes.map_or((None, None), |(a, b)| (Some(a), Some(b)));
 
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
@@ -400,7 +373,6 @@ mod tests {
                     dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
                 },
                 retrans_timer: RETRANS_TIMER,
-                link_layer_bytes,
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
@@ -416,15 +388,13 @@ mod tests {
                 usize::from(count + 1),
                 NonZeroU8::new(DAD_TRANSMITS_REQUIRED - count - 1),
                 RETRANS_TIMER,
-                expected_sll_bytes,
             );
             assert_eq!(
                 non_sync_ctx.trigger_next_timer(&mut sync_ctx, DadHandler::handle_timer),
                 Some(DAD_TIMER_ID)
             );
         }
-        let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
-            sync_ctx.get_ref();
+        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
             non_sync_ctx.take_events(),
@@ -444,7 +414,6 @@ mod tests {
                     dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
                 },
                 retrans_timer: RETRANS_TIMER,
-                link_layer_bytes: None,
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
@@ -458,7 +427,6 @@ mod tests {
             1,
             NonZeroU8::new(DAD_TRANSMITS_REQUIRED - 1),
             RETRANS_TIMER,
-            None,
         );
 
         DadHandler::stop_duplicate_address_detection(
@@ -468,49 +436,5 @@ mod tests {
             DAD_ADDRESS,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-    }
-
-    #[test]
-    fn perform_dad_no_source_link_layer_option() {
-        perform_dad(None)
-    }
-
-    #[test]
-    fn perform_dad_with_source_link_layer_option_short_address() {
-        perform_dad(Some((
-            &[1, 2, 3, 4],
-            &[
-                1, 2, 3, 4,
-                // Padding bytes as NDP options have lengths in 8 byte
-                // increments.
-                0, 0,
-            ],
-        )))
-    }
-
-    #[test]
-    fn perform_dad_with_source_link_layer_option_mac_addresss() {
-        perform_dad(Some((
-            &[1, 2, 3, 4, 5, 6],
-            &[
-                1, 2, 3, 4, 5,
-                6,
-                // No padding bytes as ethernet Mac address fit perfectly in an
-                // NDP source link-layer address option.
-            ],
-        )))
-    }
-
-    #[test]
-    fn perform_dad_with_source_link_layer_option_long_address() {
-        perform_dad(Some((
-            &[1, 2, 3, 4, 5, 6, 7, 8],
-            &[
-                1, 2, 3, 4, 5, 6, 7, 8,
-                // Padding bytes as NDP options have lengths in 8 byte
-                // increments.
-                0, 0, 0, 0, 0, 0,
-            ],
-        )))
     }
 }

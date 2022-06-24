@@ -285,10 +285,6 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
     fn retrans_timer(&self, _ctx: &mut C, device_id: SC::DeviceId) -> Duration {
         SC::get_ip_device_state(self, device_id).retrans_timer.get()
     }
-
-    fn get_link_layer_addr_bytes(&self, _ctx: &mut C, device_id: SC::DeviceId) -> Option<&[u8]> {
-        device::Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
-    }
 }
 
 fn send_ndp_packet<
@@ -334,24 +330,24 @@ impl<
         SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
     > Ipv6LayerDadContext<C> for SC
 {
-    fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
+    fn send_dad_packet(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
         dst_ip: MulticastAddr<Ipv6Addr>,
         message: NeighborSolicitation,
-        body: S,
-    ) -> Result<(), S> {
+    ) -> Result<(), ()> {
         send_ndp_packet(
             self,
             ctx,
             device_id,
             Ipv6::UNSPECIFIED_ADDRESS,
             dst_ip.into_specified(),
-            body,
+            EmptyBuf,
             IcmpUnusedCode,
             message,
         )
+        .map_err(|EmptyBuf| ())
     }
 }
 
