@@ -313,7 +313,7 @@ template("pm_publish") {
                              "testonly",
                              "visibility",
                            ])
-    depfile = "${target_gen_dir}/${target_name}.d"
+    depfile = "${target_out_dir}/${target_name}.d"
 
     assert(inputs == [ inputs[0] ],
            "pm_publish(\"$target_name\") requires exactly one input")
