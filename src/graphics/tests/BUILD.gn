@@ -45,6 +45,7 @@ group("vulkan-tests") {
   testonly = true
   deps = [
     "common:vkcontext",
+    "icd_conformance",
     "icd_load",
     "libvulkan",
     "mali_vulkan_test",

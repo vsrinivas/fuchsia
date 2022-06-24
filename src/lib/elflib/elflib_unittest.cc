@@ -451,5 +451,19 @@ TEST(ElfLib, AArch64Plt) {
   ASSERT_TRUE(warnings.empty());
 }
 
+TEST(ElfLib, GetSharedObjectDependencies) {
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(GetTestBinaryPath(std::string(kStrippedExampleFile)));
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto objects = elf->GetSharedObjectDependencies();
+  ASSERT_TRUE(objects);
+  auto& object_vec = objects.value();
+  ASSERT_EQ(object_vec.size(), 3u);
+  EXPECT_EQ(object_vec[0], "libclang_rt.scudo.so");
+  EXPECT_EQ(object_vec[1], "libfdio.so");
+  EXPECT_EQ(object_vec[2], "libc.so");
+}
+
 }  // namespace
 }  // namespace elflib

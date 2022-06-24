@@ -92,6 +92,8 @@ class ElfLib {
   // ".dynsym" section.
   std::optional<std::map<std::string, Elf64_Sym>> GetAllDynamicSymbols();
 
+  std::optional<std::vector<std::string>> GetSharedObjectDependencies();
+
   // Attempt to discern whether this file has debug symbols (otherwise it is
   // presumably stripped).
   //

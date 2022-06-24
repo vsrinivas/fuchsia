@@ -991,6 +991,40 @@ std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllDynamicSymbols() {
                                           .size = *dynstr_.size});
 }
 
+std::optional<std::vector<std::string>> ElfLib::GetSharedObjectDependencies() {
+  LoadProgramHeaders();
+
+  std::vector<std::string> output;
+
+  for (size_t idx = 0; idx < segments_.size(); idx++) {
+    if (segments_[idx].p_type != PT_DYNAMIC) {
+      continue;
+    }
+
+    auto data = GetSegmentData(idx);
+
+    if (!data.ptr) {
+      return std::nullopt;
+    }
+
+    const Elf64_Dyn* start = reinterpret_cast<const Elf64_Dyn*>(data.ptr);
+    const Elf64_Dyn* end = start + (data.size / sizeof(Elf64_Dyn));
+
+    for (auto dyn = start; dyn != end; dyn++) {
+      if (dyn->d_tag == DT_NEEDED) {
+        auto string = GetDynamicString(dyn->d_un.d_val);
+        if (!string) {
+          Warn("Invalid symbol table string");
+          continue;
+        }
+        output.push_back(std::move(*string));
+      }
+    }
+  }
+
+  return output;
+}
+
 bool ElfLib::ProbeHasDebugInfo() {
   if (!header_.e_shnum) {
     // No sections, no debug info.

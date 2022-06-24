@@ -1,0 +1,55 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+source_set("src") {
+  testonly = true
+
+  sources = [ "icd_conformance.cc" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/elflib",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/json_parser",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+  public_deps += [ "//src/lib/vulkan" ]
+}
+
+executable("icd_conformance_bin") {
+  testonly = true
+  output_name = "icd_conformance"
+
+  deps = [ ":src" ]
+}
+
+fuchsia_component("icd_conformance_cmp") {
+  testonly = true
+  component_name = "icd_conformance"
+  deps = [ ":icd_conformance_bin" ]
+
+  manifest = "meta/icd_conformance.cml"
+}
+
+fuchsia_test_package("icd-conformance") {
+  package_name = "icd_conformance"
+  test_components = [ ":icd_conformance_cmp" ]
+  test_specs = {
+    # TODO(fxbug.dev/103295): Add aemu.
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
+group("icd_conformance") {
+  testonly = true
+  deps = [ ":icd-conformance" ]
+}
