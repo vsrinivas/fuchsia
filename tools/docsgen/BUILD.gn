@@ -7,6 +7,7 @@ import("//build/config/build_api_module.gni")
 import("//build/dart/dart_packages.gni")
 import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
+import("//build/sdk/sdk_documentation.gni")
 
 group("docsgen") {
   testonly = true
@@ -137,7 +138,12 @@ compiled_action("invoke_clidoc") {
   tool_output_name = "clidoc"
   testonly = true
   depfile = "$target_out_dir/$target_name.d"
-  deps = [ "//tools:tools" ]
+  deps = [
+    "//sdk:host_tools.all",
+
+    # TODO(https://fxbug.dev/86553) check if triage belongs in sdk docs.
+    "//src/diagnostics/triage:triage",
+  ]
   metadata = {
     # Record metadata for the //tools/docsgen build API.
     generated_docset = [
@@ -269,6 +275,57 @@ compiled_action("invoke_cmldoc") {
   deps = [ "//tools/cmc($host_toolchain)" ]
 }
 
+# Set up targets and files for sdk_documentation and build_api_module.
+ref_docs = [
+  {
+    target = ":dart_sdk_docs($host_toolchain)"
+    file = "dartdoc_out.zip"
+  },
+  {
+    target = ":invoke_clidoc($host_toolchain)"
+    file = "clidoc_out.tar.gz"
+  },
+  {
+    target = ":invoke_cmldoc($host_toolchain)"
+    file = "cmldoc_out/index.md"
+  },
+  {
+    target = ":invoke_fidldoc($host_toolchain)"
+    file = "fidldoc.zip"
+  },
+  {
+    target = ":invoke_helpdoc($host_toolchain)"
+    file = "helpdoc_out.tar.gz"
+  },
+  {
+    target = "//bundles:create_all_drivers_doc"
+    file = "all_drivers_doc.yaml"
+  },
+]
+
+ref_doc_files = []
+ref_doc_targets = []
+foreach(ref_doc, ref_docs) {
+  out_dir = get_label_info(ref_doc.target, "target_out_dir")
+  ref_doc_file_prefix = ref_doc.file
+
+  # TODO(https://fxbug.dev/103315) to move drivers doc to output_dir.
+  # Unlike other ref docs, drivers docs uses gen_dir instead of output_dir
+  if (ref_doc_file_prefix == "all_drivers_doc.yaml") {
+    gen_dir = get_label_info(ref_doc.target, "target_gen_dir")
+    ref_doc_file_path = "$gen_dir/$ref_doc_file_prefix"
+  } else {
+    ref_doc_file_path = "$out_dir/$ref_doc_file_prefix"
+  }
+  ref_doc_files += [
+    {
+      source = ref_doc_file_path
+      dest = "docs/$ref_doc_file_prefix"
+    },
+  ]
+  ref_doc_targets += [ ref_doc.target ]
+}
+
 # This exposes relevant reference doc paths for infra to upload.
 #
 # Type: list(scope)
@@ -309,12 +366,14 @@ compiled_action("invoke_cmldoc") {
 build_api_module("generated_docs") {
   testonly = true
   data_keys = [ "generated_docset" ]
-  deps = [
-    ":dart_sdk_docs($host_toolchain)",
-    ":invoke_clidoc($host_toolchain)",
-    ":invoke_cmldoc($host_toolchain)",
-    ":invoke_fidldoc($host_toolchain)",
-    ":invoke_helpdoc($host_toolchain)",
-    "//bundles:create_all_drivers_doc",
-  ]
+  deps = ref_doc_targets
+}
+
+sdk_documentation("ref_docs_sdk") {
+  name = "ref_docs"
+  testonly = true
+  category = "partner"
+
+  files = ref_doc_files
+  non_sdk_deps = ref_doc_targets
 }
