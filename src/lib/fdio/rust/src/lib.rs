@@ -651,12 +651,12 @@ impl Namespace {
         Ok(Namespace { ns })
     }
 
-    /// Create a channel that is connected to a service bound in this namespace at path. The path
-    /// must be an absolute path, like "/x/y/z", containing no "." nor ".." entries. It is relative
-    /// to the root of the namespace.
+    /// Open an object at |path| relative to the root of this namespace with |flags|.
     ///
-    /// This corresponds with fdio_ns_connect in C.
-    pub fn connect(
+    /// |path| must be absolute.
+    ///
+    /// This corresponds with fdio_ns_open in C.
+    pub fn open(
         &self,
         path: &str,
         flags: fio::OpenFlags,
@@ -669,7 +669,7 @@ impl Namespace {
 
         // The channel is always consumed.
         let channel = channel.into_raw();
-        let status = unsafe { fdio_sys::fdio_ns_connect(ns, path, flags, channel) };
+        let status = unsafe { fdio_sys::fdio_ns_open(ns, path, flags, channel) };
         zx::Status::ok(status)
     }
 
@@ -749,7 +749,7 @@ mod tests {
     }
 
     #[test]
-    fn namespace_bind_connect_unbind() {
+    fn namespace_bind_open_unbind() {
         let namespace = Namespace::installed().unwrap();
         // client => ns_server => ns_client => server
         //        ^            ^            ^-- zx channel connection
@@ -760,7 +760,7 @@ mod tests {
         let path = "/test_path1";
 
         assert_eq!(namespace.bind(path, ns_client), Ok(()));
-        assert_eq!(namespace.connect(path, fio::OpenFlags::empty(), ns_server), Ok(()));
+        assert_eq!(namespace.open(path, fio::OpenFlags::empty(), ns_server), Ok(()));
         assert_eq!(namespace.unbind(path), Ok(()));
     }
 
@@ -777,13 +777,13 @@ mod tests {
     }
 
     #[test]
-    fn namespace_connect_error() {
+    fn namespace_open_error() {
         let namespace = Namespace::installed().unwrap();
         let (_client, ns_server) = zx::Channel::create().unwrap();
         let path = "/test_path3";
 
         assert_eq!(
-            namespace.connect(path, fio::OpenFlags::empty(), ns_server),
+            namespace.open(path, fio::OpenFlags::empty(), ns_server),
             Err(zx::Status::NOT_FOUND)
         );
     }
@@ -873,27 +873,30 @@ mod tests {
     // exercise one success and one failure case for each function.
     #[test]
     fn fdio_open_and_open_at() {
+        use rand::distributions::DistString as _;
+
         // fdio_open requires paths to be absolute
-        let (_, pkg_server) = zx::Channel::create().unwrap();
-        assert_eq!(
-            open("pkg", fio::OpenFlags::RIGHT_READABLE, pkg_server),
-            Err(zx::Status::NOT_FOUND)
-        );
+        {
+            let (_, pkg_server) = zx::Channel::create().unwrap();
+            assert_eq!(
+                open("pkg", fio::OpenFlags::RIGHT_READABLE, pkg_server),
+                Err(zx::Status::NOT_FOUND)
+            );
+        }
 
         let (pkg_client, pkg_server) = zx::Channel::create().unwrap();
         assert_eq!(open("/pkg", fio::OpenFlags::RIGHT_READABLE, pkg_server), Ok(()));
 
-        // fdio_open/fdio_open_at do not support OPEN_FLAG_DESCRIBE
-        let (_, bin_server) = zx::Channel::create().unwrap();
-        assert_eq!(
-            open_at(
-                &pkg_client,
-                "bin",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
-                bin_server
-            ),
-            Err(zx::Status::INVALID_ARGS)
-        );
+        // fdio_open/fdio_open_at disallow paths that are too long
+        {
+            let path = rand::distributions::Alphanumeric
+                .sample_string(&mut rand::thread_rng(), libc::PATH_MAX.try_into().unwrap());
+            let (_, server) = zx::Channel::create().unwrap();
+            assert_eq!(
+                open_at(&pkg_client, &path, fio::OpenFlags::empty(), server),
+                Err(zx::Status::INVALID_ARGS)
+            );
+        }
 
         let (_, bin_server) = zx::Channel::create().unwrap();
         assert_eq!(open_at(&pkg_client, "bin", fio::OpenFlags::RIGHT_READABLE, bin_server), Ok(()));

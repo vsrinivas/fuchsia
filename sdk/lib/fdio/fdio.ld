@@ -56,7 +56,9 @@
 		fdio_ns_free_flat_ns;
 		fdio_ns_get_installed;
 		fdio_ns_is_bound;
+		fdio_ns_open;
 		fdio_ns_opendir;
+		fdio_ns_service_connect;
 		fdio_ns_unbind;
 		fdio_null_create;
 		fdio_open;

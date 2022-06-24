@@ -108,7 +108,58 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) ZX_AVAILABLE_SINCE(
 // or passed to the remote service on success.
 // The path must be an absolute path starting with /.
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request)
-    ZX_AVAILABLE_SINCE(1);
+    ZX_DEPRECATED_SINCE(1, 8,
+                        "Incorrectly named due to accepting flags. Use fdio_ns_open or "
+                        "fdio_ns_service_connect instead.");
+
+// Opens an object at |path| relative to the root of |ns| with |flags|
+// asynchronously.
+//
+// |path| is looked up in |ns|. If found, the object at |path| is opened,
+// passing |request| to the remote party.
+//
+// Upon success, |request| is handed off to the remote party. The operation
+// completes asynchronously, which means a ZX_OK result does not ensure that the
+// requested service actually exists.
+//
+// |path| must be absolute.
+//
+// |flags| is a |fuchsia.io/OpenFlags|.
+//
+// |request| must be a channel.
+//
+// Always consumes |request|.
+//
+// # Errors
+//
+// ZX_ERR_INVALID_ARGS: |path| is invalid.
+//
+// ZX_ERR_NOT_FOUND: A prefix of |path| cannot be found in |ns|.
+zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request)
+    ZX_AVAILABLE_SINCE(8);
+
+// Connects to a service at |path| relative to the root of |ns| asynchronously.
+//
+// |path| is looked up in |ns|. If found, the object at |path| is opened,
+// passing |request| to the remote party.
+//
+// Upon success, |request| is handed off to the remote party. The operation
+// completes asynchronously, which means a ZX_OK result does not ensure that the
+// requested service actually exists.
+//
+// |path| must be absolute.
+//
+// |request| must be a channel.
+//
+// Always consumes |request|.
+//
+// # Errors
+//
+// ZX_ERR_INVALID_ARGS: |path| is invalid.
+//
+// ZX_ERR_NOT_FOUND: A prefix of |path| cannot be found in |ns|.
+zx_status_t fdio_ns_service_connect(fdio_ns_t* ns, const char* path, zx_handle_t request)
+    ZX_AVAILABLE_SINCE(8);
 
 // Frees a flat namespace.
 // Closes all handles contained within |ns|.

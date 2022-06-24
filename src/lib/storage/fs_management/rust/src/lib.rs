@@ -49,7 +49,7 @@ mod error;
 use {
     anyhow::{bail, format_err, Context as _, Error},
     cstr::cstr,
-    fdio::{service_connect_at, spawn_etc, Namespace, SpawnAction, SpawnOptions},
+    fdio::{service_connect, service_connect_at, spawn_etc, Namespace, SpawnAction, SpawnOptions},
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_fs::AdminSynchronousProxy,
     fidl_fuchsia_io as fio,
@@ -163,9 +163,7 @@ impl FSInstance {
     fn query_filesystem(&self) -> Result<Box<fio::FilesystemInfo>, Error> {
         let (client_chan, server_chan) = zx::Channel::create()?;
 
-        let namespace = Namespace::installed().context("failed to get installed namespace")?;
-        namespace
-            .connect(&self.mount_point, fio::OpenFlags::RIGHT_READABLE, server_chan)
+        service_connect(&self.mount_point, server_chan)
             .context("failed to connect to filesystem")?;
 
         let proxy = fio::DirectorySynchronousProxy::new(client_chan);
@@ -286,8 +284,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// modified at this point.
     pub fn from_path(device_path: &str, config: FSC) -> Result<Self, Error> {
         let (client_end, server_end) = zx::Channel::create()?;
-        fdio::service_connect(device_path, server_end)
-            .context("could not connect to block device")?;
+        service_connect(device_path, server_end).context("could not connect to block device")?;
         Self::from_channel(client_end, config)
     }
 

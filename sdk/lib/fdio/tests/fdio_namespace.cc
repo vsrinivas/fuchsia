@@ -34,7 +34,7 @@ TEST(NamespaceTest, NullPaths) {
 
   zx::channel service0, service1;
   ASSERT_OK(zx::channel::create(0, &service0, &service1));
-  EXPECT_STATUS(fdio_ns_connect(ns, nullptr, 0, service0.release()), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(fdio_ns_open(ns, nullptr, 0, service0.release()), ZX_ERR_INVALID_ARGS);
 
   ASSERT_OK(fdio_ns_destroy(ns));
 }
@@ -115,7 +115,7 @@ TEST(NamespaceTest, ConnectNonCanonicalPath) {
 
   zx::channel service0, service1;
   ASSERT_OK(zx::channel::create(0, &service0, &service1));
-  ASSERT_OK(fdio_ns_connect(ns, "//foo/fake_subdir/.././Service", 1u, service0.release()));
+  ASSERT_OK(fdio_ns_open(ns, "//foo/fake_subdir/.././Service", 1u, service0.release()));
 
   // Expect an incoming connect on ch1
   ASSERT_OK(fdio_ns_destroy(ns));
@@ -135,7 +135,7 @@ TEST(NamespaceTest, ConnectOversizedPath) {
   // for a null terminator. This path is thus too long by one character.
   EXPECT_EQ(long_path.length(), PATH_MAX);
 
-  EXPECT_STATUS(fdio_ns_connect(ns, long_path.c_str(), 0u, ch0.release()), ZX_ERR_BAD_PATH);
+  EXPECT_STATUS(fdio_ns_open(ns, long_path.c_str(), 0u, ch0.release()), ZX_ERR_BAD_PATH);
 
   ASSERT_OK(fdio_ns_destroy(ns));
 }
@@ -152,8 +152,7 @@ TEST(NamespaceTest, ConnectOversizedPathComponent) {
   // component is thus too long by one character.
   long_path_component.append(NAME_MAX + 1, 'a');
 
-  EXPECT_STATUS(fdio_ns_connect(ns, long_path_component.c_str(), 0u, ch0.release()),
-                ZX_ERR_BAD_PATH);
+  EXPECT_STATUS(fdio_ns_open(ns, long_path_component.c_str(), 0u, ch0.release()), ZX_ERR_BAD_PATH);
 
   ASSERT_OK(fdio_ns_destroy(ns));
 }

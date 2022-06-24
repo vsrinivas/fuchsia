@@ -71,9 +71,7 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_connect(ns, "/dev",
-                              static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
-                              endpoints->server.channel().release()));
+    ASSERT_OK(fdio_ns_service_connect(ns, "/dev", endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice)));
     ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "class/platform-bus/000",
@@ -90,9 +88,7 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_connect(ns, "/boot",
-                              static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
-                              endpoints->server.channel().release()));
+    ASSERT_OK(fdio_ns_service_connect(ns, "/boot", endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "lib", zx::ok(fio::wire::NodeInfo::Tag::kDirectory)));
     ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",

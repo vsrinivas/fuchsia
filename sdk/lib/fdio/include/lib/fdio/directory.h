@@ -16,37 +16,19 @@
 
 __BEGIN_CDECLS
 
-// Connects to a service at the given |path|.
-//
-// The |path| is looked up in the namespace for the current process. If found in
-// the namespace, the object at the path is opened, passing the |request| to
-// the remote party.
-//
-// Upon success, the |request| is handed off to the remote party. The operation
-// completes asynchronously, which means a ZX_OK result does not ensure that the
-// requested service actually exists.
+// Connects to a service at |path| relative to the root of the namespace for the
+// current process asynchronously.
 //
 // |request| must be a channel.
 //
 // Always consumes |request|.
 //
-// # Errors
-//
-// ZX_ERR_INVALID_ARGS: |path| is invalid.
-//
-// ZX_ERR_NOT_FOUND: A prefix of |path| cannot be found in the namespace for the
-// current process.
-//
-// ZX_ERR_NOT_SUPPORTED: The requested |path| was found in the namespace for the
-// current process but the namespace entry does not support connecting to
-// services.
-//
-// ZX_ERR_ACCESS_DENIED: The namespace entry has insufficient rights to connect
-// to services.
+// See |fdio_ns_service_connect| for details.
 zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t request)
     ZX_AVAILABLE_SINCE(1);
 
-// Connects to a service at the given |path| relative to the given |directory|.
+// Connects to a service at the given |path| relative to the given |directory|
+// asynchronously.
 //
 // Upon success, the |request| is handed off to the remote party. The operation
 // completes asynchronously, which means a ZX_OK result does not ensure that the
@@ -62,9 +44,6 @@ zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t
 // # Errors
 //
 // ZX_ERR_INVALID_ARGS: |directory| or |path| is invalid.
-//
-// ZX_ERR_ACCESS_DENIED: |directory| has insufficient rights to connect to
-// services.
 zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
                                     ZX_HANDLE_RELEASE zx_handle_t request) ZX_AVAILABLE_SINCE(1);
 
@@ -72,49 +51,60 @@ zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
 zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_handle_t request)
     ZX_AVAILABLE_SINCE(1);
 
-// Opens the remote object at the given |path| relative to the root of the namespace with the given
-// |flags| asynchronously.
+// Opens an object at |path| relative to the root of the namespace for the
+// current process with |flags| asynchronously.
 //
 // |flags| is a |fuchsia.io/OpenFlags|.
 //
 // Always consumes |request|.
 //
-// See |fdio_service_connect| for details.
+// See |fdio_ns_open| for details.
 zx_status_t fdio_open(const char* path, uint32_t flags, ZX_HANDLE_RELEASE zx_handle_t request)
     ZX_AVAILABLE_SINCE(1);
 
-// Opens the remote object at the given |path| relative to the given |directory| with the given
-// |flags| asynchronously.
+// Opens an object at |path| relative to |directory| with |flags| asynchronously.
 //
-// |flags| is a |fuchsia.io/OpenFlags|.
+// Upon success, |request| is handed off to the remote party. The operation
+// completes asynchronously, which means a ZX_OK result does not ensure that the
+// requested service actually exists.
+//
+// |directory| must be a channel that implements the |fuchsia.io/Directory|
+// protocol.
+//
+// |request| must be a channel.
 //
 // Always consumes |request|.
 //
-// See |fdio_service_connect_at| for details.
+// # Errors
+//
+// ZX_ERR_INVALID_ARGS: |directory| or |path| is invalid.
 zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags,
                          ZX_HANDLE_RELEASE zx_handle_t request) ZX_AVAILABLE_SINCE(1);
 
-// Opens the remote object at the given |path| relative to the root of the namespace with the given
-// |flags| synchronously, and on success, binds that channel to a file descriptor, returned via
-// |out_fd|.
+// Opens an object at |path| relative to the root of the namespace for the
+// current process with |flags| synchronously, and on success, binds that
+// channel to a file descriptor, returned via |out_fd|.
 //
-// Note that unlike fdio_open, this function is synchronous. This is because it produces a file
-// descriptor, which requires synchronously waiting for the open to complete.
+// Note that unlike fdio_open, this function is synchronous. This is because it
+// produces a file descriptor, which requires synchronously waiting for the open
+// to complete.
 //
 // |flags| is a |fuchsia.io/OpenFlags|.
 //
-// See |fdio_service_connect| for details.
+// See |fdio_open| for details.
 zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) ZX_AVAILABLE_SINCE(1);
 
-// Opens the remote object at the given |path| relative to the given |dir_fd| with the given |flags|
-// synchronously, and on success, binds that channel to a file descriptor, returned via |out_fd|.
+// Opens an object at |path| relative to |dir_fd| with |flags| synchronously,
+// and on success, binds that channel to a file descriptor, returned via
+// |out_fd|.
 //
-// Note that unlike fdio_open, this function is synchronous. This is because it produces a file
-// descriptor, which requires synchronously waiting for the open to complete.
+// Note that unlike fdio_open, this function is synchronous. This is because it
+// produces a file descriptor, which requires synchronously waiting for the open
+// to complete.
 //
 // |flags| is a |fuchsia.io/OpenFlags|.
 //
-// See |fdio_service_connect| fort details.
+// See |fdio_open_at| fort details.
 zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd)
     ZX_AVAILABLE_SINCE(1);
 

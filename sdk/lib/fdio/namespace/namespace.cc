@@ -13,8 +13,11 @@
 #include <fbl/ref_ptr.h>
 
 #include "../fdio_unistd.h"
+#include "fidl/fuchsia.io/cpp/wire_types.h"
 #include "local-connection.h"
 #include "local-filesystem.h"
+
+namespace fio = fuchsia_io;
 
 zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
@@ -24,6 +27,14 @@ __BEGIN_CDECLS
 
 __EXPORT
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request) {
+  if (static_cast<fio::wire::OpenFlags>(flags) & fio::wire::OpenFlags::kDescribe) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return fdio_ns_open(ns, path, flags, request);
+}
+
+__EXPORT
+zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request) {
   if (path == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -32,8 +43,15 @@ zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_
   if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
     return ZX_ERR_BAD_PATH;
   }
-  auto remote = fidl::ServerEnd<fuchsia_io::Node>(zx::channel(request));
-  return ns->Connect(clean, static_cast<fuchsia_io::wire::OpenFlags>(flags), std::move(remote));
+  auto remote = fidl::ServerEnd<fio::Node>(zx::channel(request));
+  return ns->Connect(clean, static_cast<fio::wire::OpenFlags>(flags), std::move(remote));
+}
+
+__EXPORT
+zx_status_t fdio_ns_service_connect(fdio_ns_t* ns, const char* path, zx_handle_t request) {
+  // TODO(https://fxbug.dev/101092): Shrink this to 0.
+  constexpr uint32_t flags = static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable);
+  return fdio_ns_open(ns, path, flags, request);
 }
 
 __EXPORT
@@ -64,7 +82,7 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote_raw
   if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
     return ZX_ERR_BAD_PATH;
   }
-  auto remote = fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(remote_raw));
+  auto remote = fidl::ClientEnd<fio::Directory>(zx::channel(remote_raw));
   return ns->Bind(clean, std::move(remote));
 }
 

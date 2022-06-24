@@ -183,8 +183,7 @@ pub fn connect_in_namespace(
     chan: zx::Channel,
 ) -> Result<(), zx_status::Status> {
     let namespace = fdio::Namespace::installed()?;
-    namespace.connect(path, flags, chan)?;
-    Ok(())
+    namespace.open(path, flags, chan)
 }
 
 /// Opens the given `path` from the current namespace as a [`NodeProxy`]. The target is not

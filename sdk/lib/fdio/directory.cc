@@ -14,20 +14,23 @@
 
 namespace fio = fuchsia_io;
 
+// TODO(https://fxbug.dev/101092): Shrink this to 0.
+constexpr uint32_t kServiceFlags = static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
+                                                         fio::wire::OpenFlags::kRightWritable);
+
 __EXPORT
 zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
-  return fdio_open(path,
-                   static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
-                                         fio::wire::OpenFlags::kRightWritable),
-                   h);
+  zx::handle handle{h};
+  fdio_ns_t* ns;
+  if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK) {
+    return status;
+  }
+  return fdio_ns_open(ns, path, kServiceFlags, handle.release());
 }
 
 __EXPORT
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h) {
-  return fdio_open_at(dir, path,
-                      static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
-                                            fio::wire::OpenFlags::kRightWritable),
-                      h);
+  return fdio_open_at(dir, path, kServiceFlags, h);
 }
 
 __EXPORT
@@ -56,18 +59,12 @@ zx_status_t fdio_service_connect_by_name(const char* name, zx_handle_t request) 
 
 __EXPORT
 zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
-  auto handle = zx::handle(request);
-  // TODO: fdio_validate_path?
-  if (path == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  // Otherwise attempt to connect through the root namespace
+  zx::handle handle{request};
   fdio_ns_t* ns;
-  zx_status_t status = fdio_ns_get_installed(&ns);
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK) {
     return status;
   }
-  return fdio_ns_connect(ns, path, flags, handle.release());
+  return fdio_ns_open(ns, path, flags, handle.release());
 }
 
 // We need to select some value to pass as the mode when calling Directory.Open. We use this value
@@ -82,10 +79,6 @@ zx_status_t fdio_open_at(fidl::UnownedClientEnd<fio::Directory> directory, std::
                          fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fio::Node> request) {
   if (!directory.is_valid()) {
     return ZX_ERR_UNAVAILABLE;
-  }
-
-  if (flags & fio::wire::OpenFlags::kDescribe) {
-    return ZX_ERR_INVALID_ARGS;
   }
 
   return fidl::WireCall(directory)

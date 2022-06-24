@@ -57,8 +57,10 @@ Namespace& Namespace::operator=(Namespace&& other) noexcept {
 
 zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end,
                                 fuchsia_io::wire::OpenFlags flags) const {
+  // TODO(https://fxbug.dev/103308): should this call fdio_ns_service_connect
+  // instead? The flags argument would need to be removed.
   zx_status_t status =
-      fdio_ns_connect(ns_, path.data(), static_cast<uint32_t>(flags), server_end.release());
+      fdio_ns_open(ns_, path.data(), static_cast<uint32_t>(flags), server_end.release());
   return zx::make_status(status);
 }
 

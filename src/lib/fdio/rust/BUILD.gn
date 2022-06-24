@@ -25,6 +25,8 @@ rustc_library("fdio") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
   ]
 
