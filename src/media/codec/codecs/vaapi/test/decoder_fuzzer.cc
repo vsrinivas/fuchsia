@@ -249,21 +249,53 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
   // Should be enough to handle a large fraction of bear.h264 output without recycling.
   constexpr uint32_t output_packet_count = 35;
 
+  // Ensure that the image will always fit, which is dependant on if the output has an output format
+  // modifier or not
+  size_t pic_size_bytes;
   const auto &image_constraints = output_constraints.image_format_constraints[0];
-  auto out_width = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
-                           safemath::MakeCheckedNum(image_constraints.coded_width_divisor));
-  auto out_width_stride =
-      RoundUp(out_width, safemath::MakeCheckedNum(image_constraints.bytes_per_row_divisor));
-  auto out_height = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_height),
-                            safemath::MakeCheckedNum(image_constraints.coded_height_divisor));
+  if (output_image_format_array_[output_image_format_idx_]) {
+    // Output is linear
+    auto out_width = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
+                             safemath::MakeCheckedNum(image_constraints.coded_width_divisor));
+    auto out_width_stride =
+        RoundUp(out_width, safemath::MakeCheckedNum(image_constraints.bytes_per_row_divisor));
+    auto out_height = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_height),
+                              safemath::MakeCheckedNum(image_constraints.coded_height_divisor));
 
-  auto main_plane_size = out_width_stride * out_height;
-  auto uv_plane_size = main_plane_size / 2;
-  auto pic_size_checked = main_plane_size + uv_plane_size;
-  if (!pic_size_checked.IsValid()) {
-    return;
+    auto main_plane_size = out_width_stride * out_height;
+    auto uv_plane_size = main_plane_size / 2;
+    auto pic_size_checked = main_plane_size + uv_plane_size;
+    if (!pic_size_checked.IsValid()) {
+      return;
+    }
+
+    pic_size_bytes = pic_size_checked.ValueOrDie();
+  } else {
+    // Output is tiled
+    static constexpr auto kRowsPerTile =
+        safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileHeightAlignment);
+    static constexpr auto kBytesPerRowPerTile =
+        safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileWidthAlignment);
+
+    auto aligned_stride = RoundUp(
+        safemath::MakeCheckedNum(image_constraints.required_max_coded_width), kBytesPerRowPerTile);
+    auto aligned_y_height = safemath::MakeCheckedNum(image_constraints.required_max_coded_height);
+    auto aligned_uv_height =
+        safemath::MakeCheckedNum(image_constraints.required_max_coded_height) / 2u;
+
+    aligned_y_height = RoundUp(aligned_y_height, kRowsPerTile);
+    aligned_uv_height = RoundUp(aligned_uv_height, kRowsPerTile);
+
+    auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
+    auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+    auto pic_size_checked = y_plane_size + uv_plane_size;
+
+    if (!pic_size_checked.IsValid()) {
+      return;
+    }
+
+    pic_size_bytes = pic_size_checked.ValueOrDie();
   }
-  size_t pic_size_bytes = pic_size_checked.ValueOrDie();
 
   // Place an arbitrary cap on the size to avoid OOMs when allocating output buffers and to reduce
   // the amount of test time spent allocating memory.
