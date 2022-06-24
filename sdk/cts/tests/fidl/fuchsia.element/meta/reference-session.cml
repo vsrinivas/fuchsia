@@ -24,6 +24,12 @@
             startup: "eager",
         },
     ],
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
     capabilities: [
         { protocol: "fuchsia.element.Manager" },
     ],
@@ -49,6 +55,11 @@
         {
             protocol: [ "fuchsia.ui.scenic.Scenic" ],
             from: "#reference-scenic",
+            to: "#element_manager",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
             to: "#element_manager",
         },
     ],

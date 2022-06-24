@@ -45,6 +45,12 @@
             startup: "lazy",
         },
     ],
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -70,7 +76,10 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "parent",
-            to: [ "#scene_manager" ],
+            to: [
+                "#elements",
+                "#scene_manager",
+            ],
         },
         {
             directory: "dev-input-report",
@@ -102,6 +111,11 @@
             ],
             from: "parent",
             to: [ "#element_manager" ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+            to: "#element_manager",
         },
         {
             protocol: [

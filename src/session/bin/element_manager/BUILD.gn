@@ -56,14 +56,6 @@ rustc_binary("element_manager_bin") {
   ]
 }
 
-fuchsia_component_manifest("base_manifest") {
-  manifest = "meta/base.shard.cml"
-}
-
-fuchsia_structured_config_rust_lib("element_config") {
-  cm_label = ":base_manifest"
-}
-
 # The Element Manager component is undergoing a breaking change. Previous
 # versions consumed the `fuchsia.component.Realm` protocol from the framework.
 # However, this behavior has been changed to instead consume the protocol
@@ -78,6 +70,10 @@ fuchsia_component_manifest("manifest") {
   manifest = "meta/element_manager.cml"
 }
 
+fuchsia_structured_config_rust_lib("element_config") {
+  cm_label = ":manifest"
+}
+
 fuchsia_structured_config_values("sc_values") {
   cm_label = ":manifest"
   values = {
@@ -90,9 +86,17 @@ fuchsia_component("element_manager_comp") {
   deps = [ ":element_manager_bin" ]
 }
 
+# The Element Manager component is undergoing a breaking change. Previous
+# versions consumed the `fuchsia.component.Realm` protocol from the framework.
+# However, this behavior has been changed to instead consume the protocol
+# from parent, delegating the necessary routing to the session. All clients of
+# the Element Manager component are to move to use this version. In order to
+# facilitate this transition, the deprecated version of the component is kept.
+#
+# TODO(http://fxbug.dev/95841): Remove `new_element_manager` related GN targets.
 fuchsia_component_manifest("new_element_manager_manifest") {
   component_name = "new_element_manager"
-  manifest = "meta/new_element_manager.cml"
+  manifest = "meta/element_manager.cml"
 }
 
 fuchsia_structured_config_values("new_element_manager_sc_values") {
