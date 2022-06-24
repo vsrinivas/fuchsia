@@ -130,11 +130,11 @@ TEST_F(CallSiteSymbolDataProviderTest, GetRegisterAsync) {
   loop().RunUntilNoTasks();
   ASSERT_TRUE(result_data);
 
-  // Currently the result of the expression is the size of a StackEntry which is normally different
-  // than the requested register. This is good enough for our use-case. We validate that to make
-  // sure it's not some truncated value. The code may change to match the requested register size,
-  // in which case the expected length should be 8.
-  EXPECT_EQ(sizeof(DwarfExprEval::StackEntry), result_data->size());
+  // Currently the result of the expression is the size of a stack entry unsigned type which is
+  // normally different than the requested register. This is good enough for our use-case. We
+  // validate that to make sure it's not some truncated value. The code may change to match the
+  // requested register size, in which case the expected length should be 8.
+  EXPECT_EQ(sizeof(DwarfStackEntry::UnsignedType), result_data->size());
   result_data->resize(sizeof(kEntryRegValue));  // Trim high 0's.
 
   // Validate the result.

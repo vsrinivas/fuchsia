@@ -36,6 +36,7 @@ fxl::RefPtr<BaseType> MakeFloatType();
 fxl::RefPtr<BaseType> MakeDoubleType();
 
 fxl::RefPtr<BaseType> MakeSignedChar8Type();
+fxl::RefPtr<BaseType> MakeUnsignedChar8Type();
 
 fxl::RefPtr<BaseType> MakeRustCharType();
 fxl::RefPtr<ModifiedType> MakeRustCharPointerType();

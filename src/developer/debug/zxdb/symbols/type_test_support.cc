@@ -48,6 +48,10 @@ fxl::RefPtr<BaseType> MakeSignedChar8Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
 }
 
+fxl::RefPtr<BaseType> MakeUnsignedChar8Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "unsigned char");
+}
+
 fxl::RefPtr<BaseType> MakeRustCharType() {
   auto type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
   type->set_parent(UncachedLazySymbol::MakeUnsafe(MakeRustUnit()));

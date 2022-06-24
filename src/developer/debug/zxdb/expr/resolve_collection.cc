@@ -372,15 +372,21 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
           cb(err);
         } else {
           // Continue resolution on any remaining inheritance steps.
-          ResolveInheritedPtr(context, static_cast<TargetPointer>(eval.GetResult()), remaining,
-                              std::move(cb));
+          if (eval.GetResultType() == DwarfExprEval::ResultType::kData)
+            return cb(Err("Unexpected result type from DWARF expression."));
+          DwarfStackEntry result = eval.GetResult();
+          if (!result.TreatAsUnsigned())
+            return cb(Err("Unexpected result type from DWARF expression."));
+
+          ResolveInheritedPtr(context, static_cast<TargetPointer>(result.unsigned_value()),
+                              remaining, std::move(cb));
         }
       };
 
       // The expression is evaluated by pushing the derived pointer on the evaluation stack and
       // executing the DWARF expression to get the resulting base class pointer.
       auto async_eval = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(on_expr_complete));
-      async_eval->dwarf_eval().Push(derived);
+      async_eval->dwarf_eval().Push(DwarfStackEntry(derived));
       async_eval->Eval(context->GetDataProvider(),
                        first_from->GetSymbolContext(context->GetProcessSymbols()),
                        first_from->location_expression());

@@ -26,9 +26,12 @@ void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval
     // the variable since it will strip "const" and stuff that the user will expect to see.
     fxl::RefPtr<Type> concrete_type = context->GetConcreteType(type.get());
 
-    // The DWARF expression produced the exact value (it's not in memory).
+    // The DWARF expression produced the exact value (it's not in memory). The expression may (but
+    // usually won't) be annotated with its own type which should match the size of the type we
+    // expect here. We don't bother validating that for now and instead just copy out the expected
+    // number of bytes.
     uint32_t type_size = concrete_type->byte_size();
-    if (type_size > sizeof(DwarfExprEval::StackEntry)) {
+    if (type_size > sizeof(DwarfStackEntry::UnsignedType)) {
       return cb(
           Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
                                 "Please file a bug with a repro case.",
@@ -43,11 +46,14 @@ void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval
     else if (eval.result_is_constant())
       source = ExprValueSource(ExprValueSource::Type::kConstant);
 
-    uint64_t result_int = eval.GetResult();
+    // Assuming little-endian and that the types in the DwarfExprEval are in a union, we can
+    // copy the bytes out using the unsigned value without type checking.
+    DwarfStackEntry result = eval.GetResult();
+    auto result_value = result.unsigned_value();
 
     std::vector<uint8_t> data;
     data.resize(type_size);
-    memcpy(data.data(), &result_int, type_size);
+    memcpy(data.data(), &result_value, type_size);
     cb(ExprValue(type, std::move(data), source));
   } else if (eval.GetResultType() == DwarfExprEval::ResultType::kData) {
     // The DWARF result is a block of data.
@@ -59,8 +65,10 @@ void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval
     cb(ExprValue(type, eval.TakeResultData(), ExprValueSource(ExprValueSource::Type::kComposite)));
   } else {
     // The DWARF result is a pointer to the value.
-    uint64_t result_int = eval.GetResult();
-    ResolvePointer(context, result_int, type,
+    DwarfStackEntry result = eval.GetResult();
+    if (!result.TreatAsUnsigned())
+      return cb(Err("DWARF expression produced an unexpected type."));
+    ResolvePointer(context, result.unsigned_value(), type,
                    [cb = std::move(cb)](ErrOrValue value) mutable { cb(std::move(value)); });
   }
 }

@@ -40,23 +40,213 @@ constexpr uint8_t DW_OP_GNU_addr_index = 0xfb;
 constexpr uint8_t DW_OP_GNU_const_index = 0xfc;
 constexpr uint8_t DW_OP_GNU_variable_value = 0xfd;
 
-// For debug print StackEntry values.
-std::string ToString128(uint128_t v) {
+// For debug printing expression integer values, this uses hex for all but the smallest numbers
+// which is what we usually expect for printing address arithmetic.
+std::string ExprIntToString(uint128_t v) {
   if (v > 1024)
     return to_hex_string(v);  // Use hex for very large values (probably addresses).
-  return std::to_string(static_cast<uint64_t>(v));  // Use decimal for small values.
+  return to_string(v);
 }
-std::string ToString128(int128_t v) {
-  if (v < 0)
-    return "-" + ToString128(static_cast<uint128_t>(-v));
-  return std::to_string(static_cast<int64_t>(v));
+std::string ExprIntToString(int128_t v) {
+  if (v > 1024)
+    return to_hex_string(v);  // Use hex for very large values (probably addresses).
+  if (v < -1024)
+    return std::string("-") + to_hex_string(-v);
+  return to_string(v);
 }
 
 // Makes a string expressing adding or subtracting the given constant value.
-std::string MakeAddString(DwarfExprEval::SignedStackEntry val) {
+std::string MakeAddString(DwarfExprEval::SignedType val) {
   if (val < 0)
-    return " - " + ToString128(-val);
-  return " + " + ToString128(val);
+    return " - " + to_string(-val);
+  return " + " + to_string(val);
+}
+
+// These macros declare functions to implement arithmetic operators that will work on typed stack
+// entries as well as generic values. I suspect this could be written using "template templates" but
+// this is mostly boring code used only in this one file and the straightforward #define / custom
+// approach is simpler and more maintainable overall.
+//
+// Before calling these functions, the caller will verify that the types of the two arguments (in
+// the case of binary operators) match.
+//
+// The macros take a validator function which is used for checking for divide-by-zero. In other
+// cases, this validator always returns no error.
+#define DEFINE_BINARY_OPERATOR(fn_name, bin_operator, validator)                                \
+  ErrOr<DwarfStackEntry> fn_name(const DwarfStackEntry& a, const DwarfStackEntry& b) {          \
+    if (Err e = validator(a, b); e.has_error())                                                 \
+      return e;                                                                                 \
+                                                                                                \
+    if (a.TreatAsSigned())                                                                      \
+      return DwarfStackEntry(a.type_ref(), a.signed_value() bin_operator b.signed_value());     \
+    if (a.TreatAsUnsigned())                                                                    \
+      return DwarfStackEntry(a.type_ref(), a.unsigned_value() bin_operator b.unsigned_value()); \
+    if (a.TreatAsFloat())                                                                       \
+      return DwarfStackEntry(a.type_ref(), a.float_value() bin_operator b.float_value());       \
+    if (a.TreatAsDouble())                                                                      \
+      return DwarfStackEntry(a.type_ref(), a.double_value() bin_operator b.double_value());     \
+                                                                                                \
+    FX_NOTREACHED();                                                                            \
+    return Err("Internal type error.");                                                         \
+  }
+
+// Like DEFINE_BINARY_OPERATOR but doesn't support floating point types. Returns an error if the
+// input is floating-point
+#define DEFINE_INTEGRAL_BINARY_OPERATOR(fn_name, bin_operator, validator)                       \
+  ErrOr<DwarfStackEntry> fn_name(const DwarfStackEntry& a, const DwarfStackEntry& b) {          \
+    if (Err e = validator(a, b); e.has_error())                                                 \
+      return e;                                                                                 \
+                                                                                                \
+    if (a.TreatAsSigned())                                                                      \
+      return DwarfStackEntry(a.type_ref(), a.signed_value() bin_operator b.signed_value());     \
+    if (a.TreatAsUnsigned())                                                                    \
+      return DwarfStackEntry(a.type_ref(), a.unsigned_value() bin_operator b.unsigned_value()); \
+                                                                                                \
+    return Err("Requires integral type.");                                                      \
+  }
+
+// Like DEFINE_BINARY_OPERATOR but casts the result to a 0 or 1 generic value to implement
+// comparison operations.
+#define DEFINE_COMPARISON_OPERATOR(fn_name, bin_operator)                              \
+  ErrOr<DwarfStackEntry> fn_name(const DwarfStackEntry& a, const DwarfStackEntry& b) { \
+    bool result = false;                                                               \
+                                                                                       \
+    if (a.TreatAsSigned()) {                                                           \
+      result = a.signed_value() bin_operator b.signed_value();                         \
+    } else if (a.TreatAsUnsigned()) {                                                  \
+      result = a.unsigned_value() bin_operator b.unsigned_value();                     \
+    } else if (a.TreatAsFloat()) {                                                     \
+      result = a.float_value() bin_operator b.float_value();                           \
+    } else if (a.TreatAsDouble()) {                                                    \
+      result = a.double_value() bin_operator b.double_value();                         \
+    } else {                                                                           \
+      FX_NOTREACHED();                                                                 \
+      return Err("Internal type error.");                                              \
+    }                                                                                  \
+                                                                                       \
+    return DwarfStackEntry(result ? 1 : 0);                                            \
+  }
+
+#define DEFINE_INTEGRAL_UNARY_OPERATOR(fn_name, un_operator)                \
+  ErrOr<DwarfStackEntry> fn_name(const DwarfStackEntry& a) {                \
+    if (a.TreatAsSigned())                                                  \
+      return DwarfStackEntry(a.type_ref(), un_operator a.signed_value());   \
+    if (a.TreatAsUnsigned())                                                \
+      return DwarfStackEntry(a.type_ref(), un_operator a.unsigned_value()); \
+                                                                            \
+    FX_NOTREACHED();                                                        \
+    return Err("Internal type error.");                                     \
+  }
+
+Err NoValidator(const DwarfStackEntry&, const DwarfStackEntry& b) { return Err(); }
+
+Err NonzeroDenominatorValidator(const DwarfStackEntry&, const DwarfStackEntry& b) {
+  if (b.IsZero())
+    return Err("Divide by zero.");
+  return Err();
+}
+
+// From the DWARF spec:
+//
+//   Operations other than DW_OP_abs, DW_OP_div, DW_OP_minus, DW_OP_mul, DW_OP_neg and DW_OP_plus
+//   require integral types of the operand (either integral base type or the generic type).
+//
+// We could allow modulo for floating point values also but the spec says not to.
+DEFINE_BINARY_OPERATOR(DwarfOperatorPlus, +, NoValidator)
+DEFINE_BINARY_OPERATOR(DwarfOperatorMinus, -, NoValidator)
+DEFINE_BINARY_OPERATOR(DwarfOperatorTimes, *, NoValidator)
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorMod, %, NonzeroDenominatorValidator)
+
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorEquals, ==)
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorNotEquals, !=)
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorLessEquals, <=)
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorGreaterEquals, >=)
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorLess, <)
+DEFINE_COMPARISON_OPERATOR(DwarfOperatorGreater, >)
+
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorShiftLeft, <<, NoValidator)
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorShiftRight, >>, NoValidator)
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorBitOr, |, NoValidator)
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorBitAnd, &, NoValidator)
+DEFINE_INTEGRAL_BINARY_OPERATOR(DwarfOperatorBitXor, ^, NoValidator)
+
+DEFINE_INTEGRAL_UNARY_OPERATOR(DwarfOperatorBitNot, ~)
+
+// The "DW_OP_div" specifies signed division in the generic type case (actually it specifies signed
+// division for all cases, but if the values are typed unsigned, we do unsigned division because it
+// seems to make more sense). This is implemented using the macro for the common cases, but a
+// custom wrapper implementation that catches the generic case.
+DEFINE_BINARY_OPERATOR(DwarfOperatorDivideTyped, /, NonzeroDenominatorValidator)
+ErrOr<DwarfStackEntry> DwarfOperatorDivide(const DwarfStackEntry& a, const DwarfStackEntry& b) {
+  if (a.is_generic()) {
+    if (Err e = NonzeroDenominatorValidator(a, b); e.has_error())
+      return e;
+    return DwarfStackEntry(static_cast<DwarfStackEntry::SignedType>(a.unsigned_value()) /
+                           static_cast<DwarfStackEntry::SignedType>(b.unsigned_value()));
+  }
+  return DwarfOperatorDivideTyped(a, b);
+}
+
+// Negation requires that "generic" values are casted to signed.
+//
+// There is a question on how to define negation of an explicitly unsigned value. The spec doesn't
+// say anything. This currently defines it as a no-op, but it could also be like the generic case
+// where the bits are reinterpreted. Probably this will not be emitted by a compiler so it won't
+// matter.
+ErrOr<DwarfStackEntry> DwarfOperatorNeg(const DwarfStackEntry& a) {
+  if (a.is_generic())
+    return DwarfStackEntry(static_cast<uint128_t>(-static_cast<int128_t>(a.unsigned_value())));
+
+  if (a.TreatAsSigned())
+    return DwarfStackEntry(a.type_ref(), -a.signed_value());
+  if (a.TreatAsUnsigned())
+    return DwarfStackEntry(a.type_ref(), a.unsigned_value());  // No-op, see above.
+  if (a.TreatAsFloat())
+    return DwarfStackEntry(a.type_ref(), -a.float_value());
+  if (a.TreatAsDouble())
+    return DwarfStackEntry(a.type_ref(), -a.double_value());
+
+  FX_NOTREACHED();
+  return Err("Internal type error");
+}
+
+// This one is an operator to DWARF but not C++. Generic values get treated as signed.
+ErrOr<DwarfStackEntry> DwarfOperatorAbs(const DwarfStackEntry& a) {
+  if (a.is_generic()) {
+    auto as_signed = static_cast<DwarfStackEntry::SignedType>(a.unsigned_value());
+    return as_signed < 0 ? DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-as_signed))
+                         : a;
+  }
+
+  // Explicit types. The DWARF spec doesn't separate out non-generic types so technically the
+  // requirement that the result is "interpreted as signed" applies, but I don't think they meant
+  // that if the value has an explicitly defined unsigned type.
+  if (a.TreatAsSigned()) {
+    if (a.signed_value() < 0)
+      return DwarfStackEntry(a.type_ref(), -a.signed_value());
+    return DwarfStackEntry(a.type_ref(), a.signed_value());
+  }
+  if (a.TreatAsUnsigned())
+    return DwarfStackEntry(a.type_ref(), a.unsigned_value());  // No-op.
+  if (a.TreatAsFloat())
+    return DwarfStackEntry(a.type_ref(), fabsf(a.float_value()));
+  if (a.TreatAsDouble())
+    return DwarfStackEntry(a.type_ref(), fabs(a.double_value()));
+
+  FX_NOTREACHED();
+  return Err("Internal type error");
+}
+
+// This does a sign-extended shift right. When the type is known, we do the same thing as a regular
+// shift right (sign-extended only for signed types). I'm assuming that the DWARF spec's
+// description of reinterpreting as a signed type only applies to generic types.
+ErrOr<DwarfStackEntry> DwarfOperatorShiftRightArithmetically(const DwarfStackEntry& a,
+                                                             const DwarfStackEntry& b) {
+  if (a.is_generic()) {
+    return DwarfStackEntry(static_cast<uint128_t>(static_cast<int128_t>(a.unsigned_value()) >>
+                                                  static_cast<int128_t>(b.unsigned_value())));
+  }
+  return DwarfOperatorShiftRight(a, b);
 }
 
 }  // namespace
@@ -71,7 +261,7 @@ DwarfExprEval::~DwarfExprEval() {
   FX_CHECK(!in_completion_callback_);
 }
 
-void DwarfExprEval::Push(StackEntry value) { stack_.push_back(value); }
+void DwarfExprEval::Push(DwarfStackEntry value) { stack_.push_back(value); }
 
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   FX_DCHECK(is_complete_);
@@ -82,7 +272,7 @@ DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   return result_type_;
 }
 
-DwarfExprEval::StackEntry DwarfExprEval::GetResult() const {
+DwarfStackEntry DwarfExprEval::GetResult() const {
   FX_DCHECK(is_complete_);
   FX_DCHECK(is_success_);
   return stack_.back();
@@ -99,7 +289,7 @@ DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> da
                                               CompletionCallback cb) {
   SetUp(std::move(data_provider), symbol_context, expr, std::move(cb));
 
-  // Note: ContinueEval() may call callback, which may delete |this|
+  // Note: ContinueEval() may call callback, which may delete |this|.
   return ContinueEval() ? Completion::kSync : Completion::kAsync;
 }
 
@@ -197,7 +387,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       return AppendString("DW_OP_lit" + std::to_string(literal_value),
                           "push(" + std::to_string(literal_value) + ")");
     } else {
-      Push(literal_value);
+      Push(DwarfStackEntry(literal_value));
     }
     return Completion::kSync;
   }
@@ -257,64 +447,49 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       // We don't have multiple address spaces.
       return ReportError("DW_OP_xderef opcode is not applicable to this platform.");
     case llvm::dwarf::DW_OP_abs:
-      return OpUnary(
-          [](StackEntry a) { return static_cast<StackEntry>(llabs(static_cast<long long>(a))); },
-          "DW_OP_abs");
+      return OpUnary(&DwarfOperatorAbs, "DW_OP_abs");
     case llvm::dwarf::DW_OP_and:
-      return OpBinary([](StackEntry a, StackEntry b) { return a & b; }, "DW_OP_and");
+      return OpBinary(&DwarfOperatorBitAnd, "DW_OP_and");
     case llvm::dwarf::DW_OP_div:
-      return OpDiv();
+      return OpBinary(&DwarfOperatorDivide, "DW_OP_div");
     case llvm::dwarf::DW_OP_minus:
-      return OpBinary([](StackEntry a, StackEntry b) { return a - b; }, "DW_OP_minus");
+      return OpBinary(&DwarfOperatorMinus, "DW_OP_minus");
     case llvm::dwarf::DW_OP_mod:
-      return OpMod();
+      return OpBinary(&DwarfOperatorMod, "DW_OP_mod");
     case llvm::dwarf::DW_OP_mul:
-      return OpBinary([](StackEntry a, StackEntry b) { return a * b; }, "DW_OP_mul");
+      return OpBinary(&DwarfOperatorTimes, "DW_OP_mul");
     case llvm::dwarf::DW_OP_neg:
-      return OpUnary(
-          [](StackEntry a) { return static_cast<StackEntry>(-static_cast<SignedStackEntry>(a)); },
-          "DW_OP_neg");
+      return OpUnary(&DwarfOperatorNeg, "DW_OP_neg");
     case llvm::dwarf::DW_OP_not:
-      return OpUnary([](StackEntry a) { return ~a; }, "DW_OP_not");
+      return OpUnary(&DwarfOperatorBitNot, "DW_OP_not");
     case llvm::dwarf::DW_OP_or:
-      return OpBinary([](StackEntry a, StackEntry b) { return a | b; }, "DW_OP_or");
+      return OpBinary(&DwarfOperatorBitOr, "DW_OP_or");
     case llvm::dwarf::DW_OP_plus:
-      return OpBinary([](StackEntry a, StackEntry b) { return a + b; }, "DW_OP_plus");
+      return OpBinary(&DwarfOperatorPlus, "DW_OP_plus");
     case llvm::dwarf::DW_OP_plus_uconst:
       return OpPlusUconst();
     case llvm::dwarf::DW_OP_shl:
-      return OpBinary([](StackEntry a, StackEntry b) { return a << b; }, "DW_OP_shl");
+      return OpBinary(&DwarfOperatorShiftLeft, "DW_OP_shl");
     case llvm::dwarf::DW_OP_shr:
-      return OpBinary([](StackEntry a, StackEntry b) { return a >> b; }, "DW_OP_shr");
+      return OpBinary(&DwarfOperatorShiftRight, "DW_OP_shr");
     case llvm::dwarf::DW_OP_shra:
-      return OpBinary(
-          [](StackEntry a, StackEntry b) {
-            return static_cast<StackEntry>(static_cast<SignedStackEntry>(a) >>
-                                           static_cast<SignedStackEntry>(b));
-          },
-          "DW_OP_shra");
+      return OpBinary(&DwarfOperatorShiftRightArithmetically, "DW_OP_shra");
     case llvm::dwarf::DW_OP_xor:
-      return OpBinary([](StackEntry a, StackEntry b) { return a ^ b; }, "DW_OP_xor");
+      return OpBinary(&DwarfOperatorBitXor, "DW_OP_xor");
     case llvm::dwarf::DW_OP_bra:
       return OpBra();
     case llvm::dwarf::DW_OP_eq:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a == b); },
-                      "DW_OP_eq");
+      return OpBinary(&DwarfOperatorEquals, "DW_OP_eq");
     case llvm::dwarf::DW_OP_ge:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a >= b); },
-                      "DW_OP_ge");
+      return OpBinary(&DwarfOperatorGreaterEquals, "DW_OP_ge");
     case llvm::dwarf::DW_OP_gt:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a > b); },
-                      "DW_OP_gt");
+      return OpBinary(&DwarfOperatorGreater, "DW_OP_gt");
     case llvm::dwarf::DW_OP_le:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a <= b); },
-                      "DW_OP_le");
+      return OpBinary(&DwarfOperatorLessEquals, "DW_OP_le");
     case llvm::dwarf::DW_OP_lt:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a < b); },
-                      "DW_OP_lt");
+      return OpBinary(&DwarfOperatorLess, "DW_OP_lt");
     case llvm::dwarf::DW_OP_ne:
-      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a != b); },
-                      "DW_OP_ne");
+      return OpBinary(&DwarfOperatorNotEquals, "DW_OP_ne");
     case llvm::dwarf::DW_OP_skip:
       return OpSkip();
       // DW_OP_lit*, DW_OP_reg*, and DW_OP_breg* are handled at the top of the function.
@@ -412,7 +587,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 }
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
-                                                                SignedStackEntry offset) {
+                                                                SignedType offset) {
   // Reading register data means the result is not constant.
   result_is_constant_ = false;
 
@@ -434,9 +609,9 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
       // stack machine for vector computations (it's not specified that the stack items are large
       // enough). When it uses a stack register for a floating-point scalar computation, it just
       // uses the low bits.
-      StackEntry reg_value = 0;
-      memcpy(&reg_value, reg_data->data(), std::min(sizeof(StackEntry), reg_data->size()));
-      Push(reg_value + offset);
+      UnsignedType reg_value = 0;
+      memcpy(&reg_value, reg_data->data(), std::min(sizeof(UnsignedType), reg_data->size()));
+      Push(DwarfStackEntry(reg_value + offset));
 
       // When the current value represents a register, save that fact.
       if (offset == 0)
@@ -457,9 +632,9 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
         }
 
         // Truncate/convert from little-endian as above.
-        StackEntry reg_value = 0;
-        memcpy(&reg_value, reg_data.data(), std::min(sizeof(StackEntry), reg_data.size()));
-        weak_eval->Push(static_cast<StackEntry>(reg_value + offset));
+        UnsignedType reg_value = 0;
+        memcpy(&reg_value, reg_data.data(), std::min(sizeof(UnsignedType), reg_data.size()));
+        weak_eval->Push(DwarfStackEntry(static_cast<UnsignedType>(reg_value + offset)));
 
         // When the current value represents a register, save that fact.
         if (offset == 0)
@@ -472,7 +647,7 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
   return Completion::kAsync;
 }
 
-bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
+bool DwarfExprEval::ReadSigned(int byte_size, SignedType* output) {
   switch (byte_size) {
     case 1:
       if (auto v = data_extractor_.Read<int8_t>()) {
@@ -504,7 +679,7 @@ bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
   return false;
 }
 
-bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
+bool DwarfExprEval::ReadUnsigned(int byte_size, UnsignedType* output) {
   switch (byte_size) {
     case 1:
       if (auto v = data_extractor_.Read<uint8_t>()) {
@@ -536,7 +711,7 @@ bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
   return false;
 }
 
-bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
+bool DwarfExprEval::ReadLEBSigned(SignedType* output) {
   if (auto result = data_extractor_.ReadSleb128()) {
     *output = *result;
     return true;
@@ -545,7 +720,7 @@ bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
   return false;
 }
 
-bool DwarfExprEval::ReadLEBUnsigned(StackEntry* output) {
+bool DwarfExprEval::ReadLEBUnsigned(UnsignedType* output) {
   if (auto result = data_extractor_.ReadUleb128()) {
     *output = *result;
     return true;
@@ -603,30 +778,52 @@ DwarfExprEval::Completion DwarfExprEval::ReportError(const Err& err) {
 
 void DwarfExprEval::ReportStackUnderflow() { ReportError("Stack underflow for DWARF expression."); }
 
-DwarfExprEval::Completion DwarfExprEval::OpUnary(StackEntry (*op)(StackEntry),
-                                                 const char* op_name) {
+DwarfExprEval::Completion DwarfExprEval::OpUnary(
+    ErrOr<DwarfStackEntry> (*op)(const DwarfStackEntry&), const char* op_name) {
   if (is_string_output())
     return AppendString(op_name);
 
-  if (stack_.empty())
+  if (stack_.empty()) {
     ReportStackUnderflow();
-  else
-    stack_.back() = op(stack_.back());
+  } else {
+    ErrOr<DwarfStackEntry> result = op(stack_.back());
+    if (result.ok()) {
+      stack_.back() = std::move(result.value());
+    } else {
+      ReportError("Error evaluating " + std::string(op_name) +
+                  " in DWARF expression: " + result.err().msg());
+    }
+  }
   return Completion::kSync;
 }
 
-DwarfExprEval::Completion DwarfExprEval::OpBinary(StackEntry (*op)(StackEntry, StackEntry),
-                                                  const char* op_name) {
+DwarfExprEval::Completion DwarfExprEval::OpBinary(
+    ErrOr<DwarfStackEntry> (*op)(const DwarfStackEntry&, const DwarfStackEntry&),
+    const char* op_name) {
   if (is_string_output())
     return AppendString(op_name);
 
   if (stack_.size() < 2) {
     ReportStackUnderflow();
   } else {
-    StackEntry b = stack_.back();
+    DwarfStackEntry b = stack_.back();
     stack_.pop_back();
-    StackEntry a = stack_.back();
-    stack_.back() = op(a, b);
+    DwarfStackEntry a = stack_.back();
+    stack_.pop_back();
+
+    if (!a.SameTypeAs(b)) {
+      ReportError(std::string(op_name) + " called on incompatible types " + a.GetTypeDescription() +
+                  " and " + b.GetTypeDescription());
+      return Completion::kSync;
+    }
+
+    ErrOr<DwarfStackEntry> result = op(a, b);
+    if (result.ok()) {
+      stack_.push_back(std::move(result.value()));
+    } else {
+      ReportError("Error evaluating " + std::string(op_name) +
+                  " in DWARF expression: " + result.err().msg());
+    }
   }
   return Completion::kSync;
 }
@@ -650,7 +847,7 @@ DwarfExprEval::Completion DwarfExprEval::OpAddrBase(ResultType result_type, cons
                        " but no addr_base is available.");
   }
 
-  StackEntry addr_table_index;
+  UnsignedType addr_table_index;
   if (!ReadLEBUnsigned(&addr_table_index))
     return Completion::kSync;
 
@@ -662,22 +859,22 @@ DwarfExprEval::Completion DwarfExprEval::OpAddrBase(ResultType result_type, cons
   result_type_ = result_type;
   if (result_type == ResultType::kPointer) {
     // Addresses need to be relocated according to the module offset.
-    StackEntry new_entry = symbol_context_.RelativeToAbsolute(result_or.value());
+    UnsignedType new_entry = symbol_context_.RelativeToAbsolute(result_or.value());
     if (is_string_output()) {
-      AppendString(std::string(op_name) + "(" + ToString128(addr_table_index) +
+      AppendString(std::string(op_name) + "(" + ExprIntToString(addr_table_index) +
                    ", with addr_base=" + to_hex_string(*base) + ") -> rel=" +
                    to_hex_string(result_or.value()) + ", abs=" + to_hex_string(new_entry));
     } else {
-      Push(new_entry);
+      Push(DwarfStackEntry(new_entry));
     }
   } else {
     // Constants are ready to use.
-    StackEntry new_entry = static_cast<StackEntry>(result_or.value());
+    UnsignedType new_entry = static_cast<UnsignedType>(result_or.value());
     if (is_string_output()) {
-      AppendString(std::string(op_name) + "(" + ToString128(addr_table_index) +
+      AppendString(std::string(op_name) + "(" + ExprIntToString(addr_table_index) +
                    ", with addr_base=" + to_hex_string(*base) + ") -> " + to_hex_string(new_entry));
     } else {
-      Push(new_entry);
+      Push(DwarfStackEntry(new_entry));
     }
   }
 
@@ -687,7 +884,7 @@ DwarfExprEval::Completion DwarfExprEval::OpAddrBase(ResultType result_type, cons
 // 1 parameter: unsigned the size of a pointer. This is relative to the load address of the current
 // module. It is used to for globals and statics.
 DwarfExprEval::Completion DwarfExprEval::OpAddr() {
-  StackEntry offset;
+  UnsignedType offset;
   if (!ReadUnsigned(kTargetPointerSize, &offset))
     return Completion::kSync;
 
@@ -701,22 +898,23 @@ DwarfExprEval::Completion DwarfExprEval::OpAddr() {
     return AppendString("push(" + to_hex_string(address) + ")");
   }
 
-  Push(address);
+  Push(DwarfStackEntry(address));
   return Completion::kSync;
 }
 
 // ULEB128 size + ULEB128 offset.
 DwarfExprEval::Completion DwarfExprEval::OpBitPiece() {
-  StackEntry size;
+  UnsignedType size;
   if (!ReadLEBUnsigned(&size))
     return Completion::kSync;
 
-  StackEntry offset;
+  UnsignedType offset;
   if (!ReadLEBUnsigned(&offset))
     return Completion::kSync;
 
   if (is_string_output())
-    return AppendString("DW_OP_bit_piece(" + ToString128(size) + ", " + ToString128(offset) + ")");
+    return AppendString("DW_OP_bit_piece(" + ExprIntToString(size) + ", " +
+                        ExprIntToString(offset) + ")");
 
   // Clang will generate bit_piece operations to make 80-bit long double constants, but the
   // expressions are invalid: https://bugs.llvm.org/show_bug.cgi?id=43682
@@ -735,12 +933,12 @@ DwarfExprEval::Completion DwarfExprEval::OpBitPiece() {
 DwarfExprEval::Completion DwarfExprEval::OpBra() {
   // "The 2-byte constant is the number of bytes of the DWARF expression to skip forward or backward
   // from the current operation, beginning after the 2-byte constant."
-  SignedStackEntry skip_amount = 0;
+  SignedType skip_amount = 0;
   if (!ReadSigned(2, &skip_amount))
     return Completion::kSync;
 
   if (is_string_output())
-    return AppendString("DW_OP_bra(" + ToString128(skip_amount) + ")");
+    return AppendString("DW_OP_bra(" + ExprIntToString(skip_amount) + ")");
 
   if (stack_.empty()) {
     ReportStackUnderflow();
@@ -748,9 +946,9 @@ DwarfExprEval::Completion DwarfExprEval::OpBra() {
   }
 
   // 0 @ top of stack means don't take the branch.
-  StackEntry condition = stack_.back();
+  DwarfStackEntry condition = stack_.back();
   stack_.pop_back();
-  if (condition == 0)
+  if (condition.IsZero())
     return Completion::kSync;
 
   // Otherwise take the branch.
@@ -762,13 +960,14 @@ DwarfExprEval::Completion DwarfExprEval::OpBra() {
 DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
   int reg_index = op - llvm::dwarf::DW_OP_breg0;
 
-  SignedStackEntry offset = 0;
+  SignedType offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_breg" + std::to_string(reg_index) + "(" + ToString128(offset) + ")",
-                        GetRegisterName(reg_index) + MakeAddString(offset));
+    return AppendString(
+        "DW_OP_breg" + std::to_string(reg_index) + "(" + ExprIntToString(offset) + ")",
+        GetRegisterName(reg_index) + MakeAddString(offset));
   }
 
   result_type_ = ResultType::kPointer;
@@ -782,31 +981,10 @@ DwarfExprEval::Completion DwarfExprEval::OpCFA() {
   // Reading the CFA means the result is not constant.
   result_is_constant_ = false;
 
-  if (StackEntry cfa = data_provider_->GetCanonicalFrameAddress())
-    Push(cfa);
+  if (UnsignedType cfa = data_provider_->GetCanonicalFrameAddress())
+    Push(DwarfStackEntry(cfa));
   else
     ReportError("Frame address is 0.");
-  return Completion::kSync;
-}
-
-DwarfExprEval::Completion DwarfExprEval::OpDiv() {
-  if (is_string_output())
-    return AppendString("DW_OP_div");
-
-  if (stack_.size() < 2) {
-    ReportStackUnderflow();
-  } else {
-    StackEntry b = stack_.back();
-    stack_.pop_back();
-    StackEntry a = stack_.back();
-
-    if (b == 0) {
-      ReportError("DWARF expression divided by zero.");
-    } else {
-      stack_.back() = static_cast<StackEntry>(static_cast<SignedStackEntry>(a) /
-                                              static_cast<SignedStackEntry>(b));
-    }
-  }
   return Completion::kSync;
 }
 
@@ -836,7 +1014,7 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
   // A ULEB128 length followed by a sub-expression of that length. This sub-expression is evaluated
   // in a separate stack using the register values that were present at the beginning of the
   // function.
-  StackEntry length;
+  UnsignedType length;
   if (!ReadLEBUnsigned(&length))
     return Completion::kSync;
   if (length == 0 || !data_extractor_.CanRead(static_cast<size_t>(length)))
@@ -889,7 +1067,7 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
           ReportError("DWARF entry value expression produced an incorrect result type.");
         } else {
           // Success case, save the result.
-          Push(nested->GetResult());
+          Push(DwarfStackEntry(nested->GetResult()));
         }
 
         if (*is_async_completion) {
@@ -914,12 +1092,12 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
   // Reading the frame base means the result is not constant.
   result_is_constant_ = false;
 
-  SignedStackEntry offset = 0;
+  SignedType offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_fbreg(" + ToString128(offset) + ")",
+    return AppendString("DW_OP_fbreg(" + ExprIntToString(offset) + ")",
                         "frame_base" + MakeAddString(offset));
   }
 
@@ -932,13 +1110,13 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
       return ReportError("Base Pointer is 0, can't evaluate.");
 
     result_type_ = ResultType::kPointer;
-    Push(*bp + offset);
+    Push(DwarfStackEntry(*bp + offset));
     return Completion::kSync;
   }
 
   // Must request async.
   data_provider_->GetFrameBaseAsync(
-      [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err, StackEntry value) {
+      [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err, UnsignedType value) {
         if (!weak_eval)
           return;
         if (err.has_error()) {
@@ -952,7 +1130,7 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
         }
 
         weak_eval->result_type_ = ResultType::kPointer;
-        weak_eval->Push(static_cast<StackEntry>(value + offset));
+        weak_eval->Push(DwarfStackEntry(static_cast<UnsignedType>(value + offset)));
 
         // Picks up processing at the next instruction.
         weak_eval->ContinueEval();
@@ -965,17 +1143,17 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
 DwarfExprEval::Completion DwarfExprEval::OpImplicitPointer(const char* op_name) {
   // GCC generates this when a pointer has been optimized out, but it still can provide the value of
   // the thing that it pointed to. We don't implement this.
-  StackEntry die_offset;
+  UnsignedType die_offset;
   if (!ReadUnsigned(8, &die_offset))
     return Completion::kSync;
 
-  SignedStackEntry value_offset;
+  SignedType value_offset;
   if (!ReadLEBSigned(&value_offset))
     return Completion::kSync;
 
   if (is_string_output()) {
     return AppendString(std::string(op_name) + "(" + to_hex_string(die_offset) + ", " +
-                        ToString128(value_offset) + ")");
+                        ExprIntToString(value_offset) + ")");
   }
 
   return ReportError("Optimized out (DW_OP_implicit_pointer)");
@@ -983,36 +1161,36 @@ DwarfExprEval::Completion DwarfExprEval::OpImplicitPointer(const char* op_name) 
 
 // 2 parameters: ULEB128 length, followed by that much data (in machine-endianness).
 DwarfExprEval::Completion DwarfExprEval::OpImplicitValue() {
-  StackEntry len = 0;
+  UnsignedType len = 0;
   if (!ReadLEBUnsigned(&len))
     return Completion::kSync;
-  if (len > sizeof(StackEntry))
+  if (len > sizeof(UnsignedType))
     return ReportError(fxl::StringPrintf("DWARF implicit value length too long: 0x%x.",
                                          static_cast<unsigned>(len)));
 
-  StackEntry value = 0;
+  UnsignedType value = 0;
   if (!data_extractor_.ReadBytes(static_cast<size_t>(len), &value))
     return ReportError("Not enough data for DWARF implicit value.");
 
   if (is_string_output()) {
     return AppendString(
-        "DW_OP_implicit_value(" + ToString128(len) + ", " + to_hex_string(value) + ")",
+        "DW_OP_implicit_value(" + ExprIntToString(len) + ", " + to_hex_string(value) + ")",
         "push(" + to_hex_string(value) + ")");
   }
 
-  Push(value);
+  Push(DwarfStackEntry(value));
   result_type_ = ResultType::kValue;
   return Completion::kSync;
 }
 
 // 1 parameter: ULEB128 constant indexing the register.
 DwarfExprEval::Completion DwarfExprEval::OpRegx() {
-  StackEntry reg = 0;
+  UnsignedType reg = 0;
   if (!ReadLEBUnsigned(&reg))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_regx(" + ToString128(reg) + ")",
+    return AppendString("DW_OP_regx(" + ExprIntToString(reg) + ")",
                         GetRegisterName(static_cast<int>(reg)));
   }
 
@@ -1022,17 +1200,17 @@ DwarfExprEval::Completion DwarfExprEval::OpRegx() {
 
 // 2 parameters: ULEB128 register number + SLEB128 offset.
 DwarfExprEval::Completion DwarfExprEval::OpBregx() {
-  StackEntry reg_val = 0;
+  UnsignedType reg_val = 0;
   if (!ReadLEBUnsigned(&reg_val))
     return Completion::kSync;
   int reg = static_cast<int>(reg_val);
 
-  SignedStackEntry offset = 0;
+  SignedType offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_bregx(" + std::to_string(reg) + ", " + ToString128(offset) + ")",
+    return AppendString("DW_OP_bregx(" + std::to_string(reg) + ", " + ExprIntToString(offset) + ")",
                         GetRegisterName(reg) + MakeAddString(offset));
   }
 
@@ -1054,51 +1232,33 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size, const char*
     return Completion::kSync;
   }
 
-  if (byte_size == 0 || byte_size > sizeof(StackEntry))
+  if (byte_size == 0 || byte_size > sizeof(UnsignedType))
     return ReportError(fxl::StringPrintf("Invalid DWARF expression read size: %u", byte_size));
 
-  StackEntry addr = stack_.back();
+  DwarfStackEntry addr = stack_.back();
   stack_.pop_back();
-  ReadMemory(addr, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
+  if (!addr.TreatAsUnsigned())
+    return ReportError("DW_OP_deref trying to dereference a non-unsigned value.");
+
+  ReadMemory(addr.unsigned_value(), byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
     // Success. This assumes little-endian and copies starting from the low bytes. The data will
-    // have already been validated to be the correct size so we know it will fit in a StackEntry.
-    FX_DCHECK(data.size() <= sizeof(StackEntry));
-    StackEntry to_push = 0;
+    // have already been validated to be the correct size so we know it will fit in a UnsignedType.
+    FX_DCHECK(data.size() <= sizeof(UnsignedType));
+    UnsignedType to_push = 0;
     memcpy(&to_push, data.data(), data.size());
-    eval->Push(to_push);
+    eval->Push(DwarfStackEntry(to_push));
   });
   return Completion::kAsync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpDerefSize() {
   // The operand is a 1-byte unsigned constant following the opcode.
-  StackEntry byte_size = 0;
+  UnsignedType byte_size = 0;
   if (!ReadUnsigned(1, &byte_size))
     return Completion::kSync;
 
   // The generic deref path can handle the rest.
   return OpDeref(static_cast<uint32_t>(byte_size), "DW_OP_deref_size", true);
-}
-
-DwarfExprEval::Completion DwarfExprEval::OpMod() {
-  if (is_string_output())
-    return AppendString("DW_OP_mod");
-
-  if (stack_.size() < 2) {
-    ReportStackUnderflow();
-  } else {
-    StackEntry b = stack_.back();
-    stack_.pop_back();
-    StackEntry a = stack_.back();
-
-    if (b == 0) {
-      ReportError("DWARF expression divided by zero.");
-    } else {
-      stack_.back() = static_cast<StackEntry>(static_cast<SignedStackEntry>(a) %
-                                              static_cast<SignedStackEntry>(b));
-    }
-  }
-  return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpOver() {
@@ -1115,12 +1275,12 @@ DwarfExprEval::Completion DwarfExprEval::OpOver() {
 
 // 1 parameter: 1-byte stack index from the top to push.
 DwarfExprEval::Completion DwarfExprEval::OpPick() {
-  StackEntry index = 0;
+  UnsignedType index = 0;
   if (!ReadUnsigned(1, &index))
     return Completion::kSync;
 
   if (is_string_output())
-    return AppendString("DW_OP_pick(" + ToString128(index) + ")");
+    return AppendString("DW_OP_pick(" + ExprIntToString(index) + ")");
 
   if (stack_.size() <= index) {
     ReportStackUnderflow();
@@ -1134,12 +1294,12 @@ DwarfExprEval::Completion DwarfExprEval::OpPick() {
 
 // 1 paramter: ULEB size of item in bytes.
 DwarfExprEval::Completion DwarfExprEval::OpPiece() {
-  StackEntry byte_size = 0;
+  UnsignedType byte_size = 0;
   if (!ReadLEBUnsigned(&byte_size))
     return Completion::kSync;
 
   // Upper-bound sanity check on the piece size to guard against corrupted or malicious data.
-  constexpr StackEntry kMaxPieceSize = 16384;
+  constexpr UnsignedType kMaxPieceSize = 16384;
   if (byte_size > kMaxPieceSize) {
     return ReportError(
         fxl::StringPrintf("DWARF expression listed a data size of %d which is too large.",
@@ -1147,7 +1307,7 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
   }
 
   if (is_string_output())
-    return AppendString("DW_OP_piece(" + ToString128(byte_size) + ")");
+    return AppendString("DW_OP_piece(" + ExprIntToString(byte_size) + ")");
 
   if (stack_.empty()) {
     // Defining a piece with no previous data on the stack means to write that many bytes that
@@ -1156,20 +1316,25 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
     return Completion::kSync;
   }
 
-  StackEntry source = stack_.back();
+  DwarfStackEntry source = stack_.back();
   stack_.pop_back();
 
   if (result_type_ == ResultType::kValue) {
     // Simple case where the source of the "piece" is the value at the top of the stack.
-    if (byte_size > sizeof(StackEntry)) {
+    if (byte_size > sizeof(UnsignedType)) {
       return ReportError(
           fxl::StringPrintf("DWARF expression listed a data size of %d which is too large.",
                             static_cast<int>(byte_size)));
     }
 
+    size_t source_valid_bytes = source.GetByteSize();
+    if (byte_size > source_valid_bytes)
+      return ReportError("DW_OP_piece attempting to read more bytes than are valid.");
+
     // We want the low bytes, this assumes little-endian.
-    uint8_t source_as_bytes[sizeof(StackEntry)];
-    memcpy(&source_as_bytes, &source, sizeof(StackEntry));
+    UnsignedType source_value = source.unsigned_value();
+    uint8_t source_as_bytes[sizeof(UnsignedType)];
+    memcpy(&source_as_bytes, &source_value, sizeof(UnsignedType));
     result_data_.Append(std::begin(source_as_bytes), &source_as_bytes[byte_size]);
 
     // Reset the expression state to start a new one.
@@ -1179,90 +1344,105 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
 
   // This is the more complex case where the top of the stack is a pointer to the value in memory.
   // We read that many bytes from memory and add it to the result data.
-  ReadMemory(source, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
-    // Success. Copy to the result.
-    eval->result_data_.Append(data);
+  if (!source.TreatAsUnsigned())
+    return ReportError("DW_OP_piece attempting to dereference invalid type.");
+  ReadMemory(source.unsigned_value(), byte_size,
+             [](DwarfExprEval* eval, std::vector<uint8_t> data) {
+               // Success. Copy to the result.
+               eval->result_data_.Append(data);
 
-    // Reset the expression state to start a new one.
-    eval->result_type_ = ResultType::kPointer;
-  });
+               // Reset the expression state to start a new one.
+               eval->result_type_ = ResultType::kPointer;
+             });
 
   // The ReadMemory call will complete asynchronously.
   return Completion::kAsync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPlusUconst() {
-  // "Pops the top stack entry, adds it to the unsigned LEB128 constant operand and pushes the
+  // "Pops the top stack entry, adds it to the unsigned LEB128 constant operand [...] and pushes the
   // result."
-  StackEntry param = 0;
+  UnsignedType param = 0;
   if (!ReadLEBUnsigned(&param))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_plus_uconst(" + ToString128(param) + ")", "+ " + ToString128(param));
+    return AppendString("DW_OP_plus_uconst(" + ExprIntToString(param) + ")",
+                        "+ " + ExprIntToString(param));
   }
 
   if (stack_.empty()) {
     ReportStackUnderflow();
   } else {
-    StackEntry top = stack_.back();
+    DwarfStackEntry top = stack_.back();
     stack_.pop_back();
-    Push(top + param);
+
+    // "interpreted as the same type as the operand popped from the top of the stack."
+    if (top.TreatAsUnsigned()) {
+      Push(DwarfStackEntry(top.type_ref(), top.unsigned_value() + param));
+    } else if (top.TreatAsSigned()) {
+      Push(DwarfStackEntry(top.type_ref(), top.signed_value() + static_cast<SignedType>(param)));
+    } else if (top.TreatAsFloat()) {
+      Push(DwarfStackEntry(top.type_ref(), top.float_value() + static_cast<float>(param)));
+    } else if (top.TreatAsDouble()) {
+      Push(DwarfStackEntry(top.type_ref(), top.double_value() + static_cast<double>(param)));
+    }
   }
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushSigned(int byte_count, const char* op_name) {
-  SignedStackEntry value = 0;
+  SignedType value = 0;
   if (!ReadSigned(byte_count, &value))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString(std::string(op_name) + "(" + ToString128(value) + ")",
-                        "push(" + ToString128(value) + ")");
+    return AppendString(std::string(op_name) + "(" + ExprIntToString(value) + ")",
+                        "push(" + ExprIntToString(value) + ")");
   }
 
-  Push(static_cast<StackEntry>(value));
+  Push(DwarfStackEntry(static_cast<UnsignedType>(value)));
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushUnsigned(int byte_count, const char* op_name) {
-  StackEntry value = 0;
+  UnsignedType value = 0;
   if (!ReadUnsigned(byte_count, &value))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString(std::string(op_name) + "(" + ToString128(value) + ")",
-                        "push(" + ToString128(value) + ")");
+    return AppendString(std::string(op_name) + "(" + ExprIntToString(value) + ")",
+                        "push(" + ExprIntToString(value) + ")");
   }
 
-  Push(value);
+  Push(DwarfStackEntry(value));
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushLEBSigned() {
-  SignedStackEntry value = 0;
+  SignedType value = 0;
   if (!ReadLEBSigned(&value))
     return Completion::kSync;
 
   if (is_string_output())
-    return AppendString("DW_OP_consts(" + ToString128(value) + ")",
-                        "push(" + ToString128(value) + ")");
+    return AppendString("DW_OP_consts(" + ExprIntToString(value) + ")",
+                        "push(" + ExprIntToString(value) + ")");
 
-  Push(static_cast<StackEntry>(value));
+  Push(DwarfStackEntry(static_cast<UnsignedType>(value)));
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushLEBUnsigned() {
-  StackEntry value = 0;
+  UnsignedType value = 0;
   if (!ReadLEBUnsigned(&value))
     return Completion::kSync;
 
-  if (is_string_output())
-    return AppendString("DW_OP_constu(" + ToString128(value) + ")",
-                        "push(" + ToString128(value) + ")");
+  if (is_string_output()) {
+    return AppendString("DW_OP_constu(" + ExprIntToString(value) + ")",
+                        "push(" + ExprIntToString(value) + ")");
+  }
 
-  Push(value);
+  Push(DwarfStackEntry(value));
   return Completion::kSync;
 }
 
@@ -1276,25 +1456,25 @@ DwarfExprEval::Completion DwarfExprEval::OpRot() {
   if (stack_.size() < 3) {
     ReportStackUnderflow();
   } else {
-    StackEntry top = stack_[stack_.size() - 1];
-    StackEntry one_back = stack_[stack_.size() - 2];
-    StackEntry two_back = stack_[stack_.size() - 3];
+    DwarfStackEntry top = stack_[stack_.size() - 1];
+    DwarfStackEntry one_back = stack_[stack_.size() - 2];
+    DwarfStackEntry two_back = stack_[stack_.size() - 3];
 
-    stack_[stack_.size() - 1] = one_back;
-    stack_[stack_.size() - 2] = two_back;
-    stack_[stack_.size() - 3] = top;
+    stack_[stack_.size() - 1] = std::move(one_back);
+    stack_[stack_.size() - 2] = std::move(two_back);
+    stack_[stack_.size() - 3] = std::move(top);
   }
   return Completion::kSync;
 }
 
 // 1 parameter: 2-byte signed constant.
 DwarfExprEval::Completion DwarfExprEval::OpSkip() {
-  SignedStackEntry skip_amount = 0;
+  SignedType skip_amount = 0;
   if (!ReadSigned(2, &skip_amount))
     return Completion::kSync;
 
   if (is_string_output()) {
-    return AppendString("DW_OP_skip(" + ToString128(skip_amount) + ")");
+    return AppendString("DW_OP_skip(" + ExprIntToString(skip_amount) + ")");
 
     // Don't actually execute the skip in printing mode, because it could skip backwards to do a
     // loop and we would keep printing from there.
@@ -1335,13 +1515,19 @@ DwarfExprEval::Completion DwarfExprEval::OpTlsAddr(const char* op_name) {
     return Completion::kSync;
   }
 
+  DwarfStackEntry entry = stack_.back();
+  stack_.pop_back();
+  if (!entry.TreatAsUnsigned())
+    return ReportError("Non-unsigned type parameter on stack when computing TLS.");
+  UnsignedType tls_offset = entry.unsigned_value();
+
   auto debug_address = data_provider_->GetDebugAddressForContext(symbol_context_);
 
   if (!debug_address)
     return ReportError("Debug address unavailable.");
 
   data_provider_->GetTLSSegment(
-      symbol_context_, [weak_eval = weak_factory_.GetWeakPtr()](ErrOr<uint64_t> value) {
+      symbol_context_, [tls_offset, weak_eval = weak_factory_.GetWeakPtr()](ErrOr<uint64_t> value) {
         if (!weak_eval) {
           return;
         }
@@ -1351,15 +1537,15 @@ DwarfExprEval::Completion DwarfExprEval::OpTlsAddr(const char* op_name) {
           return;
         }
 
-        weak_eval->stack_.back() += static_cast<StackEntry>(value.value());
+        weak_eval->Push(DwarfStackEntry(static_cast<UnsignedType>(value.value()) + tls_offset));
         weak_eval->ContinueEval();
       });
 
   return Completion::kAsync;
 }
 
-void DwarfExprEval::Skip(SignedStackEntry amount) {
-  SignedStackEntry new_index = static_cast<SignedStackEntry>(data_extractor_.cur()) + amount;
+void DwarfExprEval::Skip(SignedType amount) {
+  SignedType new_index = static_cast<SignedType>(data_extractor_.cur()) + amount;
   if (new_index < 0) {
     // Skip before beginning is an error.
     ReportError("DWARF expression skips out-of-bounds.");

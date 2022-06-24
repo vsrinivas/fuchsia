@@ -40,8 +40,11 @@ class BaseType final : public Type {
   // Converts the int to a base type, optionally including the numeric value.
   static std::string BaseTypeToString(int base_type, bool include_number = false);
 
-  // Returns wiether the given base type is a signed integer.
+  // Returns whether the given base type is an (un)signed integer.
   static bool IsSigned(int base_type);
+  bool IsSigned() const { return IsSigned(base_type()); }
+  static bool IsUnsigned(int base_type);
+  bool IsUnsigned() const { return IsUnsigned(base_type()); }
 
   // Symbol override.
   const std::string& GetAssignedName() const final;

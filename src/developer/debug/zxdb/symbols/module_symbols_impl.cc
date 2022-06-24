@@ -613,10 +613,14 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
       eval.GetResultType() != DwarfExprEval::ResultType::kPointer)
     return Location(symbol_context, std::move(variable));
 
+  DwarfStackEntry result = eval.GetResult();
+  if (!result.TreatAsUnsigned())
+    return Location(symbol_context, std::move(variable));
+
   // TODO(brettw) in all of the return cases we could in the future fill in the file/line of the
   // definition of the variable. Currently Variables don't provide that (even though it's usually in
   // the DWARF symbols).
-  return Location(eval.GetResult(), FileLine(), 0, symbol_context, std::move(variable));
+  return Location(result.unsigned_value(), FileLine(), 0, symbol_context, std::move(variable));
 }
 
 std::vector<Location> ModuleSymbolsImpl::ResolvePltName(const SymbolContext& symbol_context,

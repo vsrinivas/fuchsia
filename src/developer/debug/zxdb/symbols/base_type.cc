@@ -60,6 +60,11 @@ bool BaseType::IsSigned(int base_type) {
   return base_type == BaseType::kBaseTypeSigned || base_type == kBaseTypeSignedChar;
 }
 
+// static
+bool BaseType::IsUnsigned(int base_type) {
+  return base_type == BaseType::kBaseTypeUnsigned || base_type == kBaseTypeUnsignedChar;
+}
+
 const std::string& BaseType::GetAssignedName() const {
   const std::string& assigned_name = Type::GetAssignedName();
   if (!assigned_name.empty())

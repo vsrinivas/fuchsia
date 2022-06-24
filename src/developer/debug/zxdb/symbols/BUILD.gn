@@ -102,6 +102,8 @@ static_library("symbols") {
     "dwarf_expr_eval.cc",
     "dwarf_lang.cc",
     "dwarf_location.cc",
+    "dwarf_stack_entry.cc",
+    "dwarf_stack_entry.h",
     "dwarf_symbol_factory.cc",
     "dwarf_symbol_factory.h",
     "dwarf_tag.cc",

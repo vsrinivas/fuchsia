@@ -153,7 +153,7 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
     // makes things a little simpler) because we want to get the exact stack value (this is called
     // in the context of another DwarfExprEval).
     auto dwarf_eval = std::make_shared<DwarfExprEval>();
-    dwarf_eval->Push(static_cast<DwarfExprEval::StackEntry>(debug_address));
+    dwarf_eval->Push(DwarfStackEntry(debug_address));
     dwarf_eval->Eval(this_ref, symbol_context, DwarfExpr(std::move(program)),
                      [dwarf_eval, cb = std::move(cb)](DwarfExprEval*, const Err& err) mutable {
                        // Prevent the DwarfExprEval from getting reentrantly deleted from within its
@@ -167,11 +167,16 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
                          return cb(err);
                        }
 
+                       const char kNotPointer[] = "TLS DWARF expression did not produce a pointer.";
                        if (dwarf_eval->GetResultType() != DwarfExprEval::ResultType::kPointer) {
-                         return cb(Err("TLS DWARF expression did not produce a pointer."));
+                         return cb(Err(kNotPointer));
+                       }
+                       DwarfStackEntry result = dwarf_eval->GetResult();
+                       if (!result.TreatAsUnsigned()) {
+                         return cb(Err(kNotPointer));
                        }
 
-                       cb(static_cast<uint64_t>(dwarf_eval->GetResult()));
+                       cb(static_cast<uint64_t>(result.unsigned_value()));
                      });
   });
 }

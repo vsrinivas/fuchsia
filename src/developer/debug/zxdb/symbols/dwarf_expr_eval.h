@@ -14,10 +14,12 @@
 #include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/data_extractor.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/common/tagged_data_builder.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_stack_entry.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -72,16 +74,8 @@ class DwarfExprEval {
     kPretty,   // Decodes values and register names.
   };
 
-  // The DWARF spec says the stack entry "can represent a value of any supported base type of the
-  // target machine". We need to support x87 long doubles (80 bits) and XMM registers (128 bits).
-  // Generally the XMM registers used for floating point use only the low 64 bits and long doubles
-  // are very uncommon, but using 128 bits here covers the edge cases better. The ARM "v" registers
-  // (128 bits) are similar.
-  //
-  // The YMM (256 bit) and ZMM (512 bit) x64 reigisters aren't currently representable in DWARF
-  // expressions so larger numbers are unnecessary.
-  using StackEntry = uint128_t;
-  using SignedStackEntry = int128_t;
+  using SignedType = DwarfStackEntry::SignedType;
+  using UnsignedType = DwarfStackEntry::UnsignedType;
 
   using CompletionCallback = fit::callback<void(DwarfExprEval* eval, const Err& err)>;
 
@@ -89,8 +83,8 @@ class DwarfExprEval {
   ~DwarfExprEval();
 
   // Pushes a value on the stack. Call before Eval() for the cases where an expression requires
-  // some intitial state.
-  void Push(StackEntry value);
+  // some initial state.
+  void Push(DwarfStackEntry value);
 
   // Clears any existing values in the stack.
   void Clear() { stack_.clear(); }
@@ -106,7 +100,7 @@ class DwarfExprEval {
   // Valid when is_success() and type() == kPointer/kValue. Returns the result of evaluating the
   // expression. The meaning will be dependent on the context of the expression being evaluated.
   // Most results will be smaller than this in which case they will use only the low bits.
-  StackEntry GetResult() const;
+  DwarfStackEntry GetResult() const;
 
   // Destructively returns the generated data buffer. Valid when is_success() and type() == kData.
   TaggedData TakeResultData();
@@ -170,14 +164,14 @@ class DwarfExprEval {
   //
   // They return true if the value was read, false if there wasn't enough data (they will issue the
   // error internally, the calling code should just return on failure).
-  bool ReadSigned(int byte_size, SignedStackEntry* output);
-  bool ReadUnsigned(int byte_size, StackEntry* output);
+  bool ReadSigned(int byte_size, SignedType* output);
+  bool ReadUnsigned(int byte_size, UnsignedType* output);
 
   // Reads a signed or unsigned LEB constant from the stream. They return true if the value was
   // read, false if there wasn't enough data (they will issue the error internally, the calling code
   // should just return on failure).
-  bool ReadLEBSigned(SignedStackEntry* output);
-  bool ReadLEBUnsigned(StackEntry* output);
+  bool ReadLEBSigned(SignedType* output);
+  bool ReadLEBUnsigned(UnsignedType* output);
 
   // Schedules an asynchronous memory read. If there is any failure, including short reads, this
   // will report it and fail evaluation.
@@ -196,11 +190,12 @@ class DwarfExprEval {
 
   // Executes the given unary operation with the top stack entry as the parameter and pushes the
   // result.
-  Completion OpUnary(StackEntry (*op)(StackEntry), const char* op_name);
+  Completion OpUnary(ErrOr<DwarfStackEntry> (*op)(const DwarfStackEntry&), const char* op_name);
 
   // Executes the given binary operation by popping the top two stack entries as parameters (the
   // first is the next-to-top, the second is the top) and pushing the result on the stack.
-  Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry), const char* op_name);
+  Completion OpBinary(ErrOr<DwarfStackEntry> (*op)(const DwarfStackEntry&, const DwarfStackEntry&),
+                      const char* op_name);
 
   // Implements DW_OP_addrx and DW_OP_constx (corresponding to the given result types). The type
   // of the result on the stack will be set to the given result type, and kPointer result types
@@ -219,7 +214,6 @@ class DwarfExprEval {
   Completion OpCFA();
   Completion OpDeref(uint32_t byte_size, const char* op_name, bool string_include_size);
   Completion OpDerefSize();
-  Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();
   Completion OpEntryValue(const char* op_name);
@@ -228,7 +222,6 @@ class DwarfExprEval {
   Completion OpImplicitValue();
   Completion OpRegx();
   Completion OpBregx();
-  Completion OpMod();
   Completion OpOver();
   Completion OpPick();
   Completion OpPiece();
@@ -298,7 +291,7 @@ class DwarfExprEval {
   // Indicates that the expression is complete and that there is a result value.
   bool is_success_ = false;
 
-  std::vector<StackEntry> stack_;
+  std::vector<DwarfStackEntry> stack_;
 
   // Tracks the result when generating composite descriptions via DW_OP_[bit_]piece. A nonempty
   // contents indicates that the final result is of type "kData" (see result_type_ for more).

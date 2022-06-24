@@ -77,12 +77,16 @@ void CallSiteSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegis
     if (eval.GetResultType() == DwarfExprEval::ResultType::kData)
       return cb(Err("DWARF expression produced unexpected results."), {});
 
+    DwarfStackEntry result = eval.GetResult();
+    if (!result.TreatAsUnsigned())
+      return cb(Err("DWARF expression produced unexpected results."), {});
+    auto result_value = result.unsigned_value();
+
     // The register value should be at the top of the stack. We could trim the stack entry to match
-    // the byte width of the register, but this is expected to be used to prvide data back to the
+    // the byte width of the register, but this is expected to be used to provide data back to the
     // DwarfExprEval which will pad it out again. So always pass all the bytes.
-    std::vector<uint8_t> bytes(sizeof(DwarfExprEval::StackEntry));
-    DwarfExprEval::StackEntry result = eval.GetResult();
-    memcpy(bytes.data(), &result, sizeof(DwarfExprEval::StackEntry));
+    std::vector<uint8_t> bytes(sizeof(result_value));
+    memcpy(bytes.data(), &result_value, sizeof(result_value));
 
     cb(Err(), std::move(bytes));
   };

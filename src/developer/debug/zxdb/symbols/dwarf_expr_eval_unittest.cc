@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -46,15 +47,27 @@ class DwarfExprEvalTest : public TestWithLoop {
   // The DwarfExprEval used in the computation will be in the completed state so tests can check
   // eval().whatever for additional validation after this call returns.
   void DoEvalTest(const std::vector<uint8_t> data, bool expected_success,
-                  DwarfExprEval::Completion expected_completion, uint128_t expected_result,
+                  DwarfExprEval::Completion expected_completion,
+                  const DwarfStackEntry& expected_result,
                   DwarfExprEval::ResultType expected_result_type, const char* expected_string,
                   const char* expected_message = nullptr);
 
   // Same as the above but takes a DwarfExpr.
   void DoEvalTest(DwarfExpr expr, bool expected_success,
-                  DwarfExprEval::Completion expected_completion, uint128_t expected_result,
+                  DwarfExprEval::Completion expected_completion,
+                  const DwarfStackEntry& expected_result,
                   DwarfExprEval::ResultType expected_result_type, const char* expected_string,
                   const char* expected_message = nullptr);
+
+  // Just does the evaluation part of the eval test. This does not check the stringified version
+  // of the expression, and does not clear any previous state of the evaluator.
+  //
+  // Tests can use this variant if they want to set up some stack entries manually and then run an
+  // expression based on those.
+  void DoEval(DwarfExpr expr, bool expected_success, DwarfExprEval::Completion expected_completion,
+              const DwarfStackEntry& expected_result,
+              DwarfExprEval::ResultType expected_result_type,
+              const char* expected_message = nullptr);
 
  private:
   DwarfExprEval eval_;
@@ -64,7 +77,7 @@ class DwarfExprEvalTest : public TestWithLoop {
 
 void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expected_success,
                                    DwarfExprEval::Completion expected_completion,
-                                   uint128_t expected_result,
+                                   const DwarfStackEntry& expected_result,
                                    DwarfExprEval::ResultType expected_result_type,
                                    const char* expected_string, const char* expected_message) {
   DoEvalTest(DwarfExpr(data), expected_success, expected_completion, expected_result,
@@ -73,7 +86,7 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
 
 void DwarfExprEvalTest::DoEvalTest(DwarfExpr expr, bool expected_success,
                                    DwarfExprEval::Completion expected_completion,
-                                   uint128_t expected_result,
+                                   const DwarfStackEntry& expected_result,
                                    DwarfExprEval::ResultType expected_result_type,
                                    const char* expected_string, const char* expected_message) {
   // Check string-ification. Do this first because it won't set up the complete state of the
@@ -83,6 +96,15 @@ void DwarfExprEvalTest::DoEvalTest(DwarfExpr expr, bool expected_success,
   EXPECT_EQ(expected_string, stringified);
 
   eval_.Clear();
+  DoEval(expr, expected_success, expected_completion, expected_result, expected_result_type,
+         expected_message);
+}
+
+void DwarfExprEvalTest::DoEval(DwarfExpr expr, bool expected_success,
+                               DwarfExprEval::Completion expected_completion,
+                               const DwarfStackEntry& expected_result,
+                               DwarfExprEval::ResultType expected_result_type,
+                               const char* expected_message) {
   bool callback_issued = false;
   EXPECT_EQ(expected_completion,
             eval_.Eval(provider(), symbol_context_, expr,
@@ -127,27 +149,27 @@ TEST_F(DwarfExprEvalTest, NoResult) {
   const char kNoResults[] = "DWARF expression produced no results.";
 
   // Empty expression.
-  DoEvalTest(DwarfExpr(), false, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(DwarfExpr(), false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kPointer, "", kNoResults);
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_TRUE(eval().result_is_constant());
 
   // Nonempty expression that produces no results.
-  DoEvalTest({llvm::dwarf::DW_OP_nop}, false, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest({llvm::dwarf::DW_OP_nop}, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kPointer, "DW_OP_nop", kNoResults);
 }
 
 TEST_F(DwarfExprEvalTest, MarkValue) {
   // A computation without "stack_value" should report the result type as a pointers.
-  DoEvalTest({llvm::dwarf::DW_OP_lit4}, true, DwarfExprEval::Completion::kSync, 4u,
+  DoEvalTest({llvm::dwarf::DW_OP_lit4}, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(4u),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit4");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_TRUE(eval().result_is_constant());
 
   // "stack value" should mark the result as a stack value.
   DoEvalTest({llvm::dwarf::DW_OP_lit4, llvm::dwarf::DW_OP_stack_value}, true,
-             DwarfExprEval::Completion::kSync, 4u, DwarfExprEval::ResultType::kValue,
-             "DW_OP_lit4, DW_OP_stack_value");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(4u),
+             DwarfExprEval::ResultType::kValue, "DW_OP_lit4, DW_OP_stack_value");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_TRUE(eval().result_is_constant());
 }
@@ -187,8 +209,8 @@ TEST_F(DwarfExprEvalTest, SyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
   provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
-  DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kSync, kValue,
-             DwarfExprEval::ResultType::kValue, "DW_OP_reg0");
+  DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(kValue), DwarfExprEval::ResultType::kValue, "DW_OP_reg0");
   EXPECT_EQ(RegisterID::kARMv8_x0, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -208,7 +230,7 @@ TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
   expr_data.push_back(llvm::dwarf::DW_OP_regx);
   expr_data.push_back(0b00000001);
 
-  DoEvalTest(expr_data, true, DwarfExprEval::Completion::kSync, kValue,
+  DoEvalTest(expr_data, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(kValue),
              DwarfExprEval::ResultType::kValue, "DW_OP_nop, DW_OP_regx(1)");
   EXPECT_EQ(RegisterID::kARMv8_x1, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
@@ -219,8 +241,8 @@ TEST_F(DwarfExprEvalTest, AsyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
 
-  DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kAsync, kValue,
-             DwarfExprEval::ResultType::kValue, "DW_OP_reg0");
+  DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kAsync,
+             DwarfStackEntry(kValue), DwarfExprEval::ResultType::kValue, "DW_OP_reg0");
   EXPECT_EQ(RegisterID::kARMv8_x0, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -229,8 +251,8 @@ TEST_F(DwarfExprEvalTest, AsyncRegister) {
 TEST_F(DwarfExprEvalTest, SyncInvalidOp) {
   // Make a program that consists only of a user-defined opcode (not supported). Can't use
   // DW_OP_lo_user because that's a GNU TLS extension we know about.
-  DoEvalTest({llvm::dwarf::DW_OP_lo_user + 1}, false, DwarfExprEval::Completion::kSync, 0,
-             DwarfExprEval::ResultType::kValue, "INVALID_OPCODE(0xe1)",
+  DoEvalTest({llvm::dwarf::DW_OP_lo_user + 1}, false, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(0), DwarfExprEval::ResultType::kValue, "INVALID_OPCODE(0xe1)",
              "Invalid opcode 0xe1 in DWARF expression.");
 }
 
@@ -245,21 +267,21 @@ TEST_F(DwarfExprEvalTest, AsyncInvalidOp) {
   expr_data.push_back(llvm::dwarf::DW_OP_reg0);
   expr_data.push_back(llvm::dwarf::DW_OP_lo_user + 1);
 
-  DoEvalTest(expr_data, false, DwarfExprEval::Completion::kAsync, 0,
+  DoEvalTest(expr_data, false, DwarfExprEval::Completion::kAsync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kPointer, "DW_OP_reg0, INVALID_OPCODE(0xe1)",
              "Invalid opcode 0xe1 in DWARF expression.");
 }
 
 // Tests the special opcodes that also encode a 0-31 literal.
 TEST_F(DwarfExprEvalTest, LiteralOp) {
-  DoEvalTest({llvm::dwarf::DW_OP_lit4}, true, DwarfExprEval::Completion::kSync, 4u,
+  DoEvalTest({llvm::dwarf::DW_OP_lit4}, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(4u),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit4");
 }
 
 // Tests that reading fixed-length constant without enough room fails.
 TEST_F(DwarfExprEvalTest, Const4ReadOffEnd) {
-  DoEvalTest({llvm::dwarf::DW_OP_const4u, 0xf0}, false, DwarfExprEval::Completion::kSync, 0,
-             DwarfExprEval::ResultType::kPointer,
+  DoEvalTest({llvm::dwarf::DW_OP_const4u, 0xf0}, false, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(0), DwarfExprEval::ResultType::kPointer,
              "ERROR: \"Bad number format in DWARF expression.\"",
              "Bad number format in DWARF expression.");
 }
@@ -268,8 +290,8 @@ TEST_F(DwarfExprEvalTest, Const4ReadOffEnd) {
 TEST_F(DwarfExprEvalTest, ConstReadOffEnd) {
   // Note that LLVM allows LEB numbers to run off the end, and in that case just stops reading data
   // and reports the bits read.
-  DoEvalTest({llvm::dwarf::DW_OP_constu}, false, DwarfExprEval::Completion::kSync, 0,
-             DwarfExprEval::ResultType::kPointer,
+  DoEvalTest({llvm::dwarf::DW_OP_constu}, false, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(0), DwarfExprEval::ResultType::kPointer,
              "ERROR: \"Bad number format in DWARF expression.\"",
              "Bad number format in DWARF expression.");
 }
@@ -277,7 +299,7 @@ TEST_F(DwarfExprEvalTest, ConstReadOffEnd) {
 TEST_F(DwarfExprEvalTest, Addr) {
   // This encodes the relative address 0x4000.
   DoEvalTest({llvm::dwarf::DW_OP_addr, 0, 0x40, 0, 0, 0, 0, 0, 0}, true,
-             DwarfExprEval::Completion::kSync, kModuleBase + 0x4000,
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(kModuleBase + 0x4000),
              DwarfExprEval::ResultType::kPointer, "DW_OP_addr(0x4000)");
 }
 
@@ -312,8 +334,8 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
 
   // The "addrx" expression should read the kAddr value from the .debug_addr table at the location
   // we set up, and then relocate it relative to the module's base address.
-  DoEvalTest(addrx_expr, true, DwarfExprEval::Completion::kSync, kModuleBase + kAddr,
-             DwarfExprEval::ResultType::kPointer,
+  DoEvalTest(addrx_expr, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(kModuleBase + kAddr), DwarfExprEval::ResultType::kPointer,
              "DW_OP_addrx(8, with addr_base=0xc) -> rel=0x12345678, abs=0x8a345678");
 
   // Same test with "constx". This is the same except the resulting address is not relocated from
@@ -322,13 +344,13 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
   // Note: I have not actually seen this operator in use. This expected behavior is based only on my
   // reading of the spec.
   DwarfExpr constx_expr({llvm::dwarf::DW_OP_constx, kOffset}, UncachedLazySymbol::MakeUnsafe(var));
-  DoEvalTest(constx_expr, true, DwarfExprEval::Completion::kSync, kAddr,
+  DoEvalTest(constx_expr, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(kAddr),
              DwarfExprEval::ResultType::kValue,
              "DW_OP_constx(8, with addr_base=0xc) -> 0x12345678");
 
   // Same test with an invalid address offset.
   DwarfExpr invalid_expr({llvm::dwarf::DW_OP_constx, 16}, UncachedLazySymbol::MakeUnsafe(var));
-  DoEvalTest(invalid_expr, false, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(invalid_expr, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kPointer,
              "ERROR: \"Unable to read .debug_addr section to evaluate expression.\"");
 }
@@ -339,15 +361,15 @@ TEST_F(DwarfExprEvalTest, Breg) {
 
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
-  DoEvalTest({llvm::dwarf::DW_OP_breg0, 0x81, 0x01}, true, DwarfExprEval::Completion::kSync, 229u,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_breg0(129)");
+  DoEvalTest({llvm::dwarf::DW_OP_breg0, 0x81, 0x01}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(229u), DwarfExprEval::ResultType::kPointer, "DW_OP_breg0(129)");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 
   // reg9 (=200) - 127 = 73 (asynchronous).
   // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
-  DoEvalTest({llvm::dwarf::DW_OP_breg9, 0x81, 0x7f}, true, DwarfExprEval::Completion::kAsync, 73u,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_breg9(-127)");
+  DoEvalTest({llvm::dwarf::DW_OP_breg9, 0x81, 0x7f}, true, DwarfExprEval::Completion::kAsync,
+             DwarfStackEntry(73u), DwarfExprEval::ResultType::kPointer, "DW_OP_breg9(-127)");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -359,21 +381,21 @@ TEST_F(DwarfExprEvalTest, Bregx) {
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x00, 0x81, 0x01}, true, DwarfExprEval::Completion::kSync,
-             229u, DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(0, 129)");
+             DwarfStackEntry(229u), DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(0, 129)");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());  // Because there's an offset.
   EXPECT_FALSE(eval().result_is_constant());
 
   // reg9 (=200) - 127 = 73 (asynchronous).
   // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x09, 0x81, 0x7f}, true, DwarfExprEval::Completion::kAsync,
-             73u, DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(9, -127)");
+             DwarfStackEntry(73u), DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(9, -127)");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());  // Because there's an offset.
   EXPECT_FALSE(eval().result_is_constant());
 
   // No offset should report the register source.
   // reg0 (=100) + 0 = 100 (synchronous).
-  DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x00, 0x00}, true, DwarfExprEval::Completion::kSync, 100u,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(0, 0)");
+  DoEvalTest({llvm::dwarf::DW_OP_bregx, 0x00, 0x00}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(100u), DwarfExprEval::ResultType::kPointer, "DW_OP_bregx(0, 0)");
   EXPECT_EQ(RegisterID::kARMv8_x0, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -384,62 +406,66 @@ TEST_F(DwarfExprEvalTest, CFA) {
 
   // Most expressions involving the CFA are just the CFA itself (GCC likes
   // to declare the function frame base as being equal to the CFA).
-  DoEvalTest({llvm::dwarf::DW_OP_call_frame_cfa}, true, DwarfExprEval::Completion::kSync, kCFA,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_call_frame_cfa");
+  DoEvalTest({llvm::dwarf::DW_OP_call_frame_cfa}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(kCFA), DwarfExprEval::ResultType::kPointer, "DW_OP_call_frame_cfa");
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_FALSE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const1s) {
   DoEvalTest({llvm::dwarf::DW_OP_const1s, static_cast<uint8_t>(-3)}, true,
-             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-3)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_const1s(-3)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const1u) {
-  DoEvalTest({llvm::dwarf::DW_OP_const1u, 0xf0}, true, DwarfExprEval::Completion::kSync, 0xf0,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_const1u(240)");
+  DoEvalTest({llvm::dwarf::DW_OP_const1u, 0xf0}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(0xf0), DwarfExprEval::ResultType::kPointer, "DW_OP_const1u(240)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const2s) {
   DoEvalTest({llvm::dwarf::DW_OP_const2s, static_cast<uint8_t>(-3), 0xff}, true,
-             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-3)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_const2s(-3)");
 }
 
 TEST_F(DwarfExprEvalTest, Const2u) {
   DoEvalTest({llvm::dwarf::DW_OP_const2u, 0x01, 0xf0}, true, DwarfExprEval::Completion::kSync,
-             0xf001, DwarfExprEval::ResultType::kPointer, "DW_OP_const2u(0xf001)");
+             DwarfStackEntry(0xf001), DwarfExprEval::ResultType::kPointer, "DW_OP_const2u(0xf001)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const4s) {
   DoEvalTest({llvm::dwarf::DW_OP_const4s, static_cast<uint8_t>(-3), 0xff, 0xff, 0xff}, true,
-             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-3)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_const4s(-3)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const4u) {
   DoEvalTest({llvm::dwarf::DW_OP_const4u, 0x03, 0x02, 0x01, 0xf0}, true,
-             DwarfExprEval::Completion::kSync, 0xf0010203, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_const4u(0xf0010203)");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0xf0010203),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_const4u(0xf0010203)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const8s) {
   DoEvalTest({llvm::dwarf::DW_OP_const8s, static_cast<uint8_t>(-3), 0xff, 0xff, 0xff, 0xff, 0xff,
               0xff, 0xff},
-             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
+             true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-3)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_const8s(-3)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 TEST_F(DwarfExprEvalTest, Const8u) {
   DoEvalTest({llvm::dwarf::DW_OP_const8u, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xf0}, true,
-             DwarfExprEval::Completion::kSync, 0xf001020304050607u,
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0xf001020304050607u),
              DwarfExprEval::ResultType::kPointer, "DW_OP_const8u(0xf001020304050607)");
   EXPECT_TRUE(eval().result_is_constant());
 }
@@ -447,8 +473,8 @@ TEST_F(DwarfExprEvalTest, Const8u) {
 TEST_F(DwarfExprEvalTest, Consts) {
   // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_consts, 0x81, 0x7f}, true, DwarfExprEval::Completion::kSync,
-             static_cast<DwarfExprEval::StackEntry>(-127), DwarfExprEval::ResultType::kPointer,
-             "DW_OP_consts(-127)");
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-127)),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_consts(-127)");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
@@ -457,36 +483,55 @@ TEST_F(DwarfExprEvalTest, ConstuDrop) {
   // 129 in ULEB is 0x81, 0x01 (example in DWARF spec).
   DoEvalTest(
       {llvm::dwarf::DW_OP_constu, 0x81, 0x01, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_drop},
-      true, DwarfExprEval::Completion::kSync, 129u, DwarfExprEval::ResultType::kPointer,
-      "DW_OP_constu(129), DW_OP_lit0, DW_OP_drop");
+      true, DwarfExprEval::Completion::kSync, DwarfStackEntry(129u),
+      DwarfExprEval::ResultType::kPointer, "DW_OP_constu(129), DW_OP_lit0, DW_OP_drop");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
 // Tests both "dup" and "add".
 TEST_F(DwarfExprEvalTest, DupAdd) {
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_dup, llvm::dwarf::DW_OP_plus}, true,
-             DwarfExprEval::Completion::kSync, 16u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_dup, DW_OP_plus");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(16u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_dup, DW_OP_plus");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // Adding two different types fails, this is an unsigned integer and a generic type.
+  auto uint_type = MakeUint32Type();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(uint_type, uint128_t(17u)));
+  eval().Push(DwarfStackEntry(10u));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_plus}), false, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(0u), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Neg) {
   // Negate one should give -1 casted to unsigned.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg}, true,
-             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-1),
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-1)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_neg");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Double negate should come back to 1.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_neg}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_neg, DW_OP_neg");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_neg, DW_OP_neg");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // Negating a specifically unsigned value is a no-op. I have no idea if this is what DWARF wants
+  // (the spec isn't very specific). With this test we at least clearly define our behavior and
+  // make sure that if it changes, we do so on purpose.
+  auto uint_type = MakeUint32Type();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(uint_type, uint128_t(17u)));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_neg}), true, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(uint_type, uint128_t(17u)), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Not) {
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_not}, true,
-             DwarfExprEval::Completion::kSync, ~static_cast<DwarfExprEval::StackEntry>(1),
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(~static_cast<DwarfStackEntry::UnsignedType>(1)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_not");
   EXPECT_TRUE(eval().result_is_constant());
 }
@@ -494,39 +539,63 @@ TEST_F(DwarfExprEvalTest, Not) {
 TEST_F(DwarfExprEvalTest, Or) {
   // 8 | 1 = 9.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_or}, true,
-             DwarfExprEval::Completion::kSync, 9u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit1, DW_OP_or");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(9u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit1, DW_OP_or");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // Typed as a float should fail (can't "or" non-integral types).
+  auto float_type = MakeFloatType();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(float_type, 8.0f));
+  eval().Push(DwarfStackEntry(float_type, 1.0f));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_or}), false, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(0u), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Mul) {
   // 8 * 9 = 72.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit9, llvm::dwarf::DW_OP_mul}, true,
-             DwarfExprEval::Completion::kSync, 72u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit9, DW_OP_mul");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(72u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit9, DW_OP_mul");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // Typed as a float.
+  auto float_type = MakeFloatType();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(float_type, -8.712f));
+  eval().Push(DwarfStackEntry(float_type, 67.991f));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_mul}), true, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(float_type, -592.3376f), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Minus) {
   // 8 - 2 = 6.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_minus}, true,
-             DwarfExprEval::Completion::kSync, 6u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit2, DW_OP_minus");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(6u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit2, DW_OP_minus");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // Typed as a double.
+  auto double_type = MakeDoubleType();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(double_type, 8.712));
+  eval().Push(DwarfStackEntry(double_type, 67.991));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_minus}), true, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(double_type, -59.279), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Over) {
   // Stack of (1, 2), this pushes "1" on the top.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_over}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit2, DW_OP_over");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit2, DW_OP_over");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Same operation with a drop to check the next-to-top item.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_over,
               llvm::dwarf::DW_OP_drop},
-             true, DwarfExprEval::Completion::kSync, 2u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit2, DW_OP_over, DW_OP_drop");
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(2u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit2, DW_OP_over, DW_OP_drop");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
@@ -534,21 +603,24 @@ TEST_F(DwarfExprEvalTest, Pick) {
   // Stack of 1, 2, 3. Pick 0 -> 3.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_pick, 0},
-             true, DwarfExprEval::Completion::kSync, 3u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(3u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_pick(0)");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Stack of 1, 2, 3. Pick 2 -> 1.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_pick, 2},
-             true, DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_pick(2)");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Stack of 1, 2, 3. Pick 3 -> error.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_pick, 3},
-             false, DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
+             false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_pick(3)",
              "Stack underflow for DWARF expression.");
   EXPECT_TRUE(eval().result_is_constant());
@@ -557,12 +629,12 @@ TEST_F(DwarfExprEvalTest, Pick) {
 TEST_F(DwarfExprEvalTest, Swap) {
   // 1, 2, swap -> 2, 1
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_swap}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit2, DW_OP_swap");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit2, DW_OP_swap");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_swap,
               llvm::dwarf::DW_OP_drop},
-             true, DwarfExprEval::Completion::kSync, 2u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit2, DW_OP_swap, DW_OP_drop");
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(2u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit2, DW_OP_swap, DW_OP_drop");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
@@ -571,15 +643,17 @@ TEST_F(DwarfExprEvalTest, Rot) {
   // stack elements).
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_rot},
-             true, DwarfExprEval::Completion::kSync, 2u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot");
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(2u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_rot, llvm::dwarf::DW_OP_drop},
-             true, DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot, DW_OP_drop");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_lit3,
               llvm::dwarf::DW_OP_rot, llvm::dwarf::DW_OP_drop, llvm::dwarf::DW_OP_drop},
-             true, DwarfExprEval::Completion::kSync, 3u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(3u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot, DW_OP_drop, DW_OP_drop");
   EXPECT_TRUE(eval().result_is_constant());
 }
@@ -587,21 +661,30 @@ TEST_F(DwarfExprEvalTest, Rot) {
 TEST_F(DwarfExprEvalTest, Abs) {
   // Abs of 1 -> 1.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_abs}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_abs");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_abs");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Abs of -1 -> 1.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_abs}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_neg, DW_OP_abs");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_neg, DW_OP_abs");
+
+  // Absolute value of an explicitly unsigned type is a no-op (this value is picked so it will
+  // behave differently if the code treats it as signed.
+  auto uint_type = MakeUint32Type();
+  DwarfStackEntry stack_val(uint_type, static_cast<DwarfStackEntry::UnsignedType>(-5));
+  eval().Clear();
+  eval().Push(stack_val);
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_neg}), true, DwarfExprEval::Completion::kSync, stack_val,
+         DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, And) {
   // 3 (=0b11) & 5 (=0b101) = 1
   DoEvalTest({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_lit5, llvm::dwarf::DW_OP_and}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit3, DW_OP_lit5, DW_OP_and");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit3, DW_OP_lit5, DW_OP_and");
   EXPECT_TRUE(eval().result_is_constant());
 }
 
@@ -609,64 +692,77 @@ TEST_F(DwarfExprEvalTest, Div) {
   // 8 / -2 = -4.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_neg,
               llvm::dwarf::DW_OP_div},
-             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-4),
+             true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-4)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit2, DW_OP_neg, DW_OP_div");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Divide by zero should give an error.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_div}, false,
-             DwarfExprEval::Completion::kSync, 0, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit0, DW_OP_div", "DWARF expression divided by zero.");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit0, DW_OP_div",
+             "Error evaluating DW_OP_div in DWARF expression: Divide by zero.");
 }
 
 TEST_F(DwarfExprEvalTest, Mod) {
   // 7 % 2 = 1
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_mod}, true,
-             DwarfExprEval::Completion::kSync, 1, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit7, DW_OP_lit2, DW_OP_mod");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit7, DW_OP_lit2, DW_OP_mod");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Modulo 0 should give an error
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_mod}, false,
-             DwarfExprEval::Completion::kSync, 0, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit7, DW_OP_lit0, DW_OP_mod", "DWARF expression divided by zero.");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit7, DW_OP_lit0, DW_OP_mod",
+             "Error evaluating DW_OP_mod in DWARF expression: Divide by zero.");
 }
 
 TEST_F(DwarfExprEvalTest, PlusUconst) {
   // 7 + 129 = 136. 129 in ULEB is 0x81, 0x01 (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_plus_uconst, 0x81, 0x01}, true,
-             DwarfExprEval::Completion::kSync, 136u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit7, DW_OP_plus_uconst(129)");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(136u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit7, DW_OP_plus_uconst(129)");
   EXPECT_TRUE(eval().result_is_constant());
+
+  // The value should get reinterpreted as the same type as the top of the stack. This adds 129 to
+  // a floating-point number.
+  auto double_type = MakeDoubleType();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(double_type, 3.14159));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_plus_uconst, 0x81, 0x01}), true,
+         DwarfExprEval::Completion::kSync, DwarfStackEntry(double_type, 132.14159),
+         DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Shr) {
   // 8 >> 1 = 4
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_shr}, true,
-             DwarfExprEval::Completion::kSync, 4u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit1, DW_OP_shr");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(4u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit1, DW_OP_shr");
 }
 
 TEST_F(DwarfExprEvalTest, Shra) {
   // -7 (=0b1111...1111001) >> 2 = -2 (=0b1111...1110)
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_lit2,
               llvm::dwarf::DW_OP_shra},
-             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-2),
+             true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(static_cast<DwarfStackEntry::UnsignedType>(-2)),
              DwarfExprEval::ResultType::kPointer, "DW_OP_lit7, DW_OP_neg, DW_OP_lit2, DW_OP_shra");
 }
 
 TEST_F(DwarfExprEvalTest, Shl) {
   // 8 << 1 = 16
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_shl}, true,
-             DwarfExprEval::Completion::kSync, 16u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit8, DW_OP_lit1, DW_OP_shl");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(16u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit8, DW_OP_lit1, DW_OP_shl");
 }
 
 TEST_F(DwarfExprEvalTest, Xor) {
   // 7 (=0b111) ^ 9 (=0b1001) = 14 (=0b1110)
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_lit9, llvm::dwarf::DW_OP_xor}, true,
-             DwarfExprEval::Completion::kSync, 14u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit7, DW_OP_lit9, DW_OP_xor");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(14u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit7, DW_OP_lit9, DW_OP_xor");
 }
 
 TEST_F(DwarfExprEvalTest, Skip) {
@@ -675,23 +771,24 @@ TEST_F(DwarfExprEvalTest, Skip) {
 
   // Skip 0 (execute next instruction which just gives a constant).
   DoEvalTest({llvm::dwarf::DW_OP_skip, 0, 0, llvm::dwarf::DW_OP_lit9}, true,
-             DwarfExprEval::Completion::kSync, 9u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_skip(0), DW_OP_lit9");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(9u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_skip(0), DW_OP_lit9");
 
   // Skip 1 (skip over user-defined instruction which would normally give an error).
   DoEvalTest({llvm::dwarf::DW_OP_skip, 1, 0, llvm::dwarf::DW_OP_hi_user, llvm::dwarf::DW_OP_lit9},
-             true, DwarfExprEval::Completion::kSync, 9u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(9u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_skip(1), INVALID_OPCODE(0xff), DW_OP_lit9");
 
   // Skip to the end should just terminate the program. The result when nothing is left on the stack
   // is 0.
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_skip, 1, 0, llvm::dwarf::DW_OP_nop}, true,
-             DwarfExprEval::Completion::kSync, 0, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_skip(1), DW_OP_nop");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_skip(1), DW_OP_nop");
 
   // Skip before the beginning is an error.
-  DoEvalTest({llvm::dwarf::DW_OP_skip, 0, 0xff}, false, DwarfExprEval::Completion::kSync, 0,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_skip(-256)",
+  DoEvalTest({llvm::dwarf::DW_OP_skip, 0, 0xff}, false, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(0), DwarfExprEval::ResultType::kPointer, "DW_OP_skip(-256)",
              "DWARF expression skips out-of-bounds.");
 }
 
@@ -699,92 +796,113 @@ TEST_F(DwarfExprEvalTest, Bra) {
   // 0 @ top of stack means don't take the branch. This jumps out of bounds which should not be
   // taken.
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_bra, 0xff, 0, llvm::dwarf::DW_OP_lit9},
-             true, DwarfExprEval::Completion::kSync, 9u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_bra(255), DW_OP_lit9");
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(9u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_bra(255), DW_OP_lit9");
   EXPECT_TRUE(eval().result_is_constant());
 
   // Nonzero means take the branch. This jumps over a user-defined instruction which would give an
   // error if executed.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_bra, 1, 0, llvm::dwarf::DW_OP_lo_user,
               llvm::dwarf::DW_OP_lit9},
-             true, DwarfExprEval::Completion::kSync, 9u, DwarfExprEval::ResultType::kPointer,
+             true, DwarfExprEval::Completion::kSync, DwarfStackEntry(9u),
+             DwarfExprEval::ResultType::kPointer,
              "DW_OP_lit1, DW_OP_bra(1), DW_OP_GNU_push_tls_address, DW_OP_lit9");
 }
 
 TEST_F(DwarfExprEvalTest, Eq) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_eq}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_eq");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_eq");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_eq}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_eq");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_eq");
+
+  // Can't compare different types (this is a signed and a float value).
+  auto uint_type = MakeUint32Type();
+  auto float_type = MakeFloatType();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(uint_type, uint128_t(17u)));
+  eval().Push(DwarfStackEntry(float_type, 17.0f));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_eq}), false, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(0u), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Ge) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ge}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_ge");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_ge");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_ge}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_ge");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_ge");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ge}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit0, DW_OP_ge");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit0, DW_OP_ge");
+
+  // Can't compare different types (this is an unsigned int and an unsigned char which would be
+  // comparable in C).
+  auto uint_type = MakeUint32Type();
+  auto uchar_type = MakeUnsignedChar8Type();
+  eval().Clear();
+  eval().Push(DwarfStackEntry(uint_type, uint128_t(17u)));
+  eval().Push(DwarfStackEntry(uchar_type, uint128_t(17u)));
+  DoEval(DwarfExpr({llvm::dwarf::DW_OP_ge}), false, DwarfExprEval::Completion::kSync,
+         DwarfStackEntry(0u), DwarfExprEval::ResultType::kPointer);
 }
 
 TEST_F(DwarfExprEvalTest, Gt) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_gt}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_gt");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_gt");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_gt}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_gt");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_gt");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_gt}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit0, DW_OP_gt");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit0, DW_OP_gt");
 }
 
 TEST_F(DwarfExprEvalTest, Le) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_le}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_le");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_le");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_le}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_le");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_le");
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_le}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit1, DW_OP_lit0, DW_OP_le");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit1, DW_OP_lit0, DW_OP_le");
 }
 
 TEST_F(DwarfExprEvalTest, Lt) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lt}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_lt");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_lt");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_lt}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_lt");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_lt");
 }
 
 TEST_F(DwarfExprEvalTest, Ne) {
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_ne}, true,
-             DwarfExprEval::Completion::kSync, 0u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit0, DW_OP_ne");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(0u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit0, DW_OP_ne");
   DoEvalTest({llvm::dwarf::DW_OP_lit0, llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_ne}, true,
-             DwarfExprEval::Completion::kSync, 1u, DwarfExprEval::ResultType::kPointer,
-             "DW_OP_lit0, DW_OP_lit1, DW_OP_ne");
+             DwarfExprEval::Completion::kSync, DwarfStackEntry(1u),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_lit0, DW_OP_lit1, DW_OP_ne");
 }
 
 TEST_F(DwarfExprEvalTest, Fbreg) {
   constexpr uint64_t kBase = 0x1000000;
   provider()->set_bp(kBase);
 
-  DoEvalTest({llvm::dwarf::DW_OP_fbreg, 0}, true, DwarfExprEval::Completion::kSync, kBase,
-             DwarfExprEval::ResultType::kPointer, "DW_OP_fbreg(0)");
+  DoEvalTest({llvm::dwarf::DW_OP_fbreg, 0}, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(kBase), DwarfExprEval::ResultType::kPointer, "DW_OP_fbreg(0)");
   EXPECT_FALSE(eval().result_is_constant());
 
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_fbreg, 0x81, 0x01}, true, DwarfExprEval::Completion::kSync,
-             kBase + 129u, DwarfExprEval::ResultType::kPointer, "DW_OP_fbreg(129)");
+             DwarfStackEntry(kBase + 129u), DwarfExprEval::ResultType::kPointer,
+             "DW_OP_fbreg(129)");
   EXPECT_FALSE(eval().result_is_constant());
 }
 
@@ -805,8 +923,8 @@ TEST_F(DwarfExprEvalTest, Deref) {
   memcpy(mem.data(), &kMemoryContents, sizeof(kMemoryContents));
   provider()->AddMemory(kReg6 + kOffsetFromReg6, mem);
 
-  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemoryContents - 0x30,
-             DwarfExprEval::ResultType::kPointer,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync,
+             DwarfStackEntry(kMemoryContents - 0x30), DwarfExprEval::ResultType::kPointer,
              "DW_OP_breg6(-40), DW_OP_deref, DW_OP_constu(48), DW_OP_minus");
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -828,8 +946,8 @@ TEST_F(DwarfExprEvalTest, DerefSize) {
   std::vector<uint8_t> mem{kMemValue, 0xff, 0xff, 0xff, 0xff};
   provider()->AddMemory(kReg1, mem);
 
-  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemValue + kAddAmount,
-             DwarfExprEval::ResultType::kValue,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync,
+             DwarfStackEntry(kMemValue + kAddAmount), DwarfExprEval::ResultType::kValue,
              "DW_OP_breg1(0), DW_OP_deref_size(1), DW_OP_plus_uconst(2), DW_OP_stack_value");
   EXPECT_FALSE(eval().result_is_constant());
 }
@@ -842,7 +960,7 @@ TEST_F(DwarfExprEvalTest, ImplicitValue) {
                                   0x00, 0x50, 0xb8, 0x1e, 0x85, 0xeb, 0x51, 0x98,
                                   0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   constexpr uint128_t kExpected = (static_cast<uint128_t>(0x4000) << 64) | 0x9851eb851eb85000llu;
-  DoEvalTest(program, true, DwarfExprEval::Completion::kSync, kExpected,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(kExpected),
              DwarfExprEval::ResultType::kValue, "DW_OP_implicit_value(16, 0x40009851eb851eb85000)");
   EXPECT_TRUE(eval().result_is_constant());
 
@@ -852,7 +970,7 @@ TEST_F(DwarfExprEvalTest, ImplicitValue) {
                                       0x00, 0x50, 0xb8, 0x1e, 0x85, 0xeb, 0x51, 0x98,
                                       0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00};
   // clang-format on
-  DoEvalTest(bad_program, false, DwarfExprEval::Completion::kSync, kExpected,
+  DoEvalTest(bad_program, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(kExpected),
              DwarfExprEval::ResultType::kValue,
              "ERROR: \"Not enough data for DWARF implicit value.\"",
              "Not enough data for DWARF implicit value.");
@@ -887,7 +1005,8 @@ TEST_F(DwarfExprEvalTest, Piece_Value) {
   provider()->AddRegisterValue(kDWARFReg3ID, true, 1);   // Original "x" value.
   provider()->AddRegisterValue(kDWARFReg4ID, true, 17);  // "y" value.
 
-  DoEvalTest(program, true, DwarfExprEval::Completion::kSync, 0, DwarfExprEval::ResultType::kData,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kData,
              "DW_OP_breg3(0), DW_OP_lit1, DW_OP_shl, DW_OP_stack_value, DW_OP_piece(4), "
              "DW_OP_reg4, DW_OP_piece(4)");
 
@@ -920,7 +1039,7 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
     llvm::dwarf::DW_OP_piece, 0x08
   };
   // clang-format on
-  DoEvalTest(mostly_undefined, true, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(mostly_undefined, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kData,
              "DW_OP_piece(16), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
 
@@ -944,7 +1063,7 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
   // clang-format on
 
   provider()->AddRegisterValue(kDWARFReg3ID, true, 0x8877665544332211u);  // rbx value.
-  DoEvalTest(partially_defined, true, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(partially_defined, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kData,
              "DW_OP_implicit_value(4, 0x429c0000), DW_OP_piece(4), DW_OP_reg3, DW_OP_piece(1), "
              "DW_OP_piece(11), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
@@ -979,7 +1098,7 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
   provider()->set_entry_provider(entry_provider);
   entry_provider->AddRegisterValue(kDWARFReg5ID, true, 0x8877665544332211);
 
-  DoEvalTest(entry_value, true, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(entry_value, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kData,
              "DW_OP_implicit_value(4, 0x429c0000), DW_OP_piece(4), "
              "DW_OP_GNU_entry_value(DW_OP_reg5), DW_OP_stack_value, DW_OP_piece(1), "
@@ -1018,7 +1137,8 @@ TEST_F(DwarfExprEvalTest, Piece_Memory) {
   provider()->AddRegisterValue(kDWARFReg3ID, true, 1);             // Original "x" value.
   provider()->AddRegisterValue(kDWARFReg4ID, true, kReg4Address);  // Points to the "y" value.
 
-  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, 0, DwarfExprEval::ResultType::kData,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kData,
              "DW_OP_breg3(0), DW_OP_lit1, DW_OP_shl, DW_OP_stack_value, DW_OP_piece(4), "
              "DW_OP_breg4(0), DW_OP_piece(4)");
 
@@ -1033,7 +1153,7 @@ TEST_F(DwarfExprEvalTest, GetTLSAddr) {
 
   provider()->set_tls_segment(0xdeadbeef);
 
-  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, 0x7060504e1afbfef,
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, DwarfStackEntry(0x7060504e1afbfef),
              DwarfExprEval::ResultType::kPointer,
              "DW_OP_const8u(0x706050403020100), DW_OP_form_tls_address");
 }
@@ -1067,13 +1187,13 @@ TEST_F(DwarfExprEvalTest, EntryValue) {
       llvm::dwarf::DW_OP_reg0,
       llvm::dwarf::DW_OP_stack_value,
   };
-  DoEvalTest(simple_program, true, DwarfExprEval::Completion::kSync, kEntryX0,
+  DoEvalTest(simple_program, true, DwarfExprEval::Completion::kSync, DwarfStackEntry(kEntryX0),
              DwarfExprEval::ResultType::kValue, "DW_OP_entry_value(DW_OP_reg0), DW_OP_stack_value");
   eval().Clear();
 
   // An entry value expression with a bad length.
   std::vector<uint8_t> bad_length{llvm::dwarf::DW_OP_entry_value, 23, llvm::dwarf::DW_OP_reg0};
-  DoEvalTest(bad_length, false, DwarfExprEval::Completion::kSync, 0,
+  DoEvalTest(bad_length, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
              DwarfExprEval::ResultType::kValue,
              "ERROR: \"DW_OP_entry_value sub expression is a bad length.\"",
              "DW_OP_entry_value sub expression is a bad length.");
@@ -1107,7 +1227,7 @@ TEST_F(DwarfExprEvalTest, EntryValue) {
   // The outer expression computs (X6 + offset) and then subtracts that from the entry value.
   constexpr uint64_t kExpected = kEntryValue - (kTopX6 + kTopOffset);
 
-  DoEvalTest(complex_program, true, DwarfExprEval::Completion::kAsync, kExpected,
+  DoEvalTest(complex_program, true, DwarfExprEval::Completion::kAsync, DwarfStackEntry(kExpected),
              DwarfExprEval::ResultType::kPointer,
              "DW_OP_entry_value(DW_OP_breg6(49), DW_OP_deref), DW_OP_breg6(1), DW_OP_minus");
 

@@ -52,6 +52,7 @@ static_library("common") {
     "file_util.cc",
     "host_util.cc",
     "inet_util.cc",
+    "int128_t.cc",
     "scoped_temp_file.cc",
     "string_util.cc",
     "tagged_data.cc",
