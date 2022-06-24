@@ -99,7 +99,11 @@ protocol WritableTextField {
     /// Returns: A `TransactionId` that the text server must send in subsequent commands during this
     /// transaction.
     BeginTransaction(struct {
-        args BeginTransactionArgs;
+        /// The revision ID that the server believes to be current for the text field. Required.
+        ///
+        /// If this ID is out of date, then the server's view of the text field state is stale, so
+        /// the transaction must fail.
+        revision_id RevisionId;
     }) -> (struct {
         transaction_id TransactionId;
     }) error TextFieldError;
@@ -153,7 +157,11 @@ protocol WritableTextField {
     /// `CompositionUpdate`s. If the user or the client cancels a composition, all edit transactions
     /// within it should be reverted.
     BeginComposition(struct {
-        args BeginCompositionArgs;
+        /// The revision ID that server believes to be current for the text field.
+        ///
+        /// If this ID is out of date, then the server's view of the text field state is stale, so
+        /// the composition must fail.
+        revision_id RevisionId;
     }) -> (struct {}) error TextFieldError;
 
     /// Commits the changes made so far in the transaction, updates the composition metdata, and
@@ -161,7 +169,10 @@ protocol WritableTextField {
     ///
     /// This must be done inside a transaction, during a composition.
     CommitTransactionInComposition(struct {
-        args CommitCompositionInTransactionArgs;
+        transaction_id TransactionId;
+        ctic_options table {
+            1: composition_update CompositionUpdate;
+        };
     }) -> (struct {
         state TextFieldState;
     }) error TextFieldError;
@@ -181,28 +192,6 @@ protocol WritableTextField {
     CancelComposition() -> (struct {
         state TextFieldState;
     }) error TextFieldError;
-};
-
-type BeginTransactionArgs = table {
-    /// The revision ID that the server believes to be current for the text field. Required.
-    ///
-    /// If this ID is out of date, then the server's view of the text field state is stale, so
-    /// the transaction must fail.
-    1: revision_id RevisionId;
-};
-
-type BeginCompositionArgs = table {
-    /// The revision ID that server believes to be current for the text field.
-    ///
-    /// If this ID is out of date, then the server's view of the text field state is stale, so
-    /// the composition must fail.
-    1: revision_id RevisionId;
-};
-
-type CommitCompositionInTransactionArgs = table {
-    /// Required.
-    1: transaction_id TransactionId;
-    2: composition_update CompositionUpdate;
 };
 
 /// `TextField` represents an editable (usually) text widget inside a client application.

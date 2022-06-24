@@ -103,10 +103,10 @@ impl TextEditController {
                                 .map_err(Into::into);
                             responder.send(&mut result)?;
                         }
-                        BeginTransaction { args, responder } => {
+                        BeginTransaction { revision_id, responder } => {
                             let mut result = self_
                                 .clone()
-                                .begin_transaction(args.revision_id.as_ref())
+                                .begin_transaction(&revision_id)
                                 .await
                                 .map_err(Into::into);
                             responder.send(&mut result)?;
@@ -119,12 +119,16 @@ impl TextEditController {
                                 .map_err(Into::into);
                             responder.send(&mut result)?;
                         }
-                        CommitTransactionInComposition { args, responder } => {
+                        CommitTransactionInComposition {
+                            transaction_id,
+                            ctic_options,
+                            responder,
+                        } => {
                             let mut result = self_
                                 .clone()
                                 .commit_transaction_in_composition(
-                                    args.transaction_id,
-                                    args.composition_update,
+                                    transaction_id,
+                                    ctic_options.composition_update,
                                 )
                                 .await
                                 .map_err(Into::into);
@@ -138,10 +142,10 @@ impl TextEditController {
                                 .map_err(Into::into);
                             responder.send(&mut result)?;
                         }
-                        BeginComposition { args, responder } => {
+                        BeginComposition { revision_id, responder, .. } => {
                             let mut result = self_
                                 .clone()
-                                .begin_composition(args.revision_id.as_ref())
+                                .begin_composition(&revision_id)
                                 .await
                                 .map_err(Into::into);
                             responder.send(&mut result)?;
@@ -206,10 +210,8 @@ impl TextEditController {
 
     async fn begin_transaction(
         self,
-        revision_id: Option<&ftext::RevisionId>,
+        revision_id: &ftext::RevisionId,
     ) -> Result<ftext::TransactionId, TextFieldError> {
-        let revision_id = revision_id
-            .ok_or_else(|| TextFieldError::BadRevisionId { expected: None, found: None })?;
         self.inner.lock().await.model.begin_transaction(revision_id)
     }
 
@@ -224,11 +226,9 @@ impl TextEditController {
 
     async fn commit_transaction_in_composition(
         self,
-        transaction_id: Option<ftext::TransactionId>,
+        transaction_id: ftext::TransactionId,
         composition_update: Option<FidlCompositionUpdate>,
     ) -> Result<ftext::TextFieldState, TextFieldError> {
-        let transaction_id = transaction_id
-            .ok_or_else(|| TextFieldError::BadTransactionId { expected: None, found: None })?;
         let composition_update =
             composition_update.ok_or_else(|| TextFieldError::InvalidArgument)?.try_into()?;
         let model = &mut self.inner.lock().await.model;
@@ -247,10 +247,8 @@ impl TextEditController {
 
     async fn begin_composition(
         self,
-        revision_id: Option<&ftext::RevisionId>,
+        revision_id: &ftext::RevisionId,
     ) -> Result<(), TextFieldError> {
-        let revision_id = revision_id
-            .ok_or_else(|| TextFieldError::BadRevisionId { expected: None, found: None })?;
         self.inner.lock().await.model.begin_composition(revision_id)
     }
 
@@ -521,14 +519,10 @@ mod tests {
             let fields = self.fields.lock().await;
             let state =
                 fields.get(&text_field).expect("registered field").state.as_ref().expect("state");
-            let revision_id = state.revision_id.as_ref().map(|x| x.clone()).expect("revision_id");
-            let mut transaction_id = text_field
-                .begin_transaction(ftext::BeginTransactionArgs {
-                    revision_id: Some(revision_id),
-                    ..ftext::BeginTransactionArgs::EMPTY
-                })
-                .await?
-                .to_anyhow_error()?;
+            let mut revision_id =
+                state.revision_id.as_ref().map(|x| x.clone()).expect("revision_id");
+            let mut transaction_id =
+                text_field.begin_transaction(&mut revision_id).await?.to_anyhow_error()?;
             let old_selection = state.selection.ok_or_else(|| format_err!("Missing selection"))?;
             let old_range = old_selection.into_range();
             match command {
