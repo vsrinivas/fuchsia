@@ -370,6 +370,7 @@ impl Task {
             child_state.signals.alt_stack = state.signals.alt_stack;
             child_state.signals.mask = state.signals.mask;
             self.mm.snapshot_to(&child.mm)?;
+            copy_process_debug_addr(&self.thread_group.process, &child.thread_group.process)?;
         }
 
         if flags & (CLONE_PARENT_SETTID as u64) != 0 {

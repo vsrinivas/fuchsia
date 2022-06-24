@@ -63,9 +63,6 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
         // Still set the debug address, and clear the debug address from `current_task` to avoid
         // entering this function again.
         match current_task.thread_group.process.set_debug_addr(&debug_address.value) {
-            // TODO(tbodt): When a process execs, it will want to set its debug address again, and
-            // zircon only allows the debug address to be set once. We should figure out how to get
-            // the debugger to handle exec, or maybe kill the process and start a new one on exec.
             Err(zx::Status::ACCESS_DENIED) => {}
             status => status.map_err(|err| from_status_like_fdio!(err))?,
         };
@@ -110,6 +107,29 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
         .map_err(|err| from_status_like_fdio!(err))?;
     current_task.dt_debug_address = None;
 
+    Ok(())
+}
+
+pub fn copy_process_debug_addr(
+    source_process: &zx::Process,
+    target_process: &zx::Process,
+) -> Result<(), Errno> {
+    let source_debug_addr =
+        source_process.get_debug_addr().map_err(|err| from_status_like_fdio!(err))?;
+    let target_debug_addr =
+        target_process.get_debug_addr().map_err(|err| from_status_like_fdio!(err))?;
+
+    // TODO: Handle the case where either of the debug address requires to set an interrupt.
+    if source_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET as u64 {
+        return Ok(());
+    }
+    if target_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET as u64 {
+        return Ok(());
+    }
+    match target_process.set_debug_addr(&source_debug_addr) {
+        Err(zx::Status::ACCESS_DENIED) => {}
+        status => status.map_err(|err| from_status_like_fdio!(err))?,
+    };
     Ok(())
 }
 
