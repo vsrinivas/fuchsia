@@ -39,9 +39,19 @@ pub async fn load_object(
 /// `lib_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
 /// rights.
 pub fn start(lib_proxy: Arc<fio::DirectoryProxy>, chan: zx::Channel) {
+    start_with_multiple_dirs(vec![lib_proxy], chan);
+}
+
+/// start_with_multiple_dirs will expose the `fuchsia.ldsvc.Loader` service over the given channel,
+/// providing VMO buffers of requested library object names from any of the library directories in
+/// `lib_dirs`.
+///
+/// Each library directory must have been opened with at minimum OPEN_RIGHT_READABLE and
+/// OPEN_RIGHT_EXECUTABLE rights.
+pub fn start_with_multiple_dirs(lib_dirs: Vec<Arc<fio::DirectoryProxy>>, chan: zx::Channel) {
     fasync::Task::spawn(
         async move {
-            let mut search_dirs = vec![lib_proxy.clone()];
+            let mut search_dirs = lib_dirs.clone();
             // Wait for requests
             let mut stream =
                 LoaderRequestStream::from_channel(fasync::Channel::from_channel(chan)?);
@@ -60,7 +70,7 @@ pub fn start(lib_proxy: Arc<fio::DirectoryProxy>, chan: zx::Channel) {
                         }
                     }
                     LoaderRequest::Config { config, responder } => {
-                        match parse_config_string(&lib_proxy, &config) {
+                        match parse_config_string(&lib_dirs, &config) {
                             Ok(new_search_path) => {
                                 search_dirs = new_search_path;
                                 responder.send(zx::sys::ZX_OK)?;
@@ -72,7 +82,7 @@ pub fn start(lib_proxy: Arc<fio::DirectoryProxy>, chan: zx::Channel) {
                         }
                     }
                     LoaderRequest::Clone { loader, responder } => {
-                        start(lib_proxy.clone(), loader.into_channel());
+                        start_with_multiple_dirs(lib_dirs.clone(), loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
                 }
@@ -116,27 +126,37 @@ pub async fn load_vmo<'a>(
 /// `//docs/concepts/booting/program_loading.md` for a description of the format. Returns the set
 /// of directories which should be searched for objects.
 pub fn parse_config_string(
-    dir_proxy: &Arc<fio::DirectoryProxy>,
+    lib_dirs: &Vec<Arc<fio::DirectoryProxy>>,
     config: &str,
 ) -> Result<Vec<Arc<fio::DirectoryProxy>>, Error> {
     if config.contains("/") {
         return Err(format_err!("'/' character found in loader service config string"));
     }
+    let mut search_dirs = vec![];
     if Some('!') == config.chars().last() {
-        let sub_dir_proxy = fuchsia_fs::open_directory(
-            dir_proxy,
-            &Path::new(&config[..config.len() - 1]),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-        )?;
-        Ok(vec![sub_dir_proxy.into()])
+        // Only search the subdirs.
+        for dir_proxy in lib_dirs {
+            let sub_dir_proxy = fuchsia_fs::open_directory(
+                dir_proxy,
+                &Path::new(&config[..config.len() - 1]),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            )?;
+            search_dirs.push(Arc::new(sub_dir_proxy));
+        }
     } else {
-        let sub_dir_proxy = fuchsia_fs::open_directory(
-            dir_proxy,
-            &Path::new(config),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-        )?;
-        Ok(vec![sub_dir_proxy.into(), dir_proxy.clone()])
+        // Search the subdirs and the root dirs.
+        for dir_proxy in lib_dirs {
+            let sub_dir_proxy = fuchsia_fs::open_directory(
+                dir_proxy,
+                &Path::new(config),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+            )?;
+            search_dirs.push(Arc::new(sub_dir_proxy));
+        }
+
+        search_dirs.append(&mut lib_dirs.clone());
     }
+    Ok(search_dirs)
 }
 
 #[cfg(test)]
@@ -251,6 +271,49 @@ mod tests {
                 assert_eq!(expected_result.as_bytes(), buf.as_slice());
             } else {
                 assert_ne!(zx::sys::ZX_OK, res);
+                assert!(o_vmo.is_none());
+            }
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn load_objects_multiple_dir_test() -> Result<(), Error> {
+        // This /pkg/lib/config_test/ directory is added by the build rules for this test package,
+        // since we need a directory that supports OPEN_RIGHT_EXECUTABLE. It contains a file 'foo'
+        // which contains 'hippos' and a file 'bar/baz' (that is, baz in a subdirectory bar) which
+        // contains 'rule'.
+        // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
+        // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
+        let pkg_lib_1 = fuchsia_fs::open_directory_in_namespace(
+            "/pkg/lib/config_test/",
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        )?;
+        let pkg_lib_2 = fuchsia_fs::open_directory_in_namespace(
+            "/pkg/lib/config_test/bar",
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        )?;
+
+        let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
+        start_with_multiple_dirs(
+            vec![pkg_lib_1.into(), pkg_lib_2.into()],
+            loader_service.into_channel(),
+        );
+
+        for (obj_name, should_succeed) in vec![
+            // Should be able to access foo from dir #1
+            ("foo", true),
+            // Should be able to access baz from dir #2
+            ("baz", true),
+            // Should not be able to access bar (it's a directory)
+            ("bar", false),
+        ] {
+            let (res, o_vmo) = loader_proxy.load_object(obj_name).await?;
+            if should_succeed {
+                assert_eq!(zx::sys::ZX_OK, res, "loading {} did not succeed", obj_name);
+                assert!(o_vmo.is_some());
+            } else {
+                assert_ne!(zx::sys::ZX_OK, res, "loading {} did not fail", obj_name);
                 assert!(o_vmo.is_none());
             }
         }

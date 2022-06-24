@@ -119,7 +119,7 @@ fn serve_lib_loader(
                     }
                     LoaderRequest::Config { config, responder } => {
                         match library_loader::parse_config_string(
-                            &lib_loader_cache.lib_proxy,
+                            &vec![lib_loader_cache.lib_proxy.clone()],
                             &config,
                         ) {
                             Ok(new_search_path) => {

@@ -190,6 +190,18 @@ fn split_pty_into_handles(
     Ok((stdin, stdout, stderr))
 }
 
+fn get_lib_from_launcher_namespace() -> Result<fio::DirectoryProxy, LauncherError> {
+    let (lib_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    fuchsia_fs::node::connect_in_namespace(
+        "/pkg/lib",
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+        server.into_channel(),
+    )
+    .map_err(|_| LauncherError::Internal)?;
+
+    Ok(lib_dir)
+}
+
 fn create_dash_handles(
     job: &zx::Job,
     stdin: zx::Handle,
@@ -219,14 +231,20 @@ fn create_dash_handles(
         id: HandleId::new(HandleType::DefaultJob, 0).as_raw(),
     };
 
-    let ldsvc = if let Some(lib_dir) = lib_dir {
-        let (ldsvc, server_end) = zx::Channel::create().map_err(|_| LauncherError::Internal)?;
-        library_loader::start(Arc::new(lib_dir), server_end);
-        ldsvc.into_handle()
-    } else {
-        // Use the default loader in the dash-launcher process
-        fuchsia_runtime::loader_svc().map_err(|_| LauncherError::Internal)?
-    };
+    // Create a library loader that uses the component's /pkg/lib dir first and
+    // falls back to the launcher's /pkg/lib dir if needed.
+    let mut lib_dirs = vec![];
+    if let Some(lib_dir) = lib_dir {
+        lib_dirs.push(Arc::new(lib_dir));
+    }
+
+    let launcher_lib_dir = get_lib_from_launcher_namespace()?;
+    lib_dirs.push(Arc::new(launcher_lib_dir));
+
+    let (ldsvc, server_end) = zx::Channel::create().map_err(|_| LauncherError::Internal)?;
+    let ldsvc = ldsvc.into_handle();
+    library_loader::start_with_multiple_dirs(lib_dirs, server_end);
+
     let ldsvc_handle =
         HandleInfo { handle: ldsvc, id: HandleId::new(HandleType::LdsvcLoader, 0).as_raw() };
 
