@@ -165,7 +165,11 @@ TEST_P(FlutterSemanticsTests, StaticSemantics) {
 }
 
 // Loads ally-demo flutter app and validates hit testing
-TEST_P(FlutterSemanticsTests, DISABLED_HitTesting) {
+TEST_P(FlutterSemanticsTests, HitTesting) {
+  FX_LOGS(INFO) << "Wait for scale factor";
+  WaitForScaleFactor();
+  FX_LOGS(INFO) << "Received scale factor";
+
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // Hit test something with an action
@@ -210,7 +214,11 @@ TEST_P(FlutterSemanticsTests, PerformAction) {
 }
 
 // Loads ally-demo flutter app and validates scroll-to-make-visible
-TEST_P(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
+TEST_P(FlutterSemanticsTests, ScrollToMakeVisible) {
+  FX_LOGS(INFO) << "Wait for scale factor";
+  WaitForScaleFactor();
+  FX_LOGS(INFO) << "Received scale factor";
+
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // The "Yellow" node should be off-screen in a scrollable list
