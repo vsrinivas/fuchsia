@@ -33,8 +33,8 @@ using AmlLightType = ddk::Device<AmlLight, ddk::Messageable<Light>::Mixin>;
 class LightDevice {
  public:
   LightDevice(std::string name, ddk::GpioProtocolClient gpio,
-              std::optional<ddk::PwmProtocolClient> pwm)
-      : name_(std::move(name)), gpio_(gpio), pwm_(pwm) {}
+              std::optional<ddk::PwmProtocolClient> pwm, zx::duration pwm_period)
+      : name_(std::move(name)), gpio_(gpio), pwm_(pwm), pwm_period_(pwm_period) {}
 
   zx_status_t Init(bool init_on);
 
@@ -53,6 +53,7 @@ class LightDevice {
   std::optional<ddk::PwmProtocolClient> pwm_;
 
   double value_ = 0;
+  const zx::duration pwm_period_;
 };
 
 class AmlLight : public AmlLightType, public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {

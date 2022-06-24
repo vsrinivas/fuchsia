@@ -6,6 +6,7 @@
 
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/device-protocol/pdev.h>
 #include <string.h>
 
 #include <cmath>
@@ -22,7 +23,10 @@ namespace {
 
 constexpr double kMaxBrightness = 1.0;
 constexpr double kMinBrightness = 0.0;
-constexpr uint32_t kPwmPeriodNs = 170625;
+constexpr zx::duration kPwmPeriod = zx::nsec(170'625);
+constexpr zx::duration kNelsonPwmPeriod = zx::nsec(500'000);
+static_assert(kPwmPeriod.to_nsecs() <= UINT32_MAX);
+static_assert(kNelsonPwmPeriod.to_nsecs() <= UINT32_MAX);
 
 }  // namespace
 
@@ -62,7 +66,7 @@ zx_status_t LightDevice::SetBrightnessValue(double value) {
   aml_pwm::mode_config regular = {aml_pwm::ON, {}};
   pwm_config_t config = {
       .polarity = false,
-      .period_ns = kPwmPeriodNs,
+      .period_ns = static_cast<uint32_t>(pwm_period_.to_nsecs()),
       .duty_cycle = static_cast<float>(value * 100.0 / (kMaxBrightness * 1.0)),
       .mode_config_buffer = reinterpret_cast<uint8_t*>(&regular),
       .mode_config_size = sizeof(regular),
@@ -208,6 +212,17 @@ zx_status_t AmlLight::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  ddk::PDev pdev(parent(), "pdev");
+  pdev_board_info_t board_info = {};
+  status = ZX_OK;
+  if (!pdev.is_valid() || (status = pdev.GetBoardInfo(&board_info)) != ZX_OK) {
+    board_info.pid = PDEV_PID_GENERIC;
+  }
+
+  const zx::duration pwm_period = board_info.pid == PDEV_PID_NELSON ? kNelsonPwmPeriod : kPwmPeriod;
+
+  zxlogf(INFO, "PWM period: %ld ns", pwm_period.to_nsecs());
+
   uint32_t count = 1;
   for (uint32_t i = 0; i < configs->size(); i++) {
     auto* config = &configs.value()[i];
@@ -227,9 +242,9 @@ zx_status_t AmlLight::Init() {
         return status;
       }
       count++;
-      lights_.emplace_back(name, gpio, pwm);
+      lights_.emplace_back(name, gpio, pwm, pwm_period);
     } else {
-      lights_.emplace_back(name, gpio, std::nullopt);
+      lights_.emplace_back(name, gpio, std::nullopt, pwm_period);
     }
 
     if ((status = lights_.back().Init(config->init_on)) != ZX_OK) {

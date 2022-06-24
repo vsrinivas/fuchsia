@@ -26,7 +26,8 @@ namespace aml_light {
 class FakeAmlLight : public AmlLight {
  public:
   static std::unique_ptr<FakeAmlLight> Create(const gpio_protocol_t* gpio,
-                                              std::optional<const pwm_protocol_t*> pwm) {
+                                              std::optional<const pwm_protocol_t*> pwm,
+                                              zx_duration_t pwm_period = 170'625) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlLight>(&ac);
     if (!ac.check()) {
@@ -35,7 +36,8 @@ class FakeAmlLight : public AmlLight {
     }
     device->lights_.emplace_back(
         "test", ddk::GpioProtocolClient(gpio),
-        pwm.has_value() ? std::optional<ddk::PwmProtocolClient>(*pwm) : std::nullopt);
+        pwm.has_value() ? std::optional<ddk::PwmProtocolClient>(*pwm) : std::nullopt,
+        zx::duration(pwm_period));
     EXPECT_OK(device->lights_.back().Init(true));
     return device;
   }
@@ -276,6 +278,44 @@ TEST_F(AmlLightTest, SetInvalidValueTest) {
     EXPECT_OK(get_result.status());
     EXPECT_FALSE(get_result->is_error());
     EXPECT_EQ(get_result->value()->value, 1.0);
+  }
+}
+
+TEST_F(AmlLightTest, SetValueTestNelson) {
+  pwm_.ExpectEnable(ZX_OK);
+  aml_pwm::mode_config regular = {aml_pwm::ON, {}};
+  pwm_config_t config = {false, 500'000, 100.0, reinterpret_cast<uint8_t*>(&regular),
+                         sizeof(regular)};
+  pwm_.ExpectSetConfig(ZX_OK, config);
+
+  auto gpio = gpio_.GetProto();
+  auto pwm = pwm_.GetProto();
+  light_ = FakeAmlLight::Create(gpio, pwm, 500'000);
+  ASSERT_NOT_NULL(light_);
+  Init();
+
+  fidl::WireSyncClient<fuchsia_hardware_light::Light> client(std::move(client_));
+
+  {
+    config.duty_cycle = 0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client->SetBrightnessValue(0, 0.0);
+    EXPECT_OK(set_result.status());
+    EXPECT_FALSE(set_result->is_error());
+  }
+  {
+    config.duty_cycle = 20.0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client->SetBrightnessValue(0, 0.2);
+    EXPECT_OK(set_result.status());
+    EXPECT_FALSE(set_result->is_error());
+  }
+  {
+    config.duty_cycle = 100.0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client->SetBrightnessValue(0, 1.0);
+    EXPECT_OK(set_result.status());
+    EXPECT_FALSE(set_result->is_error());
   }
 }
 
