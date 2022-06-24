@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// WARNING: Event streams replace the hub for testing in v2. For more information:
+// https://fuchsia.dev/fuchsia-src/development/components/v2/migration/features#events
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/echo1",
+    },
+
+    // WARNING: Components must declare capabilities they provide to parents.
+    //          Either delete or uncomment and populate these lines:
+    //
+    // capabilities: [
+    //     "fuchsia.example.Protocol",
+    // ],
+    // expose: [
+    //     {
+    //          protocol: [ "fuchsia.example.Protocol" ],
+    //          from: "self",
+    //     },
+    // ],
+}

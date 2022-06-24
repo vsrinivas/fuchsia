@@ -101,7 +101,8 @@ impl Name {
     /// fails validation. The string must be non-empty, no more than 100
     /// characters in length, and consist of one or more of the
     /// following characters: `a-z`, `0-9`, `_`, `.`, `-`.
-    pub fn new(name: String) -> Result<Self, ParseError> {
+    pub fn new(name: impl Into<String>) -> Result<Self, ParseError> {
+        let name = name.into();
         Self::validate(Cow::Owned(name.clone()), MAX_NAME_LENGTH)?;
         Ok(Self(name))
     }
@@ -129,6 +130,12 @@ impl Name {
 
 impl PartialEq<&str> for Name {
     fn eq(&self, o: &&str) -> bool {
+        self.0 == *o
+    }
+}
+
+impl PartialEq<String> for Name {
+    fn eq(&self, o: &String) -> bool {
         self.0 == *o
     }
 }
@@ -203,7 +210,8 @@ impl Path {
     /// fails validation. The string must be non-empty, no more than 1024
     /// characters in length, start with a leading `/`, and contain no empty
     /// path segments.
-    pub fn new(path: String) -> Result<Self, ParseError> {
+    pub fn new(path: impl Into<String>) -> Result<Self, ParseError> {
+        let path = path.into();
         Self::validate(&path)?;
         Ok(Path(path))
     }
@@ -367,14 +375,15 @@ impl<'de> de::Deserialize<'de> for RelativePath {
 
 /// A component URL. The URL is validated, but represented as a string to avoid
 /// normalization and retain the original representation.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Url(String);
 
 impl Url {
     /// Creates a `Url` from a `String`, returning an `Err` if the string fails
     /// validation. The string must be non-empty, no more than 4096 characters
     /// in length, and be a valid URL. See the [`url`](../../url/index.html) crate.
-    pub fn new(url: String) -> Result<Self, ParseError> {
+    pub fn new(url: impl Into<String>) -> Result<Self, ParseError> {
+        let url = url.into();
         Self::from_str_impl(Cow::Owned(url))
     }
 

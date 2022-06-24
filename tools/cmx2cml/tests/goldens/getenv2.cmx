@@ -1,0 +1,16 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "FOO",
+            "BAR"
+        ],
+        "binary": "bin/getenv",
+        "env_vars": [
+            "BAZ=bar",
+            "FOO=bar"
+        ]
+    }
+}

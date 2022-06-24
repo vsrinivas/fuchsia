@@ -1,0 +1,76 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("cmx2cml") {
+  edition = "2018"
+
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:json5format",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+    "//tools/lib/cml",
+  ]
+
+  sources = [
+    "src/facets.rs",
+    "src/features.rs",
+    "src/main.rs",
+    "src/program.rs",
+    "src/runner.rs",
+    "src/sandbox.rs",
+    "src/warnings.rs",
+  ]
+
+  inputs = [ "injected_services_map.json5" ]
+}
+
+install_host_tools("install") {
+  deps = [ ":cmx2cml" ]
+  outputs = [ "cmx2cml" ]
+}
+
+# NOTE: If changing these target paths to match a new location, please also update
+# `injected_services_map.json5` so users of this converter will get the correct label.
+group("injected_service_v2_providers") {
+  testonly = true
+  deps = [
+    "//src/connectivity/location/regulatory_region:regulatory_region_component($default_toolchain)",
+    "//src/connectivity/lowpan/service:lowpanservice-cv2($default_toolchain)",
+    "//src/connectivity/network/dns:component($default_toolchain)",
+    "//src/connectivity/network/http-client:component($default_toolchain)",
+    "//src/connectivity/network/netstack:component($default_toolchain)",
+    "//src/connectivity/network/tun/network-tun:component-v2($default_toolchain)",
+    "//src/developer/build_info/testing:fake-build-info-component($default_toolchain)",
+    "//src/developer/memory/monitor:component($default_toolchain)",
+    "//src/developer/tracing/bin/trace_manager:component_cfv2($default_toolchain)",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2($default_toolchain)",
+    "//src/fonts/fake:fake-fonts-cm($default_toolchain)",
+    "//src/fonts/tests/integration:mock_font_resolver_cm($default_toolchain)",
+    "//src/media/audio/audio_core/v2:audio_core_audio_core_component($default_toolchain)",
+    "//src/media/codec/factory:fake_codec_factory($default_toolchain)",
+    "//src/sys/stash:stash_v2($default_toolchain)",
+    "//src/testing/fidl/intl_property_manager:intl_property_manager_component($default_toolchain)",
+    "//src/ui/a11y/bin/a11y_manager:component_v2($default_toolchain)",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component($default_toolchain)",
+    "//src/ui/bin/root_presenter:component_v2($default_toolchain)",
+    "//src/ui/bin/text:text_manager_comp_v2($default_toolchain)",
+    "//src/ui/scenic:component_v2($default_toolchain)",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":injected_service_v2_providers",
+    "tests",
+  ]
+}

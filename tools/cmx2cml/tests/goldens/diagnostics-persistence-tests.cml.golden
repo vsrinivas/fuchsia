@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/persistence_lib_test",
+    },
+    use: [
+        {
+            // WARNING: Build info is delivered differently in v1 & v2. See
+            // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/features#build-info.
+            protocol: [ "fuchsia.buildinfo.Provider" ],
+        },
+    ],
+}

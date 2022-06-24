@@ -1,0 +1,53 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/h265_encoder_test",
+        args: [ "--test-threads=1" ],
+    },
+    children: [
+        {
+            // WARNING: This child must be packaged with your component. The package should depend on:
+            //     //src/media/codec/factory:fake_codec_factory
+            // Note that you may need to route additional capabilities to this child.
+            name: "codec_factory",
+            url: "#meta/codec_factory.cm",
+        },
+    ],
+
+    // WARNING: Components must declare capabilities they provide to parents.
+    //          Either delete or uncomment and populate these lines:
+    //
+    // capabilities: [
+    //     "fuchsia.example.Protocol",
+    // ],
+    // expose: [
+    //     {
+    //          protocol: [ "fuchsia.example.Protocol" ],
+    //          from: "self",
+    //     },
+    // ],
+    use: [
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec_factory",
+        },
+        {
+            protocol: [
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}

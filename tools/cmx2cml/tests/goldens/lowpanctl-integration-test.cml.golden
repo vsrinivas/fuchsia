@@ -1,0 +1,53 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // NOTE: You may want to choose a test runner that understands your language's tests. See
+        // https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#inventory_of_test_runners
+        // for details.
+        "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/lowpanctl_integration_test",
+    },
+    children: [
+        {
+            // WARNING: This child must be packaged with your component. The package should depend on:
+            //     //src/connectivity/lowpan/service:lowpanservice-cv2
+            // Note that you may need to route additional capabilities to this child.
+            name: "lowpan",
+            url: "#meta/lowpanservice.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.CountersConnector",
+                "fuchsia.lowpan.device.DeviceConnector",
+                "fuchsia.lowpan.device.DeviceExtraConnector",
+                "fuchsia.lowpan.device.EnergyScanConnector",
+                "fuchsia.lowpan.DeviceWatcher",
+                "fuchsia.lowpan.driver.Register",
+                "fuchsia.lowpan.experimental.DeviceConnector",
+                "fuchsia.lowpan.experimental.DeviceExtraConnector",
+                "fuchsia.lowpan.experimental.DeviceRouterConnector",
+                "fuchsia.lowpan.experimental.DeviceRouterExtraConnector",
+                "fuchsia.lowpan.experimental.LegacyJoiningConnector",
+                "fuchsia.lowpan.test.DeviceTestConnector",
+                "fuchsia.lowpan.thread.DatasetConnector",
+                "fuchsia.lowpan.thread.MeshcopConnector",
+            ],
+            from: "#lowpan",
+        },
+        {
+            // WARNING: This protocol is not normally available to tests, you may need to add it to the
+            // system test realm or add a mock/fake implementation as a child.
+            protocol: [ "fuchsia.sys.Launcher" ],
+        },
+    ],
+}

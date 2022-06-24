@@ -1,0 +1,33 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader"
+            ]
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/insntrace_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "sys/cpu-trace"
+        ],
+        "features": [
+            "isolated-persistent-storage",
+            "isolated-temp",
+            "shell-commands"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.kernel.Controller",
+            "fuchsia.tracing.kernel.Reader"
+        ]
+    }
+}

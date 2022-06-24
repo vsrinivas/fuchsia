@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // NOTE: You may want to choose a test runner that understands your language's tests. See
+        // https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#inventory_of_test_runners
+        // for details.
+        "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/insntrace_integration_tests",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+
+                // WARNING: This protocol is not normally available to tests, you may need to add it to the
+                // system test realm or add a mock/fake implementation as a child.
+                "fuchsia.process.Resolver",
+
+                // WARNING: This protocol is not normally available to tests, you may need to add it to the
+                // system test realm or add a mock/fake implementation as a child.
+                "fuchsia.sys.Launcher",
+
+                // WARNING: This protocol is not normally available to tests, you may need to add it to the
+                // system test realm or add a mock/fake implementation as a child.
+                "fuchsia.tracing.kernel.Controller",
+
+                // WARNING: This protocol is not normally available to tests, you may need to add it to the
+                // system test realm or add a mock/fake implementation as a child.
+                "fuchsia.tracing.kernel.Reader",
+            ],
+        },
+        {
+            // WARNING: Device directories are converted as best-effort and may need either different rights or
+            // a different directory name to function in v2.
+            directory: "dev-cpu-trace",
+            rights: [ "r*" ],
+            path: "/dev/sys/cpu-trace",
+        },
+        {
+            // NOTE: Using persistent storage requires updating the storage index. For more details:
+            // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/features#update_component_storage_index
+            storage: "data",
+            path: "/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            directory: "bin",
+            rights: [ "r*" ],
+            path: "/bin",
+        },
+    ],
+}

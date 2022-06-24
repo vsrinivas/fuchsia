@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/tee_manager"
+    },
+    "sandbox": {
+        "dev": [
+            "class/tee"
+        ],
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ]
+    }
+}

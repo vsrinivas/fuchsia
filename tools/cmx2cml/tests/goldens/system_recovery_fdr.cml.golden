@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // WARNING: These includes have been mechanically renamed from .cmx to .cml, it's possible
+    // that some of them do not yet have CML equivalents. Check with authors of the v1 shards
+    // if you get build errors using this manifest.
+    include: [
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_recovery_fdr",
+        args: [
+            "--rotation",
+            "90",
+        ],
+    },
+
+    // WARNING: Components must declare capabilities they provide to parents.
+    //          Either delete or uncomment and populate these lines:
+    //
+    // capabilities: [
+    //     "fuchsia.example.Protocol",
+    // ],
+    // expose: [
+    //     {
+    //          protocol: [ "fuchsia.example.Protocol" ],
+    //          from: "self",
+    //     },
+    // ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.recovery.policy.FactoryReset",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+            ],
+        },
+        {
+            // WARNING: Device directories are converted as best-effort and may need either different rights or
+            // a different directory name to function in v2.
+            directory: "dev-display-controller",
+            rights: [ "r*" ],
+            path: "/dev/class/display-controller",
+        },
+        {
+            directory: "dev-input",
+            rights: [ "r*" ],
+            path: "/dev/class/input",
+        },
+        {
+            directory: "dev-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+        {
+            directory: "dev-platform",
+            rights: [ "r*" ],
+            path: "/dev/sys/platform",
+        },
+    ],
+}

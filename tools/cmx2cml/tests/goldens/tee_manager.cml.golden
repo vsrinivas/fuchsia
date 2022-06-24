@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/tee_manager",
+    },
+
+    // WARNING: Components must declare capabilities they provide to parents.
+    //          Either delete or uncomment and populate these lines:
+    //
+    // capabilities: [
+    //     "fuchsia.example.Protocol",
+    // ],
+    // expose: [
+    //     {
+    //          protocol: [ "fuchsia.example.Protocol" ],
+    //          from: "self",
+    //     },
+    // ],
+    use: [
+        {
+            // WARNING: Device directories are converted as best-effort and may need either different rights or
+            // a different directory name to function in v2.
+            directory: "dev-tee",
+            rights: [ "r*" ],
+            path: "/dev/class/tee",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            // NOTE: Using persistent storage requires updating the storage index. For more details:
+            // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/features#update_component_storage_index
+            storage: "data",
+            path: "/data",
+        },
+    ],
+}

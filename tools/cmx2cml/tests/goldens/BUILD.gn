@@ -1,0 +1,121 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/testing/golden_file.gni")
+
+template("cmx2cml_golden") {
+  assert(defined(invoker.cmx), "must provide a `cmx` file")
+  assert(defined(invoker.runner), "must provide a `runner`")
+  _converter_name = "${target_name}_converter"
+
+  _generated_cml = "${target_out_dir}/${target_name}.cml"
+  _golden_cml = string_replace(invoker.cmx, ".cmx", ".cml.golden")
+
+  compiled_action(_converter_name) {
+    testonly = true
+    tool = "//tools/cmx2cml"
+    tool_output_name = "cmx2cml"
+    inputs = [ invoker.cmx ]
+    outputs = [ _generated_cml ]
+    args = [
+      rebase_path(invoker.cmx, root_build_dir),
+      "--runner",
+      invoker.runner,
+      "--output",
+      rebase_path(_generated_cml, root_build_dir),
+    ]
+  }
+
+  golden_file(target_name) {
+    testonly = true
+    golden = _golden_cml
+    current = _generated_cml
+    deps = [ ":$_converter_name" ]
+  }
+}
+
+cmx2cml_golden("button_checker_unittest") {
+  cmx = "button_checker_unittest.cmx"
+  runner = "elf-test"
+}
+
+cmx2cml_golden("diagnostics_persistence") {
+  cmx = "diagnostics-persistence-tests.cmx"
+  runner = "rust-test"
+}
+
+cmx2cml_golden("echo_hub") {
+  cmx = "echo_hub.cmx"
+  runner = "elf"
+}
+
+cmx2cml_golden("fasync") {
+  cmx = "fuchsia_async_lib_test.cmx"
+  runner = "rust-test"
+}
+
+cmx2cml_golden("getenv") {
+  cmx = "getenv2.cmx"
+  runner = "elf"
+}
+
+cmx2cml_golden("h265") {
+  cmx = "h265_encoder_test.cmx"
+  runner = "elf"
+}
+
+cmx2cml_golden("insntrace") {
+  cmx = "insntrace_integration_tests.cmx"
+  runner = "elf-test"
+}
+
+cmx2cml_golden("lowpan") {
+  cmx = "lowpanctl-integration-test.cmx"
+  runner = "elf-test"
+}
+
+cmx2cml_golden("pkgctl_integration_test") {
+  cmx = "pkgctl-integration-test.cmx"
+  runner = "elf-test"
+}
+
+cmx2cml_golden("power_manager_test") {
+  cmx = "power_manager_bin_test.cmx"
+  runner = "rust-test"
+}
+
+cmx2cml_golden("recovery_fdr") {
+  cmx = "system_recovery_fdr.cmx"
+  runner = "elf"
+}
+
+cmx2cml_golden("tee_manager") {
+  cmx = "tee_manager.cmx"
+  runner = "elf"
+}
+
+cmx2cml_golden("test_driver") {
+  cmx = "test_driver.cmx"
+  runner = "elf-test"
+}
+
+group("goldens") {
+  testonly = true
+  deps = [
+    ":button_checker_unittest",
+    ":diagnostics_persistence",
+    ":echo_hub",
+    ":fasync",
+    ":getenv",
+    ":h265",
+    ":insntrace",
+    ":lowpan",
+    ":pkgctl_integration_test",
+    ":power_manager_test",
+    ":recovery_fdr",
+    ":tee_manager",
+    ":test_driver",
+  ]
+}

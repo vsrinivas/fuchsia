@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/button_checker_unittest_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "services": [
+            "fuchsia.hardware.input",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

@@ -1,0 +1,74 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // WARNING: These includes have been mechanically renamed from .cmx to .cml, it's possible
+    // that some of them do not yet have CML equivalents. Check with authors of the v1 shards
+    // if you get build errors using this manifest.
+    include: [
+        // NOTE: You may want to choose a test runner that understands your language's tests. See
+        // https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#inventory_of_test_runners
+        // for details.
+        "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/pkgctl_integration_test",
+    },
+    children: [
+        {
+            // WARNING: This child must be packaged with your component. The package should depend on:
+            //     //src/connectivity/network/dns:component
+            // Note that you may need to route additional capabilities to this child.
+            name: "dns_resolver",
+            url: "#meta/dns-resolver.cm",
+        },
+        {
+            // WARNING: This child must be packaged with your component. The package should depend on:
+            //     //src/connectivity/network/http-client:component
+            // Note that you may need to route additional capabilities to this child.
+            name: "http_client",
+            url: "#meta/http-client.cm",
+        },
+        {
+            // WARNING: This child must be packaged with your component. The package should depend on:
+            //     //src/connectivity/network/netstack:component
+            // Note that you may need to route additional capabilities to this child.
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+        },
+        {
+            protocol: [ "fuchsia.net.http.Loader" ],
+            from: "#http_client",
+        },
+        {
+            protocol: [
+                "fuchsia.net.routes.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+
+                // WARNING: This protocol is not normally available to tests, you may need to add it to the
+                // system test realm or add a mock/fake implementation as a child.
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}

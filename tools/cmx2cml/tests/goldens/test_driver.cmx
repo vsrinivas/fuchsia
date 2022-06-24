@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/test_driver"
+    },
+    "sandbox": {
+        "dev": [
+            "class/usb-device"
+        ]
+    }
+}

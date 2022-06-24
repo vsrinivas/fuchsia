@@ -16,7 +16,6 @@ pub mod translate;
 
 use {
     crate::error::Error,
-    crate::one_or_many::OneOrMany,
     cml_macro::{CheckedVec, OneOrMany, Reference},
     fidl_fuchsia_io as fio,
     json5format::{FormatOptions, PathOption},
@@ -41,7 +40,7 @@ pub use cm_types::{
     RelativePath, StartupMode, StorageId, Url,
 };
 
-pub use crate::translate::compile;
+pub use crate::{one_or_many::OneOrMany, translate::compile};
 
 lazy_static! {
     static ref DEFAULT_EVENT_STREAM_NAME: Name = "EventStream".parse().unwrap();

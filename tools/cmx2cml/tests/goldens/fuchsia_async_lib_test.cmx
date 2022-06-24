@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/fuchsia-async-tests#meta/netstack.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/fuchsia_async_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
