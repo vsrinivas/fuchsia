@@ -345,7 +345,13 @@ impl MouseInjectorHandler {
     ) -> Result<(), anyhow::Error> {
         let mut inner = self.mutable_state.borrow_mut();
         let new_position = match (mouse_event.location, mouse_descriptor) {
-            (mouse_binding::MouseLocation::Relative(offset), _) => inner.current_position + offset,
+            (
+                mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: offset,
+                    millimeters: _,
+                }),
+                _,
+            ) => inner.current_position + offset,
             (
                 mouse_binding::MouseLocation::Absolute(position),
                 mouse_binding::MouseDeviceDescriptor {
@@ -464,9 +470,10 @@ impl MouseInjectorHandler {
         let inner = self.mutable_state.borrow();
         if let Some(injector) = inner.injectors.get(&mouse_descriptor.device_id) {
             let relative_motion = match mouse_event.location {
-                mouse_binding::MouseLocation::Relative(offset)
-                    if mouse_event.phase == mouse_binding::MousePhase::Move =>
-                {
+                mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: offset,
+                    millimeters: _,
+                }) if mouse_event.phase == mouse_binding::MousePhase::Move => {
                     Some([offset.x, offset.y])
                 }
                 _ => None,
@@ -741,7 +748,11 @@ mod tests {
         time: fuchsia_zircon::Time,
     ) -> input_device::InputEvent {
         create_mouse_event(
-            mouse_binding::MouseLocation::Relative(position),
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: position,
+                // TODO(https://fxbug.dev/102570): Implement millimeters.
+                millimeters: Position::zero(),
+            }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
@@ -893,15 +904,15 @@ mod tests {
     // Tests that a mouse move event both sends an update to scenic and sends the current cursor
     // location via the cursor location sender.
     #[test_case(
-        mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
+        mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {counts:Position { x: 10.0, y: 15.0 }, millimeters: Position { x: 0.0, y: 0.0 }}),
         Position { x: DISPLAY_WIDTH / 2.0 + 10.0, y: DISPLAY_HEIGHT / 2.0 + 15.0 },
         [10.0, 15.0]; "Valid move event."
     )]
     #[test_case(
-        mouse_binding::MouseLocation::Relative(Position {
+        mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {counts:Position {
           x: DISPLAY_WIDTH + 2.0,
           y: DISPLAY_HEIGHT + 2.0,
-        }),
+        }, millimeters: Position { x: 0.0, y: 0.0 }}),
         Position {
           x: DISPLAY_WIDTH ,
           y: DISPLAY_HEIGHT,
@@ -909,7 +920,7 @@ mod tests {
         [DISPLAY_WIDTH + 2.0, DISPLAY_HEIGHT + 2.0]; "Move event exceeds max bounds."
     )]
     #[test_case(
-      mouse_binding::MouseLocation::Relative(Position { x: -(DISPLAY_WIDTH + 20.0), y: -(DISPLAY_HEIGHT + 15.0) }),
+      mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {counts:Position { x: -(DISPLAY_WIDTH + 20.0), y: -(DISPLAY_HEIGHT + 15.0) }, millimeters: Position { x: 0.0, y: 0.0 }}),
       Position { x: 0.0, y: 0.0 },
       [-(DISPLAY_WIDTH + 20.0), -(DISPLAY_HEIGHT + 15.0)]; "Move event exceeds min bounds."
     )]
@@ -1591,7 +1602,10 @@ mod tests {
             &DESCRIPTOR,
         );
         let event2 = create_mouse_event(
-            mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 10.0, y: 15.0 },
+                millimeters: Position { x: 0.0, y: 0.0 },
+            }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
@@ -1601,7 +1615,10 @@ mod tests {
             &DESCRIPTOR,
         );
         let event3 = create_mouse_event(
-            mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 }),
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: 0.0 },
+                millimeters: Position { x: 0.0, y: 0.0 },
+            }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Up,
@@ -1739,7 +1756,11 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
-        let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
+        let cursor_location =
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: cursor_relative_position,
+                millimeters: Position { x: 0.0, y: 0.0 },
+            });
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
@@ -1803,7 +1824,11 @@ mod tests {
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
 
-        let zero_location = mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 });
+        let zero_location =
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: 0.0 },
+                millimeters: Position { x: 0.0, y: 0.0 },
+            });
         let expected_position = Position { x: 50.0, y: 50.0 };
 
         let event_time = zx::Time::get_monotonic();
@@ -1910,7 +1935,11 @@ mod tests {
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
 
-        let zero_location = mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 });
+        let zero_location =
+            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: 0.0 },
+                millimeters: Position { x: 0.0, y: 0.0 },
+            });
         let expected_position = Position { x: 50.0, y: 50.0 };
 
         let event_time = zx::Time::get_monotonic();

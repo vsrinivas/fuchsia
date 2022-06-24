@@ -38,7 +38,11 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
             input_device::UnhandledInputEvent {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                        location: mouse_binding::MouseLocation::Relative(position),
+                        location:
+                            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                                counts: position,
+                                ..
+                            }),
                         // Click and drag only interested in motion and button events.
                         phase:
                             phase @ mouse_binding::MousePhase::Move
@@ -69,7 +73,11 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
     fn from(relative_mouse_event: RelativeMouseEvent) -> input_device::InputEvent {
         input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(relative_mouse_event.displacement),
+                location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: relative_mouse_event.displacement,
+                    // TODO(https://fxbug.dev/102567): Implement millimeters.
+                    millimeters: Position::zero(),
+                }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
                 phase: relative_mouse_event.phase.into(),
@@ -407,7 +415,7 @@ mod tests {
     async fn button_down_is_passed_through_when_no_button_was_previously_clicked() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -424,9 +432,9 @@ mod tests {
     async fn move_event_is_passed_through_when_no_button_is_clicked() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position {
-                x: SMALL_MOTION,
-                y: SMALL_MOTION,
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: SMALL_MOTION, y: SMALL_MOTION },
+                millimeters: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -444,7 +452,7 @@ mod tests {
     async fn button_down_then_small_motion_yields_no_move_events() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -452,7 +460,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: SMALL_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -471,7 +482,7 @@ mod tests {
     ) {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -479,7 +490,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: SMALL_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -487,7 +501,7 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Up,
@@ -521,7 +535,7 @@ mod tests {
     async fn button_down_then_large_motion_yields_large_motion(position: Position) {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -529,7 +543,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(position),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: position,
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -550,7 +567,7 @@ mod tests {
     async fn button_up_after_botton_down_and_large_motion_does_not_replay_motion() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -558,7 +575,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: LARGE_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: LARGE_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -566,7 +586,7 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Up,
@@ -589,7 +609,7 @@ mod tests {
     async fn button_down_then_two_motions_summing_past_drag_threshold_yields_motions() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -597,7 +617,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: HALF_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -605,7 +628,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: HALF_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -636,7 +662,7 @@ mod tests {
     async fn move_events_continue_after_drag_is_recognized() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -644,7 +670,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: HALF_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -652,7 +681,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: HALF_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -660,7 +692,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 0.0, y: HALF_MOTION },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -691,7 +726,7 @@ mod tests {
     ) {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -699,7 +734,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(first_motion),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: first_motion,
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -707,7 +745,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(second_motion),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: second_motion,
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -730,7 +771,7 @@ mod tests {
     async fn ignore_wheel_events() {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: Some(1),
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Wheel,
@@ -749,7 +790,7 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
 
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
@@ -757,7 +798,10 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position { x: -2.0, y: 0.0 }),
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: -2.0, y: 0.0 },
+                millimeters: Position::zero(),
+            }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
@@ -765,7 +809,7 @@ mod tests {
             pressed_buttons: hashset! {0},
         });
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: Some(1),
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Wheel,

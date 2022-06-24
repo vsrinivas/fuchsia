@@ -578,7 +578,11 @@ mod tests {
         let offset = Position { x: rng.gen_range(0..10) as f32, y: rng.gen_range(0..10) as f32 };
         let input_event = input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
-                mouse_binding::MouseLocation::Relative(offset),
+                mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: offset,
+                    // TODO(https://fxbug.dev/102566): Implement millimeters.
+                    millimeters: Position::zero(),
+                }),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 mouse_binding::MousePhase::Move,

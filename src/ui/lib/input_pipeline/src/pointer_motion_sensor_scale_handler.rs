@@ -31,7 +31,11 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
             input_device::UnhandledInputEvent {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                        location: mouse_binding::MouseLocation::Relative(raw_motion),
+                        location:
+                            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                                counts: raw_motion,
+                                millimeters: _,
+                            }),
                         wheel_delta_v,
                         wheel_delta_h,
                         // Only the `Move` phase carries non-zero motion.
@@ -47,7 +51,13 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                 let input_event = input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Mouse(
                         mouse_binding::MouseEvent {
-                            location: mouse_binding::MouseLocation::Relative(scaled_motion),
+                            location: mouse_binding::MouseLocation::Relative(
+                                mouse_binding::RelativeLocation {
+                                    counts: scaled_motion,
+                                    // TODO(https://fxbug.dev/102568): Implement millimeters.
+                                    millimeters: Position::zero(),
+                                },
+                            ),
                             wheel_delta_v,
                             wheel_delta_h,
                             phase,
@@ -364,7 +374,7 @@ mod tests {
             // Send a don't-care value through to seed the last timestamp.
             let input_event = input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                    location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 }),
+                    location: mouse_binding::MouseLocation::Relative(Default::default()),
                     wheel_delta_v: None,
                     wheel_delta_h: None,
                     phase: mouse_binding::MousePhase::Move,
@@ -380,7 +390,12 @@ mod tests {
             // Send in the requested motion.
             let input_event = input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                    location: mouse_binding::MouseLocation::Relative(movement_counts),
+                    location: mouse_binding::MouseLocation::Relative(
+                        mouse_binding::RelativeLocation {
+                            counts: movement_counts,
+                            millimeters: Position::zero(),
+                        },
+                    ),
                     wheel_delta_v: None,
                     wheel_delta_h: None,
                     phase: mouse_binding::MousePhase::Move,
@@ -401,7 +416,9 @@ mod tests {
                 [input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Mouse(
                         mouse_binding::MouseEvent {
-                            location: mouse_binding::MouseLocation::Relative(Position { .. }),
+                            location: mouse_binding::MouseLocation::Relative(
+                                mouse_binding::RelativeLocation { .. }
+                            ),
                             ..
                         }
                     ),
@@ -413,7 +430,11 @@ mod tests {
             if let input_device::InputEvent {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
-                        location: mouse_binding::MouseLocation::Relative(movement_counts),
+                        location:
+                            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                                counts: movement_counts,
+                                millimeters: _,
+                            }),
                         ..
                     }),
                 ..
@@ -541,7 +562,10 @@ mod tests {
         async fn does_not_consume_event() {
             let handler = PointerMotionSensorScaleHandler::new();
             let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+                location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: Position { x: 1.5, y: 4.5 },
+                    millimeters: Position::zero(),
+                }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
                 phase: mouse_binding::MousePhase::Move,
@@ -560,7 +584,10 @@ mod tests {
         async fn preserves_event_time() {
             let handler = PointerMotionSensorScaleHandler::new();
             let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+                location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: Position { x: 1.5, y: 4.5 },
+                    millimeters: Position::zero(),
+                }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
                 phase: mouse_binding::MousePhase::Move,

@@ -305,11 +305,17 @@ pub fn create_mouse_input_report(
         keyboard: None,
         mouse: Some(fidl_input_report::MouseInputReport {
             movement_x: match location {
-                mouse_binding::MouseLocation::Relative(Position { x, .. }) => Some(x as i64),
+                mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: Position { x, .. },
+                    millimeters: Position { .. },
+                }) => Some(x as i64),
                 _ => None,
             },
             movement_y: match location {
-                mouse_binding::MouseLocation::Relative(Position { y, .. }) => Some(y as i64),
+                mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                    counts: Position { y, .. },
+                    millimeters: Position { .. },
+                }) => Some(y as i64),
                 _ => None,
             },
             position_x: match location {
