@@ -115,6 +115,19 @@ impl Pipeline {
         Self::new(parameters, data_repo, pipelines_path, parent_node)
     }
 
+    /// Creates a pipeline for LoWPAN metrics. This applies static selectors configured
+    /// under config/data/lowpan to inspect exfiltration.
+    pub fn lowpan(data_repo: DataRepo, pipelines_path: &Path, parent_node: &inspect::Node) -> Self {
+        let parameters = PipelineParameters {
+            has_config: true,
+            name: "lowpan",
+            empty_behavior: configs::EmptyBehavior::Disable,
+            protocol_name: constants::LOWPAN_ARCHIVE_ACCESSOR_NAME,
+            moniker_rewriter: Some(MonikerRewriter::new()),
+        };
+        Self::new(parameters, data_repo, pipelines_path, parent_node)
+    }
+
     #[cfg(test)]
     pub fn for_test(static_selectors: Option<Vec<Selector>>, data_repo: DataRepo) -> Self {
         Pipeline {

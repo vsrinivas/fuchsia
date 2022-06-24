@@ -13,6 +13,7 @@
             protocol: [
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LoWPANArchiveAccessor",
             ],
         },
     ],
@@ -41,6 +42,7 @@
             protocol: [
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LoWPANArchiveAccessor",
             ],
             from: "self",
         },

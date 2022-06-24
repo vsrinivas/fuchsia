@@ -4,6 +4,7 @@
 
 use crate::{constants::*, test_topology};
 use anyhow::Error;
+use archivist_lib::constants;
 use diagnostics_reader::{
     assert_data_tree, assert_json_diff, AnyProperty, ArchiveReader, DiagnosticsHierarchy, Inspect,
 };
@@ -28,12 +29,12 @@ lazy_static! {
         include_str!("../../test_data/unified_reader_all_golden.json");
     static ref UNIFIED_FULL_FILTER_GOLDEN: &'static str =
         include_str!("../../test_data/unified_reader_full_filter_golden.json");
-    static ref FEEDBACK_SINGLE_VALUE_GOLDEN: &'static str =
-        include_str!("../../test_data/feedback_reader_single_value_golden.json");
-    static ref FEEDBACK_ALL_GOLDEN: &'static str =
-        include_str!("../../test_data/feedback_reader_all_golden.json");
-    static ref FEEDBACK_NONOVERLAPPING_SELECTORS_GOLDEN: &'static str =
-        include_str!("../../test_data/feedback_reader_nonoverlapping_selectors_golden.json");
+    static ref PIPELINE_SINGLE_VALUE_GOLDEN: &'static str =
+        include_str!("../../test_data/pipeline_reader_single_value_golden.json");
+    static ref PIPELINE_ALL_GOLDEN: &'static str =
+        include_str!("../../test_data/pipeline_reader_all_golden.json");
+    static ref PIPELINE_NONOVERLAPPING_SELECTORS_GOLDEN: &'static str =
+        include_str!("../../test_data/pipeline_reader_nonoverlapping_selectors_golden.json");
     static ref MEMORY_MONITOR_V2_MONIKER_GOLDEN: &'static str =
         include_str!("../../test_data/memory_monitor_v2_moniker_golden.json");
     static ref MEMORY_MONITOR_LEGACY_MONIKER_GOLDEN: &'static str =
@@ -271,21 +272,21 @@ async fn feedback_canonical_reader_test() -> Result<(), Error> {
     // First, retrieve all of the information in our realm to make sure that everything
     // we expect is present.
     let accessor = connect_to_feedback_accessor(&instance);
-    retrieve_and_validate_results(accessor, Vec::new(), &FEEDBACK_ALL_GOLDEN, 3).await;
+    retrieve_and_validate_results(accessor, Vec::new(), &PIPELINE_ALL_GOLDEN, 3).await;
 
     // Then verify that from the expected data, we can retrieve one specific value.
     let accessor = connect_to_feedback_accessor(&instance);
     retrieve_and_validate_results(
         accessor,
         vec!["test_component:*:lazy-*"],
-        &FEEDBACK_SINGLE_VALUE_GOLDEN,
+        &PIPELINE_SINGLE_VALUE_GOLDEN,
         3,
     )
     .await;
 
     // Then verify that subtree selection retrieves all trees under and including root.
     let accessor = connect_to_feedback_accessor(&instance);
-    retrieve_and_validate_results(accessor, vec!["test_component:root"], &FEEDBACK_ALL_GOLDEN, 3)
+    retrieve_and_validate_results(accessor, vec!["test_component:root"], &PIPELINE_ALL_GOLDEN, 3)
         .await;
 
     // Then verify that client selectors dont override the static selectors provided
@@ -294,12 +295,12 @@ async fn feedback_canonical_reader_test() -> Result<(), Error> {
     retrieve_and_validate_results(
         accessor,
         vec![r#"test_component:root:array\:0x15"#],
-        &FEEDBACK_NONOVERLAPPING_SELECTORS_GOLDEN,
+        &PIPELINE_NONOVERLAPPING_SELECTORS_GOLDEN,
         3,
     )
     .await;
 
-    assert!(feedback_pipeline_is_filtered(instance, 3).await);
+    assert!(pipeline_is_filtered(instance, 3, constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME).await);
 
     Ok(())
 }
@@ -316,7 +317,7 @@ async fn feedback_disabled_pipeline() -> Result<(), Error> {
         .expect("add child a");
 
     let instance = builder.build().await.expect("create instance");
-    assert!(!feedback_pipeline_is_filtered(instance, 3).await);
+    assert!(!pipeline_is_filtered(instance, 3, constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME).await);
 
     Ok(())
 }
@@ -332,7 +333,56 @@ async fn feedback_pipeline_missing_selectors() -> Result<(), Error> {
 
     let instance = builder.build().await.expect("create instance");
 
-    assert!(!feedback_pipeline_is_filtered(instance, 3).await);
+    assert!(!pipeline_is_filtered(instance, 3, constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME).await);
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn lowpan_canonical_reader_test() -> Result<(), Error> {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
+        archivist_url: ARCHIVIST_WITH_LOWPAN_FILTERING,
+    })
+    .await
+    .expect("create base topology");
+    test_topology::add_eager_child(&test_realm, "test_component", IQUERY_TEST_COMPONENT_URL)
+        .await
+        .expect("add child a");
+
+    let instance = builder.build().await.expect("create instance");
+
+    // First, retrieve all of the information in our realm to make sure that everything
+    // we expect is present.
+    let accessor = connect_to_lowpan_accessor(&instance);
+    retrieve_and_validate_results(accessor, Vec::new(), &PIPELINE_ALL_GOLDEN, 3).await;
+
+    // Then verify that from the expected data, we can retrieve one specific value.
+    let accessor = connect_to_lowpan_accessor(&instance);
+    retrieve_and_validate_results(
+        accessor,
+        vec!["test_component:*:lazy-*"],
+        &PIPELINE_SINGLE_VALUE_GOLDEN,
+        3,
+    )
+    .await;
+
+    // Then verify that subtree selection retrieves all trees under and including root.
+    let accessor = connect_to_lowpan_accessor(&instance);
+    retrieve_and_validate_results(accessor, vec!["test_component:root"], &PIPELINE_ALL_GOLDEN, 3)
+        .await;
+
+    // Then verify that client selectors dont override the static selectors provided
+    // to the archivist.
+    let accessor = connect_to_lowpan_accessor(&instance);
+    retrieve_and_validate_results(
+        accessor,
+        vec![r#"test_component:root:array\:0x15"#],
+        &PIPELINE_NONOVERLAPPING_SELECTORS_GOLDEN,
+        3,
+    )
+    .await;
+
+    assert!(pipeline_is_filtered(instance, 3, constants::LOWPAN_ARCHIVE_ACCESSOR_NAME).await);
 
     Ok(())
 }
@@ -351,6 +401,15 @@ fn connect_to_legacy_accessor(instance: &RealmInstance) -> ArchiveAccessorProxy 
         .root
         .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(
             "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+        )
+        .unwrap()
+}
+
+fn connect_to_lowpan_accessor(instance: &RealmInstance) -> ArchiveAccessorProxy {
+    instance
+        .root
+        .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(
+            "fuchsia.diagnostics.LoWPANArchiveAccessor",
         )
         .unwrap()
 }
@@ -427,19 +486,18 @@ fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Val
     serde_json::from_str(&sorted_results_json_string).unwrap()
 }
 
-async fn feedback_pipeline_is_filtered(
+async fn pipeline_is_filtered(
     instance: RealmInstance,
     expected_results_count: usize,
+    accessor_name: &str,
 ) -> bool {
-    let feedback_archive_accessor = instance
+    let archive_accessor = instance
         .root
-        .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(
-            "fuchsia.diagnostics.FeedbackArchiveAccessor",
-        )
+        .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(accessor_name)
         .unwrap();
 
-    let feedback_results = ArchiveReader::new()
-        .with_archive(feedback_archive_accessor)
+    let pipeline_results = ArchiveReader::new()
+        .with_archive(archive_accessor)
         .with_minimum_schema_count(expected_results_count)
         .snapshot_raw::<Inspect>()
         .await
@@ -455,5 +513,5 @@ async fn feedback_pipeline_is_filtered(
         .await
         .expect("got result");
 
-    process_results_for_comparison(feedback_results) != process_results_for_comparison(all_results)
+    process_results_for_comparison(pipeline_results) != process_results_for_comparison(all_results)
 }

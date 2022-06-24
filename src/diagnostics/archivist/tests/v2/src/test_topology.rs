@@ -46,6 +46,7 @@ pub async fn create(opts: Options) -> Result<(RealmBuilder, SubRealmBuilder), Er
         .capability(Capability::protocol_by_name(
             "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
         ))
+        .capability(Capability::protocol_by_name("fuchsia.diagnostics.LoWPANArchiveAccessor"))
         .capability(Capability::protocol_by_name("fuchsia.diagnostics.LogSettings"))
         .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
         .capability(Capability::protocol_by_name("fuchsia.logger.Log"));

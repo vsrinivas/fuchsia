@@ -28,6 +28,11 @@ pub const FEEDBACK_ARCHIVE_ACCESSOR_NAME: &str = "fuchsia.diagnostics.FeedbackAr
 pub const LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME: &str =
     "fuchsia.diagnostics.LegacyMetricsArchiveAccessor";
 
+/// Name used by clients to connect to the lowpan diagnostics protocol.
+/// This protocol applies static selectors configured under config/data/lowpan to
+/// inspect exfiltration.
+pub const LOWPAN_ARCHIVE_ACCESSOR_NAME: &str = "fuchsia.diagnostics.LoWPANArchiveAccessor";
+
 /// The maximum number of Inspect files that can be simultaneously snapshotted and formatted per
 /// reader.
 pub const MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 4;

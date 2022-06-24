@@ -103,9 +103,10 @@ impl Archivist {
         let pipelines_node = component::inspector().root().create_child("pipelines");
         let pipelines_path = Path::new(&archivist_configuration.pipelines_path);
         let pipelines = vec![
-            Pipeline::feedback(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
-            Pipeline::legacy_metrics(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
-            Pipeline::all_access(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
+            Pipeline::feedback(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
+            Pipeline::legacy_metrics(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
+            Pipeline::lowpan(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
+            Pipeline::all_access(diagnostics_repo.clone(), pipelines_path, &pipelines_node),
         ];
         component::inspector().root().record(pipelines_node);
 

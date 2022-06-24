@@ -30,6 +30,11 @@ with_feedback_filtering = {
   pipelines_path = "/pkg/data/config/pipelines/feedback_filtered"
 }
 
+with_lowpan_filtering = {
+  forward_variables_from(archivist_for_integration_config, "*")
+  pipelines_path = "/pkg/data/config/pipelines/lowpan_filtered"
+}
+
 with_legacy_metrics_filtering = {
   forward_variables_from(archivist_for_integration_config, "*")
   pipelines_path = "/pkg/data/config/pipelines/legacy_metrics_filtered"

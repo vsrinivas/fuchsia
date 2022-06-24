@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub const ARCHIVIST_WITH_FEEDBACK_FILTERING: &str = "#meta/archivist-with-feedback-filtering.cm";
+pub const ARCHIVIST_WITH_LOWPAN_FILTERING: &str = "#meta/archivist-with-lowpan-filtering.cm";
 pub const ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED: &str =
     "#meta/archivist-with-feedback-filtering-disabled.cm";
 pub const ARCHIVIST_WITH_SMALL_CACHES: &str = "#meta/archivist-with-small-caches.cm";
