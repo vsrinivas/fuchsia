@@ -11,6 +11,9 @@ import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/sdk/virtual_device.gni")
 
+assert(current_toolchain == default_toolchain,
+       "//build/images/* are only valid in the Fuchsia toolchain")
+
 # Deps that are added to the //build/images:default_image_deps target.
 flash_image_deps = []
 

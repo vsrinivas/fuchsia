@@ -10,6 +10,9 @@ import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//src/sys/root/build/root.gni")
 
+assert(current_toolchain == default_toolchain,
+       "//build/images/* are only valid in the Fuchsia toolchain")
+
 root_realm("root") {
   core_package_name = "core-invalid"
 }

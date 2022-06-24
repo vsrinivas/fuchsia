@@ -38,7 +38,8 @@ if (is_host) {
 # The assembly operation should only be defined in the default (fuchsia)
 # toolchain.
 if (is_fuchsia) {
-  assert(current_toolchain == default_toolchain)
+  assert(current_toolchain == default_toolchain,
+         "//build/images/* are only valid in the Fuchsia toolchain")
 
   # This catches inadvertent dependencies on the "fucshia" assembly implementation
   # in bringup-only configurations.

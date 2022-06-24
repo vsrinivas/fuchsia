@@ -10,6 +10,9 @@ import("//build/security.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
+assert(current_toolchain == default_toolchain,
+       "//build/images/* are only valid in the Fuchsia toolchain")
+
 if (use_bringup_assembly) {
   # These don't have any meaning in a bringup assembly, so leave them as empty
   # placeholder targets.

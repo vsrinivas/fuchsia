@@ -8,6 +8,9 @@ import("//build/images/archive/paver_targets.gni")
 import("//build/images/args.gni")
 import("//build/sdk/config.gni")
 
+assert(current_toolchain == default_toolchain,
+       "//build/images/* are only valid in the Fuchsia toolchain")
+
 group("archive-extras") {
   testonly = true
   deps = [

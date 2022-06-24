@@ -10,277 +10,6 @@ import("//src/sys/appmgr/core_shards.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
-# Parameters shared between recovery-eng and recovery-installer
-recovery_base = {
-  testonly = true
-  generate_fvm = !bootfs_only
-
-  # We avoid compressing blobs in the blobfs image so that they can be more
-  # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  if (generate_fvm) {
-    assembly_compress_blobs = false
-  }
-  ramdisk_fvm_in_zbi = true
-
-  include_component_id_index = true
-  devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
-  cmdline = [
-    "console.shell=true",
-    "netsvc.disable=false",
-    "kernel.enable-debugging-syscalls=true",
-    "kernel.enable-serial-syscalls=true",
-  ]
-
-  bootfs_labels = [
-    ":root",
-    "//build/info:bootfs",
-    "//build/input:recovery_bootfs",
-    "//bundles:bootstrap",
-    "//bundles:debugging",
-    "//bundles/bringup:manual_testing",
-    "//bundles/drivers:bootstrap",
-    "//bundles/drivers:usb-host-stack",
-    "//bundles/drivers:usb-peripheral-stack",
-    "//bundles/drivers:utils",
-  ]
-  bootfs_labels += [
-    "//src/sys/component_manager:component_manager_bootfs_config",
-    "//src/diagnostics/archivist:default-service-config",
-  ]
-
-  if (custom_signing_script != "") {
-    zbi_signing_script = custom_signing_script
-    zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
-  } else if (use_vboot) {
-    zbi_signing_script = vboot_action.script
-    zbi_signing_args = vboot_action.args
-    zbi_signing_script_deps = vboot_action.deps
-    inputs = vboot_action.inputs
-  }
-}
-
-group("recovery") {
-  testonly = true
-  public_deps = [
-    ":recovery-eng",
-    ":recovery-fdr",
-    ":recovery-installer",
-  ]
-}
-
-core_name = "core-recovery"
-
-_core_realm_deps = [
-  "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
-  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
-  "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
-  "//src/developer/build_info:build_info_core_shard",
-  "//src/recovery/factory_reset:factory_reset_core_shard",
-  "//src/ui/bin/brightness_manager:auto-brightness_core_shard",
-]
-
-# TODO(fxbug.dev/102390): deprecate appmgr from this product config
-_core_realm_deps += appmgr_core_shards
-
-core_realm("core") {
-  package_name = core_name
-  restrict_persistent_storage = false
-  deps = _core_realm_deps
-}
-
-core_realm("core-eng") {
-  package_name = core_name
-  restrict_persistent_storage = false
-  deps = _core_realm_deps + [ "//src/developer/sshd-host:core_shard" ]
-}
-
-root_realm("root") {
-  core_package_name = core_name
-}
-
-recovery_packages = [
-  "//build/info:build-info",
-  "//src/connectivity/location/regulatory_region:regulatory_region",
-  "//src/connectivity/network",
-  "//src/connectivity/network/netcfg:config-default",
-  "//src/connectivity/wlan/wlancfg",
-  "//src/connectivity/wlan/wlandevicemonitor",
-  "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
-  "//src/devices/sysmem/bin/sysmem_connector",
-  "//src/recovery/factory_reset",
-  "//src/recovery/system:system_recovery",
-  "//src/recovery/system:config",
-  "//src/security/root_ssl_certificates",
-  "//src/sys/appmgr",
-  "//src/sys/appmgr:appmgr_scheme_config",
-  "//src/sys/appmgr:component_id_index_no_restrict_storage",
-  "//src/sys/pkg:recovery",
-  "//src/sys/stash:pkg",
-  "//src/sys/sysmgr",
-  "//src/sys/time:recovery",
-  "//src/ui/bin/brightness_manager:auto-brightness",
-]
-
-recovery_system_image_deps = [ "//bundles/packages/prod:broadcom" ]
-
-recovery_eng_packages =
-    recovery_packages + [
-      # So recovery can read board name and version info:
-      "//src/developer/build_info:build-info-service",
-
-      # So components can be launched:
-      "//src/sys/tools/run",
-
-      # Use eng allowlists:
-      "//src/security/policy:appmgr_policy_eng",
-
-      # Enable ffx support.
-      "//src/connectivity/network/mdns/bundles:services",
-      "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
-      "//src/developer/ffx:runtime",
-
-      # Enable SSH (for engineering builds):
-      "//src/developer/sshd-host",
-      "//src/developer/sshd-host:config",
-
-      # Basic command-line tools:
-      "//third_party/sbase",
-      "//src/diagnostics/log_listener:log_listener_shell",
-
-      # Command-line interface to wlan stack:
-      "//src/connectivity/wlan/wlancfg/tool:donut",
-
-      # Device side of zxdb & fidlcat:
-      "//src/developer/debug/debug_agent",
-
-      # The SWD stack for OTAs.
-      "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
-    ]
-
-recovery_installer_packages =
-    recovery_eng_packages - [
-      "//src/recovery/system:system_recovery",
-      "//src/recovery/system:config",
-    ] +
-    [
-      "//src/recovery/system:system_recovery_installer",
-      "//src/recovery/system:config_installer",
-    ]
-
-assembled_system("recovery-eng") {
-  forward_variables_from(recovery_base, "*")
-  base_packages = recovery_eng_packages + [ ":core-eng" ]
-  system_image_deps = recovery_system_image_deps
-
-  # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "recovery-eng"
-        path = rebase_path("$target_out_dir/recovery-eng/recovery-eng.zbi",
-                           root_build_dir)
-        type = "zbi"
-      },
-    ]
-
-    if (custom_signing_script != "" || use_vboot) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "recovery-eng.signed"
-          path = rebase_path(
-                  "$target_out_dir/recovery-eng/recovery-eng.zbi.signed",
-                  root_build_dir)
-          type = "zbi.signed"
-        },
-      ]
-    }
-  }
-}
-
-assembled_system("recovery-fdr") {
-  base_packages = recovery_packages + [ ":core" ]
-  generate_fvm = !bootfs_only
-
-  system_image_deps = recovery_system_image_deps
-
-  # We avoid compressing blobs in the blobfs image so that they can be more
-  # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  if (generate_fvm) {
-    assembly_compress_blobs = false
-  }
-  ramdisk_fvm_in_zbi = true
-
-  include_component_id_index = true
-
-  devmgr_config = [ "virtcon.disable=true" ]
-  cmdline = []
-
-  bootfs_labels = [
-    ":root",
-    "//build/info:bootfs",
-    "//build/input:recovery_bootfs",
-    "//bundles:bootstrap",
-    "//bundles/drivers:bootstrap",
-    "//bundles/drivers:usb-host-stack",
-    "//bundles/drivers:usb-peripheral-stack",
-  ]
-  bootfs_labels += [
-    "//src/diagnostics/archivist:default-service-config",
-    "//src/sys/component_manager:component_manager_bootfs_config",
-  ]
-
-  if (custom_signing_script != "") {
-    zbi_signing_script = custom_signing_script
-    zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
-  } else if (use_vboot) {
-    zbi_signing_script = vboot_action.script
-    zbi_signing_args = vboot_action.args
-    zbi_signing_script_deps = vboot_action.deps
-    inputs = vboot_action.inputs
-  }
-}
-
-assembled_system("recovery-installer") {
-  forward_variables_from(recovery_base, "*")
-  base_packages = recovery_installer_packages + [ ":core-eng" ]
-  system_image_deps = recovery_system_image_deps
-
-  # The installer needs to see all partitions on the system so that it can
-  #determine the installation source and destination
-  fshost_config = {
-    gpt_all = true
-  }
-
-  # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "recovery-installer"
-        path = rebase_path(
-                "$target_out_dir/recovery-installer/recovery-installer.zbi",
-                root_build_dir)
-        type = "zbi"
-      },
-    ]
-
-    if (custom_signing_script != "" || use_vboot) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "recovery-installer.signed"
-          path = rebase_path(
-                  "$target_out_dir/recovery-installer/recovery-installer.zbi.signed",
-                  root_build_dir)
-          type = "zbi.signed"
-        },
-      ]
-    }
-  }
-}
-
 if (is_host) {
   host_test_data("test_data") {
     out_dir = get_label_info(":anything($target_toolchain)", "target_out_dir")
@@ -294,5 +23,281 @@ if (is_host) {
       ":recovery-fdr($target_toolchain)",
       ":recovery-installer($target_toolchain)",
     ]
+  }
+}
+
+if (is_fuchsia) {
+  assert(current_toolchain == default_toolchain,
+         "//build/images/* are only valid in the Fuchsia toolchain")
+
+  # Parameters shared between recovery-eng and recovery-installer
+  recovery_base = {
+    testonly = true
+    generate_fvm = !bootfs_only
+
+    # We avoid compressing blobs in the blobfs image so that they can be more
+    # effectively compressed by the ZBI compressor that is tuned to zstd max.
+    if (generate_fvm) {
+      assembly_compress_blobs = false
+    }
+    ramdisk_fvm_in_zbi = true
+
+    include_component_id_index = true
+    devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
+    cmdline = [
+      "console.shell=true",
+      "netsvc.disable=false",
+      "kernel.enable-debugging-syscalls=true",
+      "kernel.enable-serial-syscalls=true",
+    ]
+
+    bootfs_labels = [
+      ":root",
+      "//build/info:bootfs",
+      "//build/input:recovery_bootfs",
+      "//bundles:bootstrap",
+      "//bundles:debugging",
+      "//bundles/bringup:manual_testing",
+      "//bundles/drivers:bootstrap",
+      "//bundles/drivers:usb-host-stack",
+      "//bundles/drivers:usb-peripheral-stack",
+      "//bundles/drivers:utils",
+    ]
+    bootfs_labels += [
+      "//src/sys/component_manager:component_manager_bootfs_config",
+      "//src/diagnostics/archivist:default-service-config",
+    ]
+
+    if (custom_signing_script != "") {
+      zbi_signing_script = custom_signing_script
+      zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
+    } else if (use_vboot) {
+      zbi_signing_script = vboot_action.script
+      zbi_signing_args = vboot_action.args
+      zbi_signing_script_deps = vboot_action.deps
+      inputs = vboot_action.inputs
+    }
+  }
+
+  group("recovery") {
+    testonly = true
+    public_deps = [
+      ":recovery-eng",
+      ":recovery-fdr",
+      ":recovery-installer",
+    ]
+  }
+
+  core_name = "core-recovery"
+
+  _core_realm_deps = [
+    "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
+    "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
+    "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
+    "//src/developer/build_info:build_info_core_shard",
+    "//src/recovery/factory_reset:factory_reset_core_shard",
+    "//src/ui/bin/brightness_manager:auto-brightness_core_shard",
+  ]
+
+  # TODO(fxbug.dev/102390): deprecate appmgr from this product config
+  _core_realm_deps += appmgr_core_shards
+
+  core_realm("core") {
+    package_name = core_name
+    restrict_persistent_storage = false
+    deps = _core_realm_deps
+  }
+
+  core_realm("core-eng") {
+    package_name = core_name
+    restrict_persistent_storage = false
+    deps = _core_realm_deps + [ "//src/developer/sshd-host:core_shard" ]
+  }
+
+  root_realm("root") {
+    core_package_name = core_name
+  }
+
+  recovery_packages = [
+    "//build/info:build-info",
+    "//src/connectivity/location/regulatory_region:regulatory_region",
+    "//src/connectivity/network",
+    "//src/connectivity/network/netcfg:config-default",
+    "//src/connectivity/wlan/wlancfg",
+    "//src/connectivity/wlan/wlandevicemonitor",
+    "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
+    "//src/devices/sysmem/bin/sysmem_connector",
+    "//src/recovery/factory_reset",
+    "//src/recovery/system:system_recovery",
+    "//src/recovery/system:config",
+    "//src/security/root_ssl_certificates",
+    "//src/sys/appmgr",
+    "//src/sys/appmgr:appmgr_scheme_config",
+    "//src/sys/appmgr:component_id_index_no_restrict_storage",
+    "//src/sys/pkg:recovery",
+    "//src/sys/stash:pkg",
+    "//src/sys/sysmgr",
+    "//src/sys/time:recovery",
+    "//src/ui/bin/brightness_manager:auto-brightness",
+  ]
+
+  recovery_system_image_deps = [ "//bundles/packages/prod:broadcom" ]
+
+  recovery_eng_packages =
+      recovery_packages + [
+        # So recovery can read board name and version info:
+        "//src/developer/build_info:build-info-service",
+
+        # So components can be launched:
+        "//src/sys/tools/run",
+
+        # Use eng allowlists:
+        "//src/security/policy:appmgr_policy_eng",
+
+        # Enable ffx support.
+        "//src/connectivity/network/mdns/bundles:services",
+        "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
+        "//src/developer/ffx:runtime",
+
+        # Enable SSH (for engineering builds):
+        "//src/developer/sshd-host",
+        "//src/developer/sshd-host:config",
+
+        # Basic command-line tools:
+        "//third_party/sbase",
+        "//src/diagnostics/log_listener:log_listener_shell",
+
+        # Command-line interface to wlan stack:
+        "//src/connectivity/wlan/wlancfg/tool:donut",
+
+        # Device side of zxdb & fidlcat:
+        "//src/developer/debug/debug_agent",
+
+        # The SWD stack for OTAs.
+        "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
+      ]
+
+  recovery_installer_packages =
+      recovery_eng_packages - [
+        "//src/recovery/system:system_recovery",
+        "//src/recovery/system:config",
+      ] +
+      [
+        "//src/recovery/system:system_recovery_installer",
+        "//src/recovery/system:config_installer",
+      ]
+
+  assembled_system("recovery-eng") {
+    forward_variables_from(recovery_base, "*")
+    base_packages = recovery_eng_packages + [ ":core-eng" ]
+    system_image_deps = recovery_system_image_deps
+
+    # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "recovery-eng"
+          path = rebase_path("$target_out_dir/recovery-eng/recovery-eng.zbi",
+                             root_build_dir)
+          type = "zbi"
+        },
+      ]
+
+      if (custom_signing_script != "" || use_vboot) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = "recovery-eng.signed"
+            path = rebase_path(
+                    "$target_out_dir/recovery-eng/recovery-eng.zbi.signed",
+                    root_build_dir)
+            type = "zbi.signed"
+          },
+        ]
+      }
+    }
+  }
+
+  assembled_system("recovery-fdr") {
+    base_packages = recovery_packages + [ ":core" ]
+    generate_fvm = !bootfs_only
+
+    system_image_deps = recovery_system_image_deps
+
+    # We avoid compressing blobs in the blobfs image so that they can be more
+    # effectively compressed by the ZBI compressor that is tuned to zstd max.
+    if (generate_fvm) {
+      assembly_compress_blobs = false
+    }
+    ramdisk_fvm_in_zbi = true
+
+    include_component_id_index = true
+
+    devmgr_config = [ "virtcon.disable=true" ]
+    cmdline = []
+
+    bootfs_labels = [
+      ":root",
+      "//build/info:bootfs",
+      "//build/input:recovery_bootfs",
+      "//bundles:bootstrap",
+      "//bundles/drivers:bootstrap",
+      "//bundles/drivers:usb-host-stack",
+      "//bundles/drivers:usb-peripheral-stack",
+    ]
+    bootfs_labels += [
+      "//src/diagnostics/archivist:default-service-config",
+      "//src/sys/component_manager:component_manager_bootfs_config",
+    ]
+
+    if (custom_signing_script != "") {
+      zbi_signing_script = custom_signing_script
+      zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
+    } else if (use_vboot) {
+      zbi_signing_script = vboot_action.script
+      zbi_signing_args = vboot_action.args
+      zbi_signing_script_deps = vboot_action.deps
+      inputs = vboot_action.inputs
+    }
+  }
+
+  assembled_system("recovery-installer") {
+    forward_variables_from(recovery_base, "*")
+    base_packages = recovery_installer_packages + [ ":core-eng" ]
+    system_image_deps = recovery_system_image_deps
+
+    # The installer needs to see all partitions on the system so that it can
+    #determine the installation source and destination
+    fshost_config = {
+      gpt_all = true
+    }
+
+    # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "recovery-installer"
+          path = rebase_path(
+                  "$target_out_dir/recovery-installer/recovery-installer.zbi",
+                  root_build_dir)
+          type = "zbi"
+        },
+      ]
+
+      if (custom_signing_script != "" || use_vboot) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = "recovery-installer.signed"
+            path = rebase_path(
+                    "$target_out_dir/recovery-installer/recovery-installer.zbi.signed",
+                    root_build_dir)
+            type = "zbi.signed"
+          },
+        ]
+      }
+    }
   }
 }

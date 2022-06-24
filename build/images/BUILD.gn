@@ -24,6 +24,9 @@ import("//build/security.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 
+assert(current_toolchain == default_toolchain,
+       "//build/images/* are only valid in the Fuchsia toolchain")
+
 assert(
     bootfs_only == use_bringup_assembly,
     "use_bringup_assembly is replacing bootfs_only, and MUST always be the same value")

@@ -60,6 +60,10 @@ python_binary("make_legacy_config") {
   ]
 }
 
+python_binary("package_list") {
+  main_source = "package_list.py"
+}
+
 python_host_test("test_make_legacy_config") {
   main_source = "test_make_legacy_config.py"
   sources = [ "make_legacy_config.py" ]
