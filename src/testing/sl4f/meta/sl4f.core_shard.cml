@@ -15,11 +15,6 @@
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/data_proxy.cm",
             environment: "#full-resolver-env",
         },
-        {
-            name: "audio_recording",
-            url: "fuchsia-pkg://fuchsia.com/sl4f#meta/audio_recording.cm",
-            environment: "#full-resolver-env",
-        },
     ],
     capabilities: [
         {
@@ -203,19 +198,11 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [
-                "#audio_recording",
-                "#data_proxy",
-            ],
+            to: "#data_proxy",
         },
         {
             protocol: "fuchsia.testing.proxy.TcpProxyControl",
             from: "#data_proxy",
-            to: "#sl4f",
-        },
-        {
-            protocol: "fuchsia.test.audio.recording.AudioRecordingControl",
-            from: "#audio_recording",
             to: "#sl4f",
         },
         {
@@ -263,7 +250,7 @@
             directory: "dev",
             from: "parent",
             as: "dev-virtual-audio",
-            to: "#audio_recording",
+            to: "#sl4f",
             subdir: "sys/platform/00:00:2f",
         },
     ],

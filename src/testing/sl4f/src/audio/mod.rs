@@ -3,4 +3,5 @@
 // found in the LICENSE file.
 
 pub mod commands;
+pub mod facade;
 pub mod types;

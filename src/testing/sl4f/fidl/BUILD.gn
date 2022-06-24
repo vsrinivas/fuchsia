@@ -7,8 +7,3 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.testing.proxy") {
   sources = [ "tcp_proxy.fidl" ]
 }
-
-fidl("fuchsia.test.audio.recording") {
-  sources = [ "audio_recording.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}

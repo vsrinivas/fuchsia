@@ -32,6 +32,11 @@
             path: "/dev/class/temperature",
         },
         {
+            directory: "dev-virtual-audio",
+            rights: [ "r*" ],
+            path: "/dev/sys/platform/00:00:2f",
+        },
+        {
             protocol: [
                 "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.avrcp.PeerManager",
@@ -78,7 +83,6 @@
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.systemmetrics.test.SystemMetricsLogger",
-                "fuchsia.test.audio.recording.AudioRecordingControl",
                 "fuchsia.testing.proxy.TcpProxyControl",
                 "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.thermal.test.TemperatureLogger",
