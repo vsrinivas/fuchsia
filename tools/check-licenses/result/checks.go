@@ -84,12 +84,11 @@ func AllFuchsiaAuthorSourceFilesMustHaveCopyrightHeaders() error {
 func AllLicenseTextsMustBeRecognized() error {
 	if len(license.Unrecognized.Matches) > 0 {
 		var b strings.Builder
-		b.WriteString("Found license texts that were unrecognized:\n\n")
+		b.WriteString("Found unrecognized license texts - please add the relevant license pattern(s) to //tools/check-licenses/license/patterns/* and have it(them) reviewed by the OSRB team:\n\n")
 		for _, m := range license.Unrecognized.Matches {
 			b.WriteString(fmt.Sprintf("-> Line %v of %v\n", m.LineNumber, m.FilePath))
 			b.WriteString(fmt.Sprintf("\n%v\n\n", string(m.Data)))
 		}
-		b.WriteString("\nPlease add the relevant license pattern to //tools/check-licenses/license/pattern/*, and have it reviewed by the OSRB team.\n")
 		return fmt.Errorf(b.String())
 	}
 	return nil
