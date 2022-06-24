@@ -8,6 +8,7 @@
 #include <optional>
 #include <set>
 #include <sstream>
+#include <string_view>
 
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -73,7 +74,13 @@ void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent
 
   output->Append(syntax, prefix);
   output->Append(Syntax::kSpecial, std::to_string(rec.koid));
-  output->Append(syntax, " " + rec.name + "\n");
+  if (!rec.name.empty())
+    output->Append(syntax, " " + rec.name);
+  if (!rec.component_moniker.empty())
+    output->Append(" " + rec.component_moniker, TextForegroundColor::kCyan);
+  if (!rec.component_url.empty())
+    output->Append(" " + rec.component_url, TextForegroundColor::kGray);
+  output->Append(syntax, "\n");
 
   for (const auto& child : rec.children)
     OutputProcessTreeRecord(child, indent + 1, attached, output);
@@ -86,16 +93,32 @@ std::optional<debug_ipc::ProcessTreeRecord> FilterProcessTree(
     const debug_ipc::ProcessTreeRecord& rec, const std::string& filter) {
   debug_ipc::ProcessTreeRecord result;
 
-  for (const auto& child : rec.children) {
-    if (auto matched_child = FilterProcessTree(child, filter))
-      result.children.push_back(*matched_child);
+  // A record matches if its name or component_moniker matches.
+  bool matched = rec.name.find(filter) != std::string::npos;
+  if (!matched && !rec.component_moniker.empty()) {
+    // Use the last segment of the moniker as the "component name".
+    std::string_view moniker = rec.component_moniker;
+    std::string_view name = moniker.substr(moniker.find_last_of('/') + 1);
+    matched = name.find(filter) != std::string_view::npos;
+  }
+
+  // If a record matches, show all its children.
+  if (matched) {
+    result.children = rec.children;
+  } else {
+    for (const auto& child : rec.children) {
+      if (auto matched_child = FilterProcessTree(child, filter))
+        result.children.push_back(*matched_child);
+    }
   }
 
   // Return the node when it matches or any of its children do.
-  if (rec.name.find(filter) != std::string::npos || !result.children.empty()) {
+  if (matched || !result.children.empty()) {
     result.type = rec.type;
     result.koid = rec.koid;
     result.name = rec.name;
+    result.component_url = rec.component_url;
+    result.component_moniker = rec.component_moniker;
     return result;
   }
 
@@ -131,6 +154,9 @@ const char kPsHelp[] =
 
   If a filter-string is provided only jobs and processes whose names contain the
   given case-sensitive substring. It does not support regular expressions.
+
+  If a job is the root job of a component, the component information will also
+  be printed.
 
   Jobs are annotated with "j: <job koid>"
   Processes are annotated with "p: <process koid>")";

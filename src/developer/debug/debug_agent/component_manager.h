@@ -26,6 +26,14 @@ class ComponentManager {
  public:
   virtual ~ComponentManager() = default;
 
+  struct ComponentInfo {
+    std::string url;
+    std::string moniker;
+  };
+
+  // Find the component information if the job is the root job of an ELF component.
+  virtual std::optional<ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const = 0;
+
   // Launches the component with the given command line.
   //
   // The root_job is the job for the attached component or system root job. The requirement is

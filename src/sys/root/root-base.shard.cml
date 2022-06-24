@@ -267,6 +267,16 @@
             to: "#core",
         },
 
+        // Offer events to `core` for debugger usage.
+        {
+            event: [
+                "debug_started",
+                "stopped",
+            ],
+            from: "framework",
+            to: "#core",
+        },
+
         // Offer boot resolver to `bootstrap` for driver usage.
         {
             resolver: "boot_resolver",

@@ -27,7 +27,21 @@
 
                 // For running v1 components.
                 "fuchsia.sys.Launcher",
+
+                // To watch and attach to v2 components.
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
             ],
+            from: "parent",
+        },
+        {
+            // To watch and attach to v2 components.
+            event: [
+                "debug_started",
+                "stopped",
+            ],
+            from: "parent",
         },
         {
             // Some tests depend on "run /boot/bin/crasher".

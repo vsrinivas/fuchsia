@@ -24,6 +24,8 @@ debug_ipc::ProcessTreeReply GetCannedProcessTreeReply() {
   reply.root.children.emplace_back();
   reply.root.children[0].koid = 100;
   reply.root.children[0].name = "j1";
+  reply.root.children[0].component_moniker = "/some/moniker";
+  reply.root.children[0].component_url = "schema://url";
 
   reply.root.children[0].children.emplace_back();
   reply.root.children[0].children[0].koid = 101;
@@ -79,9 +81,9 @@ class VerbPSTest : public ConsoleTest {
 
 TEST_F(VerbPSTest, Filter) {
   // "ps" by itself should show everything.
-  EXPECT_EQ(RunCommandAndGetOutput("ps b"),
+  EXPECT_EQ(RunCommandAndGetOutput("ps"),
             " j: 1 root\n"
-            "   j: 100 j1\n"
+            "   j: 100 j1 /some/moniker schema://url\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n"
             "▶  p: 875123541 foo bar\n");
@@ -89,7 +91,7 @@ TEST_F(VerbPSTest, Filter) {
   // Both processes have a "b" in them, this should match everything.
   EXPECT_EQ(RunCommandAndGetOutput("ps b"),
             " j: 1 root\n"
-            "   j: 100 j1\n"
+            "   j: 100 j1 /some/moniker schema://url\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n"
             "▶  p: 875123541 foo bar\n");
@@ -97,8 +99,16 @@ TEST_F(VerbPSTest, Filter) {
   // Look for just a job name.
   EXPECT_EQ(RunCommandAndGetOutput("ps j2"),
             " j: 1 root\n"
-            "   j: 100 j1\n"
-            "     j: 101 j2\n");
+            "   j: 100 j1 /some/moniker schema://url\n"
+            "     j: 101 j2\n"
+            "       p: 102 baz\n");
+
+  // Look for a component name.
+  EXPECT_EQ(RunCommandAndGetOutput("ps moniker"),
+            " j: 1 root\n"
+            "   j: 100 j1 /some/moniker schema://url\n"
+            "     j: 101 j2\n"
+            "       p: 102 baz\n");
 
   // Look for just one process name with a space in it (matches "foo bar").
   EXPECT_EQ(RunCommandAndGetOutput("ps o b"),
@@ -107,6 +117,7 @@ TEST_F(VerbPSTest, Filter) {
 
   // Matches nothing.
   EXPECT_EQ(RunCommandAndGetOutput("ps zzz"), "No processes or jobs matching \"zzz\".\n");
+  EXPECT_EQ(RunCommandAndGetOutput("ps some"), "No processes or jobs matching \"some\".\n");
 }
 
 }  // namespace zxdb

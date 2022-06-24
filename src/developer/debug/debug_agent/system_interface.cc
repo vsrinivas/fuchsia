@@ -4,17 +4,24 @@
 
 #include "src/developer/debug/debug_agent/system_interface.h"
 
+#include "src/developer/debug/debug_agent/component_manager.h"
+
 namespace debug_agent {
 
 namespace {
 
 using debug_ipc::ProcessTreeRecord;
 
-ProcessTreeRecord GetProcessTreeFrom(const JobHandle& job) {
+ProcessTreeRecord GetProcessTreeFrom(const JobHandle& job,
+                                     const ComponentManager& component_manager) {
   ProcessTreeRecord result;
   result.type = ProcessTreeRecord::Type::kJob;
   result.koid = job.GetKoid();
   result.name = job.GetName();
+  if (auto component_info = component_manager.FindComponentInfo(job.GetKoid())) {
+    result.component_url = component_info->url;
+    result.component_moniker = component_info->moniker;
+  }
 
   for (const auto& child_process : job.GetChildProcesses()) {
     ProcessTreeRecord& proc_record = result.children.emplace_back();
@@ -24,16 +31,17 @@ ProcessTreeRecord GetProcessTreeFrom(const JobHandle& job) {
   }
 
   for (const auto& child_job : job.GetChildJobs())
-    result.children.push_back(GetProcessTreeFrom(*child_job));
+    result.children.push_back(GetProcessTreeFrom(*child_job, component_manager));
 
   return result;
 }
 
 }  // namespace
 
-ProcessTreeRecord SystemInterface::GetProcessTree() const {
+ProcessTreeRecord SystemInterface::GetProcessTree() {
+  const ComponentManager& component_manager = GetComponentManager();
   if (std::unique_ptr<JobHandle> root_job = GetRootJob())
-    return GetProcessTreeFrom(*root_job);
+    return GetProcessTreeFrom(*root_job, component_manager);
   return ProcessTreeRecord();
 }
 

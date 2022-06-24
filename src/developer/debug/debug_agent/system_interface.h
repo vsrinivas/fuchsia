@@ -57,7 +57,7 @@ class SystemInterface {
   // These all use the virtual interface above to implement their functionality.
 
   // Collects the process tree starting from the given job handle.
-  debug_ipc::ProcessTreeRecord GetProcessTree() const;
+  debug_ipc::ProcessTreeRecord GetProcessTree();
 
   // Returns a handle to the job/process with the given koid. Returns an empty pointer if it was not
   // found. This can also happen if the debug_agent doesn't have permission to see it.

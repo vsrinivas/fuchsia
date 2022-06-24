@@ -40,7 +40,8 @@ void DebuggedJob::OnProcessStarting(std::unique_ptr<ProcessHandle> process) {
   // Tools like fx serve will connect every second or so to the target, spamming logging for this
   // with a lot of "/boot/bin/sh" starting. We filter this out as it makes debugging much harder.
   if (proc_name != "/boot/bin/sh") {
-    DEBUG_LOG(Job) << "Debugged job " << koid() << ": Process " << proc_name << " starting.";
+    DEBUG_LOG(Job) << "Debugged job " << koid() << ": Process starting pid=" << process->GetKoid()
+                   << " name=" << proc_name;
   }
 
   // Search through the available filters. If the regex is not valid, fallback to checking if

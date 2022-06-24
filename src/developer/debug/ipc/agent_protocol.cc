@@ -125,7 +125,11 @@ void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(record.type));
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
-  Serialize(record.children, writer);
+  if (record.type == ProcessTreeRecord::Type::kJob) {
+    writer->WriteString(record.component_url);
+    writer->WriteString(record.component_moniker);
+    Serialize(record.children, writer);
+  }
 }
 
 void Serialize(const ThreadRecord& record, MessageWriter* writer) {

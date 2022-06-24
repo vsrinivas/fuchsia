@@ -21,7 +21,15 @@ bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
     return false;
   if (!reader->ReadString(&record->name))
     return false;
-  return Deserialize(reader, &record->children);
+  if (record->type == ProcessTreeRecord::Type::kJob) {
+    if (!reader->ReadString(&record->component_url))
+      return false;
+    if (!reader->ReadString(&record->component_moniker))
+      return false;
+    if (!Deserialize(reader, &record->children))
+      return false;
+  }
+  return true;
 }
 
 bool Deserialize(MessageReader* reader, ThreadRecord* record) {

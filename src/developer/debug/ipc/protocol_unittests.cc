@@ -377,6 +377,8 @@ TEST(Protocol, ProcessTreeReply) {
   initial.root.type = ProcessTreeRecord::Type::kJob;
   initial.root.koid = 1234;
   initial.root.name = "root";
+  initial.root.component_url = "fuchsia-pkg://package#meta/component.cm";
+  initial.root.component_moniker = "/moniker";
 
   initial.root.children.resize(1);
   initial.root.children[0].type = ProcessTreeRecord::Type::kProcess;
@@ -389,6 +391,8 @@ TEST(Protocol, ProcessTreeReply) {
   EXPECT_EQ(initial.root.type, second.root.type);
   EXPECT_EQ(initial.root.koid, second.root.koid);
   EXPECT_EQ(initial.root.name, second.root.name);
+  EXPECT_EQ(initial.root.component_moniker, second.root.component_moniker);
+  EXPECT_EQ(initial.root.component_url, second.root.component_url);
   ASSERT_EQ(initial.root.children.size(), second.root.children.size());
   EXPECT_EQ(initial.root.children[0].type, second.root.children[0].type);
   EXPECT_EQ(initial.root.children[0].koid, second.root.children[0].koid);

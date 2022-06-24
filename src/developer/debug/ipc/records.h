@@ -142,6 +142,12 @@ struct ProcessTreeRecord {
   uint64_t koid = 0;
   std::string name;
 
+  // The following fields are only valid on kJob and will be skipped if type is kProcess.
+
+  // The component information if the current job is the root job of an ELF component.
+  std::string component_url;
+  std::string component_moniker;
+
   std::vector<ProcessTreeRecord> children;
 };
 

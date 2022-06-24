@@ -15,7 +15,25 @@
             protocol: [
                 "fuchsia.kernel.RootJob",
                 "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
             ],
+        },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "framework",
+            path: "/svc/fuchsia.sys2.RealmExplorer.root",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+            path: "/svc/fuchsia.sys2.RealmQuery.root",
+        },
+        {
+            event: [
+                "debug_started",
+                "stopped",
+            ],
+            from: "framework",
         },
     ],
 }

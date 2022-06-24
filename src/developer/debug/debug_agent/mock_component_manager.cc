@@ -6,6 +6,11 @@
 
 namespace debug_agent {
 
+std::optional<ComponentManager::ComponentInfo> MockComponentManager::FindComponentInfo(
+    zx_koid_t job_koid) const {
+  return std::nullopt;
+}
+
 debug::Status MockComponentManager::LaunchComponent(DebuggedJob* root_job,
                                                     const std::vector<std::string>& argv,
                                                     uint64_t* component_id) {
