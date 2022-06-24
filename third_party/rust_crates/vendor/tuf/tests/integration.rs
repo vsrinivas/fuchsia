@@ -1,11 +1,11 @@
 use assert_matches::assert_matches;
+use chrono::offset::Utc;
 use futures_executor::block_on;
 use maplit::hashmap;
 use tuf::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
 use tuf::interchange::Json;
 use tuf::metadata::{
-    Delegation, Delegations, MetadataDescription, MetadataPath, Role, TargetPath,
-    TargetsMetadataBuilder,
+    Delegation, Delegations, MetadataDescription, MetadataPath, TargetPath, TargetsMetadataBuilder,
 };
 use tuf::repo_builder::RepoBuilder;
 use tuf::repository::EphemeralRepository;
@@ -22,6 +22,8 @@ const ED25519_6_PK8: &[u8] = include_bytes!("./ed25519/ed25519-6.pk8.der");
 #[test]
 fn simple_delegation() {
     block_on(async {
+        let now = Utc::now();
+
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let snapshot_key = Ed25519PrivateKey::from_pkcs8(ED25519_2_PK8).unwrap();
         let targets_key = Ed25519PrivateKey::from_pkcs8(ED25519_3_PK8).unwrap();
@@ -84,8 +86,9 @@ fn simple_delegation() {
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
-        tuf.update_delegation(
-            &MetadataPath::from_role(&Role::Targets),
+        tuf.update_delegated_targets(
+            &now,
+            &MetadataPath::targets(),
             &MetadataPath::new("delegation").unwrap(),
             &raw_delegation,
         )
@@ -100,6 +103,8 @@ fn simple_delegation() {
 #[test]
 fn nested_delegation() {
     block_on(async {
+        let now = Utc::now();
+
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let snapshot_key = Ed25519PrivateKey::from_pkcs8(ED25519_2_PK8).unwrap();
         let targets_key = Ed25519PrivateKey::from_pkcs8(ED25519_3_PK8).unwrap();
@@ -179,8 +184,9 @@ fn nested_delegation() {
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
-        tuf.update_delegation(
-            &MetadataPath::from_role(&Role::Targets),
+        tuf.update_delegated_targets(
+            &now,
+            &MetadataPath::targets(),
             &MetadataPath::new("delegation-a").unwrap(),
             &raw_delegation,
         )
@@ -201,7 +207,8 @@ fn nested_delegation() {
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
-        tuf.update_delegation(
+        tuf.update_delegated_targets(
+            &now,
             &MetadataPath::new("delegation-a").unwrap(),
             &MetadataPath::new("delegation-b").unwrap(),
             &raw_delegation,
@@ -217,6 +224,8 @@ fn nested_delegation() {
 #[test]
 fn rejects_bad_delegation_signatures() {
     block_on(async {
+        let now = Utc::now();
+
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let snapshot_key = Ed25519PrivateKey::from_pkcs8(ED25519_2_PK8).unwrap();
         let targets_key = Ed25519PrivateKey::from_pkcs8(ED25519_3_PK8).unwrap();
@@ -280,8 +289,9 @@ fn rejects_bad_delegation_signatures() {
         let raw_delegation = delegation.to_raw().unwrap();
 
         assert_matches!(
-            tuf.update_delegation(
-                &MetadataPath::from_role(&Role::Targets),
+            tuf.update_delegated_targets(
+                &now,
+                &MetadataPath::targets(),
                 &MetadataPath::new("delegation").unwrap(),
                 &raw_delegation
             ),
@@ -298,6 +308,8 @@ fn rejects_bad_delegation_signatures() {
 #[test]
 fn diamond_delegation() {
     block_on(async {
+        let now = Utc::now();
+
         let etc_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let targets_key = Ed25519PrivateKey::from_pkcs8(ED25519_2_PK8).unwrap();
         let delegation_a_key = Ed25519PrivateKey::from_pkcs8(ED25519_3_PK8).unwrap();
@@ -319,6 +331,73 @@ fn diamond_delegation() {
         // can contain target "bar" which is unaccessible and target "foo" which is.
         //
         // Verify tuf::Database handles this situation correctly.
+
+        //// build delegation A ////
+
+        let delegation_a_delegations = Delegations::new(
+            hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
+            vec![Delegation::new(
+                MetadataPath::new("delegation-c").unwrap(),
+                false,
+                1,
+                vec![delegation_c_key.public().key_id().clone()].iter().cloned().collect(),
+                vec![TargetPath::new("foo").unwrap()].iter().cloned().collect(),
+            )
+            .unwrap()],
+        )
+        .unwrap();
+
+        let delegation_a = TargetsMetadataBuilder::new()
+            .delegations(delegation_a_delegations)
+            .signed::<Json>(&delegation_a_key)
+            .unwrap();
+        let raw_delegation_a = delegation_a.to_raw().unwrap();
+
+        //// build delegation B ////
+
+        let delegations_b = Delegations::new(
+            hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
+            vec![Delegation::new(
+                MetadataPath::new("delegation-c").unwrap(),
+                false,
+                1,
+                // oops, wrong key.
+                vec![delegation_b_key.public().key_id().clone()].iter().cloned().collect(),
+                vec![TargetPath::new("bar").unwrap()].iter().cloned().collect(),
+            )
+            .unwrap()],
+        )
+        .unwrap();
+
+        let delegation_b = TargetsMetadataBuilder::new()
+            .delegations(delegations_b)
+            .signed::<Json>(&delegation_b_key)
+            .unwrap();
+        let raw_delegation_b = delegation_b.to_raw().unwrap();
+
+        //// build delegation C ////
+
+        let foo_target_file: &[u8] = b"foo contents";
+        let bar_target_file: &[u8] = b"bar contents";
+
+        let delegation_c = TargetsMetadataBuilder::new()
+            .insert_target_from_slice(
+                TargetPath::new("foo").unwrap(),
+                foo_target_file,
+                &[HashAlgorithm::Sha256],
+            )
+            .unwrap()
+            .insert_target_from_slice(
+                TargetPath::new("bar").unwrap(),
+                bar_target_file,
+                &[HashAlgorithm::Sha256],
+            )
+            .unwrap()
+            .signed::<Json>(&delegation_c_key)
+            .unwrap();
+        let raw_delegation_c = delegation_c.to_raw().unwrap();
+
+        //// construct the database ////
 
         let delegations = Delegations::new(
             hashmap! {
@@ -372,18 +451,30 @@ fn diamond_delegation() {
                 builder
                     .insert_metadata_description(
                         MetadataPath::new("delegation-a").unwrap(),
-                        MetadataDescription::from_slice(&[0u8], 1, &[HashAlgorithm::Sha256])
-                            .unwrap(),
+                        MetadataDescription::from_slice(
+                            raw_delegation_a.as_bytes(),
+                            1,
+                            &[HashAlgorithm::Sha256],
+                        )
+                        .unwrap(),
                     )
                     .insert_metadata_description(
                         MetadataPath::new("delegation-b").unwrap(),
-                        MetadataDescription::from_slice(&[0u8], 1, &[HashAlgorithm::Sha256])
-                            .unwrap(),
+                        MetadataDescription::from_slice(
+                            raw_delegation_b.as_bytes(),
+                            1,
+                            &[HashAlgorithm::Sha256],
+                        )
+                        .unwrap(),
                     )
                     .insert_metadata_description(
                         MetadataPath::new("delegation-c").unwrap(),
-                        MetadataDescription::from_slice(&[0u8], 1, &[HashAlgorithm::Sha256])
-                            .unwrap(),
+                        MetadataDescription::from_slice(
+                            raw_delegation_c.as_bytes(),
+                            1,
+                            &[HashAlgorithm::Sha256],
+                        )
+                        .unwrap(),
                     )
             })
             .unwrap()
@@ -393,102 +484,43 @@ fn diamond_delegation() {
 
         let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
 
-        //// build delegation A ////
+        //// Verify we can trust delegation-a and delegation-b..
 
-        let delegations = Delegations::new(
-        hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
-        vec![Delegation::new(
-            MetadataPath::new("delegation-c").unwrap(),
-            false,
-            1,
-            vec![delegation_c_key.public().key_id().clone()].iter().cloned().collect(),
-            vec![TargetPath::new("foo").unwrap()].iter().cloned().collect(),
-        )
-        .unwrap()],
-    )
-    .unwrap();
-
-        let delegation = TargetsMetadataBuilder::new()
-            .delegations(delegations)
-            .signed::<Json>(&delegation_a_key)
-            .unwrap();
-        let raw_delegation = delegation.to_raw().unwrap();
-
-        tuf.update_delegation(
-            &MetadataPath::from_role(&Role::Targets),
+        tuf.update_delegated_targets(
+            &now,
+            &MetadataPath::targets(),
             &MetadataPath::new("delegation-a").unwrap(),
-            &raw_delegation,
+            &raw_delegation_a,
         )
         .unwrap();
 
-        //// build delegation B ////
-
-        let delegations = Delegations::new(
-        hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
-        vec![Delegation::new(
-            MetadataPath::new("delegation-c").unwrap(),
-            false,
-            1,
-            // oops, wrong key.
-            vec![delegation_b_key.public().key_id().clone()].iter().cloned().collect(),
-            vec![TargetPath::new("bar").unwrap()].iter().cloned().collect(),
-        )
-        .unwrap()],
-    )
-    .unwrap();
-
-        let delegation = TargetsMetadataBuilder::new()
-            .delegations(delegations)
-            .signed::<Json>(&delegation_b_key)
-            .unwrap();
-        let raw_delegation = delegation.to_raw().unwrap();
-
-        tuf.update_delegation(
-            &MetadataPath::from_role(&Role::Targets),
+        tuf.update_delegated_targets(
+            &now,
+            &MetadataPath::targets(),
             &MetadataPath::new("delegation-b").unwrap(),
-            &raw_delegation,
+            &raw_delegation_b,
         )
         .unwrap();
-
-        //// build delegation C ////
-
-        let foo_target_file: &[u8] = b"foo contents";
-        let bar_target_file: &[u8] = b"bar contents";
-
-        let delegation = TargetsMetadataBuilder::new()
-            .insert_target_from_slice(
-                TargetPath::new("foo").unwrap(),
-                foo_target_file,
-                &[HashAlgorithm::Sha256],
-            )
-            .unwrap()
-            .insert_target_from_slice(
-                TargetPath::new("bar").unwrap(),
-                bar_target_file,
-                &[HashAlgorithm::Sha256],
-            )
-            .unwrap()
-            .signed::<Json>(&delegation_c_key)
-            .unwrap();
-        let raw_delegation = delegation.to_raw().unwrap();
 
         //// Verify delegation-c is valid, but only when updated through delegation-a.
 
-        tuf.update_delegation(
-            &MetadataPath::new("delegation-a").unwrap(),
-            &MetadataPath::new("delegation-c").unwrap(),
-            &raw_delegation,
-        )
-        .unwrap();
-
         assert_matches!(
-            tuf.update_delegation(
+            tuf.update_delegated_targets(
+                &now,
                 &MetadataPath::new("delegation-b").unwrap(),
                 &MetadataPath::new("delegation-c").unwrap(),
-                &raw_delegation
+                &raw_delegation_c
             ),
             Err(Error::VerificationFailure(_))
         );
+
+        tuf.update_delegated_targets(
+            &now,
+            &MetadataPath::new("delegation-a").unwrap(),
+            &MetadataPath::new("delegation-c").unwrap(),
+            &raw_delegation_c,
+        )
+        .unwrap();
 
         assert!(tuf
             .target_description(&TargetPath::new("foo").unwrap())

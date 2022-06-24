@@ -12,13 +12,20 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta6"
-authors = ["heartsucker <heartsucker@autistici.org>", "Erick Tryzelaar <etryzelaar@google.com>"]
+version = "0.3.0-beta7"
+authors = [
+    "heartsucker <heartsucker@autistici.org>",
+    "Erick Tryzelaar <etryzelaar@google.com>",
+]
 description = "Library for The Update Framework (TUF)"
 homepage = "https://github.com/theupdateframework/rust-tuf"
 documentation = "https://docs.rs/tuf"
 readme = "README.md"
-keywords = ["security", "update", "repository"]
+keywords = [
+    "security",
+    "update",
+    "repository",
+]
 categories = ["cryptography"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/theupdateframework/rust-tuf"
@@ -26,6 +33,7 @@ repository = "https://github.com/theupdateframework/rust-tuf"
 [lib]
 name = "tuf"
 path = "./src/lib.rs"
+
 [dependencies.chrono]
 version = "0.4"
 features = ["serde"]
@@ -55,7 +63,11 @@ package = "hyper"
 
 [dependencies.hyper_014]
 version = "0.14.15"
-features = ["stream", "client", "http1"]
+features = [
+    "stream",
+    "client",
+    "http1",
+]
 optional = true
 default-features = false
 package = "hyper"
@@ -92,6 +104,7 @@ version = "0.7"
 
 [dependencies.url]
 version = "2"
+
 [dev-dependencies.assert_matches]
 version = "1.5.0"
 

@@ -6,7 +6,7 @@ use futures_io::AsyncRead;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, Error as DeserializeError};
 use serde::ser::{Error as SerializeError, Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Display};
 use std::marker::PhantomData;
@@ -151,12 +151,15 @@ pub enum Role {
     /// The root role.
     #[serde(rename = "root")]
     Root,
+
     /// The snapshot role.
     #[serde(rename = "snapshot")]
     Snapshot,
+
     /// The targets role.
     #[serde(rename = "targets")]
     Targets,
+
     /// The timestamp role.
     #[serde(rename = "timestamp")]
     Timestamp,
@@ -168,12 +171,12 @@ impl Role {
     /// ```
     /// use tuf::metadata::{MetadataPath, Role};
     ///
-    /// assert!(Role::Root.fuzzy_matches_path(&MetadataPath::from_role(&Role::Root)));
-    /// assert!(Role::Snapshot.fuzzy_matches_path(&MetadataPath::from_role(&Role::Snapshot)));
-    /// assert!(Role::Targets.fuzzy_matches_path(&MetadataPath::from_role(&Role::Targets)));
-    /// assert!(Role::Timestamp.fuzzy_matches_path(&MetadataPath::from_role(&Role::Timestamp)));
+    /// assert!(Role::Root.fuzzy_matches_path(&MetadataPath::root()));
+    /// assert!(Role::Snapshot.fuzzy_matches_path(&MetadataPath::snapshot()));
+    /// assert!(Role::Targets.fuzzy_matches_path(&MetadataPath::targets()));
+    /// assert!(Role::Timestamp.fuzzy_matches_path(&MetadataPath::timestamp()));
     ///
-    /// assert!(!Role::Root.fuzzy_matches_path(&MetadataPath::from_role(&Role::Snapshot)));
+    /// assert!(!Role::Root.fuzzy_matches_path(&MetadataPath::snapshot()));
     /// assert!(!Role::Root.fuzzy_matches_path(&MetadataPath::new("wat").unwrap()));
     /// ```
     pub fn fuzzy_matches_path(&self, path: &MetadataPath) -> bool {
@@ -182,7 +185,7 @@ impl Role {
             Role::Snapshot if &path.0 == "snapshot" => true,
             Role::Timestamp if &path.0 == "timestamp" => true,
             Role::Targets if &path.0 == "targets" => true,
-            Role::Targets if !&["root", "snapshot", "targets"].contains(&path.0.as_str()) => true,
+            Role::Targets if !&["root", "snapshot", "targets"].contains(&path.0.as_ref()) => true,
             _ => false,
         }
     }
@@ -973,9 +976,29 @@ impl<'de> Deserialize<'de> for RoleDefinition {
 /// let _ = MetadataPath::new("root.json");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
-pub struct MetadataPath(String);
+pub struct MetadataPath(Cow<'static, str>);
 
 impl MetadataPath {
+    /// Create a new `MetadataPath` for the Root role.
+    pub fn root() -> Self {
+        MetadataPath(Role::Root.name().into())
+    }
+
+    /// Create a new `MetadataPath` for the Timestamp role.
+    pub fn timestamp() -> Self {
+        MetadataPath(Role::Timestamp.name().into())
+    }
+
+    /// Create a new `MetadataPath` for the Snapshot role.
+    pub fn snapshot() -> Self {
+        MetadataPath(Role::Snapshot.name().into())
+    }
+
+    /// Create a new `MetadataPath` for the targets role.
+    pub fn targets() -> Self {
+        MetadataPath(Role::Targets.name().into())
+    }
+
     /// Create a new `MetadataPath` from a `String`.
     ///
     /// ```
@@ -989,27 +1012,18 @@ impl MetadataPath {
     /// assert!(MetadataPath::new("foo/..bar").is_ok());
     /// assert!(MetadataPath::new("foo/bar..").is_ok());
     /// ```
-    pub fn new<P: Into<String>>(path: P) -> Result<Self> {
+    pub fn new<P: Into<Cow<'static, str>>>(path: P) -> Result<Self> {
         let path = path.into();
-        safe_path(&path)?;
-        Ok(MetadataPath(path))
-    }
-
-    /// Create a metadata path from the given role.
-    ///
-    /// ```
-    /// # use tuf::metadata::{Role, MetadataPath};
-    /// assert_eq!(MetadataPath::from_role(&Role::Root),
-    ///            MetadataPath::new("root").unwrap());
-    /// assert_eq!(MetadataPath::from_role(&Role::Snapshot),
-    ///            MetadataPath::new("snapshot").unwrap());
-    /// assert_eq!(MetadataPath::from_role(&Role::Targets),
-    ///            MetadataPath::new("targets").unwrap());
-    /// assert_eq!(MetadataPath::from_role(&Role::Timestamp),
-    ///            MetadataPath::new("timestamp").unwrap());
-    /// ```
-    pub fn from_role(role: &Role) -> Self {
-        Self::new(format!("{}", role)).unwrap()
+        match path.as_ref() {
+            "root" => Ok(MetadataPath::root()),
+            "timestamp" => Ok(MetadataPath::timestamp()),
+            "snapshot" => Ok(MetadataPath::snapshot()),
+            "targets" => Ok(MetadataPath::targets()),
+            _ => {
+                safe_path(&path)?;
+                Ok(MetadataPath(path))
+            }
+        }
     }
 
     /// Split `MetadataPath` into components that can be joined to create URL paths, Unix paths, or
@@ -1034,6 +1048,17 @@ impl MetadataPath {
         let len = buf.len();
         buf[len - 1] = format!("{}{}.{}", version.prefix(), buf[len - 1], D::extension());
         buf
+    }
+}
+
+impl From<Role> for MetadataPath {
+    fn from(role: Role) -> MetadataPath {
+        match role {
+            Role::Root => MetadataPath::root(),
+            Role::Timestamp => MetadataPath::timestamp(),
+            Role::Snapshot => MetadataPath::snapshot(),
+            Role::Targets => MetadataPath::targets(),
+        }
     }
 }
 
@@ -1332,7 +1357,7 @@ impl SnapshotMetadataBuilder {
         hash_algs: &[HashAlgorithm],
     ) -> Result<Self>
     where
-        P: Into<String>,
+        P: Into<Cow<'static, str>>,
         M: Metadata,
         D: DataInterchange,
     {

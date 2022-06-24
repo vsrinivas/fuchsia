@@ -7,10 +7,10 @@ use {
         interchange::DataInterchange,
         metadata::{
             Metadata, MetadataDescription, MetadataPath, MetadataVersion, RawSignedMetadata,
-            RawSignedMetadataSet, RawSignedMetadataSetBuilder, Role, RootMetadata,
-            RootMetadataBuilder, SignedMetadataBuilder, SnapshotMetadata, SnapshotMetadataBuilder,
-            TargetDescription, TargetPath, TargetsMetadata, TargetsMetadataBuilder,
-            TimestampMetadata, TimestampMetadataBuilder,
+            RawSignedMetadataSet, RawSignedMetadataSetBuilder, RootMetadata, RootMetadataBuilder,
+            SignedMetadataBuilder, SnapshotMetadata, SnapshotMetadataBuilder, TargetDescription,
+            TargetPath, TargetsMetadata, TargetsMetadataBuilder, TimestampMetadata,
+            TimestampMetadataBuilder,
         },
         repository::RepositoryStorage,
         Error, Result,
@@ -707,7 +707,7 @@ where
         } else if let Some(db) = self.ctx.db {
             db.trusted_root().consistent_snapshot()
         } else {
-            return Err(Error::MissingMetadata(Role::Root));
+            return Err(Error::MissingMetadata(MetadataPath::root()));
         };
 
         let target_description = TargetDescription::from_reader_with_custom(
@@ -929,10 +929,8 @@ where
 
         // Overwrite the targets entry if specified.
         if let Some(targets_description) = self.state.targets_description()? {
-            snapshot_builder = snapshot_builder.insert_metadata_description(
-                MetadataPath::from_role(&Role::Targets),
-                targets_description,
-            );
+            snapshot_builder = snapshot_builder
+                .insert_metadata_description(MetadataPath::targets(), targets_description);
         };
 
         let snapshot = f(snapshot_builder).build()?;
@@ -1082,7 +1080,7 @@ where
                 .db
                 .and_then(|db| db.trusted_timestamp())
                 .map(|timestamp| timestamp.snapshot().clone())
-                .ok_or(Error::MissingMetadata(Role::Timestamp))?
+                .ok_or_else(|| Error::MissingMetadata(MetadataPath::timestamp()))?
         };
 
         let timestamp_builder = TimestampMetadataBuilder::from_metadata_description(description)
@@ -1213,19 +1211,21 @@ where
         } else if let Some(ref root) = self.state.staged_root {
             Database::from_trusted_root(&root.raw)?
         } else {
-            return Err(Error::MissingMetadata(Role::Root));
+            return Err(Error::MissingMetadata(MetadataPath::root()));
         };
 
+        let now = Utc::now();
+
         if let Some(ref timestamp) = self.state.staged_timestamp {
-            db.update_timestamp(&timestamp.raw)?;
+            db.update_timestamp(&now, &timestamp.raw)?;
         }
 
         if let Some(ref snapshot) = self.state.staged_snapshot {
-            db.update_snapshot(&snapshot.raw)?;
+            db.update_snapshot(&now, &snapshot.raw)?;
         }
 
         if let Some(ref targets) = self.state.staged_targets {
-            db.update_targets(&targets.raw)?;
+            db.update_targets(&now, &targets.raw)?;
         }
 
         Ok(())
@@ -1236,7 +1236,7 @@ where
             self.ctx
                 .repo
                 .store_metadata(
-                    &MetadataPath::from_role(&Role::Root),
+                    &MetadataPath::root(),
                     MetadataVersion::Number(root.metadata.version()),
                     &mut root.raw.as_bytes(),
                 )
@@ -1245,7 +1245,7 @@ where
             self.ctx
                 .repo
                 .store_metadata(
-                    &MetadataPath::from_role(&Role::Root),
+                    &MetadataPath::root(),
                     MetadataVersion::None,
                     &mut root.raw.as_bytes(),
                 )
@@ -1255,11 +1255,11 @@ where
         } else if let Some(db) = self.ctx.db {
             db.trusted_root().consistent_snapshot()
         } else {
-            return Err(Error::MissingMetadata(Role::Root));
+            return Err(Error::MissingMetadata(MetadataPath::root()));
         };
 
         if let Some(ref targets) = self.state.staged_targets {
-            let path = MetadataPath::from_role(&Role::Targets);
+            let path = MetadataPath::targets();
             self.ctx
                 .repo
                 .store_metadata(&path, MetadataVersion::None, &mut targets.raw.as_bytes())
@@ -1278,7 +1278,7 @@ where
         }
 
         if let Some(ref snapshot) = self.state.staged_snapshot {
-            let path = MetadataPath::from_role(&Role::Snapshot);
+            let path = MetadataPath::snapshot();
             self.ctx
                 .repo
                 .store_metadata(&path, MetadataVersion::None, &mut snapshot.raw.as_bytes())
@@ -1300,7 +1300,7 @@ where
             self.ctx
                 .repo
                 .store_metadata(
-                    &MetadataPath::from_role(&Role::Timestamp),
+                    &MetadataPath::timestamp(),
                     MetadataVersion::None,
                     &mut timestamp.raw.as_bytes(),
                 )
@@ -1432,7 +1432,7 @@ mod tests {
         };
 
         let snapshot = SnapshotMetadataBuilder::new()
-            .insert_metadata_description(MetadataPath::from_role(&Role::Targets), description)
+            .insert_metadata_description(MetadataPath::targets(), description)
             .version(version)
             .expires(expires)
             .build()
@@ -1598,35 +1598,23 @@ mod tests {
         // Make sure we stored the metadata correctly.
         let mut expected_metadata: BTreeMap<_, _> = vec![
             (
-                (
-                    MetadataPath::from_role(&Role::Root),
-                    MetadataVersion::Number(1),
-                ),
+                (MetadataPath::root(), MetadataVersion::Number(1)),
                 raw_root1.as_bytes(),
             ),
             (
-                (MetadataPath::from_role(&Role::Root), MetadataVersion::None),
+                (MetadataPath::root(), MetadataVersion::None),
                 raw_root1.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Targets),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::targets(), MetadataVersion::None),
                 raw_targets1.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Snapshot),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::snapshot(), MetadataVersion::None),
                 raw_snapshot1.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Timestamp),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::timestamp(), MetadataVersion::None),
                 raw_timestamp1.as_bytes(),
             ),
         ]
@@ -1636,17 +1624,11 @@ mod tests {
         if consistent_snapshot {
             expected_metadata.extend(vec![
                 (
-                    (
-                        MetadataPath::from_role(&Role::Targets),
-                        MetadataVersion::Number(1),
-                    ),
+                    (MetadataPath::targets(), MetadataVersion::Number(1)),
                     raw_targets1.as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Snapshot),
-                        MetadataVersion::Number(1),
-                    ),
+                    (MetadataPath::snapshot(), MetadataVersion::Number(1)),
                     raw_snapshot1.as_bytes(),
                 ),
             ]);
@@ -1726,35 +1708,23 @@ mod tests {
         // Check that the new metadata was written.
         expected_metadata.extend(vec![
             (
-                (
-                    MetadataPath::from_role(&Role::Root),
-                    MetadataVersion::Number(2),
-                ),
+                (MetadataPath::root(), MetadataVersion::Number(2)),
                 raw_root2.as_bytes(),
             ),
             (
-                (MetadataPath::from_role(&Role::Root), MetadataVersion::None),
+                (MetadataPath::root(), MetadataVersion::None),
                 raw_root2.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Targets),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::targets(), MetadataVersion::None),
                 raw_targets2.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Snapshot),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::snapshot(), MetadataVersion::None),
                 raw_snapshot2.as_bytes(),
             ),
             (
-                (
-                    MetadataPath::from_role(&Role::Timestamp),
-                    MetadataVersion::None,
-                ),
+                (MetadataPath::timestamp(), MetadataVersion::None),
                 raw_timestamp2.as_bytes(),
             ),
         ]);
@@ -1762,17 +1732,11 @@ mod tests {
         if consistent_snapshot {
             expected_metadata.extend(vec![
                 (
-                    (
-                        MetadataPath::from_role(&Role::Targets),
-                        MetadataVersion::Number(2),
-                    ),
+                    (MetadataPath::targets(), MetadataVersion::Number(2)),
                     raw_targets2.as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Snapshot),
-                        MetadataVersion::Number(2),
-                    ),
+                    (MetadataPath::snapshot(), MetadataVersion::Number(2)),
                     raw_snapshot2.as_bytes(),
                 ),
             ]);
@@ -2222,49 +2186,31 @@ mod tests {
 
             let mut expected_metadata: BTreeMap<_, _> = vec![
                 (
-                    (
-                        MetadataPath::from_role(&Role::Root),
-                        MetadataVersion::Number(1),
-                    ),
+                    (MetadataPath::root(), MetadataVersion::Number(1)),
                     metadata1.root().unwrap().as_bytes(),
                 ),
                 (
-                    (MetadataPath::from_role(&Role::Root), MetadataVersion::None),
+                    (MetadataPath::root(), MetadataVersion::None),
                     metadata1.root().unwrap().as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Targets),
-                        MetadataVersion::Number(1),
-                    ),
+                    (MetadataPath::targets(), MetadataVersion::Number(1)),
                     metadata1.targets().unwrap().as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Targets),
-                        MetadataVersion::None,
-                    ),
+                    (MetadataPath::targets(), MetadataVersion::None),
                     metadata1.targets().unwrap().as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Snapshot),
-                        MetadataVersion::Number(1),
-                    ),
+                    (MetadataPath::snapshot(), MetadataVersion::Number(1)),
                     metadata1.snapshot().unwrap().as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Snapshot),
-                        MetadataVersion::None,
-                    ),
+                    (MetadataPath::snapshot(), MetadataVersion::None),
                     metadata1.snapshot().unwrap().as_bytes(),
                 ),
                 (
-                    (
-                        MetadataPath::from_role(&Role::Timestamp),
-                        MetadataVersion::None,
-                    ),
+                    (MetadataPath::timestamp(), MetadataVersion::None),
                     metadata1.timestamp().unwrap().as_bytes(),
                 ),
             ]
@@ -2302,38 +2248,23 @@ mod tests {
             expected_metadata.extend(
                 vec![
                     (
-                        (
-                            MetadataPath::from_role(&Role::Targets),
-                            MetadataVersion::Number(2),
-                        ),
+                        (MetadataPath::targets(), MetadataVersion::Number(2)),
                         metadata2.targets().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Targets),
-                            MetadataVersion::None,
-                        ),
+                        (MetadataPath::targets(), MetadataVersion::None),
                         metadata2.targets().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Snapshot),
-                            MetadataVersion::Number(2),
-                        ),
+                        (MetadataPath::snapshot(), MetadataVersion::Number(2)),
                         metadata2.snapshot().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Snapshot),
-                            MetadataVersion::None,
-                        ),
+                        (MetadataPath::snapshot(), MetadataVersion::None),
                         metadata2.snapshot().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Timestamp),
-                            MetadataVersion::None,
-                        ),
+                        (MetadataPath::timestamp(), MetadataVersion::None),
                         metadata2.timestamp().unwrap().as_bytes(),
                     ),
                 ]
@@ -2368,24 +2299,15 @@ mod tests {
             expected_metadata.extend(
                 vec![
                     (
-                        (
-                            MetadataPath::from_role(&Role::Snapshot),
-                            MetadataVersion::Number(3),
-                        ),
+                        (MetadataPath::snapshot(), MetadataVersion::Number(3)),
                         metadata3.snapshot().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Snapshot),
-                            MetadataVersion::None,
-                        ),
+                        (MetadataPath::snapshot(), MetadataVersion::None),
                         metadata3.snapshot().unwrap().as_bytes(),
                     ),
                     (
-                        (
-                            MetadataPath::from_role(&Role::Timestamp),
-                            MetadataVersion::None,
-                        ),
+                        (MetadataPath::timestamp(), MetadataVersion::None),
                         metadata3.timestamp().unwrap().as_bytes(),
                     ),
                 ]
@@ -2417,10 +2339,7 @@ mod tests {
 
             expected_metadata.extend(
                 vec![(
-                    (
-                        MetadataPath::from_role(&Role::Timestamp),
-                        MetadataVersion::None,
-                    ),
+                    (MetadataPath::timestamp(), MetadataVersion::None),
                     metadata4.timestamp().unwrap().as_bytes(),
                 )]
                 .into_iter(),

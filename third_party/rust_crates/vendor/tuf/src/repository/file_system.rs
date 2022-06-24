@@ -347,7 +347,7 @@ mod test {
     use super::*;
     use crate::error::Error;
     use crate::interchange::Json;
-    use crate::metadata::{Role, RootMetadata};
+    use crate::metadata::RootMetadata;
     use crate::repository::{fetch_metadata_to_string, fetch_target_to_string, Repository};
     use assert_matches::assert_matches;
     use futures_executor::block_on;
@@ -368,7 +368,7 @@ mod test {
             assert_matches!(
                 Repository::<_, Json>::new(repo)
                     .fetch_metadata::<RootMetadata>(
-                        &MetadataPath::from_role(&Role::Root),
+                        &MetadataPath::root(),
                         MetadataVersion::None,
                         None,
                         vec![],

@@ -514,7 +514,7 @@ where
 mod test {
     use super::*;
     use crate::interchange::Json;
-    use crate::metadata::{MetadataPath, MetadataVersion, Role, RootMetadata, SnapshotMetadata};
+    use crate::metadata::{MetadataPath, MetadataVersion, RootMetadata, SnapshotMetadata};
     use crate::repository::EphemeralRepository;
     use assert_matches::assert_matches;
     use futures_executor::block_on;
@@ -526,7 +526,7 @@ mod test {
 
             assert_matches!(
                 repo.fetch_metadata::<RootMetadata>(
-                    &MetadataPath::from_role(&Role::Root),
+                    &MetadataPath::root(),
                     MetadataVersion::None,
                     None,
                     vec![],
@@ -543,17 +543,13 @@ mod test {
             let mut repo = Repository::<_, Json>::new(EphemeralRepository::new());
             let fake_metadata = RawSignedMetadata::<Json, RootMetadata>::new(vec![]);
 
-            repo.store_metadata(
-                &MetadataPath::from_role(&Role::Root),
-                MetadataVersion::None,
-                &fake_metadata,
-            )
-            .await
-            .unwrap();
+            repo.store_metadata(&MetadataPath::root(), MetadataVersion::None, &fake_metadata)
+                .await
+                .unwrap();
 
             assert_matches!(
                 repo.store_metadata(
-                    &MetadataPath::from_role(&Role::Snapshot),
+                    &MetadataPath::snapshot(),
                     MetadataVersion::None,
                     &fake_metadata,
                 )
@@ -563,7 +559,7 @@ mod test {
 
             assert_matches!(
                 repo.fetch_metadata::<SnapshotMetadata>(
-                    &MetadataPath::from_role(&Role::Root),
+                    &MetadataPath::root(),
                     MetadataVersion::None,
                     None,
                     vec![],
@@ -577,7 +573,7 @@ mod test {
     #[test]
     fn repository_verifies_metadata_hash() {
         block_on(async {
-            let path = MetadataPath::from_role(&Role::Root);
+            let path = MetadataPath::root();
             let version = MetadataVersion::None;
             let data: &[u8] = b"valid metadata";
             let _metadata = RawSignedMetadata::<Json, RootMetadata>::new(data.to_vec());
@@ -607,7 +603,7 @@ mod test {
     #[test]
     fn repository_rejects_corrupt_metadata() {
         block_on(async {
-            let path = MetadataPath::from_role(&Role::Root);
+            let path = MetadataPath::root();
             let version = MetadataVersion::None;
             let data: &[u8] = b"corrupt metadata";
 
@@ -635,7 +631,7 @@ mod test {
     #[test]
     fn repository_verifies_metadata_size() {
         block_on(async {
-            let path = MetadataPath::from_role(&Role::Root);
+            let path = MetadataPath::root();
             let version = MetadataVersion::None;
             let data: &[u8] = b"reasonably sized metadata";
             let _metadata = RawSignedMetadata::<Json, RootMetadata>::new(data.to_vec());
@@ -659,7 +655,7 @@ mod test {
     #[test]
     fn repository_rejects_oversized_metadata() {
         block_on(async {
-            let path = MetadataPath::from_role(&Role::Root);
+            let path = MetadataPath::root();
             let version = MetadataVersion::None;
             let data: &[u8] = b"very big metadata";
 

@@ -9,7 +9,7 @@ use std::io;
 use std::path::Path;
 use thiserror::Error;
 
-use crate::metadata::Role;
+use crate::metadata::MetadataPath;
 
 /// Error type for all TUF related errors.
 #[non_exhaustive]
@@ -25,7 +25,7 @@ pub enum Error {
 
     /// Metadata was expired.
     #[error("expired {0} metadata")]
-    ExpiredMetadata(Role),
+    ExpiredMetadata(MetadataPath),
 
     /// An illegal argument was passed into a function.
     #[error("illegal argument: {0}")]
@@ -52,7 +52,7 @@ pub enum Error {
 
     /// The metadata was missing, so an operation could not be completed.
     #[error("missing {0} metadata")]
-    MissingMetadata(Role),
+    MissingMetadata(MetadataPath),
 
     /// There were no available hash algorithms.
     #[error("no supported hash algorithm")]

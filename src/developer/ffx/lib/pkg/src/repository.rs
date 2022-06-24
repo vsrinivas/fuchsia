@@ -34,8 +34,8 @@ use {
         crypto::KeyType,
         interchange::Json,
         metadata::{
-            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, Role,
-            TargetDescription, TargetPath, TargetsMetadata,
+            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, TargetDescription,
+            TargetPath, TargetsMetadata,
         },
         repository::{EphemeralRepository, RepositoryProvider},
         verify::Verified,
@@ -335,8 +335,8 @@ impl Repository {
             // https://github.com/heartsucker/rust-tuf/pull/318 lands.
             match client.update().await {
                 Ok(_) => {}
-                Err(err @ tuf::Error::ExpiredMetadata(Role::Root)) => {
-                    return Err(err.into());
+                Err(tuf::Error::ExpiredMetadata(path)) if path == MetadataPath::root() => {
+                    return Err(tuf::Error::ExpiredMetadata(path).into());
                 }
                 Err(tuf::Error::ExpiredMetadata(_)) => {}
                 Err(err) => {
@@ -595,16 +595,12 @@ where
     let raw_signed_meta = {
         // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
         // trusting 1.root.json.
-        let root = tuf_repo
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
-            .await;
+        let root = tuf_repo.fetch_metadata(&MetadataPath::root(), MetadataVersion::Number(1)).await;
 
         // If we couldn't find 1.root.json, see if root.json exists and try to initialize trust with it.
         let mut root = match root {
             Err(tuf::Error::NotFound) => {
-                tuf_repo
-                    .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::None)
-                    .await?
+                tuf_repo.fetch_metadata(&MetadataPath::root(), MetadataVersion::None).await?
             }
             Err(err) => return Err(err.into()),
             Ok(root) => root,

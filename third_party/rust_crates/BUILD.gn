@@ -974,7 +974,7 @@ if (current_os == "fuchsia") {
 }
 
 group("tuf") {
-  public_deps = [ ":tuf-v0_3_0-beta6" ]
+  public_deps = [ ":tuf-v0_3_0-beta7" ]
 }
 
 group("tui") {
@@ -11023,10 +11023,10 @@ rust_library("ttf-parser-v0_10_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("tuf-v0_3_0-beta6") {
+rust_library("tuf-v0_3_0-beta7") {
   crate_name = "tuf"
   crate_root = "//third_party/rust_crates/vendor/tuf/./src/lib.rs"
-  output_name = "tuf-952564b68aeb1a54"
+  output_name = "tuf-96c9a4f85a521c39"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -11054,8 +11054,8 @@ rust_library("tuf-v0_3_0-beta6") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=952564b68aeb1a54",
-    "-Cextra-filename=-952564b68aeb1a54",
+    "-Cmetadata=96c9a4f85a521c39",
+    "-Cextra-filename=-96c9a4f85a521c39",
     "--cfg=feature=\"hyper_014\"",
   ]
 

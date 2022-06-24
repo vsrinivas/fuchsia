@@ -103,7 +103,6 @@ mod tests {
         fidl_fuchsia_pkg::LocalMirrorMarker,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{FakePkgLocalMirror, PackageBuilder, Repository, RepositoryBuilder},
-        tuf::metadata::Role,
     };
 
     struct TestEnv {
@@ -146,7 +145,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::None)
+            .fetch_metadata(&MetadataPath::root(), MetadataVersion::None)
             .await
             .expect("fetch_metadata succeeds");
 
@@ -160,7 +159,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
+            .fetch_metadata(&MetadataPath::root(), MetadataVersion::Number(1))
             .await
             .expect("fetch_metadata succeeds");
 
@@ -172,10 +171,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_fetch_metadata_v4_fails() {
         let env = TestEnv::new().await;
-        let result = env
-            .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(4))
-            .await;
+        let result =
+            env.provider.fetch_metadata(&MetadataPath::root(), MetadataVersion::Number(4)).await;
 
         assert!(result.is_err());
     }

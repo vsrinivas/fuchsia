@@ -343,6 +343,7 @@ mod tests {
             path::{Path, PathBuf},
             sync::Arc,
         },
+        tuf::metadata::MetadataPath,
         updating_tuf_client::METADATA_CACHE_STALE_TIMEOUT,
     };
 
@@ -554,8 +555,10 @@ mod tests {
         assert_matches!(
             repo.get_merkle_at_path(&target_path).await,
             Err(MerkleForError::FetchTargetDescription(
-                extracted_path, TufError::MissingMetadata(tuf::metadata::Role::Snapshot)))
-            if extracted_path == "just-meta-far/0"
+                extracted_path, TufError::MissingMetadata(metadata_path)))
+            if
+                metadata_path == MetadataPath::snapshot() &&
+                extracted_path == "just-meta-far/0"
         );
     }
 

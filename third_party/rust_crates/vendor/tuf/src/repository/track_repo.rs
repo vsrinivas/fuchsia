@@ -48,11 +48,7 @@ impl Track {
         M: Metadata,
         D: DataInterchange,
     {
-        Self::store(
-            &MetadataPath::from_role(&M::ROLE),
-            version,
-            metadata.as_bytes(),
-        )
+        Self::store(&M::ROLE.into(), version, metadata.as_bytes())
     }
 
     pub(crate) fn fetch_found<T>(
@@ -78,11 +74,7 @@ impl Track {
         M: Metadata,
         D: DataInterchange,
     {
-        Track::fetch_found(
-            &MetadataPath::from_role(&M::ROLE),
-            version,
-            metadata.as_bytes(),
-        )
+        Track::fetch_found(&M::ROLE.into(), version, metadata.as_bytes())
     }
 }
 
