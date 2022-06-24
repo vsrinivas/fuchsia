@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/syscalls/forward.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,8 +18,6 @@
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

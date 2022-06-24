@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
@@ -20,8 +21,6 @@
 #include <object/handle.h>
 #include <object/stream_dispatcher.h>
 #include <vm/vm_aspace.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

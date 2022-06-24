@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/policy.h>
@@ -16,8 +17,6 @@
 #include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

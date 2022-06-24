@@ -4,10 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
-#define ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
+#ifndef ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_FORWARD_H_
+#define ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_FORWARD_H_
 
-#include <lib/boot-options/types.h>
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/types.h>
 #include <zircon/types.h>
@@ -46,7 +45,7 @@ class user_out_handle final {
   }
 
   // These methods are called by the kazoo-generated wrapper_* functions
-  // (syscall-kernel-wrappers.inc).  See KernelWrapperGenerator::syscall.
+  // (syscall-kernel-wrappers.inc).  See KernelWrappersOutput.
 
   zx_status_t begin_copyout(ProcessDispatcher* current_process,
                             user_out_ptr<zx_handle_t> out) const {
@@ -92,4 +91,4 @@ class user_out_handle final {
 #undef BLOCKING_SYSCALL
 #undef _ZX_SYSCALL_ANNO
 
-#endif  // ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
+#endif  // ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_FORWARD_H_

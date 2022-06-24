@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <trace.h>
@@ -22,8 +23,6 @@
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/wait_signal_observer.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

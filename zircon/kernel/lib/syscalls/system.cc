@@ -10,6 +10,7 @@
 #include <lib/debuglog.h>
 #include <lib/fit/defer.h>
 #include <lib/instrumentation/asan.h>
+#include <lib/syscalls/forward.h>
 #include <lib/zircon-internal/macros.h>
 #include <mexec.h>
 #include <platform.h>
@@ -51,7 +52,6 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 
-#include "priv.h"
 #include "system_priv.h"
 
 #include <ktl/enforce.h>

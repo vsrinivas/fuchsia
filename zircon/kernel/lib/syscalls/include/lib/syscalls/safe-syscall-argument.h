@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_
-#define ZIRCON_KERNEL_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_
+#ifndef ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_
+#define ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -91,4 +91,4 @@ struct SafeSyscallArgument<T, false> {
   static constexpr T Sanitize(RawType value) { return value; }
 };
 
-#endif  // ZIRCON_KERNEL_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_
+#endif  // ZIRCON_KERNEL_LIB_SYSCALLS_INCLUDE_LIB_SYSCALLS_SAFE_SYSCALL_ARGUMENT_H_

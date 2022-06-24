@@ -12,6 +12,7 @@
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
 #include <lib/persistent-debuglog.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -27,8 +28,6 @@
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <platform/debug.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

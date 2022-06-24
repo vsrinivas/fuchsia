@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/syscalls/forward.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include <fbl/ref_ptr.h>
@@ -15,8 +16,6 @@
 #include <object/vcpu_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-
-#include "priv.h"
 
 zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_handle* guest_handle,
                              user_out_handle* vmar_handle) {

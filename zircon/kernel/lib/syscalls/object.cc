@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/heap.h>
+#include <lib/syscalls/forward.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <trace.h>
@@ -39,8 +40,6 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-
-#include "priv.h"
 
 #include <ktl/enforce.h>
 

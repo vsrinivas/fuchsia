@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -14,8 +15,6 @@
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/profile_dispatcher.h>
-
-#include "priv.h"
 
 KCOUNTER(profile_create, "profile.create")
 KCOUNTER(profile_set, "profile.set")

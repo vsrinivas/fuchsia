@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -20,8 +21,6 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

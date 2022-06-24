@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <trace.h>
@@ -19,8 +20,6 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

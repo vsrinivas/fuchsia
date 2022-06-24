@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/syscalls/forward.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -12,8 +13,6 @@
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/user_handles.h>
-
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 

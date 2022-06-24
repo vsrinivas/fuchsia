@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -33,8 +34,6 @@
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <object/thread_dispatcher.h>
-
-#include "priv.h"
 
 #include <ktl/enforce.h>
 

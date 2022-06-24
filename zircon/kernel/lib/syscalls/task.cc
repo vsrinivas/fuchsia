@@ -8,6 +8,7 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/userabi/vdso.h>
 #include <platform.h>
@@ -33,8 +34,6 @@
 #include <object/suspend_token_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
-
-#include "priv.h"
 
 #include <ktl/enforce.h>
 

@@ -39,7 +39,7 @@
 #include <object/pci_device_dispatcher.h>
 #endif
 
-#include "priv.h"
+#include <lib/syscalls/forward.h>
 
 #include <ktl/enforce.h>
 

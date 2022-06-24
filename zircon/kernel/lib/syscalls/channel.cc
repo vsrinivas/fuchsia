@@ -8,6 +8,7 @@
 #include <lib/counters.h>
 #include <lib/fit/defer.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/policy.h>
@@ -21,8 +22,6 @@
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <object/user_handles.h>
-
-#include "priv.h"
 
 #include <ktl/enforce.h>
 

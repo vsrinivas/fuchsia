@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <lib/syscalls/forward.h>
 #include <zircon/syscalls-next.h>
 
 #include <fbl/ref_ptr.h>
@@ -12,8 +13,6 @@
 #include <object/pager_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object_paged.h>
-
-#include "priv.h"
 
 #include <ktl/enforce.h>
 

@@ -6,6 +6,8 @@
 
 #include <inttypes.h>
 #include <lib/ktrace.h>
+#include <lib/syscalls/forward.h>
+#include <lib/syscalls/safe-syscall-argument.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
 #include <lib/userabi/vdso.h>
 #include <platform.h>
@@ -19,8 +21,6 @@
 #include <object/process_dispatcher.h>
 #include <syscalls/syscalls.h>
 
-#include "priv.h"
-#include "safe-syscall-argument.h"
 #include "vdso-valid-sysret.h"
 
 #define LOCAL_TRACE 0

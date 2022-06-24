@@ -47,8 +47,9 @@
 #include <platform/pc/smbios.h>
 #endif
 
+#include <lib/syscalls/forward.h>
+
 #include "ddk_priv.h"
-#include "priv.h"
 
 #define LOCAL_TRACE 0
 
