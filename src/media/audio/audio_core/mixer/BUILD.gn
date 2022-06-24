@@ -11,7 +11,6 @@ source_set("constants") {
 
 source_set("mixer") {
   sources = [
-    "channel_strip.h",
     "gain.cc",
     "gain.h",
     "intersect.cc",
@@ -84,7 +83,6 @@ executable("mixer_unittest_bin") {
 
   sources = [
     "bookkeeping_unittest.cc",
-    "channel_strip_unittest.cc",
     "gain_unittest.cc",
     "intersect_unittest.cc",
     "no_op_unittest.cc",

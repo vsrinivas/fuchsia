@@ -38,6 +38,7 @@ source_set("processing") {
 
 source_set("sampler") {
   sources = [
+    "channel_strip.h",
     "coefficient_table_cache.h",
     "filter.cc",
     "filter.h",
@@ -116,6 +117,7 @@ executable("unittest-bin") {
   output_name = "audio-libprocessing-unittests"
 
   sources = [
+    "channel_strip_unittest.cc",
     "coefficient_table_cache_unittest.cc",
     "coefficient_table_unittest.cc",
     "filter_unittest.cc",
