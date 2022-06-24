@@ -490,6 +490,122 @@ async fn aggregate_instances_renamed_test() {
     );
 }
 
+// aggregate_instances_multiple_service_instances_renamed_test tests that an aggregate service
+// where the component sources that are aggregated supply multiple service instances are aggregated
+// correctly.
+// The components implementing the EchoService each implement 3 service instances "default" , "hello", and "goodbye".
+// This test asserts the resulting namespace in the component that "use"s the EchoService contains only the service
+// instances that exist in ther source_instance_filters of the aggregated offers, some of which are renamed, and that
+// they respond with the correct response when the regular_echo protocol is called on each service instance.
+#[fuchsia::test]
+async fn aggregate_instances_multiple_service_instances_renamed_test() {
+    let dynamic_child_name = "aggregate_instances_multiple_service_instances_renamed_test_client";
+    let provider_exposed_dir =
+        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+            .await
+            .expect("Failed to get child expose directory.");
+
+    let _ = verify_original_service(&provider_exposed_dir).await;
+    let dynamic_provider_name = "aggregate_instances_renamed_test_provider";
+    create_dynamic_service_provider(dynamic_provider_name).await;
+    let dynamic_provider_exposed_dir = client::open_childs_exposed_directory(
+        dynamic_provider_name.to_string(),
+        Some(TEST_COLLECTION_NAME.to_string()),
+    )
+    .await
+    .expect("Failed to get child expose directory.");
+
+    let _ = verify_original_service(&dynamic_provider_exposed_dir).await;
+    let offers = vec![
+        fdecl::Offer::Service(fdecl::OfferService {
+            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                name: PROVIDER_CHILD_NAME.to_string(),
+                collection: None,
+            })),
+            source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            target_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            renamed_instances: Some(vec![
+                fdecl::NameMapping {
+                    source_name: "default".to_string(),
+                    target_name: "default_from_a".to_string(),
+                },
+                fdecl::NameMapping {
+                    source_name: "default".to_string(),
+                    target_name: "default_from_a2".to_string(),
+                },
+            ]),
+            source_instance_filter: Some(vec![
+                "default_from_a".to_string(),
+                "default_from_a2".to_string(),
+            ]),
+            ..fdecl::OfferService::EMPTY
+        }),
+        fdecl::Offer::Service(fdecl::OfferService {
+            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                name: dynamic_provider_name.to_string(),
+                collection: Some(TEST_COLLECTION_NAME.to_string()),
+            })),
+            source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            target_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            renamed_instances: Some(vec![fdecl::NameMapping {
+                source_name: "hello".to_string(),
+                target_name: "hello_from_dynamic".to_string(),
+            }]),
+            source_instance_filter: Some(vec![
+                "hello_from_dynamic".to_string(),
+                "goodbye".to_string(),
+            ]),
+            ..fdecl::OfferService::EMPTY
+        }),
+    ];
+    create_dynamic_service_client_from_offers(dynamic_child_name, offers)
+        .await
+        .expect("Failed to create dynamic service client");
+    let filtered_exposed_dir = client::open_childs_exposed_directory(
+        dynamic_child_name,
+        Some(TEST_COLLECTION_NAME.to_string()),
+    )
+    .await
+    .expect("Failed to get child expose directory.");
+
+    let renamed_service_dir_proxy =
+        client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
+            .expect("failed to open service in expose dir.");
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&renamed_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
+    info!("Entries in exposed service dir after rename: {:?}", visible_service_instances);
+    let expected_visible_instance_list: Vec<String> =
+        vec!["default_from_a", "default_from_a2", "goodbye", "hello_from_dynamic"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+    assert_eq!(expected_visible_instance_list, visible_service_instances);
+
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "default").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "default_from_a").await.unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "default").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "default_from_a2").await.unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "goodbye").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "goodbye").await.unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "hello").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "hello_from_dynamic",)
+            .await
+            .unwrap(),
+    );
+}
+
 #[fuchsia::test]
 async fn aggregate_service_fails_without_filter_test() {
     let dynamic_child_name = "aggregate_service_fails_without_filter_test_client";

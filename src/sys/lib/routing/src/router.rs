@@ -663,17 +663,17 @@ where
         capability: AggregateCapability::Service(source_name),
         component: aggregation_component.as_weak(),
         collection_name: "".to_string(),
-        capability_provider: Box::new(AggregateServiceProvider {
-            router: RoutingStrategy::new()
+        capability_provider: Box::new(AggregateServiceProvider::new(
+            offer_service_decls,
+            aggregation_component.as_weak(),
+            RoutingStrategy::new()
                 .use_::<UseServiceDecl>()
                 .offer::<OfferServiceDecl>()
                 .expose::<ExposeServiceDecl>(),
-            component: aggregation_component.as_weak(),
-            offer_decls: offer_service_decls,
-            sources: AllowedSourcesBuilder::<ServiceDecl>::new().component().collection(),
-            visitor: AvailabilityServiceVisitor(starting_availability.into()),
+            AllowedSourcesBuilder::<ServiceDecl>::new().component().collection(),
+            AvailabilityServiceVisitor(starting_availability.into()),
             mapper,
-        }),
+        )),
     })
 }
 

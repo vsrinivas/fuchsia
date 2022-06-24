@@ -82,10 +82,8 @@ where
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
         let mut instances = Vec::new();
         let component = self.collection_component.upgrade()?;
-        let components: Vec<(ChildMoniker, Arc<C>)> = component
-            .lock_resolved_state()
-            .await?
-            .children_in_collection(&self.collection_name);
+        let components: Vec<(ChildMoniker, Arc<C>)> =
+            component.lock_resolved_state().await?.children_in_collection(&self.collection_name);
         for (moniker, child_component) in components {
             let child_exposes = child_component.lock_resolved_state().await.map(|c| c.exposes());
             match child_exposes {
@@ -158,17 +156,53 @@ where
 #[derive(Derivative)]
 #[derivative(Clone(bound = "S: Clone, M: Clone, V: Clone"))]
 pub(super) struct AggregateServiceProvider<C: ComponentInstanceInterface, U, S, M, V> {
-    pub router: RoutingStrategy<U, Offer<OfferServiceDecl>, Expose<ExposeServiceDecl>>,
+    router: RoutingStrategy<U, Offer<OfferServiceDecl>, Expose<ExposeServiceDecl>>,
 
     /// Component that offered the aggregate service
-    pub component: WeakComponentInstanceInterface<C>,
+    component: WeakComponentInstanceInterface<C>,
 
     /// List of offer decl to follow for routing each service provider used in the overall aggregation
-    pub offer_decls: Vec<OfferServiceDecl>,
+    offer_decls: Vec<OfferServiceDecl>,
 
-    pub sources: S,
-    pub visitor: V,
-    pub mapper: M,
+    sources: S,
+    visitor: V,
+    mapper: M,
+}
+
+impl<C, U, S, M, V> AggregateServiceProvider<C, U, S, M, V>
+where
+    C: ComponentInstanceInterface + 'static,
+    U: Send + Sync + 'static,
+    S: Sources<CapabilityDecl = ServiceDecl> + 'static,
+    V: OfferVisitor<OfferDecl = OfferServiceDecl>
+        + ExposeVisitor<ExposeDecl = ExposeServiceDecl>
+        + CapabilityVisitor<CapabilityDecl = ServiceDecl>,
+    V: Send + Sync + Clone + 'static,
+    M: DebugRouteMapper + Send + Sync + Clone + 'static,
+{
+    pub(super) fn new(
+        offer_service_decls: Vec<OfferServiceDecl>,
+        component: WeakComponentInstanceInterface<C>,
+        router: RoutingStrategy<U, Offer<OfferServiceDecl>, Expose<ExposeServiceDecl>>,
+        sources: S,
+        visitor: V,
+        mapper: M,
+    ) -> Self {
+        let single_instance_decls: Vec<OfferServiceDecl> = offer_service_decls
+            .iter()
+            .map(|o| {
+                o.source_instance_filter.iter().flatten().map(move |instance_name| {
+                    // Create a service decl for each filtered service instance so that when the aggregate
+                    // capability routes an instance each entry can ignore the component name.
+                    let mut single_instance_decl = o.clone();
+                    single_instance_decl.source_instance_filter = Some(vec![instance_name.clone()]);
+                    single_instance_decl
+                })
+            })
+            .flatten()
+            .collect();
+        Self { router, offer_decls: single_instance_decls, sources, visitor, component, mapper }
+    }
 }
 
 #[async_trait]
@@ -203,7 +237,7 @@ where
                 .map(|allowed_instances| allowed_instances.contains(&instance.to_string()))
                 .unwrap_or(false)
             {
-                let capability_source = self
+                return self
                     .router
                     .route_from_offer(
                         offer_decl.clone(),
@@ -217,8 +251,7 @@ where
                         &mut self.visitor.clone(),
                         &mut self.mapper.clone(),
                     )
-                    .await?;
-                return Ok(capability_source);
+                    .await;
             }
         }
         Err(RoutingError::unsupported_route_source(format!("instance '{}' not found", instance)))
