@@ -5,10 +5,10 @@
 use crate::{
     api_metrics::{ApiEvent, ApiMetricsReporter},
     app_set::FuchsiaAppSet,
-    channel::ChannelConfigs,
     inspect::{AppsNode, StateNode},
 };
 use anyhow::{anyhow, Context as _, Error};
+use channel_config::ChannelConfigs;
 use event_queue::{ClosedClient, ControlHandle, Event, EventQueue, Notify};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
@@ -962,8 +962,8 @@ mod stub {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::channel::ChannelConfig;
     use assert_matches::assert_matches;
+    use channel_config::ChannelConfig;
     use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_update::{
         self as update, AttemptsMonitorRequest, ManagerMarker, MonitorMarker, MonitorRequest,
@@ -1371,8 +1371,8 @@ mod tests {
             .with_channel_configs(ChannelConfigs {
                 default_channel: None,
                 known_channels: vec![
-                    ChannelConfig::new("some-channel"),
-                    ChannelConfig::with_appid("target-channel", "target-id"),
+                    ChannelConfig::new_for_test("some-channel"),
+                    ChannelConfig::with_appid_for_test("target-channel", "target-id"),
                 ],
             })
             .build()
@@ -1399,7 +1399,10 @@ mod tests {
         let fidl = FidlServerBuilder::new()
             .with_channel_configs(ChannelConfigs {
                 default_channel: "default-channel".to_string().into(),
-                known_channels: vec![ChannelConfig::with_appid("default-channel", "default-app")],
+                known_channels: vec![ChannelConfig::with_appid_for_test(
+                    "default-channel",
+                    "default-app",
+                )],
             })
             .build()
             .await;
@@ -1452,8 +1455,8 @@ mod tests {
             .with_channel_configs(ChannelConfigs {
                 default_channel: None,
                 known_channels: vec![
-                    ChannelConfig::new("some-channel"),
-                    ChannelConfig::new("some-other-channel"),
+                    ChannelConfig::new_for_test("some-channel"),
+                    ChannelConfig::new_for_test("some-other-channel"),
                 ],
             })
             .build()
@@ -1508,7 +1511,7 @@ mod tests {
             .with_apps_node(apps_node)
             .with_channel_configs(ChannelConfigs {
                 default_channel: None,
-                known_channels: vec![ChannelConfig::new("target-channel")],
+                known_channels: vec![ChannelConfig::new_for_test("target-channel")],
             })
             .build()
             .await;

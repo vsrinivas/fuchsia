@@ -4,10 +4,10 @@
 
 use crate::{
     app_set::{EagerPackage, FuchsiaAppSet},
-    channel::{ChannelConfig, ChannelConfigs},
     eager_package_config::{EagerPackageConfig, EagerPackageConfigs},
 };
 use anyhow::{anyhow, Error};
+use channel_config::{ChannelConfig, ChannelConfigs};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use fidl_fuchsia_pkg::{self as fpkg, CupMarker, CupProxy, GetInfoError};
 use log::{error, info, warn};
@@ -389,7 +389,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_channel_data_configured() {
-        let channel_config = ChannelConfig::with_appid("some-channel", "some-appid");
+        let channel_config = ChannelConfig::with_appid_for_test("some-channel", "some-appid");
         let channel_configs = ChannelConfigs {
             default_channel: Some(channel_config.name.clone()),
             known_channels: vec![channel_config.clone()],
@@ -415,10 +415,10 @@ mod tests {
             Some(&ChannelConfigs {
                 default_channel: Some("some-channel".to_string()),
                 known_channels: vec![
-                    ChannelConfig::new("no-appid-channel"),
-                    ChannelConfig::with_appid("wrong-channel", "wrong-appid"),
-                    ChannelConfig::with_appid("some-channel", "some-appid"),
-                    ChannelConfig::with_appid("some-other-channel", "some-other-appid"),
+                    ChannelConfig::new_for_test("no-appid-channel"),
+                    ChannelConfig::with_appid_for_test("wrong-channel", "wrong-appid"),
+                    ChannelConfig::with_appid_for_test("some-channel", "some-appid"),
+                    ChannelConfig::with_appid_for_test("some-other-channel", "some-other-appid"),
                 ],
             }),
             VbMetaData::default(),
@@ -448,7 +448,10 @@ mod tests {
             "1.2.3.4",
             Some(&ChannelConfigs {
                 default_channel: Some("wrong-channel".to_string()),
-                known_channels: vec![ChannelConfig::with_appid("wrong-channel", "wrong-appid")],
+                known_channels: vec![ChannelConfig::with_appid_for_test(
+                    "wrong-channel",
+                    "wrong-appid",
+                )],
             }),
             VbMetaData {
                 appid: Some("vbmeta-appid".to_string()),

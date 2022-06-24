@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::channel::ChannelConfigs;
 use anyhow::{Context as _, Error};
+use channel_config::ChannelConfigs;
 use fuchsia_url::UnpinnedAbsolutePackageUrl;
 use omaha_client::cup_ecdsa::PublicKeys;
 use serde::Deserialize;
@@ -72,8 +72,8 @@ impl EagerPackageConfigs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::channel::ChannelConfig;
     use assert_matches::assert_matches;
+    use channel_config::ChannelConfig;
     use omaha_client::cup_ecdsa::{
         test_support::{
             make_default_json_public_keys_for_test, make_default_public_key_for_test,

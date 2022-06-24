@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::channel::ChannelConfigs,
+    channel_config::ChannelConfigs,
     omaha_client::{app_set::AppSet, common::App},
 };
 
