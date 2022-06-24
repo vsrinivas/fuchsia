@@ -610,30 +610,20 @@ fn hash_from_cache_packages_manifest<'a>(
     // variant of "0" will be assumed. This means that if the URL we are resolving has a
     // variant that is not "0", it should never match anything in the cache packages manifest,
     // and if the URL has a variant of "0", we should remove it before checking the cache manifest.
+    let mut no_variant;
     let url = match url.variant() {
-        None => url.clone(),
+        None => url,
         Some(variant) if !variant.is_zero() => {
             return None;
         }
         Some(_) => {
-            let mut url = url.clone();
-            url.clear_variant();
-            url
+            no_variant = url.clone();
+            no_variant.clear_variant();
+            &no_variant
         }
     };
 
-    let cache_hash = system_cache_list.hash_for_package(&url).map(Into::into);
-    match (cache_hash, url.hash()) {
-        // This arm is less useful than (Some, None) b/c generally metadata lookup for pinned URLs
-        // succeeds (because generally the package from the pinned URL exists in the repo), and if
-        // the blob fetching failed, then even if this fn returns success, the resolve will still
-        // end up failing when we try to open the package from pkg-cache. The arm is still useful
-        // if initial creation of the TUF client for fuchsia.com fails (e.g. because networking is
-        // down/not yet available).
-        (Some(cache), Some(url)) if cache == BlobId::from(url) => Some(cache),
-        (Some(cache), None) => Some(cache),
-        _ => None,
-    }
+    system_cache_list.hash_for_package(url).map(Into::into)
 }
 
 async fn get_hash(
