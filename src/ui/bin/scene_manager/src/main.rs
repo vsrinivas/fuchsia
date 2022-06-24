@@ -16,6 +16,7 @@ use {
         RegistryRequestStream as A11yViewRegistryRequestStream,
     },
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as fland,
+    fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -29,6 +30,7 @@ use {
     std::sync::Arc,
 };
 
+mod input_config_server;
 mod input_device_registry_server;
 mod input_pipeline;
 
@@ -36,6 +38,7 @@ enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    InputConfigFeatures(InputConfigFeaturesRequestStream),
 }
 
 #[fuchsia::main(logging_tags = [ "scene_manager" ])]
@@ -47,10 +50,14 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::SceneManager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
+    fs.dir("svc").add_fidl_service(ExposedServices::InputConfigFeatures);
     fs.take_and_serve_directory_handle()?;
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
         input_device_registry_server::make_server_and_receiver();
+
+    let (input_config_server, input_config_receiver) =
+        input_config_server::make_server_and_receiver();
 
     // This call should normally never fail. The ICU data loader must be kept alive to ensure
     // Unicode data is kept in memory.
@@ -103,6 +110,7 @@ async fn main() -> Result<(), Error> {
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         use_flatland,
         scene_manager.clone(),
+        input_config_receiver,
         input_device_registry_request_stream_receiver,
         icu_data_loader,
         &inspect_node.clone(),
@@ -152,6 +160,14 @@ async fn main() -> Result<(), Error> {
                                 must restart to enable input injection",
                             e
                         )
+                    }
+                }
+            }
+            ExposedServices::InputConfigFeatures(request_stream) => {
+                match &input_config_server.handle_request(request_stream).await {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
                     }
                 }
             }

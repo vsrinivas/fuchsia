@@ -13,7 +13,9 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
     std::path::PathBuf,
 };
@@ -134,6 +136,12 @@ pub trait InputDeviceBinding: Send {
 
     /// Returns the input event stream's sender.
     fn input_event_sender(&self) -> Sender<InputEvent>;
+
+    /// Handles input config changes.
+    async fn handle_input_config_request(
+        &self,
+        request: &InputConfigFeaturesRequest,
+    ) -> Result<(), Error>;
 }
 
 /// Initializes the input report stream for the device bound to `device_proxy`.

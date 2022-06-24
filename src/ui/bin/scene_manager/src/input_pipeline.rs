@@ -7,6 +7,7 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_settings as fsettings,
+    fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -35,6 +36,8 @@ use {
 ///
 /// # Parameters
 /// - `scene_manager`: The scene manager used by the session.
+/// - `input_config_request_stream_receiver`:  A receiving end of a MPSC channel for
+///   `InputConfig` messages.
 /// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
 ///   `InputDeviceRegistry` messages.
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
@@ -43,6 +46,9 @@ pub async fn handle_input(
     // new Flatland API.
     use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    input_config_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        InputConfigFeaturesRequestStream,
+    >,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
@@ -75,6 +81,13 @@ pub async fn handle_input(
     );
 
     fasync::Task::local(input_device_registry_fut).detach();
+
+    let input_config_fut = handle_input_config_request_streams(
+        input_config_request_stream_receiver,
+        input_pipeline.input_device_bindings().clone(),
+    );
+
+    fasync::Task::local(input_config_fut).detach();
 
     Ok(input_pipeline)
 }
@@ -321,6 +334,28 @@ fn add_pointer_motion_sensor_scale_handler(
 
 fn add_immersive_mode_shortcut_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     assembly.add_handler(ImmersiveModeShortcutHandler::new())
+}
+
+pub async fn handle_input_config_request_streams(
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        InputConfigFeaturesRequestStream,
+    >,
+    input_device_bindings: InputDeviceBindingHashMap,
+) {
+    while let Some(stream) = stream_receiver.next().await {
+        match InputPipeline::handle_input_config_request_stream(stream, &input_device_bindings)
+            .await
+        {
+            Ok(()) => (),
+            Err(e) => {
+                fx_log_warn!(
+                    "failure while serving InputConfig.Features: {}; \
+                     will continue serving other clients",
+                    e
+                );
+            }
+        }
+    }
 }
 
 pub async fn handle_input_device_registry_request_streams(

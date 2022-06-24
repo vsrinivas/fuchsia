@@ -8,7 +8,9 @@ use {
         focus_listener::FocusListener, input_device, input_handler,
     },
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_input_injection, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_input_injection, fidl_fuchsia_io as fio,
+    fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
+    fuchsia_async as fasync,
     fuchsia_fs::open_directory_in_namespace,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
@@ -454,6 +456,35 @@ impl InputPipeline {
         Ok(())
     }
 
+    /// Handles the incoming InputConfigFeaturesRequestStream.
+    ///
+    /// This method will end when the request stream is closed. If the stream closes with an
+    /// error the error will be returned in the Result.
+    ///
+    /// # Parameters
+    /// - `stream`: The stream of InputConfigFeaturesRequests.
+    /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
+    pub async fn handle_input_config_request_stream(
+        mut stream: InputConfigFeaturesRequestStream,
+        bindings: &InputDeviceBindingHashMap,
+    ) -> Result<(), Error> {
+        while let Some(request) =
+            stream.try_next().await.context("Error handling input config request stream")?
+        {
+            let bindings = bindings.lock().await;
+            for v in bindings.values() {
+                for binding in v.iter() {
+                    match binding.handle_input_config_request(&request).await {
+                        Ok(()) => (),
+                        Err(e) => fx_log_err!("Error handling input config request {:?}", e),
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Starts all tasks in an asynchronous executor.
     fn run(tasks: Vec<fuchsia_async::Task<()>>) {
         fasync::Task::local(async move {
@@ -556,7 +587,12 @@ mod tests {
         crate::input_device::{self, InputDeviceBinding},
         crate::mouse_binding,
         crate::utils::Position,
+        assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
+        fidl_fuchsia_ui_input_config::{
+            FeaturesMarker as InputConfigFeaturesMarker,
+            FeaturesRequest as InputConfigFeaturesRequest,
+        },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
         futures::FutureExt,
@@ -652,10 +688,16 @@ mod tests {
         // Create two fake device bindings.
         let (device_event_sender, device_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let first_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new(device_event_sender.clone());
-        let second_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new(device_event_sender.clone());
+        let (input_config_features_sender, _input_config_features_receiver) =
+            futures::channel::mpsc::channel(1);
+        let first_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new(
+            device_event_sender.clone(),
+            input_config_features_sender.clone(),
+        );
+        let second_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new(
+            device_event_sender.clone(),
+            input_config_features_sender.clone(),
+        );
 
         // Create a fake input handler.
         let (handler_event_sender, mut handler_event_receiver) =
@@ -699,8 +741,12 @@ mod tests {
         // Create two fake device bindings.
         let (device_event_sender, device_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let input_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new(device_event_sender.clone());
+        let (input_config_features_sender, _input_config_features_receiver) =
+            futures::channel::mpsc::channel(1);
+        let input_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new(
+            device_event_sender.clone(),
+            input_config_features_sender.clone(),
+        );
 
         // Create two fake input handlers.
         let (first_handler_event_sender, mut first_handler_event_receiver) =
@@ -952,5 +998,39 @@ mod tests {
         // Assert that a device was registered.
         let bindings = bindings.lock().await;
         assert_eq!(bindings.len(), 1);
+    }
+
+    /// Tests that config changes are forwarded to device bindings.
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_input_config_request_stream() {
+        let (device_event_sender, _device_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        let (input_config_features_sender, mut input_config_features_receiver) =
+            futures::channel::mpsc::channel(1);
+        let fake_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new(
+            device_event_sender,
+            input_config_features_sender,
+        );
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
+        bindings.lock().await.insert(1, vec![Box::new(fake_device_binding)]);
+
+        let bindings_clone = bindings.clone();
+
+        let (input_config_features_proxy, input_config_features_request_stream) =
+            create_proxy_and_stream::<InputConfigFeaturesMarker>().unwrap();
+        input_config_features_proxy.set_touchpad_mode(true).expect("set_touchpad_mode");
+        // Drop proxy to terminate request stream.
+        std::mem::drop(input_config_features_proxy);
+        InputPipeline::handle_input_config_request_stream(
+            input_config_features_request_stream,
+            &bindings_clone,
+        )
+        .await
+        .expect("handle_input_config_request_stream");
+
+        assert_matches!(
+            input_config_features_receiver.next().await.unwrap(),
+            InputConfigFeaturesRequest::SetTouchpadMode { enable: true, .. }
+        );
     }
 }

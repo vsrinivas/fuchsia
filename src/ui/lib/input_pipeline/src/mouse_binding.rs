@@ -9,6 +9,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
+    fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
@@ -160,6 +161,13 @@ impl input_device::InputDeviceBinding for MouseBinding {
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
         input_device::InputDeviceDescriptor::Mouse(self.device_descriptor.clone())
+    }
+
+    async fn handle_input_config_request(
+        &self,
+        _request: &InputConfigFeaturesRequest,
+    ) -> Result<(), Error> {
+        Ok(())
     }
 }
 

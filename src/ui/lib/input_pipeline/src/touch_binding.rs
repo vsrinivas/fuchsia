@@ -9,7 +9,9 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
-    fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_pointerinjector as pointerinjector,
+    fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
+    fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
@@ -157,8 +159,10 @@ pub struct TouchBinding {
     device_descriptor: TouchDeviceDescriptor,
 
     /// Touch device type of the touch device.
-    /// TODO(fxb/99687): following CL will begin use this field and remove the underscore.
-    _touch_device_type: TouchDeviceType,
+    touch_device_type: TouchDeviceType,
+
+    /// Proxy to the device.
+    device_proxy: InputDeviceProxy,
 }
 
 #[async_trait]
@@ -169,6 +173,38 @@ impl input_device::InputDeviceBinding for TouchBinding {
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
         input_device::InputDeviceDescriptor::Touch(self.device_descriptor.clone())
+    }
+
+    async fn handle_input_config_request(
+        &self,
+        request: &InputConfigFeaturesRequest,
+    ) -> Result<(), Error> {
+        match request {
+            InputConfigFeaturesRequest::SetTouchpadMode { enable, .. } => {
+                match self.touch_device_type {
+                    TouchDeviceType::TouchScreen => Ok(()),
+                    TouchDeviceType::WindowsPrecisionTouchpad => {
+                        // `get_feature_report` to only modify the input_mode and
+                        // keep other feature as is.
+                        let mut report = match self.device_proxy.get_feature_report().await? {
+                            Ok(report) => report,
+                            Err(e) => return Err(format_err!("get_feature_report failed: {}", e)),
+                        };
+                        let mut touch =
+                            report.touch.unwrap_or(fidl_input_report::TouchFeatureReport::EMPTY);
+                        touch.input_mode = match enable {
+                            true => Some(fidl_input_report::TouchConfigurationInputMode::WindowsPrecisionTouchpadCollection),
+                            false => Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection),
+                        };
+                        report.touch = Some(touch);
+                        self.device_proxy
+                            .set_feature_report(report)
+                            .await?
+                            .map_err(|e| format_err!("set_feature_report failed: {}", e))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -191,7 +227,7 @@ impl TouchBinding {
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
         let device_binding =
-            Self::bind_device(&device_proxy, device_id, input_event_sender).await?;
+            Self::bind_device(device_proxy.clone(), device_id, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -213,12 +249,12 @@ impl TouchBinding {
     /// If the device descriptor could not be retrieved, or the descriptor could not be parsed
     /// correctly.
     async fn bind_device(
-        device: &InputDeviceProxy,
+        device_proxy: InputDeviceProxy,
         device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
-            device.get_descriptor().await?;
+            device_proxy.get_descriptor().await?;
 
         match device_descriptor.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
@@ -241,7 +277,8 @@ impl TouchBinding {
                         .filter_map(Result::ok)
                         .collect(),
                 },
-                _touch_device_type: get_device_type(device).await,
+                touch_device_type: get_device_type(&device_proxy).await,
+                device_proxy,
             }),
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
         }
@@ -448,15 +485,21 @@ async fn get_device_type(input_device: &fidl_input_report::InputDeviceProxy) -> 
 mod tests {
     use {
         super::*,
+        crate::input_pipeline::InputDeviceBindingHashMap,
+        crate::input_pipeline::InputPipeline,
         crate::testing_utilities::{
             self, create_touch_contact, create_touch_event, create_touch_input_report,
         },
         crate::utils::Position,
         assert_matches::assert_matches,
+        fidl::endpoints::create_proxy_and_stream,
         fidl::endpoints::spawn_stream_handler,
+        fidl_fuchsia_ui_input_config::FeaturesMarker as InputConfigFeaturesMarker,
         fuchsia_async as fasync,
+        futures::lock::Mutex,
         futures::StreamExt,
         pretty_assertions::assert_eq,
+        std::sync::Arc,
         test_case::test_case,
     };
 
@@ -690,70 +733,7 @@ mod tests {
         let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
             match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
-                        mouse: match has_mouse_descriptor {
-                            true => Some(fidl_input_report::MouseDescriptor {
-                                input: Some(fidl_input_report::MouseInputDescriptor {
-                                    movement_x: None,
-                                    movement_y: None,
-                                    position_x: None,
-                                    position_y: None,
-                                    scroll_v: None,
-                                    scroll_h: None,
-                                    buttons: None,
-                                    ..fidl_input_report::MouseInputDescriptor::EMPTY
-                                }),
-                                ..fidl_input_report::MouseDescriptor::EMPTY
-                            }),
-                            false => None,
-                        },
-                        touch: Some(fidl_input_report::TouchDescriptor {
-                            input: Some(fidl_input_report::TouchInputDescriptor {
-                                contacts: Some(vec![fidl_input_report::ContactInputDescriptor {
-                                    position_x: Some(fidl_input_report::Axis {
-                                        range: fidl_input_report::Range { min: 1, max: 2 },
-                                        unit: fidl_input_report::Unit {
-                                            type_: fidl_input_report::UnitType::None,
-                                            exponent: 0,
-                                        },
-                                    }),
-                                    position_y: Some(fidl_input_report::Axis {
-                                        range: fidl_input_report::Range { min: 2, max: 3 },
-                                        unit: fidl_input_report::Unit {
-                                            type_: fidl_input_report::UnitType::Other,
-                                            exponent: 100000,
-                                        },
-                                    }),
-                                    pressure: Some(fidl_input_report::Axis {
-                                        range: fidl_input_report::Range { min: 3, max: 4 },
-                                        unit: fidl_input_report::Unit {
-                                            type_: fidl_input_report::UnitType::Grams,
-                                            exponent: -991,
-                                        },
-                                    }),
-                                    contact_width: Some(fidl_input_report::Axis {
-                                        range: fidl_input_report::Range { min: 5, max: 6 },
-                                        unit: fidl_input_report::Unit {
-                                            type_:
-                                                fidl_input_report::UnitType::EnglishAngularVelocity,
-                                            exponent: 123,
-                                        },
-                                    }),
-                                    contact_height: Some(fidl_input_report::Axis {
-                                        range: fidl_input_report::Range { min: 7, max: 8 },
-                                        unit: fidl_input_report::Unit {
-                                            type_: fidl_input_report::UnitType::Pascals,
-                                            exponent: 100,
-                                        },
-                                    }),
-                                    ..fidl_input_report::ContactInputDescriptor::EMPTY
-                                }]),
-                                ..fidl_input_report::TouchInputDescriptor::EMPTY
-                            }),
-                            ..fidl_input_report::TouchDescriptor::EMPTY
-                        }),
-                        ..fidl_input_report::DeviceDescriptor::EMPTY
-                    });
+                    let _ = responder.send(get_touchpad_device_descriptor(has_mouse_descriptor));
                 }
                 fidl_input_report::InputDeviceRequest::GetFeatureReport { responder } => {
                     let _ = responder.send(&mut Ok(fidl_input_report::FeatureReport {
@@ -773,6 +753,152 @@ mod tests {
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
         let binding = TouchBinding::new(input_device_proxy, 0, device_event_sender).await.unwrap();
-        pretty_assertions::assert_eq!(binding._touch_device_type, expect_touch_device_type);
+        pretty_assertions::assert_eq!(binding.touch_device_type, expect_touch_device_type);
+    }
+
+    #[test_case(false, fidl_input_report::TouchConfigurationInputMode::MouseCollection; "mouse mode")]
+    #[test_case(true, fidl_input_report::TouchConfigurationInputMode::WindowsPrecisionTouchpadCollection; "touchpad mode")]
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_input_config_request(
+        enable_touchpad_mode: bool,
+        want_touch_configuration_input_mode: fidl_input_report::TouchConfigurationInputMode,
+    ) {
+        let (set_feature_report_sender, mut set_feature_report_receiver) =
+            futures::channel::mpsc::channel::<fidl_input_report::FeatureReport>(1);
+        let input_device_proxy = spawn_stream_handler(move |input_device_request| {
+            let mut set_feature_report_sender = set_feature_report_sender.clone();
+            async move {
+                match input_device_request {
+                    fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                        let _ = responder.send(get_touchpad_device_descriptor(true));
+                    }
+                    fidl_input_report::InputDeviceRequest::GetFeatureReport { responder } => {
+                        let _ = responder.send(&mut Ok(fidl_input_report::FeatureReport {
+                            touch: Some(fidl_input_report::TouchFeatureReport {
+                                input_mode: Some(
+                                    fidl_input_report::TouchConfigurationInputMode::MouseCollection,
+                                ),
+                                ..fidl_input_report::TouchFeatureReport::EMPTY
+                            }),
+                            ..fidl_input_report::FeatureReport::EMPTY
+                        }));
+                    }
+                    fidl_input_report::InputDeviceRequest::SetFeatureReport {
+                        report,
+                        responder,
+                    } => {
+                        match set_feature_report_sender.try_send(report) {
+                            Ok(_) => {
+                                let _ = responder.send(&mut Ok(()));
+                            }
+                            Err(e) => {
+                                panic!(
+                                    "try_send set_feature_report_request failed: {}",
+                                    e.to_string()
+                                );
+                            }
+                        };
+                    }
+                    fidl_input_report::InputDeviceRequest::GetInputReportsReader { .. } => {
+                        // Do not panic as `initialize_report_stream()` will call this protocol.
+                    }
+                    _ => panic!("InputDevice handler received an unexpected request"),
+                }
+            }
+        })
+        .unwrap();
+
+        let (device_event_sender, _device_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+
+        let binding = TouchBinding::new(input_device_proxy, 0, device_event_sender).await.unwrap();
+        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
+        bindings.lock().await.insert(1, vec![Box::new(binding)]);
+
+        let bindings_clone = bindings.clone();
+
+        let (input_config_features_proxy, input_config_features_request_stream) =
+            create_proxy_and_stream::<InputConfigFeaturesMarker>().unwrap();
+        input_config_features_proxy
+            .set_touchpad_mode(enable_touchpad_mode)
+            .expect("set_touchpad_mode");
+
+        // Drop proxy to terminate request stream.
+        std::mem::drop(input_config_features_proxy);
+
+        InputPipeline::handle_input_config_request_stream(
+            input_config_features_request_stream,
+            &bindings_clone,
+        )
+        .await
+        .expect("handle_input_config_request_stream");
+
+        let got_feature_report = set_feature_report_receiver.next().await;
+        let want_feature_report = Some(fidl_input_report::FeatureReport {
+            touch: Some(fidl_input_report::TouchFeatureReport {
+                input_mode: Some(want_touch_configuration_input_mode),
+                ..fidl_input_report::TouchFeatureReport::EMPTY
+            }),
+            ..fidl_input_report::FeatureReport::EMPTY
+        });
+        pretty_assertions::assert_eq!(want_feature_report, got_feature_report);
+    }
+
+    /// Returns an |fidl_fuchsia_input_report::DeviceDescriptor| for
+    /// touchpad related tests.
+    fn get_touchpad_device_descriptor(
+        has_mouse_descriptor: bool,
+    ) -> fidl_fuchsia_input_report::DeviceDescriptor {
+        fidl_input_report::DeviceDescriptor {
+            mouse: match has_mouse_descriptor {
+                true => Some(fidl_input_report::MouseDescriptor::EMPTY),
+                false => None,
+            },
+            touch: Some(fidl_input_report::TouchDescriptor {
+                input: Some(fidl_input_report::TouchInputDescriptor {
+                    contacts: Some(vec![fidl_input_report::ContactInputDescriptor {
+                        position_x: Some(fidl_input_report::Axis {
+                            range: fidl_input_report::Range { min: 1, max: 2 },
+                            unit: fidl_input_report::Unit {
+                                type_: fidl_input_report::UnitType::None,
+                                exponent: 0,
+                            },
+                        }),
+                        position_y: Some(fidl_input_report::Axis {
+                            range: fidl_input_report::Range { min: 2, max: 3 },
+                            unit: fidl_input_report::Unit {
+                                type_: fidl_input_report::UnitType::Other,
+                                exponent: 100000,
+                            },
+                        }),
+                        pressure: Some(fidl_input_report::Axis {
+                            range: fidl_input_report::Range { min: 3, max: 4 },
+                            unit: fidl_input_report::Unit {
+                                type_: fidl_input_report::UnitType::Grams,
+                                exponent: -991,
+                            },
+                        }),
+                        contact_width: Some(fidl_input_report::Axis {
+                            range: fidl_input_report::Range { min: 5, max: 6 },
+                            unit: fidl_input_report::Unit {
+                                type_: fidl_input_report::UnitType::EnglishAngularVelocity,
+                                exponent: 123,
+                            },
+                        }),
+                        contact_height: Some(fidl_input_report::Axis {
+                            range: fidl_input_report::Range { min: 7, max: 8 },
+                            unit: fidl_input_report::Unit {
+                                type_: fidl_input_report::UnitType::Pascals,
+                                exponent: 100,
+                            },
+                        }),
+                        ..fidl_input_report::ContactInputDescriptor::EMPTY
+                    }]),
+                    ..fidl_input_report::TouchInputDescriptor::EMPTY
+                }),
+                ..fidl_input_report::TouchDescriptor::EMPTY
+            }),
+            ..fidl_input_report::DeviceDescriptor::EMPTY
+        }
     }
 }
