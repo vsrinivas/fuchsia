@@ -5,21 +5,16 @@
 import("//build/components.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-_common_deps = [
-  "dhcp:component",
-  "dhcpv6/client:component",
-  "dns:component",
-  "http-client:component",
-  "reachability:component",
-]
+declare_args() {
+  # DO NOT SET THIS IN A PRODUCT DEFINITION!!  FOR NETSTACK DEVELOPER USE ONLY
+  # TODO(https://fxbug.dev/85450) - Convert this to a platform configuration
+  # option in Product Assembly
+  use_netstack3 = false
+}
 
 fuchsia_component("component") {
   component_name = "network"
   manifest = "meta/network-default.cml"
-  deps = _common_deps + [
-           "netstack:component",
-           "netcfg:component-advanced",
-         ]
 }
 
 # TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
@@ -29,35 +24,82 @@ fuchsia_component("component") {
 fuchsia_component("component-basic") {
   component_name = "network"
   manifest = "meta/network-basic.cml"
-  deps = _common_deps + [
-           "netstack:component",
-           "netcfg:component-basic",
-         ]
+}
+
+# TODO(https://fxbug.dev/85450): Convert this to a platform configuration
+# option in Product Assembly
+group("network") {
+  if (use_netstack3) {
+    public_deps = [ ":network_netstack3" ]
+  } else {
+    public_deps = [ ":network_netstack2" ]
+  }
+}
+
+# Defines a Fuchsia package with networking components.
+#
+# Parameters
+#
+#   netstack_component:
+#     Required: Name of the Fuchsia component target that provides the netstack.
+#
+#   basic:
+#     Required: Use only the basic versions of components.
+#
+#   visibility:
+#     Optional: Has the standard GN meaning.
+template("network_package") {
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    package_name = "network"
+    deps = [
+      "dhcp:component",
+      "dhcpv6/client:component",
+      "dns:component",
+      "http-client:component",
+      "reachability:component",
+      invoker.netstack_component,
+    ]
+    if (invoker.basic) {
+      deps += [
+        ":component-basic",
+        "netcfg:component-basic",
+      ]
+    } else {
+      deps += [
+        ":component",
+        "netcfg:component-advanced",
+      ]
+    }
+  }
+}
+
+network_package("network_netstack2") {
+  netstack_component = "netstack:component"
+  basic = false
+
+  # Other targets should depend on this via the :network group.
+  visibility = [ ":network" ]
+}
+
+network_package("network_netstack3") {
+  netstack_component = "netstack3:component-dropin"
+  basic = false
+
+  # Other targets should depend on this via the :network group.
+  visibility = [ ":network" ]
+}
+
+network_package("network-basic") {
+  netstack_component = "netstack:component"
+  basic = true
 }
 
 # TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
 # create this variant.
-fuchsia_component("component-with-tracing") {
-  component_name = "network"
-  manifest = "meta/network-default.cml"
-  deps = _common_deps + [
-           "netstack:component-with-tracing",
-           "netcfg:component-advanced",
-         ]
-}
-
-fuchsia_package("network") {
-  deps = [ ":component" ]
-}
-
-fuchsia_package("network-basic") {
-  package_name = "network"
-  deps = [ ":component-basic" ]
-}
-
-fuchsia_package("network-with-tracing") {
-  package_name = "network"
-  deps = [ ":component-with-tracing" ]
+network_package("network-with-tracing") {
+  netstack_component = "netstack:component-with-tracing"
+  basic = false
 }
 
 core_shard("virtualization-core-shard") {
@@ -88,9 +130,6 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
-    # Ensure this target doesn't rot. This dependency can be removed if the
-    # target becomes load bearing elsewhere.
-    ":component-with-tracing",
     "dhcp:tests",
     "dhcpv6:tests",
     "dns:tests",
@@ -100,6 +139,10 @@ group("tests") {
     "mdns:tests",
     "net-cli:tests",
     "netcfg:tests",
+
+    # Ensure this target doesn't rot. This dependency can be removed if the
+    # target becomes load bearing elsewhere.
+    "netstack:component-with-tracing",
     "netstack:tests",
     "netstack3:tests",
     "reachability:tests",

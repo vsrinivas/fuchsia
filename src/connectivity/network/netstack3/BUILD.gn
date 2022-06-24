@@ -101,6 +101,14 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+# Component that shows up in the package as #meta/netstack.cm and can be used
+# in place of Netstack2 when assembling images.
+fuchsia_component("component-dropin") {
+  component_name = "netstack"
+  manifest = "meta/netstack3.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("netstack3") {
   deps = [ ":component-legacy" ]
 }
