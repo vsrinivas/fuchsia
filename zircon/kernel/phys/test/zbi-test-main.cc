@@ -11,7 +11,9 @@
 
 #include "test-main.h"
 
-void ZbiMain(void* zbi, arch::EarlyTicks ticks) {
+// Make sure ZbiMain can't be inlined into PhysMain via LTO, so that
+// tests will have a known machine-level backtrace to TestMain.
+[[gnu::noinline]] void ZbiMain(void* zbi, arch::EarlyTicks ticks) {
   // Early boot may have filled the screen with logs. Add a newline to
   // terminate any previous line, and another newline to leave a blank.
   printf("\n\n");

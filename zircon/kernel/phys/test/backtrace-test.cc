@@ -81,7 +81,7 @@ namespace {
 
 }  // namespace
 
-int TestMain(void* zbi, arch::EarlyTicks) {
+[[gnu::noinline]] int TestMain(void* zbi, arch::EarlyTicks) {
   MainSymbolize symbolize("backtrace-test");
 
   if (zbi && static_cast<zbi_header_t*>(zbi)->type == ZBI_TYPE_CONTAINER) {
