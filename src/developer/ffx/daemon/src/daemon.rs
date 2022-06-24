@@ -66,6 +66,7 @@ impl DaemonEventHandler {
         Self { target_collection }
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn handle_overnet_peer(&self, node_id: u64) {
         let rcs = match RcsConnection::new(&mut NodeId { id: node_id }) {
             Ok(rcs) => rcs,
@@ -88,6 +89,7 @@ impl DaemonEventHandler {
         target.run_logger();
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn handle_overnet_peer_lost(&self, node_id: u64) {
         if let Some(target) = self
             .target_collection
@@ -197,6 +199,7 @@ impl DaemonProtocolProvider for Daemon {
         Ok(target.as_ref().into())
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn open_remote_control(
         &self,
         target_identifier: Option<String>,

@@ -228,7 +228,7 @@ zstd-safe = "4.0.0+zstd.1.4.9"
 [dependencies.tracing-subscriber]
 version = "0.3.1"
 default-features = false
-features = ["registry", "tracing-log"]
+features = ["registry", "tracing-log", "fmt", "std"]
 
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]

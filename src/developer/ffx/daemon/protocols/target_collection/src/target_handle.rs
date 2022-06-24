@@ -55,6 +55,7 @@ struct TargetHandleInner {
 }
 
 impl TargetHandleInner {
+    #[tracing::instrument(level = "info", skip(self, _cx))]
     async fn handle(&self, _cx: &Context, req: ffx::TargetRequest) -> Result<()> {
         match req {
             ffx::TargetRequest::GetSshLogs { responder } => {

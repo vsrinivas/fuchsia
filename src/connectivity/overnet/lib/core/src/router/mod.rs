@@ -90,6 +90,7 @@ impl RouterOptions {
     }
 }
 
+#[derive(Debug)]
 enum PendingTransfer {
     Complete(FoundTransfer),
     Waiting(Waker),
@@ -109,6 +110,7 @@ pub(crate) enum OpenedTransfer {
     Remote(FramedStreamWriter, FramedStreamReader, Handle),
 }
 
+#[derive(Debug)]
 struct PeerMaps {
     clients: BTreeMap<NodeId, Arc<Peer>>,
     servers: BTreeMap<NodeId, Vec<Arc<Peer>>>,
@@ -207,6 +209,7 @@ impl PeerMaps {
 }
 
 /// Wrapper to get the right list_peers behavior.
+#[derive(Debug)]
 pub struct ListPeersContext(Mutex<Option<Observer<Vec<ListablePeer>>>>);
 
 static LIST_PEERS_CALL: AtomicU64 = AtomicU64::new(0);

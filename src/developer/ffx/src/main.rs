@@ -50,12 +50,19 @@ struct Injection {
     target: Once<Option<String>>,
 }
 
+impl std::fmt::Debug for Injection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Injection").finish()
+    }
+}
+
 impl Default for Injection {
     fn default() -> Self {
         Self { target: Once::new(), daemon_once: Once::new(), remote_once: Once::new() }
     }
 }
 
+#[tracing::instrument(level = "info")]
 fn open_target_with_fut<'a>(
     target: Option<String>,
     is_default_target: bool,
@@ -111,6 +118,7 @@ impl Injection {
             .map(|s| s.clone())
     }
 
+    #[tracing::instrument(level = "info")]
     async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
         let daemon_proxy = self.daemon_factory().await?;
         let target = self.target().await?;
@@ -198,6 +206,7 @@ impl Injection {
 impl Injector for Injection {
     // This could get called multiple times by the plugin system via multiple threads - so make sure
     // the spawning only happens one thread at a time.
+    #[tracing::instrument(level = "info")]
     async fn daemon_factory(&self) -> Result<DaemonProxy> {
         self.daemon_once.get_or_try_init(init_daemon_proxy()).await.map(|proxy| proxy.clone())
     }
@@ -220,6 +229,7 @@ impl Injector for Injection {
         })?
     }
 
+    #[tracing::instrument(level = "info")]
     async fn remote_factory(&self) -> Result<RemoteControlProxy> {
         let target = self.target().await?;
         let timeout_error = self.daemon_timeout_error().await?;

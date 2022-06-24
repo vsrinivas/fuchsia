@@ -4,12 +4,17 @@
 
 use {
     anyhow::{Context as _, Result},
-    simplelog::{CombinedLogger, Config, ConfigBuilder, LevelFilter, SimpleLogger, WriteLogger},
+    rand::Rng,
     std::fs::{create_dir_all, remove_file, rename, File, OpenOptions},
     std::io::{ErrorKind, Read, Seek, SeekFrom, Write},
     std::path::PathBuf,
     std::str::FromStr,
     std::sync::atomic::{AtomicBool, Ordering},
+    std::sync::Mutex,
+    tracing::Metadata,
+    tracing_subscriber::filter::LevelFilter,
+    tracing_subscriber::prelude::*,
+    tracing_subscriber::Layer,
 };
 
 const LOG_DIR: &str = "log.dir";
@@ -22,70 +27,16 @@ const TIME_FORMAT: &str = "%b %d %H:%M:%S";
 
 static LOG_ENABLED_FLAG: AtomicBool = AtomicBool::new(true);
 
-fn config() -> Config {
-    // Sets the target level to "Error" so that all logs show their module
-    // target in the logs.
-    ConfigBuilder::new()
-        .set_target_level(LevelFilter::Error)
-        .set_time_to_local(true)
-        .set_time_format_str(TIME_FORMAT)
-        .add_filter_ignore_str("hyper")
-        .add_filter_ignore_str("rustls")
-        .build()
-}
-
-struct DisableableSimpleLogger {
-    logger: Box<SimpleLogger>,
+lazy_static::lazy_static! {
+    static ref LOGGING_ID: u64 = generate_id();
 }
 
 pub fn disable_stdio_logging() {
     LOG_ENABLED_FLAG.store(false, Ordering::Relaxed);
 }
 
-impl DisableableSimpleLogger {
-    pub fn new(logger: Box<SimpleLogger>) -> Box<Self> {
-        Box::new(Self { logger })
-    }
-
-    pub fn is_enabled(&self) -> bool {
-        LOG_ENABLED_FLAG.load(Ordering::Relaxed)
-    }
-}
-
-impl log::Log for DisableableSimpleLogger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        self.is_enabled() && self.logger.enabled(metadata)
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.is_enabled() {
-            self.logger.log(record);
-        }
-    }
-
-    fn flush(&self) {
-        if self.is_enabled() {
-            self.logger.flush();
-        }
-    }
-}
-
-impl simplelog::SharedLogger for DisableableSimpleLogger {
-    fn level(&self) -> log::LevelFilter {
-        if self.is_enabled() {
-            self.logger.level()
-        } else {
-            log::LevelFilter::Off
-        }
-    }
-
-    fn config(&self) -> Option<&Config> {
-        self.logger.config()
-    }
-
-    fn as_log(self: Box<Self>) -> Box<dyn log::Log> {
-        Box::new(*self)
-    }
+fn generate_id() -> u64 {
+    rand::thread_rng().gen::<u64>()
 }
 
 pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
@@ -193,9 +144,9 @@ pub async fn filter_level() -> LevelFilter {
         .ok()
         .map(|str| {
             // Ideally we could log here, but there may be no log sink, so fall back to a default
-            LevelFilter::from_str(&str).unwrap_or(LevelFilter::Debug)
+            LevelFilter::from_str(&str).unwrap_or(LevelFilter::DEBUG)
         })
-        .unwrap_or(LevelFilter::Debug)
+        .unwrap_or(LevelFilter::DEBUG)
 }
 
 pub async fn init(log_to_stdio: bool, log_to_file: bool) -> Result<()> {
@@ -207,64 +158,187 @@ pub async fn init(log_to_stdio: bool, log_to_file: bool) -> Result<()> {
 
     let level = filter_level().await;
 
-    CombinedLogger::init(get_loggers(log_to_stdio, file, level)).context("initializing logger")
+    configure_subscribers(log_to_stdio, file, level);
+
+    Ok(())
 }
 
-fn get_loggers(
-    stdio: bool,
-    file: Option<File>,
-    level: LevelFilter,
-) -> Vec<Box<dyn simplelog::SharedLogger>> {
-    let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> = vec![];
+struct DisableableFilter;
 
-    // The daemon logs to stdio, and is redirected to file by spawn_daemon, which enables
-    // panics and backtraces to also be included.
-    if stdio {
-        loggers.push(DisableableSimpleLogger::new(SimpleLogger::new(level, config())));
+impl<S> tracing_subscriber::layer::Filter<S> for DisableableFilter {
+    fn enabled(
+        &self,
+        _meta: &Metadata<'_>,
+        _cx: &tracing_subscriber::layer::Context<'_, S>,
+    ) -> bool {
+        LOG_ENABLED_FLAG.load(Ordering::Relaxed)
     }
-
-    if let Some(file) = file {
-        let writer = std::io::LineWriter::new(file);
-        loggers.push(WriteLogger::new(level, config(), writer));
-    }
-
-    loggers
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use log::Log;
+fn configure_subscribers(stdio: bool, file: Option<File>, level: LevelFilter) {
+    let stdio_layer = if stdio {
+        let event_format = LogFormat::new(*LOGGING_ID);
+        let format = tracing_subscriber::fmt::layer()
+            .event_format(event_format)
+            .with_filter(DisableableFilter)
+            .with_filter(level);
+        Some(format)
+    } else {
+        None
+    };
 
-    #[test]
-    fn test_get_loggers() {
-        let loggers = get_loggers(false, None, LevelFilter::Debug);
-        assert!(loggers.len() == 0);
+    let file_layer = file.map(|f| {
+        let event_format = LogFormat::new(*LOGGING_ID);
+        let writer = Mutex::new(std::io::LineWriter::new(f));
+        let format = tracing_subscriber::fmt::layer()
+            .event_format(event_format)
+            .with_writer(writer)
+            .with_filter(level);
+        format
+    });
 
-        // SimpleLogger (error logs to stderr, all other levels to stdout)
-        let loggers = get_loggers(true, None, LevelFilter::Debug);
-        assert!(loggers.len() == 1);
+    tracing_subscriber::registry().with(stdio_layer).with(file_layer).init();
+}
 
-        // WriteLogger (error logs to stderr, all other logs to file)
-        let loggers = get_loggers(false, Some(tempfile::tempfile().unwrap()), LevelFilter::Debug);
-        assert!(loggers.len() == 1);
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+struct LogTimer;
 
-        // SimpleLogger & WriteLogger (error logs to stderr, all other levels to stdout and file)
-        let loggers = get_loggers(true, Some(tempfile::tempfile().unwrap()), LevelFilter::Debug);
-        assert!(loggers.len() == 2);
+impl tracing_subscriber::fmt::time::FormatTime for LogTimer {
+    fn format_time(&self, w: &mut tracing_subscriber::fmt::format::Writer<'_>) -> std::fmt::Result {
+        let time = chrono::Local::now().format(TIME_FORMAT);
+        write!(w, "{}", time)
     }
+}
 
-    #[test]
-    fn test_disable_logger() {
-        let logger = DisableableSimpleLogger::new(SimpleLogger::new(LevelFilter::Debug, config()));
-        let metadata =
-            log::MetadataBuilder::new().level(log::Level::Error).target("test-target").build();
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+struct LogFormat {
+    id: u64,
+    display_thread_id: bool,
+    display_filename: bool,
+    display_line_number: bool,
+    display_target: bool,
+    timer: LogTimer,
+}
 
-        assert!(logger.enabled(&metadata));
-        disable_stdio_logging();
-        assert!(!logger.enabled(&metadata));
+impl LogFormat {
+    fn new(id: u64) -> Self {
+        LogFormat { id, ..Default::default() }
+    }
+}
 
-        // This might not be necessary but restores the shared state to what it was before the test
-        LOG_ENABLED_FLAG.store(true, Ordering::Relaxed);
+impl<S, N> tracing_subscriber::fmt::FormatEvent<S, N> for LogFormat
+where
+    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+    N: for<'a> tracing_subscriber::fmt::FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
+        mut writer: tracing_subscriber::fmt::format::Writer<'_>,
+        event: &tracing::Event<'_>,
+    ) -> std::fmt::Result {
+        use tracing_log::NormalizeEvent;
+        use tracing_subscriber::fmt::time::FormatTime;
+        use tracing_subscriber::fmt::FormatFields;
+
+        let normalized_meta = event.normalized_metadata();
+        let meta = normalized_meta.as_ref().unwrap_or_else(|| event.metadata());
+
+        if self.timer.format_time(&mut writer).is_err() {
+            writer.write_str("<unknown time>")?;
+        }
+        writer.write_char(' ')?;
+
+        write!(writer, "[{:0>20?}] ", self.id)?;
+
+        match *meta.level() {
+            tracing::Level::TRACE => write!(writer, "TRACE ")?,
+            tracing::Level::DEBUG => write!(writer, "DEBUG ")?,
+            tracing::Level::INFO => write!(writer, "INFO ")?,
+            tracing::Level::WARN => write!(writer, "WARN ")?,
+            tracing::Level::ERROR => write!(writer, "ERROR ")?,
+        }
+
+        if self.display_thread_id {
+            write!(writer, "{:0>2?} ", std::thread::current().id())?;
+        }
+
+        let full_ctx = FullCtx::new(ctx, event.parent());
+        write!(writer, "{}", full_ctx)?;
+
+        if self.display_target {
+            write!(writer, "{}: ", meta.target())?;
+        }
+
+        let line_number = if self.display_line_number { meta.line() } else { None };
+
+        if self.display_filename {
+            if let Some(filename) = meta.file() {
+                write!(writer, "{}:{}", filename, if line_number.is_some() { "" } else { " " })?;
+            }
+        }
+
+        if let Some(line_number) = line_number {
+            write!(writer, "{}: ", line_number)?;
+        }
+
+        ctx.format_fields(writer.by_ref(), event)?;
+        writeln!(writer)
+    }
+}
+
+struct FullCtx<'a, S, N>
+where
+    S: tracing::Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
+    N: for<'writer> tracing_subscriber::fmt::FormatFields<'writer> + 'static,
+{
+    ctx: &'a tracing_subscriber::fmt::FmtContext<'a, S, N>,
+    span: Option<&'a tracing::span::Id>,
+}
+
+impl<'a, S, N: 'a> FullCtx<'a, S, N>
+where
+    S: tracing::Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
+    N: for<'writer> tracing_subscriber::fmt::FormatFields<'writer> + 'static,
+{
+    fn new(
+        ctx: &'a tracing_subscriber::fmt::FmtContext<'a, S, N>,
+        span: Option<&'a tracing::span::Id>,
+    ) -> Self {
+        Self { ctx, span }
+    }
+}
+
+impl<'a, S, N> std::fmt::Display for FullCtx<'a, S, N>
+where
+    S: tracing::Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
+    N: for<'writer> tracing_subscriber::fmt::FormatFields<'writer> + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+        let mut seen = false;
+
+        let span = self.span.and_then(|id| self.ctx.span(id)).or_else(|| self.ctx.lookup_current());
+
+        let scope = span.into_iter().flat_map(|span| span.scope().from_root());
+
+        for span in scope {
+            write!(f, "{}", span.metadata().name())?;
+            seen = true;
+
+            let ext = span.extensions();
+            let fields = &ext
+                .get::<tracing_subscriber::fmt::FormattedFields<N>>()
+                .expect("Unable to find FormattedFields in extensions; this is a bug");
+            if !fields.is_empty() {
+                write!(f, "{{{}}}", fields)?;
+            }
+            f.write_char(':')?;
+        }
+
+        if seen {
+            f.write_char(' ')?;
+        }
+        Ok(())
     }
 }

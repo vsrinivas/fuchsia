@@ -141,6 +141,7 @@ impl FidlProtocol for TargetCollectionProtocol {
     type Protocol = ffx::TargetCollectionMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
+    #[tracing::instrument(level = "info", skip(self, cx))]
     async fn handle(&self, cx: &Context, req: ffx::TargetCollectionRequest) -> Result<()> {
         let target_collection = cx.get_target_collection().await?;
         match req {

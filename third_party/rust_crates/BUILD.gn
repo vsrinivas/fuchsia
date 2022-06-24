@@ -10883,6 +10883,7 @@ rust_library("tracing-subscriber-v0_3_1") {
     "-Cmetadata=3c92bd8481194a1d",
     "-Cextra-filename=-3c92bd8481194a1d",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"fmt\"",
     "--cfg=feature=\"registry\"",
     "--cfg=feature=\"sharded-slab\"",
     "--cfg=feature=\"std\"",

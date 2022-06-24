@@ -126,6 +126,7 @@ impl TargetCollection {
         to_update
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     pub fn merge_insert(&self, new_target: Rc<Target>) -> Rc<Target> {
         // Drop non-manual loopback address entries, as matching against
         // them could otherwise match every target in the collection.

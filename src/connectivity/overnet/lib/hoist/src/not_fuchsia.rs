@@ -73,6 +73,7 @@ impl HostOvernet {
     }
 }
 
+#[derive(Debug)]
 pub struct Hoist {
     host_overnet: HostOvernet,
     node: Arc<Router>,
@@ -216,6 +217,7 @@ async fn retry_with_backoff<E, F>(
     }
 }
 
+#[tracing::instrument(level = "info")]
 async fn handle_consumer_request(
     node: Arc<Router>,
     list_peers_context: Arc<ListPeersContext>,
@@ -236,6 +238,7 @@ async fn handle_consumer_request(
     Ok(())
 }
 
+#[tracing::instrument(level = "info")]
 async fn handle_publisher_request(
     node: Arc<Router>,
     r: ServicePublisherRequest,
@@ -244,6 +247,7 @@ async fn handle_publisher_request(
     node.register_service(service_name, provider).await
 }
 
+#[tracing::instrument(level = "info")]
 async fn handle_controller_request(
     node: Arc<Router>,
     r: MeshControllerRequest,
@@ -283,6 +287,7 @@ fn log_request<
     }
 }
 
+#[tracing::instrument(level = "info")]
 async fn handle_request(node: Arc<Router>, req: HostOvernetRequest) -> Result<(), Error> {
     match req {
         HostOvernetRequest::ConnectServiceConsumer { svc, control_handle: _ } => {
@@ -319,6 +324,7 @@ async fn handle_request(node: Arc<Router>, req: HostOvernetRequest) -> Result<()
     Ok(())
 }
 
+#[tracing::instrument(level = "info", skip(rx))]
 async fn run_overnet(node: Arc<Router>, rx: HostOvernetRequestStream) -> Result<(), Error> {
     // Run application loop
     rx.map_err(Into::into)

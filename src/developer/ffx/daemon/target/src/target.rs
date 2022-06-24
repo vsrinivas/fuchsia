@@ -553,6 +553,7 @@ impl Target {
     ///
     ///   RCS  ->   MDNS          =>  RCS (does not drop RCS state)
     ///   *    ->   Disconnected  =>  Manual if the device is manual
+    #[tracing::instrument(level = "info", skip(func))]
     pub fn update_connection_state<F>(&self, func: F)
     where
         F: FnOnce(TargetConnectionState) -> TargetConnectionState + Sized,
@@ -773,6 +774,7 @@ impl Target {
         }
     }
 
+    #[tracing::instrument(level = "info")]
     pub fn from_identify(identify: IdentifyHostResponse) -> Result<Rc<Self>, Error> {
         // TODO(raggi): allow targets to truly be created without a nodename.
         let nodename = match identify.nodename {
@@ -816,6 +818,7 @@ impl Target {
         Ok(target)
     }
 
+    #[tracing::instrument(level = "info")]
     pub async fn from_rcs_connection(rcs: RcsConnection) -> Result<Rc<Self>, RcsConnectionError> {
         let identify_result =
             timeout(Duration::from_millis(IDENTIFY_HOST_TIMEOUT_MILLIS), rcs.proxy.identify_host())
@@ -868,6 +871,7 @@ impl Target {
         self.preferred_ssh_address.borrow_mut().take();
     }
 
+    #[tracing::instrument(level = "info")]
     pub fn run_host_pipe(self: &Rc<Self>) {
         if self.host_pipe.borrow().is_some() {
             return;

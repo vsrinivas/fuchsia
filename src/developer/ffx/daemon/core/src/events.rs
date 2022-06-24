@@ -77,6 +77,7 @@ struct Dispatcher<T: EventTrait + 'static> {
 }
 
 impl<T: EventTrait + 'static> Dispatcher<T> {
+    #[tracing::instrument(level = "info", skip(inner))]
     async fn handler_helper(
         event: T,
         inner: Rc<DispatcherInner<T>>,
