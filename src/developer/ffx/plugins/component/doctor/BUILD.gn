@@ -8,14 +8,20 @@ ffx_plugin("ffx_component_doctor") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
+  args_with_unit_tests = true
+
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
-    "//src/lib/component_hub",
     "//src/sys/lib/moniker",
-    "//third_party/rust_crates:ansi_term",
-    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:prettytable-rs",
+    "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:textwrap",
   ]
+
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   args_sources = [ "src/args.rs" ]
 

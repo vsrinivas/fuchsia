@@ -152,6 +152,20 @@ impl RemoteControlService {
                 )?;
                 Ok(())
             }
+            rcs::RemoteControlRequest::RootRouteValidator { server, responder } => {
+                responder.send(
+                    &mut fuchsia_fs::connect_in_namespace(
+                        &format!(
+                            "/svc/{}.root",
+                            fidl_fuchsia_sys2::RouteValidatorMarker::PROTOCOL_NAME
+                        ),
+                        server.into_channel(),
+                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
             rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
                 let addr: SocketAddressExt = addr.into();
                 let addr = addr.0;

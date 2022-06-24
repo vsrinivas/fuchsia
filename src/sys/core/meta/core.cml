@@ -749,6 +749,7 @@
                 "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
+                "fuchsia.sys2.RouteValidator.root",
             ],
             from: "parent",
             to: "#remote-control",

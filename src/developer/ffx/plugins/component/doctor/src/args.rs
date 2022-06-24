@@ -14,18 +14,27 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 $ ffx component doctor /core/appmgr
 
-This will run the following checks:
-    * Verify that the component's lists of outgoing and exposed capabilities match",
-    note = "When using the `doctor` subcommand, the following diagnostic checks are ran on a component:
-
-    1- Check that the lists of `outgoing` and `exposed` capabilities match
-
-All the checks are ran consecutively. In the case of a check failing, the following checks WILL be
-ran and the command will return an error code afterwards.
-    "
+This will run checks on the capabilities configuration of the component, checking that all of the
+`use` and `expose` capabilities can be routed successfully by the component manager."
 )]
 pub struct DoctorCommand {
     #[argh(positional)]
     /// the component's moniker. Example: `/core/appmgr`.
-    pub moniker: Vec<String>,
+    pub moniker: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const CMD_NAME: &'static [&'static str] = &["doctor"];
+
+    #[test]
+    fn test_command() {
+        let moniker = "/core/ffx-laboratory:foo";
+        let args = &[moniker];
+        assert_eq!(
+            DoctorCommand::from_args(CMD_NAME, args),
+            Ok(DoctorCommand { moniker: moniker.to_string() })
+        )
+    }
 }

@@ -62,6 +62,11 @@ protocol RemoteControl {
         server server_end:sys2.LifecycleController;
     }) -> (struct {}) error zx.status;
 
+    /// Connects to the root [`fuchsia.sys2/RouteValidator`] protocol.
+    RootRouteValidator(resource struct {
+        server server_end:sys2.RouteValidator;
+    }) -> (struct {}) error zx.status;
+
     IdentifyHost() -> (struct {
         response IdentifyHostResponse;
     }) error IdentifyHostError;
