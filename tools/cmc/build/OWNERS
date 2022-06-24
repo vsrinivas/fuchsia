@@ -1,4 +1,0 @@
-include /src/sys/cmc/OWNERS
-
-per-file BUILD.gn=bryanhenry@google.com
-per-file BUILD.gn=zarvox@google.com
