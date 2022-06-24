@@ -205,9 +205,9 @@ type CommandBuffer = struct {
 /// triggered, the driver removes a range from the pool, writes the performance counter values from
 /// the hardware into it, then signals the client using OnPerformanceCounterReadCompleted. Pool IDs
 /// are arbitrary uint64 values that are allocated by the client.
-alias PerfCountPoolId = uint64;
+alias PerformanceCounterPoolId = uint64;
 
-type ResultFlags = strict bits {
+type ResultFlags = flexible bits {
     /// This bit is set in result_flags if the performance counters missed some samples, e.g. due to
     /// the GPU being in protected mode for part of the time.
     DISCONTINUITY = 1;
@@ -222,6 +222,12 @@ type BufferRange = struct {
 };
 
 alias ContextId = uint32;
+
+alias PerformanceCounterTriggerId = uint32;
+
+/// Describes a set of performance counters. The exact meaning depends on the GPU driver, but will
+/// often be a bitvector representing whether each performance counter is enabled or disabled.
+alias PerformanceCounterSet = vector<uint64>:64;
 
 /// If a system driver error occurs, or if the client sends a message that the client should have
 /// known is invalid, the connection will be closed and a zx.status sent via epitaph.
@@ -361,26 +367,26 @@ protocol Primary {
         enabled bool;
     });
 
-    /// Enables a set of performance counters (the precise definition depends on the GPU driver).
-    /// Disables enabled performance counters that are not in the new set. Performance counters will
-    /// also be automatically disabled on connection close. Performance counter access must have
-    /// been enabled using EnablePerformanceCounterAccess before calling this method.
+    /// Enables a set of performance counters.  Disables enabled performance counters that are not
+    /// in the new set. Performance counters will also be automatically disabled on connection
+    /// close. Performance counter access must have been enabled using
+    /// EnablePerformanceCounterAccess before calling this method.
     EnablePerformanceCounters(struct {
-        counters vector<uint64>:64;
+        counters PerformanceCounterSet;
     });
 
     /// Creates a pool of buffers that performance counters can be dumped into. Performance counter
     /// access must have been enabled using EnablePerformanceCounterAccess before calling this
     /// method.
     CreatePerformanceCounterBufferPool(resource struct {
-        pool_id PerfCountPoolId;
+        pool_id PerformanceCounterPoolId;
         event_channel server_end:PerformanceCounterEvents;
     });
 
     /// Releases a pool of performance counter buffers. Performance counter access must have been
     /// enabled using EnablePerformanceCounterAccess before calling this method.
     ReleasePerformanceCounterBufferPool(struct {
-        pool_id PerfCountPoolId;
+        pool_id PerformanceCounterPoolId;
     });
 
     /// Adds a set of offsets into buffers to the pool. |offsets[n].buffer_id| is the id of a
@@ -392,7 +398,7 @@ protocol Primary {
     /// counters. Performance counter access must have been enabled using
     /// EnablePerformanceCounterAccess before calling this method.
     AddPerformanceCounterBufferOffsetsToPool(struct {
-        pool_id PerfCountPoolId;
+        pool_id PerformanceCounterPoolId;
         offsets vector<BufferRange>:64;
     });
 
@@ -401,7 +407,7 @@ protocol Primary {
     /// buffer may be lost.  Performance counter access must have been enabled using
     /// EnablePerformanceCounterAccess before calling this method.
     RemovePerformanceCounterBufferFromPool(struct {
-        pool_id PerfCountPoolId;
+        pool_id PerformanceCounterPoolId;
         buffer_id ObjectId;
     });
 
@@ -410,15 +416,15 @@ protocol Primary {
     /// be returned in OnPerformanceCounterReadCompleted. Performance counter access must have been
     /// enabled using EnablePerformanceCounterAccess before calling this method.
     DumpPerformanceCounters(struct {
-        pool_id PerfCountPoolId;
-        trigger_id uint32;
+        pool_id PerformanceCounterPoolId;
+        trigger_id PerformanceCounterTriggerId;
     });
 
     /// Sets the values of all listed performance counters to 0. May not be supported by some
     /// hardware. Performance counter access must have been enabled using
     /// EnablePerformanceCounterAccess before calling this method.
     ClearPerformanceCounters(struct {
-        counters vector<uint64>:64;
+        counters PerformanceCounterSet;
     });
 };
 
@@ -434,12 +440,21 @@ protocol PerformanceCounterAccess {
 protocol PerformanceCounterEvents {
     /// Signals that a performance counter buffer has data. These will be output in the order of
     /// when the reads are completed.
-    -> OnPerformanceCounterReadCompleted(struct {
-        trigger_id uint32;
-        buffer_id ObjectId;
-        buffer_offset uint32;
-        timestamp zx.time;
-        flags ResultFlags;
+    -> OnPerformanceCounterReadCompleted(table {
+        /// Required.
+        1: trigger_id PerformanceCounterTriggerId;
+
+        /// Required.
+        2: buffer_id ObjectId;
+
+        /// Required.
+        3: buffer_offset uint32;
+
+        /// Required.
+        4: timestamp zx.time;
+
+        /// Required.
+        5: flags ResultFlags;
     });
 };
 

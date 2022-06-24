@@ -79,11 +79,15 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
           fidl::WireEvent<
               fuchsia_gpu_magma::PerformanceCounterEvents::OnPerformanceCounterReadCompleted>*
               event) override {
-        *trigger_id_out_ = event->trigger_id;
-        *buffer_id_out_ = event->buffer_id;
-        *buffer_offset_out_ = event->buffer_offset;
-        *time_out_ = event->timestamp;
-        *result_flags_out_ = static_cast<uint32_t>(event->flags);
+        if (!event->has_trigger_id() || !event->has_buffer_id() || !event->has_buffer_offset() ||
+            !event->has_timestamp() || !event->has_flags()) {
+          return;
+        }
+        *trigger_id_out_ = event->trigger_id();
+        *buffer_id_out_ = event->buffer_id();
+        *buffer_offset_out_ = event->buffer_offset();
+        *time_out_ = event->timestamp();
+        *result_flags_out_ = static_cast<uint32_t>(event->flags());
       }
 
      private:

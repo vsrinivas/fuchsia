@@ -47,11 +47,17 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
   magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
                                                  uint32_t buffer_offset, uint64_t time,
                                                  uint32_t result_flags) override {
+    fidl::Arena allocator;
+    auto builder = fuchsia_gpu_magma::wire::
+        PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest::Builder(allocator);
+    builder.trigger_id(trigger_id)
+        .buffer_id(buffer_id)
+        .buffer_offset(buffer_offset)
+        .timestamp(time)
+        .flags(fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
+
     fidl::Status result =
-        fidl::WireSendEvent(server_end_)
-            ->OnPerformanceCounterReadCompleted(
-                trigger_id, buffer_id, buffer_offset, time,
-                fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
+        fidl::WireSendEvent(server_end_)->OnPerformanceCounterReadCompleted(builder.Build());
     switch (result.status()) {
       case ZX_OK:
         return MAGMA_STATUS_OK;
