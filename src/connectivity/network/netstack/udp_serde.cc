@@ -313,8 +313,9 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
     bool sock_control_set = false;
     if (meta.cmsg_set.has_timestamp_nanos) {
       sock_control_set = true;
-      sock_control_builder.timestamp(
-          fsocket::wire::Timestamp::WithNanoseconds(alloc, meta.cmsg_set.timestamp_nanos));
+      sock_control_builder.timestamp(fsocket::wire::Timestamp{
+          .nanoseconds = meta.cmsg_set.timestamp_nanos,
+      });
     }
     if (sock_control_set) {
       net_control_set = true;

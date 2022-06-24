@@ -468,29 +468,27 @@ class FidlControlDataProcessor {
     socklen_t total = 0;
 
     if (control_data.has_timestamp()) {
-      fsocket::wire::Timestamp timestamp = control_data.timestamp();
-      switch (timestamp.Which()) {
-        case fsocket::wire::Timestamp::Tag::kNanoseconds: {
-          std::chrono::duration t = std::chrono::nanoseconds(timestamp.nanoseconds());
-          std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+      const fsocket::wire::Timestamp& timestamp = control_data.timestamp();
+
+      std::chrono::duration t = std::chrono::nanoseconds(timestamp.nanoseconds);
+      std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+      switch (timestamp.requested) {
+        case fsocket::wire::TimestampOption::kNanosecond: {
           const struct timespec ts = {
               .tv_sec = sec.count(),
               .tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(t - sec).count(),
           };
           total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMPNS, &ts, sizeof(ts));
-          break;
-        }
-        case fsocket::wire::Timestamp::Tag::kMicroseconds: {
-          std::chrono::duration t =
-              std::chrono::microseconds(control_data.timestamp().microseconds());
-          std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+        } break;
+        case fsocket::wire::TimestampOption::kMicrosecond: {
           const struct timeval tv = {
               .tv_sec = sec.count(),
               .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(t - sec).count(),
           };
           total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMP, &tv, sizeof(tv));
+        } break;
+        case fsocket::wire::TimestampOption::kDisabled:
           break;
-        }
       }
     }
 

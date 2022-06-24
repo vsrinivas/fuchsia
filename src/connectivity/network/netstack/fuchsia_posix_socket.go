@@ -1860,19 +1860,24 @@ func (s *synchronousDatagramSocket) socketControlMessagesToFIDL(cmsg tcpip.Recei
 	s.mu.RUnlock()
 
 	var controlData socket.SocketRecvControlData
+
+	// TODO(https://fxbug.dev/87656): Remove after ABI transition.
 	switch sockOptTimestamp {
 	case socket.TimestampOptionDisabled:
 	case socket.TimestampOptionNanosecond:
-		controlData.SetTimestamp(socket.TimestampWithNanoseconds(cmsg.Timestamp.UnixNano()))
-		// TODO(https://fxbug.dev/87656): Remove after ABI transition.
-		controlData.SetTimestampDeprecated(socket.TimestampWithNanoseconds(cmsg.Timestamp.UnixNano()))
+		controlData.SetTimestampDeprecated2(socket.TimestampDeprecatedWithNanoseconds(cmsg.Timestamp.UnixNano()))
+		controlData.SetTimestampDeprecated(socket.TimestampDeprecatedWithNanoseconds(cmsg.Timestamp.UnixNano()))
 	case socket.TimestampOptionMicrosecond:
-		controlData.SetTimestamp(socket.TimestampWithMicroseconds(cmsg.Timestamp.UnixMicro()))
-		// TODO(https://fxbug.dev/87656): Remove after ABI transition.
-		controlData.SetTimestampDeprecated(socket.TimestampWithMicroseconds(cmsg.Timestamp.UnixMicro()))
+		controlData.SetTimestampDeprecated2(socket.TimestampDeprecatedWithMicroseconds(cmsg.Timestamp.UnixMicro()))
+		controlData.SetTimestampDeprecated(socket.TimestampDeprecatedWithMicroseconds(cmsg.Timestamp.UnixMicro()))
 	default:
 		panic(fmt.Sprintf("unknown timestamp option: %d", sockOptTimestamp))
 	}
+
+	controlData.SetTimestamp(socket.Timestamp{
+		Nanoseconds: cmsg.Timestamp.UnixNano(),
+		Requested:   sockOptTimestamp,
+	})
 
 	return controlData
 }

@@ -420,9 +420,9 @@ type OptionalUint32 = strict union {
 // TODO(https://fxbug.dev/7913): Use built-in empty struct when available.
 type Empty = struct {};
 
-// TODO(https://fxbug.dev/87656): Inline in SocketRecvControlData after
+// TODO(https://fxbug.dev/87656): Remove after
 // SocketRecvControlData.timestamp_deprecated is deleted.
-type Timestamp = strict union {
+type TimestampDeprecated = strict union {
     /// Time in nanoseconds since epoch (January 1 1970 GMT).
     1: nanoseconds int64;
     /// Time in microseconds since epoch (January 1 1970 GMT).
@@ -438,7 +438,8 @@ type SocketRecvControlData = table {
     /// Present if a timestamp option is enabled. Refer to
     /// [`fuchsia.posix.socket.BaseSocket/GetTimestamp`] and
     /// [`fuchsia.posix.socket.BaseSocket/SetTimestamp`].
-    1: timestamp Timestamp;
+    // TODO(https://fxbug.dev/87656): Remove after ABI transition.
+    1: timestamp_deprecated2 TimestampDeprecated;
 
     /// The time at which a packet was received.
     ///
@@ -446,7 +447,17 @@ type SocketRecvControlData = table {
     /// [`fuchsia.posix.socket.BaseSocket/GetTimestamp`] and
     /// [`fuchsia.posix.socket.BaseSocket/SetTimestamp`].
     // TODO(https://fxbug.dev/87656): Remove after ABI transition.
-    2: timestamp_deprecated Timestamp;
+    2: timestamp_deprecated TimestampDeprecated;
+
+    /// Data about the time at which the packet was received.
+    3: timestamp @generated_name("Timestamp") struct {
+        /// Time in nanoseconds since epoch (January 1 1970 GMT).
+        nanoseconds int64;
+
+        /// Identifies whether/how the timestamp should be returned to the user.
+        /// Ignored in the DatagramSocket protocol.
+        requested TimestampOption;
+    };
 };
 
 /// Network socket (L3) ancillary data that can be received.

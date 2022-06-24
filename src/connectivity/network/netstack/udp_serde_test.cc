@@ -204,7 +204,7 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
   const fsocket::wire::SocketRecvControlData& socket_control = network_control.socket();
 
   ASSERT_TRUE(socket_control.has_timestamp());
-  EXPECT_EQ(socket_control.timestamp().nanoseconds(), cmsg_set.timestamp_nanos);
+  EXPECT_EQ(socket_control.timestamp().nanoseconds, cmsg_set.timestamp_nanos);
 
   ASSERT_TRUE(recv_meta.has_from());
   const fnet::wire::SocketAddress& from = recv_meta.from();
