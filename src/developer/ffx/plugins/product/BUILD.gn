@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_product") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  config_data = [ "data/config.json" ]
+
+  args_sources = [ "src/args.rs" ]
+
+  deps = [
+    "//build/sdk/meta:rust",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
+    "//src/developer/ffx/lib/fms:lib",
+    "//src/developer/ffx/lib/pbms:lib",
+    "//src/lib/gcs:lib",
+    "//third_party/rust_crates:fs_extra",
+    "//third_party/rust_crates:pathdiff",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:url",
+  ]
+
+  sources = [
+    "src/create.rs",
+    "src/lib.rs",
+  ]
+}
+
+group("product") {
+  testonly = true
+
+  # The unit tests are also built by the ffx_plugin target.
+  deps = [ ":ffx_product" ]
+}
+
+group("tests") {
+  testonly = true
+
+  # The unit tests are also built by the ffx_plugin target.
+  deps = [ ":ffx_product" ]
+}
