@@ -8,13 +8,14 @@
 
 mod insert_unique;
 mod path_to_string;
+
 mod paths;
 
 pub use insert_unique::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 pub use path_to_string::PathToStringExt;
 pub use paths::{
     normalize_path, path_relative_from, path_relative_from_file, resolve_path,
-    resolve_path_from_file,
+    resolve_path_from_file, PathTypeMarker, TypedPathBuf,
 };
 
 use anyhow::{Context as _, Result};

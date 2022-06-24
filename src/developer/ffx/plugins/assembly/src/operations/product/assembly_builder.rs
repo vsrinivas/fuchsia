@@ -163,10 +163,10 @@ impl ImageAssemblyConfigBuilder {
     /// flagged as being the issue (and not the platform being the issue).
     pub fn add_product_packages(&mut self, packages: &ProductPackagesConfig) -> Result<()> {
         for p in &packages.base {
-            self.base.add_package_from_path(p)?
+            self.base.add_package_from_path(p.manifest.as_std_path())?
         }
         for p in &packages.cache {
-            self.cache.add_package_from_path(p)?
+            self.cache.add_package_from_path(p.manifest.as_std_path())?
         }
         Ok(())
     }
@@ -469,22 +469,24 @@ impl FileEntryMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_package_utils::PackageManifestPathBuf;
     use camino::Utf8PathBuf;
     use fuchsia_pkg::{PackageBuilder, PackageManifest};
     use std::fs::File;
     use tempfile::TempDir;
 
-    fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> Utf8PathBuf {
+    fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> PackageManifestPathBuf {
         let path = path.as_ref();
         let mut builder = PackageBuilder::new(name);
         let manifest_path = path.join(name);
         builder.manifest_path(&manifest_path);
         builder.build(path, path.join(format!("{}_meta.far", name))).unwrap();
-        Utf8PathBuf::from_path_buf(manifest_path).unwrap()
+        Utf8PathBuf::from_path_buf(manifest_path).unwrap().into()
     }
 
     fn make_test_assembly_bundle(bundle_path: &Path) -> AssemblyInputBundle {
-        let write_empty_bundle_pkg = |name: &str| write_empty_pkg(bundle_path, name).into();
+        let write_empty_bundle_pkg =
+            |name: &str| write_empty_pkg(bundle_path, name).clone().into_std_path_buf();
         AssemblyInputBundle {
             image_assembly: image_assembly_config::PartialImageAssemblyConfig {
                 base: vec![write_empty_bundle_pkg("base_package0")],
@@ -604,8 +606,14 @@ mod tests {
         let outdir = TempDir::new().unwrap();
 
         let packages = ProductPackagesConfig {
-            base: vec![write_empty_pkg(&outdir, "base_a"), write_empty_pkg(&outdir, "base_b")],
-            cache: vec![write_empty_pkg(&outdir, "cache_a"), write_empty_pkg(&outdir, "cache_b")],
+            base: vec![
+                write_empty_pkg(&outdir, "base_a").into(),
+                write_empty_pkg(&outdir, "base_b").into(),
+            ],
+            cache: vec![
+                write_empty_pkg(&outdir, "cache_a").into(),
+                write_empty_pkg(&outdir, "cache_b").into(),
+            ],
         };
         let minimum_bundle = AssemblyInputBundle {
             image_assembly: image_assembly_config::PartialImageAssemblyConfig {
@@ -647,7 +655,7 @@ mod tests {
         let outdir = TempDir::new().unwrap();
 
         let packages = ProductPackagesConfig {
-            base: vec![write_empty_pkg(&outdir, "base_a")],
+            base: vec![write_empty_pkg(&outdir, "base_a").into()],
             ..ProductPackagesConfig::default()
         };
         let minimum_bundle = AssemblyInputBundle {

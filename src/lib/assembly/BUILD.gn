@@ -14,6 +14,7 @@ if (is_host) {
       "images_config:host_tests",
       "images_manifest:host_tests",
       "minfs:host_tests",
+      "package_utils:host_tests",
       "partitions_config:host_tests",
       "structured_config:host_tests",
       "test_util:host_tests",

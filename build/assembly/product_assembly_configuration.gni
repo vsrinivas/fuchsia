@@ -126,9 +126,20 @@ template("product_assembly_configuration") {
         packages.cache = []
       }
 
-      packages.base += rebase_path(files.base_package_manifests, root_build_dir)
-      packages.cache +=
-          rebase_path(files.cache_package_manifests, root_build_dir)
+      foreach(manifest_path, files.base_package_manifests) {
+        packages.base += [
+          {
+            manifest = rebase_path(manifest_path, root_build_dir)
+          },
+        ]
+      }
+      foreach(manifest_path, files.cache_package_manifests) {
+        packages.cache += [
+          {
+            manifest = rebase_path(manifest_path, root_build_dir)
+          },
+        ]
+      }
     }
   }
 

@@ -205,16 +205,25 @@ def main() -> int:
     errors = []
     errors.extend(
         compare_pkg_sets(
-            legacy.base | set(product_packages.get('base', [])), generated.base,
-            "base"))
+            legacy.base | set(
+                [
+                    entry["manifest"]
+                    for entry in product_packages.get('base', [])
+                ]), generated.base, "base"))
     errors.extend(
         compare_pkg_sets(
-            legacy.cache | set(product_packages.get('cache', [])),
-            generated.cache, "cache"))
+            legacy.cache | set(
+                [
+                    entry["manifest"]
+                    for entry in product_packages.get('cache', [])
+                ]), generated.cache, "cache"))
     errors.extend(
         compare_pkg_sets(
-            legacy.system | set(product_packages.get('system', [])),
-            generated.system, "system"))
+            legacy.system | set(
+                [
+                    entry["manifest"]
+                    for entry in product_packages.get('system', [])
+                ]), generated.system, "system"))
 
     errors.extend(
         compare_file_entry_sets(

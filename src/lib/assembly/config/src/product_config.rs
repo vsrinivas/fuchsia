@@ -5,6 +5,7 @@
 use crate as image_assembly_config;
 use crate::FileEntry;
 use anyhow::ensure;
+use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
 use camino::Utf8PathBuf;
 use fidl_fuchsia_logger::MAX_TAGS;
 use serde::{Deserialize, Serialize};
@@ -68,15 +69,65 @@ pub struct ProductConfig {
 }
 
 /// Packages provided by the product, to add to the assembled images.
+///
+/// This also includes configuration for those packages:
+///
+/// ```json5
+///   packages: {
+///     base: [
+///       {
+///         manifest: "path/to/package_a/package_manifest.json",
+///       },
+///       {
+///         manifest: "path/to/package_b/package_manifest.json",
+///         config_data: {
+///           "foo.cfg": "path/to/some/source/file/foo.cfg",
+///           "bar/more/data.json": "path/to/some.json",
+///         },
+///       },
+///     ],
+///     cache: []
+///   }
+/// ```
+///
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ProductPackagesConfig {
-    /// Paths to package manifests for packages to add to the 'base' package set.
+    /// Paths to package manifests, or more detailed json entries for packages
+    /// to add to the 'base' package set.
     #[serde(default)]
-    pub base: Vec<Utf8PathBuf>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub base: Vec<ProductPackageDetails>,
 
-    /// Paths to package manifests for packages to add to the 'cache' package set.
+    /// Paths to package manifests, or more detailed json entries for packages
+    /// to add to the 'cache' package set.
     #[serde(default)]
-    pub cache: Vec<Utf8PathBuf>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cache: Vec<ProductPackageDetails>,
+}
+
+/// Describes in more detail a package to add to the assembly.
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct ProductPackageDetails {
+    /// Path to the package manifest for this package.
+    pub manifest: PackageManifestPathBuf,
+
+    /// Map of config_data entries for this package, from the destination path
+    /// within the package, to the path where the source file is to be found.
+    #[serde(default)]
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub config_data: BTreeMap<PackageInternalPathBuf, SourcePathBuf>,
+}
+
+impl From<PackageManifestPathBuf> for ProductPackageDetails {
+    fn from(manifest: PackageManifestPathBuf) -> Self {
+        Self { manifest, config_data: BTreeMap::default() }
+    }
+}
+
+impl From<&str> for ProductPackageDetails {
+    fn from(s: &str) -> Self {
+        ProductPackageDetails { manifest: s.into(), config_data: BTreeMap::default() }
+    }
 }
 
 const BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
@@ -300,10 +351,10 @@ mod tests {
               product: {
                   packages: {
                       base: [
-                          "path/to/base/package_manifest.json"
+                          { manifest: "path/to/base/package_manifest.json" }
                       ],
                       cache: [
-                          "path/to/cache/package_manifest.json"
+                          { manifest: "path/to/cache/package_manifest.json" }
                       ]
                   }
               },
@@ -313,8 +364,118 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
         assert_eq!(config.platform.build_type, BuildType::Eng);
-        assert_eq!(config.product.packages.base, vec!["path/to/base/package_manifest.json"]);
-        assert_eq!(config.product.packages.cache, vec!["path/to/cache/package_manifest.json"]);
+        assert_eq!(
+            config.product.packages.base,
+            vec![ProductPackageDetails {
+                manifest: "path/to/base/package_manifest.json".into(),
+                config_data: BTreeMap::default()
+            }]
+        );
+        assert_eq!(
+            config.product.packages.cache,
+            vec![ProductPackageDetails {
+                manifest: "path/to/cache/package_manifest.json".into(),
+                config_data: BTreeMap::default()
+            }]
+        );
+    }
+
+    #[test]
+    fn test_product_provided_config_data() {
+        let json5 = r#"
+            {
+                base: [
+                    {
+                        manifest: "path/to/base/package_manifest.json"
+                    },
+                    {
+                        manifest: "some/other/manifest.json",
+                        config_data: {
+                            "dest/path/cfg.txt": "source/path/cfg.txt",
+                            "other_data.json": "source_other_data.json",
+                        }
+                    }
+                  ],
+                cache: [
+                    {
+                        manifest: "path/to/cache/package_manifest.json"
+                    }
+                ]
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let packages: ProductPackagesConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(
+            packages.base,
+            vec![
+                ProductPackageDetails::from("path/to/base/package_manifest.json"),
+                ProductPackageDetails {
+                    manifest: "some/other/manifest.json".into(),
+                    config_data: BTreeMap::from([
+                        ("dest/path/cfg.txt".into(), "source/path/cfg.txt".into()),
+                        ("other_data.json".into(), "source_other_data.json".into())
+                    ])
+                }
+            ]
+        );
+        assert_eq!(packages.cache, vec!["path/to/cache/package_manifest.json".into()]);
+    }
+
+    #[test]
+    fn product_package_details_deserialization() {
+        let json5 = r#"
+            {
+                manifest: "some/other/manifest.json",
+                config_data: {
+                    "dest/path/cfg.txt": "source/path/cfg.txt",
+                    "other_data.json": "source_other_data.json",
+                }
+            }
+        "#;
+        let expected = ProductPackageDetails {
+            manifest: "some/other/manifest.json".into(),
+            config_data: BTreeMap::from([
+                ("dest/path/cfg.txt".into(), "source/path/cfg.txt".into()),
+                ("other_data.json".into(), "source_other_data.json".into()),
+            ]),
+        };
+        let mut cursor = std::io::Cursor::new(json5);
+        let details: ProductPackageDetails = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(details, expected);
+    }
+
+    #[test]
+    fn product_package_details_serialization() {
+        let entries = vec![
+            ProductPackageDetails {
+                manifest: "path/to/manifest.json".into(),
+                config_data: BTreeMap::default(),
+            },
+            ProductPackageDetails {
+                manifest: "another/path/to/a/manifest.json".into(),
+                config_data: BTreeMap::from([
+                    ("dest/path/A".into(), "source/path/A".into()),
+                    ("dest/path/B".into(), "source/path/B".into()),
+                ]),
+            },
+        ];
+        let serialized = serde_json::to_value(&entries).unwrap();
+        let expected = serde_json::json!(
+            [
+                {
+                    "manifest": "path/to/manifest.json"
+                },
+                {
+                    "manifest": "another/path/to/a/manifest.json",
+                    "config_data": {
+                        "dest/path/A": "source/path/A",
+                        "dest/path/B": "source/path/B"
+                    }
+                }
+            ]
+        );
+        assert_eq!(serialized, expected);
     }
 
     #[test]

@@ -10,6 +10,8 @@ import sys
 
 from depfile import DepFile
 
+from typing import Dict, Optional
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -50,13 +52,18 @@ def main():
     # Add a package and all the included blobs.
     manifests_for_depfile = []
 
-    def add_package(manifest):
+    def add_package(entry: Dict):
+        manifest = entry["manifest"]
         manifests_for_depfile.append(manifest)
         add_source(manifest)
         with open(manifest, 'r') as f:
             manifest = json.load(f)
             for blob in manifest.get("blobs", []):
                 add_source(blob["source_path"])
+        config_data: Optional[Dict[str, str]] = entry.get("config_data")
+        if config_data:
+            for (_dest, source) in config_data.items():
+                add_source(source)
 
     # Add the product config.
     add_source(args.product_config.name)
