@@ -730,12 +730,4 @@ group("cmx_allowlist") {
     "//zircon/third_party/ulib/lz4/test:lz4-decompress-fuzzer_component_manifest_compile",
     "//zircon/third_party/ulib/lz4/test:lz4-roundtrip-fuzzer_component_manifest_compile",
   ]
-
-  # Vulkan CTS. These directories are not in the default checkout, so they're
-  # listed separately to ensure they're not removed when the list is
-  # regenerated.  TODO(fxbug.dev/103175): Remove.
-  visibility += [
-    "//third_party/vulkan-cts/fuchsia:*",
-    "//third_party/vulkan-cts/fuchsia/split-cts:*",
-  ]
 }
