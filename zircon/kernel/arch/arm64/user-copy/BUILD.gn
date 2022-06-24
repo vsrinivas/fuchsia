@@ -1,4 +1,4 @@
-# Copyright 2021 The Fuchsia Authors
+# Copyright 2022 The Fuchsia Authors
 #
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
@@ -9,5 +9,9 @@ source_set("user-copy") {
     "user-copy.S",
     "user-copy.cc",
   ]
-  deps = [ "//zircon/kernel/lib/user_copy" ]
+  deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/lib/user_copy",
+  ]
 }
