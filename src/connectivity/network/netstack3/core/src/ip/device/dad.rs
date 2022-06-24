@@ -29,13 +29,12 @@ pub(super) trait Ipv6DeviceDadContext<C>: IpDeviceIdContext<Ipv6> {
     /// Returns the address's state mutably, if it exists on the interface.
     fn get_address_state_mut(
         &mut self,
-        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<&mut AddressState>;
 
     /// Returns the NDP retransmission timer configured on the device.
-    fn retrans_timer(&self, ctx: &mut C, device_id: Self::DeviceId) -> Duration;
+    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
 }
 
 /// The IP layer context provided to DAD.
@@ -129,7 +128,7 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
         addr: UnicastAddr<Ipv6Addr>,
     ) {
         let state = self
-            .get_address_state_mut(ctx, device_id, addr)
+            .get_address_state_mut(device_id, addr)
             .unwrap_or_else(|| panic!("expected address to exist; addr={}", addr));
 
         let remaining = match state {
@@ -159,7 +158,7 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
                 //      time a node waits after sending the last Neighbor
                 //      Solicitation before ending the Duplicate Address Detection
                 //      process.
-                let retrans_timer = self.retrans_timer(ctx, device_id);
+                let retrans_timer = self.retrans_timer(device_id);
 
                 let dst_ip = addr.to_solicited_node_address();
 
@@ -242,7 +241,6 @@ mod tests {
     impl Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx {
         fn get_address_state_mut(
             &mut self,
-            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
         ) -> Option<&mut AddressState> {
@@ -250,11 +248,7 @@ mod tests {
             (*addr == request_addr).then(|| state)
         }
 
-        fn retrans_timer(
-            &self,
-            _ctx: &mut MockNonSyncCtx,
-            DummyDeviceId: DummyDeviceId,
-        ) -> Duration {
+        fn retrans_timer(&self, DummyDeviceId: DummyDeviceId) -> Duration {
             let MockDadContext { addr: _, state: _, retrans_timer } = self.get_ref();
             *retrans_timer
         }

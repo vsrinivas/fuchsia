@@ -272,7 +272,6 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
 {
     fn get_address_state_mut(
         &mut self,
-        _ctx: &mut C,
         device_id: SC::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<&mut AddressState> {
@@ -282,7 +281,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
             .map(|Ipv6AddressEntry { addr_sub: _, state, config: _, deprecated: _ }| state)
     }
 
-    fn retrans_timer(&self, _ctx: &mut C, device_id: SC::DeviceId) -> Duration {
+    fn retrans_timer(&self, device_id: SC::DeviceId) -> Duration {
         SC::get_ip_device_state(self, device_id).retrans_timer.get()
     }
 }
