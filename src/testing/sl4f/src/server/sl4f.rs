@@ -25,7 +25,7 @@ use crate::{
 };
 
 // Audio related includes
-use crate::audio::facade::AudioFacade;
+use crate::audio::commands::AudioFacade;
 
 // Session related includes
 use crate::modular::facade::ModularFacade;

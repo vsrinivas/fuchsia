@@ -63,7 +63,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
-    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
     "//sdk/fidl/fuchsia.weave:fuchsia.weave-rustc",
     "//sdk/fidl/fuchsia.web:fuchsia.web-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
@@ -104,6 +103,7 @@ rustc_library("lib") {
     "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test-rustc",
     "//src/sys/lib/moniker",
     "//src/testing/metrics-logger/fuchsia.metricslogger.test:fuchsia.metricslogger.test-rustc",
+    "//src/testing/sl4f/fidl:fuchsia.test.audio.recording-rustc",
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
     "//third_party/rust_crates:anyhow",
@@ -144,7 +144,6 @@ rustc_library("lib") {
 
   sources = [
     "src/audio/commands.rs",
-    "src/audio/facade.rs",
     "src/audio/mod.rs",
     "src/audio/types.rs",
     "src/bluetooth/avdtp_facade.rs",
@@ -338,6 +337,12 @@ fuchsia_component("data_proxy_comp") {
   deps = [ "proxy:bin" ]
 }
 
+fuchsia_component("audio_recording_comp") {
+  component_name = "audio_recording"
+  manifest = "audio_recording/meta/audio_recording.cml"
+  deps = [ "audio_recording:bin" ]
+}
+
 core_shard("sl4f_core_shard") {
   shard_file = "meta/sl4f.core_shard.cml"
 }
@@ -350,6 +355,7 @@ core_shard("sl4f_terminal_core_shard") {
 fuchsia_package("sl4f") {
   package_name = "sl4f"
   deps = [
+    ":audio_recording_comp",
     ":data_proxy_comp",
     ":sl4f_comp",
   ]

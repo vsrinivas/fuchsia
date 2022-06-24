@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/audio_recording",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.test.audio.recording.AudioRecordingControl" ],
+        },
+    ],
+    use: [
+        {
+            directory: "dev-virtual-audio",
+            rights: [ "r*" ],
+            path: "/dev/sys/platform/00:00:2f",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.audio.recording.AudioRecordingControl",
+            from: "self",
+        },
+    ],
+}
