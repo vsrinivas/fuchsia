@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_input") {
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.ui.input.config:fuchsia.ui.input.config-rustc",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:test-case",
+  ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
+}
