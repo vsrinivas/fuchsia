@@ -31,8 +31,8 @@ Target | Codegen | Runtime Libraries | Tests
 C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/c]
 Coding Tables | [/tools/fidl/fidlc/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
 HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
-LLCPP | [/tools/fidl/fidlgen_llcpp] | [/sdk/lib/fidl/llcpp] | [/src/lib/fidl/llcpp]
-Unified C++ | [/tools/fidl/fidlgen_llcpp] | [/src/lib/fidl/cpp] | *(located alongside runtime libraries)*
+LLCPP | [/tools/fidl/fidlgen_cpp] | [/sdk/lib/fidl/llcpp] | [/src/lib/fidl/llcpp]
+Unified C++ | [/tools/fidl/fidlgen_cpp] | [/src/lib/fidl/cpp] | *(located alongside runtime libraries)*
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl](https://fuchsia.googlesource.com/third_party/go/+/main/src/syscall/zx/fidl) | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
 Dart | [/tools/fidl/fidlgen_dart] | [/sdk/dart/fidl] | [/src/tests/fidl/dart_bindings_test]
@@ -513,7 +513,7 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 | fidlgen type definitions   | `fx test fidlgen_lib_test`                         | //tools/fidl/lib/fidlgen
 | fidlgen C++ specific IR    | `fx test fidlgen_cpp_ir_test`                      | //tools/fidl/lib/fidlgen_cpp
 | fidlgen hlcpp              | `fx test fidlgen_hlcpp_golden_tests`               | //tools/fidl/fidlgen_hlcpp
-| fidlgen llcpp              | `fx test fidlgen_llcpp_golden_tests`               | //tools/fidl/fidlgen_llcpp
+| fidlgen llcpp              | `fx test fidlgen_cpp_golden_tests`               | //tools/fidl/fidlgen_cpp
 | fidlgen golang             | `fx test fidlgen_go_{lib,golden}_tests`            | //tools/fidl/fidlgen_golang
 | fidlgen rust               | `fx test fidlgen_rust_{lib,golden}_tests`          | //tools/fidl/fidlgen_rust
 | fidlgen syzkaller          | `fx test fidlgen_syzkaller_golden_tests`           | //tools/fidl/fidlgen_syzkaller
@@ -727,7 +727,7 @@ fidl fmt --library my_library.fidl -i
 [/tools/fidl/fidlc/lib/c_generator.cc]: /tools/fidl/fidlc/lib/c_generator.cc
 [/tools/fidl/fidlc/lib/tables_generator.cc]: /tools/fidl/fidlc/lib/tables_generator.cc
 [/tools/fidl/fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp
-[/tools/fidl/fidlgen_llcpp]: /tools/fidl/fidlgen_llcpp
+[/tools/fidl/fidlgen_cpp]: /tools/fidl/fidlgen_cpp
 [/tools/fidl/fidlgen_go]: /tools/fidl/fidlgen_go
 [/tools/fidl/fidlgen_rust]: /tools/fidl/fidlgen_rust
 [/tools/fidl/fidlgen_dart]: /tools/fidl/fidlgen_dart

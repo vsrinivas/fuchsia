@@ -1,0 +1,241 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/host.gni")
+import("//build/testing/golden_test.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
+
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [
+      "codegen/codegen.go",
+      "codegen/driver/file_natural_messaging_header.tmpl",
+      "codegen/driver/file_natural_messaging_source.tmpl",
+      "codegen/driver/file_unified_header.tmpl",
+      "codegen/driver/file_wire_header.tmpl",
+      "codegen/driver/file_wire_messaging_header.tmpl",
+      "codegen/driver/file_wire_messaging_source.tmpl",
+      "codegen/driver/fragment_method_client_impl_async_buffer.tmpl",
+      "codegen/driver/fragment_method_client_impl_oneway.tmpl",
+      "codegen/driver/fragment_method_client_impl_oneway_buffer.tmpl",
+      "codegen/driver/fragment_method_client_impl_sync.tmpl",
+      "codegen/driver/fragment_method_completer_base.tmpl",
+      "codegen/driver/fragment_method_unownedresult.tmpl",
+      "codegen/driver/fragment_protocol_caller.tmpl",
+      "codegen/driver/fragment_protocol_client_impl.tmpl",
+      "codegen/file_common_types_header.tmpl",
+      "codegen/file_common_types_source.tmpl",
+      "codegen/file_hlcpp_conversion.tmpl",
+      "codegen/file_markers.tmpl",
+      "codegen/file_natural_messaging_header.tmpl",
+      "codegen/file_natural_messaging_source.tmpl",
+      "codegen/file_natural_types_header.tmpl",
+      "codegen/file_natural_types_source.tmpl",
+      "codegen/file_type_conversions_header.tmpl",
+      "codegen/file_type_conversions_source.tmpl",
+      "codegen/file_unified_header.tmpl",
+      "codegen/file_wire_header.tmpl",
+      "codegen/file_wire_messaging_header.tmpl",
+      "codegen/file_wire_messaging_source.tmpl",
+      "codegen/file_wire_test_base.tmpl",
+      "codegen/file_wire_types_header.tmpl",
+      "codegen/file_wire_types_source.tmpl",
+      "codegen/fragment_bits.tmpl",
+      "codegen/fragment_const.tmpl",
+      "codegen/fragment_enum.tmpl",
+      "codegen/fragment_method_client_impl_async.tmpl",
+      "codegen/fragment_method_client_impl_async_buffer.tmpl",
+      "codegen/fragment_method_client_impl_oneway.tmpl",
+      "codegen/fragment_method_client_impl_oneway_buffer.tmpl",
+      "codegen/fragment_method_client_impl_sync.tmpl",
+      "codegen/fragment_method_completer_base.tmpl",
+      "codegen/fragment_method_event.tmpl",
+      "codegen/fragment_method_request.tmpl",
+      "codegen/fragment_method_response.tmpl",
+      "codegen/fragment_method_result.tmpl",
+      "codegen/fragment_method_types.tmpl",
+      "codegen/fragment_method_unownedresult.tmpl",
+      "codegen/fragment_protocol.tmpl",
+      "codegen/fragment_protocol_caller.tmpl",
+      "codegen/fragment_protocol_client_impl.tmpl",
+      "codegen/fragment_protocol_details.tmpl",
+      "codegen/fragment_protocol_dispatcher.tmpl",
+      "codegen/fragment_protocol_event_handler.tmpl",
+      "codegen/fragment_protocol_event_sender.tmpl",
+      "codegen/fragment_protocol_interface.tmpl",
+      "codegen/fragment_service.tmpl",
+      "codegen/fragment_struct.tmpl",
+      "codegen/fragment_table.tmpl",
+      "codegen/fragment_union.tmpl",
+      "codegen/natural_struct.tmpl",
+      "codegen/natural_table.tmpl",
+      "codegen/natural_union.tmpl",
+      "main.go",
+    ]
+  }
+
+  go_binary("fidlgen_cpp") {
+    sdk_category = "partner"
+    sdk_name = "fidlgen_cpp_experimental_driver_only_toolchain"
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp"
+    deps = [ ":gopkg" ]
+  }
+
+  golden_test("fidlgen_cpp_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_bin = "$root_out_dir/clang-format-wrapper"
+    reformat_goldens_args =
+        [ rebase_path("${clang_prefix}/clang-format", root_build_dir) ]
+    reformat_goldens_inputs = [ "${clang_prefix}/clang-format" ]
+    deps = [ "//tools/fidl/clang-format-wrapper" ]
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
+        include_path = "fidl/${info.library}/cpp"
+        entries += [
+          {
+            golden = "${info.name}_wire.h.golden"
+            generated = "$gen_dir/$include_path/wire.h"
+          },
+          {
+            golden = "${info.name}_wire_test_base.h.golden"
+            generated = "$gen_dir/$include_path/wire_test_base.h"
+          },
+          {
+            golden = "${info.name}_markers.h.golden"
+            generated = "$gen_dir/$include_path/markers.h"
+          },
+          {
+            golden = "${info.name}_common_types.h.golden"
+            generated = "$gen_dir/$include_path/common_types.h"
+          },
+          {
+            golden = "${info.name}_common_types.cc.golden"
+            generated = "$gen_dir/$include_path/common_types.cc"
+          },
+          {
+            golden = "${info.name}_wire_types.h.golden"
+            generated = "$gen_dir/$include_path/wire_types.h"
+          },
+          {
+            golden = "${info.name}_wire_types.cc.golden"
+            generated = "$gen_dir/$include_path/wire_types.cc"
+          },
+          {
+            golden = "${info.name}_wire_messaging.h.golden"
+            generated = "$gen_dir/$include_path/wire_messaging.h"
+          },
+          {
+            golden = "${info.name}_wire_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/wire_messaging.cc"
+          },
+          {
+            golden = "${info.name}_natural_types.h.golden"
+            generated = "$gen_dir/$include_path/natural_types.h"
+          },
+          {
+            golden = "${info.name}_natural_types.cc.golden"
+            generated = "$gen_dir/$include_path/natural_types.cc"
+          },
+          {
+            golden = "${info.name}_natural_messaging.h.golden"
+            generated = "$gen_dir/$include_path/natural_messaging.h"
+          },
+          {
+            golden = "${info.name}_natural_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/natural_messaging.cc"
+          },
+          {
+            golden = "${info.name}_type_conversions.h.golden"
+            generated = "$gen_dir/$include_path/type_conversions.h"
+          },
+          {
+            golden = "${info.name}_type_conversions.cc.golden"
+            generated = "$gen_dir/$include_path/type_conversions.cc"
+          },
+          {
+            golden = "${info.name}_hlcpp_conversion.h.golden"
+            generated = "$gen_dir/$include_path/hlcpp_conversion.h"
+          },
+          {
+            golden = "${info.name}_fidl.h.golden"
+            generated = "$gen_dir/$include_path/fidl.h"
+          },
+          {
+            golden = "${info.name}_driver_wire.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
+          },
+          {
+            golden = "${info.name}_driver_natural_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver/natural_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_natural_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver/natural_messaging.cc"
+          },
+          {
+            golden = "${info.name}_driver_fidl.h.golden"
+            generated = "$gen_dir/$include_path/driver/fidl.h"
+          },
+        ]
+      }
+    }
+  }
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlgen_cpp" ]
+  outputs = [ "fidlgen_cpp" ]
+}
+
+group("goldens") {
+  testonly = true
+
+  denylist_key = "device_build_denylist"
+  if (is_host) {
+    denylist_key = "host_build_denylist"
+  }
+
+  deps = []
+  foreach(info, fidl_testdata_info) {
+    if (info[denylist_key] + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
+        info[denylist_key]) {
+      deps += [ "${info.target}_llcpp" ]
+      if (is_fuchsia) {
+        deps += [
+          "${info.target}_cpp",
+          "${info.target}_driver",
+        ]
+      }
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidlgen_cpp_golden_tests($host_toolchain)",
+    ":goldens",
+    ":goldens($host_toolchain)",
+  ]
+}

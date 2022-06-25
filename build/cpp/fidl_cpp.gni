@@ -602,7 +602,7 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_llcpp") {
     forward_variables_from(common_options, "*")
     bindings_flavor = "llcpp"
-    fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+    fidlgen_tool = "//tools/fidl/fidlgen_cpp"
     generated_headers = []
     generated_sources = []
     additional_visibility = []

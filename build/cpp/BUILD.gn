@@ -217,7 +217,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
 
 # TODO(fxbug.dev/69585): Delete this config after all user code
 # migrates to typed channels.
-# This is used by generated C++ library from fidlgen_llcpp, which unfortunately
+# This is used by generated C++ library from fidlgen_cpp, which unfortunately
 # cannot have a definite visibility restriction. Please do not use this config.
 config(
     "fidl-llcpp-deprecated-raw-channels-reserved-for-llcpp-generated-code-only") {

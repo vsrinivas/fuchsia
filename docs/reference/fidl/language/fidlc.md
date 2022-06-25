@@ -270,8 +270,8 @@ The officially supported FIDL language back-ends are:
 
 * C++:
     * High level: [fidlgen_hlcpp]
-    * Low level: [fidlgen_llcpp]
-    * Unified: [fidlgen_llcpp] (shared tooling for all new C++ backends)
+    * Low level: [fidlgen_cpp]
+    * Unified: [fidlgen_cpp] (shared tooling for all new C++ backends)
 * Dart: [fidlgen_dart]
 * Go: [fidlgen_go]
 * Rust: [fidlgen_rust]
@@ -429,7 +429,7 @@ anonymous [`Name`](#name)s.
 [fidlgen_dart]: /tools/fidl/fidlgen_dart
 [fidlgen_go]: /tools/fidl/fidlgen_go
 [fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp
-[fidlgen_llcpp]: /tools/fidl/fidlgen_llcpp
+[fidlgen_cpp]: /tools/fidl/fidlgen_cpp
 [fidlgen_rust]: /tools/fidl/fidlgen_rust
 [schema]: /docs/reference/fidl/language/json-ir.md
 [coding-readme]: /src/lib/fidl/c/walker_tests/README.md

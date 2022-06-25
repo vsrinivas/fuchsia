@@ -13,7 +13,7 @@
 ##
 ##   --list   List matching tools and their golden directories, and exit.
 ##   --reset  Delete existing goldens first. (See "Troubleshooting" below.)
-## 
+##
 ##   All other flags are forwarded to fx test. A useful one is -o/--output to
 ##   show test output, which prints the filenames being regenerated.
 ##
@@ -59,7 +59,7 @@ readonly all_tools=(
     "fidlgen_go tools/fidl/fidlgen_go/goldens"
     "fidlgen_hlcpp tools/fidl/fidlgen_hlcpp/goldens"
     "fidlgen_libfuzzer tools/fidl/fidlgen_libfuzzer/goldens"
-    "fidlgen_llcpp tools/fidl/fidlgen_llcpp/goldens"
+    "fidlgen_cpp tools/fidl/fidlgen_cpp/goldens"
     "fidlgen_rust tools/fidl/fidlgen_rust/goldens"
     "fidlgen_syzkaller tools/fidl/fidlgen_syzkaller/goldens"
     "gidl tools/fidl/gidl/goldens"
