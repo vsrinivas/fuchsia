@@ -15,6 +15,10 @@ use {
     std::collections::HashSet,
 };
 
+/// Reading from the v1/CMX hub is flaky while components are being added/removed.
+/// Attempt to get CMX instances several times before calling it a failure.
+const CMX_HUB_RETRY_ATTEMPTS: u64 = 3;
+
 #[derive(PartialEq, Debug)]
 pub enum InstanceState {
     Unresolved,
@@ -203,6 +207,26 @@ pub async fn get_all_cml_instances(explorer: &fsys::RealmExplorerProxy) -> Resul
 }
 
 pub async fn get_all_cmx_instances(query: &fsys::RealmQueryProxy) -> Result<Vec<Instance>> {
+    // Reading from the v1/CMX hub is flaky while components are being added/removed.
+    // Attempt to get CMX instances several times before calling it a failure.
+    let mut attempt = 1;
+    loop {
+        match get_all_cmx_instances_internal(query).await {
+            Ok(instances) => break Ok(instances),
+            Err(e) => {
+                if attempt == CMX_HUB_RETRY_ATTEMPTS {
+                    break Err(format_err!(
+                        "Maximum attempts reached trying to parse CMX realm.\nLast Error: {}",
+                        e
+                    ));
+                }
+                attempt += 1;
+            }
+        }
+    }
+}
+
+async fn get_all_cmx_instances_internal(query: &fsys::RealmQueryProxy) -> Result<Vec<Instance>> {
     let moniker = AbsoluteMoniker::parse_str("/core/appmgr")?;
 
     let (_, resolved) = query
