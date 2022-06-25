@@ -31,7 +31,7 @@ pub struct EagerPackageConfigs {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-struct EagerPackageConfigsJson {
+pub struct EagerPackageConfigsJson {
     pub eager_package_configs: Vec<EagerPackageConfigs>,
 }
 

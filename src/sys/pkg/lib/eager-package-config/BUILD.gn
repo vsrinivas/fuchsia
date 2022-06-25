@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("eager-package-config") {
+  version = "0.0.1"
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-url",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/pkg/lib/channel-config",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/omaha-client",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/omaha_client.rs",
+    "src/pkg_resolver.rs",
+  ]
+}
+
+fuchsia_unittest_package("eager-package-config-lib-tests") {
+  deps = [ ":eager-package-config_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":eager-package-config-lib-tests" ]
+}

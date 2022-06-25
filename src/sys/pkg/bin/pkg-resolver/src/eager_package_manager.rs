@@ -6,6 +6,7 @@ use {
     crate::resolver_service::Resolver,
     anyhow::{anyhow, Context as _, Error},
     async_lock::RwLock as AsyncRwLock,
+    eager_package_config::pkg_resolver::{EagerPackageConfig, EagerPackageConfigs},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{self as fpkg, CupRequest, CupRequestStream, GetInfoError, WriteError},
     fidl_fuchsia_pkg_ext::{cache, BlobInfo, CupData, CupMissingField},
@@ -20,11 +21,9 @@ use {
         protocol::response::Response,
     },
     p256::ecdsa::{signature::Signature, DerSignature},
-    serde::Deserialize,
     std::{collections::BTreeMap, convert::TryInto, sync::Arc},
 };
 
-const EAGER_PACKAGE_CONFIG_PATH: &str = "/config/data/eager_package_config.json";
 const EAGER_PACKAGE_PERSISTENT_FIDL_NAME: &str = "eager_packages.pf";
 
 #[derive(Clone, Debug)]
@@ -413,43 +412,6 @@ impl From<&CupGetInfoError> for GetInfoError {
             CupGetInfoError::CupDataMissingVersion => GetInfoError::Verification,
             CupGetInfoError::CupDataMissingChannel => GetInfoError::Verification,
             CupGetInfoError::ParseCupResponse(_) => GetInfoError::Verification,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-struct EagerPackageConfigs {
-    packages: Vec<EagerPackageConfig>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-struct EagerPackageConfig {
-    url: UnpinnedAbsolutePackageUrl,
-    #[serde(default)]
-    executable: bool,
-    public_keys: PublicKeys,
-}
-
-impl EagerPackageConfigs {
-    /// Read eager config from namespace. Returns an empty instance of `EagerPackageConfigs` in
-    /// case config was not found.
-    async fn from_namespace() -> Result<Self, Error> {
-        match fuchsia_fs::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
-            Ok(json) => Ok(serde_json::from_slice(&json).context("parsing eager package config")?),
-            Err(e) => match e.into_inner() {
-                fuchsia_fs::file::ReadError::Open(fuchsia_fs::node::OpenError::OpenError(
-                    status,
-                ))
-                | fuchsia_fs::file::ReadError::Fidl(fidl::Error::ClientChannelClosed {
-                    status,
-                    ..
-                }) if status == zx::Status::NOT_FOUND => {
-                    Ok(EagerPackageConfigs { packages: Vec::new() })
-                }
-                err => Err(err).with_context(|| {
-                    format!("Error reading eager package config file {EAGER_PACKAGE_CONFIG_PATH}")
-                }),
-            },
         }
     }
 }

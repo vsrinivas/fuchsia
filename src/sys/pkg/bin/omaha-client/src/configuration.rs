@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    app_set::{EagerPackage, FuchsiaAppSet},
-    eager_package_config::{EagerPackageConfig, EagerPackageConfigs},
-};
+use crate::app_set::{EagerPackage, FuchsiaAppSet};
 use anyhow::{anyhow, Error};
 use channel_config::{ChannelConfig, ChannelConfigs};
+use eager_package_config::omaha_client::{EagerPackageConfig, EagerPackageConfigs};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use fidl_fuchsia_pkg::{self as fpkg, CupMarker, CupProxy, GetInfoError};
 use log::{error, info, warn};
@@ -326,7 +324,7 @@ impl VbMetaData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eager_package_config::{EagerPackageConfig, OmahaServer};
+    use eager_package_config::omaha_client::{EagerPackageConfig, OmahaServer};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fidl_fuchsia_pkg::CupRequest;

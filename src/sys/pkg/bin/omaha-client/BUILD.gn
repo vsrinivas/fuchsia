@@ -54,6 +54,7 @@ rustc_library("lib") {
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/bounded-node",
     "//src/sys/pkg/lib/channel-config",
+    "//src/sys/pkg/lib/eager-package-config",
     "//src/sys/pkg/lib/event-queue",
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
@@ -66,6 +67,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
+
+    # TODO(https://fxbug.dev/103361): Migrate this crate away from log.
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
@@ -90,7 +93,6 @@ rustc_library("lib") {
     "src/channel.rs",
     "src/cobalt.rs",
     "src/configuration.rs",
-    "src/eager_package_config.rs",
     "src/feedback_annotation.rs",
     "src/fidl.rs",
     "src/http_request.rs",

@@ -42,6 +42,7 @@ rustc_library("lib") {
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/pkg/lib/async-generator",
+    "//src/sys/pkg/lib/eager-package-config",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/omaha-client",
