@@ -227,18 +227,18 @@ impl Cmx {
 const BUILD_INFO_PROTOCOL: &str = "fuchsia.buildinfo.Provider";
 const PROTOCOLS_FOR_HERMETIC_TESTS: &[&str] = &[
     "fuchsia.boot.WriteOnlyLog",
+    "fuchsia.diagnostics.ArchiveAccessor",
     "fuchsia.logger.LogSink",
     "fuchsia.process.Launcher",
     "fuchsia.sys2.EventSource",
+    "fuchsia.tracing.provider.Registry",
 ];
 const PROTOCOLS_FOR_SYSTEM_TESTS: &[&str] = &[
     "fuchsia.boot.ReadOnlyLog",
     "fuchsia.boot.RootResource",
     "fuchsia.component.resolution.Resolver",
     "fuchsia.exception.Handler",
-    "fuchsia.hwinfo.Board",
-    "fuchsia.hwinfo.Device",
-    "fuchsia.hwinfo.Product",
+    "fuchsia.hardware.pty.Device",
     "fuchsia.kernel.Counter",
     "fuchsia.kernel.CpuResource",
     "fuchsia.kernel.DebugResource",
@@ -254,6 +254,7 @@ const PROTOCOLS_FOR_SYSTEM_TESTS: &[&str] = &[
     "fuchsia.kernel.Stats",
     "fuchsia.kernel.VmexResource",
     "fuchsia.net.http.Loader",
+    "fuchsia.posix.socket.Provider",
     "fuchsia.scheduler.ProfileProvider",
     "fuchsia.sys.Environment",
     "fuchsia.sys.Loader",
