@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Context as _, Error},
-    fuchsia_async as fasync,
-    futures::future::BoxFuture,
-    futures::{future, select, stream::TryStreamExt, Future, FutureExt},
-    parking_lot::Mutex,
-    pin_utils::pin_mut,
-    std::any::{Any, TypeId},
-    std::collections::{hash_map::Entry, HashMap},
-    std::sync::Arc,
-    tracing::{error, info},
-};
+use anyhow::{format_err, Context as _, Error};
+use fuchsia_async as fasync;
+use futures::future::BoxFuture;
+use futures::{future, select, stream::TryStreamExt, Future, FutureExt};
+use parking_lot::Mutex;
+use pin_utils::pin_mut;
+use std::any::{Any, TypeId};
+use std::collections::{hash_map::Entry, HashMap};
+use std::sync::Arc;
 
 /// SharedState is a string-indexed map used to share state across multiple TestHarnesses that are
 /// tupled together. For example, the state could be a Bluetooth emulator instance and core
@@ -146,31 +143,8 @@ where
     result.and_then(|ok| term_result.map(|_| ok))
 }
 
-/// Sets up the test environment and the given test case. Each integration test case is an
-/// asynchronous function from some harness `H` to the result of the test run.
-pub fn run_test<H, Fut>(
-    test: impl FnOnce(H) -> Fut + Send + 'static,
-    name: &str,
-) -> Result<(), Error>
-where
-    Fut: Future<Output = Result<(), Error>> + Send + 'static,
-    H: TestHarness,
-{
-    let mut executor = fasync::LocalExecutor::new().context("error creating event loop")?;
-    info!("[ RUN      ] {}...", name);
-    let result = executor.run_singlethreaded(run_with_harness(test));
-    if let Err(err) = &result {
-        error!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {:?}", name, err);
-    } else {
-        info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
-    }
-    result.context(format!("Error running test '{}'", name))
-}
-
 /// The Unit type can be used as the empty test-harness - it does no initialization and no
-/// termination. This is largely useful when using the `run_suite!` macro, which takes a sequence
-/// of tests to run with harnesses - if there are tests that don't actually need a harness, then a
-/// unit parameter can be passed.
+/// termination.
 impl TestHarness for () {
     type Env = ();
     type Runner = future::Pending<Result<(), Error>>;
@@ -183,29 +157,6 @@ impl TestHarness for () {
     fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
         future::ok(()).boxed()
     }
-}
-
-// Prints out the test name and runs the test.
-#[macro_export]
-macro_rules! run_test {
-    ($name:ident) => {{
-        test_harness::run_test($name, stringify!($name))
-    }};
-}
-
-#[macro_export]
-macro_rules! run_suite {
-    ($name:tt, [$($test:ident),+]) => {{
-        log::info!(">>> Running {} tests:", $name);
-        {
-            use fuchsia_bluetooth::util::CollectExt;
-            let res = vec![$( test_harness::run_test($test, stringify!($test)), )*]
-                .into_iter()
-                .collect_results();
-            anyhow::Context::context(res, format!("Error running suite {}", $name))?;
-        }
-        Ok(())
-    }}
 }
 
 /// We can implement TestHarness for any tuples of types that are TestHarnesses - this macro can
