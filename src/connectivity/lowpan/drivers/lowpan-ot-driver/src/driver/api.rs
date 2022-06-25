@@ -735,7 +735,7 @@ where
         })
     }
 
-    async fn attach_all_nodes_to(&self, dataset: &[u8]) -> ZxResult {
+    async fn attach_all_nodes_to(&self, dataset: &[u8]) -> ZxResult<i64> {
         let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset)
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
 
@@ -747,13 +747,17 @@ where
 
         if driver_state.is_ready() {
             // Transition all devices over to the new dataset.
-            warn!("attach_all_nodes_to: Migrating all devices is not supported");
+            warn!("attach_all_nodes_to: Migrating all devices is not yet supported");
             Err(ZxStatus::NOT_SUPPORTED)
         } else {
-            driver_state.ot_instance.dataset_set_active_tlvs(&dataset).map_err(|e| {
-                warn!("attach_all_nodes_to: Error: {:?}", e);
-                ZxStatus::from(ErrorAdapter(e))
-            })
+            driver_state
+                .ot_instance
+                .dataset_set_active_tlvs(&dataset)
+                .map_err(|e| {
+                    warn!("attach_all_nodes_to: Error: {:?}", e);
+                    ZxStatus::from(ErrorAdapter(e))
+                })
+                .map(|()| 0i64)
         }
     }
 

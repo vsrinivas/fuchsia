@@ -76,8 +76,14 @@ protocol Dataset {
         dataset OperationalDatasetTlvs;
     }) -> ();
 
+    @available(removed=8)
+    AttachAllNodesTo(struct {
+        dataset OperationalDatasetTlvs;
+    }) -> ();
+
     /// Requests that all nodes on the current network attach to the thread
-    /// network described by given dataset.
+    /// network described by given dataset. Returns the number of milliseconds
+    /// until the change takes effect.
     ///
     /// Functionally equivalent to `ot-br-posix`'s [`AttachAllNodesTo`][4].
     ///
@@ -85,15 +91,28 @@ protocol Dataset {
     /// is equivalent to calling [`SetActiveTlvs()`].
     ///
     /// The transition of all nodes to the new network may take as long as
-    /// five minutes.
+    /// five minutes. The exact amount of time until the network is
+    /// transitioned is returned by this method.
     ///
     /// This method returns once the transition has been scheduled successfully.
     /// Any error that prevents the scheduling of this operation from
     /// completing successfully (such as being provided with an incomplete
     /// dataset) will result in the protocol being closed.
     ///
-    /// [4]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L67-L73
+    /// [4]: https://github.com/openthread/ot-br-posix/blob/f68c07702bef50f1cc4a153a59b5a3a8331ff43b/src/dbus/server/introspect.xml#L60-L72
+    @available(added=8)
     AttachAllNodesTo(struct {
+        /// The Operational Dataset that contains parameter values of the
+        /// Thread network to attach to. It must be a full dataset.
         dataset OperationalDatasetTlvs;
-    }) -> ();
+    }) -> (struct {
+        /// The delay between when the method returns and when the dataset
+        /// takes effect, in milliseconds. If this value is 0, then the node is
+        /// attached to the given network when this method returns. If this
+        /// value is not 0, then the node is attached to its existing network
+        /// when this method returns, and will attach to the given network
+        /// after the delay. Negative values are prohibited and must be
+        /// considered a runtime error.
+        delay_ms int64;
+    });
 };

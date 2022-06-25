@@ -1,6 +1,6 @@
 [
     {
-        "declaration": "(vector<uint8>:254 dataset) -> ()",
+        "declaration": "(vector<uint8>:254 dataset) -> (int64 delay_ms)",
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.thread/Dataset.AttachAllNodesTo"
     },

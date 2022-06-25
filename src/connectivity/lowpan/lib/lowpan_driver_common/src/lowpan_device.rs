@@ -267,7 +267,8 @@ pub trait Driver: Send + Sync {
     }
 
     /// Requests that all nodes on the current network attach to the thread
-    /// network described by given dataset.
+    /// network described by given dataset. Returns the number of milliseconds
+    /// until the change takes effect.
     ///
     /// Functionally equivalent to `ot-br-posix`'s [`AttachAllNodesTo`][4].
     ///
@@ -275,15 +276,16 @@ pub trait Driver: Send + Sync {
     /// is equivalent to calling [`SetActiveTlvs()`].
     ///
     /// The transition of all nodes to the new network may take as long as
-    /// five minutes.
+    /// five minutes. The exact amount of time until the network is
+    /// transitioned is returned by this method.
     ///
     /// This method returns once the transition has been scheduled successfully.
-    /// Any error that prevents the operation from completing successfully
-    /// (such as being provided with an incomplete dataset) will result in the
-    /// protocol being closed.
+    /// Any error that prevents the scheduling of this operation from
+    /// completing successfully (such as being provided with an incomplete
+    /// dataset) will result in the protocol being closed.
     ///
-    /// [4]: https://github.com/openthread/ot-br-posix/blob/0b5c6e1ecb8152ef6cea57c09b8a37a020fc4d6f/src/dbus/server/introspect.xml#L67-L73
-    async fn attach_all_nodes_to(&self, _dataset: &[u8]) -> ZxResult {
+    /// [4]: https://github.com/openthread/ot-br-posix/blob/f68c07702bef50f1cc4a153a59b5a3a8331ff43b/src/dbus/server/introspect.xml#L60-L72
+    async fn attach_all_nodes_to(&self, _dataset: &[u8]) -> ZxResult<i64> {
         warn!("attach_all_nodes_to: Not supported by this device.");
         Err(ZxStatus::NOT_SUPPORTED)
     }
@@ -1123,7 +1125,7 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
                 DatasetRequest::AttachAllNodesTo { dataset, responder, .. } => {
                     self.attach_all_nodes_to(&dataset)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|delay_ms| ready(responder.send(delay_ms).map_err(Error::from)))
                         .await
                         .context("error in attach_all_nodes_to request")?;
                 }
