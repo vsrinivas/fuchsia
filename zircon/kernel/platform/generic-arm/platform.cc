@@ -487,14 +487,16 @@ int platform_dgetc(char* c, bool wait) {
   if (uart_disabled) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+
   int ret = uart_getc(wait);
-  // uart_getc returns ZX_ERR_INTERNAL if no input was read
-  if (!wait && ret == ZX_ERR_INTERNAL)
+  if (ret >= 0) {
+    *c = static_cast<char>(ret);
+    return 1;
+  }
+  if (ret == ZX_ERR_SHOULD_WAIT) {
     return 0;
-  if (ret < 0)
-    return ret;
-  *c = static_cast<char>(ret);
-  return 1;
+  }
+  return ret;
 }
 
 void platform_pputc(char c) {

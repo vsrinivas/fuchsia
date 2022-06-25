@@ -226,7 +226,7 @@ static int motmot_uart_getc(bool wait) {
     return result.value();
   }
 
-  return ZX_ERR_INTERNAL;
+  return result.error_value();
 }
 
 // panic-time getc/putc
