@@ -80,11 +80,9 @@ fn main() -> Result<(), Error> {
             d
         })
         .unwrap_or_else(|| std::env::current_dir().unwrap().canonicalize().unwrap());
-    let clean_tree = Command::new("jiri")
-        .args(["runp", "-exit-on-error", "git", "diff-index", "--quiet", "HEAD"])
-        .output()?
-        .status
-        .success();
+    let git_status =
+        Command::new("jiri").args(["runp", "git", "status", "--porcelain"]).output()?;
+    let clean_tree = git_status.status.success() && git_status.stdout.is_empty();
     if !(args.dryrun || args.force || clean_tree) {
         return Err(anyhow!(
             "The current directory is dirty, pass the --force flag or commit the local changes"
