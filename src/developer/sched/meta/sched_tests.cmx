@@ -10,9 +10,6 @@
             "bin",
             "lib"
         ],
-        "features": [
-            "shell-commands"
-        ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
