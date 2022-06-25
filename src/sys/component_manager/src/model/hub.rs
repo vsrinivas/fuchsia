@@ -246,25 +246,15 @@ impl Hub {
         };
 
         if let (Some(child_moniker), Some(parent_moniker)) = (moniker.leaf(), moniker.parent()) {
-            match instance_map.get_mut(&parent_moniker) {
-                Some(instance) => {
-                    instance.children_directory.add_node(
-                        &Hub::child_dir_name(child_moniker.as_str(), uuid),
-                        controlled.clone(),
-                        moniker,
-                    )?;
-                }
-                None => {
-                    // TODO(fxbug.dev/89503): Investigate event ordering between
-                    // parent and child, so that we can guarantee the parent is
-                    // in the instance_map.
-                    log::warn!(
-                        "Parent {} not found: could not add {} to children directory.",
-                        parent_moniker,
-                        moniker
-                    );
-                }
-            };
+            instance_map
+                .get(&parent_moniker)
+                .expect(&format!("Unable to find instance {} in map.", parent_moniker))
+                .children_directory
+                .add_node(
+                    &Hub::child_dir_name(child_moniker.as_str(), uuid),
+                    controlled.clone(),
+                    moniker,
+                )?;
         }
         Ok(())
     }
@@ -406,7 +396,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
@@ -457,7 +447,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         // Don't create an execution directory if it already exists
         if instance.has_execution_directory {
@@ -547,7 +537,7 @@ impl Hub {
         let mut instance_map = self.instances.lock().await;
         let mut instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         instance.directory.remove_node("exec")?.ok_or_else(|| {
             log::warn!("exec directory for instance {} was already removed", target_moniker);
@@ -563,7 +553,7 @@ impl Hub {
 
         let instance = instance_map
             .get(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         let child = target_moniker.leaf().expect("A root component cannot be destroyed");
         // In the children directory, the child's instance id is not used
@@ -590,7 +580,7 @@ impl Hub {
         })?;
         instance_map
             .remove(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         Ok(())
     }
