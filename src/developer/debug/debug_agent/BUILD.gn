@@ -6,9 +6,10 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-# Set manually to true to compile the zxdb_test_app.cc file for manual debugger
-# testing of various conditions.
-include_test_app = false
+# Set manually to true to compile helper executables for manual debugger
+# testing of various conditions. Use `ffx component explore /core/debug_agent`
+# to run these executables.
+include_helper_executables = false
 
 static_library("lib") {
   sources = [
@@ -131,19 +132,6 @@ static_library("lib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-if (include_test_app) {
-  executable("zxdb_test_app") {
-    if (is_debug) {
-      # Force no optimization in debug builds.
-      configs -= [ "//build/config:default_optimize" ]
-      configs += [ "//build/config:optimize_none" ]
-    }
-
-    sources = [ "zxdb_test_app.cc" ]
-    deps = [ "//zircon/system/ulib/zx" ]
-  }
-}
-
 executable("bin") {
   output_name = "debug_agent"
   sources = [ "main.cc" ]
@@ -176,8 +164,25 @@ fuchsia_component("debug_agent-component") {
   ]
 }
 
+executable("zxdb_test_app") {
+  sources = [ "zxdb_test_app.cc" ]
+  deps = [ "//zircon/system/ulib/zx" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
 fuchsia_package("debug_agent") {
   deps = [ ":debug_agent-component" ]
+
+  if (include_helper_executables) {
+    # These executables are not used by tests or the agent, but are useful for
+    # replicating behaviour in development.
+    deps += [
+      ":zxdb_test_app",
+      "test_data:helper_executables",
+    ]
+  }
 }
 
 core_shard("core_shard") {
@@ -291,46 +296,10 @@ fuchsia_unittest_package("debug_agent_integration_tests") {
   ]
 }
 
-# Helper Executables ---------------------------------------------------------
-#
-# These executables are not used by tests or the agent, but are useful for
-# replicating behaviour in development.
-
-fuchsia_component("limbo_caller") {
-  testonly = true
-  manifest = "meta/limbo_caller.cmx"
-  deps = [ "test_data:limbo_caller" ]
-}
-
-fuchsia_component("test_suite") {
-  testonly = true
-  component_name = "debug_agent_test_suite"
-  manifest = "meta/test_suite.cmx"
-
-  # NOTE: The 'test_suite' executable will launch '/pkg/bin/hw_watchpointer' at runtime!
-  deps = [
-    "test_data:hw_watchpointer",
-    "test_data:test_suite",
-  ]
-}
-
-fuchsia_package("debug_agent_helpers") {
-  testonly = true
-  deps = [
-    ":limbo_caller",
-    ":test_suite",
-    "//src/developer/debug/debug_agent/test_data:helper_executables",
-  ]
-  if (include_test_app) {
-    deps += [ ":zxdb_test_app" ]
-  }
-}
-
 group("tests") {
   testonly = true
 
   deps = [
-    ":debug_agent_helpers",
     ":debug_agent_integration_tests",
     ":debug_agent_unit_tests",
   ]

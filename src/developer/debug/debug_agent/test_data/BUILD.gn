@@ -105,8 +105,6 @@ if (current_cpu == "x64") {
 # Helper Executables -----------------------------------------------------------
 
 group("helper_executables") {
-  testonly = true
-
   public_deps = [
     ":backtrace_request",
     ":debug_test_false",
@@ -140,13 +138,17 @@ executable("debug_test_false") {
 }
 
 executable("test_suite") {
-  testonly = true
   output_name = "test_suite"
 
   sources = [
     "test_suite.cc",
     "test_suite_helpers.cc",
     "test_suite_helpers.h",
+  ]
+
+  data_deps = [
+    # NOTE: The 'test_suite' executable will launch '/pkg/bin/hw_watchpointer' at runtime!
+    ":hw_watchpointer",
   ]
 
   deps = [
@@ -158,7 +160,6 @@ executable("test_suite") {
 }
 
 executable("hw_watchpointer") {
-  testonly = true
   output_name = "hw_watchpointer"
 
   sources = [ "hw_watchpointer.cc" ]
@@ -171,8 +172,6 @@ executable("hw_watchpointer") {
 }
 
 executable("multi_threaded") {
-  testonly = true
-
   sources = [ "multi_threaded.cc" ]
 
   deps = [
@@ -186,14 +185,12 @@ executable("printer") {
 }
 
 executable("process_loop") {
-  testonly = true
   output_name = "process_loop"
 
   sources = [ "process_loop.cc" ]
 }
 
 executable("process_spawner") {
-  testonly = true
   output_name = "process_spawner"
 
   sources = [ "process_spawner.cc" ]
@@ -206,7 +203,6 @@ executable("process_spawner") {
 }
 
 executable("thread_signals") {
-  testonly = true
   output_name = "thread_signals"
 
   sources = [ "thread_signals.cc" ]
@@ -219,7 +215,6 @@ executable("thread_signals") {
 }
 
 executable("limbo_caller") {
-  testonly = true
   output_name = "limbo_caller"
 
   sources = [ "limbo_caller.cc" ]

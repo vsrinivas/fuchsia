@@ -4,6 +4,7 @@
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
@@ -28,10 +29,26 @@ std::string GetThreadName(const fuchsia::exception::ProcessExceptionMetadata& pe
   return {};
 }
 
+// Program executing in the `ffx component explore` environment don't receive
+// capabilities in the standard path at `/`. Instead, the process access the
+// scoped component's namespace via the `/ns` directory. Consequently, when
+// the service root is created, the protocols are not located in `/svc`,
+// the default for most components, but rather at `/ns/svc`.
+zx::channel OpenServiceRoot() {
+  zx::channel request, service_root;
+  auto status = zx::channel::create(0, &request, &service_root);
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+
+  status = fdio_service_connect("/ns/svc/.", request.release());
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+
+  return service_root;
+}
+
 }  // namespace
 
 int main() {
-  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
+  auto environment_services = std::make_shared<sys::ServiceDirectory>(OpenServiceRoot());
 
   fuchsia::exception::ProcessLimboSyncPtr process_limbo;
   environment_services->Connect(process_limbo.NewRequest());
