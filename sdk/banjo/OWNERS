@@ -4,4 +4,4 @@ include /src/devices/OWNERS
 rsakthi@google.com
 silberst@google.com
 
-# COMPONENT: Zircon>FDF
+# COMPONENT: DriverFramework

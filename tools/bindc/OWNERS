@@ -3,4 +3,4 @@ spqchan@google.com
 
 include /src/devices/OWNERS
 
-# COMPONENT: Zircon>FDF
+# COMPONENT: DriverFramework>Bind
