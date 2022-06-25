@@ -2,16 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+
+static_library("test-lib") {
+  sources = [
+    "test/lib.cc",
+    "test/lib.h",
+  ]
+  deps = [ "//zircon/system/public" ]
+}
 
 rustc_library("abi") {
   name = "fuchsia_zbi_abi"
   edition = "2021"
+  with_unit_tests = true
 
   deps = [
     "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+  ]
+
+  test_deps = [
+    ":test-lib",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "src/lib.rs" ]
+}
+
+fuchsia_unittest_package("fuchsia-zbi-abi-tests") {
+  deps = [ ":abi_test" ]
 }

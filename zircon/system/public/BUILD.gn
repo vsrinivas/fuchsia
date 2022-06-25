@@ -13,6 +13,7 @@ config("public_config") {
 source_set("public") {
   public = [
     "zircon/analyzer.h",
+    "zircon/boot/image.h",
     "zircon/boot/netboot.h",
     "zircon/compiler.h",
     "zircon/device/block.h",
