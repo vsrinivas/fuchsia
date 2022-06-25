@@ -54,31 +54,35 @@ class Pci {
 
   ~Pci() = default;
 
-  zx_status_t GetDeviceInfo(pci_device_info_t* out_info);
-  zx_status_t GetBar(uint32_t bar_id, pci_bar_t* out_result);
-  zx_status_t SetBusMastering(bool enabled);
-  zx_status_t ResetDevice();
-  zx_status_t AckInterrupt();
-  zx_status_t MapInterrupt(uint32_t which_irq, zx::interrupt* out_interrupt);
-  void GetInterruptModes(pci_interrupt_modes_t* out_modes);
-  zx_status_t SetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
-  zx_status_t ReadConfig8(uint16_t offset, uint8_t* out_value);
-  zx_status_t ReadConfig16(uint16_t offset, uint16_t* out_value);
-  zx_status_t ReadConfig32(uint16_t offset, uint32_t* out_value);
-  zx_status_t WriteConfig8(uint16_t offset, uint8_t value);
-  zx_status_t WriteConfig16(uint16_t offset, uint16_t value);
-  zx_status_t WriteConfig32(uint16_t offset, uint32_t value);
-  zx_status_t GetFirstCapability(pci_capability_id_t id, uint8_t* out_offset);
-  zx_status_t GetNextCapability(pci_capability_id_t id, uint8_t start_offset, uint8_t* out_offset);
-  zx_status_t GetFirstExtendedCapability(pci_extended_capability_id_t id, uint16_t* out_offset);
+  zx_status_t GetDeviceInfo(pci_device_info_t* out_info) const;
+  zx_status_t GetBar(uint32_t bar_id, pci_bar_t* out_result) const;
+  zx_status_t SetBusMastering(bool enabled) const;
+  zx_status_t ResetDevice() const;
+  zx_status_t AckInterrupt() const;
+  zx_status_t MapInterrupt(uint32_t which_irq, zx::interrupt* out_interrupt) const;
+  void GetInterruptModes(pci_interrupt_modes_t* out_modes) const;
+  zx_status_t SetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count) const;
+  zx_status_t ReadConfig8(uint16_t offset, uint8_t* out_value) const;
+  zx_status_t ReadConfig16(uint16_t offset, uint16_t* out_value) const;
+  zx_status_t ReadConfig32(uint16_t offset, uint32_t* out_value) const;
+  zx_status_t WriteConfig8(uint16_t offset, uint8_t value) const;
+  zx_status_t WriteConfig16(uint16_t offset, uint16_t value) const;
+  zx_status_t WriteConfig32(uint16_t offset, uint32_t value) const;
+  zx_status_t GetFirstCapability(pci_capability_id_t id, uint8_t* out_offset) const;
+  zx_status_t GetNextCapability(pci_capability_id_t id, uint8_t start_offset,
+                                uint8_t* out_offset) const;
+  zx_status_t GetFirstExtendedCapability(pci_extended_capability_id_t id,
+                                         uint16_t* out_offset) const;
   zx_status_t GetNextExtendedCapability(pci_extended_capability_id_t id, uint16_t start_offset,
-                                        uint16_t* out_offset);
-  zx_status_t GetBti(uint32_t index, zx::bti* out_bti);
+                                        uint16_t* out_offset) const;
+  zx_status_t GetBti(uint32_t index, zx::bti* out_bti) const;
 
   // These two methods are not Banjo methods but miscellaneous PCI helper
   // methods.
-  zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count, pci_interrupt_mode_t* out_mode);
-  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<fdf::MmioBuffer>* mmio);
+  zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count,
+                                     pci_interrupt_mode_t* out_mode) const;
+  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy,
+                      std::optional<fdf::MmioBuffer>* mmio) const;
 
   bool is_valid() const { return client_.is_valid(); }
 
