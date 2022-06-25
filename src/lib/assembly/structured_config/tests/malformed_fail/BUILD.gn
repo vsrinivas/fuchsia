@@ -49,7 +49,6 @@ if (is_host) {
 
   rustc_test("structured_config_malformed_test") {
     edition = "2018"
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
     sources = [ "malformed.rs" ]
     source_root = "malformed.rs"
     deps = [

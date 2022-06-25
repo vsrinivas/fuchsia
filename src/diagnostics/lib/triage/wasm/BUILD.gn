@@ -43,7 +43,6 @@ if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
     name = "triage_lib"
     edition = "2018"
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
     configs += [
       ":env",

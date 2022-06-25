@@ -113,7 +113,6 @@ template("dart_test_wrapper_component") {
       ":dart_runner_rust_cfg",
       ":${wrapper_component_name}_env",
     ]
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
   }
 
   fuchsia_component(wrapper_component_name) {

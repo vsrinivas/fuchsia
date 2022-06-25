@@ -140,7 +140,6 @@ if (is_host) {
     ]
 
     configs += [ ":test_config" ]
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
     # TODO(fxbug.dev/92670): Needed by test.  Remove when fixed.
     configs += [ "//build/config/rust:output_dir_sensitive" ]

@@ -101,9 +101,6 @@ if (is_host) {
       ":testdata($host_toolchain)",
       "//third_party/rust_crates:tempfile",
     ]
-
-    # TODO(fxbug.dev/86506): Remove when clippy supports envars
-    disable_clippy = true
     sources = [ "src/lib.rs" ]
     configs += [ ":config" ]
 

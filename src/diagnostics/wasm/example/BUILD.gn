@@ -39,7 +39,6 @@ if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
     output_name = "example_lib"
     edition = "2018"
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
     configs += [ ":env" ]
 
@@ -50,7 +49,6 @@ if (current_toolchain == unknown_wasm32_toolchain) {
 } else {
   rustc_library("lib") {
     edition = "2018"
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
     configs += [ ":env" ]
 

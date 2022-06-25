@@ -64,6 +64,7 @@ template("clippy") {
     args += [
       "--",
       "env",
+      "{{rustenv}}",
     ]
     if (defined(invoker.rustenv)) {
       args += invoker.rustenv
