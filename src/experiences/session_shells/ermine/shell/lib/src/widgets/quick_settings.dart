@@ -234,6 +234,7 @@ class _ListSettings extends StatelessWidget {
                             value: appState.settingsState.brightnessLevel ?? 1,
                             onChanged:
                                 appState.settingsState.setBrightnessLevel,
+                            min: 0.05,
                           ),
                         ),
                       ],
