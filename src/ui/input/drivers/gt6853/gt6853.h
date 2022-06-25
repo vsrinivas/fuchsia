@@ -16,7 +16,6 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
@@ -86,9 +85,6 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
-
-  // Visible for testing.
-  static zx::status<Gt6853Device*> CreateAndGetDevice(void* ctx, zx_device_t* parent);
 
   void DdkRelease() { delete this; }
 

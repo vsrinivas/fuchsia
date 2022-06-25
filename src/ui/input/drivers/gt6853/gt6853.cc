@@ -72,48 +72,44 @@ void Gt6853InputReport::ToFidlInputReport(
   input_report.touch(touch_report.Build());
 }
 
-zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
+zx_status_t Gt6853Device::Create(void* ctx, zx_device_t* parent) {
   ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Failed to get I2C fragment");
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::GpioProtocolClient interrupt_gpio(parent, "gpio-int");
   if (!interrupt_gpio.is_valid()) {
     zxlogf(ERROR, "Failed to get interrupt GPIO fragment");
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::GpioProtocolClient reset_gpio(parent, "gpio-reset");
   if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "Failed to get reset GPIO fragment");
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   std::unique_ptr<Gt6853Device> device =
       std::make_unique<Gt6853Device>(parent, std::move(i2c), interrupt_gpio, reset_gpio);
   if (!device) {
-    return zx::error(ZX_ERR_NO_MEMORY);
+    return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = device->Init();
   if (status != ZX_OK) {
-    return zx::error(status);
+    return status;
   }
 
   if ((status = device->DdkAdd(ddk::DeviceAddArgs("gt6853").set_inspect_vmo(
            device->inspector_.DuplicateVmo()))) != ZX_OK) {
     zxlogf(ERROR, "DdkAdd failed: %d", status);
-    return zx::error(status);
+    return status;
   }
 
-  return zx::ok(device.release());
-}
-
-zx_status_t Gt6853Device::Create(void* ctx, zx_device_t* parent) {
-  auto status = CreateAndGetDevice(ctx, parent);
-  return status.is_error() ? status.error_value() : ZX_OK;
+  __UNUSED auto _ = device.release();
+  return ZX_OK;
 }
 
 void Gt6853Device::DdkUnbind(ddk::UnbindTxn txn) {

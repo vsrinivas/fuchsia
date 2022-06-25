@@ -6,19 +6,23 @@
 
 #include <endian.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/zx/clock.h>
 
 #include <array>
 #include <vector>
 
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -53,24 +57,6 @@ zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, con
 }
 
 namespace touch {
-
-class SaveInspectVmoBind : public fake_ddk::Bind {
- public:
-  zx::vmo TakeInspectVmo() { return std::move(inspect_vmo_); }
-
- protected:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    if (args) {
-      inspect_vmo_.reset(args->inspect_vmo);
-      args->inspect_vmo = ZX_HANDLE_INVALID;
-    }
-    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
-  }
-
- private:
-  zx::vmo inspect_vmo_;
-};
 
 class FakeTouchDevice : public fake_i2c::FakeI2c {
  public:
@@ -291,6 +277,9 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
 
 class Gt6853Test : public zxtest::Test {
  public:
+  Gt6853Test()
+      : fake_parent_(MockDevice::FakeRootParent()), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
     ASSERT_OK(zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL,
                                     &gpio_interrupt_));
@@ -300,13 +289,14 @@ class Gt6853Test : public zxtest::Test {
 
     mock_gpio_.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
     mock_gpio_.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(gpio_interrupt));
+
+    EXPECT_OK(loop_.StartThread());
   }
 
   void TearDown() override {
     if (device_) {
-      device_async_remove(fake_ddk::kFakeDevice);
-      EXPECT_TRUE(ddk_.Ok());
-      device_->DdkRelease();
+      device_async_remove(device_);
+      EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(fake_parent_.get()));
     }
     device_ = nullptr;
   }
@@ -314,38 +304,30 @@ class Gt6853Test : public zxtest::Test {
   zx_status_t Init(uint32_t panel_type_id = 1) {
     panel_type_id_ = panel_type_id;
 
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[4], 4);
-    fragments[0].name = "pdev";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{});
-    fragments[1].name = "i2c";
-    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_I2C,
-        .proto = {.ops = fake_i2c_.GetProto()->ops, .ctx = fake_i2c_.GetProto()->ctx},
-    });
-    fragments[2].name = "gpio-int";
-    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_GPIO,
-        .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
-    });
-    fragments[3].name = "gpio-reset";
-    fragments[3].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_GPIO,
-        .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
-    });
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GPIO, mock_gpio_.GetProto()->ops,
+                              mock_gpio_.GetProto()->ctx, "gpio-int");
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GPIO, mock_gpio_.GetProto()->ops,
+                              mock_gpio_.GetProto()->ctx, "gpio-reset");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
+        [&](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
+                           &fake_i2c_);
+          return ZX_OK;
+        },
+        "i2c");
 
-    ddk_.SetFragments(std::move(fragments));
-
-    ddk_.SetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id_, sizeof(panel_type_id_));
+    fake_parent_->SetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id_,
+                              sizeof(panel_type_id_));
 
     config_vmo = &config_vmo_;
     firmware_vmo = &firmware_vmo_;
 
-    auto status = Gt6853Device::CreateAndGetDevice(nullptr, fake_ddk::kFakeParent);
-    if (status.is_error()) {
-      return status.error_value();
-    }
-    device_ = status.value();
-    return ZX_OK;
+    zx_status_t status = Gt6853Device::Create(nullptr, fake_parent_.get());
+    device_ = fake_parent_->GetLatestChild();
+    return status;
   }
 
  protected:
@@ -383,33 +365,36 @@ class Gt6853Test : public zxtest::Test {
     fake_i2c_.set_sensor_id(0);
   }
 
-  SaveInspectVmoBind ddk_;
+  void WaitForNextReader() { device_->GetDeviceContext<Gt6853Device>()->WaitForNextReader(); }
+
+  fidl::ClientEnd<fuchsia_input_report::InputDevice> GetInputDeviceClient() {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputDevice>();
+    EXPECT_OK(endpoints);
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                     device_->GetDeviceContext<Gt6853Device>());
+
+    return std::move(endpoints->client);
+  }
+
   FakeTouchDevice fake_i2c_;
   zx::interrupt gpio_interrupt_;
-  Gt6853Device* device_ = nullptr;
+  MockDevice* device_ = nullptr;
   uint32_t panel_type_id_ = 0;
   zx::vmo config_vmo_;
   zx::vmo firmware_vmo_;
   ddk::MockGpio mock_gpio_;
 
  private:
-  static bool GetFragment(void* ctx, const char* name, zx_device_t** out_fragment) {
-    if (strcmp(name, "i2c") == 0 || strcmp(name, "gpio-int") == 0 ||
-        strcmp(name, "gpio-reset") == 0) {
-      *out_fragment = fake_ddk::kFakeParent;
-      return true;
-    }
-
-    return false;
-  }
+  std::shared_ptr<MockDevice> fake_parent_;
+  async::Loop loop_;
 };
 
 TEST_F(Gt6853Test, GetDescriptor) {
   AddDefaultConfig();
   ASSERT_OK(Init());
 
-  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
-      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+  fidl::WireSyncClient client(GetInputDeviceClient());
 
   auto response = client->GetDescriptor();
 
@@ -453,8 +438,7 @@ TEST_F(Gt6853Test, ReadReport) {
   AddDefaultConfig();
   ASSERT_OK(Init());
 
-  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
-      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+  fidl::WireSyncClient client(GetInputDeviceClient());
 
   auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(reader_endpoints.is_ok());
@@ -462,7 +446,7 @@ TEST_F(Gt6853Test, ReadReport) {
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)client->GetInputReportsReader(std::move(reader_server));
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
-  device_->WaitForNextReader();
+  WaitForNextReader();
 
   EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));
 
@@ -712,8 +696,7 @@ TEST_F(Gt6853Test, LatencyMeasurements) {
   AddDefaultConfig();
   ASSERT_OK(Init());
 
-  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
-      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+  fidl::WireSyncClient client(GetInputDeviceClient());
 
   auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(reader_endpoints.is_ok());
@@ -721,7 +704,7 @@ TEST_F(Gt6853Test, LatencyMeasurements) {
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)client->GetInputReportsReader(std::move(reader_server));
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
-  device_->WaitForNextReader();
+  WaitForNextReader();
 
   for (int i = 0; i < 5; i++) {
     EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));
@@ -735,7 +718,7 @@ TEST_F(Gt6853Test, LatencyMeasurements) {
     }
   }
 
-  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  const zx::vmo& inspect_vmo = device_->GetInspectVmo();
   ASSERT_TRUE(inspect_vmo.is_valid());
 
   inspect::InspectTestHelper inspector;
