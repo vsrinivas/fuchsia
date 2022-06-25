@@ -24,7 +24,6 @@ fuchsia_driver("ssd1306_driver-driver") {
   deps = [
     ":ssd1306-bind",
     "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -62,7 +61,6 @@ test("ssd1306-test") {
   deps = [
     ":ssd1306-bind",
     "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -71,6 +69,8 @@ test("ssd1306-test") {
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",

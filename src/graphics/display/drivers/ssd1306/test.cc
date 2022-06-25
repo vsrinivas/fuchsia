@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake-i2c/fake-i2c.h>
 
 #include <zxtest/zxtest.h>
@@ -24,7 +26,16 @@ class FakeI2cParent : public fake_i2c::FakeI2c {
 
 TEST(Ssd1306Test, LifetimeTest) {
   FakeI2cParent parent;
-  ddk::I2cChannel i2c_channel = ddk::I2cChannel(parent.GetProto());
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &parent);
+  EXPECT_OK(loop.StartThread());
+
+  ddk::I2cChannel i2c_channel = ddk::I2cChannel(std::move(endpoints->client));
+
   auto fake_parent = MockDevice::FakeRootParent();
   auto device = new Ssd1306(fake_parent.get());
 
