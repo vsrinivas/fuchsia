@@ -235,7 +235,7 @@ zx_status_t KTraceState::RewindLocked() {
   return ZX_OK;
 }
 
-ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
+ssize_t KTraceState::ReadUser(user_out_ptr<void> ptr, uint32_t off, size_t len) {
   Guard<Mutex> guard(&lock_);
 
   // If we were never configured to have a target buffer, our "docs" say that we
@@ -270,9 +270,7 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
   // with the |always| flag set (ignoring the grpmask).  This should only ever
   // happen during rewind and start operations which are serialized by lock_.
   struct Region {
-    Region() = default;
-    Region(void* _ptr, size_t _len) : ptr(_ptr), len(_len) {}
-    void* ptr{nullptr};
+    uint8_t* ptr{nullptr};
     size_t len{0};
   };
 
@@ -370,7 +368,7 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
   // this.  For now, I'm just going to maintain the existing behavior and return
   // all of the available bytes, but someday the defined behavior of this API
   // needs to be clearly specified.
-  if (ptr == nullptr) {
+  if (!ptr) {
     return to_copy.avail;
   }
 
@@ -380,7 +378,7 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
   }
 
   // Go ahead and copy the data.
-  uint8_t* const ptr8 = reinterpret_cast<uint8_t*>(ptr);
+  auto ptr8 = ptr.reinterpret<uint8_t>();
   size_t done = 0;
   for (const auto& r : to_copy.regions) {
     if (r.ptr != nullptr) {
@@ -391,7 +389,7 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
       //
       // TOOD(fxb/101783): Determine if this should be changed to capture faults and resolve them
       // outside the lock.
-      guard.CallUntracked([&] { copy_result = CopyToUser(ptr8 + done, r.ptr, r.len); });
+      guard.CallUntracked([&] { copy_result = CopyToUser(ptr8.byte_offset(done), r.ptr, r.len); });
       if (copy_result != ZX_OK) {
         return ZX_ERR_INVALID_ARGS;
       }

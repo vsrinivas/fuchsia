@@ -13,7 +13,6 @@
 
 #include <arch/user_copy.h>
 #include <ktl/type_traits.h>
-#include <vm/vm.h>
 
 // user_*_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory. They can be in, out, or inout pointers.

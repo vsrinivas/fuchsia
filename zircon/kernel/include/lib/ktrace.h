@@ -279,7 +279,7 @@ inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* nam
   ktrace_name_etc(tag, id, arg, name, always);
 }
 
-inline ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
+inline ssize_t ktrace_read_user(user_out_ptr<void> ptr, uint32_t off, size_t len) {
   return KTRACE_STATE.ReadUser(ptr, off, len);
 }
 

@@ -525,7 +525,7 @@ class TestKTraceState : public ::internal::KTraceState {
       // buffer yet, so not even the static metadata should be available to
       // read.
       ASSERT_OK(state.Stop());
-      ASSERT_EQ(0u, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(0u, state.ReadUser(user_out_ptr<void>(nullptr), 0, 0));
       ASSERT_OK(state.Rewind());
       ASSERT_EQ(KTRACE_GRP_TO_MASK(0u), state.grpmask());
 
@@ -536,7 +536,7 @@ class TestKTraceState : public ::internal::KTraceState {
       // Now that we are started, rewinding or should fail because of the state
       // check.
       ASSERT_EQ(ZX_ERR_BAD_STATE, state.Rewind());
-      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(user_out_ptr<void>(nullptr), 0, 0));
       ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask());
 
       // Starting while already started should succeed, but change the active
@@ -553,7 +553,7 @@ class TestKTraceState : public ::internal::KTraceState {
       // have started before, we expect that the amount of data available to
       // read should be equal to the size of the two static metadata records.
       const ssize_t expected_size = sizeof(ktrace_rec_32b_t) * 2;
-      ASSERT_EQ(expected_size, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(expected_size, state.ReadUser(user_out_ptr<void>(nullptr), 0, 0));
       ASSERT_OK(state.Rewind());
     }
 
@@ -567,7 +567,7 @@ class TestKTraceState : public ::internal::KTraceState {
       // We are started, so rewinding or reading should fail because of the
       // state check.
       ASSERT_EQ(ZX_ERR_BAD_STATE, state.Rewind());
-      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(user_out_ptr<void>(nullptr), 0, 0));
       ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask());
 
       // "Restarting" should change the active group mask.
@@ -581,7 +581,7 @@ class TestKTraceState : public ::internal::KTraceState {
       // Stopping again, rewinding, and reading are all OK now.
       const ssize_t expected_size = sizeof(ktrace_rec_32b_t) * 2;
       ASSERT_OK(state.Stop());
-      ASSERT_EQ(expected_size, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(expected_size, state.ReadUser(user_out_ptr<void>(nullptr), 0, 0));
       ASSERT_OK(state.Rewind());
       ASSERT_OK(state.Stop());
     }
@@ -835,8 +835,8 @@ class TestKTraceState : public ::internal::KTraceState {
     ++thread_name_report_count_;
   }
 
-  zx_status_t CopyToUser(void* dst, const void* src, size_t len) override {
-    ::memcpy(dst, src, len);
+  zx_status_t CopyToUser(user_out_ptr<uint8_t> dst, const uint8_t* src, size_t len) override {
+    ::memcpy(dst.get(), src, len);
     return ZX_OK;
   }
 
@@ -873,14 +873,15 @@ class TestKTraceState : public ::internal::KTraceState {
     records_enumerated_out = 0;
 
     // Make sure that Read reports a reasonable size needed to read the buffer.
-    ssize_t available = ReadUser(nullptr, 0, 0);
+    ssize_t available = ReadUser(user_out_ptr<void>(nullptr), 0, 0);
     ASSERT_GE(available, 0);
     ASSERT_LE(static_cast<size_t>(available), validation_buffer_size_);
 
     // Now actually read the data, make sure that we read the same amount that
     // the size operation told us we would need to read.
     ASSERT_NONNULL(validation_buffer_.get());
-    size_t to_validate = ReadUser(validation_buffer_.get(), 0, validation_buffer_size_);
+    size_t to_validate =
+        ReadUser(user_out_ptr<void>(validation_buffer_.get()), 0, validation_buffer_size_);
     ASSERT_EQ(static_cast<size_t>(available), to_validate);
 
     uint32_t rd_offset = sizeof(ktrace_rec_32b_t) * 2;

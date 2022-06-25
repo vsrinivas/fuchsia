@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <lib/fit/function.h>
+#include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -91,7 +92,7 @@ class KTraceState {
     return RewindLocked();
   }
 
-  ssize_t ReadUser(void* ptr, uint32_t off, size_t len) TA_EXCL(lock_, write_lock_);
+  ssize_t ReadUser(user_out_ptr<void> ptr, uint32_t off, size_t len) TA_EXCL(lock_, write_lock_);
 
   // Write a record to the tracelog.
   //
@@ -205,8 +206,8 @@ class KTraceState {
 
   // Copy data from kernel memory to user memory.  Used by Read, and overloaded
   // by test code (which needs to copy to kernel memory, not user memory).
-  virtual zx_status_t CopyToUser(void* dst, const void* src, size_t len) {
-    return arch_copy_to_user(dst, src, len);
+  virtual zx_status_t CopyToUser(user_out_ptr<uint8_t> dst, const uint8_t* src, size_t len) {
+    return dst.copy_array_to_user(src, len);
   }
 
   // A small printf stand-in which gives tests the ability to disable diagnostic

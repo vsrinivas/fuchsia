@@ -144,7 +144,7 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32
     return status;
   }
 
-  ssize_t result = ktrace_read_user(_data.get(), offset, len);
+  ssize_t result = ktrace_read_user(_data, offset, len);
   if (result < 0)
     return static_cast<zx_status_t>(result);
 
