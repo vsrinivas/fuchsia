@@ -162,7 +162,12 @@ type MacAddressFilterMode = strict enum : int32 {
 
 /// Neighbor Table Entry
 ///
-/// See also: https://github.com/openthread/wpantund/blob/8db2a71c9597e08949dfc38d8c10f830e3de565c/third_party/openthread/src/ncp/spinel.h#L2356-L2373
+/// All fields are optional except for `mac_address`.
+///
+/// See also:
+///   * https://openthread.io/reference/struct/ot-neighbor-info
+///   * https://openthread.io/reference/struct/ot-child-info
+///   * https://github.com/openthread/wpantund/blob/8db2a71c9597e08949dfc38d8c10f830e3de565c/third_party/openthread/src/ncp/spinel.h#L2356-L2373
 type NeighborInfo = table {
     /// The MAC address of the neighbor.
     ///
@@ -176,8 +181,8 @@ type NeighborInfo = table {
 
     /// The age of this entry in the neighbor table.
     ///
-    /// Roughly (+/- 1sec) describes how long this device has been a neighbor.
-    ///
+    /// Describes when this neighbor was last seen.
+    /// Resolution is roughly +/- 1sec.
     3: age zx.duration;
 
     /// True if this neighbor is considered a child and is thus
@@ -217,4 +222,32 @@ type NeighborInfo = table {
     ///
     /// Defined by section 4.5.2 of the Thread 1.1.1 specification ("Mode TLV").
    10: thread_mode uint8;
+
+    /// Frame error rate.
+    ///
+    /// `0xffff` indicates 100%, `0x0000` indicates 0%.
+   11: frame_error_rate uint16;
+
+    /// IPv6 message error rate.
+    ///
+    /// `0xffff` indicates 100%, `0x0000` indicates 0%.
+   12: ipv6_error_rate uint16;
+
+    /// True if the child is CSL synced.
+    ///
+    /// CSL is Coordinated Sampled Listening, a mechanism for sleepy devices
+    /// to perform indirect TX.
+   13: child_is_csl_synced bool;
+
+    /// True if the child is restoring state.
+   14: child_is_state_restoring bool;
+
+    /// Version of NetData that the neighbor has.
+   15: net_data_version uint8;
+
+    /// Number of messages queued for the neighbor.
+   16: queued_messages uint16;
+
+    /// MLE version for the neighbor.
+   17: thread_mle_version uint8;
 };
