@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{bail, Error};
 use carnelian::input::consumer_control::Phase;
 use fidl_fuchsia_input_report::ConsumerControlButton;
+use fidl_fuchsia_recovery::FactoryResetMarker;
+use fuchsia_component::client::connect_to_protocol;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum FactoryResetState {
@@ -150,6 +153,26 @@ impl FactoryResetStateMachine {
     pub fn get_state(&self) -> FactoryResetState {
         return self.state;
     }
+}
+
+pub async fn execute_reset() -> Result<(), Error> {
+    let factory_reset_service = connect_to_protocol::<FactoryResetMarker>();
+    let proxy = match factory_reset_service {
+        Ok(marker) => marker.clone(),
+        Err(error) => {
+            bail!("Could not connect to factory_reset_service: {:?}", error);
+        }
+    };
+
+    println!("recovery: Executing factory reset command");
+
+    match proxy.reset().await {
+        Ok(_) => {}
+        Err(error) => {
+            bail!("Error executing factory reset command : {:?}", error);
+        }
+    };
+    Ok(())
 }
 
 #[cfg(test)]

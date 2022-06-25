@@ -45,7 +45,6 @@ use carnelian::{
 use euclid::size2;
 use fdr::{FactoryResetState, ResetEvent};
 use fidl_fuchsia_input_report::ConsumerControlButton;
-use fidl_fuchsia_recovery::FactoryResetMarker;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
 #[cfg(feature = "http_setup_server")]
 use fuchsia_async::DurationExt;
@@ -633,34 +632,6 @@ impl RecoveryViewAssistant {
         );
     }
 
-    async fn execute_reset(view_key: ViewKey, app_sender: AppSender) {
-        let factory_reset_service = connect_to_protocol::<FactoryResetMarker>();
-        let proxy = match factory_reset_service {
-            Ok(marker) => marker.clone(),
-            Err(error) => {
-                app_sender.queue_message(
-                    MessageTarget::View(view_key),
-                    make_message(RecoveryMessages::ResetFailed),
-                );
-                panic!("Could not connect to factory_reset_service: {:?}", error);
-            }
-        };
-
-        println!("recovery: Executing factory reset command");
-
-        let res = proxy.reset().await;
-        match res {
-            Ok(_) => {}
-            Err(error) => {
-                app_sender.queue_message(
-                    MessageTarget::View(view_key),
-                    make_message(RecoveryMessages::ResetFailed),
-                );
-                eprintln!("recovery: Error occurred : {:?}", error);
-            }
-        };
-    }
-
     fn handle_recovery_message(&mut self, message: &RecoveryMessages) {
         match message {
             #[cfg(feature = "http_setup_server")]
@@ -746,7 +717,19 @@ impl RecoveryViewAssistant {
                         let view_key = self.view_key;
                         let local_app_sender = self.app_sender.clone();
                         let f = async move {
-                            RecoveryViewAssistant::execute_reset(view_key, local_app_sender).await;
+                            match fdr::execute_reset().await {
+                                Ok(_) => {}
+                                Err(error) => {
+                                    local_app_sender.queue_message(
+                                        MessageTarget::View(view_key),
+                                        make_message(RecoveryMessages::ResetFailed),
+                                    );
+                                    eprintln!(
+                                        "Error occurred attempting to factory reset: {:?}",
+                                        error
+                                    );
+                                }
+                            };
                         };
                         fasync::Task::local(f).detach();
                     }

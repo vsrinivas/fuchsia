@@ -89,6 +89,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-channel",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",

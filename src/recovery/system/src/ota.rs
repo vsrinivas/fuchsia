@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{setup::DevhostConfig, storage::Storage},
+    crate::{
+        setup::DevhostConfig,
+        storage::{Initializer, Storage, TopoPathInitializer},
+    },
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_buildinfo::ProviderMarker as BuildInfoMarker,
@@ -44,7 +47,7 @@ enum StorageType {
     Real,
     /// Use the given DirectoryMarker for blobfs, and the given path for minfs.
     #[allow(dead_code)]
-    Fake { blobfs_root: ClientEnd<fio::DirectoryMarker>, minfs_path: String },
+    Fake { blobfs_root: ClientEnd<fio::DirectoryMarker>, minfs_path: Option<String> },
 }
 
 /// Helper for constructing OTAs.
@@ -55,6 +58,7 @@ pub struct OtaEnvBuilder {
     paver: PaverType,
     ssl_certificates: String,
     storage_type: StorageType,
+    factory_reset: bool,
 }
 
 impl OtaEnvBuilder {
@@ -66,6 +70,7 @@ impl OtaEnvBuilder {
             paver: PaverType::Real,
             ssl_certificates: "/config/ssl".to_owned(),
             storage_type: StorageType::Real,
+            factory_reset: true,
         }
     }
 
@@ -83,7 +88,7 @@ impl OtaEnvBuilder {
         blobfs_root: ClientEnd<fio::DirectoryMarker>,
         minfs_path: String,
     ) -> Self {
-        self.storage_type = StorageType::Fake { blobfs_root, minfs_path };
+        self.storage_type = StorageType::Fake { blobfs_root, minfs_path: Some(minfs_path) };
         self
     }
 
@@ -114,15 +119,25 @@ impl OtaEnvBuilder {
         self
     }
 
+    #[cfg(test)]
+    /// Set whether the OTA process should factory reset the data partition.
+    pub fn factory_reset(mut self, reset: bool) -> Self {
+        self.factory_reset = reset;
+        self
+    }
+
     /// Returns the name of the board provided by fidl/fuchsia.buildinfo
     async fn get_board_name(&self) -> Result<String, Error> {
         match &self.board_name {
             BoardName::BuildInfo => {
                 let proxy = match client::connect_to_protocol::<BuildInfoMarker>() {
                     Ok(p) => p,
-                    Err(err) => bail!("Failed to connect to fuchsia.buildinfo.Provider proxy: {:?}", err),
+                    Err(err) => {
+                        bail!("Failed to connect to fuchsia.buildinfo.Provider proxy: {:?}", err)
+                    }
                 };
-                let build_info = proxy.get_build_info().await.context("Failed to read build info")?;
+                let build_info =
+                    proxy.get_build_info().await.context("Failed to read build info")?;
                 build_info.board_config.ok_or(format_err!("No board name provided"))
             }
             BoardName::Override { name } => Ok(name.to_owned()),
@@ -182,15 +197,19 @@ impl OtaEnvBuilder {
         ))
     }
 
-    /// Wipe the system's disk and mount the clean minfs/blobfs partitions.
-    async fn init_real_storage(
+    /// Wipe the system's disk and mount the clean blobfs partition.
+    pub async fn init_real_storage(
         &self,
-    ) -> Result<(Option<Storage>, ClientEnd<fio::DirectoryMarker>, String), Error> {
-        let mut storage = Storage::new().await.context("initialising storage")?;
-        let blobfs_root = storage.get_blobfs().context("Opening blobfs")?;
-        storage.mount_minfs().context("Mounting minfs")?;
+    ) -> Result<(Option<Storage>, ClientEnd<fio::DirectoryMarker>, Option<String>), Error> {
+        let storage_initializer = TopoPathInitializer {};
+        let mut storage = storage_initializer.initialize().await.context("initialising storage")?;
+        storage.wipe_storage().await.context("Wiping storage")?;
 
-        Ok((Some(storage), blobfs_root, "/m".to_owned()))
+        let blobfs_root = storage.get_blobfs().context("Opening blobfs")?;
+        let minfs_mount_point =
+            storage.get_minfs_mount_point().context("Getting minfs mount point")?;
+
+        Ok((Some(storage), blobfs_root, minfs_mount_point))
     }
 
     /// Construct an |OtaEnv| from this |OtaEnvBuilder|.
@@ -235,7 +254,8 @@ impl OtaEnvBuilder {
             paver_connector,
             repo_dir,
             ssl_certificates,
-            _storage: storage,
+            storage: storage,
+            factory_reset: self.factory_reset,
         })
     }
 }
@@ -244,12 +264,13 @@ pub struct OtaEnv {
     authorized_keys: Option<String>,
     blobfs_root: ClientEnd<fio::DirectoryMarker>,
     board_name: String,
-    minfs_root_path: String,
+    minfs_root_path: Option<String>,
     omaha_config: Option<OmahaConfig>,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
     repo_dir: File,
     ssl_certificates: File,
-    _storage: Option<Storage>,
+    storage: Option<Storage>,
+    factory_reset: bool,
 }
 
 impl OtaEnv {
@@ -270,8 +291,23 @@ impl OtaEnv {
         .context("Installing OTA")?;
 
         if let Some(keys) = self.authorized_keys {
-            OtaEnv::install_ssh_certificates(&self.minfs_root_path, &keys)
-                .context("Installing SSH authorized keys")?;
+            match self.minfs_root_path {
+                Some(path) => {
+                    OtaEnv::install_ssh_certificates(&path, &keys)
+                        .context("Installing SSH authorized keys")?;
+                }
+                None => eprintln!("Skipping SSH key installation: minfs not available"),
+            };
+        }
+
+        if self.factory_reset {
+            match self.storage {
+                Some(storage) => {
+                    storage.wipe_data().await.context("Wiping data")?;
+                }
+                // This should only be the case for test environments.
+                None => eprintln!("Storage not available, skipping factory reset."),
+            };
         }
         Ok(())
     }
@@ -552,6 +588,7 @@ mod tests {
                 .fake_paver(paver_connector)
                 .ssl_certificates(TEST_SSL_CERTS)
                 .devhost(cfg)
+                .factory_reset(false)
                 .build()
                 .await
                 .context("Building environment")?;
