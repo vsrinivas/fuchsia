@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::installer::BlockDevice;
+use recovery_util::block::BlockDevice;
 
 const CONST_SELECT_INSTALL_HEADLINE: &'static str = "Select Installation Method";
 const CONST_SELECT_DISK_HEADLINE: &'static str = "Select Disk you would like to install Fuchsia to";

@@ -35,9 +35,10 @@ use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
 
 pub mod installer;
 use installer::{
-    find_install_source, get_block_device, get_block_devices, get_bootloader_type, paver_connect,
-    set_active_configuration, BlockDevice, BootloaderType,
+    find_install_source, get_bootloader_type, paver_connect, set_active_configuration,
+    BootloaderType,
 };
+use recovery_util::block::{get_block_device, get_block_devices, BlockDevice};
 
 pub mod partition;
 use partition::Partition;
@@ -662,7 +663,13 @@ async fn do_install(
     let bootloader_type = installation_paths.bootloader_type.unwrap();
 
     // TODO(fxbug.dev/100712): Remove this once flake is resolved.
-    println!("Installing to {} ({}), source {} ({})", install_target.topo_path, install_target.class_path, install_source.topo_path, install_source.class_path);
+    println!(
+        "Installing to {} ({}), source {} ({})",
+        install_target.topo_path,
+        install_target.class_path,
+        install_source.topo_path,
+        install_source.class_path
+    );
 
     let (paver, data_sink) =
         paver_connect(&install_target.class_path).context("Could not contact paver")?;

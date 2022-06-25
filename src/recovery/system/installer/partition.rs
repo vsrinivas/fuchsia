@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::installer::{BlockDevice, BootloaderType},
+    crate::installer::BootloaderType,
     anyhow::{Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
@@ -13,6 +13,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     payload_streamer::PayloadStreamer,
+    recovery_util::block::BlockDevice,
     regex,
     std::{fmt, fs, io::Read, path::Path, sync::Mutex},
 };
