@@ -394,12 +394,6 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
-if (!(current_os == "fuchsia")) {
-  group("inotify") {
-    public_deps = [ ":inotify-v0_9_3" ]
-  }
-}
-
 group("iota") {
   public_deps = [ ":iota-v0_2_2" ]
 }

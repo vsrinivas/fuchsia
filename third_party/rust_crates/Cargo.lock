@@ -1383,7 +1383,6 @@ dependencies = [
  "hyper-rustls",
  "indexmap",
  "indoc",
- "inotify",
  "iota",
  "itertools 0.10.1",
  "itoa 0.4.3",
