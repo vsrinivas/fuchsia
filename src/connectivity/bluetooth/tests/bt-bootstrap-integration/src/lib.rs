@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{format_err, Context as _},
     bt_test_harness::{
         access_v2::{AccessHarness, AccessState},
         bootstrap_v2::BootstrapHarness,
@@ -56,9 +56,7 @@ fn example_emulator_identity() -> Identity {
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_add_and_commit_identities(
-    (bootstrap, access): (BootstrapHarness, AccessHarness),
-) -> Result<(), Error> {
+async fn test_add_and_commit_identities((bootstrap, access): (BootstrapHarness, AccessHarness)) {
     let bootstrap = bootstrap.aux().clone();
 
     let initial_device_empty_pred = Predicate::<AccessState>::predicate(
@@ -74,14 +72,20 @@ async fn test_add_and_commit_identities(
     let expected_peers: HashSet<PeerId> = identity.bonds.iter().map(|b| b.identifier).collect();
 
     let identities: Vec<sys::Identity> = vec![identity.into()];
-    bootstrap.add_identities(&mut identities.into_iter()).context("Error adding identities")?;
-    bootstrap.commit().await?.map_err(|e| format_err!("Error committing bonds: {:?}", e))?;
+    bootstrap
+        .add_identities(&mut identities.into_iter())
+        .context("Error adding identities")
+        .unwrap();
+    bootstrap
+        .commit()
+        .await
+        .unwrap()
+        .map_err(|e| format_err!("Error committing bonds: {:?}", e))
+        .unwrap();
 
     let pred = Predicate::<AccessState>::predicate(
         move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
-    let _ = access.when_satisfied(pred, INTEGRATION_TIMEOUT).await?;
-
-    Ok(())
+    let _ = access.when_satisfied(pred, INTEGRATION_TIMEOUT).await.unwrap();
 }

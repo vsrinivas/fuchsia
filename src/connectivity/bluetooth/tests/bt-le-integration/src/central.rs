@@ -57,7 +57,7 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
         .start_scan(None)
         .map_err(|e| e.into())
         .on_timeout(INTEGRATION_TIMEOUT.after_now(), move || Err(format_err!("Timed out")));
-    let status = fut.await?;
+    let status = fut.await.unwrap();
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
@@ -65,25 +65,24 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
+async fn test_enable_scan(central: CentralHarness) {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let fut = add_le_peer(central.aux().as_ref(), default_le_peer(&address));
-    let _peer = fut.await?;
-    start_scan(&central).await?;
+    let _peer = fut.await.unwrap();
+    start_scan(&central).await.unwrap();
     let _ = central
         .when_satisfied(
             expect::scan_enabled().and(expect::device_found("Fake")),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
-    start_scan(&central).await?;
-    let _ = central.when_satisfied(expect::scan_enabled(), INTEGRATION_TIMEOUT).await?;
-    let _ = central.aux().central.stop_scan()?;
-    let _ = central.when_satisfied(expect::scan_disabled(), INTEGRATION_TIMEOUT).await?;
-    Ok(())
+async fn test_enable_and_disable_scan(central: CentralHarness) {
+    start_scan(&central).await.unwrap();
+    let _ = central.when_satisfied(expect::scan_enabled(), INTEGRATION_TIMEOUT).await.unwrap();
+    let _ = central.aux().central.stop_scan().unwrap();
+    let _ = central.when_satisfied(expect::scan_disabled(), INTEGRATION_TIMEOUT).await.unwrap();
 }

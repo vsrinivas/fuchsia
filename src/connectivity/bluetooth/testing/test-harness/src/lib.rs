@@ -81,7 +81,7 @@ impl SharedState {
 
 /// A `TestHarness` is a type that provides an interface to test cases for interacting with
 /// functionality under test. For example, a WidgetHarness might provide controls for interacting
-/// with and meausuring a Widget, allowing us to easily write tests for Widget functionality.
+/// with and measuring a Widget, allowing us to easily write tests for Widget functionality.
 ///
 /// A `TestHarness` defines how to initialize (via `init()`) the harness resources and how to
 /// terminate (via `terminate()`) them when done. The `init()` function can also provide some
@@ -115,15 +115,16 @@ pub trait TestHarness: Sized {
 }
 
 /// We can run any test which is an async function from some harness `H` to a result
-pub async fn run_with_harness<H, F, Fut>(test_func: F) -> Result<(), Error>
+#[track_caller]
+pub async fn run_with_harness<H, F, Fut>(test_func: F)
 where
     H: TestHarness,
     F: FnOnce(H) -> Fut + Send + 'static,
-    Fut: Future<Output = Result<(), Error>> + Send + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
 {
-    fuchsia_syslog::init().context("could not initialize logger")?;
+    fuchsia_syslog::init().expect("could not initialize logger");
     let state = Default::default();
-    let (harness, env, runner) = H::init(&state).await.context("Error initializing harness")?;
+    let (harness, env, runner) = H::init(&state).await.expect("couldn't initialize harness");
     // Drop `state` so that SharedState entries may be dropped if not needed during test execution.
     // See Harness::init doc comment for further explanation.
     drop(state);
@@ -133,14 +134,12 @@ where
     pin_mut!(runner);
 
     let result = select! {
-        test_result = run_test.fuse() => test_result,
-        runner_result = runner.fuse() => runner_result.context("Error running harness background task"),
+        () = run_test.fuse() => Ok(()),
+        runner_result = runner.fuse() => runner_result.context("error running harness background task"),
     };
 
-    let term_result = H::terminate(env).await.context("Error terminating harness");
-    // Return test failure if it exists, else return terminate failure, else return the
-    // successful test result
-    result.and_then(|ok| term_result.map(|_| ok))
+    let () = H::terminate(env).await.expect("couldn't terminate harness");
+    result.expect("error running test");
 }
 
 /// The Unit type can be used as the empty test-harness - it does no initialization and no

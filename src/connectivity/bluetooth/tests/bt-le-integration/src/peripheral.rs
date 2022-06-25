@@ -17,7 +17,6 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         constants::INTEGRATION_TIMEOUT,
-        expect_eq,
         expectation::asynchronous::{ExpectableExt, ExpectableState, ExpectableStateExt},
         types::Address,
     },
@@ -79,43 +78,42 @@ fn default_parameters() -> AdvertisingParameters {
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
+async fn test_enable_advertising(harness: PeripheralHarness) {
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, default_parameters(), handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(true), INTEGRATION_TIMEOUT)
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_enable_and_disable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
-    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
+async fn test_enable_and_disable_advertising(harness: PeripheralHarness) {
+    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, default_parameters(), handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(true), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     // Closing the advertising handle should stop advertising.
     drop(handle);
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(false), INTEGRATION_TIMEOUT)
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_advertising_handle_closed_while_pending(
-    harness: PeripheralHarness,
-) -> Result<(), Error> {
-    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+async fn test_advertising_handle_closed_while_pending(harness: PeripheralHarness) {
+    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     // Drop the handle before getting a response to abort the procedure.
     drop(handle);
-    let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
+    let result = start_advertising(&harness, default_parameters(), handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
     // Advertising should become disabled after getting enabled once.
@@ -125,14 +123,14 @@ async fn test_advertising_handle_closed_while_pending(
                 .and(emulator::expectation::advertising_is_enabled(false)),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_advertising_data_too_long(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_data_too_long(harness: PeripheralHarness) {
     const LENGTH: usize = (MAX_LEGACY_ADVERTISING_DATA_LENGTH + 1) as usize;
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     // Assign a very long name.
     let mut params = default_parameters();
@@ -140,15 +138,14 @@ async fn test_advertising_data_too_long(harness: PeripheralHarness) -> Result<()
         name: Some(repeat("x").take(LENGTH).collect::<String>()),
         ..empty_advertising_data()
     });
-    let result = start_advertising(&harness, params, handle_remote).await?;
-    expect_eq!(Err(PeripheralError::AdvertisingDataTooLong), result)?;
-    Ok(())
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
+    assert_eq!(Err(PeripheralError::AdvertisingDataTooLong), result);
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_scan_response_data_too_long(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_scan_response_data_too_long(harness: PeripheralHarness) {
     const LENGTH: usize = (MAX_LEGACY_ADVERTISING_DATA_LENGTH + 1) as usize;
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     // Assign a very long name.
     let mut params = default_parameters();
@@ -156,32 +153,33 @@ async fn test_scan_response_data_too_long(harness: PeripheralHarness) -> Result<
         name: Some(repeat("x").take(LENGTH).collect::<String>()),
         ..empty_advertising_data()
     });
-    let result = start_advertising(&harness, params, handle_remote).await?;
-    expect_eq!(Err(PeripheralError::ScanResponseDataTooLong), result)?;
-    Ok(())
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
+    assert_eq!(Err(PeripheralError::ScanResponseDataTooLong), result);
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error> {
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
+async fn test_update_advertising(harness: PeripheralHarness) {
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, default_parameters(), handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(true), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
     harness.write_state().reset();
 
     // Call `start_advertising` again with new parameters.
     let mut params = default_parameters();
     params.connectable = Some(true);
-    let (_handle2, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle2, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
     // Advertising should stop and start with the new parameters.
@@ -191,42 +189,44 @@ async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error
                 .and(emulator::expectation::advertising_is_enabled(true)),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_types(harness: PeripheralHarness) {
     // Non-connectable
     let params = AdvertisingParameters { connectable: Some(false), ..default_parameters() };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Connectable
     let params = AdvertisingParameters { connectable: Some(true), ..default_parameters() };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Scannable
     let params = AdvertisingParameters {
@@ -237,15 +237,16 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
         }),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvScanInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Connectable and scannable
     let params = AdvertisingParameters {
@@ -256,33 +257,33 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
         }),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_modes(harness: PeripheralHarness) {
     // Very fast advertising interval (<= 60 ms), only supported for connectable advertising.
     let params = AdvertisingParameters {
         connectable: Some(true),
         mode_hint: Some(AdvertisingModeHint::VeryFast),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_max_interval_is(60), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     // Very fast advertising interval (<= 60 ms) falls back to "fast" parameters for non-connectable
     // advertising.
@@ -290,58 +291,59 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
         mode_hint: Some(AdvertisingModeHint::VeryFast),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_max_interval_is(150),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Fast advertising interval (<= 150 ms)
     let params = AdvertisingParameters {
         mode_hint: Some(AdvertisingModeHint::Fast),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_max_interval_is(150),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Slow advertising interval (<= 1.2 s)
     let params = AdvertisingParameters {
         mode_hint: Some(AdvertisingModeHint::Slow),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(
             emulator::expectation::advertising_max_interval_is(1200),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_data(harness: PeripheralHarness) {
     // Test that encoding one field works. The serialization of other fields is unit tested elsewhere.
     let params = AdvertisingParameters {
         data: Some(AdvertisingData { name: Some("hello".to_string()), ..empty_advertising_data() }),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
     let data = vec![
@@ -364,13 +366,12 @@ async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Error> 
                 .and(emulator::expectation::advertising_data_is(data)),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_scan_response(harness: PeripheralHarness) {
     // Test that encoding one field works. The serialization of other fields is unit tested elsewhere.
     let params = AdvertisingParameters {
         data: Some(AdvertisingData {
@@ -388,8 +389,8 @@ async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
         }),
         ..default_parameters()
     };
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
     let data = vec![
@@ -413,9 +414,8 @@ async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
                 .and(emulator::expectation::scan_response_is(scan_rsp)),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 fn default_address() -> Address {
@@ -439,54 +439,56 @@ async fn add_fake_peer(proxy: &HciEmulatorProxy, address: &Address) -> Result<Pe
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_receive_connection(harness: PeripheralHarness) {
     let emulator = harness.aux().as_ref().clone();
     let address = default_address();
-    let peer = add_fake_peer(&emulator, &address).await?;
-    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let peer = add_fake_peer(&emulator, &address).await.unwrap();
+    let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     let mut params = default_parameters();
     params.connectable = Some(true);
 
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(true), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
-    peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
+    peer.emulate_le_connection_complete(ConnectionRole::Follower).unwrap();
     let _ = harness
         .when_satisfied(expectation::peripheral_received_connection(), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     // Receiving a connection is expected to stop advertising. Verify that the emulator no longer
     // advertises.
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(false), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     // Similarly our AdvertisingHandle should be closed by the system.
-    let handle = handle.into_proxy()?;
-    handle.on_closed().await.map_or_else(|e| Err(e.into()), |_| Ok(()))
+    let handle = handle.into_proxy().unwrap();
+    let _ = handle.on_closed().await.unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_connection_dropped_when_not_connectable(
-    harness: PeripheralHarness,
-) -> Result<(), Error> {
+async fn test_connection_dropped_when_not_connectable(harness: PeripheralHarness) {
     let emulator = harness.aux().as_ref().clone();
     let address = default_address();
-    let peer = add_fake_peer(&emulator, &address).await?;
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let peer = add_fake_peer(&emulator, &address).await.unwrap();
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     // `default_parameters()` are configured as non-connectable.
-    let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
+    let result = start_advertising(&harness, default_parameters(), handle_remote).await.unwrap();
     result.expect("failed to start advertising");
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_is_enabled(true), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
-    peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
+    peer.emulate_le_connection_complete(ConnectionRole::Follower).unwrap();
 
     // Wait for the connection to get dropped by the stack as it should be rejected when we are not
     // connectable. We assign our own PeerId here for tracking purposes (this is distinct from the
@@ -506,28 +508,27 @@ async fn test_connection_dropped_when_not_connectable(
                 )),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Make sure that we haven't received any connection events over the Peripheral protocol.
     assert!(harness.read().connections.is_empty());
-
-    Ok(())
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_drop_connection(harness: PeripheralHarness) {
     let emulator = harness.aux().as_ref().clone();
     let address = default_address();
-    let peer = add_fake_peer(&emulator, &address).await?;
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let peer = add_fake_peer(&emulator, &address).await.unwrap();
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     let mut params = default_parameters();
     params.connectable = Some(true);
 
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
-    peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
+    peer.emulate_le_connection_complete(ConnectionRole::Follower).unwrap();
     fasync::Task::spawn(
         emulator::watch_peer_connection_states(harness.deref().clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
@@ -536,7 +537,8 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
 
     let _ = harness
         .when_satisfied(expectation::peripheral_received_connection(), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     assert!(harness.read().connections.len() == 1);
     let (_, conn) = harness.write_state().connections.remove(0);
@@ -552,27 +554,24 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
                 )),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
-
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[test_harness::run_singlethreaded_test]
-async fn test_connection_handle_closes_on_disconnect(
-    harness: PeripheralHarness,
-) -> Result<(), Error> {
+async fn test_connection_handle_closes_on_disconnect(harness: PeripheralHarness) {
     let emulator = harness.aux().as_ref().clone();
     let address = default_address();
-    let peer = add_fake_peer(&emulator, &address).await?;
-    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let peer = add_fake_peer(&emulator, &address).await.unwrap();
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>().unwrap();
 
     let mut params = default_parameters();
     params.connectable = Some(true);
 
-    let result = start_advertising(&harness, params, handle_remote).await?;
+    let result = start_advertising(&harness, params, handle_remote).await.unwrap();
     result.expect("failed to start advertising");
 
-    peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
+    peer.emulate_le_connection_complete(ConnectionRole::Follower).unwrap();
     fasync::Task::spawn(
         emulator::watch_peer_connection_states(harness.deref().clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
@@ -581,13 +580,14 @@ async fn test_connection_handle_closes_on_disconnect(
 
     let _ = harness
         .when_satisfied(expectation::peripheral_received_connection(), INTEGRATION_TIMEOUT)
-        .await?;
+        .await
+        .unwrap();
 
     assert!(harness.read().connections.len() == 1);
     let (_, conn) = harness.write_state().connections.remove(0);
 
     // Tell the controller to disconnect the link. The harness should get notified of this.
-    peer.emulate_disconnection_complete()?;
+    peer.emulate_disconnection_complete().unwrap();
     let _ = harness
         .when_satisfied(
             emulator::expectation::peer_connection_state_was(address, ConnectionState::Connected)
@@ -597,8 +597,9 @@ async fn test_connection_handle_closes_on_disconnect(
                 )),
             INTEGRATION_TIMEOUT,
         )
-        .await?;
+        .await
+        .unwrap();
 
     // Our connection handle should be closed by the system.
-    conn.on_closed().await.map_or_else(|e| Err(e.into()), |_| Ok(()))
+    let _ = conn.on_closed().await.unwrap();
 }

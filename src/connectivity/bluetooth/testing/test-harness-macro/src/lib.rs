@@ -67,7 +67,7 @@ fn validate_item_fn(sig: &syn::Signature, vis: &syn::Visibility) -> Result<(), s
 ///     impl TestHarness for SomeHarness {..}
 ///
 ///     #[test_harness::run_singlethreaded_test]
-///     async fn test_foo(harness: SomeHarness) -> Result<(),Error> {
+///     async fn test_foo(harness: SomeHarness) {
 ///         // use harness
 ///     }
 ///     ```
@@ -80,7 +80,6 @@ pub fn run_singlethreaded_test(_attr: TokenStream, item: TokenStream) -> TokenSt
         return e.to_compile_error().into();
     }
 
-    let ret_type = sig.output;
     let inputs = sig.inputs;
     let span = sig.ident.span();
     let ident = sig.ident;
@@ -88,12 +87,12 @@ pub fn run_singlethreaded_test(_attr: TokenStream, item: TokenStream) -> TokenSt
     let output = quote_spanned! {span=>
         // Preserve any original attributes.
         #(#attrs)* #[test]
-        fn #ident () #ret_type {
+        fn #ident () {
             // Note: `ItemFn::block` includes the function body braces. Do not
             // add additional braces (will break source code coverage analysis).
             // TODO(fxbug.dev/77212): Try to improve the Rust compiler to ease
             // this restriction.
-            async fn func(#inputs) #ret_type #block
+            async fn func(#inputs) #block
             let func = move |_| { ::test_harness::run_with_harness(func) };
             ::test_harness::run_singlethreaded_test(func)
           }

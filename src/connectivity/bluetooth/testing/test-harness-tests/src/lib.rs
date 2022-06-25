@@ -15,9 +15,7 @@ mod test {
     use test_harness;
 
     #[test_harness::run_singlethreaded_test]
-    async fn trivial_unit_harness(_unit_harness: ()) -> Result<(), Error> {
-        Ok(())
-    }
+    async fn trivial_unit_harness(_unit_harness: ()) {}
 
     // This mod tests the ability for TestHarnesses to share state via the `TestHarness::init`'s
     // `SharedState` map parameter.
@@ -65,16 +63,13 @@ mod test {
         }
 
         #[test_harness::run_singlethreaded_test]
-        async fn harnesses_share_state(
-            (harness1, harness2): (IntHarness, IntHarness),
-        ) -> Result<(), Error> {
+        async fn harnesses_share_state((harness1, harness2): (IntHarness, IntHarness)) {
             assert_eq!(*harness1.val.lock(), INITIAL_VAL);
             assert_eq!(*harness2.val.lock(), INITIAL_VAL);
             *harness1.val.lock() += 1;
             assert_eq!(*harness2.val.lock(), INITIAL_VAL + 1);
             *harness2.val.lock() += 1;
             assert_eq!(*harness1.val.lock(), INITIAL_VAL + 2);
-            Ok(())
         }
 
         #[fuchsia::test]
