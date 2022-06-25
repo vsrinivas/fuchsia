@@ -4,12 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    "api",
-
-    # TODO(fxbug.dev/90408): remove this
-    "//src/media/audio/audio_core:audio-core-for-test",
-  ]
+  deps = [ "api" ]
 
   # These have real-time requirements and must run in release builds (debug builds are too slow).
   if (!is_debug) {

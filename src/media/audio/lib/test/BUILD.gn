@@ -12,10 +12,7 @@ source_set("test") {
   public_deps = [
     ":comparators",
     ":constants",
-    ":hermetic_audio_test",
-    ":hermetic_pipeline_test_main",
     ":test_fixture",
-    ":vmo_backed_buffer",
   ]
 }
 
@@ -45,109 +42,6 @@ source_set("comparators") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-source_set("vmo_backed_buffer") {
-  testonly = true
-
-  sources = [ "vmo_backed_buffer.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/syslog/cpp",
-    "//src/media/audio/lib/format",
-    "//zircon/system/ulib/fzl",
-  ]
-}
-
-# Base class for hermetic test cases
-source_set("hermetic_audio_test") {
-  testonly = true
-
-  sources = [
-    "capturer_shim.h",
-    "hermetic_audio_environment.cc",
-    "hermetic_audio_environment.h",
-    "hermetic_audio_test.cc",
-    "hermetic_audio_test.h",
-    "renderer_shim.cc",
-    "renderer_shim.h",
-    "virtual_device.cc",
-    "virtual_device.h",
-  ]
-
-  public_deps = [
-    ":comparators",
-    ":constants",
-    ":test_fixture",
-    ":vmo_backed_buffer",
-    "//sdk/fidl/fuchsia.audio.effects",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/fidl/fuchsia.ultrasound",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/inspect/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/media/audio/audio_core:audio_core_lib",
-    "//src/media/audio/effects/test_effects:test_effects_v2",
-    "//src/media/audio/lib/analysis",
-    "//src/media/audio/lib/clock",
-    "//src/media/audio/lib/format",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-    "//src/media/audio/lib/wav",
-    "//src/power/fidl/testing:test.thermal",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/inspect",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.media.tuning",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//src/lib/fxl",
-    "//src/media/audio/lib/audio_test_devmgr",
-    "//zircon/system/ulib/trace-provider",
-  ]
-}
-
-source_set("hermetic_pipeline_test") {
-  testonly = true
-
-  sources = [
-    "hermetic_fidelity_frequencies.cc",
-    "hermetic_fidelity_test.cc",
-    "hermetic_fidelity_test.h",
-    "hermetic_impulse_test.cc",
-    "hermetic_impulse_test.h",
-    "hermetic_pipeline_test.cc",
-    "hermetic_pipeline_test.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-  ]
-
-  public_deps = [ ":hermetic_audio_test" ]
-}
-
-# Main entry point for tests that use hermetic_pipeline_test.h.
-source_set("hermetic_pipeline_test_main") {
-  testonly = true
-
-  sources = [ "hermetic_pipeline_test_main.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-  ]
-
-  public_deps = [ ":hermetic_pipeline_test" ]
 }
 
 source_set("test_fixture") {

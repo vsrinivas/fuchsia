@@ -35,7 +35,3 @@ group("examples") {
 group("virtual_audio_driver") {
   public_deps = [ "//src/media/audio/drivers/virtual_audio" ]
 }
-
-# TODO(fxbug.dev/90408): delete after all out-of-tree references are gone
-group("audio_config") {
-}

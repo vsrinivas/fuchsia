@@ -33,16 +33,6 @@ metrics_registry("media_metrics_registry") {
   generate_cc = true
 }
 
-# TODO(fxbug.dev/90408): replace with rule from v2/BUILD.gn after the v1 component is no longer used
-audio_core_package("audio_core") {
-  effects = {
-    target = "//src/media/audio/effects/passthrough:audio_effects"
-    name = "audio_effects.so"
-  }
-
-  test_package_name = "audio-core-for-test"
-}
-
 source_set("audio_core_lib") {
   sources = [
     "active_stream_count_reporter.h",

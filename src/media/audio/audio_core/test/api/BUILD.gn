@@ -14,12 +14,6 @@ group("api") {
   deps = [
     ":audio-core-api-test-effects",
     ":audio-core-api-tests",
-
-    # TODO(fxbug.dev/90408): remove this
-    "//src/media/audio/audio_core:audio-core-for-test",
-
-    # TODO(fxbug.dev/90408): remove this
-    "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
   ]
 
   # These have real-time requirements and must run in release builds (debug builds are too slow).

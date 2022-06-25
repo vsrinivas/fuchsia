@@ -15,9 +15,9 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_realm.h"
+#include "src/media/audio/audio_core/testing/integration/vmo_backed_buffer.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/test_fixture.h"
-#include "src/media/audio/lib/test/vmo_backed_buffer.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio::test {
