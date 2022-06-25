@@ -621,9 +621,9 @@ if (current_toolchain == dart_toolchain) {
         ]
 
         deps = dart_sdk_deps + [
-                 runner_label,
                  ":$_dart_package_config_target_name",
                  _detect_snapshot_label,
+                 runner_label,
                ]
         forward_variables_from(invoker, [ "testonly" ])
       }

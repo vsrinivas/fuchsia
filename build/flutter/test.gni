@@ -257,9 +257,9 @@ if (current_toolchain == dart_toolchain) {
       ]
 
       deps = dart_sdk_deps + [
-               "$_flutter_tools_label",
                ":$_copy_target_name",
                ":$_package_config_target_name",
+               "$_flutter_tools_label",
              ]
     }
 
@@ -343,12 +343,12 @@ if (current_toolchain == dart_toolchain) {
       }
 
       deps = [
-               ":$_library_target_name",
                ":$_bootstrap_target_name",
-               ":${_kernel_target_name}_kernel",
-               ":$_snapshot_target_name",
                ":$_copy_target_name",
+               ":$_library_target_name",
                ":$_package_config_target_name",
+               ":$_snapshot_target_name",
+               ":${_kernel_target_name}_kernel",
                _flutter_tester_label,
              ] + _precompiled_kernel_target_names
 

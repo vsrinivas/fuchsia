@@ -119,16 +119,15 @@ group("tests") {
                   # most of these dependencies should be in those subdirectories.
                   "//bundles/packages:base_packages",
                   "//bundles/packages/tests:scenic",
-                  "//src/modular/bundles:framework",
-                  "//src/modular/bundles:tools",
-                  "//src/modular/bundles:integration_testing",
-                  "//src/fonts",
-                  "//src/ui/tools:scenic",
-
                   "//sdk/dart/fuchsia_component_test:tests",
                   "//sdk/dart/fuchsia_inspect:tests",
                   "//sdk/dart/fuchsia_modular:fuchsia_modular_package_unittests",
                   "//sdk/dart/fuchsia_services:fuchsia_services_package_unittests",
+                  "//src/fonts",
+                  "//src/modular/bundles:framework",
+                  "//src/modular/bundles:integration_testing",
+                  "//src/modular/bundles:tools",
+                  "//src/ui/tools:scenic",
 
                   # TODO(fxb/38305): Re-enable test when unblocked and inspect paths are corrected
                   # "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-dart-integration-test-driver",

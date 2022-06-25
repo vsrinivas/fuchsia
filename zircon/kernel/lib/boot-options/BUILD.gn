@@ -21,6 +21,9 @@ if (current_toolchain == default_toolchain) {
     deps = [ ":json" ]
     sources = get_target_outputs(":json") + [
                 "preamble.md",
+
+                # This comment is here to ensure 'preamble.md' appears
+                # before postamble.md in this list, even after GN reformatting.
                 "postamble.md",
               ]
     args = rebase_path(outputs + sources, root_build_dir)

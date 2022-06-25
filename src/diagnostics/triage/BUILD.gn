@@ -112,9 +112,9 @@ rustc_test("triage_lib_test") {
   edition = "2021"
 
   deps = lib_deps + [
-           "//src/lib/fuchsia",
-           ":triage_app_lib",
            ":test_data",
+           ":triage_app_lib",
+           "//src/lib/fuchsia",
          ]
 
   # we need to take a dependency on our bin because our integration tests invoke it

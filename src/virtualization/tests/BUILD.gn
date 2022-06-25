@@ -293,11 +293,11 @@ executable("virtualization_core_tests") {
 group("test_images") {
   testonly = true
   deps = [
-           ":termina_extras_img",
            ":debian_tests_img",
            ":linux_extras_img",
-           termina_extras_label,
+           ":termina_extras_img",
            linux_tests_label,
+           termina_extras_label,
          ] + guest_packages
 }
 

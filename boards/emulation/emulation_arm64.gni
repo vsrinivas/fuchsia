@@ -11,8 +11,8 @@ _imports = {  # Import into hidden scope, to avoid importing into args.gn.
 # Drivers required for emulated ARM.
 _bootfs_deps = _imports.virtio_drivers + [
                  "//src/devices/block/drivers/ahci",
-                 "//src/devices/board/drivers/qemu-arm64",
                  "//src/devices/board/drivers/acpi-arm64",
+                 "//src/devices/board/drivers/qemu-arm64",
                  "//src/devices/rtc/drivers/pl031-rtc",
                  "//src/graphics/display/drivers/fake:fake-display",
                ]

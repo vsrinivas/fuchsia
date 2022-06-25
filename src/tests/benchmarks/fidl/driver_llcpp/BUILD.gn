@@ -39,13 +39,13 @@ executable("bin") {
   testonly = true
   sources = [ "main.cc" ]
   deps = [
-           "//src/zircon/lib/zircon",
            "//sdk/lib/driver_runtime:driver_runtime_internal",
            "//sdk/lib/fidl_driver",
            "//src/devices/bin/driver_runtime:driver_runtime_impl",
+           "//src/zircon/lib/zircon",
            "//zircon/system/ulib/async:async-cpp",
-           "//zircon/system/ulib/sync:sync-cpp",
            "//zircon/system/ulib/perftest",
+           "//zircon/system/ulib/sync:sync-cpp",
          ] + gidl_deps
 }
 

@@ -74,8 +74,8 @@ test("intel-spi-flash-test-bin") {
 
   deps = common_deps + [
            "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp_mock",
-           "//src/devices/testing/mock-ddk",
            "//src/devices/testing/fake-mmio-reg",
+           "//src/devices/testing/mock-ddk",
            "//zircon/system/ulib/async-loop:async-loop-cpp",
            "//zircon/system/ulib/mock-function",
            "//zircon/system/ulib/zxtest",

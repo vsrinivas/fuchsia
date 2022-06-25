@@ -42,8 +42,8 @@ executable("bin") {
   deps = [
            "//src/zircon/lib/zircon",
            "//zircon/system/ulib/fidl",
-           "//zircon/system/ulib/zx",
            "//zircon/system/ulib/perftest",
+           "//zircon/system/ulib/zx",
          ] + gidl_deps
 }
 

@@ -161,13 +161,13 @@ rustc_fuzzer("fuzz-single-device") {
 
   sources = lib_sources
   deps = lib_deps + lib_test_deps + [
+           "//src/connectivity/lib/fuzz-util",
            "//src/connectivity/lib/net-declare",
            "//src/connectivity/lib/net-types",
-           "//src/connectivity/lib/fuzz-util",
            "//src/lib/network/packet",
            "//third_party/rust_crates:arbitrary",
-           "//third_party/rust_crates:log",
            "//third_party/rust_crates:lazy_static",
+           "//third_party/rust_crates:log",
          ]
 
   features = [

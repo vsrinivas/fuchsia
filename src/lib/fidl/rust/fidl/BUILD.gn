@@ -60,8 +60,8 @@ rustc_test("fidl_rust_lib_tests_bin") {
   output_name = "fidl_rust_lib_tests"
   edition = "2021"
   deps = fidl_rust_deps + [
-           "//third_party/rust_crates:futures-test",
            "//third_party/rust_crates:assert_matches",
+           "//third_party/rust_crates:futures-test",
          ]
   sources = fidl_rust_sources
 }

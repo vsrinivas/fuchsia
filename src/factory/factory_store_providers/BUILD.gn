@@ -159,13 +159,11 @@ fuchsia_test_component("factory_store_providers_ext4_test_comp") {
 fuchsia_test_package("factory_store_providers_ext4_tests") {
   test_components = [ ":factory_store_providers_ext4_test_comp" ]
   deps = [
+           ":factory_ext4_image",
+           ":factory_store_providers_comp",
+           ":factory_store_providers_ext4_tests_config",
            "//src/factory/factory_store_providers/driver_test_realm",
            "//src/storage/ext4/server:ext4_readonly_comp",
-           ":factory_store_providers_comp",
-
-           ":factory_store_providers_ext4_tests_config",
-
-           ":factory_ext4_image",
          ] + test_file_resources
   test_specs = {
     log_settings = {
@@ -211,12 +209,11 @@ fuchsia_test_package("factory_store_providers_tests") {
   test_components = [ ":factory_store_providers_test_comp" ]
   deps = [
            ":factory_store_providers_comp",
-           ":fake_factory_items_comp",
-
            ":factory_store_providers_tests_config",
-           "../fake_factory_items:fake_factory_items_comp",
-           ":items_zbi",
+           ":fake_factory_items_comp",
            ":fake_factory_items_json",
+           ":items_zbi",
+           "../fake_factory_items:fake_factory_items_comp",
          ] + test_file_resources
 
   test_specs = {

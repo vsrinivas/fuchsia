@@ -88,8 +88,8 @@ rustc_test("core_test") {
   edition = "2021"
 
   deps = CORE_DEPS + [
-           "//third_party/rust_crates:arbitrary",
            "//src/lib/fuchsia",
+           "//third_party/rust_crates:arbitrary",
          ]
 
   if (is_host) {

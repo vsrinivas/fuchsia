@@ -63,9 +63,9 @@ test("wlanphy_convert_unittest") {
   sources = wlanphy_sources + [ "tests/convert_unittest.cc" ]
 
   deps = wlanphy_deps + [
+           "//src/lib/fxl/test:gtest_main",
            "//src/lib/testing/loop_fixture",
            "//third_party/googletest:gmock",
-           "//src/lib/fxl/test:gtest_main",
            "//third_party/googletest:gtest",
          ]
 

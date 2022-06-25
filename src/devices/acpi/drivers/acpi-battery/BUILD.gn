@@ -58,10 +58,10 @@ test("acpi-battery-unit-tests") {
   ]
   deps = common_deps + [
            "//sdk/lib/inspect/testing/cpp:zxtest",
-           "//zircon/system/ulib/async-loop:async-loop-cpp",
-           "//src/devices/testing/mock-ddk",
-           "//zircon/system/ulib/zxtest",
            "//src/devices/lib/acpi/mock:mock-acpi",
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/zxtest",
          ]
 }
 
