@@ -346,8 +346,8 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   }
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
   ::fdf::Arena arena_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> : public ::fidl::internal::BaseEventHandlerInterface {

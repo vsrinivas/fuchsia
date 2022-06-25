@@ -26,7 +26,19 @@ class TestServer : public fdf::WireServer<test_transport::SendZirconHandleTest> 
   }
 };
 
-TEST(DriverTransport, WireSendZirconHandleAsync) {
+class CreateNewHandlesTestServer : public fdf::WireServer<test_transport::SendZirconHandleTest> {
+  void SendZirconHandle(SendZirconHandleRequestView request, fdf::Arena& arena,
+                        SendZirconHandleCompleter::Sync& completer) override {
+    ASSERT_TRUE(request->h.is_valid());
+
+    zx::event ev;
+    ASSERT_OK(zx::event::create(0, &ev));
+    completer.buffer(arena).Reply(std::move(ev));
+  }
+};
+
+template <typename TestServerType, bool HandlesEqual>
+void TestImpl() {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   libsync::Completion dispatcher_shutdown;
@@ -48,30 +60,47 @@ TEST(DriverTransport, WireSendZirconHandleAsync) {
 
   fdf::WireSharedClient<test_transport::SendZirconHandleTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
-  ASSERT_OK(arena.status_value());
-
-  zx::event ev;
-  zx::event::create(0, &ev);
-  zx_handle_t handle = ev.get();
-
   sync_completion_t done;
-  client.buffer(*arena)
-      ->SendZirconHandle(std::move(ev))
-      .ThenExactlyOnce(
-          [&done,
-           handle](fdf::WireUnownedResult<::test_transport::SendZirconHandleTest::SendZirconHandle>&
-                       result) {
-            ASSERT_OK(result.status());
-            ASSERT_TRUE(result->h.is_valid());
-            ASSERT_EQ(handle, result->h.get());
-            sync_completion_signal(&done);
-          });
+
+  // Use a scope block to close the local arena reference after the message is sent.
+  // This ensures that handles stored in the arena are closed before the arena is destructed.
+  {
+    auto arena = fdf::Arena::Create(0, "");
+    ASSERT_OK(arena.status_value());
+
+    zx::event ev;
+    zx::event::create(0, &ev);
+    zx_handle_t handle = ev.get();
+
+    client.buffer(*arena)
+        ->SendZirconHandle(std::move(ev))
+        .ThenExactlyOnce(
+            [&done, handle](
+                fdf::WireUnownedResult<::test_transport::SendZirconHandleTest::SendZirconHandle>&
+                    result) {
+              ASSERT_OK(result.status());
+              ASSERT_TRUE(result->h.is_valid());
+              if (HandlesEqual) {
+                ASSERT_EQ(handle, result->h.get());
+              }
+              sync_completion_signal(&done);
+            });
+  }
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_shutdown.Wait());
+}
+
+TEST(DriverTransport, WireSendZirconHandleAsync) { TestImpl<TestServer, true>(); }
+
+// Instead of echoing the handles, create new handles.
+// This ensures CloseHandles() is called on the request object before the fdf::Arena
+// is destructed. In the case of echo, the handle is moved out of the request object
+// so this corner case is never encountered. (See fxbug.dev/102974 for motivation).
+TEST(DriverTransport, WireSendNewZirconHandleAsync) {
+  TestImpl<CreateNewHandlesTestServer, false>();
 }
 
 TEST(DriverTransport, WireSendZirconHandleEncodeErrorShouldCloseHandle) {

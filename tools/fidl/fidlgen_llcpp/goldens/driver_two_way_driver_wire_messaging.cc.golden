@@ -79,13 +79,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
-          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           reinterpret_cast<::fdf::WireServer<::test_drivertwoway::TwoWay>*>(interface)->Add(
               primary, arena, completer);
           return ::fidl::Status::Ok();

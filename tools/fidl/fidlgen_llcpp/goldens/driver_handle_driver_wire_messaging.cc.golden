@@ -77,13 +77,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>::Sync completer(txn);
-          fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           reinterpret_cast<::fdf::WireServer<::test_driverhandle::HandlesInProtocol>*>(interface)->SendHandles(
               primary, arena, completer);
           return ::fidl::Status::Ok();

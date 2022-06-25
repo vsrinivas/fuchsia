@@ -94,8 +94,8 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
     }
 
    private:
-    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
     ::fdf::Arena arena_;
+    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
     {{- if and .Result .HasWireResultBase }}
       std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
     {{- end }}

@@ -35,6 +35,11 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
     { {{ .OrdinalName }},
       [](void* interface, ::fidl::IncomingMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        {{- if eq .Transport.Name "Driver" }}
+        {{/* |arena| needs to be declared before |decoded| so that |decoded| is destructed first.
+             This is for the case where handles used in |decoded| are stored in |arena|. */}}
+        fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
+        {{- end }}
         {{- if .RequestArgs }}
         ::fidl::unstable::DecodedMessage<{{ .WireTransactionalRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
@@ -47,7 +52,6 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
         {{- if eq .Transport.Name "Driver" }}
-        fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
         reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
             primary, arena, completer);
         {{- else }}
