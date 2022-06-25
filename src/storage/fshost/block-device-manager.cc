@@ -190,8 +190,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
       if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
         // Set the max size for this partition in FVM. Ignore failures since the max size is
         // mostly a guard rail against bad behavior and we can still function.
-        auto status =
-            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        auto status = device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
         ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
@@ -252,8 +251,7 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
-        auto status =
-            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        auto status = device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
         ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
@@ -394,8 +392,7 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
-        auto status =
-            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        auto status = device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
         ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
@@ -509,13 +506,12 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
 class BootpartMatcher : public BlockDeviceManager::Matcher {
  public:
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
-    fuchsia_hardware_block_BlockInfo info;
-    zx_status_t status = device.GetInfo(&info);
-    if (status != ZX_OK) {
+    zx::status info = device.GetInfo();
+    if (info.is_error()) {
       return fs_management::kDiskFormatUnknown;
     }
-    return info.flags & BLOCK_FLAG_BOOTPART ? fs_management::kDiskFormatBootpart
-                                            : fs_management::kDiskFormatUnknown;
+    return info->flags & BLOCK_FLAG_BOOTPART ? fs_management::kDiskFormatBootpart
+                                             : fs_management::kDiskFormatUnknown;
   }
 };
 

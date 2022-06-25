@@ -96,8 +96,7 @@ TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   fbl::unique_fd fd;
   BlockDevice device(&mounter, {}, &config_);
   EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatUnknown);
-  fuchsia_hardware_block_BlockInfo info;
-  EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
+  EXPECT_EQ(device.GetInfo().status_value(), ZX_ERR_BAD_HANDLE);
   fuchsia_hardware_block_partition::wire::Guid null_guid{};
   EXPECT_EQ(memcmp(&device.GetTypeGuid(), &null_guid, sizeof(null_guid)), 0);
   EXPECT_EQ(device.AttachDriver("/foobar"), ZX_ERR_BAD_HANDLE);
@@ -121,17 +120,17 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config_);
   EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatUnknown);
-  fuchsia_hardware_block_BlockInfo info;
-  EXPECT_EQ(device.GetInfo(&info), ZX_OK);
-  EXPECT_EQ(info.block_count, kBlockCount);
-  EXPECT_EQ(info.block_size, kBlockSize);
+  zx::status info = device.GetInfo();
+  EXPECT_EQ(info.status_value(), ZX_OK);
+  EXPECT_EQ(info->block_count, kBlockCount);
+  EXPECT_EQ(info->block_size, kBlockSize);
 
   // Black-box: Since we're caching info, double check that re-calling GetInfo
   // works correctly.
-  memset(&info, 0, sizeof(info));
-  EXPECT_EQ(device.GetInfo(&info), ZX_OK);
-  EXPECT_EQ(info.block_count, kBlockCount);
-  EXPECT_EQ(info.block_size, kBlockSize);
+  info = device.GetInfo();
+  EXPECT_EQ(info.status_value(), ZX_OK);
+  EXPECT_EQ(info->block_count, kBlockCount);
+  EXPECT_EQ(info->block_size, kBlockSize);
 
   static constexpr fuchsia_hardware_block_partition::wire::Guid expected_guid = GUID_DATA_VALUE;
   EXPECT_EQ(memcmp(&device.GetTypeGuid(), &expected_guid, sizeof(expected_guid)), 0);

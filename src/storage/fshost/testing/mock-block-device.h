@@ -73,13 +73,12 @@ class MockBlockDevice : public BlockDeviceInterface {
   const std::string& partition_name() const override { return partition_name_; }
   fs_management::DiskFormat GetFormat() final { return format_; }
   void SetFormat(fs_management::DiskFormat format) final { format_ = format; }
-  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
-    fuchsia_hardware_block_BlockInfo info = {};
+  zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+    fuchsia_hardware_block::wire::BlockInfo info = {};
     info.flags = 0;
     info.block_size = 512;
     info.block_count = 1024;
-    *out_info = info;
-    return ZX_OK;
+    return zx::ok(info);
   }
   const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const override {
     ADD_FAILURE() << "Test should not invoke function " << __FUNCTION__;

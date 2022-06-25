@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/ldsvc/c/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

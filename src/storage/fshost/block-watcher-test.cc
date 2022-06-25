@@ -85,13 +85,12 @@ TEST(AddDeviceTestCase, AddUnknownDevice) {
 TEST(AddDeviceTestCase, AddSmallDevice) {
   class SmallDevice : public MockBlockDevice {
    public:
-    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
-      fuchsia_hardware_block_BlockInfo info = {};
+    zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+      fuchsia_hardware_block::wire::BlockInfo info = {};
       info.flags = 0;
       info.block_size = 512;
       info.block_count = 1;
-      *out_info = info;
-      return ZX_OK;
+      return zx::ok(info);
     }
   };
   SmallDevice device;
@@ -547,13 +546,12 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
         : MockBlockDevice(Options{
               .driver_path = kBootpartDriverPath,
           }) {}
-    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
-      fuchsia_hardware_block_BlockInfo info = {};
+    zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+      fuchsia_hardware_block::wire::BlockInfo info = {};
       info.flags = BLOCK_FLAG_BOOTPART;
       info.block_size = 512;
       info.block_count = 1024;
-      *out_info = info;
-      return ZX_OK;
+      return zx::ok(info);
     }
   };
   BootPartDevice device;

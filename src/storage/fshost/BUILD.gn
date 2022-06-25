@@ -67,10 +67,6 @@ source_set("fshost-registry") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("inspect") {
@@ -120,14 +116,9 @@ source_set("block-watcher") {
   ]
   deps = [
     ":headers",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -167,10 +158,6 @@ source_set("block-watcher") {
   } else if (data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("config") {
@@ -197,12 +184,9 @@ executable("fshost") {
     ":block-watcher",
     ":config",
     ":fshost-registry",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_c",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//third_party/zstd",
@@ -212,10 +196,6 @@ executable("fshost") {
   if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("fshost_test") {
@@ -235,10 +215,6 @@ test("fshost_test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # Include this target from a product config if you want to allow authoring
@@ -354,9 +330,6 @@ template("fshost_integration_test") {
       "//src/storage/bin/umount",
     ]
 
-    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-    # Consider switching to the C++ bindings. See linked bug for details.
-    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
     defines = [
       "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",
       "TEST_COMPONENT_NAME=\"$test_component_name\"",

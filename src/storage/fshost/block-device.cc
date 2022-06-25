@@ -12,8 +12,6 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -324,20 +322,20 @@ const std::string& BlockDevice::partition_name() const {
   return partition_name_;
 }
 
-zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
+zx::status<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const {
   if (info_.has_value()) {
-    memcpy(out_info, &*info_, sizeof(*out_info));
-    return ZX_OK;
+    return zx::ok(*info_);
   }
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  zx_status_t io_status, call_status;
-  io_status =
-      fuchsia_hardware_block_BlockGetInfo(connection.borrow_channel(), &call_status, out_info);
-  if (io_status != ZX_OK) {
-    return io_status;
+  auto res = fidl::WireCall(connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  if (!res.ok()) {
+    return zx::error(res.status());
   }
-  info_ = *out_info;
-  return call_status;
+  if (res->status != ZX_OK) {
+    return zx::error(res->status);
+  }
+  info_ = *res->info.get();
+  return zx::ok(*info_);
 }
 
 const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid() const {
@@ -561,10 +559,9 @@ zx_status_t BlockDevice::CheckFilesystem() {
     return ZX_OK;
   }
 
-  zx_status_t status;
-  fuchsia_hardware_block_BlockInfo info;
-  if ((status = GetInfo(&info)) != ZX_OK) {
-    return status;
+  zx::status info = GetInfo();
+  if (info.is_error()) {
+    return info.status_value();
   }
 
   const std::array<DiskFormat, 3> kFormatsToCheck = {
@@ -587,6 +584,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
   });
   FX_LOGS(INFO) << "fsck of " << DiskFormatString(format_) << " partition started";
 
+  zx_status_t status;
   switch (format_) {
     case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatFxfs: {
@@ -595,7 +593,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
     }
     case fs_management::kDiskFormatMinfs: {
       // With minfs, we can run the library directly without needing to start a new process.
-      uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      uint64_t device_size = info->block_size * info->block_count / minfs::kMinfsBlockSize;
       auto device_or = minfs::FdToBlockDevice(fd_);
       if (device_or.is_error()) {
         FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
@@ -636,10 +634,9 @@ zx_status_t BlockDevice::CheckFilesystem() {
 }
 
 zx_status_t BlockDevice::FormatFilesystem() {
-  zx_status_t status;
-  fuchsia_hardware_block_BlockInfo info;
-  if ((status = GetInfo(&info)) != ZX_OK) {
-    return status;
+  zx::status info = GetInfo();
+  if (info.is_error()) {
+    return info.status_value();
   }
 
   // There might be a previously cached content format; forget that now since it could change.
@@ -656,7 +653,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
     }
     case fs_management::kDiskFormatFxfs:
     case fs_management::kDiskFormatF2fs: {
-      status = FormatCustomFilesystem(format_);
+      zx_status_t status = FormatCustomFilesystem(format_);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to format: " << zx_status_get_string(status);
       }
@@ -665,11 +662,11 @@ zx_status_t BlockDevice::FormatFilesystem() {
     case fs_management::kDiskFormatMinfs: {
       // With minfs, we can run the library directly without needing to start a new process.
       FX_LOGS(INFO) << "Formatting minfs.";
-      uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+      uint64_t blocks = info->block_size * info->block_count / minfs::kMinfsBlockSize;
       auto device_or = minfs::FdToBlockDevice(fd_);
       if (device_or.is_error()) {
         FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
-        return status;
+        return device_or.status_value();
       }
       auto bc_or =
           minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(blocks));
@@ -678,7 +675,8 @@ zx_status_t BlockDevice::FormatFilesystem() {
         return bc_or.error_value();
       }
       minfs::MountOptions options = {};
-      if (status = minfs::Mkfs(options, bc_or.value().get()).status_value(); status != ZX_OK) {
+      if (zx_status_t status = minfs::Mkfs(options, bc_or.value().get()).status_value();
+          status != ZX_OK) {
         FX_LOGS(ERROR) << "Could not format minfs filesystem.";
         return status;
       }

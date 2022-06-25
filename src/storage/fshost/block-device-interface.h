@@ -6,7 +6,6 @@
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_INTERFACE_H_
 
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
@@ -71,7 +70,7 @@ class BlockDeviceInterface {
   virtual void SetFormat(fs_management::DiskFormat format) = 0;
 
   // Queries (using the block interface) for info about the underlying device.
-  virtual zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
+  virtual zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const = 0;
 
   // Queries (using the partition interface) for the instance/type GUID of the underlying device.
   // Returns a GUID with all 0 bytes on failure, normally this means the device doesn't support the

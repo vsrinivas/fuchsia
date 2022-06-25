@@ -48,7 +48,7 @@ class BlockDevice : public BlockDeviceInterface {
   zx::status<Copier> ExtractData() override;
   fs_management::DiskFormat GetFormat() override;
   void SetFormat(fs_management::DiskFormat format) override;
-  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
+  zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override;
   const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const override;
   const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override;
   zx_status_t AttachDriver(const std::string_view& driver) override;
@@ -83,7 +83,7 @@ class BlockDevice : public BlockDeviceInterface {
   zx_status_t CopySourceData(const Copier& copier) const;
 
   fbl::unique_fd fd_;
-  mutable std::optional<fuchsia_hardware_block_BlockInfo> info_;
+  mutable std::optional<fuchsia_hardware_block::wire::BlockInfo> info_;
   mutable fs_management::DiskFormat content_format_;
   fs_management::DiskFormat format_ = fs_management::kDiskFormatUnknown;
   std::string topological_path_;
