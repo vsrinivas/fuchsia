@@ -12,6 +12,7 @@
 #include <cstring>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace media_audio {
 
@@ -19,13 +20,13 @@ namespace media_audio {
 class ChannelStrip {
  public:
   ChannelStrip(int64_t channel_count, int64_t frame_count)
-      : data_(new float[channel_count * frame_count]{}),
+      : data_(channel_count * frame_count, 0.0f),
         channel_count_(channel_count),
         frame_count_(frame_count) {
     FX_DCHECK(channel_count > 0);
     FX_DCHECK(frame_count > 0);
   }
-  ~ChannelStrip() { delete[] data_; }
+  ~ChannelStrip() = default;
 
   // Non-copyable and non-movable.
   ChannelStrip(const ChannelStrip& other) = delete;
@@ -53,13 +54,13 @@ class ChannelStrip {
   }
 
   // Zeroes out all channels.
-  void Clear() { std::fill_n(data_, channel_count_ * frame_count_, 0.0f); }
+  void Clear() { std::fill(data_.begin(), data_.end(), 0.0f); }
 
   // Shifts the audio data in all channels, by `shift_by` amount.
   void ShiftBy(size_t shift_by) {
     shift_by = std::min(shift_by, static_cast<size_t>(frame_count_));
     for (auto chan = 0; chan < channel_count_; ++chan) {
-      float* channel_data = data_ + chan * frame_count_;
+      float* channel_data = &data_[chan * frame_count_];
       std::memmove(channel_data, channel_data + shift_by,
                    (frame_count_ - shift_by) * sizeof(data_[0]));
       std::fill_n(channel_data + (frame_count_ - shift_by), shift_by, 0.0f);
@@ -68,10 +69,10 @@ class ChannelStrip {
 
   // Returns a span containing audio data for a given `channel`.
   cpp20::span<float> operator[](size_t channel) {
-    return cpp20::span{data_ + channel * frame_count_, static_cast<size_t>(frame_count_)};
+    return cpp20::span{&data_[channel * frame_count_], static_cast<size_t>(frame_count_)};
   }
   cpp20::span<const float> operator[](size_t channel) const {
-    return cpp20::span{data_ + channel * frame_count_, static_cast<size_t>(frame_count_)};
+    return cpp20::span{&data_[channel * frame_count_], static_cast<size_t>(frame_count_)};
   }
 
   // Returns the number of channels.
@@ -81,7 +82,7 @@ class ChannelStrip {
   int64_t frame_count() const { return frame_count_; }
 
  private:
-  float* data_;
+  std::vector<float> data_;
   int64_t channel_count_;
   int64_t frame_count_;
 };
