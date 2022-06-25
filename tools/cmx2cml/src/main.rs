@@ -275,5 +275,7 @@ const KNOWN_INCLUDES: &[&str] = &[
 const SYSLOG_SHARD: &str = "syslog/client.shard.cml";
 const ELF_STDIO_SHARD: &str = "syslog/elf_stdio.shard.cml";
 const ELF_TEST_RUNNER_SHARD: &str = "//sdk/lib/sys/testing/elf_test_runner.shard.cml";
+const GTEST_RUNNER_SHARD: &str = "//src/sys/test_runners/gtest/default.shard.cml";
+const GUNIT_RUNNER_SHARD: &str = "//src/sys/test_runners/gunit/default.shard.cml";
 const RUST_TEST_RUNNER_SHARD: &str = "//src/sys/test_runners/rust/default.shard.cml";
 const SYSTEM_TEST_SHARD: &str = "//src/sys/test_manager/system-test.shard.cml";

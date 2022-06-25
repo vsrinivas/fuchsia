@@ -38,7 +38,7 @@ template("cmx2cml_golden") {
 
 cmx2cml_golden("button_checker_unittest") {
   cmx = "button_checker_unittest.cmx"
-  runner = "elf-test"
+  runner = "gunit"
 }
 
 cmx2cml_golden("diagnostics_persistence") {
@@ -68,7 +68,7 @@ cmx2cml_golden("h265") {
 
 cmx2cml_golden("insntrace") {
   cmx = "insntrace_integration_tests.cmx"
-  runner = "elf-test"
+  runner = "gtest"
 }
 
 cmx2cml_golden("lowpan") {

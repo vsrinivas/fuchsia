@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    warnings::Warning, ELF_STDIO_SHARD, ELF_TEST_RUNNER_SHARD, RUST_TEST_RUNNER_SHARD, SYSLOG_SHARD,
+    warnings::Warning, ELF_STDIO_SHARD, ELF_TEST_RUNNER_SHARD, GTEST_RUNNER_SHARD,
+    GUNIT_RUNNER_SHARD, RUST_TEST_RUNNER_SHARD, SYSLOG_SHARD,
 };
 use anyhow::{bail, Error};
 use std::{collections::BTreeSet, str::FromStr};
@@ -13,8 +14,9 @@ pub enum RunnerSelection {
     Elf,
     ElfTest,
     RustTest,
+    GoogleTest,
+    GoogleTestUnit,
     // TODO support dart
-    // TODO maybe support gtest/gunit?
 }
 
 impl FromStr for RunnerSelection {
@@ -23,9 +25,11 @@ impl FromStr for RunnerSelection {
         Ok(match s {
             "elf" => Self::Elf,
             "elf-test" => Self::ElfTest,
+            "gtest" => Self::GoogleTest,
+            "gunit" => Self::GoogleTestUnit,
             "rust-test" => Self::RustTest,
             other => {
-                bail!("unrecognized runner {other}, options are `elf`, `elf-test`, `rust-test`")
+                bail!("unrecognized runner {other}, options are `elf`, `elf-test`, `gtest`, `gunit`, `rust-test`")
             }
         })
     }
@@ -37,7 +41,7 @@ impl RunnerSelection {
     }
 
     pub fn is_for_testing(&self) -> bool {
-        matches!(self, Self::ElfTest | Self::RustTest)
+        matches!(self, Self::ElfTest | Self::RustTest | Self::GoogleTest | Self::GoogleTestUnit)
     }
 
     /// Return any warnings that should be surfaced to the user based on their choice of runner.
@@ -51,7 +55,7 @@ impl RunnerSelection {
             // that they might want to pick a more specific runner.
             Self::ElfTest => Some(Warning::ElfTestRunnerUsed),
 
-            Self::RustTest => None,
+            Self::GoogleTest | Self::GoogleTestUnit | Self::RustTest => None,
         }
     }
 
@@ -66,6 +70,12 @@ impl RunnerSelection {
             Self::ElfTest => {
                 include.insert(ELF_TEST_RUNNER_SHARD.to_owned());
             }
+            Self::GoogleTest => {
+                include.insert(GTEST_RUNNER_SHARD.to_owned());
+            }
+            Self::GoogleTestUnit => {
+                include.insert(GUNIT_RUNNER_SHARD.to_owned());
+            }
             Self::RustTest => {
                 include.insert(RUST_TEST_RUNNER_SHARD.to_owned());
             }
@@ -79,7 +89,7 @@ impl RunnerSelection {
             }
 
             // handled by shards
-            Self::ElfTest | Self::RustTest => None,
+            Self::ElfTest | Self::GoogleTest | Self::GoogleTestUnit | Self::RustTest => None,
         }
     }
 }

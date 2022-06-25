@@ -65,7 +65,7 @@ impl CmxFeature {
                     path: Some(cml::Path::new("/data").unwrap()),
                     ..Default::default()
                 }),
-                Some(Warning::StorageIndex),
+                if !is_test { Some(Warning::StorageIndex) } else { None },
                 None,
             ),
             CmxFeature::IsolatedCacheStorage => (
