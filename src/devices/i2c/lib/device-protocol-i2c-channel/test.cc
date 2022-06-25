@@ -142,6 +142,8 @@ class I2cChannelTest : public zxtest::Test {
 
   void SetUp() override { loop_.StartThread(); }
 
+  void TearDown() override { loop_.Shutdown(); }
+
  protected:
   static void TransactCallback(void* ctx, zx_status_t status, const i2c_op_t* op_list,
                                size_t op_count) {
@@ -157,6 +159,15 @@ class I2cChannelTest : public zxtest::Test {
     transact_status_ = status;
   }
 
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> BindI2c(
+      fidl::WireServer<fuchsia_hardware_i2c::Device>* server) {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), server);
+    return std::move(endpoints->client);
+  }
+
   std::vector<uint8_t> read_data_[I2C_MAX_RW_OPS];
   size_t read_ops_ = 0;
   zx_status_t transact_status_ = ZX_ERR_IO;
@@ -164,9 +175,9 @@ class I2cChannelTest : public zxtest::Test {
   async::Loop loop_;
 };
 
-TEST(I2cChannelTest, NoRetries) {
+TEST_F(I2cChannelTest, NoRetries) {
   FlakyI2cDevice i2c_dev;
-  ddk::I2cChannel channel(i2c_dev.GetProto());
+  ddk::I2cChannel channel(BindI2c(&i2c_dev));
   // No retry, the first error is returned.
   uint8_t buffer[1] = {0x12};
   constexpr uint8_t kNumberOfRetries = 0;
@@ -175,9 +186,9 @@ TEST(I2cChannelTest, NoRetries) {
   EXPECT_EQ(ret.retries, 0);
 }
 
-TEST(I2cChannelTest, RetriesAllFail) {
+TEST_F(I2cChannelTest, RetriesAllFail) {
   FlakyI2cDevice i2c_dev;
-  ddk::I2cChannel channel(i2c_dev.GetProto());
+  ddk::I2cChannel channel(BindI2c(&i2c_dev));
   // 2 retries, corresponding error is returned. The first time Transact is called we get a
   // ZX_ERR_INTERNAL. Then the first retry gives us ZX_ERR_NOT_SUPPORTED and then the second
   // gives us ZX_ERR_NO_RESOURCES.
@@ -188,9 +199,9 @@ TEST(I2cChannelTest, RetriesAllFail) {
   EXPECT_EQ(ret.retries, 2);
 }
 
-TEST(I2cChannelTest, RetriesOk) {
+TEST_F(I2cChannelTest, RetriesOk) {
   FlakyI2cDevice i2c_dev;
-  ddk::I2cChannel channel(i2c_dev.GetProto());
+  ddk::I2cChannel channel(BindI2c(&i2c_dev));
   // 4 retries requested but no error, return ok.
   uint8_t tx_buffer[1] = {0x78};
   uint8_t rx_buffer[1] = {0x90};
@@ -439,7 +450,7 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
   EXPECT_EQ(i2c_dev.fidl_count(), 1);
 }
 
-TEST_F(I2cChannelTest, BanjoClientPreferred) {
+TEST_F(I2cChannelTest, BanjoClientMethods) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
@@ -447,8 +458,6 @@ TEST_F(I2cChannelTest, BanjoClientPreferred) {
   auto binding = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &i2c_dev);
 
   auto parent = MockDevice::FakeRootParent();
-
-  parent->AddProtocol(ZX_PROTOCOL_I2C, i2c_dev.GetProto()->ops, i2c_dev.GetProto()->ctx);
 
   parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
                           [this, &i2c_dev](zx::channel channel) {
@@ -461,41 +470,6 @@ TEST_F(I2cChannelTest, BanjoClientPreferred) {
 
   ddk::I2cChannel client(parent.get());
   ASSERT_TRUE(client.is_valid());
-
-  i2c_dev.set_rx_data({0xab});
-
-  uint8_t rx;
-  EXPECT_OK(client.ReadSync(0x89, &rx, 1));
-  ASSERT_EQ(i2c_dev.tx_data().size(), 1);
-  EXPECT_EQ(i2c_dev.tx_data()[0], 0x89);
-  EXPECT_EQ(rx, 0xab);
-
-  // Both Banjo and FIDL were available, but only Banjo should have been used.
-  EXPECT_EQ(i2c_dev.banjo_count(), 1);
-  EXPECT_EQ(i2c_dev.fidl_count(), 0);
-
-  i2c_protocol_t protocol = {};
-  client.GetProto(&protocol);
-  EXPECT_NOT_NULL(protocol.ops);
-}
-
-TEST_F(I2cChannelTest, BanjoClientMethods) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  I2cDevice i2c_dev;
-  auto binding = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &i2c_dev);
-
-  auto parent = MockDevice::FakeRootParent();
-
-  parent->AddProtocol(ZX_PROTOCOL_I2C, i2c_dev.GetProto()->ops, i2c_dev.GetProto()->ctx);
-
-  ddk::I2cChannel client(parent.get());
-  ASSERT_TRUE(client.is_valid());
-
-  i2c_protocol_t protocol = {};
-  client.GetProto(&protocol);
-  EXPECT_NOT_NULL(protocol.ops);
 
   const std::array<uint8_t, 4> expected_rx_data{0x12, 0x34, 0xab, 0xcd};
   const std::array<uint8_t, 1> expected_tx_data{0xa5};
@@ -545,7 +519,4 @@ TEST_F(I2cChannelTest, BanjoClientMethods) {
   EXPECT_EQ(i2c_dev.tx_data()[0], 0xa5);
 
   EXPECT_BYTES_EQ(context.rx_data, expected_rx_data.data(), sizeof(context.rx_data));
-
-  EXPECT_EQ(i2c_dev.banjo_count(), 1);
-  EXPECT_EQ(i2c_dev.fidl_count(), 0);
 }
