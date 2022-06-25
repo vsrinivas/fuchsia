@@ -5,9 +5,10 @@
 #include "ft_device.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake-i2c/fake-i2c.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/focaltech/focaltech.h>
 
 #include <hid/ft3x27.h>
@@ -16,6 +17,7 @@
 #include <zxtest/zxtest.h>
 
 #include "ft_firmware.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -141,39 +143,23 @@ class FakeFtDevice : public fake_i2c::FakeI2c {
 
 class FocaltechTest : public zxtest::Test {
  public:
+  FocaltechTest()
+      : fake_parent_(MockDevice::FakeRootParent()), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-    fragments[0].name = "i2c";
-    fragments[0].protocols.push_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_I2C,
-        .proto =
-            {
-                .ops = i2c_.GetProto()->ops,
-                .ctx = i2c_.GetProto()->ctx,
-            },
-    });
-
-    fragments[1].name = "gpio-int";
-    fragments[1].protocols.push_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_GPIO,
-        .proto =
-            {
-                .ops = interrupt_gpio_.GetProto()->ops,
-                .ctx = interrupt_gpio_.GetProto()->ctx,
-            },
-    });
-
-    fragments[2].name = "gpio-reset";
-    fragments[2].protocols.push_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_GPIO,
-        .proto =
-            {
-                .ops = reset_gpio_.GetProto()->ops,
-                .ctx = reset_gpio_.GetProto()->ctx,
-            },
-    });
-
-    ddk_.SetFragments(std::move(fragments));
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GPIO, interrupt_gpio_.GetProto()->ops,
+                              interrupt_gpio_.GetProto()->ctx, "gpio-int");
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GPIO, reset_gpio_.GetProto()->ops,
+                              reset_gpio_.GetProto()->ctx, "gpio-reset");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
+        [&](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
+                           &i2c_);
+          return ZX_OK;
+        },
+        "i2c");
 
     zx::interrupt interrupt;
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
@@ -181,15 +167,18 @@ class FocaltechTest : public zxtest::Test {
     interrupt_gpio_.ExpectConfigIn(ZX_OK, GPIO_NO_PULL)
         .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(interrupt));
     reset_gpio_.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+    EXPECT_OK(loop_.StartThread());
   }
 
  protected:
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_;
   FakeFtDevice i2c_;
 
  private:
   ddk::MockGpio interrupt_gpio_;
   ddk::MockGpio reset_gpio_;
+  async::Loop loop_;
 };
 
 TEST_F(FocaltechTest, Metadata3x27) {
@@ -197,9 +186,9 @@ TEST_F(FocaltechTest, Metadata3x27) {
       .device_id = FOCALTECH_DEVICE_FT3X27,
       .needs_firmware = false,
   };
-  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt3x27Metadata, sizeof(kFt3x27Metadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kFt3x27Metadata, sizeof(kFt3x27Metadata));
 
-  FtDevice dut(nullptr);
+  FtDevice dut(fake_parent_.get());
   EXPECT_OK(dut.Init());
 
   uint8_t actual_descriptor[1024];
@@ -217,9 +206,9 @@ TEST_F(FocaltechTest, Metadata5726) {
       .device_id = FOCALTECH_DEVICE_FT5726,
       .needs_firmware = false,
   };
-  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
 
-  FtDevice dut(nullptr);
+  FtDevice dut(fake_parent_.get());
   EXPECT_OK(dut.Init());
 
   uint8_t actual_descriptor[1024];
@@ -237,9 +226,9 @@ TEST_F(FocaltechTest, Metadata6336) {
       .device_id = FOCALTECH_DEVICE_FT6336,
       .needs_firmware = false,
   };
-  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt6336Metadata, sizeof(kFt6336Metadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kFt6336Metadata, sizeof(kFt6336Metadata));
 
-  FtDevice dut(nullptr);
+  FtDevice dut(fake_parent_.get());
   EXPECT_OK(dut.Init());
 
   uint8_t actual_descriptor[1024];
@@ -259,9 +248,9 @@ TEST_F(FocaltechTest, Firmware5726) {
       .display_vendor = 1,
       .ddic_version = 1,
   };
-  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
 
-  FtDevice dut(nullptr);
+  FtDevice dut(fake_parent_.get());
   EXPECT_OK(dut.Init());
   EXPECT_EQ(i2c_.firmware_write_size(), sizeof(kFirmware3));
 }
@@ -273,9 +262,9 @@ TEST_F(FocaltechTest, Firmware5726UpToDate) {
       .display_vendor = 1,
       .ddic_version = 0,
   };
-  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
 
-  FtDevice dut(nullptr);
+  FtDevice dut(fake_parent_.get());
   EXPECT_OK(dut.Init());
   EXPECT_EQ(i2c_.firmware_write_size(), 0);
 }

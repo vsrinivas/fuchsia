@@ -133,7 +133,6 @@ zx_library("fake_ddk") {
     "//src/media/audio/drivers/usb-audio/tests/*",
     "//src/media/audio/lib/simple-audio-stream/tests/*",
     "//src/media/drivers/amlogic_decoder/tests/unit_tests/*",
-    "//src/ui/input/drivers/focaltech/*",
     "//src/ui/input/drivers/hid-buttons/*",
     "//src/ui/input/drivers/hid-input-report/*",
     "//src/ui/input/drivers/hidctl/*",
