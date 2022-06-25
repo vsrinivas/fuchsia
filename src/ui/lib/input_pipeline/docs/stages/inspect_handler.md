@@ -6,14 +6,13 @@ events. The metrics are exposed using Fuchsia's standard Inspect interfaces.
 To see the recorded metrics use a command line such as this one:
 
 ```
-fx ffx inspect show \
-    "core/session-manager/session:\:session/scene_manager"
+fx ffx inspect show "core/ui/scene_manager"
 ```
 
 The output will be like this:
 
 ```
-core/session-manager/session\:session/scene_manager:
+core/ui/scene_manager:
   metadata:
     filename = fuchsia.inspect.Tree
     component_url = fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm

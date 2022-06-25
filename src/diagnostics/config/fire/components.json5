@@ -554,4 +554,9 @@
         label: "Text Manager CFv2",
         moniker: "core/text_manager",
     },
+    {
+        id: 215,
+        label: "Scene Manager",
+        moniker: "core/ui/scene_manager",
+    },
 ]
