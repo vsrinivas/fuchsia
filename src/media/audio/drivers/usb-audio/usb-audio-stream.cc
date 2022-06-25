@@ -993,7 +993,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
       case RingBufferState::STARTING:
         when_finished = Action::SIGNAL_STARTED;
-        break;
+        [[fallthrough]];
 
       case RingBufferState::STARTED:
         QueueRequestLocked();
