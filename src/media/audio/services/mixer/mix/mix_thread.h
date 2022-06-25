@@ -11,9 +11,9 @@
 #include <memory>
 #include <string>
 
+#include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
-#include "src/media/audio/services/mixer/common/timer.h"
 #include "src/media/audio/services/mixer/mix/thread.h"
 
 namespace media_audio {

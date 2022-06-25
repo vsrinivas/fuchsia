@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_TESTING_DEFAULTS_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_TESTING_DEFAULTS_H_
 
+#include "src/media/audio/lib/clock/clock_snapshot.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 

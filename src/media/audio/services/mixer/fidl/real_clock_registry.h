@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+#include "src/media/audio/lib/clock/real_clock.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
 
 namespace media_audio {

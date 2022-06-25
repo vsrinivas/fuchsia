@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
+
 namespace media_audio {
 
 namespace {

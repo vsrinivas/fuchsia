@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"

@@ -21,12 +21,6 @@ source_set("common") {
     "basic_types.h",
     "global_task_queue.cc",
     "global_task_queue.h",
-    "scoped_unique_lock.h",
-    "timer.h",
-    "timer_with_real_clock.cc",
-    "timer_with_real_clock.h",
-    "timer_with_synthetic_clock.cc",
-    "timer_with_synthetic_clock.h",
   ]
 
   public_deps = [
@@ -46,11 +40,7 @@ executable("common_unittests") {
   output_name = "audio_services_mixer_common_unittests"
   testonly = true
 
-  sources = [
-    "global_task_queue_unittest.cc",
-    "timer_with_real_clock_unittest.cc",
-    "timer_with_synthetic_clock_unittest.cc",
-  ]
+  sources = [ "global_task_queue_unittest.cc" ]
 
   deps = [
     ":common",

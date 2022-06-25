@@ -19,7 +19,8 @@ namespace media_audio {
 
 class SyntheticClockRealm;
 
-// A synthetic clock. Time advances on request only. See SyntheticClockRealm.
+// An implementation of Clock that is controlled by a SyntheticClockRealm. To create a
+// SyntheticClock, see SyntheticClockRealm::CreateClock.
 //
 // All methods are safe to call from any thread.
 class SyntheticClock : public Clock {
@@ -73,41 +74,6 @@ class SyntheticClock : public Clock {
   mutable std::mutex mutex_;
   media::TimelineFunction to_clock_mono_ TA_GUARDED(mutex_);
   int64_t generation_ TA_GUARDED(mutex_) = 0;
-};
-
-// Creates and controls a collection of synthetic clocks. Each realm has its own, isolated,
-// synthetic monotonic clock, which advances on demand (see `AdvanceTo` and `AdvanceBy`). Within a
-// realm, all clocks advance atomically relative to the realm's synthetic montonic clock.
-//
-// All methods are safe to call from any thread.
-class SyntheticClockRealm : public std::enable_shared_from_this<SyntheticClockRealm> {
- public:
-  // Create a new realm with `now() == zx::time(0)`.
-  [[nodiscard]] static std::shared_ptr<SyntheticClockRealm> Create();
-
-  // Creates a new clock. The clock starts starts with the given `to_clock_mono` transformation (by
-  // default, the identity transform).
-  [[nodiscard]] std::shared_ptr<SyntheticClock> CreateClock(
-      std::string_view name, uint32_t domain, bool adjustable,
-      media::TimelineFunction to_clock_mono = media::TimelineFunction(0, 0, 1, 1));
-
-  // The current synthetic monotonic time.
-  zx::time now() const;
-
-  // Advance now to the given monotonic time.
-  // Requires: `mono_now > now()`
-  void AdvanceTo(zx::time mono_now);
-
-  // Advance now by the given duration.
-  // Requires: `mono_diff > 0`
-  void AdvanceBy(zx::duration mono_diff);
-
- private:
-  void AdvanceToImpl(zx::time mono_now) TA_REQ(mutex_);
-  SyntheticClockRealm() = default;
-
-  mutable std::mutex mutex_;
-  zx::time mono_now_ TA_GUARDED(mutex_);
 };
 
 }  // namespace media_audio

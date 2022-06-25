@@ -2,71 +2,67 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_TIMER_WITH_SYNTHETIC_CLOCK_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_TIMER_WITH_SYNTHETIC_CLOCK_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_SYNTHETIC_TIMER_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_SYNTHETIC_TIMER_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <mutex>
 #include <optional>
 
-#include "src/media/audio/services/mixer/common/timer.h"
+#include "src/media/audio/lib/clock/timer.h"
 
 namespace media_audio {
 
-// An implementation of Timer that uses a synthetic clock.
-//
-// Once a thread blocks in SleepUntil, it does not unblock until explicitly directed by
-// a call to WakeAndAdvanceTo. This can be used by a controller thread to advance time
-// deterministically in tests. A thread might control multiple timers using code like:
-//
-//   for (;;) {
-//     for (auto& t : timers) {
-//       t.WaitUntilSleeping();
-//     }
-//
-//     // Check the timer status while all threads are sleeping.
-//     zx::time next_deadline = zx::time::infinite();
-//     bool has_event = false;
-//     for (auto& t : timers) {
-//       auto state = t.CurrentState();
-//       next_deadline = std::min(state.deadline, next_deadline);
-//       if (state.event_set) { has_event = true; }
-//     }
-//
-//     // If there are no events pending, advance to the next deadline.
-//     if (!has_event) {
-//       now = std::max(now, next_deadline);
-//     }
-//     for (auto& t : timers) {
-//       t.WakeAndAdvanceTo(now);
-//     }
-//  }
+// An implementation of Timer that is controlled by a SyntheticClockRealm. Once a thread blocks in
+// SleepUntil(T), it does not unblock until receiving a call to AdvanceTo(T') where `T' >= T`.
 //
 // This class is thread safe.
-class TimerWithSyntheticClock : public Timer {
+class SyntheticTimer : public Timer {
  public:
-  explicit TimerWithSyntheticClock(zx::time start_time);
+  [[nodiscard]] static std::shared_ptr<SyntheticTimer> Create(zx::time mono_start_time);
 
   // Implementation of Timer.
   void SetShutdownBit() override;
   void SetEventBit() override;
   WakeReason SleepUntil(zx::time deadline) override;
+  void Stop() override;
 
-  // Blocks until a thread is blocked in SleepUntil.
+  // Blocks until stopped or until a thread is blocked in SleepUntil. This is intended to be used
+  // from SyntheticClockRealm using code like:
+  //
+  // ```
+  // void AdvanceTo(when) {
+  //   while (now_ < when) {
+  //     for (auto& t : timers) {
+  //       t.WaitUntilSleepingOrStopped();
+  //     }
+  //
+  //     // Use SyntheticTimer::CurrentState to compute the next deadline and check
+  //     // if any events are pending, then advance to the next deadline.
+  //   }
+  // }
+  // ```
+  //
   // May be called from any thread.
-  void WaitUntilSleeping();
+  void WaitUntilSleepingOrStopped();
 
-  // Wakes the currently-blocked SleepUntil after advancing to the given time.
+  // Advances to the given system monotonic time. If a thread is currently blocked in
+  // `SleepUntil(deadline)` with `deadline <= t`, the blocked thread is woken. If called with `t <
+  // deadline`, the blocked thread will be woken iff there is a pending signal.
+  //
   // May be called from any thread.
+  //
   // REQUIRES: currently sleeping and t >= now.
-  void WakeAndAdvanceTo(zx::time t);
+  void AdvanceTo(zx::time t);
 
   struct State {
     std::optional<zx::time> deadline;  // std::nullopt if not sleeping
     bool event_set;                    // true if the "event" bit is set
     bool shutdown_set;                 // true if the "shutdown" bit is set
+    bool stopped;                      // true if stopped
   };
 
   // Reports the current state of this timer.
@@ -75,10 +71,12 @@ class TimerWithSyntheticClock : public Timer {
   // example in the class comments.
   State CurrentState();
 
-  // The current time.
+  // The current system monotonic time.
   zx::time now();
 
  private:
+  explicit SyntheticTimer(zx::time mono_start_time);
+
   struct InternalState {
     explicit InternalState(zx::time start_time) : now(start_time) {}
 
@@ -92,6 +90,7 @@ class TimerWithSyntheticClock : public Timer {
     int64_t sleep_count = 0;
     int64_t advance_count = 0;
     int64_t wake_count = 0;
+    bool stopped = false;
   };
 
   std::mutex mutex_;
@@ -100,4 +99,4 @@ class TimerWithSyntheticClock : public Timer {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_TIMER_WITH_SYNTHETIC_CLOCK_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_SYNTHETIC_TIMER_H_

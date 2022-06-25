@@ -22,10 +22,18 @@ source_set("clock") {
     "pid_control.h",
     "real_clock.cc",
     "real_clock.h",
+    "real_timer.cc",
+    "real_timer.h",
     "recovered_clock.cc",
     "recovered_clock.h",
+    "scoped_unique_lock.h",
     "synthetic_clock.cc",
     "synthetic_clock.h",
+    "synthetic_clock_realm.cc",
+    "synthetic_clock_realm.h",
+    "synthetic_timer.cc",
+    "synthetic_timer.h",
+    "timer.h",
     "unadjustable_clock_wrapper.h",
     "utils.cc",
     "utils.h",
@@ -55,8 +63,11 @@ executable("unittest_bin") {
     "clone_mono_unittest.cc",
     "pid_control_unittest.cc",
     "real_clock_unittest.cc",
+    "real_timer_unittest.cc",
     "recovered_clock_unittest.cc",
+    "synthetic_clock_realm_unittest.cc",
     "synthetic_clock_unittest.cc",
+    "synthetic_timer_unittest.cc",
     "utils_unittest.cc",
   ]
 
@@ -66,6 +77,7 @@ executable("unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
     "//src/zircon/lib/zircon",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/sync:sync-cpp",
   ]
 }

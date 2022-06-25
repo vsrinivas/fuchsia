@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 
 using media::TimelineFunction;
 
@@ -111,25 +112,7 @@ TEST(SyntheticClockTest, SetTimeAndRate) {
   EXPECT_EQ(clock->MonotonicTimeFromReferenceTime(m3), m3);
 }
 
-TEST(SyntheticClockRealmTest, Advance) {
-  auto realm = SyntheticClockRealm::Create();
-  auto clock1 = realm->CreateClock("clock1", kExternalDomain, true);
-  EXPECT_EQ(realm->now(), zx::time(0));
-  EXPECT_EQ(clock1->now(), zx::time(0));
-
-  realm->AdvanceBy(zx::nsec(10));
-  auto clock2 = realm->CreateClock("clock2", kExternalDomain, true);
-  EXPECT_EQ(realm->now(), zx::time(10));
-  EXPECT_EQ(clock1->now(), zx::time(10));
-  EXPECT_EQ(clock2->now(), zx::time(10));
-
-  realm->AdvanceTo(zx::time(50));
-  EXPECT_EQ(realm->now(), zx::time(50));
-  EXPECT_EQ(clock1->now(), zx::time(50));
-  EXPECT_EQ(clock2->now(), zx::time(50));
-}
-
-TEST(SyntheticClockRealmTest, DuplicateUnreadable) {
+TEST(SyntheticClockTest, DuplicateUnreadable) {
   auto realm = SyntheticClockRealm::Create();
   auto clock = realm->CreateClock("clock", kExternalDomain, true);
 

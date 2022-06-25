@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/clock/synthetic_clock.h"
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 
 using media::TimelineFunction;
 

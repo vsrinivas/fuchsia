@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/common/timer_with_real_clock.h"
+#include "src/media/audio/lib/clock/real_timer.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -16,23 +16,33 @@ constexpr auto kSignalForEvent = ZX_USER_SIGNAL_0;
 constexpr auto kSignalForShutdown = ZX_USER_SIGNAL_1;
 }  // namespace
 
-TimerWithRealClock::TimerWithRealClock(Config config) : slack_(config.timer_slack) {
+// static
+std::shared_ptr<RealTimer> RealTimer::Create(Config config) {
+  struct MakePublicCtor : RealTimer {
+    MakePublicCtor(Config config) : RealTimer(config) {}
+  };
+  return std::make_shared<MakePublicCtor>(config);
+}
+
+RealTimer::RealTimer(Config config) : slack_(config.timer_slack) {
   auto status = zx::timer::create(config.timer_slack_policy, ZX_CLOCK_MONOTONIC, &timer_);
   FX_CHECK(status == ZX_OK) << "Failed to create timer; status = " << status;
   FX_CHECK(slack_ >= zx::nsec(0)) << "Slack " << slack_.to_nsecs() << "ns < 0";
 }
 
-void TimerWithRealClock::SetEventBit() {
+void RealTimer::SetEventBit() {
   auto status = timer_.signal(/* clear_mask = */ 0, /* set_mask = */ kSignalForEvent);
   FX_CHECK(status == ZX_OK) << "Failed to signal event bit; status = " << status;
 }
 
-void TimerWithRealClock::SetShutdownBit() {
+void RealTimer::SetShutdownBit() {
   auto status = timer_.signal(/* clear_mask = */ 0, /* set_mask = */ kSignalForShutdown);
   FX_CHECK(status == ZX_OK) << "Failed to signal shutdown bit; status = " << status;
 }
 
-Timer::WakeReason TimerWithRealClock::SleepUntil(zx::time deadline) {
+Timer::WakeReason RealTimer::SleepUntil(zx::time deadline) {
+  FX_CHECK(!stopped_.load());
+
   constexpr auto kExpectedSignals = ZX_TIMER_SIGNALED | kSignalForEvent | kSignalForShutdown;
 
   // Reset the timer.
@@ -75,5 +85,7 @@ Timer::WakeReason TimerWithRealClock::SleepUntil(zx::time deadline) {
       .shutdown_set = (signals & kSignalForShutdown) != 0,
   };
 }
+
+void RealTimer::Stop() { stopped_.store(true); }
 
 }  // namespace media_audio

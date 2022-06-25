@@ -7,6 +7,7 @@
 
 #include <lib/zx/status.h>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 
 namespace media_audio {

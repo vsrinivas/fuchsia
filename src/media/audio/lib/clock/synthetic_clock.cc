@@ -10,6 +10,8 @@
 #include <cmath>
 #include <string>
 
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
+
 namespace media_audio {
 
 // static
@@ -87,41 +89,6 @@ zx::clock SyntheticClock::DuplicateZxClockUnreadable() const {
   auto status = zx_clock_.duplicate(rights, &dup);
   FX_CHECK(status == ZX_OK) << "zx::clock::duplicate failed with status " << status;
   return dup;
-}
-
-// static
-std::shared_ptr<SyntheticClockRealm> SyntheticClockRealm::Create() {
-  struct MakePublicCtor : SyntheticClockRealm {
-    MakePublicCtor() : SyntheticClockRealm() {}
-  };
-  return std::make_shared<MakePublicCtor>();
-}
-
-// static
-std::shared_ptr<SyntheticClock> SyntheticClockRealm::CreateClock(
-    std::string_view name, uint32_t domain, bool adjustable,
-    media::TimelineFunction to_clock_mono) {
-  return SyntheticClock::Create(name, domain, adjustable, shared_from_this(), to_clock_mono);
-}
-
-zx::time SyntheticClockRealm::now() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return mono_now_;
-}
-
-void SyntheticClockRealm::AdvanceTo(zx::time mono_now) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  AdvanceToImpl(mono_now);
-}
-
-void SyntheticClockRealm::AdvanceBy(zx::duration mono_diff) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  AdvanceToImpl(mono_now_ + mono_diff);
-}
-
-void SyntheticClockRealm::AdvanceToImpl(zx::time mono_now) {
-  FX_CHECK(mono_now > mono_now_);
-  mono_now_ = mono_now;
 }
 
 }  // namespace media_audio

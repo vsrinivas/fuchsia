@@ -15,6 +15,7 @@ class StubTimer : public Timer {
   void SetEventBit() override { signaled_ = true; }
   void SetShutdownBit() override {}
   WakeReason SleepUntil(zx::time deadline) override { return {}; }
+  void Stop() override {}
 
   bool signaled() const { return signaled_; }
 

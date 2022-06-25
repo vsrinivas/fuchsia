@@ -13,8 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
-#include "src/media/audio/services/mixer/common/timer.h"
 
 namespace media_audio {
 
