@@ -11,7 +11,7 @@ import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
-const chromiumUrl = 'fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm';
+const chromiumUrl = 'fuchsia-pkg://chromium.org/chrome#meta/chrome.cm';
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
 

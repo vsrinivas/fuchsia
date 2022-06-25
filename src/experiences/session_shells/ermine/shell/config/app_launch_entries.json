@@ -3,7 +3,7 @@
         "element_manager_name": "fuchsia.element.Manager-chrome",
         "icon": "images/Chromium-icon-2x.png",
         "title": "Chromium",
-        "url": "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm"
+        "url": "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm"
     },
     {
         "icon": "images/SpinningSquare-icon-2x.png",

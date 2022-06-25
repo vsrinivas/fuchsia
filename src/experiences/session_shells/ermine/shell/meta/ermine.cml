@@ -18,7 +18,7 @@
         },
         {
             name: "chrome",
-            url: "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm",
+            url: "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm",
         },
     ],
     collections: [
