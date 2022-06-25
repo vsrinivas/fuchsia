@@ -140,7 +140,7 @@ class NodeManager {
   // Caller should acquire LockType:kFileOp.
   zx_status_t RemoveInodePage(VnodeF2fs *vnode);
   // Caller should acquire LockType:kFileOp.
-  zx_status_t NewInodePage(Dir *parent, VnodeF2fs *child);
+  zx::status<LockedPage> NewInodePage(VnodeF2fs &new_vnode);
 
   bool IsCheckpointedNode(nid_t nid);
 

@@ -238,48 +238,5 @@ TEST(FileTest2, FailedNidReuse) {
   FileTester::Unmount(std::move(fs), &bc);
 }
 
-TEST(DeadLockTest, Truncate) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
-
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  // Disable inline data option
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
-  fbl::RefPtr<fs::Vnode> test_file;
-  root_dir->Create("test2", S_IFREG, &test_file);
-  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
-
-  constexpr int kNTry = 1000;
-  uint8_t buf[kPageSize * 2] = {1};
-  FileTester::AppendToFile(vn.get(), buf, sizeof(buf));
-  std::thread thread1 = std::thread([&]() {
-    for (int i = 0; i < kNTry; ++i) {
-      size_t out_actual;
-      ASSERT_EQ(vn->Write(buf, sizeof(buf), 0, &out_actual), ZX_OK);
-    }
-  });
-  std::thread thread2 = std::thread([&]() {
-    for (int i = 0; i < kNTry; ++i) {
-      ASSERT_EQ(vn->Truncate(0), ZX_OK);
-    }
-  });
-  thread1.join();
-  thread2.join();
-  vn->Close();
-  vn = nullptr;
-  root_dir->Close();
-  root_dir = nullptr;
-  FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
-}
-
 }  // namespace
 }  // namespace f2fs

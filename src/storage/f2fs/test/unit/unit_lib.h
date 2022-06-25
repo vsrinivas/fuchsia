@@ -52,7 +52,7 @@ class FileTester {
   static void Lookup(VnodeF2fs *parent, std::string_view name, fbl::RefPtr<fs::Vnode> *out);
 
   static void CreateChild(Dir *vn, uint32_t mode, std::string_view name);
-  static void DeleteChild(Dir *vn, std::string_view name);
+  static void DeleteChild(Dir *vn, std::string_view name, bool is_dir = true);
   static void CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
                              std::vector<uint32_t> &inos, fbl::RefPtr<Dir> &parent,
                              std::string name, uint32_t inode_cnt);

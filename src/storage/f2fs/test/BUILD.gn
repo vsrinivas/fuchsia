@@ -30,6 +30,7 @@ test("f2fs_unit") {
     "unit/mkfs.cc",
     "unit/mmap.cc",
     "unit/mount.cc",
+    "unit/multithreading.cc",
     "unit/node.cc",
     "unit/orphan.cc",
     "unit/roll_forward_recovery.cc",

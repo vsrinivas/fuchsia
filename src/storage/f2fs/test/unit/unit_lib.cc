@@ -115,8 +115,8 @@ void FileTester::CreateChild(Dir *vn, uint32_t mode, std::string_view name) {
   ASSERT_EQ(tmp_child->Close(), ZX_OK);
 }
 
-void FileTester::DeleteChild(Dir *vn, std::string_view name) {
-  ASSERT_EQ(vn->Unlink(name, true), ZX_OK);
+void FileTester::DeleteChild(Dir *vn, std::string_view name, bool is_dir) {
+  ASSERT_EQ(vn->Unlink(name, is_dir), ZX_OK);
   // TODO: After EvictInode available, check if nids of the child are correctly freed
 }
 

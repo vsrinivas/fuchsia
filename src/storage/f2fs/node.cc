@@ -781,15 +781,14 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
   return ZX_OK;
 }
 
-zx_status_t NodeManager::NewInodePage(Dir *parent, VnodeF2fs *child) {
+zx::status<LockedPage> NodeManager::NewInodePage(VnodeF2fs &new_vnode) {
   LockedPage page;
 
   // allocate inode page for new inode
-  if (zx_status_t ret = NewNodePage(*child, child->Ino(), 0, &page); ret != ZX_OK) {
-    return ret;
+  if (zx_status_t ret = NewNodePage(new_vnode, new_vnode.Ino(), 0, &page); ret != ZX_OK) {
+    return zx::error(ret);
   }
-  parent->InitDentInode(child, &page.GetPage<NodePage>());
-  return ZX_OK;
+  return zx::ok(std::move(page));
 }
 
 zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, LockedPage *out) {

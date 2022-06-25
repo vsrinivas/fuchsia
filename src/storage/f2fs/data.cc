@@ -289,6 +289,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
   if (new_i_size && GetSize() < ((index + 1) << kPageCacheShift)) {
     SetSize((index + 1) << kPageCacheShift);
     // TODO: mark sync when fdatasync is available.
+    SetFlag(InodeInfoFlag::kUpdateDir);
     MarkInodeDirty();
   }
 
@@ -419,9 +420,9 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   // return kAopWritepageActivate;
   //}
 
+  fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
-    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = DoWriteDataPage(page); err != ZX_OK) {
       // TODO: Tracks pages skipping wb
       // ++wbc->pages_skipped;

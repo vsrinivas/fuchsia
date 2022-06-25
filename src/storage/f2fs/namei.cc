@@ -121,16 +121,29 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 
   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
-#if 0  // porting needed
-  // if (!superblock_info.IsOnRecovery())
-  //   d_instantiate(dentry, inode);
-#endif
   vnode->UnlockNewInode();
-
-  Vfs()->GetSegmentManager().BalanceFs();
 
   *out = std::move(vnode_refptr);
   return ZX_OK;
+}
+
+zx::status<> Dir::RecoverLink(VnodeF2fs &vnode) {
+  std::lock_guard dir_lock(dir_mutex_);
+  fbl::RefPtr<Page> page;
+  auto dir_entry = FindEntry(vnode.GetNameView(), &page);
+  if (dir_entry == nullptr) {
+    AddLink(vnode.GetNameView(), &vnode);
+  } else if (dir_entry && vnode.Ino() != LeToCpu(dir_entry->ino)) {
+    // Remove old dentry
+    fbl::RefPtr<VnodeF2fs> old_vnode_refptr;
+    if (zx_status_t err = VnodeF2fs::Vget(Vfs(), dir_entry->ino, &old_vnode_refptr); err != ZX_OK) {
+      return zx::error(err);
+    }
+    DeleteEntry(dir_entry, page, old_vnode_refptr.get());
+    ZX_ASSERT(FindEntry(vnode.GetNameView()).status_value() == ZX_ERR_NOT_FOUND);
+    AddLink(vnode.GetNameView(), &vnode);
+  }
+  return zx::ok();
 }
 
 zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
@@ -143,45 +156,34 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   }
 
   fbl::RefPtr<VnodeF2fs> target = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(new_child));
-  if (target->IsDir())
+  if (target->IsDir()) {
     return ZX_ERR_NOT_FILE;
-
-  if (auto old_entry = FindEntry(name); !old_entry.is_error()) {
-    return ZX_ERR_ALREADY_EXISTS;
   }
-
-  timespec cur_time;
-  clock_gettime(CLOCK_REALTIME, &cur_time);
-  target->SetCTime(cur_time);
 
   {
-    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-    target->SetFlag(InodeInfoFlag::kIncLink);
-    if (zx_status_t err = AddLink(name, target.get()); err != ZX_OK) {
-      target->ClearFlag(InodeInfoFlag::kIncLink);
-      return err;
+    std::lock_guard dir_lock(dir_mutex_);
+    if (auto old_entry = FindEntry(name); !old_entry.is_error()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    timespec cur_time;
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    target->SetCTime(cur_time);
+
+    {
+      fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+      target->SetFlag(InodeInfoFlag::kIncLink);
+      if (zx_status_t err = AddLink(name, target.get()); err != ZX_OK) {
+        target->ClearFlag(InodeInfoFlag::kIncLink);
+        return err;
+      }
     }
   }
-
-#if 0  // porting needed
-  // d_instantiate(dentry, inode);
-#endif
 
   Vfs()->GetSegmentManager().BalanceFs();
 
   return ZX_OK;
 }
-
-#if 0  // porting needed
-// dentry *Dir::F2fsGetParent(dentry *child) {
-//   return nullptr;
-//   // qstr dotdot = QSTR_INIT("..", 2);
-//   // uint64_t ino = Inode_by_name(child->d_inode, &dotdot);
-//   // if (!ino)
-//   //   return ErrPtr(-ENOENT);
-//   // return d_obtain_alias(f2fs_iget(child->d_inode->i_sb, ino));
-// }
-#endif
 
 zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
   fbl::RefPtr<VnodeF2fs> vn;
@@ -192,11 +194,6 @@ zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
 
   if (auto dir_entry = FindEntry(name); !dir_entry.is_error()) {
     nid_t ino = LeToCpu((*dir_entry).ino);
-#if 0  // porting needed
-    // if (!f2fs_has_inline_dentry(dir))
-    //   kunmap(page);
-#endif
-
     if (zx_status_t ret = VnodeF2fs::Vget(Vfs(), ino, &vn); ret != ZX_OK)
       return ret;
 
@@ -209,6 +206,7 @@ zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
 }
 
 zx_status_t Dir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
+  fs::SharedLock dir_read_lock(dir_mutex_);
   return DoLookup(name, out);
 }
 
@@ -225,17 +223,12 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     {
       fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
       if (zx_status_t err = Vfs()->CheckOrphanSpace(); err != ZX_OK) {
-#if 0  // porting needed
-      // if (!f2fs_has_inline_dentry(dir))
-      //   kunmap(page);
-#endif
         return err;
       }
 
       DeleteEntry(de, page, vnode);
     }
   }
-  Vfs()->GetSegmentManager().BalanceFs();
   return ZX_OK;
 }
 
@@ -297,21 +290,16 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
     }
   }
   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
-
-#if 0  // porting needed
-  // d_instantiate(dentry, inode);
-#endif
   vnode->UnlockNewInode();
-
-  Vfs()->GetSegmentManager().BalanceFs();
 
   *out = std::move(vnode_refptr);
   return ZX_OK;
 }
 
 zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
-  if (vnode->IsEmptyDir())
+  if (vnode->IsEmptyDir()) {
     return DoUnlink(vnode, name);
+  }
   return ZX_ERR_NOT_EMPTY;
 }
 
@@ -375,63 +363,51 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     return ZX_ERR_BAD_STATE;
   }
 
-  fbl::RefPtr<VnodeF2fs> old_vn_ref;
-  fbl::RefPtr<VnodeF2fs> new_vn_ref;
-  Dir *old_dir = this;
-  Dir *new_dir = static_cast<Dir *>(_newdir.get());
-  VnodeF2fs *old_vnode = nullptr;
-  nid_t old_ino;
-  VnodeF2fs *new_vnode = nullptr;
-  nid_t new_ino;
-  DirEntry *old_dir_entry = nullptr;
-  DirEntry *old_entry;
-  DirEntry *new_entry;
-  timespec cur_time;
-
+  fbl::RefPtr<Dir> new_dir = fbl::RefPtr<Dir>::Downcast(std::move(_newdir));
+  bool is_same_dir = (new_dir.get() == this);
   {
-    fbl::RefPtr<Page> old_page;
-    fbl::RefPtr<Page> new_page;
-    fbl::RefPtr<Page> old_dir_page;
-
     if (!fs::IsValidName(oldname) || !fs::IsValidName(newname)) {
       return ZX_ERR_INVALID_ARGS;
     }
 
+    std::lock_guard dir_lock(dir_mutex_);
+
+    timespec cur_time;
     clock_gettime(CLOCK_REALTIME, &cur_time);
 
-    if (new_dir->GetNlink() == 0)
+    if (new_dir->GetNlink() == 0) {
       return ZX_ERR_NOT_FOUND;
+    }
 
-    old_entry = FindEntry(oldname, &old_page);
+    fbl::RefPtr<Page> old_page;
+    DirEntry *old_entry = FindEntry(oldname, &old_page);
     if (!old_entry) {
       return ZX_ERR_NOT_FOUND;
     }
 
-    old_ino = LeToCpu(old_entry->ino);
-    if (zx_status_t err = VnodeF2fs::Vget(Vfs(), old_ino, &old_vn_ref); err != ZX_OK) {
+    fbl::RefPtr<VnodeF2fs> old_vnode;
+    nid_t old_ino = LeToCpu(old_entry->ino);
+    if (zx_status_t err = VnodeF2fs::Vget(Vfs(), old_ino, &old_vnode); err != ZX_OK) {
       return err;
     }
 
-    old_vnode = old_vn_ref.get();
-    ZX_ASSERT(old_vnode->IsSameName(oldname));
+    ZX_DEBUG_ASSERT(old_vnode->IsSameName(oldname));
 
     if (!old_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir)) {
       return ZX_ERR_NOT_DIR;
     }
 
-    ZX_ASSERT(!src_must_be_dir || old_vnode->IsDir());
+    ZX_DEBUG_ASSERT(!src_must_be_dir || old_vnode->IsDir());
 
+    fbl::RefPtr<Page> old_dir_page;
+    DirEntry *old_dir_entry = nullptr;
     if (old_vnode->IsDir()) {
-      old_dir_entry = (static_cast<Dir *>(old_vnode))->ParentDir(&old_dir_page);
+      old_dir_entry = fbl::RefPtr<Dir>::Downcast(old_vnode)->ParentDir(&old_dir_page);
       if (!old_dir_entry) {
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_dir))
-       //   kunmap(old_page);
-#endif
         return ZX_ERR_IO;
       }
 
-      auto is_subdir = (static_cast<Dir *>(old_vnode))->IsSubdir(new_dir);
+      auto is_subdir = fbl::RefPtr<Dir>::Downcast(old_vnode)->IsSubdir(new_dir.get());
       if (is_subdir.is_error()) {
         return is_subdir.error_value();
       }
@@ -440,115 +416,102 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       }
     }
 
-    do {
-      fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+    fbl::RefPtr<Page> new_page;
+    DirEntry *new_entry = nullptr;
+    if (is_same_dir) {
+      new_entry = FindEntry(newname, &new_page);
+    } else {
+      new_entry = new_dir->FindEntrySafe(newname, &new_page);
+    }
 
-      new_entry = new_dir->FindEntry(newname, &new_page);
-      if (new_entry) {
-        new_ino = LeToCpu(new_entry->ino);
-        if (zx_status_t err = VnodeF2fs::Vget(Vfs(), new_ino, &new_vn_ref); err != ZX_OK) {
-          if (old_dir_entry) {
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_inode))
-       //   kunmap(old_dir_page);
-#endif
-          }
+    if (new_entry) {
+      ino_t new_ino = LeToCpu(new_entry->ino);
+      fbl::RefPtr<VnodeF2fs> new_vnode;
+      if (zx_status_t err = VnodeF2fs::Vget(Vfs(), new_ino, &new_vnode); err != ZX_OK) {
+        return err;
+      }
 
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_dir))
-       //   kunmap(old_page);
-#endif
-          return err;
-        }
+      ZX_DEBUG_ASSERT(new_vnode->IsSameName(newname));
 
-        new_vnode = new_vn_ref.get();
-        ZX_ASSERT(new_vnode->IsSameName(newname));
+      if (!new_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir)) {
+        return ZX_ERR_NOT_DIR;
+      }
 
-        if (!new_vnode->IsDir() && (src_must_be_dir || dst_must_be_dir)) {
-          return ZX_ERR_NOT_DIR;
-        }
+      if (old_vnode->IsDir() && !new_vnode->IsDir()) {
+        return ZX_ERR_NOT_DIR;
+      }
 
-        if (old_vnode->IsDir() && !new_vnode->IsDir()) {
-          return ZX_ERR_NOT_DIR;
-        }
+      if (!old_vnode->IsDir() && new_vnode->IsDir()) {
+        return ZX_ERR_NOT_FILE;
+      }
 
-        if (!old_vnode->IsDir() && new_vnode->IsDir()) {
-          return ZX_ERR_NOT_FILE;
-        }
+      if (is_same_dir && oldname == newname) {
+        return ZX_OK;
+      }
 
-        if (old_dir == new_dir && oldname == newname) {
-          return ZX_OK;
-        }
+      if (old_dir_entry &&
+          (!new_vnode->IsDir() || !fbl::RefPtr<Dir>::Downcast(new_vnode)->IsEmptyDir())) {
+        return ZX_ERR_NOT_EMPTY;
+      }
 
-        if (old_dir_entry &&
-            (!new_vnode->IsDir() || !(static_cast<Dir *>(new_vnode))->IsEmptyDir())) {
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_inode))
-       //   kunmap(old_dir_page);
-       // if (!f2fs_has_inline_dentry(old_dir))
-       //   kunmap(old_page);
-#endif
-          return ZX_ERR_NOT_EMPTY;
-        }
-
-        old_vnode->SetName(newname);
-        new_dir->SetLink(new_entry, new_page, old_vnode);
-
-        new_vnode->SetCTime(cur_time);
-        if (old_dir_entry)
-          new_vnode->DropNlink();
-        new_vnode->DropNlink();
-        if (!new_vnode->GetNlink())
-          Vfs()->AddOrphanInode(new_vnode);
-        new_vnode->WriteInode(false);
+      old_vnode->SetName(newname);
+      if (is_same_dir) {
+        SetLink(new_entry, new_page, old_vnode.get());
       } else {
-        if (old_dir == new_dir && oldname == newname) {
-          return ZX_OK;
-        }
+        new_dir->SetLinkSafe(new_entry, new_page, old_vnode.get());
+      }
 
-        old_vnode->SetName(newname);
-        if (zx_status_t err = new_dir->AddLink(newname, old_vnode); err != ZX_OK) {
-          if (old_dir_entry) {
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_inode))
-       //   kunmap(old_dir_page);
-#endif
-          }
+      new_vnode->SetCTime(cur_time);
+      if (old_dir_entry) {
+        new_vnode->DropNlink();
+      }
+      new_vnode->DropNlink();
+      if (!new_vnode->GetNlink()) {
+        Vfs()->AddOrphanInode(new_vnode.get());
+      }
+      new_vnode->WriteInode(false);
+    } else {
+      if (is_same_dir && oldname == newname) {
+        return ZX_OK;
+      }
 
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_dir))
-       //   kunmap(old_page);
-#endif
+      old_vnode->SetName(newname);
+
+      if (is_same_dir) {
+        if (zx_status_t err = AddLink(newname, old_vnode.get()); err != ZX_OK) {
           return err;
         }
-
+        if (old_dir_entry) {
+          IncNlink();
+          WriteInode(false);
+        }
+      } else {
+        if (zx_status_t err = new_dir->AddLinkSafe(newname, old_vnode.get()); err != ZX_OK) {
+          return err;
+        }
         if (old_dir_entry) {
           new_dir->IncNlink();
           new_dir->WriteInode(false);
         }
       }
+    }
 
-      old_vnode->SetParentNid(new_dir->Ino());
-      old_vnode->SetCTime(cur_time);
-      old_vnode->SetFlag(InodeInfoFlag::kNeedCp);
-      old_vnode->MarkInodeDirty();
+    old_vnode->SetParentNid(new_dir->Ino());
+    old_vnode->SetCTime(cur_time);
+    old_vnode->SetFlag(InodeInfoFlag::kNeedCp);
+    old_vnode->MarkInodeDirty();
 
-      DeleteEntry(old_entry, old_page, nullptr);
+    DeleteEntry(old_entry, old_page, nullptr);
 
-      if (old_dir_entry) {
-        if (old_dir != new_dir) {
-          (static_cast<Dir *>(old_vnode))->SetLink(old_dir_entry, old_dir_page, new_dir);
-        } else {
-#if 0  // porting needed
-       // if (!f2fs_has_inline_dentry(old_inode))
-       //   kunmap(old_dir_page);
-#endif
-          old_dir_page.reset();
-        }
-        old_dir->DropNlink();
-        old_dir->WriteInode(false);
+    if (old_dir_entry) {
+      if (!is_same_dir) {
+        fbl::RefPtr<Dir>::Downcast(old_vnode)->SetLinkSafe(old_dir_entry, old_dir_page,
+                                                           new_dir.get());
       }
-    } while (false);
+      DropNlink();
+      WriteInode(false);
+    }
   }
 
   Vfs()->GetSegmentManager().BalanceFs();
@@ -563,24 +526,27 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
   if (!fs::IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  zx_status_t ret = ZX_OK;
+  {
+    std::lock_guard dir_lock(dir_mutex_);
+    if (GetNlink() == 0)
+      return ZX_ERR_NOT_FOUND;
 
-  if (GetNlink() == 0)
-    return ZX_ERR_NOT_FOUND;
+    if (auto ret = FindEntry(name); !ret.is_error()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
 
-  if (auto ret = FindEntry(name); !ret.is_error()) {
-    return ZX_ERR_ALREADY_EXISTS;
+    if (S_ISDIR(mode)) {
+      ret = Mkdir(name, mode, out);
+    } else {
+      ret = DoCreate(name, mode, out);
+    }
   }
-
-  zx_status_t status = ZX_OK;
-  if (S_ISDIR(mode)) {
-    status = Mkdir(name, mode, out);
-  } else {
-    status = DoCreate(name, mode, out);
+  if (ret == ZX_OK) {
+    Vfs()->GetSegmentManager().BalanceFs();
+    ret = (*out)->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
   }
-  if (status == ZX_OK) {
-    status = (*out)->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
-  }
-  return status;
+  return ret;
 }
 
 zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
@@ -588,19 +554,28 @@ zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
     return ZX_ERR_BAD_STATE;
   }
 
-  fbl::RefPtr<fs::Vnode> vn;
-  if (zx_status_t status = DoLookup(name, &vn); status != ZX_OK) {
-    return status;
+  zx_status_t ret = ZX_OK;
+  {
+    std::lock_guard dir_lock(dir_mutex_);
+    fbl::RefPtr<fs::Vnode> vn;
+    if (zx_status_t status = DoLookup(name, &vn); status != ZX_OK) {
+      return status;
+    }
+
+    VnodeF2fs *vnode = (VnodeF2fs *)vn.get();
+    if (vnode->IsDir()) {
+      ret = Rmdir(static_cast<Dir *>(vnode), name);
+    } else {
+      if (must_be_dir) {
+        return ZX_ERR_NOT_DIR;
+      }
+      ret = DoUnlink(vnode, name);
+    }
   }
-
-  VnodeF2fs *vnode = (VnodeF2fs *)vn.get();
-  if (vnode->IsDir())
-    return Rmdir(static_cast<Dir *>(vnode), name);
-
-  if (must_be_dir)
-    return ZX_ERR_NOT_DIR;
-
-  return DoUnlink(vnode, name);
+  if (ret == ZX_OK) {
+    Vfs()->GetSegmentManager().BalanceFs();
+  }
+  return ret;
 }
 
 }  // namespace f2fs

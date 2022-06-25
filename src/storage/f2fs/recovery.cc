@@ -37,22 +37,7 @@ zx_status_t F2fs::RecoverDentry(NodePage &ipage, VnodeF2fs &vnode) {
     return err;
   }
 
-  auto dir = static_cast<Dir *>(dir_refptr.get());
-  fbl::RefPtr<Page> page;
-  auto dir_entry = dir->FindEntry(vnode.GetNameView(), &page);
-  if (dir_entry == nullptr) {
-    dir->AddLink(vnode.GetNameView(), &vnode);
-  } else if (dir_entry && vnode.Ino() != LeToCpu(dir_entry->ino)) {
-    // Remove old dentry
-    fbl::RefPtr<VnodeF2fs> old_vnode_refptr;
-    if (err = VnodeF2fs::Vget(this, dir_entry->ino, &old_vnode_refptr); err != ZX_OK) {
-      return err;
-    }
-    dir->DeleteEntry(dir_entry, page, old_vnode_refptr.get());
-    ZX_ASSERT(dir->FindEntry(vnode.GetNameView()).status_value() == ZX_ERR_NOT_FOUND);
-    dir->AddLink(vnode.GetNameView(), &vnode);
-  }
-  return err;
+  return fbl::RefPtr<Dir>::Downcast(dir_refptr)->RecoverLink(vnode).status_value();
 }
 
 zx_status_t F2fs::RecoverInode(VnodeF2fs &vnode, NodePage &node_page) {

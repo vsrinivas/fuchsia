@@ -236,7 +236,7 @@ TEST_F(NodeManagerTest, NodePage) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
 
   NodeManager &node_manager = fs_->GetNodeManager();
   uint64_t free_node_cnt = node_manager.GetFreeNidCount();
@@ -357,7 +357,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
 
   NodeManager &node_manager = fs_->GetNodeManager();
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
@@ -435,13 +435,12 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, test_vnode);
 
   test_vnode->SetFlag(InodeInfoFlag::kNoAlloc);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), test_vnode.get()),
-            ZX_ERR_ACCESS_DENIED);
+  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(*test_vnode).status_value(), ZX_ERR_ACCESS_DENIED);
   test_vnode->ClearFlag(InodeInfoFlag::kNoAlloc);
 
   tmp_total_valid_block_count = superblock_info.GetTotalValidBlockCount();
   superblock_info.SetTotalValidBlockCount(superblock_info.GetUserBlockCount());
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), test_vnode.get()), ZX_ERR_NO_SPACE);
+  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(*test_vnode).status_value(), ZX_ERR_NO_SPACE);
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
   test_vnode.reset();
   superblock_info.SetTotalValidBlockCount(tmp_total_valid_block_count);
@@ -462,7 +461,7 @@ TEST_F(NodeManagerTest, TruncateDoubleIndirect) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
 
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
 
@@ -530,7 +529,7 @@ TEST_F(NodeManagerTest, TruncateIndirect) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
 
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
 
@@ -602,7 +601,7 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
 
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
 
@@ -694,7 +693,7 @@ TEST_F(NodeManagerTest, NodeFooter) {
   // Alloc Inode
   fbl::RefPtr<VnodeF2fs> vnode;
   FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
-  ASSERT_EQ(fs_->GetNodeManager().NewInodePage(root_dir_.get(), vnode.get()), ZX_OK);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
   nid_t inode_nid = vnode->Ino();
 
   {

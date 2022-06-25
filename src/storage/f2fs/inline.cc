@@ -64,11 +64,7 @@ DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_pag
 
     // For the most part, it should be a bug when name_len is zero.
     // We stop here for figuring out where the bugs are occurred.
-#if 0  // porting needed
-    // f2fs_bug_on(F2FS_P_SB(node_page), !de->name_len);
-#else
-    ZX_ASSERT(de->name_len > 0);
-#endif
+    ZX_DEBUG_ASSERT(de->name_len > 0);
 
     bit_pos += GetDentrySlots(LeToCpu(de->name_len));
   }
@@ -161,11 +157,10 @@ zx_status_t Dir::ConvertInlineDir() {
 
   NodePage *ipage = &dnode_page.GetPage<NodePage>();
   block_t data_blkaddr = DatablockAddr(ipage, ofs_in_dnode);
-  if (data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
-      return err;
-    }
-    data_blkaddr = kNewAddr;
+  ZX_DEBUG_ASSERT(data_blkaddr == kNullAddr);
+
+  if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
+    return err;
   }
 
   page->WaitOnWriteback();
@@ -178,19 +173,7 @@ zx_status_t Dir::ConvertInlineDir() {
   memcpy(dentry_blk->dentry, InlineDentryArray(ipage), sizeof(DirEntry) * MaxInlineDentry());
   memcpy(dentry_blk->filename, InlineDentryFilenameArray(ipage), MaxInlineDentry() * kNameLen);
 
-#if 0  // porting needed
-//   kunmap(page);
-#endif
   page->SetDirty();
-  // TODO: Use writeback() while keeping the lock
-  if (page->ClearDirtyForIo()) {
-    page->SetWriteback();
-    Vfs()->GetSegmentManager().WriteDataPage(this, page, ipage->NidOfNode(), ofs_in_dnode,
-                                             data_blkaddr, &data_blkaddr);
-    SetDataBlkaddr(*ipage, ofs_in_dnode, data_blkaddr);
-    UpdateExtentCache(data_blkaddr, 0);
-    UpdateVersion();
-  }
   // clear inline dir and flag after data writeback
   ipage->WaitOnWriteback();
   ipage->ZeroUserSegment(InlineDataOffset(), InlineDataOffset() + MaxInlineData());
@@ -208,74 +191,56 @@ zx_status_t Dir::ConvertInlineDir() {
   return ZX_OK;
 }
 
-zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *is_converted) {
-  *is_converted = false;
-
-  f2fs_hash_t name_hash = DentryHash(name);
-
-  LockedPage ipage;
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
-    return err;
-  }
-
-  int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
-  unsigned int bit_pos = RoomInInlineDir(ipage.get(), slots);
-  if (bit_pos >= MaxInlineDentry()) {
-    ipage.reset();
-    ZX_ASSERT(ConvertInlineDir() == ZX_OK);
-
-    *is_converted = true;
-    return ZX_OK;
-  }
-
-  ipage->WaitOnWriteback();
-
-#if 0  // porting needed
-  // down_write(&F2FS_I(inode)->i_sem);
-#endif
-
-  if (zx_status_t err = InitInodeMetadata(vnode); err != ZX_OK) {
-#if 0  // porting needed
-    // up_write(&F2FS_I(inode)->i_sem);
-#endif
-
-    if (TestFlag(InodeInfoFlag::kUpdateDir)) {
-      UpdateInode(ipage.get());
-      ClearFlag(InodeInfoFlag::kUpdateDir);
+zx::status<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
+  {
+    LockedPage ipage;
+    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
+      return zx::error(err);
     }
-    return err;
-  }
 
-  DirEntry *de = &InlineDentryArray(ipage.get())[bit_pos];
-  de->hash_code = name_hash;
-  de->name_len = static_cast<uint16_t>(CpuToLe(name.length()));
-  memcpy(InlineDentryFilenameArray(ipage.get())[bit_pos], name.data(), name.length());
-  de->ino = CpuToLe(vnode->Ino());
-  SetDeType(de, vnode);
-  for (int i = 0; i < slots; ++i) {
-    TestAndSetBit(bit_pos + i, InlineDentryBitmap(ipage.get()));
-  }
+    f2fs_hash_t name_hash = DentryHash(name);
+    int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
+    unsigned int bit_pos = RoomInInlineDir(ipage.get(), slots);
+    if (bit_pos < MaxInlineDentry()) {
+      ipage->WaitOnWriteback();
+
+      if (zx_status_t err = InitInodeMetadata(vnode); err != ZX_OK) {
+        if (ClearFlag(InodeInfoFlag::kUpdateDir)) {
+          UpdateInode(ipage.get());
+        }
+        return zx::error(err);
+      }
+
+      DirEntry *de = &InlineDentryArray(ipage.get())[bit_pos];
+      de->hash_code = name_hash;
+      de->name_len = static_cast<uint16_t>(CpuToLe(name.length()));
+      memcpy(InlineDentryFilenameArray(ipage.get())[bit_pos], name.data(), name.length());
+      de->ino = CpuToLe(vnode->Ino());
+      SetDeType(de, vnode);
+      for (int i = 0; i < slots; ++i) {
+        TestAndSetBit(bit_pos + i, InlineDentryBitmap(ipage.get()));
+      }
 
 #ifdef __Fuchsia__
-  if (de != nullptr) {
-    Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
-  }
+      if (de != nullptr) {
+        Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
+      }
 #endif  // __Fuchsia__
 
-  ipage->SetDirty();
-  UpdateParentMetadata(vnode, 0);
-  vnode->WriteInode();
-  UpdateInode(ipage.get());
+      ipage->SetDirty();
+      UpdateParentMetadata(vnode, 0);
+      vnode->WriteInode();
+      UpdateInode(ipage.get());
 
-#if 0  // porting needed
-  // up_write(&F2FS_I(inode)->i_sem);
-#endif
-
-  if (TestFlag(InodeInfoFlag::kUpdateDir)) {
-    ClearFlag(InodeInfoFlag::kUpdateDir);
+      ClearFlag(InodeInfoFlag::kUpdateDir);
+      return zx::ok(false);
+    }
   }
 
-  return ZX_OK;
+  if (auto ret = ConvertInlineDir(); ret != ZX_OK) {
+    return zx::error(ret);
+  }
+  return zx::ok(true);
 }
 
 void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
@@ -453,10 +418,10 @@ zx_status_t File::ConvertInlineData() {
 
   NodePage *ipage = &dnode_page.GetPage<NodePage>();
   block_t data_blkaddr = DatablockAddr(ipage, ofs_in_dnode);
-  if (data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
-      return err;
-    }
+  ZX_DEBUG_ASSERT(data_blkaddr == kNullAddr);
+
+  if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
+    return err;
   }
 
   page->WaitOnWriteback();
