@@ -58,6 +58,8 @@ test("shtv3-test-bin") {
   deps = [
     ":common",
     "//src/devices/i2c/testing/fake-i2c",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 

@@ -4,6 +4,8 @@
 
 #include "shtv3.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake-i2c/fake-i2c.h>
 
 #include <zxtest/zxtest.h>
@@ -67,7 +69,15 @@ TEST(Shtv3Test, ReadTemperature) {
   FakeShtv3Device fake_i2c_;
   EXPECT_EQ(fake_i2c_.state(), FakeShtv3Device::kNeedReset);
 
-  Shtv3Device dut(nullptr, fake_i2c_.GetProto());
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &fake_i2c_);
+  EXPECT_OK(loop.StartThread());
+
+  Shtv3Device dut(nullptr, std::move(endpoints->client));
   EXPECT_OK(dut.Init());
   EXPECT_EQ(fake_i2c_.state(), FakeShtv3Device::kIdle);
 
