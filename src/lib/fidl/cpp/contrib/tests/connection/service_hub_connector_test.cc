@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fidl/llcpp/contrib/connection/service_hub_connector.h"
+#include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 
 #include <fidl/test.protocol/cpp/fidl.h>
 #include <lib/service/llcpp/service.h>

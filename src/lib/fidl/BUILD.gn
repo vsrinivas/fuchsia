@@ -7,9 +7,9 @@ group("tests") {
 
   deps = [
     "c:tests",
+    "cpp/contrib:tests",
     "cpp/tests",
     "dart/gidl:tests",
-    "llcpp/contrib:tests",
     "llcpp/tests",
     "rust:tests",
   ]

@@ -7,7 +7,7 @@
 
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "fidl/fuchsia.metrics/cpp/fidl.h"
-#include "src/lib/fidl/llcpp/contrib/connection/service_hub_connector.h"
+#include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 #include "src/ui/scenic/lib/utils/metrics.h"
 

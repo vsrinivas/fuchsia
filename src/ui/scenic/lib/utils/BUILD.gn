@@ -30,7 +30,7 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/lib/fidl/llcpp/contrib/connection:service_hub_connector",
+    "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry_cc",
     "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",

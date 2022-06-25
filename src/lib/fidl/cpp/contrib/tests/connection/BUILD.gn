@@ -18,7 +18,7 @@ test("service_hub_connector_tests_bin") {
   deps = [
     ":test.protocol_cpp",
     "//sdk/lib/sys/component/llcpp",
-    "//src/lib/fidl/llcpp/contrib/connection:service_hub_connector",
+    "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
@@ -32,7 +32,7 @@ test("service_reconnector_tests_bin") {
   deps = [
     ":test.protocol_cpp",
     "//sdk/lib/sys/component/llcpp",
-    "//src/lib/fidl/llcpp/contrib/connection:service_reconnector",
+    "//src/lib/fidl/cpp/contrib/connection:service_reconnector",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",

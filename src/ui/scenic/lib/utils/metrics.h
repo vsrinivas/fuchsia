@@ -6,7 +6,7 @@
 #define SRC_UI_SCENIC_LIB_UTILS_METRICS_H_
 
 #include "fidl/fuchsia.metrics/cpp/natural_types.h"
-#include "src/lib/fidl/llcpp/contrib/connection/service_hub_connector.h"
+#include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 
 namespace metrics {

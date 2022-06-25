@@ -20,7 +20,7 @@
 #include <utility>
 
 #include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/fidl/llcpp/contrib/connection/service_reconnector.h"
+#include "src/lib/fidl/cpp/contrib/connection/service_reconnector.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace fidl::contrib {
