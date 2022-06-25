@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/64360def95659c24536158d85c8f1a2654c5be05/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a479927186409cc1bcce82c0e023676cd9744f1a/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/64360def95659c24536158d85c8f1a2654c5be05/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a479927186409cc1bcce82c0e023676cd9744f1a/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -216,6 +216,15 @@ From //out/not-default/args.gn:10
 
 From //BUILD.gn:46
 
+### base_resolver_enable_subpackages
+Whether to allow base-resolver to resolve subpackages.
+TODO(fxbug.dev/102652): This configuration will be removed when subpackages
+is generally available.
+
+**Current value (from the default):** `false`
+
+From //build/security.gni:156
+
 ### basic_env_names
 The list of environment names to include in "basic_envs".
 
@@ -344,7 +353,7 @@ From //build/images/fvm.gni:54
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/board/drivers/acpi-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/acpi-arm64", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:21
 
@@ -527,7 +536,7 @@ From //build/board.gni:21
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/board/drivers/acpi-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/acpi-arm64", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:25
 
@@ -583,7 +592,7 @@ From //build/board.gni:72
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/board/drivers/acpi-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/acpi-arm64", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:23
 
@@ -4003,7 +4012,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"7xYNLplFONjZu36Gyvp0FYUX3rmyKkMqY8b_Hb4YpNYC"`
+**Current value (from the default):** `"lEoZLfP0meAggQFcXgqpLlmhX43Txz-JzLwgi3KRXyMC"`
 
 From //build/rust/config.gni:32
 
@@ -4575,6 +4584,15 @@ From //out/not-default/args.gn:13
 
 From //BUILD.gn:64
 
+### universe_resolver_enable_subpackages
+Whether to allow universe-resolver to resolve subpackages.
+TODO(fxbug.dev/102652): This configuration will be removed when subpackages
+is generally available.
+
+**Current value (from the default):** `false`
+
+From //build/security.gni:161
+
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
 If no list is provided, all built kernels are included. The names in the
@@ -4702,6 +4720,15 @@ defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
 **Current value (from the default):** `false`
 
 From //src/lib/ui/input-synthesis/BUILD.gn:14
+
+### use_netstack3
+DO NOT SET THIS IN A PRODUCT DEFINITION!!  FOR NETSTACK DEVELOPER USE ONLY
+TODO(https://fxbug.dev/85450) - Convert this to a platform configuration
+option in Product Assembly
+
+**Current value (from the default):** `false`
+
+From //src/connectivity/network/BUILD.gn:12
 
 ### use_null_vulkan_on_host
 TODO(liyl): Currently non-x64 platforms don't have Vulkan support,
