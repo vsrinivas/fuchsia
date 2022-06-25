@@ -18,6 +18,7 @@ use {
     log::*,
     std::collections::HashMap,
     thiserror::Error,
+    universe_resolver_config::Config,
 };
 
 enum IncomingService {
@@ -27,6 +28,12 @@ enum IncomingService {
 #[fuchsia::main]
 async fn main() -> anyhow::Result<()> {
     info!("started");
+
+    // Record configuration to inspect
+    let config = Config::take_from_startup_handle();
+    let inspector = fuchsia_inspect::component::inspector();
+    inspector.root().record_child("config", |config_node| config.record_inspect(config_node));
+
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingService::Resolver);
 
@@ -35,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
     service_fs
         .for_each_concurrent(None, |request| async {
             if let Err(err) = match request {
-                IncomingService::Resolver(stream) => serve(stream).await,
+                IncomingService::Resolver(stream) => serve(stream, &config).await,
             } {
                 error!("failed to serve resolve request: {:#}", err);
             }
@@ -45,7 +52,10 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result<()> {
+async fn serve(
+    mut stream: fresolution::ResolverRequestStream,
+    config: &Config,
+) -> anyhow::Result<()> {
     let package_resolver = connect_to_protocol::<PackageResolverMarker>()
         .context("failed to connect to PackageResolver service")?;
     while let Some(request) =
@@ -72,20 +82,31 @@ async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result
                 context,
                 responder,
             } => {
-                let mut result =
-                    resolve_component_with_context(&component_url, &context, &package_resolver)
-                        .await
-                        .map_err(|err| {
-                            let fidl_err = (&err).into();
-                            warn!(
-                                "failed to resolve component URL {} with context {:?}: {:#}",
-                                component_url,
-                                context,
-                                anyhow!(err)
-                            );
-                            fidl_err
-                        });
-                responder.send(&mut result).context("failed sending response")?;
+                if config.enable_subpackages {
+                    let mut result =
+                        resolve_component_with_context(&component_url, &context, &package_resolver)
+                            .await
+                            .map_err(|err| {
+                                let fidl_err = (&err).into();
+                                warn!(
+                                    "failed to resolve component URL {} with context {:?}: {:#}",
+                                    component_url,
+                                    context,
+                                    anyhow!(err)
+                                );
+                                fidl_err
+                            });
+                    responder.send(&mut result).context("failed sending response")?;
+                } else {
+                    error!(
+                        "universe-resolver ResolveWithContext is disabled. Config value `enable_subpackages` is false. Cannot resolve component URL {:?} with context {:?}",
+                        component_url,
+                        context
+                    );
+                    responder
+                        .send(&mut Err(fresolution::ResolverError::Internal))
+                        .context("failed sending response")?;
+                }
             }
         }
     }
@@ -247,24 +268,20 @@ mod transitional {
                 return Ok(Err(fidl_fuchsia_pkg::ResolveError::Internal));
             }
         };
-        // TODO(fxbug.dev/100060):
-        // This URL format (containing only the package hash with no absolute
-        // package name) is a placeholder and not expected to actually be
-        // accepted by the package resolver. We can add the package name, but,
-        // but that would mean we would need to be able to get the package name
-        // from the "subpackages" meta file, which is NOT part of the current
-        // RFC spec. (The subpackage name does not need to match the absolute
-        // package name. It's a parent package-specific internal name.). So
-        // there are three choices:
-        //   1. Leave it as-is and don't expect universe resolver to work until
-        //      either option 2 or 3 is done. (This is what I'm doing for now,
-        //      until we decide if we have to do 2 or can go directly to 3.)
-        //   2. Add the absolute package name to the subpackages file format
-        //      (for now), and to the package resolver URL below.
-        //   3. Implement package resolver's "ResolveWithContext()" and move the
-        //      logic for looking up subpackages to package resolver instead,
-        //      where it actually belongs (according to the RFC).
-        let pinned_subpackage_url = format!("{}/?hash={}", repo, hash);
+
+        // TODO(fxbug.dev/100060): When package resolver implements
+        // ResolveWithContext, remove the `pinned_subpackage_url` (an absolute
+        // package URL) and pass the relative subpackage URL (without repo,
+        // and without hash) to ResolveWithContext, along with the given
+        // context.
+        //
+        // Until then, PackageResolver::Resolve() requires an absolute URL, and
+        // the path must be the actual package name. The actual package name
+        // is not known, so the only way this workaround works is by ensuring
+        // the subpackage name equals the original package name (by not renaming
+        // it in the `subpackages` declaration in the build files).
+        let pinned_subpackage_url = format!("{}/{}?hash={}", repo, package_url.as_ref(), hash);
+
         if let Err(err) = package_resolver.resolve(&pinned_subpackage_url, dir_server_end).await {
             return Err(err);
         }
@@ -788,7 +805,7 @@ mod tests {
             subpackage_name.to_owned() + subpackaged_component_fragment;
         let subpackage_hash = "facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface";
         let subpackage_hash_query_url =
-            format!("fuchsia-pkg://fuchsia.com/?hash={}", subpackage_hash);
+            format!("fuchsia-pkg://fuchsia.com/my_subpackage?hash={}", subpackage_hash);
         let subpackages = MetaSubpackages::from_iter(vec![(
             RelativePackageUrl::parse(subpackage_name).unwrap(),
             Hash::from_str(subpackage_hash).unwrap(),

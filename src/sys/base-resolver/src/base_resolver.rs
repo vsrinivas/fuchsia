@@ -4,6 +4,7 @@
 
 use {
     anyhow::{self, Context},
+    base_resolver_config::Config,
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_resolution::{
@@ -25,6 +26,11 @@ use {
 pub(crate) async fn main() -> anyhow::Result<()> {
     info!("started");
 
+    // Record configuration to inspect
+    let config = Config::take_from_startup_handle();
+    let inspector = fuchsia_inspect::component::inspector();
+    inspector.root().record_child("config", |config_node| config.record_inspect(config_node));
+
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(Services::BaseResolver);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
@@ -32,7 +38,7 @@ pub(crate) async fn main() -> anyhow::Result<()> {
         .for_each_concurrent(None, |request| async {
             match request {
                 Services::BaseResolver(stream) => {
-                    serve(stream)
+                    serve(stream, &config)
                         .unwrap_or_else(|e| {
                             error!("failed to serve base resolver request: {:#}", e)
                         })
@@ -49,7 +55,7 @@ enum Services {
     BaseResolver(ResolverRequestStream),
 }
 
-async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
+async fn serve(mut stream: ResolverRequestStream, config: &Config) -> anyhow::Result<()> {
     let pkg_cache =
         connect_to_protocol::<PackageCacheMarker>().context("error connecting to package cache")?;
     let base_package_index = BasePackageIndex::from_proxy(&pkg_cache)
@@ -78,24 +84,35 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
                 responder.send(&mut result).context("failed sending response")?;
             }
             ResolverRequest::ResolveWithContext { component_url, context, responder } => {
-                let mut result = resolve_component_with_context(
-                    &component_url,
-                    &context,
-                    &packages_dir,
-                    &base_package_index,
-                )
-                .await
-                .map_err(|err| {
-                    let fidl_err = (&err).into();
-                    error!(
-                        "failed to resolve component URL {} with context {:?}: {:#}",
+                if config.enable_subpackages {
+                    let mut result = resolve_component_with_context(
                         &component_url,
                         &context,
-                        anyhow::anyhow!(err)
+                        &packages_dir,
+                        &base_package_index,
+                    )
+                    .await
+                    .map_err(|err| {
+                        let fidl_err = (&err).into();
+                        error!(
+                            "failed to resolve component URL {} with context {:?}: {:#}",
+                            &component_url,
+                            &context,
+                            anyhow::anyhow!(err)
+                        );
+                        fidl_err
+                    });
+                    responder.send(&mut result).context("failed sending response")?;
+                } else {
+                    error!(
+                        "base-resolver ResolveWithContext is disabled. Config value `enable_subpackages` is false. Cannot resolve component URL {:?} with context {:?}",
+                        component_url,
+                        context
                     );
-                    fidl_err
-                });
-                responder.send(&mut result).context("failed sending response")?;
+                    responder
+                        .send(&mut Err(fresolution::ResolverError::Internal))
+                        .context("failed sending response")?;
+                }
             }
         };
     }

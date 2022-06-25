@@ -1,0 +1,86 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/security.gni")
+
+group("tests") {
+  testonly = true
+
+  # This subpackages example will only work if subpackage resolution is enabled
+  # in the universe-resolver.
+  if (universe_resolver_enable_subpackages) {
+    deps = [ ":package-with-subs" ]
+  }
+}
+
+rustc_test("bin") {
+  name = "parent_realm"
+  edition = "2021"
+
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("parent-component") {
+  testonly = true
+  manifest = "meta/parent_realm.cml"
+  component_name = "parent-realm"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("echo_client_component") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cml"
+  deps = [ "//examples/components/routing/rust/echo_client" ]
+}
+
+fuchsia_component("echo_server_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ "//examples/components/routing/rust/echo_server" ]
+}
+
+fuchsia_package("echo_client_package") {
+  package_name = "echo_client"
+  deps = [ ":echo_client_component" ]
+}
+
+fuchsia_package("echo_server_package") {
+  deps = [ ":echo_server_component" ]
+}
+
+# Run with `fx test subpackage-examples`.
+fuchsia_test_package("package-with-subs") {
+  package_name = "subpackage-examples"
+  test_components = [ ":parent-component" ]
+
+  subpackages = [
+    {
+      package = ":echo_client_package"
+    },
+    {
+      # TODO(fxbug.dev/100060): It should be possible to rename the subpackage, by
+      # uncommenting the next line, but universe-resolver needs to be updated first,
+      # to resolve packages only by package hash (blob id). Until then, the subpackage
+      # name is used to fill in the package name, so they must match.
+      #
+      #     name = "my-echo-server"
+      package = ":echo_server_package"
+    },
+  ]
+}

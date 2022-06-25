@@ -16,11 +16,12 @@ rustc_library("cm_fidl_validator") {
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:url",
   ]
   test_deps = [
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:test-case",

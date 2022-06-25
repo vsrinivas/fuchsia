@@ -70,6 +70,12 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: bool
 #     Default: true
 #
+#   subpackages (optional)
+#      A list of subpackages defined by scoped variables `package` (a
+#     `fuchsia_package()` target) and an optional `name`. See
+#     `fuchsia_package()` for more details and an example.
+#     Type: list of scopes
+#
 #   data_deps
 #   deps
 #   visibility
@@ -171,6 +177,7 @@ template("fuchsia_test_package") {
                                "deps",
                                "disable_elf_binaries_checks",
                                "metadata",
+                               "subpackages",
                                "visibility",
                              ])
       package_name = package_name

@@ -16,8 +16,11 @@ import("//tools/configc/build/config.gni")
 # Fuchsia packages are a collection of any number of files (or resources), each
 # with a unique path that is relative to the package's root.
 # Package targets collect resources via their dependencies. These dependencies
-# are typically fuchsia_component() targets, which provide their component
-# manifest and other files that the component needs (such as an executable).
+# are typically either:
+#
+#   * `fuchsia_component()` targets, which provide their component manifest and
+#     other files that the component needs (such as an executable)
+#   * other `fuchsia_package()` targets, declared as `subpackages`
 #
 # Packages can be defined as a collection of pairs each representing a file in
 # the package. Each pair consists of the path in the package that is assigned
@@ -41,11 +44,21 @@ import("//tools/configc/build/config.gni")
 # See: https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name
 #
 # It's recommended for a package to depend on one or more `fuchsia_component()`
-# targets. Typically no other dependencies are required.
+# targets, and zero or more `subpackages`. Typically no other dependencies are
+# required.
 #
 # Example:
 # ```
 # fuchsia_package("my-package") {
+#   subpackages = [
+#     {
+#       package = ":some_package"
+#     },
+#     {
+#       name = "renamed-subpackage"
+#       package = ":another_package"
+#     }
+#   ]
 #   deps = [
 #     ":first_component",
 #     ":second_component",
@@ -98,6 +111,16 @@ import("//tools/configc/build/config.gni")
 #     Type: string
 #     Default: fuchsia.com
 #
+#   subpackages (optional)
+#     A list of subpackages defined by scoped variables `package` and an
+#     optional `name`. If `name` is omitted, the subpackage target's package
+#     name is used by default. The generated package will include a
+#     `subpackages` meta file that declares dependencies on the listed packages,
+#     using the current package hash of each package. All included `package`
+#     entries will be added as `deps` of the generated meta file, and do not
+#     need to be listed as additional `deps` of the `fuchsia_package` target.
+#     Type: list of scopes
+#
 #   data_deps
 #   deps
 #   testonly
@@ -126,6 +149,16 @@ template("fuchsia_package") {
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
       package_name = package_name
+    }
+
+    if (defined(invoker.subpackages)) {
+      # Generate the "meta/fuchsia.pkg/subpackages" file
+      meta_subpackages_target = "${target_name}_meta_subpackages"
+      generate_meta_subpackages(meta_subpackages_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        visibility = [ ":*" ]
+        subpackages = invoker.subpackages
+      }
     }
 
     # Generate package manifest
@@ -191,6 +224,9 @@ template("fuchsia_package") {
                              ])
       package_out_dir = _files.package_out_dir
       manifest = ":$package_manifest_target"
+      if (defined(meta_subpackages_target)) {
+        meta_subpackages = ":$meta_subpackages_target"
+      }
       metadata = {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")

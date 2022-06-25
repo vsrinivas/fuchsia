@@ -22,5 +22,6 @@ group("tests") {
     "realm_builder:tests",
     "routing:tests",
     "services:tests",
+    "subpackages:tests",
   ]
 }

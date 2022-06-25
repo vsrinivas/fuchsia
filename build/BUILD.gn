@@ -360,3 +360,9 @@ group("deprecated_zx_wrapper_allowlist") {
 group("output_dir_leaking_allowlist") {
   visibility = [ "*" ]
 }
+
+# TODO(fxbug.dev/102652): remove this allow list (and allow anyone to use
+# subpackages) when Fuchsia makes subpackages generally available.
+group("declare_subpackages_allowlist") {
+  visibility = [ "//examples/components/subpackages:*" ]
+}

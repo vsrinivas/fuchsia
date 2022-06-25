@@ -19,14 +19,15 @@ import (
 
 // Config contains global build configuration for other build commands
 type Config struct {
-	OutputDir      string
-	ManifestPath   string
-	KeyPath        string
-	TempDir        string
-	PkgName        string
-	PkgRepository  string
-	PkgVersion     string
-	PkgABIRevision uint64
+	OutputDir       string
+	ManifestPath    string
+	KeyPath         string
+	TempDir         string
+	PkgName         string
+	PkgRepository   string
+	PkgVersion      string
+	PkgABIRevision  uint64
+	SubpackagesPath string
 
 	// the manifest is memoized lazily, on the first call to Manifest()
 	manifest *Manifest
@@ -35,14 +36,15 @@ type Config struct {
 // NewConfig initializes a new configuration with conventional defaults
 func NewConfig() *Config {
 	cfg := &Config{
-		OutputDir:      ".",
-		ManifestPath:   ".",
-		KeyPath:        "",
-		TempDir:        os.TempDir(),
-		PkgName:        "",
-		PkgRepository:  "",
-		PkgVersion:     "0",
-		PkgABIRevision: 0,
+		OutputDir:       ".",
+		ManifestPath:    ".",
+		KeyPath:         "",
+		TempDir:         os.TempDir(),
+		PkgName:         "",
+		PkgRepository:   "",
+		PkgVersion:      "0",
+		SubpackagesPath: "",
+		PkgABIRevision:  0,
 	}
 	return cfg
 }
@@ -56,14 +58,15 @@ func TestConfig() *Config {
 		panic(err)
 	}
 	cfg := &Config{
-		OutputDir:      filepath.Join(d, "output"),
-		ManifestPath:   filepath.Join(d, "manifest"),
-		KeyPath:        filepath.Join(d, "key"),
-		TempDir:        filepath.Join(d, "tmp"),
-		PkgName:        "testpackage",
-		PkgRepository:  "testrepository.com",
-		PkgVersion:     "0",
-		PkgABIRevision: 0,
+		OutputDir:       filepath.Join(d, "output"),
+		ManifestPath:    filepath.Join(d, "manifest"),
+		KeyPath:         filepath.Join(d, "key"),
+		TempDir:         filepath.Join(d, "tmp"),
+		PkgName:         "testpackage",
+		PkgRepository:   "testrepository.com",
+		PkgVersion:      "0",
+		SubpackagesPath: "",
+		PkgABIRevision:  0,
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
 		os.MkdirAll(d, os.ModePerm)
@@ -79,6 +82,7 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
 	fs.StringVar(&c.PkgRepository, "r", c.PkgRepository, "repository of the packages")
+	fs.StringVar(&c.SubpackagesPath, "subpackages", c.SubpackagesPath, "metafile of subpackages")
 	fs.Func("api-level", "package API level", func(value string) error {
 		if c.PkgABIRevision != 0 {
 			return fmt.Errorf("cannot specify both --api-level and --abi-revision")

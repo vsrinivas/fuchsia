@@ -126,3 +126,62 @@ template("generate_meta_package") {
     outputs = [ "meta/package" ]
   }
 }
+
+# Generate the `declared_subpackages` file, which will be passed to `pm build`
+# with the optional flag `-subpackages <file>`. `pm build` will parse this file
+# and generate a `meta/fuchsia.pkg/subpackages` file.
+#
+# Each subpackage entry includes either an explicit name or a path to a file
+# containing the default package name for the subpackage, and a path to the
+# subpackage's merkle.
+#
+# Parameters
+#
+#   subpackages (required)
+#   testonly
+#   visibility
+template("generate_meta_subpackages") {
+  rebased_subpackages = []
+  subpackage_targets = []
+  foreach(subpackage, invoker.subpackages) {
+    # name = "" # subpackage name, if explicitly provided
+    # meta_package_file = "" # to retrieve the package name, if no subpackage name
+    if (defined(subpackage.name)) {
+      name = subpackage.name
+    } else {
+      package_outputs = []
+      package_outputs = get_target_outputs(subpackage.package + "_meta_package")
+      meta_package_file = rebase_path(package_outputs[0], root_build_dir)
+    }
+    merkle_file = rebase_path(
+            get_label_info(subpackage.package, "target_out_dir") + "/" +
+                get_label_info(subpackage.package, "name") + "/meta.far.merkle",
+            root_build_dir)
+
+    rebased_subpackages += [
+      {
+        if (defined(name)) {
+          name = name
+        } else {
+          meta_package_file =
+              meta_package_file  # to get the subpackage package name
+        }
+        merkle_file = merkle_file  # to get the subpackage package hash
+      },
+    ]
+    subpackage_targets += [ subpackage.package ]
+  }
+
+  generated_resource(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    contents = rebased_subpackages
+    outputs = [ "target_subpackages.json" ]
+    output_conversion = "json"
+
+    deps = subpackage_targets
+  }
+}

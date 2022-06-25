@@ -129,5 +129,6 @@ fuchsia_test_package("base-resolver-tests") {
     ":mock-pkg-cache-component",
     "//src/sys/base-resolver:base-resolver-component",
     "//src/sys/base-resolver:pkg-cache-resolver-component",
+    "//src/sys/base-resolver:values_from_gn",
   ]
 }

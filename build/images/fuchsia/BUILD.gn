@@ -666,30 +666,23 @@ if (is_fuchsia) {
   # configuration files for sensitive components are verified using the
   # strategy below.
   action("verify_base_resolver_config") {
-    # TODO(fxbug.dev/102968): Uncomment in upcoming fxrev.dev/687102.
-    # _cvf_eng_golden =
-    #     "//src/security/policy/build/base_resolver_golden_eng.cvf"
-
+    _cvf_eng_golden = "//src/security/policy/build/base_resolver_golden_eng.cvf"
     _cvf_non_eng_golden =
         "//src/security/policy/build/base_resolver_golden_non_eng.cvf"
 
     # Follow output conventions defined by cvf template in
     # //tools/configc/build/config.gni.
-    # TODO(fxbug.dev/102968): Uncomment in upcoming fxrev.dev/687102.
-    # _cvf_target = "//src/sys/base-resolver:values_from_gn"
-    # _cvf_output_name = "values_from_gn"
-    # _cvf_out_dir = get_label_info(_cvf_target, "target_out_dir")
-    # _cvf_output = "${_cvf_out_dir}/${_cvf_output_name}.cvf"
+    _cvf_target = "//src/sys/base-resolver:values_from_gn"
+    _cvf_output_name = "values_from_gn"
+    _cvf_out_dir = get_label_info(_cvf_target, "target_out_dir")
+    _cvf_output = "${_cvf_out_dir}/${_cvf_output_name}.cvf"
 
     _output = "${target_out_dir}/${target_name}.verified"
 
     script = "//src/security/policy/build/verify_golden_by_build_type.py"
     args = [
       "--eng-golden",
-
-      # TODO(fxbug.dev/102968): Uncomment/swap in upcoming fxrev.dev/687102.
-      # rebase_path(_cvf_eng_golden, root_out_dir),
-      rebase_path(_cvf_non_eng_golden, root_out_dir),
+      rebase_path(_cvf_eng_golden, root_out_dir),
 
       "--non-eng-golden",
       rebase_path(_cvf_non_eng_golden, root_out_dir),
@@ -698,29 +691,21 @@ if (is_fuchsia) {
       rebase_path(fuchsia_base.product_assembly_config_file, root_out_dir),
 
       "--input",
-
-      # TODO(fxbug.dev/102968): Uncomment/swap in upcoming fxrev.dev/687102.
-      # rebase_path(_cvf_output, root_out_dir),
-      rebase_path(_cvf_non_eng_golden, root_out_dir),
+      rebase_path(_cvf_output, root_out_dir),
 
       "--output",
       rebase_path(_output, root_out_dir),
     ]
 
     inputs = [
-      # TODO(fxbug.dev/102968): Uncomment in upcoming fxrev.dev/687102.
-      # _cvf_eng_golden,
-      # _cvf_output,
-
+      _cvf_eng_golden,
       _cvf_non_eng_golden,
       fuchsia_base.product_assembly_config_file,
+      _cvf_output,
     ]
     outputs = [ _output ]
 
-    deps = [
-      # TODO(fxbug.dev/102968): Uncomment in upcoming fxrev.dev/687102.
-      # _cvf_target,
-    ]
+    deps = [ _cvf_target ]
     if (defined(fuchsia_base.product_assembly_config_dep)) {
       deps += [ fuchsia_base.product_assembly_config_dep ]
     }

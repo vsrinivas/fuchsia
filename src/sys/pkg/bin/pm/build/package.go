@@ -28,6 +28,19 @@ const abiRevisionKey string = "meta/fuchsia.abi/abi-revision"
 // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
 var InvalidRepositoryCharsPattern = regexp.MustCompile("[^a-z0-9-.]").MatchString
 
+// Build-time information about a subpackage
+type SubpackageInfo struct {
+	Name            *string `json:"name,omitempty"`
+	MetaPackageFile *string `json:"meta_package_file,omitempty"`
+	MerkleFile      string  `json:"merkle_file"`
+}
+
+// subpackages metafile content
+type MetaSubpackages struct {
+	Version     string            `json:"version"`
+	Subpackages map[string]string `json:"subpackages"`
+}
+
 // PackageManifest is the json structure representation of a full package
 // manifest.
 type PackageManifest struct {
@@ -131,6 +144,12 @@ func Update(cfg *Config) error {
 
 	contentsPath := filepath.Join(metadir, "contents")
 	pkgContents := manifest.Content()
+
+	if cfg.SubpackagesPath != "" {
+		if err := writeSubpackagesMeta(cfg, cfg.SubpackagesPath); err != nil {
+			return err
+		}
+	}
 
 	// manifestLines is a channel containing unpacked manifest paths
 	var manifestLines = make(chan struct{ src, dest string }, len(pkgContents))
@@ -296,4 +315,68 @@ func Seal(cfg *Config) (string, error) {
 		return "", err
 	}
 	return cfg.MetaFAR(), archive.Close()
+}
+
+// Read the build-time subpackage data and output files and generate the
+// "subpackages" meta file
+func writeSubpackagesMeta(cfg *Config, subpackagesPath string) error {
+	content, err := ioutil.ReadFile(subpackagesPath)
+	if err != nil {
+		return fmt.Errorf("the -subpackages file (%s) could not be read: %s", subpackagesPath, err)
+	}
+	var subpackages []SubpackageInfo
+	if err := json.Unmarshal(content, &subpackages); err != nil {
+		return fmt.Errorf("the -subpackages file (%s) could not be parsed as JSON: %s", subpackagesPath, err)
+	}
+
+	var meta_subpackages MetaSubpackages
+	meta_subpackages.Version = "1"
+	meta_subpackages.Subpackages = make(map[string]string)
+
+	for _, subpackage := range subpackages {
+		var name *string
+		if subpackage.Name != nil {
+			name = subpackage.Name
+		} else if subpackage.MetaPackageFile == nil {
+			return fmt.Errorf("format error in the -subpackages file (%s): a subpackage entry requires either a 'name' or a 'meta_package_file'", subpackagesPath)
+		} else {
+			content, err := ioutil.ReadFile(*subpackage.MetaPackageFile)
+			if err != nil {
+				return fmt.Errorf("a subpackage meta package file (%s) could not be read: %s", *subpackage.MetaPackageFile, err)
+			}
+			var packageMeta pkg.Package
+			if err := json.Unmarshal(content, &packageMeta); err != nil {
+				return fmt.Errorf("a subpackage meta package file (%s) could not be parsed as JSON: %s", *subpackage.MetaPackageFile, err)
+			}
+			name = &packageMeta.Name
+		}
+		content, err := ioutil.ReadFile(subpackage.MerkleFile)
+		if err != nil {
+			return fmt.Errorf("a subpackage meta package file (%s) could not be read: %s", *subpackage.MetaPackageFile, err)
+		}
+		merkle := string(content)
+		if _, ok := meta_subpackages.Subpackages[*name]; ok {
+			return fmt.Errorf("duplicate entry in the -subpackages file (%s) for name: %s", subpackagesPath, *name)
+		}
+		meta_subpackages.Subpackages[*name] = merkle
+	}
+	{
+		content, err := json.MarshalIndent(meta_subpackages, "", "    ")
+		if err != nil {
+			return err
+		}
+		subpackages_dir := filepath.Join(cfg.OutputDir, "meta", "fuchsia.pkg")
+		os.MkdirAll(subpackages_dir, os.ModePerm)
+		subpackagesFilePath := filepath.Join(subpackages_dir, "subpackages")
+		if err := ioutil.WriteFile(subpackagesFilePath, content, 0644); err != nil {
+			return err
+		}
+
+		manifest, err := cfg.Manifest()
+		if err != nil {
+			return err
+		}
+		manifest.Paths["meta/fuchsia.pkg/subpackages"] = subpackagesFilePath
+	}
+	return nil
 }

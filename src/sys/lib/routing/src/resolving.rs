@@ -117,46 +117,103 @@ impl<'a> From<&'a ComponentResolutionContext> for &'a [u8] {
     }
 }
 
-/// Provides the `ComponentAddress` and context for resolving the child that was
-/// passed to `from_child()` to create this `ResolvedParentComponent`.
+/// Provides the `ComponentAddress` and context for resolving a child or
+/// descendent component.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct ResolvedParentComponent {
-    /// The parent address, needed for relative path URLs (to get the
+struct ResolvedAncestorComponent {
+    /// The component address, needed for relative path URLs (to get the
     /// scheme used to find the required `Resolver`), or for relative resource
     /// URLs (which will clone the parent's address, but replace the resource).
     pub address: ComponentAddress,
-    /// The parent's resolution_context, required for resolving children using
-    /// a relative path component URLs.
+    /// The component's resolution_context, required for resolving descendents
+    /// using a relative path component URLs.
     pub context_to_resolve_children: Option<ComponentResolutionContext>,
 }
 
-impl ResolvedParentComponent {
-    /// Creates a `ResolvedParentComponent` from one of its child components.
-    pub async fn from_child<C: ComponentInstanceInterface>(
+impl ResolvedAncestorComponent {
+    /// Creates a `ResolvedAncestorComponent` from one of its child components.
+    pub async fn direct_parent_of<C: ComponentInstanceInterface>(
         component: &Arc<C>,
     ) -> Result<Self, ResolverError> {
-        if let ExtendedInstanceInterface::Component(parent_component) =
-            component.try_get_parent().map_err(|err| {
-                ResolverError::no_parent_context(anyhow::format_err!(
-                    "component {} at {} has no parent for context: {:?}",
-                    component.url(),
-                    component.abs_moniker(),
-                    err
-                ))
-            })?
-        {
-            let resolved_parent = parent_component.lock_resolved_state().await?;
-            Ok(Self {
-                address: resolved_parent.address(),
-                context_to_resolve_children: resolved_parent.context_to_resolve_children(),
-            })
-        } else {
-            Err(ResolverError::no_parent_context(anyhow::format_err!(
-                "component {} has no parent for context: {}",
-                component.url(),
-                component.abs_moniker()
-            )))
+        let parent_component = get_parent(component).await?;
+        let resolved_parent = parent_component.lock_resolved_state().await?;
+        Ok(Self {
+            address: resolved_parent.address(),
+            context_to_resolve_children: resolved_parent.context_to_resolve_children(),
+        })
+    }
+
+    /// Creates a `ResolvedAncestorComponent` from one of its child components.
+    pub async fn first_packaged_ancestor_of<C: ComponentInstanceInterface>(
+        component: &Arc<C>,
+    ) -> Result<Self, ResolverError> {
+        let mut parent_component = get_parent(component).await?;
+        loop {
+            // Loop until the parent has a valid context_to_resolve_children,
+            // or an error getting the next parent, or its resolved state.
+            {
+                let resolved_parent = parent_component.lock_resolved_state().await?;
+                let address = resolved_parent.address();
+                // TODO(fxbug.dev/102211): change this test to something more
+                // explicit, that is, return the parent's address and context if
+                // the component address is a packaged component (determined in
+                // some way).
+                //
+                // The issue being addressed here is, when resolving a relative
+                // subpackaged component URL, component manager MUST resolve the
+                // component using a "resolution context" _AND_ the resolver
+                // that provided that context. Typically these are provided by
+                // the parent component, but in the case of a RealmBuilder child
+                // component, its parent is the built "realm" (which was
+                // resolved by the realm_builder_resolver, using URL scheme
+                // "realm-builder://"). The child component's URL is supposed to
+                // be relative to the test component (the parent of the realm),
+                // which was probably resolved by the universe-resolver (scheme
+                // "fuchsia-pkg://"). Knowing this expected topology, we can
+                // skip "realm-builder" components when searching for the
+                // required ancestor's URL scheme (to get the right resolver)
+                // and context. This is a brittle workaround that will be
+                // replaced.
+                //
+                // Some alternatives are under discussion, but the leading
+                // candidate, for now, is to allow a resolver to return a flag
+                // (with the resolved Component; perhaps `is_packaged()`) to
+                // indicate that descendents should (if true) use this component
+                // to get scheme and context for resolving relative path URLs
+                // (for example, subpackages). If false, get the parent's parent
+                // and so on.
+                if address.scheme() != "realm-builder" {
+                    return Ok(Self {
+                        address,
+                        context_to_resolve_children: resolved_parent.context_to_resolve_children(),
+                    });
+                }
+            }
+            parent_component = get_parent(&parent_component).await?;
         }
+    }
+}
+
+async fn get_parent<C: ComponentInstanceInterface>(
+    component: &Arc<C>,
+) -> Result<Arc<C>, ResolverError> {
+    if let ExtendedInstanceInterface::Component(parent_component) =
+        component.try_get_parent().map_err(|err| {
+            ResolverError::no_parent_context(anyhow::format_err!(
+                "Component {} ({}) has no parent for context: {:?}.",
+                component.abs_moniker(),
+                component.url(),
+                err,
+            ))
+        })?
+    {
+        Ok(parent_component.clone())
+    } else {
+        Err(ResolverError::no_parent_context(anyhow::format_err!(
+            "Component {} ({}) has no parent for context.",
+            component.abs_moniker(),
+            component.url(),
+        )))
     }
 }
 
@@ -282,7 +339,7 @@ impl ComponentAddress {
         let path = &url.path()[1..]; // skip leading "/"
         let host = url.host_str().ok_or_else(|| {
             ResolverError::malformed_url(anyhow::format_err!(
-                "parsed `host` was invalid (`None`) from: {}",
+                "Parsed `host` was invalid (`None`) from URL '{}'.",
                 component_url
             ))
         })?;
@@ -315,29 +372,33 @@ impl ComponentAddress {
                 component_url
             )));
         }
-        let resolved_parent = ResolvedParentComponent::from_child(component).await?;
         let mut address = if path.is_empty() {
-            // The `component_url` had only a fragment, so the new
-            // address will be the same as it's parent (for example, the
-            // same package), except for its resource.
+            // The `component_url` had only a fragment, so the new address will
+            // be the same as its parent (for example, the same package), except
+            // for its resource.
+            let resolved_parent = ResolvedAncestorComponent::direct_parent_of(component).await?;
             resolved_parent.address.clone_with_new_resource(url.fragment())
         } else {
-            // The `component_url` starts with a relative path (for
-            // example, a subpackage name). Create a `RelativePath`
-            // address, and resolve it using the
-            // `context_to_resolve_children`, from this component's
-            // parent.
-            Self::new_relative_path(
-                path,
-                url.fragment(),
-                resolved_parent.address.scheme(),
-                resolved_parent.context_to_resolve_children.clone().ok_or_else(|| {
+            // The `component_url` starts with a relative path (for example, a
+            // subpackage name). Create a `RelativePath` address, and resolve it
+            // using the `context_to_resolve_children`, from this component's
+            // parent, or the first ancestor that is from a "package". (Note
+            // that Realm Builder realms are synthesized, and not from a
+            // package. A test component using Realm Builder will build a realm
+            // and may add child components using subpackage references. Those
+            // child components should get resolved using the context of the
+            // test package, not the intermediate realm created via
+            // RealmBuilder.)
+            let resolved_ancestor =
+                ResolvedAncestorComponent::first_packaged_ancestor_of(component).await?;
+            let scheme = resolved_ancestor.address.scheme();
+            let context = resolved_ancestor.context_to_resolve_children.clone().ok_or_else(|| {
                     ResolverError::RelativeUrlMissingContext(format!(
-                        "relative path component URL '{}' cannot be resolved because it's parent/ancestor did not provide a resolution context: {:?}",
-                         component_url, resolved_parent.address
+                        "Relative path component URL '{}' cannot be resolved because its ancestor did not provide a resolution context. The ancestor's component address is {:?}.",
+                         component_url, resolved_ancestor.address
                     ))
-                })?,
-            )
+                })?;
+            Self::new_relative_path(path, url.fragment(), scheme, context)
         };
         address.some_original_url = Some(component_url.to_owned());
         Ok(address)
@@ -479,20 +540,20 @@ impl ComponentAddress {
 fn parse_relative_url(component_url: &str) -> Result<Url, ResolverError> {
     match Url::parse(component_url) {
         Ok(_) => Err(ResolverError::malformed_url(anyhow::format_err!(
-            "Error parsing a relative URL given absolute URL: {}",
+            "Error parsing a relative URL given absolute URL '{}'.",
             component_url,
         ))),
         Err(url::ParseError::RelativeUrlWithoutBase) => {
             A_BASE_URL.join(component_url).map_err(|err| {
                 ResolverError::malformed_url(anyhow::format_err!(
-                    "Error parsing relative component URL {}: {:?}",
+                    "Error parsing a relative component URL '{}': {:?}.",
                     component_url,
                     err
                 ))
             })
         }
         Err(err) => Err(ResolverError::malformed_url(anyhow::format_err!(
-            "Unexpected error while parsing component_url {}: {:?}",
+            "Unexpected error while parsing a component URL '{}': {:?}.",
             component_url,
             err,
         ))),

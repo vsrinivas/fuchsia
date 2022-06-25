@@ -123,6 +123,14 @@ template("pm_archive") {
 #   package_out_dir (default: "$target_out_dir/$target_name")
 #     [path] The directory into which package artifacts should be placed.
 #
+#   meta_subpackages (optional)
+#     [label] A generate_meta_subpackages() target defined earlier in the same
+#     file. The file contains a JSON list of subpackage metadata, for the
+#     subpackages declared for the target package. Each subpackage entry
+#     includes either an explicit name or a path to a file containing the
+#     default package name for the subpackage, and a path to the subpackage's
+#     merkle.
+#
 #   deps (optional)
 #   test (optional)
 #   visibility (optional)
@@ -180,6 +188,18 @@ template("pm_build") {
     pkg_manifest_file = pkg_manifest_outputs[0]
     deps += [ invoker.manifest ]
     inputs = [ pkg_manifest_file ]
+    if (defined(invoker.meta_subpackages)) {
+      meta_subpackages_outputs = get_target_outputs(invoker.meta_subpackages)
+      meta_subpackages_file = meta_subpackages_outputs[0]
+      deps += [
+        "//build:declare_subpackages_allowlist",
+        invoker.meta_subpackages,
+
+        # Package targets must be in the allowlist to use subpackages
+      ]
+      inputs += [ meta_subpackages_file ]
+    }
+
     depfile = "$package_out_dir/meta.far.d"
 
     metadata = {
@@ -187,6 +207,9 @@ template("pm_build") {
         forward_variables_from(invoker.metadata, "*")
       }
       package_barrier = [ ":$metadata_target_name" ]
+      if (defined(invoker.meta_subpackages)) {
+        package_barrier += [ invoker.meta_subpackages ]
+      }
     }
     deps += [ ":$metadata_target_name" ]
 
@@ -221,6 +244,16 @@ template("pm_build") {
       repository,
       "-api-level",
       "$package_api_level",
+    ]
+
+    if (defined(meta_subpackages_file)) {
+      args += [
+        "-subpackages",
+        rebase_path(meta_subpackages_file, root_build_dir),
+      ]
+    }
+
+    args += [
       "build",
       "-output-package-manifest",
       rebase_path(pkg_output_manifest, root_build_dir),

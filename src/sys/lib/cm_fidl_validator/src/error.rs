@@ -22,6 +22,9 @@ pub enum Error {
     #[error("Field `{}` for {} is invalid.",  .0.field, .0.decl)]
     InvalidField(DeclField),
 
+    #[error("Field {} for {} is invalid. {}.", .0.field, .0.decl, .1)]
+    InvalidUrl(DeclField, String),
+
     #[error("Field `{}` for {} is too long. The field must be up to {1} characters.", .0.field, .0.decl)]
     FieldTooLong(DeclField, usize),
 
@@ -99,6 +102,17 @@ impl Error {
 
     pub fn invalid_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
         Error::InvalidField(DeclField { decl: decl_type.into(), field: keyword.into() })
+    }
+
+    pub fn invalid_url(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        message: &str,
+    ) -> Self {
+        Error::InvalidUrl(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            message.into(),
+        )
     }
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {

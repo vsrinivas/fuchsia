@@ -147,11 +147,11 @@ impl Registry {
                     responder.send(&mut self.resolve(&component_url).await)?;
                 }
                 fresolution::ResolverRequest::ResolveWithContext {
-                    component_url: _,
-                    context: _,
+                    component_url,
+                    context,
                     responder,
                 } => {
-                    warn!("The RealmBuilder resolver does not resolve relative path component URLs with a context.");
+                    warn!("The RealmBuilder resolver does not resolve relative path component URLs with a context. Cannot resolve {} with context {:?}.", component_url, context);
                     responder.send(&mut Err(fresolution::ResolverError::InvalidArgs))?;
                 }
             }

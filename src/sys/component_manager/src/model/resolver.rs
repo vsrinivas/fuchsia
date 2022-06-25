@@ -1055,7 +1055,7 @@ mod tests {
     async fn relative_resources_and_paths_to_realm_builder() -> Result<(), Error> {
         let expected_urls_and_contexts = vec![
             ResolveState::new(
-                "realm-builder://fuchsia.com/my-realm",
+                "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
                 Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
             ),
@@ -1083,8 +1083,15 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
 
         resolver.register(
-            "realm-builder".to_string(),
+            "fuchsia-pkg".to_string(),
             Box::new(MockMultipleOkResolver::new(expected_urls_and_contexts.clone())),
+        );
+        resolver.register(
+            "realm-builder".to_string(),
+            Box::new(MockOkResolver {
+                expected_url: "realm-builder://0/my-realm".to_string(),
+                resolved_url: "realm-builder://0/my-realm".to_string(),
+            }),
         );
 
         let top_instance = Arc::new(ComponentManagerInstance::new(vec![], vec![]));
@@ -1094,17 +1101,18 @@ mod tests {
             resolver,
             DebugRegistry::default(),
         );
+
         let root = ComponentInstance::new_root(
             environment,
             Weak::new(),
             Weak::new(),
-            "realm-builder://fuchsia.com/my-realm".to_string(),
+            "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm".to_string(),
         );
 
-        let child_one = ComponentInstance::new(
+        let realm = ComponentInstance::new(
             root.environment.clone(),
-            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
-            "my-subpackage1#meta/sub1.cm".to_string(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/realm:0/child:0")?,
+            "realm-builder://0/my-realm".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
@@ -1114,9 +1122,22 @@ mod tests {
             false,
         );
 
+        let child_one = ComponentInstance::new(
+            root.environment.clone(),
+            InstancedAbsoluteMoniker::parse_str("/root:0/realm:0/child:0")?,
+            "my-subpackage1#meta/sub1.cm".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(&realm)),
+            Arc::new(Hooks::new()),
+            None,
+            false,
+        );
+
         let child_two = ComponentInstance::new(
             root.environment.clone(),
-            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/realm:0/child:0/child2:0")?,
             "#meta/sub1-child.cm".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -1129,7 +1150,7 @@ mod tests {
 
         let child_three = ComponentInstance::new(
             root.environment.clone(),
-            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0/child3:0")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/realm:0/child:0/child2:0/child3:0")?,
             "my-subpackage2#meta/sub2.cm".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -1142,7 +1163,9 @@ mod tests {
 
         let child_four = ComponentInstance::new(
             root.environment.clone(),
-            InstancedAbsoluteMoniker::parse_str("/root:0/child:0/child2:0/child3:0/child4:0")?,
+            InstancedAbsoluteMoniker::parse_str(
+                "/root:0/realm:0/child:0/child2:0/child3:0/child4:0",
+            )?,
             "#meta/sub2-child.cm".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
