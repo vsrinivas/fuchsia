@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/zx/interrupt.h>
 
@@ -35,11 +34,8 @@ namespace fake_i2c {
 //   }
 // }
 //
-class FakeI2c : public ddk::I2cProtocol<FakeI2c>,
-                public fidl::WireServer<fuchsia_hardware_i2c::Device> {
+class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
-  FakeI2c() : proto_({&i2c_protocol_ops_, this}) {}
-
   // This function takes the |op_list| and serialies the write data so it is easier to use
   // in a fake. This will call |Transact| with the serialzed data.
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
@@ -92,8 +88,6 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c>,
   }
 
   void SetInterrupt(zx::interrupt irq) { irq_ = std::move(irq); }
-
-  i2c_protocol_t* GetProto() { return &proto_; }
 
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
     // Serialize the write information.
@@ -160,7 +154,6 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c>,
   }
 
   zx::interrupt irq_;
-  i2c_protocol_t proto_;
 };
 
 }  // namespace fake_i2c
