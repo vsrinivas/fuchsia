@@ -141,4 +141,4 @@ class SincFilter : public Filter {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FILTER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_PROCESSING_FILTER_H_

@@ -89,4 +89,4 @@ class ChannelStrip {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_CHANNEL_STRIP_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_PROCESSING_CHANNEL_STRIP_H_

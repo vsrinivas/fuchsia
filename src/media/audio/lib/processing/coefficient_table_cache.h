@@ -159,4 +159,4 @@ class LazySharedCoefficientTable {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_CACHE_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_PROCESSING_COEFFICIENT_TABLE_CACHE_H_
