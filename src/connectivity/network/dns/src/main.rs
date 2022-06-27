@@ -843,21 +843,19 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                                     }
                                 },
                                 Ok(lookup) => lookup.iter().for_each(|rdata| match rdata {
-                                    RData::A(addr) => {
+                                    RData::A(addr) if ipv4_lookup => {
                                         addrs.push(net_ext::IpAddress(IpAddr::V4(*addr)).into())
                                     }
-                                    RData::AAAA(addr) => {
+                                    RData::AAAA(addr) if ipv6_lookup => {
                                         addrs.push(net_ext::IpAddress(IpAddr::V6(*addr)).into())
                                     }
-                                    RData::CNAME(name) => {
-                                        // TODO(https://fxbug.dev/102536): Why are we seeing CNAME
-                                        // records when looking up A/AAAA records?
-                                        debug!(
-                                            "received CNAME={} for Lookup({}, {:?})",
-                                            name, hostname, options
+                                    rdata => {
+                                        error!(
+                                            "Lookup(_, {:?}) yielded unexpected record type: {}",
+                                            options,
+                                            rdata.to_record_type()
                                         )
                                     }
-                                    rdata => error!("unexpected rdata {:?}", rdata),
                                 }),
                             };
                             (addrs, error)
