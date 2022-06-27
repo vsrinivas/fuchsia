@@ -1,5 +1,0 @@
-error: expected `;`
- --> $DIR/function_with_body.rs:4:16
-  |
-4 |         fn f() {}
-  |                ^

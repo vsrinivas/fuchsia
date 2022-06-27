@@ -188,14 +188,6 @@ group("csv") {
   public_deps = [ ":csv-v1_1_3" ]
 }
 
-group("cxx") {
-  public_deps = [ ":cxx-v1_0_50" ]
-}
-
-group("cxxbridge-cmd") {
-  public_deps = [ ":cxxbridge-cmd-v1_0_50" ]
-}
-
 group("darling") {
   public_deps = [ ":darling-v0_12_4" ]
 }
@@ -1083,10 +1075,6 @@ group("zstd") {
 
 group("zstd-safe") {
   public_deps = [ ":zstd-safe-v4_0_0+zstd_1_4_9" ]
-}
-
-group("cxxbridge") {
-  public_deps = [ ":cxxbridge-cmd-cxxbridge-v1_0_50" ]
 }
 
 rust_library("adler32-v1_0_4") {
@@ -2437,28 +2425,6 @@ rust_library("cloudabi-v0_0_3") {
   visibility = [ ":*" ]
 }
 
-rust_library("codespan-reporting-v0_11_1") {
-  crate_name = "codespan_reporting"
-  crate_root = "//third_party/rust_crates/vendor/codespan-reporting/src/lib.rs"
-  output_name = "codespan_reporting-7b67adc51c2d979a"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":termcolor-v1_1_2" ]
-  deps += [ ":unicode-width-v0_1_5" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=7b67adc51c2d979a",
-    "-Cextra-filename=-7b67adc51c2d979a",
-  ]
-
-  visibility = [ ":*" ]
-}
-
 rust_library("combine-v4_6_2") {
   crate_name = "combine"
   crate_root = "//third_party/rust_crates/vendor/combine/src/lib.rs"
@@ -3116,102 +3082,6 @@ rust_library("ctr-v0_8_0") {
     "--edition=2018",
     "-Cmetadata=8ca25ee458401261",
     "-Cextra-filename=-8ca25ee458401261",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("cxx-v1_0_50") {
-  crate_name = "cxx"
-  crate_root = "//third_party/rust_crates/vendor/cxx/src/lib.rs"
-  output_name = "cxx-618927fcf37aaeb7"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":cxxbridge-macro-v1_0_50($host_toolchain)" ]
-  deps += [ ":link-cplusplus-v1_0_2" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=618927fcf37aaeb7",
-    "-Cextra-filename=-618927fcf37aaeb7",
-    "--cfg=feature=\"default\"",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-executable("cxxbridge-cmd-cxxbridge-v1_0_50") {
-  crate_name = "cxxbridge"
-  crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/main.rs"
-  output_name = "cxxbridge"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":clap-v2_33_0" ]
-  deps += [ ":codespan-reporting-v0_11_1" ]
-  deps += [ ":proc-macro2-v1_0_39" ]
-  deps += [ ":quote-v1_0_18" ]
-  deps += [ ":syn-v1_0_98" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=eecf4c060bb1e4c2",
-    "-Cextra-filename=-eecf4c060bb1e4c2",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("cxxbridge-cmd-v1_0_50") {
-  crate_name = "cxxbridge_cmd"
-  crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/lib.rs"
-  output_name = "cxxbridge_cmd-76895b4879778319"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":clap-v2_33_0" ]
-  deps += [ ":codespan-reporting-v0_11_1" ]
-  deps += [ ":proc-macro2-v1_0_39" ]
-  deps += [ ":quote-v1_0_18" ]
-  deps += [ ":syn-v1_0_98" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=76895b4879778319",
-    "-Cextra-filename=-76895b4879778319",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_proc_macro("cxxbridge-macro-v1_0_50") {
-  crate_name = "cxxbridge_macro"
-  crate_root = "//third_party/rust_crates/vendor/cxxbridge-macro/src/lib.rs"
-  output_name = "cxxbridge_macro-ad21b247159ca7e7"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":proc-macro2-v1_0_39" ]
-  deps += [ ":quote-v1_0_18" ]
-  deps += [ ":syn-v1_0_98" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=ad21b247159ca7e7",
-    "-Cextra-filename=-ad21b247159ca7e7",
   ]
 
   visibility = [ ":*" ]
@@ -5533,27 +5403,6 @@ rust_library("libm-v0_2_1") {
     "--edition=2015",
     "-Cmetadata=9acc3111b7a9209b",
     "-Cextra-filename=-9acc3111b7a9209b",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("link-cplusplus-v1_0_2") {
-  crate_name = "link_cplusplus"
-  crate_root = "//third_party/rust_crates/vendor/link-cplusplus/src/lib.rs"
-  output_name = "link_cplusplus-ca3941f03f39e09b"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=ca3941f03f39e09b",
-    "-Cextra-filename=-ca3941f03f39e09b",
-    "--cfg=feature=\"default\"",
   ]
 
   visibility = [ ":*" ]

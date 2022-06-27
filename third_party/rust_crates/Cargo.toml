@@ -74,8 +74,6 @@ crossbeam-utils = "0.8.0"
 cfg-if = "1.0.0"
 chacha20 = "0.8.1"
 csv = "1.0.7"
-cxx = "1.0.50"
-cxxbridge-cmd = "1.0.49"
 darling = "0.12.0"
 dashmap = "4.0.2"
 data-encoding = "2.1.2"
@@ -644,12 +642,6 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.63" ]
 # Keep this sorted alphabetically, please.
 [gn.package.crossbeam-epoch."0.8.2"]
 [gn.package.crossbeam-utils."0.7.2"]
-# cxx's build.rs is only used to build it's src/cxx.cc file, for crates that use cxx and build with
-# cargo. It is replaced with //src/lib/rust_cxx:cxx_lib.
-[gn.package.cxx."1.0.50"]
-# cxx uses this to link against libc++ or libstdc++, for crates that use cxx and build with cargo.
-# It is replaced by our own build machinery.
-[gn.package.link-cplusplus."1.0.2"]
 [gn.package.memoffset."0.5.3"]
 [gn.package.nom."5.0.0"]
 [gn.package.parking_lot."0.9.0"]
@@ -661,26 +653,3 @@ rustflags = ["--cfg=limb_width_64"]
 [gn.package.syn."1.0.98"]
 [gn.package.test-case."1.1.0"]
 [gn.package.wasm-bindgen."0.2.63"]
-
-
-# This section defines GN binary targets that should be generated from Cargo binary targets. (By
-# default, cargo-gnaw will only generate targets for libraries and proc-macros.)
-#
-# Example:
-#
-#   [gn.package.cargo-package-name."1.2.3".binary.cargo-target-name]
-#   output_name = "gn-name"
-#   rustflags = [ ... ]
-#   configs = [ ... ]
-#
-#
-# In the above example, "gn-name" will become both the name of the group target to depend
-# upon and the executable's output_name, so usages can assume output_name == target_name (and must
-# since get_target_outputs only works within the same file).
-#
-# "cargo-target-name" is the name of the Cargo binary target within "cargo-package-name".
-#
-# Keep this sorted alphabetically, please.
-
-[gn.package.cxxbridge-cmd."1.0.50".binary.cxxbridge]
-output_name = "cxxbridge"

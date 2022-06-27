@@ -568,16 +568,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codespan-reporting"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
-dependencies = [
- "termcolor",
- "unicode-width",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -853,48 +843,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "049bb91fb4aaf0e3c7efa6cd5ef877dbbbd15b39dad06d9948de4ec8a75761ea"
 dependencies = [
  "cipher",
-]
-
-[[package]]
-name = "cxx"
-version = "1.0.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12592dd641edafd27da61d9d16944dfff35c2622c7c93207a1817ebdbc7fb52d"
-dependencies = [
- "cc",
- "cxxbridge-flags",
- "cxxbridge-macro",
- "link-cplusplus",
-]
-
-[[package]]
-name = "cxxbridge-cmd"
-version = "1.0.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d883747773acca0adc2735a7ba906455a9bf9e921374480e1fcd0c2100d1ae26"
-dependencies = [
- "clap",
- "codespan-reporting",
- "proc-macro2 1.0.39",
- "quote 1.0.18",
- "syn 1.0.98",
-]
-
-[[package]]
-name = "cxxbridge-flags"
-version = "1.0.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7146a007a8adea5a48656097e5323de55ffde80205264ea3649a0eb671acf48"
-
-[[package]]
-name = "cxxbridge-macro"
-version = "1.0.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c8246052ff54d19278c48994b88594231151baecd84a7404d242fc822d07e77"
-dependencies = [
- "proc-macro2 1.0.39",
- "quote 1.0.18",
- "syn 1.0.98",
 ]
 
 [[package]]
@@ -1337,8 +1285,6 @@ dependencies = [
  "crossbeam-utils 0.8.4",
  "crossterm",
  "csv",
- "cxx",
- "cxxbridge-cmd",
  "darling",
  "dashmap",
  "data-encoding",
@@ -2063,15 +2009,6 @@ name = "libm"
 version = "0.2.1"
 dependencies = [
  "static_assertions",
-]
-
-[[package]]
-name = "link-cplusplus"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f563b3814ea63e830e3e321206e4e2b5177854586ebe3f595795ed7053b217f5"
-dependencies = [
- "cc",
 ]
 
 [[package]]
