@@ -71,7 +71,7 @@ legacy_assembly_input_bundle("input_bundle") {
 # for the host_test_data() template is very difficult right now.
 # TODO(https://fxbug.dev/96877) archive the AIB into a tgz for host_test_data()
 stamp = "$target_out_dir/test_assembled_config.stamp"
-platform_bundles_target = "//build/assembly($default_toolchain)"
+platform_bundles_target = "//bundles/assembly($default_toolchain)"
 platform_bundles_dir = get_label_info(platform_bundles_target, "target_out_dir")
 python_action("assembled_config") {
   testonly = true

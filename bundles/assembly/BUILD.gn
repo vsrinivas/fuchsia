@@ -1,0 +1,67 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/assembly/assembly_input_bundle.gni")
+
+assert(is_fuchsia,
+       "Assembly Input Bundles can only be in the Fuchsia toolchain")
+
+group("assembly") {
+  deps = [
+    ":common_minimal",
+    ":emulator_support",
+  ]
+}
+
+# The most-common, most-basic, Assembly Input Bundle that is included by all
+# products that have an FVM (and therefore have base packages).
+#
+# This corresponds to the "minimal" platform configuration, the most-basic
+# configuration that has pkg_resolver and pkg_cache, and can OTA itself.
+#
+# WARNING:  The only way to remove items from this AIB for a given product is to
+# move them to other AIBs that are included by all other products.
+#
+assembly_input_bundle("common_minimal") {
+  base_packages = [
+    # The required SWD stack artifacts to enable packages in an FVM.
+    "//src/sys/pkg/bin/pkg-cache",
+    "//src/sys/pkg/bin/pkg-resolver",
+
+    # The SWD stack artifacts that enable OTAs
+    "//src/sys/pkg/bin/system-update-committer",
+    "//src/sys/pkg/bin/system-updater",
+
+    # Build-Information
+    "//src/developer/build_info:build-info-service",
+
+    # Hardware Information
+    "//src/hwinfo:hwinfo",
+  ]
+}
+
+# This is the "emulator support" bundle, which provides the kernel that can be
+# booted by an emulator, and which knows how to then boot the Fuchsia kernel
+# itself (Zircon).
+assembly_input_bundle("emulator_support") {
+  # Which label and file the qemu kernel is at is dependent on the arch of the
+  # target we are compiling for.
+  if (target_cpu == "x64") {
+    _qemu_kernel_file = "$root_build_dir/multiboot.bin"
+    _qemu_kernel_target =
+        "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
+  } else if (target_cpu == "arm64") {
+    _qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+    _qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+  } else {
+    assert(false, "Unsupported target cpu: $target_cpu")
+  }
+
+  qemu_kernel = _qemu_kernel_file
+  deps = [ _qemu_kernel_target ]
+
+  # Create package and archive for use OOT.
+  create_aib_package = true
+  create_aib_archive = true
+}

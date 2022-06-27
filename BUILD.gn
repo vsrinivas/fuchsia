@@ -1139,8 +1139,11 @@ build_api_module("assembly_input_archives") {
   testonly = true
   data_keys = [ "assembly_input_archives" ]
   deps = [
-    "//build/assembly",
-    "//build/images:default-images",
+    # The platform bundles
+    "//bundles/assembly",
+
+    # The legacy bundle for the main product assembly.
+    "//build/images:main_assembly",
   ]
 }
 

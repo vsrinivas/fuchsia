@@ -7,33 +7,8 @@ import("//build/python/python_action.gni")
 import("//build/security.gni")
 
 if (is_fuchsia) {
-  qemu_kernel_file = ""
-  qemu_kernel_target = ""
-  if (target_cpu == "x64") {
-    qemu_kernel_file = "$root_build_dir/multiboot.bin"
-    qemu_kernel_target =
-        "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
-  } else if (target_cpu == "arm64") {
-    qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
-    qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
-  } else {
-    assert(false, "Unsupported target cpu: $target_cpu")
-  }
-
-  assembly_input_bundle("emulator_support") {
-    qemu_kernel = qemu_kernel_file
-    deps = [ qemu_kernel_target ]
-
-    # Create package and archive for use OOT.
-    create_aib_package = true
-    create_aib_archive = true
-  }
-
   group("assembly") {
-    public_deps = [
-      ":emulator_support",
-      "scripts:assembly_input_bundle_tool_install($host_toolchain)",
-    ]
+    deps = [ "scripts:assembly_input_bundle_tool_install($host_toolchain)" ]
   }
 
   python_action("validate_product_defs") {

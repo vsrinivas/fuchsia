@@ -233,7 +233,19 @@ template("assembled_system") {
     fshost_config = "${image_name}.fshost_config"
     compare_command_logs = "${image_name}.compare_command_logs"
     compare_images_manifests = "${image_name}.compare_images_manifests"
-    platform_aib = "//build/assembly"
+
+    # The names of all of the platform's Assembly Input Bundles
+    _platform_aib_names = [
+      # "common_base",
+      "common_minimal",
+      "emulator_support",
+    ]
+
+    # Add platform AIBs, by their names:
+    platform_common_aibs = []
+    foreach(name, _platform_aib_names) {
+      platform_common_aibs += [ "//bundles/assembly:${name}" ]
+    }
   }
 
   # Intermediate files produced for Image Assembly.
@@ -255,9 +267,6 @@ template("assembled_system") {
 
     legacy_assembly_input_bundle_manifest =
         "${outdir}/legacy/assembly_config.json"
-    platform_aib_dir = get_label_info(labels.platform_aib, "target_out_dir")
-    emulator_aib_manifest =
-        "$platform_aib_dir/emulator_support/assembly_config.json"
 
     # This file is created implicitly by ffx assembly product, so this is the
     # path that it's expected to be found at, not the path that it's to be
@@ -302,6 +311,20 @@ template("assembled_system") {
     zbi_final = zbi
     if (defined(invoker.zbi_signing_script)) {
       zbi_final = zbi_signed
+    }
+
+    # The directory in which all the platform AIBs can be found
+    platform_common_aibs_dir =
+        get_label_info("//bundles/assembly", "target_out_dir")
+
+    # This isn't strictly required, but it allows the AIB input files to be
+    # specified in GN.
+    platform_common_aibs = []
+    foreach(aib, labels.platform_common_aibs) {
+      _name = get_label_info(aib, "name")
+      _target_out_dir = get_label_info(aib, "target_out_dir")
+      platform_common_aibs +=
+          [ "${_target_out_dir}/${_name}/assembly_config.json" ]
     }
   }
 
@@ -609,23 +632,20 @@ template("assembled_system") {
       "--product",
       rebase_path(files.product_assembly_config, root_build_dir),
       "--input-bundles-dir",
-      rebase_path(files.platform_aib_dir, root_build_dir),
+      rebase_path(files.platform_common_aibs_dir, root_build_dir),
       "--legacy-bundle-dir",
       rebase_path(files.outdir, root_build_dir),
       "--outdir",
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    deps = [
-             ":${labels.legacy_assembly_input_bundle}",
-             labels.platform_aib,
-           ] + labels.product_assembly_config_deps
+    deps = [ ":${labels.legacy_assembly_input_bundle}" ] +
+           labels.platform_common_aibs + labels.product_assembly_config_deps
 
     inputs = [
-      files.emulator_aib_manifest,
-      files.legacy_assembly_input_bundle_manifest,
-      files.product_assembly_config,
-    ]
+               files.legacy_assembly_input_bundle_manifest,
+               files.product_assembly_config,
+             ] + files.platform_common_aibs
 
     outputs = [ files.regenerated_image_assembly_config ]
 
