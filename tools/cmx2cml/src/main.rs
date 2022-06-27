@@ -228,8 +228,12 @@ const BUILD_INFO_PROTOCOL: &str = "fuchsia.buildinfo.Provider";
 const PROTOCOLS_FOR_HERMETIC_TESTS: &[&str] = &[
     "fuchsia.boot.WriteOnlyLog",
     "fuchsia.diagnostics.ArchiveAccessor",
+    "fuchsia.logger.Log",
     "fuchsia.logger.LogSink",
     "fuchsia.process.Launcher",
+    "fuchsia.sys.Environment",
+    "fuchsia.sys.Launcher",
+    "fuchsia.sys.Loader",
     "fuchsia.sys2.EventSource",
     "fuchsia.tracing.provider.Registry",
 ];
@@ -256,8 +260,6 @@ const PROTOCOLS_FOR_SYSTEM_TESTS: &[&str] = &[
     "fuchsia.net.http.Loader",
     "fuchsia.posix.socket.Provider",
     "fuchsia.scheduler.ProfileProvider",
-    "fuchsia.sys.Environment",
-    "fuchsia.sys.Loader",
     "fuchsia.sysinfo.SysInfo",
     "fuchsia.sysmem.Allocator",
     "fuchsia.tracing.provider.Registry",
@@ -268,6 +270,8 @@ const KNOWN_INCLUDES: &[&str] = &[
     SYSLOG_SHARD,
     ELF_STDIO_SHARD,
     ELF_TEST_RUNNER_SHARD,
+    GTEST_RUNNER_SHARD,
+    GUNIT_RUNNER_SHARD,
     RUST_TEST_RUNNER_SHARD,
     SYSTEM_TEST_SHARD,
 ];

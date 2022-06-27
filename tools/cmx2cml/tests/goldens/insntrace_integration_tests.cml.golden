@@ -18,9 +18,6 @@
                 // WARNING: This protocol is not normally available to tests, you may need to add it to the
                 // system test realm or add a mock/fake implementation as a child.
                 "fuchsia.process.Resolver",
-
-                // WARNING: This protocol is not normally available to tests, you may need to add it to the
-                // system test realm or add a mock/fake implementation as a child.
                 "fuchsia.sys.Launcher",
 
                 // WARNING: This protocol is not normally available to tests, you may need to add it to the

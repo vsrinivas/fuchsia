@@ -11,7 +11,6 @@
         // for details.
         "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
         "//src/lib/fuchsia-hyper/hyper.shard.cml",
-        "//src/sys/test_manager/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
@@ -59,9 +58,6 @@
         {
             protocol: [
                 "fuchsia.sys.Environment",
-
-                // WARNING: This protocol is not normally available to tests, you may need to add it to the
-                // system test realm or add a mock/fake implementation as a child.
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
             ],
