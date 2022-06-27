@@ -374,10 +374,18 @@ impl AdvertisingProxyInner {
             let publish_responder_future = pub_responder_stream.map_err(Into::into).try_for_each(
                 move |ServiceInstancePublicationResponder_Request::OnPublication {
                           responder,
+                          publication_cause,
+                          subtype,
+                          source_addresses,
                           ..
                       }| {
                     let info =
                         service_info_clone.lock().clone().into_service_instance_publication();
+
+                    debug!("publish_responder_future: On Publication for {:?}", info);
+                    debug!("publish_responder_future: publication_cause: {:?}", publication_cause);
+                    debug!("publish_responder_future: subtype: {:?}", subtype);
+                    debug!("publish_responder_future: source_addresses: {:?}", source_addresses);
 
                     async move { responder.send(&mut Ok(info)).map_err(Into::into) }
                 },
