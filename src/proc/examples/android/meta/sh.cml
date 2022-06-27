@@ -6,5 +6,6 @@
         runner: "stardroid",
         binary: "/system/bin/sh",
         args: [ "-i" ],
+        user: "root:x:0:0",
     },
 }
