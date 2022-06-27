@@ -229,11 +229,8 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
     return ZX_OK;
   }
 
-  pci_protocol_t pci_proto = {};
-  pci().GetProto(&pci_proto);
-  ddk::Pci helper(pci_proto);
   std::optional<fdf::MmioBuffer> mmio;
-  zx_status_t s = helper.MapMmio(bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t s = pci().MapMmio(bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (s != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to map bar %u: %d", tag(), bar, s);
     return s;

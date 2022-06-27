@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/hw/inout.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/virtio/backends/backend.h>
 #include <lib/zx/port.h>
@@ -18,7 +18,7 @@ namespace virtio {
 
 class PciBackend : public Backend {
  public:
-  PciBackend(ddk::PciProtocolClient pci, pci_device_info_t info);
+  PciBackend(ddk::Pci pci, pci_device_info_t info);
   zx_status_t Bind() final;
   virtual zx_status_t Init() = 0;
   const char* tag() { return tag_; }
@@ -33,13 +33,13 @@ class PciBackend : public Backend {
   static constexpr uint16_t kMsiQueueVector = 1;
 
  protected:
-  const ddk::PciProtocolClient& pci() { return pci_; }
+  const ddk::Pci& pci() { return pci_; }
   pci_device_info_t info() { return info_; }
   fbl::Mutex& lock() { return lock_; }
   zx::port& wait_port() { return wait_port_; }
 
  private:
-  ddk::PciProtocolClient pci_;
+  ddk::Pci pci_;
   pci_device_info_t info_;
   fbl::Mutex lock_;
   zx::port wait_port_;
@@ -99,9 +99,9 @@ class PciLegacyIoInterface : public LegacyIoInterface {
 // configuration structures when MSI-X is enabled.
 class PciLegacyBackend : public PciBackend {
  public:
-  PciLegacyBackend(ddk::PciProtocolClient pci, pci_device_info_t info)
+  PciLegacyBackend(ddk::Pci pci, pci_device_info_t info)
       : PciBackend(pci, info), legacy_io_(PciLegacyIoInterface::Get()) {}
-  PciLegacyBackend(ddk::PciProtocolClient pci, pci_device_info_t info, LegacyIoInterface* interface)
+  PciLegacyBackend(ddk::Pci pci, pci_device_info_t info, LegacyIoInterface* interface)
       : PciBackend(pci, info), legacy_io_(interface) {}
   PciLegacyBackend(const PciLegacyBackend&) = delete;
   PciLegacyBackend& operator=(const PciLegacyBackend&) = delete;
@@ -149,7 +149,7 @@ class PciLegacyBackend : public PciBackend {
 // PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
 class PciModernBackend : public PciBackend {
  public:
-  PciModernBackend(ddk::PciProtocolClient pci, pci_device_info_t info) : PciBackend(pci, info) {}
+  PciModernBackend(ddk::Pci pci, pci_device_info_t info) : PciBackend(pci, info) {}
   // The dtor handles cleanup of allocated bars because we cannot tear down
   // the mappings safely while the virtio device is being used by a driver.
   ~PciModernBackend() override = default;

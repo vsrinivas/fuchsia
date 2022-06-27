@@ -306,7 +306,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   SetUpLegacyQueue();
 
   // With a manually crafted backend using the test interface it should succeed.
-  ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
+  ddk::Pci pci(fake_ddk::kFakeParent);
   ASSERT_TRUE(pci.is_valid());
   pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
@@ -330,7 +330,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
   SetUpLegacyBar();
   SetUpLegacyQueue();
 
-  ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
+  ddk::Pci pci(fake_ddk::kFakeParent);
   ASSERT_TRUE(pci.is_valid());
   pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));

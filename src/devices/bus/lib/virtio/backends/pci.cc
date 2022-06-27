@@ -5,8 +5,8 @@
 #include "../include/lib/virtio/backends/pci.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
@@ -22,8 +22,7 @@
 
 namespace virtio {
 
-PciBackend::PciBackend(ddk::PciProtocolClient pci, pci_device_info_t info)
-    : pci_(pci), info_(info) {
+PciBackend::PciBackend(ddk::Pci pci, pci_device_info_t info) : pci_(pci), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }
 

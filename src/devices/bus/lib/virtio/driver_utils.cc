@@ -4,7 +4,7 @@
 
 #include "include/lib/virtio/driver_utils.h"
 
-#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,9 +21,9 @@ namespace virtio {
 zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device) {
   zx_status_t status;
-  ddk::PciProtocolClient pci(bus_device, "pci");
+  ddk::Pci pci(bus_device, "pci");
   if (!pci.is_valid()) {
-    pci = ddk::PciProtocolClient(bus_device);
+    pci = ddk::Pci(bus_device);
   }
 
   if (!pci.is_valid()) {
