@@ -18,7 +18,8 @@ zx_status_t KernelMappedVmo::Init(fbl::RefPtr<VmObject> vmo, size_t offset, size
                                   const char* name) {
   ZX_ASSERT(offset % PAGE_SIZE == 0);
   size = ROUNDUP_PAGE_SIZE(size);
-  zx_status_t status = PinnedVmObject::Create(ktl::move(vmo), offset, size, &pinned_vmo_);
+  zx_status_t status =
+      PinnedVmObject::Create(ktl::move(vmo), offset, size, /*write=*/true, &pinned_vmo_);
   if (status == ZX_OK) {
     status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
         0, size, 0, VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE, pinned_vmo_.vmo(), offset,

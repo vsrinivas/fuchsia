@@ -305,9 +305,10 @@ class VmObject : public VmHierarchyBase,
   virtual zx_status_t CommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   // find physical pages to back the range of the object and pin them.
-  // |len| must be non-zero.
+  // |len| must be non-zero. |write| indicates whether the range is being pinned for a write or a
+  // read.
   // May block on user pager requests and must be called without locks held.
-  virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) = 0;
+  virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len, bool write) = 0;
 
   // free a range of the vmo back to the default state
   virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }

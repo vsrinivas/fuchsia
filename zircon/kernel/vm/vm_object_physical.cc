@@ -226,7 +226,7 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len,
   return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::CommitRangePinned(uint64_t offset, uint64_t len) {
+zx_status_t VmObjectPhysical::CommitRangePinned(uint64_t offset, uint64_t len, bool write) {
   canary_.Assert();
 
   if (unlikely(len == 0 || !IS_PAGE_ALIGNED(offset))) {

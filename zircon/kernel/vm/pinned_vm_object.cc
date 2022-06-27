@@ -19,12 +19,12 @@
 
 // static
 zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
-                                   PinnedVmObject* out_pinned_vmo) {
+                                   bool write, PinnedVmObject* out_pinned_vmo) {
   DEBUG_ASSERT(vmo != nullptr);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
   DEBUG_ASSERT(out_pinned_vmo != nullptr);
 
-  zx_status_t status = vmo->CommitRangePinned(offset, size);
+  zx_status_t status = vmo->CommitRangePinned(offset, size, write);
   if (status != ZX_OK) {
     LTRACEF("vmo->CommitRange failed: %d\n", status);
     return status;

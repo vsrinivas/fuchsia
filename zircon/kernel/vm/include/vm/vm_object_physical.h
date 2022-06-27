@@ -48,7 +48,7 @@ class VmObjectPhysical final : public VmObject {
   zx_status_t Lookup(uint64_t offset, uint64_t len, LookupFunction lookup_fn) override;
   zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) override;
 
-  zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) override;
+  zx_status_t CommitRangePinned(uint64_t offset, uint64_t len, bool write) override;
 
   void Unpin(uint64_t offset, uint64_t len) override {
     // Unpin is a no-op for physical VMOs as they are always pinned.

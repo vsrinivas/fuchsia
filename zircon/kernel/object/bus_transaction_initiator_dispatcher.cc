@@ -66,7 +66,8 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
   }
 
   PinnedVmObject pinned_vmo;
-  zx_status_t status = PinnedVmObject::Create(vmo, offset, size, &pinned_vmo);
+  zx_status_t status =
+      PinnedVmObject::Create(vmo, offset, size, perms & IOMMU_FLAG_PERM_WRITE, &pinned_vmo);
   if (status != ZX_OK) {
     return status;
   }

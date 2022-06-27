@@ -12,7 +12,7 @@
 // An RAII wrapper around a |VmObject| that is pinned.
 class PinnedVmObject {
  public:
-  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
+  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, size_t offset, size_t size, bool write,
                             PinnedVmObject* out_pinned_vmo);
 
   PinnedVmObject();

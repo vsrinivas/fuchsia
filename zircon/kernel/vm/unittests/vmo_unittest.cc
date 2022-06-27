@@ -100,12 +100,12 @@ static bool vmo_pin_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size);
+    status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size, false);
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
-    status = vmo->CommitRangePinned(PAGE_SIZE, 0);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 0, false);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "pinning range of len 0\n");
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning range\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
@@ -122,7 +122,7 @@ static bool vmo_pin_test() {
     status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning range after decommit\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
@@ -159,12 +159,12 @@ static bool vmo_pin_contiguous_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size);
+    status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size, false);
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
-    status = vmo->CommitRangePinned(PAGE_SIZE, 0);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 0, false);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "pinning range of len 0\n");
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning range\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
@@ -197,7 +197,7 @@ static bool vmo_pin_contiguous_test() {
       EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
     }
 
-    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning range after decommit\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
@@ -232,18 +232,18 @@ static bool vmo_multiple_pin_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    status = vmo->CommitRangePinned(0, alloc_size);
+    status = vmo->CommitRangePinned(0, alloc_size, false);
     EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
-    status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning subrange\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
     for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
-      status = vmo->CommitRangePinned(0, PAGE_SIZE);
+      status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
       EXPECT_EQ(ZX_OK, status, "pinning first page max times\n");
     }
-    status = vmo->CommitRangePinned(0, PAGE_SIZE);
+    status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
     EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
 
     vmo->Unpin(0, alloc_size);
@@ -298,18 +298,18 @@ static bool vmo_multiple_pin_contiguous_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
-    status = vmo->CommitRangePinned(0, alloc_size);
+    status = vmo->CommitRangePinned(0, alloc_size, false);
     EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
-    status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE);
+    status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE, false);
     EXPECT_EQ(ZX_OK, status, "pinning subrange\n");
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
     for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
-      status = vmo->CommitRangePinned(0, PAGE_SIZE);
+      status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
       EXPECT_EQ(ZX_OK, status, "pinning first page max times\n");
     }
-    status = vmo->CommitRangePinned(0, PAGE_SIZE);
+    status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
     EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
 
     vmo->Unpin(0, alloc_size);
@@ -414,10 +414,10 @@ static bool vmo_physical_pin_test() {
   status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
 
   // Validate we can pin the range.
-  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, PAGE_SIZE));
+  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, PAGE_SIZE, false));
 
   // Pinning out side should fail.
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE, false));
 
   // Unpin for physical VMOs does not currently do anything, but still call it to be API correct.
   vmo->Unpin(0, PAGE_SIZE);
@@ -1355,7 +1355,7 @@ static bool vmo_zero_scan_test() {
 
   // Pinning the page should prevent it from being counted.
   EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-  EXPECT_EQ(ZX_OK, mem->vmo()->CommitRangePinned(0, PAGE_SIZE));
+  EXPECT_EQ(ZX_OK, mem->vmo()->CommitRangePinned(0, PAGE_SIZE, false));
   EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
   mem->vmo()->Unpin(0, PAGE_SIZE);
   EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
@@ -1763,7 +1763,7 @@ static bool vmo_eviction_test() {
   EXPECT_GT(vmo2->EvictionEventCount(), 0u);
 
   // Pinned pages should not be evictable.
-  status = vmo->CommitRangePinned(0, PAGE_SIZE);
+  status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
   EXPECT_EQ(ZX_OK, status);
   ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
       page, 0, VmCowPages::EvictionHintAction::Follow));
@@ -2640,7 +2640,7 @@ static bool vmo_discard_test() {
   EXPECT_EQ(0u, vmo->AttributedPages());
 
   // Commit and pin some pages, then unlock.
-  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, kSize));
+  EXPECT_EQ(ZX_OK, vmo->CommitRangePinned(0, kSize, false));
   EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
   EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kNewSize));
 
@@ -2743,7 +2743,7 @@ static bool vmo_discard_failure_test() {
   EXPECT_EQ(0u, vmo->AttributedPages());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->CommitRange(0, kSize));
   EXPECT_EQ(0u, vmo->AttributedPages());
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->CommitRangePinned(0, kSize));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo->CommitRangePinned(0, kSize, false));
   EXPECT_EQ(0u, vmo->AttributedPages());
 
   // Decommit and ZeroRange should trivially succeed.
@@ -3299,7 +3299,7 @@ static bool vmo_pinning_backlink_test() {
   EXPECT_EQ(static_cast<uint64_t>(PAGE_SIZE), pages[1]->object.get_page_offset());
 
   // Pin the pages.
-  status = vmo->CommitRangePinned(0, 2 * PAGE_SIZE);
+  status = vmo->CommitRangePinned(0, 2 * PAGE_SIZE, false);
   ASSERT_EQ(ZX_OK, status);
 
   // Pages might get swapped out on pinning if they were loaned. Look them up again.
@@ -3439,7 +3439,7 @@ static bool vmo_zero_pinned_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Pin the page.
-  status = vmo->CommitRangePinned(0, PAGE_SIZE);
+  status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page.
@@ -3464,7 +3464,7 @@ static bool vmo_zero_pinned_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Pin the page.
-  status = pager_vmo->CommitRangePinned(0, PAGE_SIZE);
+  status = pager_vmo->CommitRangePinned(0, PAGE_SIZE, false);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page. Lookup the page again, as pinning might have switched out
@@ -3483,7 +3483,7 @@ static bool vmo_zero_pinned_test() {
   // Resize the VMO up, and pin a page in the newly extended range.
   status = pager_vmo->Resize(2 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
-  status = pager_vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE);
+  status = pager_vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE, false);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page.

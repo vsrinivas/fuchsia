@@ -174,7 +174,7 @@ static zx_status_t create_precommitted_pager_backed_vmo(uint64_t size,
   // strict with asserts that verify how many non-loaned pages are evicted.  Loaned pages can also
   // be evicted along the way to evicting non-loaned pages, but only non-loaned pages count as fully
   // free.
-  ASSERT(ZX_OK == vmo->CommitRangePinned(0, size));
+  ASSERT(ZX_OK == vmo->CommitRangePinned(0, size, false));
   vmo->Unpin(0, size);
 
   // Get the pages after the pin, so that we find non-loaned pages.

@@ -672,13 +672,17 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   return page_count;
 }
 
-zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin) {
+zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin,
+                                               bool write) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
   if (can_block_on_page_requests()) {
     lockdep::AssertNoLocksHeld();
   }
+
+  // We only expect write to be set if this a pin. All non-pin commits are reads.
+  DEBUG_ASSERT(!write || pin);
 
   Guard<Mutex> guard{&lock_};
 
