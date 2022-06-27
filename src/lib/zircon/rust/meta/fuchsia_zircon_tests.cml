@@ -15,6 +15,7 @@
         {
             protocol: [
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
             ],

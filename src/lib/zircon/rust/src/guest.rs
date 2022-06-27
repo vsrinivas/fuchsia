@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Port, Status};
-use fuchsia_zircon_sys as sys;
+use {
+    crate::{ok, AsHandleRef, Handle, HandleBased, HandleRef, Port, Resource, Status, Vmar},
+    fuchsia_zircon_sys as sys,
+};
 
 /// Wrapper type for guest physical addresses.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -20,8 +21,23 @@ pub struct Guest(Handle);
 impl_handle_based!(Guest);
 
 impl Guest {
-    // TODO: create (aka zx_guest_create) is not defined here as resources do not yet have a type
-    // safe definition.
+    /// Create a guest that is used to run virtual machines.
+    pub fn create(hypervisor: &Resource) -> Result<(Guest, Vmar), Status> {
+        unsafe {
+            let mut guest_handle = 0;
+            let mut vmar_handle = 0;
+            ok(sys::zx_guest_create(
+                hypervisor.raw_handle(),
+                0,
+                &mut guest_handle,
+                &mut vmar_handle,
+            ))?;
+            Ok((
+                Self::from(Handle::from_raw(guest_handle)),
+                Vmar::from(Handle::from_raw(vmar_handle)),
+            ))
+        }
+    }
 
     /// Set a bell trap for the given guest physical address range that will be delivered on the specified `Port`.
     pub fn set_trap_bell(
@@ -112,4 +128,35 @@ pub enum PortData {
     Data8(u8),
     Data16(u16),
     Data32(u32),
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_kernel as fkernel,
+        fuchsia_component::client::connect_to_protocol,
+        fuchsia_zircon::{HandleBased, Status},
+    };
+
+    async fn get_hypervisor() -> Resource {
+        let resource = connect_to_protocol::<fkernel::HypervisorResourceMarker>()
+            .unwrap()
+            .get()
+            .await
+            .unwrap();
+        unsafe { Resource::from(Handle::from_raw(resource.into_raw())) }
+    }
+
+    #[fuchsia::test]
+    async fn guest_create() {
+        let hypervisor = get_hypervisor().await;
+        match Guest::create(&hypervisor) {
+            Err(Status::NOT_SUPPORTED) => {
+                println!("Hypervisor not supported");
+                return;
+            }
+            result => result.unwrap(),
+        };
+    }
 }

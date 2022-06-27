@@ -146,7 +146,7 @@ mod event;
 mod eventpair;
 mod exception;
 mod fifo;
-pub mod guest;
+mod guest;
 mod handle;
 mod info;
 mod interrupt;
@@ -166,6 +166,7 @@ mod stream;
 mod task;
 mod thread;
 mod time;
+mod vcpu;
 mod version;
 mod vmar;
 mod vmo;
@@ -180,7 +181,7 @@ pub use self::event::*;
 pub use self::eventpair::*;
 pub use self::exception::*;
 pub use self::fifo::*;
-pub use self::guest::{GPAddr, Guest};
+pub use self::guest::*;
 pub use self::handle::*;
 pub use self::info::*;
 pub use self::interrupt::*;
@@ -200,6 +201,7 @@ pub use self::stream::*;
 pub use self::task::*;
 pub use self::thread::*;
 pub use self::time::*;
+pub use self::vcpu::*;
 pub use self::version::*;
 pub use self::vmar::*;
 pub use self::vmo::*;
@@ -215,6 +217,11 @@ pub mod prelude {
 pub fn ok(raw: sys::zx_status_t) -> Result<(), Status> {
     Status::ok(raw)
 }
+
+/// A packet sent through a port. This is a type-safe wrapper for
+/// [zx_port_packet_t](https://fuchsia.dev/fuchsia-src/reference/syscalls/port_wait.md).
+#[derive(PartialEq, Eq, Debug)]
+pub struct Packet(sys::zx_port_packet_t);
 
 /// A "wait item" containing a handle reference and information about what signals
 /// to wait on, and, on return from `object_wait_many`, which are pending.

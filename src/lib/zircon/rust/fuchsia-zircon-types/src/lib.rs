@@ -15,6 +15,8 @@ pub type zx_clock_t = u32;
 pub type zx_duration_t = i64;
 pub type zx_futex_t = AtomicI32;
 pub type zx_gpaddr_t = usize;
+pub type zx_guest_option_t = u32;
+pub type zx_vcpu_option_t = u32;
 pub type zx_guest_trap_t = u32;
 pub type zx_handle_t = u32;
 pub type zx_handle_op_t = u32;
@@ -36,6 +38,7 @@ pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_vm_option_t = u32;
 pub type zx_thread_state_topic_t = u32;
+pub type zx_vcpu_state_topic_t = u32;
 
 // TODO: magically coerce this to &`static str somehow?
 #[repr(C)]
@@ -397,6 +400,12 @@ multiconst!(zx_thread_state_topic_t, [
     ZX_THREAD_STATE_SINGLE_STEP        = 5;
 ]);
 
+// Possible values for "kind" in zx_vcpu_read_state and zx_vcpu_write_state.
+multiconst!(zx_vcpu_state_topic_t, [
+    ZX_VCPU_STATE   = 0;
+    ZX_VCPU_IO      = 1;
+]);
+
 multiconst!(zx_rsrc_kind_t, [
     ZX_RSRC_KIND_MMIO       = 0;
     ZX_RSRC_KIND_IRQ        = 1;
@@ -422,7 +431,7 @@ multiconst!(zx_clock_t, [
     ZX_CLOCK_MONOTONIC    = 0;
 ]);
 
-// from //src/zircon/system/public/zircon/syscalls/clock.h
+// from //zircon/system/public/zircon/syscalls/clock.h
 multiconst!(u64, [
     ZX_CLOCK_OPT_MONOTONIC = 1 << 0;
     ZX_CLOCK_OPT_CONTINUOUS = 1 << 1;
@@ -753,6 +762,15 @@ impl Default for zx_packet_type_t {
     }
 }
 
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum zx_packet_guest_vcpu_type_t {
+    ZX_PKT_GUEST_VCPU_INTERRUPT = 0,
+    ZX_PKT_GUEST_VCPU_STARTUP = 1,
+    #[doc(hidden)]
+    __Nonexhaustive,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct zx_packet_signal_t {
@@ -789,6 +807,51 @@ pub struct zx_packet_guest_io_t {
     pub access_size: u8,
     pub input: bool,
     pub data: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_guest_vcpu_interrupt_t {
+    pub mask: u64,
+    pub vector: u8,
+    padding1: [PadByte; 7],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_guest_vcpu_startup_t {
+    pub id: u64,
+    pub entry: zx_gpaddr_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union zx_packet_guest_vcpu_union_t {
+    pub interrupt: zx_packet_guest_vcpu_interrupt_t,
+    pub startup: zx_packet_guest_vcpu_startup_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct zx_packet_guest_vcpu_t {
+    pub r#type: zx_packet_guest_vcpu_type_t,
+    padding1: [PadByte; 4],
+    pub union: zx_packet_guest_vcpu_union_t,
+    reserved: u64,
+}
+
+impl Debug for zx_packet_guest_vcpu_t {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.r#type {
+            zx_packet_guest_vcpu_type_t::ZX_PKT_GUEST_VCPU_INTERRUPT => {
+                write!(f, "type: {:?} union: {:?}", self.r#type, unsafe { self.union.interrupt })
+            }
+            zx_packet_guest_vcpu_type_t::ZX_PKT_GUEST_VCPU_STARTUP => {
+                write!(f, "type: {:?} union: {:?}", self.r#type, unsafe { self.union.startup })
+            }
+            _ => panic!("unexpected VCPU packet type"),
+        }
+    }
 }
 
 #[repr(C)]
@@ -965,6 +1028,41 @@ pub struct zx_thread_state_general_regs_t {
     pub pc: u64,
     pub cpsr: u64,
     pub tpidr: u64,
+}
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_vcpu_state_t {
+    pub rax: u64,
+    pub rcx: u64,
+    pub rdx: u64,
+    pub rbx: u64,
+    pub rsp: u64,
+    pub rbp: u64,
+    pub rsi: u64,
+    pub rdi: u64,
+    pub r8: u64,
+    pub r9: u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
+    // Contains only the user-controllable lower 32-bits.
+    pub rflags: u64,
+}
+
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_vcpu_state_t {
+    pub x: [u64; 31],
+    pub sp: u64,
+    // Contains only the user-controllable upper 4-bits (NZCV).
+    pub cpsr: u32,
+    _padding1: [PadByte; 4],
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -1347,6 +1445,7 @@ struct_decl_macro! {
 
 zx_info_maps_t!(zx_info_maps_t);
 
+// from //zircon/system/public/zircon/syscalls/hypervisor.h
 multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_BELL = 0;
     ZX_GUEST_TRAP_MEM  = 1;
