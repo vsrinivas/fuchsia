@@ -136,8 +136,5 @@ group("run_test_component") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":run_test_component_unittests",
-    "test",
-  ]
+  public_deps = [ ":run_test_component_unittests" ]
 }
