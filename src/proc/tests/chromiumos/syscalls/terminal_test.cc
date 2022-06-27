@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
@@ -33,14 +34,16 @@ void register_signal_handler(int signal) {
   SAFE_SYSCALL(sigaction(signal, &action, nullptr));
 }
 
-long sleep_ns(int count) {
-  struct timespec ts = {.tv_sec = 0, .tv_nsec = count};
+long sleep_ns(uint64_t count) {
+  const uint64_t NS_PER_SECONDS = 1000000000;
+  struct timespec ts = {.tv_sec = static_cast<time_t>(count / NS_PER_SECONDS),
+                        .tv_nsec = static_cast<long>(count % NS_PER_SECONDS)};
   // TODO(qsr): Use nanosleep when starnix implements clock_nanosleep
   return syscall(SYS_nanosleep, &ts, nullptr);
 }
 
-int open_main_terminal() {
-  int fd = SAFE_SYSCALL(posix_openpt(O_RDWR | O_NONBLOCK));
+int open_main_terminal(int additional_flags = 0) {
+  int fd = SAFE_SYSCALL(posix_openpt(O_RDWR | additional_flags));
   SAFE_SYSCALL(grantpt(fd));
   SAFE_SYSCALL(unlockpt(fd));
   return fd;
@@ -174,7 +177,7 @@ TEST(Pty, OpenDevTTY) {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
 
-    int main_terminal = open_main_terminal();
+    int main_terminal = open_main_terminal(O_NONBLOCK);
     SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
     SAFE_SYSCALL(open("/dev/tty", O_RDWR));
@@ -316,6 +319,87 @@ TEST(Pty, SendSignals) {
     });
     ASSERT_TRUE(helper.WaitForChildren());
   }
+}
+
+TEST(Pty, CloseMainTerminal) {
+  ForkHelper helper;
+  helper.RunInForkedProcess([&] {
+    ignore_signal(SIGHUP);
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal(O_NONBLOCK | O_NOCTTY);
+    int replica_terminal =
+        SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK | O_NOCTTY));
+    ASSERT_EQ(open("/dev/tty", O_RDWR), -1);
+    ASSERT_EQ(errno, ENXIO);
+    close(main_terminal);
+    char buffer[1];
+    ASSERT_EQ(read(replica_terminal, buffer, 1), 0);
+    ASSERT_EQ(write(replica_terminal, buffer, 1), -1);
+    EXPECT_EQ(EIO, errno);
+
+    short all_events = POLLIN | POLLPRI | POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+    struct pollfd fds = {replica_terminal, all_events, 0};
+    ASSERT_EQ(1, SAFE_SYSCALL(poll(&fds, 1, -1)));
+    EXPECT_EQ(fds.revents, POLLIN | POLLOUT | POLLERR | POLLHUP);
+  });
+}
+
+TEST(Pty, CloseReplicaTerminal) {
+  ForkHelper helper;
+  helper.RunInForkedProcess([&] {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal(O_NONBLOCK | O_NOCTTY);
+    int replica_terminal =
+        SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK | O_NOCTTY));
+    ASSERT_EQ(open("/dev/tty", O_RDWR), -1);
+    ASSERT_EQ(errno, ENXIO);
+    close(replica_terminal);
+
+    char buffer[1];
+    ASSERT_EQ(read(main_terminal, buffer, 1), -1);
+    EXPECT_EQ(EIO, errno);
+
+    short all_events = POLLIN | POLLPRI | POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+    struct pollfd fds = {main_terminal, all_events, 0};
+    ASSERT_EQ(1, SAFE_SYSCALL(poll(&fds, 1, -1)));
+    ASSERT_EQ(fds.revents, POLLOUT | POLLHUP);
+
+    ASSERT_EQ(write(main_terminal, buffer, 1), 1);
+  });
+}
+
+TEST(Pty, DetectReplicaClosing) {
+  ForkHelper helper;
+  helper.RunInForkedProcess([&] {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal(O_NOCTTY);
+    int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NOCTTY));
+
+    struct pollfd fds = {main_terminal, POLLIN, 0};
+
+    register_signal_handler(SIGUSR1);
+    pid_t child_pid = helper.RunInForkedProcess([&] {
+      close(main_terminal);
+      register_signal_handler(SIGUSR2);
+      SAFE_SYSCALL(kill(getppid(), SIGUSR1));
+      // Wait for SIGUSR2
+      while (received_signal[SIGUSR2] == 0) {
+        sleep_ns(10e7);
+      }
+    });
+
+    close(replica_terminal);
+    // Wait for SIGUSR1
+    while (received_signal[SIGUSR1] == 0) {
+      sleep_ns(10e7);
+    }
+    SAFE_SYSCALL(kill(child_pid, SIGUSR2));
+    ASSERT_EQ(1, SAFE_SYSCALL(poll(&fds, 1, 10000)));
+    ASSERT_EQ(fds.revents, POLLHUP);
+  });
 }
 
 }  // namespace

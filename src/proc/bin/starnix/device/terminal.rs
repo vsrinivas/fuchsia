@@ -87,6 +87,14 @@ pub struct TerminalMutableState {
     /// backspace.
     column: usize,
 
+    /// The number of active references to the main part of the terminal. Starts as `None`. The
+    /// main part of the terminal is considered closed when this is `Some(0)`.
+    main_references: Option<u32>,
+
+    /// The number of active references to the replica part of the terminal. Starts as `None`. The
+    /// replica part of the terminal is considered closed when this is `Some(0)`.
+    replica_references: Option<u32>,
+
     /// Input queue of the terminal. Data flow from the main side to the replica side.
     ///
     /// This option is never empty in the steady state of the terminal. Mutating methods on Queue
@@ -151,6 +159,16 @@ impl Terminal {
         self.send_signals(signals);
     }
 
+    /// `close` implementation of the main side of the terminal.
+    pub fn main_close(self: &Arc<Self>) {
+        self.write().main_close();
+    }
+
+    /// Called when a new reference to the replica side of this terminal is made.
+    pub fn main_open(self: &Arc<Self>) {
+        self.write().main_open();
+    }
+
     /// `wait_async` implementation of the main side of the terminal.
     pub fn main_wait_async(
         self: &Arc<Self>,
@@ -192,6 +210,16 @@ impl Terminal {
         let (bytes, signals) = self.write().main_write(current_task, data)?;
         self.send_signals(signals);
         Ok(bytes)
+    }
+
+    /// `close` implementation of the replica side of the terminal.
+    pub fn replica_close(self: &Arc<Self>) {
+        self.write().replica_close();
+    }
+
+    /// Called when a new reference to the replica side of this terminal is made.
+    pub fn replica_open(self: &Arc<Self>) {
+        self.write().replica_open();
     }
 
     /// `wait_async` implementation of the replica side of the terminal.
@@ -364,6 +392,24 @@ state_implementation!(Terminal, TerminalMutableState, {
         }
     }
 
+    /// `close` implementation of the main side of the terminal.
+    pub fn main_close(&mut self) {
+        self.main_references = self.main_references.map(|v| v - 1);
+        self.notify_waiters();
+    }
+
+    /// Called when a new reference to the replica side of this terminal is made.
+    pub fn main_open(&mut self) {
+        self.main_references = Some(self.main_references.unwrap_or(0) + 1);
+    }
+
+    fn is_main_closed(&self) -> bool {
+        match self.main_references {
+            Some(0) => true,
+            _ => false,
+        }
+    }
+
     /// `wait_async` implementation of the main side of the terminal.
     fn main_wait_async(
         &mut self,
@@ -387,6 +433,9 @@ state_implementation!(Terminal, TerminalMutableState, {
 
     /// `query_events` implementation of the main side of the terminal.
     fn main_query_events(&self) -> FdEvents {
+        if self.is_replica_closed() {
+            return FdEvents::POLLOUT | FdEvents::POLLHUP;
+        }
         self.output_queue().read_readyness() | self.input_queue().write_readyness()
     }
 
@@ -396,6 +445,9 @@ state_implementation!(Terminal, TerminalMutableState, {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
+        if self.is_replica_closed() {
+            return error!(EIO);
+        }
         let result = with_queue!(self.output_queue.read(self, current_task, data))?;
         self.notify_waiters();
         Ok(result)
@@ -410,6 +462,24 @@ state_implementation!(Terminal, TerminalMutableState, {
         let result = with_queue!(self.input_queue.write(self, current_task, data))?;
         self.notify_waiters();
         Ok(result)
+    }
+
+    /// `close` implementation of the replica side of the terminal.
+    pub fn replica_close(&mut self) {
+        self.replica_references = self.replica_references.map(|v| v - 1);
+        self.notify_waiters();
+    }
+
+    /// Called when a new reference to the replica side of this terminal is made.
+    pub fn replica_open(&mut self) {
+        self.replica_references = Some(self.replica_references.unwrap_or(0) + 1);
+    }
+
+    fn is_replica_closed(&self) -> bool {
+        match self.replica_references {
+            Some(0) => true,
+            _ => false,
+        }
     }
 
     /// `wait_async` implementation of the replica side of the terminal.
@@ -435,6 +505,9 @@ state_implementation!(Terminal, TerminalMutableState, {
 
     /// `query_events` implementation of the replica side of the terminal.
     fn replica_query_events(&self) -> FdEvents {
+        if self.is_main_closed() {
+            return FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLERR | FdEvents::POLLHUP;
+        }
         self.input_queue().read_readyness() | self.output_queue().write_readyness()
     }
 
@@ -444,6 +517,9 @@ state_implementation!(Terminal, TerminalMutableState, {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
+        if self.is_main_closed() {
+            return Ok((0, PendingSignals::new()));
+        }
         let result = with_queue!(self.input_queue.read(self, current_task, data))?;
         self.notify_waiters();
         Ok(result)
@@ -455,6 +531,9 @@ state_implementation!(Terminal, TerminalMutableState, {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
+        if self.is_main_closed() {
+            return error!(EIO);
+        }
         let result = with_queue!(self.output_queue.write(self, current_task, data))?;
         self.notify_waiters();
         Ok(result)

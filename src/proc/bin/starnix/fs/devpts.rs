@@ -135,7 +135,7 @@ impl DeviceOps for DevPtsDevice {
                         Ok(Box::new(DevPtsFile::new(controlling_terminal.terminal)))
                     }
                 } else {
-                    error!(EIO)
+                    error!(ENXIO)
                 }
             }
             // /dev/pts/??
@@ -170,6 +170,7 @@ struct DevPtmxFile {
 
 impl DevPtmxFile {
     pub fn new(fs: FileSystemHandle, terminal: Arc<Terminal>) -> Self {
+        terminal.main_open();
         Self { fs, terminal }
     }
 }
@@ -183,7 +184,9 @@ impl Drop for DevPtmxFile {
 impl FileOps for DevPtmxFile {
     fileops_impl_nonseekable!();
 
-    fn close(&self, _file: &FileObject) {}
+    fn close(&self, _file: &FileObject) {
+        self.terminal.main_close();
+    }
 
     fn read(
         &self,
@@ -270,6 +273,7 @@ struct DevPtsFile {
 
 impl DevPtsFile {
     pub fn new(terminal: Arc<Terminal>) -> Self {
+        terminal.replica_open();
         Self { terminal }
     }
 }
@@ -277,7 +281,9 @@ impl DevPtsFile {
 impl FileOps for DevPtsFile {
     fileops_impl_nonseekable!();
 
-    fn close(&self, _file: &FileObject) {}
+    fn close(&self, _file: &FileObject) {
+        self.terminal.replica_close();
+    }
 
     fn read(
         &self,
