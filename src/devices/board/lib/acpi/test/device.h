@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_TEST_DEVICE_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_TEST_DEVICE_H_
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,6 +39,8 @@ class Device {
   }
   void SetGlk(bool val) { glk_ = val; }
 
+  void SetPowerResourceMethods(uint8_t system_level, uint16_t resource_order);
+
   // Add a child to this device.
   void AddChild(std::unique_ptr<Device> c) {
     c->parent_ = this;
@@ -45,6 +48,8 @@ class Device {
   }
 
   void AddMethodCallback(const std::optional<std::string>& name, EvaluateObjectCallback cb) {
+    // Allow an existing callback to be replaced.
+    methods_.erase(name);
     methods_.emplace(name, std::move(cb));
   }
 

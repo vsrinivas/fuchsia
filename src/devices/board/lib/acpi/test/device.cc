@@ -220,4 +220,26 @@ acpi::status<> Device::AddressSpaceOp(ACPI_ADR_SPACE_TYPE space, uint32_t functi
       result->second.first(function, address, bit_width, value, result->second.second, nullptr));
 }
 
+void Device::SetPowerResourceMethods(uint8_t system_level, uint16_t resource_order) {
+  SetSta(0);
+  AddMethodCallback(
+      std::nullopt, [system_level, resource_order](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->PowerResource.Type = ACPI_TYPE_POWER;
+        retval->PowerResource.SystemLevel = system_level;
+        retval->PowerResource.ResourceOrder = resource_order;
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  AddMethodCallback("_ON", [this](const std::optional<std::vector<ACPI_OBJECT>>&) {
+    SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  AddMethodCallback("_OFF", [this](const std::optional<std::vector<ACPI_OBJECT>>&) {
+    SetSta(0);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+}
+
 }  // namespace acpi::test

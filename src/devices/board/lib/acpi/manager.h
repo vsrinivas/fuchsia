@@ -56,6 +56,14 @@ class Manager {
   // Used by a device to inform the manager about the existence of a power resource.
   const PowerResource* AddPowerResource(ACPI_HANDLE power_resource_handle);
 
+  // Used by a device to declare that it requires a list of power resources to be on.
+  // The list of power resources should be sorted by ascending resource_order.
+  zx_status_t ReferencePowerResources(const std::vector<ACPI_HANDLE>& power_resource_handles);
+
+  // Used by a device to declare that it no longer requires a list of power resources to be on.
+  // The list of power resources should be sorted by ascending resource_order.
+  zx_status_t DereferencePowerResources(const std::vector<ACPI_HANDLE>& power_resource_handles);
+
   // For internal and unit test use only.
   virtual zx_status_t StartFidlLoop() { return ZX_ERR_NOT_SUPPORTED; }
   DeviceBuilder* LookupDevice(ACPI_HANDLE handle);

@@ -23,14 +23,20 @@ class PowerResource {
 
   zx_status_t Init();
 
+  ACPI_HANDLE handle() const { return acpi_handle_; }
   uint8_t system_level() const { return system_level_; }
   uint16_t resource_order() const { return resource_order_; }
+  bool is_on() const { return is_on_; }
+
+  zx_status_t Reference();
+  zx_status_t Dereference();
 
  private:
   Acpi* acpi_;
   ACPI_HANDLE acpi_handle_;
   uint8_t system_level_;
   uint16_t resource_order_;
+  int ref_count_ = 0;
   bool is_on_ = false;
 };
 

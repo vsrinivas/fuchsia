@@ -186,7 +186,34 @@ void Device::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  // TODO(fxbug.dev/81684): transition to D state 0.
+#ifdef ENABLE_ATLAS_CAMERA
+  bool atlas_camera_enabled = true;
+#else
+  bool atlas_camera_enabled = false;
+#endif
+
+  // Initial transition to D state 0.
+  // Skip turning on Atlas camera unless enabled.
+  if ((name_ != "acpi-CAM0" && name_ != "acpi-NVM0") || atlas_camera_enabled) {
+    if (PowerStateInfo* state = GetPowerState(DEV_POWER_STATE_D0)) {
+      result = manager_->ReferencePowerResources(state->power_resources);
+      if (result) {
+        zxlogf(ERROR, "Failed to turn on power resources required for D0 for ACPI device: %s",
+               zx_status_get_string(result));
+        txn.Reply(result);
+        return;
+      }
+
+      result = CallPsxMethod(*state);
+      if (result) {
+        zxlogf(ERROR, "Failed to call _PS0 for ACPI device: %s", zx_status_get_string(result));
+        txn.Reply(result);
+        return;
+      }
+
+      current_power_state_ = DEV_POWER_STATE_D0;
+    }
+  }
 
   if (metadata_.empty()) {
     txn.Reply(ZX_OK);
@@ -343,8 +370,19 @@ zx::status<zx::channel> Device::PrepareOutgoing() {
   return zx::ok(endpoints->client.TakeChannel());
 }
 
+zx_status_t Device::CallPsxMethod(const PowerStateInfo& state) {
+  if (!state.defines_psx_method) {
+    return ZX_OK;
+  }
+
+  std::string method_name = "_PS" + std::to_string(state.d_state);
+  auto psx = acpi_->EvaluateObject(acpi_handle_, method_name.c_str(), std::nullopt);
+  return psx.zx_status_value();
+}
+
 zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
-  PowerStateInfo power_state_info{};
+  PowerStateInfo power_state_info{.d_state = d_state};
+  std::vector<const PowerResource*> power_resources;
 
   // Gather information about what power resources are needed in this D state.
   std::string method_name = "_PR" + std::to_string(d_state);
@@ -361,19 +399,29 @@ zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
       }
 
       if (power_resource) {
-        power_state_info.power_resources.insert(power_resource);
+        power_resources.push_back(power_resource);
       }
     }
   }
 
   // Map from D states to supported S states based on power resource system_levels.
   uint8_t shallowest_system_level = 4;
-  for (const PowerResource* power_resource : power_state_info.power_resources) {
+  for (const PowerResource* power_resource : power_resources) {
     shallowest_system_level = std::min(shallowest_system_level, power_resource->system_level());
   }
 
   for (uint8_t s_state = 0; s_state <= shallowest_system_level; ++s_state) {
     power_state_info.supported_s_states.insert(s_state);
+  }
+
+  // Sort power resources by ascending resource_order.
+  std::sort(power_resources.begin(), power_resources.end(),
+            [](const PowerResource* lhs, const PowerResource* rhs) {
+              return lhs->resource_order() < rhs->resource_order();
+            });
+
+  for (auto power_resource : power_resources) {
+    power_state_info.power_resources.push_back(power_resource->handle());
   }
 
   // Check whether this D state has a _PSx method defined.
@@ -409,13 +457,9 @@ zx_status_t Device::InitializePowerManagement() {
     if (sxd.is_ok()) {
       for (uint8_t d_state = DEV_POWER_STATE_D0; d_state < static_cast<uint8_t>(sxd->Integer.Value);
            ++d_state) {
-        auto power_state_entry = supported_power_states_.find(d_state);
-        if (power_state_entry == supported_power_states_.end()) {
-          continue;
+        if (PowerStateInfo* power_state = GetPowerState(d_state)) {
+          power_state->supported_s_states.erase(s_state);
         }
-        PowerStateInfo& power_state = power_state_entry->second;
-
-        power_state.supported_s_states.erase(s_state);
       }
     }
   }
@@ -435,8 +479,13 @@ std::unordered_map<uint8_t, DevicePowerState> Device::GetSupportedPowerStates() 
 }
 
 PowerStateTransitionResponse Device::TransitionToPowerState(uint8_t requested_state) {
+  PowerStateInfo* state = GetPowerState(requested_state);
+  if (state == nullptr) {
+    return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, current_power_state_);
+  }
+
   // TODO(fxbug.dev/81684): implement.
-  return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, DEV_POWER_STATE_D0);
+  return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, current_power_state_);
 }
 
 zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,

@@ -48,77 +48,6 @@ const std::string_view hid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
   return std::string_view{};
 }
 
-// TODO(fxbug.dev/81684): remove these hacks once we have a proper solution for managing power of
-// ACPI devices.
-void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
-  // Slate workaround: Turn on the HID controller.
-  if (!memcmp(&info->Name, "I2C0", 4)) {
-    auto acpi_status = acpi->EvaluateObject(object, "H00A._PR0", std::nullopt);
-    if (acpi_status.is_ok()) {
-      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
-      for (unsigned i = 0; i < pkg->Package.Count; i++) {
-        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
-        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
-        } else {
-          zxlogf(DEBUG, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]", i);
-          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
-          if (acpi_status.is_error()) {
-            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status.error_value());
-          }
-        }
-      }
-    }
-
-    // Atlas workaround: Turn on the HID controller.
-    acpi_status = acpi->EvaluateObject(object, "H049._PR0", std::nullopt);
-    if (acpi_status.is_ok()) {
-      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
-      for (unsigned i = 0; i < pkg->Package.Count; i++) {
-        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
-        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
-        } else {
-          zxlogf(DEBUG, "acpi: Enabling HID controller at I2C0.H049._PR0[%u]", i);
-          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
-          if (acpi_status.is_error()) {
-            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status.error_value());
-          }
-        }
-      }
-    }
-
-  }
-  // Acer workaround: Turn on the HID controller.
-  else if (!memcmp(&info->Name, "I2C1", 4)) {
-    zxlogf(DEBUG, "acpi: Enabling HID controller at I2C1");
-    auto acpi_status = acpi->EvaluateObject(object, "_PS0", std::nullopt);
-    if (acpi_status.is_error()) {
-      zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status.error_value());
-    }
-#ifdef ENABLE_ATLAS_CAMERA
-  } else if (!memcmp(&info->Name, "CAM0", 4)) {
-    // Atlas workaround: turn on the camera.
-    auto acpi_status = acpi->EvaluateObject(object, "_PR0", std::nullopt);
-    if (acpi_status.is_ok()) {
-      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
-      for (unsigned i = 0; i < pkg->Package.Count; i++) {
-        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
-        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
-        } else {
-          zxlogf(DEBUG, "acpi: Enabling camera at CAM0._PR0[%u]", i);
-          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
-          if (acpi_status.is_error()) {
-            zxlogf(ERROR, "acpi: acpi error 0x%x in CAM0._PR0._ON", acpi_status.error_value());
-          }
-        }
-      }
-    }
-#endif
-  }
-}
-
 }  // namespace
 
 namespace acpi {
@@ -165,32 +94,6 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
   }
 
   acpi::Acpi* acpi = manager->acpi();
-  // TODO(fxbug.dev/81684): remove this once we have a proper solution for managing power of ACPI
-  // devices.
-  acpi::status<> acpi_status = acpi->WalkNamespace(
-      ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [acpi](ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> acpi::status<> {
-        if (dir == acpi::WalkDirection::Ascending) {
-          return acpi::ok();
-        }
-
-        // We are descending.  Grab our object info.
-        acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-        if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-          return res.take_error();
-        } else {
-          info = std::move(res.value());
-        }
-
-        // Apply any workarounds for quirks.
-        acpi_apply_workarounds(acpi, object, info.get());
-
-        return acpi::ok();
-      });
-
-  if (acpi_status.is_error()) {
-    zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status.error_value());
-  }
 
   auto result = manager->DiscoverDevices();
   if (result.is_error()) {
@@ -205,46 +108,47 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.
   // TODO(fxbug.dev/78349): remove this when all drivers are removed from the x86 board driver.
-  acpi_status = acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-                                    [acpi_root, acpi](ACPI_HANDLE object, uint32_t level,
-                                                      acpi::WalkDirection dir) -> acpi::status<> {
-                                      // We don't have anything useful to do during the ascent
-                                      // phase.  Just skip it.
-                                      if (dir == acpi::WalkDirection::Ascending) {
-                                        return acpi::ok();
-                                      }
+  acpi::status<> acpi_status =
+      acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
+                          [acpi_root, acpi](ACPI_HANDLE object, uint32_t level,
+                                            acpi::WalkDirection dir) -> acpi::status<> {
+                            // We don't have anything useful to do during the ascent
+                            // phase.  Just skip it.
+                            if (dir == acpi::WalkDirection::Ascending) {
+                              return acpi::ok();
+                            }
 
-                                      // We are descending.  Grab our object info.
-                                      acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-                                      if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-                                        return res.take_error();
-                                      } else {
-                                        info = std::move(res.value());
-                                      }
+                            // We are descending.  Grab our object info.
+                            acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+                            if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+                              return res.take_error();
+                            } else {
+                              info = std::move(res.value());
+                            }
 
-                                      // Extract pointers to the hardware ID and the compatible ID
-                                      // if present. If there is no hardware ID, just skip the
-                                      // device.
-                                      const std::string_view hid = hid_from_acpi_devinfo(*info);
-                                      if (hid.empty()) {
-                                        return acpi::ok();
-                                      }
+                            // Extract pointers to the hardware ID and the compatible ID
+                            // if present. If there is no hardware ID, just skip the
+                            // device.
+                            const std::string_view hid = hid_from_acpi_devinfo(*info);
+                            if (hid.empty()) {
+                              return acpi::ok();
+                            }
 
-                                      // Now, if we recognize the HID, go ahead and deal with
-                                      // publishing the device.
-                                      if (hid == LID_HID_STRING) {
-                                        lid_init(acpi_root, object);
-                                      } else if (hid == EC_HID_STRING) {
-                                        acpi_ec::EcDevice::Create(acpi_root, acpi, object);
-                                      } else if (hid == GOOGLE_TBMC_HID_STRING) {
-                                        tbmc_init(acpi_root, object);
-                                      }
-                                      return acpi::ok();
-                                    });
+                            // Now, if we recognize the HID, go ahead and deal with
+                            // publishing the device.
+                            if (hid == LID_HID_STRING) {
+                              lid_init(acpi_root, object);
+                            } else if (hid == EC_HID_STRING) {
+                              acpi_ec::EcDevice::Create(acpi_root, acpi, object);
+                            } else if (hid == GOOGLE_TBMC_HID_STRING) {
+                              tbmc_init(acpi_root, object);
+                            }
+                            return acpi::ok();
+                          });
 
   if (acpi_status.is_error()) {
     return ZX_ERR_BAD_STATE;
-  } else {
-    return ZX_OK;
   }
+
+  return ZX_OK;
 }

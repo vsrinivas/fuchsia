@@ -166,13 +166,24 @@ class Device : public DeviceType,
   zx::status<zx::channel> PrepareOutgoing();
 
   struct PowerStateInfo {
-    std::unordered_set<const PowerResource*> power_resources;
+    uint8_t d_state;
+    // This should be sorted by ascending resource_order.
+    std::vector<ACPI_HANDLE> power_resources;
     bool defines_psx_method = false;
     std::unordered_set<uint8_t> supported_s_states;
   };
 
   zx_status_t InitializePowerManagement();
   zx::status<PowerStateInfo> GetInfoForState(uint8_t d_state);
+  zx_status_t CallPsxMethod(const PowerStateInfo& state);
+
+  PowerStateInfo* GetPowerState(uint8_t d_state) {
+    auto power_state = supported_power_states_.find(d_state);
+    if (power_state == supported_power_states_.end()) {
+      return nullptr;
+    }
+    return &power_state->second;
+  }
 
   acpi::Manager* manager_;
   acpi::Acpi* acpi_;
@@ -192,6 +203,7 @@ class Device : public DeviceType,
   bool can_use_global_lock_ = false;
 
   std::unordered_map<uint8_t, PowerStateInfo> supported_power_states_;
+  uint8_t current_power_state_;
 
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;

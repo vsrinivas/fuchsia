@@ -27,4 +27,38 @@ zx_status_t PowerResource::Init() {
   return ZX_OK;
 }
 
+zx_status_t PowerResource::Reference() {
+  if (ref_count_ == 0) {
+    auto status = acpi_->EvaluateObject(acpi_handle_, "_ON", std::nullopt);
+    if (status.is_error()) {
+      zxlogf(ERROR, "Failed to call _ON on an ACPI power resource: %s",
+             zx_status_get_string(status.zx_status_value()));
+      return status.zx_status_value();
+    }
+    is_on_ = true;
+  }
+
+  ++ref_count_;
+
+  return ZX_OK;
+}
+
+zx_status_t PowerResource::Dereference() {
+  ZX_ASSERT_MSG(ref_count_ > 0, "Tried to dereference an ACPI PowerResource with no references");
+
+  if (ref_count_ == 1) {
+    auto status = acpi_->EvaluateObject(acpi_handle_, "_OFF", std::nullopt);
+    if (status.is_error()) {
+      zxlogf(ERROR, "Failed to call _OFF on an ACPI power resource: %s",
+             zx_status_get_string(status.zx_status_value()));
+      return status.zx_status_value();
+    }
+    is_on_ = false;
+  }
+
+  --ref_count_;
+
+  return ZX_OK;
+}
+
 }  // namespace acpi

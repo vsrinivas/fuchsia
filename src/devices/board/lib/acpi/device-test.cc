@@ -185,21 +185,9 @@ class AcpiDeviceTest : public zxtest::Test {
   ACPI_HANDLE AddPowerResource(const std::string& name, uint8_t system_level,
                                uint16_t resource_order) {
     auto power_resource = std::make_unique<acpi::test::Device>(name);
-
-    power_resource->AddMethodCallback(
-        std::nullopt,
-        [system_level, resource_order](const std::optional<std::vector<ACPI_OBJECT>>&) {
-          ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-          retval->PowerResource.Type = ACPI_TYPE_POWER;
-          retval->PowerResource.SystemLevel = system_level;
-          retval->PowerResource.ResourceOrder = resource_order;
-          return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-        });
-
+    power_resource->SetPowerResourceMethods(system_level, resource_order);
     ACPI_HANDLE handle = power_resource.get();
-
     acpi_.GetDeviceRoot()->AddChild(std::move(power_resource));
-
     return handle;
   }
 
@@ -504,69 +492,72 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementNoSupportedStates) {
 }
 
 TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResources) {
-  ACPI_HANDLE power_resource1 = AddPowerResource("POW1", 1, 0);
-  ACPI_HANDLE power_resource2 = AddPowerResource("POW2", 2, 0);
-  ACPI_HANDLE power_resource3 = AddPowerResource("POW3", 3, 0);
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 1, 0);
+  ACPI_HANDLE power_resource_handle2 = AddPowerResource("POW2", 2, 0);
+  ACPI_HANDLE power_resource_handle3 = AddPowerResource("POW3", 3, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  acpi::test::Device* mock_power_device2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
+  acpi::test::Device* mock_power_device3 = acpi_.GetDeviceRoot()->FindByPath("\\POW3");
 
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
 
+  test_dev->AddMethodCallback("_PR0", [power_resource_handle1, power_resource_handle2](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev->AddMethodCallback("_PR1", [power_resource_handle1, power_resource_handle3](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle3}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev->AddMethodCallback("_PR2", [power_resource_handle2, power_resource_handle3](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle3}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
   test_dev->AddMethodCallback(
-      "_PR0", [power_resource1, power_resource2](const std::optional<std::vector<ACPI_OBJECT>>&) {
-        static std::array<ACPI_OBJECT, 2> power_resources{
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource1}},
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource2}}};
-
-        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-        retval->Package.Type = ACPI_TYPE_PACKAGE;
-        retval->Package.Count = power_resources.size();
-        retval->Package.Elements = power_resources.data();
-        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-      });
-
-  test_dev->AddMethodCallback(
-      "_PR1", [power_resource1, power_resource3](const std::optional<std::vector<ACPI_OBJECT>>&) {
-        static std::array<ACPI_OBJECT, 2> power_resources{
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource1}},
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource3}}};
-
-        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-        retval->Package.Type = ACPI_TYPE_PACKAGE;
-        retval->Package.Count = power_resources.size();
-        retval->Package.Elements = power_resources.data();
-        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-      });
-
-  test_dev->AddMethodCallback(
-      "_PR2", [power_resource2, power_resource3](const std::optional<std::vector<ACPI_OBJECT>>&) {
-        static std::array<ACPI_OBJECT, 2> power_resources{
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource2}},
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource3}}};
-
-        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-        retval->Package.Type = ACPI_TYPE_PACKAGE;
-        retval->Package.Count = power_resources.size();
-        retval->Package.Elements = power_resources.data();
-        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-      });
-
-  test_dev->AddMethodCallback(
-      "_PR3", [power_resource3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+      "_PR3", [power_resource_handle3](const std::optional<std::vector<ACPI_OBJECT>>&) {
         static std::array<ACPI_OBJECT, 1> power_resources{
             ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
                                       .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource3}}};
+                                      .Handle = power_resource_handle3}}};
 
         ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
         retval->Package.Type = ACPI_TYPE_PACKAGE;
@@ -594,26 +585,148 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResources) {
             std::unordered_set<uint8_t>({0, 1, 2}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
+
+  // Make sure only the power resources required for D0 were turned on.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+}
+
+TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResourceOrder) {
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 1, 2);
+  ACPI_HANDLE power_resource_handle2 = AddPowerResource("POW2", 2, 1);
+  ACPI_HANDLE power_resource_handle3 = AddPowerResource("POW3", 3, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  acpi::test::Device* mock_power_device2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
+  acpi::test::Device* mock_power_device3 = acpi_.GetDeviceRoot()->FindByPath("\\POW3");
+
+  mock_power_device1->AddMethodCallback(
+      "_ON", [mock_power_device1, mock_power_device2,
+              mock_power_device3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        // Make sure power resources with lower system orders are already on.
+        EXPECT_EQ(mock_power_device2->sta(), 1);
+        EXPECT_EQ(mock_power_device3->sta(), 1);
+        mock_power_device1->SetSta(1);
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+      });
+
+  mock_power_device2->AddMethodCallback("_ON", [mock_power_device2, mock_power_device3](
+                                                   const std::optional<std::vector<ACPI_OBJECT>>&) {
+    // Make sure power resources with lower system orders are already on.
+    EXPECT_EQ(mock_power_device3->sta(), 1);
+    mock_power_device2->SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  mock_power_device1->AddMethodCallback(
+      "_OFF", [mock_power_device1, mock_power_device2,
+               mock_power_device3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        // Make sure power resources with lower system orders are still on.
+        EXPECT_EQ(mock_power_device2->sta(), 1);
+        EXPECT_EQ(mock_power_device3->sta(), 1);
+        mock_power_device1->SetSta(0);
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+      });
+
+  mock_power_device2->AddMethodCallback(
+      "_OFF",
+      [mock_power_device2, mock_power_device3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        // Make sure power resources with lower system orders are still on.
+        EXPECT_EQ(mock_power_device3->sta(), 1);
+        mock_power_device2->SetSta(0);
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+      });
+
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+
+  test_dev->AddMethodCallback(
+      "_PR0", [power_resource_handle1, power_resource_handle2,
+               power_resource_handle3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 3> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle2}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle3}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  test_dev->AddMethodCallback(
+      "_PR3", [power_resource_handle1, power_resource_handle2,
+               power_resource_handle3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 3> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle2}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle3}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
+
+  HandOffToDdk(std::move(device));
+
+  // Make sure the power resources required for D0 were turned on.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
+
+  // TODO(fxbug.dev/81684): suspend the device to make sure power resources are turned off in the
+  // right order.
 }
 
 TEST_F(AcpiDeviceTest, TestInitializePowerManagementPsxMethods) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
 
-  test_dev->AddMethodCallback("_PS0", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
-  });
+  bool ps0_called = false;
+  test_dev->AddMethodCallback("_PS0",
+                              [&ps0_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps0_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
 
-  test_dev->AddMethodCallback("_PS1", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
-  });
+  bool ps1_called = false;
+  test_dev->AddMethodCallback("_PS1",
+                              [&ps1_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps1_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
 
-  test_dev->AddMethodCallback("_PS2", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
-  });
+  bool ps2_called = false;
+  test_dev->AddMethodCallback("_PS2",
+                              [&ps2_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps2_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
 
-  test_dev->AddMethodCallback("_PS3", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
-  });
+  bool ps3_called = false;
+  test_dev->AddMethodCallback("_PS3",
+                              [&ps3_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps3_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
 
   test_dev->AddMethodCallback("_S1D", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
     ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
@@ -662,55 +775,71 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPsxMethods) {
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3, 4}));
+
+  ASSERT_TRUE(ps0_called);
+  ASSERT_FALSE(ps1_called);
+  ASSERT_FALSE(ps2_called);
+  ASSERT_FALSE(ps3_called);
 }
 
 TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResourcesAndPsxMethods) {
-  ACPI_HANDLE power_resource1 = AddPowerResource("POW1", 3, 0);
-  ACPI_HANDLE power_resource2 = AddPowerResource("POW2", 4, 0);
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 3, 0);
+  ACPI_HANDLE power_resource_handle2 = AddPowerResource("POW2", 4, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  acpi::test::Device* mock_power_device2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
 
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
 
-  test_dev->AddMethodCallback(
-      "_PR0", [power_resource1, power_resource2](const std::optional<std::vector<ACPI_OBJECT>>&) {
-        static std::array<ACPI_OBJECT, 2> power_resources{
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource1}},
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource2}}};
+  test_dev->AddMethodCallback("_PR0", [power_resource_handle1, power_resource_handle2](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
 
-        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-        retval->Package.Type = ACPI_TYPE_PACKAGE;
-        retval->Package.Count = power_resources.size();
-        retval->Package.Elements = power_resources.data();
-        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-      });
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
 
-  test_dev->AddMethodCallback(
-      "_PR3", [power_resource1, power_resource2](const std::optional<std::vector<ACPI_OBJECT>>&) {
-        static std::array<ACPI_OBJECT, 2> power_resources{
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource1}},
-            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
-                                      .ActualType = ACPI_TYPE_POWER,
-                                      .Handle = power_resource2}}};
+  test_dev->AddMethodCallback("_PR3", [power_resource_handle1, power_resource_handle2](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
 
-        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-        retval->Package.Type = ACPI_TYPE_PACKAGE;
-        retval->Package.Count = power_resources.size();
-        retval->Package.Elements = power_resources.data();
-        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-      });
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
 
-  test_dev->AddMethodCallback("_PS0", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
+  bool ps0_called = false;
+  test_dev->AddMethodCallback("_PS0", [&ps0_called, mock_power_device1, mock_power_device2](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    // Make sure power resources were turned on BEFORE calling PS0.
+    EXPECT_EQ(mock_power_device1->sta(), 1);
+    EXPECT_EQ(mock_power_device2->sta(), 1);
+    ps0_called = true;
     return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
   });
 
-  test_dev->AddMethodCallback("_PS3", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
-  });
+  bool ps3_called = false;
+  test_dev->AddMethodCallback("_PS3",
+                              [&ps3_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps3_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
 
   test_dev->AddMethodCallback("_S1D", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
     ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
@@ -741,4 +870,9 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResourcesAndPsxMethods)
             std::unordered_set<uint8_t>({0, 2}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
+
+  ASSERT_TRUE(ps0_called);
+  ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
 }

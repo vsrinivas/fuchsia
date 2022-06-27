@@ -9,6 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/status.h>
+#include <zircon/compiler.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -161,6 +162,52 @@ const PowerResource* Manager::AddPowerResource(ACPI_HANDLE power_resource_handle
   }
 
   return &power_resource_entry->second;
+}
+
+zx_status_t Manager::ReferencePowerResources(
+    const std::vector<ACPI_HANDLE>& power_resource_handles) {
+  std::scoped_lock lock(power_resource_lock_);
+
+  for (auto it = power_resource_handles.begin(); it != power_resource_handles.end(); ++it) {
+    auto power_resource = power_resources_.find(*it);
+    ZX_ASSERT_MSG(power_resource != power_resources_.end(),
+                  "Attempting to reference an unknown power resource.");
+    zx_status_t status = power_resource->second.Reference();
+    if (status != ZX_OK) {
+      // Re-dereference all the successfully referenced power resources.
+      while (it != power_resource_handles.begin()) {
+        --it;
+        auto power_resource = power_resources_.find(*it);
+        power_resource->second.Dereference();
+      }
+      return status;
+    }
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Manager::DereferencePowerResources(
+    const std::vector<ACPI_HANDLE>& power_resource_handles) {
+  std::scoped_lock lock(power_resource_lock_);
+
+  for (auto rit = power_resource_handles.rbegin(); rit != power_resource_handles.rend(); ++rit) {
+    auto power_resource = power_resources_.find(*rit);
+    ZX_ASSERT_MSG(power_resource != power_resources_.end(),
+                  "Attempting to dereference an unknown power resource.");
+    zx_status_t status = power_resource->second.Dereference();
+    if (status != ZX_OK) {
+      // Re-reference all the successfully dereferenced power resources.
+      while (rit != power_resource_handles.rbegin()) {
+        --rit;
+        auto power_resource = power_resources_.find(*rit);
+        power_resource->second.Reference();
+      }
+      return status;
+    }
+  }
+
+  return ZX_OK;
 }
 
 acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {

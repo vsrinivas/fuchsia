@@ -422,24 +422,43 @@ TEST_F(AcpiManagerTest, TestDeviceNotEnabled) {
 
 TEST_F(AcpiManagerTest, TestAddPowerResource) {
   auto device = std::make_unique<Device>("PRIC");
-
-  device->AddMethodCallback(std::nullopt, [](std::optional<std::vector<ACPI_OBJECT>>) {
-    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
-    retval->PowerResource.Type = ACPI_TYPE_POWER;
-    retval->PowerResource.SystemLevel = 3;
-    retval->PowerResource.ResourceOrder = 5;
-    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
-  });
-
+  device->SetPowerResourceMethods(3, 5);
   ACPI_HANDLE power_resource_handle = device.get();
-
-  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::move(device)));
+  acpi_.GetDeviceRoot()->AddChild(std::move(device));
 
   const acpi::PowerResource* power_resource = manager_.AddPowerResource(power_resource_handle);
-
   ASSERT_NOT_NULL(power_resource);
+
   ASSERT_EQ(power_resource->system_level(), 3);
   ASSERT_EQ(power_resource->resource_order(), 5);
   // Make sure adding the same power resource returns the existing entry.
   ASSERT_EQ(manager_.AddPowerResource(power_resource_handle), power_resource);
+}
+
+TEST_F(AcpiManagerTest, TestReferencePowerResources) {
+  auto device = std::make_unique<Device>("POW1");
+  device->SetPowerResourceMethods(0, 0);
+  ACPI_HANDLE power_resource_handle1 = device.get();
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::move(device)));
+  Device* mock_power_resource1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  const acpi::PowerResource* power_resource1 = manager_.AddPowerResource(power_resource_handle1);
+  ASSERT_NOT_NULL(power_resource1);
+
+  device = std::make_unique<Device>("POW2");
+  device->SetPowerResourceMethods(0, 0);
+  ACPI_HANDLE power_resource_handle2 = device.get();
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::move(device)));
+  Device* mock_power_resource2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
+  const acpi::PowerResource* power_resource2 = manager_.AddPowerResource(power_resource_handle2);
+  ASSERT_NOT_NULL(power_resource2);
+
+  std::vector<ACPI_HANDLE> power_resource_handles{power_resource_handle1, power_resource_handle2};
+
+  ASSERT_OK(manager_.ReferencePowerResources(power_resource_handles));
+  ASSERT_EQ(mock_power_resource1->sta(), 1);
+  ASSERT_EQ(mock_power_resource2->sta(), 1);
+
+  ASSERT_OK(manager_.DereferencePowerResources(power_resource_handles));
+  ASSERT_EQ(mock_power_resource1->sta(), 0);
+  ASSERT_EQ(mock_power_resource2->sta(), 0);
 }
