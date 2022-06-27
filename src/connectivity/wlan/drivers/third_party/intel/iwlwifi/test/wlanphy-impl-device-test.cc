@@ -6,6 +6,7 @@
 
 #include <fuchsia/wlan/common/cpp/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 
@@ -42,30 +43,88 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
                 },
         } {
     device_ = sim_trans_.sim_device();
+
+    // Create the FIDL endpoints, bind the client end to the test class, and the server end to
+    // wlan::iwlwifi::WlanphyImplDevice class.
+    auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_wlanphyimpl::WlanphyImpl>();
+    ASSERT_FALSE(endpoints.is_error());
+
+    // Create a dispatcher to wait on the runtime channel.
+    auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+
+    ASSERT_FALSE(dispatcher.is_error());
+
+    client_dispatcher_ = *std::move(dispatcher);
+
+    client_ = fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl>(
+        std::move(endpoints->client), client_dispatcher_.get());
+
+    device_->DdkServiceConnect(
+        fidl::DiscoverableProtocolName<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
+        endpoints->server.TakeHandle());
+
+    // Create test arena.
+    std::string_view tag{"WlanphyImplDevice-test"};
+
+    auto arena = fdf::Arena::Create(0, tag);
+    ASSERT_FALSE(arena.is_error());
+
+    test_arena_ = *std::move(arena);
   }
-  ~WlanphyImplDeviceTest() {}
+
+  ~WlanphyImplDeviceTest() {
+    client_dispatcher_.ShutdownAsync();
+    completion_.Wait();
+  }
+
+  zx_status_t CreateIface(fuchsia_wlan_common::WlanMacRole role, uint16_t* iface_id_out) {
+    auto ch = ::zx::channel(kDummyMlmeChannel);
+    fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceReq req = {
+        .role = role,
+        .mlme_channel = std::move(ch),
+    };
+
+    auto result = client_.sync().buffer(test_arena_)->CreateIface(std::move(req));
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      // Returns an invalid iface id.
+      *iface_id_out = MAX_NUM_MVMVIF;
+      return result->error_value();
+    }
+
+    *iface_id_out = result->value()->iface_id;
+    return ZX_OK;
+  }
+
+  zx_status_t DestroyIface(uint16_t iface_id) {
+    auto result = client_.sync().buffer(test_arena_)->DestroyIface(iface_id);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+
+    return ZX_OK;
+  }
 
  protected:
   struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
   wlan::iwlwifi::WlanphyImplDevice* device_;
+
+  fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client_;
+  fdf::Dispatcher client_dispatcher_;
+  fdf::Arena test_arena_;
+  libsync::Completion completion_;
 };
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
-TEST_F(WlanphyImplDeviceTest, PhyGetSupportedMacRolesNullPtr) {
-  // Test input null pointers
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanphyImplGetSupportedMacRoles(nullptr, 0));
-}
-
 TEST_F(WlanphyImplDeviceTest, PhyGetSupportedMacRoles) {
-  wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES] = {};
-  uint8_t supported_mac_roles_count = 0;
-
-  // Normal case
-  ASSERT_EQ(ZX_OK, device_->WlanphyImplGetSupportedMacRoles(supported_mac_roles_list,
-                                                            &supported_mac_roles_count));
-  EXPECT_EQ(supported_mac_roles_count, 1);
-  EXPECT_EQ(supported_mac_roles_list[0], WLAN_MAC_ROLE_CLIENT);
+  auto result = client_.sync().buffer(test_arena_)->GetSupportedMacRoles();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_EQ(result->value()->supported_mac_roles.count(), 1);
+  EXPECT_EQ(result->value()->supported_mac_roles.data()[0],
+            fuchsia_wlan_common::WlanMacRole::kClient);
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {
@@ -89,133 +148,127 @@ TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyCreateDestroySingleInterface) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_MAC_ROLE_CLIENT,
-      .mlme_channel = kDummyMlmeChannel,
-  };
   uint16_t iface_id;
 
-  // Test input null pointers
-  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, &iface_id), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, nullptr), ZX_ERR_INVALID_ARGS);
-
   // Test invalid inputs
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(MAX_NUM_MVMVIF), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);  // hasn't been added yet.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, DestroyIface(MAX_NUM_MVMVIF));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, DestroyIface(0));  // hasn't been added yet.
 
   // To verify the internal state of MVM driver.
   struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
 
   // Add interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[0];
   ASSERT_NE(mvmvif, nullptr);
-  ASSERT_EQ(mvmvif->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_EQ(mvmvif->mac_role,
+            static_cast<wlan_mac_role_t>(fuchsia_wlan_common::wire::WlanMacRole::kClient));
   // Count includes phy device in addition to the newly created mac device.
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Remove interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(0));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
-  ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(mvm->mvmvif[0], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 1);
-}
+
+  mock_ddk::ReleaseFlaggedDevices(device_->zxdev());
+}  // namespace
 
 TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_MAC_ROLE_CLIENT,
-      .mlme_channel = kDummyMlmeChannel,
-  };
-  uint16_t iface_id;
   struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);  // To verify the internal state of MVM driver
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);  // To verify the internal state of MVM
+  uint16_t iface_id;
 
   // Add 1st interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 0);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_NE(mvm->mvmvif[0], nullptr);
+  ASSERT_EQ(mvm->mvmvif[0]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Add 2nd interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 1);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_NE(mvm->mvmvif[1], nullptr);
+  ASSERT_EQ(mvm->mvmvif[1]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 3);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Add 3rd interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 2);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_NE(mvm->mvmvif[2], nullptr);
+  ASSERT_EQ(mvm->mvmvif[2]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Remove the 2nd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(1));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 3);
 
   // Add a new interface and it should be the 2nd one.
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 1);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_NE(mvm->mvmvif[1], nullptr);
+  ASSERT_EQ(mvm->mvmvif[1]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Add 4th interface
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  EXPECT_EQ(ZX_OK, CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(iface_id, 3);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_MAC_ROLE_CLIENT);
+  ASSERT_NE(mvm->mvmvif[3], nullptr);
+  ASSERT_EQ(mvm->mvmvif[3]->mac_role, WLAN_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 5);
   device_->parent()->GetLatestChild()->InitOp();
 
   // Add 5th interface and it should fail
-  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_ERR_NO_RESOURCES);
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES,
+            CreateIface(fuchsia_wlan_common::wire::WlanMacRole::kClient, &iface_id));
   ASSERT_EQ(fake_parent_->descendant_count(), 5);
 
   // Remove the 2nd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(1));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
 
   // Remove the 3rd interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(2), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(2));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[2], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 3);
 
   // Remove the 4th interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(3), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(3));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[3], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
 
   // Remove the 1st interface
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
+  EXPECT_EQ(ZX_OK, DestroyIface(0));
   mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[0], nullptr);
   ASSERT_EQ(fake_parent_->descendant_count(), 1);
 
   // Remove the 1st interface again and it should fail.
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, DestroyIface(0));
   ASSERT_EQ(fake_parent_->descendant_count(), 1);
 }
 
 TEST_F(WlanphyImplDeviceTest, GetCountry) {
-  wlanphy_country_t country;
-  ASSERT_EQ(ZX_OK, device_->WlanphyImplGetCountry(&country));
-  EXPECT_EQ('Z', country.alpha2[0]);
-  EXPECT_EQ('Z', country.alpha2[1]);
+  auto result = client_.sync().buffer(test_arena_)->GetCountry();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  auto& country = result->value()->country;
+  EXPECT_EQ('Z', country.alpha2().data()[0]);
+  EXPECT_EQ('Z', country.alpha2().data()[1]);
 }
 
 }  // namespace

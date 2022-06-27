@@ -125,7 +125,7 @@ group("bluetooth_profiles") {
 group("broadcom") {
   public_deps = [
     "//src/connectivity/wlan/drivers/wlanif",
-    "//src/connectivity/wlan/drivers/wlanphy",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy",
   ]
 }
 
@@ -238,7 +238,7 @@ group("wifi_intel") {
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
     "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_dfv2",
   ]
 }
 

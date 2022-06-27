@@ -14,17 +14,30 @@ wlanphy_sources = [
   "driver.h",
 ]
 
+wlanphy_dfv2_sources = [
+  "device_dfv2.cc",
+  "device_dfv2.h",
+  "driver.h",
+  "driver_dfv2.cc",
+]
+
 wlanphy_deps = [
   ":wlanphy_bind",
   "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
+  "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
+  "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_llcpp",
+  "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//src/connectivity/wlan/drivers/lib/log/cpp",
   "//src/connectivity/wlan/lib/common/cpp:common",
   "//src/devices/lib/driver",
+  "//src/devices/lib/driver:driver_runtime",
   "//src/lib/ddk",
+  "//src/lib/ddktl",
   "//zircon/system/ulib/async:async-cpp",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/sync:sync-cpp",
 ]
 
 driver_bind_rules("wlanphy_bind") {
@@ -40,7 +53,18 @@ fuchsia_driver("wlanphy_driver-driver") {
   sources = wlanphy_sources
 
   deps = wlanphy_deps
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+# TODO(https://fxbug.dev/100036): Remove it when all the drivers that wlanphy driver binds to gets
+# migrated to DFv2.
+fuchsia_driver("wlanphy_driver_dfv2-driver") {
+  output_name = "wlanphy_dfv2"
+  sources = wlanphy_dfv2_sources
+
+  deps = wlanphy_deps
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -53,14 +77,33 @@ fuchsia_driver_component("wlanphy_driver") {
   colocate = true
 }
 
+# TODO(https://fxbug.dev/100036): Remove it when all the drivers that wlanphy driver binds to gets
+# migrated to DFv2.
+fuchsia_driver_component("wlanphy_driver_dfv2") {
+  component_name = "wlanphy_dfv2"
+  deps = [ ":wlanphy_driver_dfv2-driver" ]
+  info = "wlanphy_driver-info.json"
+  colocate = true
+}
+
 fuchsia_driver_package("wlanphy") {
   driver_components = [ ":wlanphy_driver" ]
 }
 
+# TODO(https://fxbug.dev/100036): Remove it when all the drivers that wlanphy driver binds to gets
+# migrated to DFv2.
+fuchsia_driver_package("wlanphy_dfv2") {
+  driver_components = [ ":wlanphy_driver_dfv2" ]
+}
+
 # unit tests start here
 
-test("wlanphy_convert_unittest") {
-  sources = wlanphy_sources + [ "tests/convert_unittest.cc" ]
+# TODO(https://fxbug.dev/100036): Remove it when all the drivers that wlanphy driver binds to gets
+# migrated to DFv2.
+executable("wlanphy_device_test") {
+  testonly = true
+  output_name = "wlanphy_device_test"
+  sources = wlanphy_sources + [ "tests/wlanphy_device_test.cc" ]
 
   deps = wlanphy_deps + [
            "//src/lib/fxl/test:gtest_main",
@@ -76,8 +119,38 @@ test("wlanphy_convert_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_unittest_package("wlanphy-unittests") {
-  deps = [ ":wlanphy_convert_unittest" ]
+executable("wlanphy_device_test_dfv2") {
+  testonly = true
+  output_name = "wlanphy_device_test_dfv2"
+  sources = wlanphy_dfv2_sources + [ "tests/wlanphy_device_test_dfv2.cc" ]
+
+  deps = wlanphy_deps + [
+           "//src/devices/testing/driver-runtime-main:zxtest",
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/sync:sync-cpp",
+           "//zircon/system/ulib/zxtest",
+         ]
+
+  configs +=
+      [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_unittest_component("wlanphy_device_test_component") {
+  deps = [ ":wlanphy_device_test" ]
+}
+
+fuchsia_unittest_component("wlanphy_device_test_dfv2_component") {
+  deps = [ ":wlanphy_device_test_dfv2" ]
+}
+
+fuchsia_test_package("wlanphy-unittests") {
+  test_components = [
+    ":wlanphy_device_test_dfv2_component",
+    ":wlanphy_device_test_component",
+  ]
 }
 
 group("tests") {

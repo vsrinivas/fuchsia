@@ -39,6 +39,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   device->driver_inspector_ =
       std::make_unique<DriverInspector>(DriverInspectorOptions{.root_name = "iwlwifi"});
   if ((status = device->DdkAdd(::ddk::DeviceAddArgs("iwlwifi-wlanphyimpl")
+                                   .set_proto_id(ZX_PROTOCOL_WLANPHY_IMPL)
                                    .set_inspect_vmo(device->driver_inspector_->DuplicateVmo()))) !=
       ZX_OK) {
     IWL_ERR(device->drvdata(), "%s() failed device add: %s", __func__,
@@ -132,13 +133,16 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
 }
 
 void PcieDevice::DdkUnbind(::ddk::UnbindTxn txn) {
+  // Saving the input UnbindTxn to the device, ::ddk::UnbindTxn::Reply() will be called with this
+  // UnbindTxn in the shutdown callback of the dispatcher, so that we can make sure DdkUnbind()
+  // won't end before the dispatcher shutdown.
+  unbind_txn_ = std::move(txn);
   iwl_pci_remove(&pci_dev_);
   zx_handle_close(pci_dev_.dev.bti);
   pci_dev_.dev.bti = ZX_HANDLE_INVALID;
   irq_loop_->Shutdown();
   task_loop_->Shutdown();
-
-  txn.Reply();
+  dispatcher_.ShutdownAsync();
 }
 
 }  // namespace iwlwifi

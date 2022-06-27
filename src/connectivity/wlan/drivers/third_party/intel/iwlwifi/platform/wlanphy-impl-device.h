@@ -5,8 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_
 
-#include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
+#include <fuchsia/wlan/common/cpp/banjo.h>
 #include <lib/ddk/device.h>
+#include <lib/fdf/cpp/arena.h>
+#include <lib/fdf/cpp/channel.h>
+#include <lib/fdf/cpp/channel_read.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/vector_view.h>
 
 #include <ddktl/device.h>
 
@@ -14,9 +21,9 @@ struct iwl_trans;
 
 namespace wlan::iwlwifi {
 
-class WlanphyImplDevice
-    : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable>,
-      public ::ddk::WlanphyImplProtocol<WlanphyImplDevice, ::ddk::base_protocol> {
+class WlanphyImplDevice : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable,
+                                               ::ddk::Unbindable, ddk::ServiceConnectable>,
+                          public fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl> {
  public:
   WlanphyImplDevice(const WlanphyImplDevice& device) = delete;
   WlanphyImplDevice& operator=(const WlanphyImplDevice& other) = delete;
@@ -28,27 +35,38 @@ class WlanphyImplDevice
   // ::ddk::Device functions for initialization and unbinding, to be implemented by derived classes.
   virtual void DdkInit(::ddk::InitTxn txn) = 0;
   virtual void DdkUnbind(::ddk::UnbindTxn txn) = 0;
+  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
 
   // State accessors.
   virtual iwl_trans* drvdata() = 0;
   virtual const iwl_trans* drvdata() const = 0;
 
-  // WlanphyImpl interface implementation.
-  zx_status_t WlanphyImplGetSupportedMacRoles(
-      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
-      uint8_t* out_supported_mac_roles_count);
-  zx_status_t WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
-                                     uint16_t* out_iface_id);
-  zx_status_t WlanphyImplDestroyIface(uint16_t iface_id);
-  zx_status_t WlanphyImplSetCountry(const wlanphy_country_t* country);
-  zx_status_t WlanphyImplClearCountry();
-  zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
-  zx_status_t WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode);
-  zx_status_t WlanphyImplGetPsMode(wlanphy_ps_mode* out_pm_mode);
+  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+                            GetSupportedMacRolesCompleter::Sync& completer) override;
+  void CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
+                   CreateIfaceCompleter::Sync& completer) override;
+  void DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
+                    DestroyIfaceCompleter::Sync& completer) override;
+  void SetCountry(SetCountryRequestView request, fdf::Arena& arena,
+                  SetCountryCompleter::Sync& completer) override;
+  void ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
+                    ClearCountryCompleter::Sync& completer) override;
+  void GetCountry(GetCountryRequestView request, fdf::Arena& arena,
+                  GetCountryCompleter::Sync& completer) override;
+  void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
+                 SetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
+                 GetPsModeCompleter::Sync& completer) override;
 
  protected:
   // Only derived classes are allowed to create this object.
   explicit WlanphyImplDevice(zx_device_t* parent);
+
+  // Store unbind txn for async reply.
+  std::optional<::ddk::UnbindTxn> unbind_txn_;
+
+  // Dispatcher for FIDL server.
+  fdf::Dispatcher dispatcher_;
 };
 
 }  // namespace wlan::iwlwifi

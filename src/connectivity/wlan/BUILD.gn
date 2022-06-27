@@ -19,6 +19,7 @@ group("drivers") {
     "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",
     "drivers/wlanphy:wlanphy_driver",
+    "drivers/wlanphy:wlanphy_driver_dfv2",
     "testing/wlantap-driver:wlantap_driver",
   ]
   if (current_cpu == "x64") {

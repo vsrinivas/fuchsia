@@ -1,16 +1,18 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/100036): Deprecate this file when all the drivers that wlanphy driver
-// binds to gets migrated to DFv2.
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_DFV2_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_DFV2_H_
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/wire.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/channel_read.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/connect_service.h>
 
@@ -21,15 +23,21 @@ namespace wlanphy {
 
 class DeviceConnector;
 
-class Device : public fidl::WireServer<fuchsia_wlan_device::Phy> {
+class Device : public fidl::WireServer<fuchsia_wlan_device::Phy>,
+               public ::ddk::Device<Device, ::ddk::MessageableManual, ::ddk::Unbindable> {
  public:
-  Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto);
-  ~Device() override;
+  Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client);
+  ~Device();
 
-  zx_status_t Bind();
-  zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  void Release();
-  void Unbind();
+  // Creates and binds wlanphy device instance. On success hands device off to device lifecycle
+  // management.
+  static zx_status_t Create(zx_device_t* parent_device,
+                            fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client);
+
+  // Overriding DDK functions.
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkRelease();
+  void DdkUnbind(::ddk::UnbindTxn txn);
 
   // Function implementations in protocol fuchsia_wlan_device::Phy.
   void GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
@@ -45,20 +53,27 @@ class Device : public fidl::WireServer<fuchsia_wlan_device::Phy> {
   void GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) override;
 
   zx_status_t Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);
+  zx_status_t ConnectToWlanphyImpl(fdf::Channel server_channel);
+
+  // Add the device to the devhost.
+  zx_status_t DeviceAdd();
 
  private:
-  zx_device_t* parent_;
-  zx_device_t* zxdev_;
-
-  wlanphy_impl_protocol_t wlanphy_impl_;
-
   // Dispatcher for being a FIDL server listening MLME requests.
   async_dispatcher_t* server_dispatcher_;
 
+  // The FIDL client to communicate with iwlwifi
+  fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client_;
+
+  // Dispatcher for being a FIDL client firing requests to WlanphyImpl device.
+  fdf::Dispatcher client_dispatcher_;
+
+  // Store unbind txn for async reply.
+  std::optional<::ddk::UnbindTxn> unbind_txn_;
+
   friend class DeviceConnector;
-  friend class WlanphyConvertTest;
 };
 
 }  // namespace wlanphy
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_DFV2_H_

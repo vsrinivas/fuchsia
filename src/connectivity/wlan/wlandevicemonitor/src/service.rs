@@ -226,11 +226,18 @@ async fn create_iface(
         mlme_channel: mlme_server,
         init_sta_addr: req.sta_addr,
     };
-    let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
-        error!("Error sending 'CreateIface' request to phy #{}: {}", phy_id, e);
-        zx::Status::INTERNAL
-    })?;
-    zx::Status::ok(r.status)?;
+    let assigned_iface_id = phy
+        .proxy
+        .create_iface(&mut phy_req)
+        .await
+        .map_err(move |e| {
+            error!("CreateIface failed: phy {}, fidl error {}", phy_id, e);
+            zx::Status::INTERNAL
+        })?
+        .map_err(move |e| {
+            error!("CreateIface failed: phy {}, error {}", phy_id, e);
+            zx::Status::ok(e)
+        })?;
 
     let (generic_sme_client, generic_sme_server) = create_endpoints::<fidl_sme::GenericSmeMarker>()
         .map_err(|e| {
@@ -245,7 +252,7 @@ async fn create_iface(
     let (status, iface_id) = dev_svc
         .add_iface(&mut fidl_svc::AddIfaceRequest {
             phy_id,
-            assigned_iface_id: r.iface_id,
+            assigned_iface_id: assigned_iface_id,
             iface: mlme_client,
             generic_sme: generic_sme_server,
         })
@@ -259,7 +266,7 @@ async fn create_iface(
 
     Ok(NewIface {
         id: added_iface.iface_id,
-        phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: r.iface_id },
+        phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: assigned_iface_id },
         generic_sme: generic_sme_proxy,
     })
 }
@@ -270,27 +277,34 @@ async fn destroy_iface(phys: &PhyMap, ifaces: &IfaceMap, id: u16) -> Result<(), 
     let phy_ownership = &iface.phy_ownership;
     let phy = phys.get(&phy_ownership.phy_id).ok_or(zx::Status::NOT_FOUND)?;
     let mut phy_req = fidl_dev::DestroyIfaceRequest { id: phy_ownership.phy_assigned_id };
-    let r = phy.proxy.destroy_iface(&mut phy_req).await.map_err(move |e| {
+    let destroy_iface_result = phy.proxy.destroy_iface(&mut phy_req).await.map_err(move |e| {
         error!("Error sending 'DestroyIface' request to phy {:?}: {}", phy_ownership, e);
         zx::Status::INTERNAL
     })?;
 
     // If the removal is successful or the interface cannot be found, update the internal
     // accounting.
-    match r.status {
-        zx::sys::ZX_OK => ifaces.remove(&id),
-        zx::sys::ZX_ERR_NOT_FOUND => {
-            if ifaces.get_snapshot().contains_key(&id) {
-                info!(
-                    "Encountered NOT_FOUND while removing iface #{} potentially due to recovery.",
-                    id
-                );
-                ifaces.remove(&id);
-            }
+    match destroy_iface_result {
+        Ok(()) => {
+            ifaces.remove(&id);
+            zx::Status::ok(zx::sys::ZX_OK)
         }
-        _ => {}
+        Err(status) => {
+            match status {
+                zx::sys::ZX_ERR_NOT_FOUND => {
+                    if ifaces.get_snapshot().contains_key(&id) {
+                        info!(
+                            "Encountered NOT_FOUND while removing iface #{} potentially due to recovery.",
+                            id
+                        );
+                        ifaces.remove(&id);
+                    }
+                }
+                _ => {}
+            }
+            zx::Status::ok(status)
+        }
     }
-    zx::Status::ok(r.status)
 }
 
 async fn get_client_sme(
@@ -1199,13 +1213,11 @@ mod tests {
                     assert_eq!(req.init_sta_addr, [0, 1, 2, 3, 4, 5]);
                 }
 
-                let mut response = if create_iface_fails {
-                    fidl_dev::CreateIfaceResponse { status: zx::sys::ZX_ERR_NOT_SUPPORTED, iface_id: 0 }
+                if create_iface_fails {
+                    responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED)).expect("failed to send iface_id");
                 } else {
-                    fidl_dev::CreateIfaceResponse { status: zx::sys::ZX_OK, iface_id: 123 }
+                    responder.send(&mut Ok(123)).expect("failed to send iface id");
                 };
-
-                responder.send(&mut response).expect("failed to send CreateIfaceResponse");
             }
         );
 
@@ -1312,9 +1324,7 @@ mod tests {
         // Verify the destroy iface request to the corresponding PHY is correct.
         assert_eq!(0, req.id);
 
-        responder
-            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_OK })
-            .expect("failed to send DestroyIfaceResponse");
+        responder.send(&mut Ok(())).expect("failed to send DestroyIfaceResponse");
         assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut destroy_fut));
 
         // Verify iface was removed from available ifaces.
@@ -1339,7 +1349,7 @@ mod tests {
         assert_eq!(0, req.id);
 
         responder
-            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_ERR_INTERNAL })
+            .send(&mut Err(zx::sys::ZX_ERR_INTERNAL))
             .expect("failed to send DestroyIfaceResponse");
         assert_eq!(
             Poll::Ready(Err(zx::Status::INTERNAL)),
@@ -1372,7 +1382,7 @@ mod tests {
         // ZX_ERR_NOT_FOUND.  In this case, we should verify that the internal accounting is still
         // updated.
         responder
-            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_ERR_NOT_FOUND })
+            .send(&mut Err(zx::sys::ZX_ERR_NOT_FOUND))
             .expect("failed to send DestroyIfaceResponse");
         assert_eq!(
             Poll::Ready(Err(zx::Status::NOT_FOUND)),

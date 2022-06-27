@@ -14,8 +14,9 @@
 // This pointer is guaranteed to be valid after the driver .init hook returns and before the driver
 // .release hook is called. Therefore any device created and bound by this driver may assume the
 // async_dispatcher_t* is initialized and running.
+zx_status_t wlanphy_init_loop();
 async_dispatcher_t* wlanphy_async_t();
-
+void wlanphy_destroy_loop();
 // Callbacks for wlanphy_driver_ops
 __BEGIN_CDECLS
 zx_status_t wlanphy_init(void** out_ctx);

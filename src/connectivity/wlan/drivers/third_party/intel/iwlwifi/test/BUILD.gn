@@ -41,6 +41,7 @@ source_set("sim_library") {
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
@@ -90,6 +91,7 @@ executable("dummy_test") {
   sources = [ "dummy-test.cc" ]
   deps = [
     ":sim_library",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -102,6 +104,7 @@ executable("fw_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -114,6 +117,7 @@ executable("fw_dbg_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:driver_inspector",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxtest",
   ]
@@ -138,6 +142,7 @@ executable("mac80211_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
@@ -150,6 +155,7 @@ executable("mac_ctxt_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -162,6 +168,7 @@ executable("mvm_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
@@ -188,6 +195,7 @@ executable("nvm_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -198,11 +206,13 @@ executable("pcie_test") {
   sources = [ "pcie-test.cc" ]
   deps = [
     ":sim_library",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
     "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/public",
@@ -222,6 +232,7 @@ executable("phy_ctxt_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -257,6 +268,7 @@ executable("sta_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
@@ -296,9 +308,11 @@ executable("wlan_softmac_device_test") {
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_llcpp",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/public",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/mock-function",
@@ -315,9 +329,12 @@ executable("wlanphy_impl_device_test") {
     ":sim_library",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/public",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

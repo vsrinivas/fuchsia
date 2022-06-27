@@ -1,7 +1,9 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/100036): Deprecate this file when all the drivers that wlanphy driver
+// binds to gets migrated to DFv2.
 #include "device.h"
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
@@ -36,7 +38,7 @@ class DeviceConnector : public fidl::WireServer<fuchsia_wlan_device::Connector> 
 };
 
 Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
-    : parent_(device), wlanphy_impl_(wlanphy_impl_proto), dispatcher_(wlanphy_async_t()) {
+    : parent_(device), wlanphy_impl_(wlanphy_impl_proto), server_dispatcher_(wlanphy_async_t()) {
   ltrace_fn();
   // Assert minimum required functionality from the wlanphy_impl driver
   ZX_ASSERT(wlanphy_impl_.ops != nullptr && wlanphy_impl_.ops->get_supported_mac_roles != nullptr &&
@@ -59,18 +61,20 @@ static zx_protocol_device_t wlanphy_device_ops = {
 
 zx_status_t Device::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
   ltrace_fn();
-  return dispatcher_.AddBinding(std::move(server_end), this);
+  fidl::BindServer<fidl::WireServer<fuchsia_wlan_device::Phy>>(server_dispatcher_,
+                                                               std::move(server_end), this);
+  return ZX_OK;
 }
 
 zx_status_t Device::Bind() {
   ltrace_fn();
-
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "wlanphy";
   args.ctx = this;
   args.ops = &wlanphy_device_ops;
   args.proto_id = ZX_PROTOCOL_WLANPHY;
+
   zx_status_t status = device_add(parent_, &args, &zxdev_);
 
   if (status != ZX_OK) {
@@ -96,17 +100,15 @@ void Device::Release() {
 
 void Device::Unbind() {
   ltrace_fn();
-
-  // Stop accepting new FIDL requests. Once the dispatcher is shut down,
-  // remove the device.
-  dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
+  wlanphy_destroy_loop();
+  device_unbind_reply(zxdev_);
 }
 
-void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
+void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
                                   GetSupportedMacRolesCompleter::Sync& completer) {
   ltrace_fn();
-
   std::vector<fuchsia_wlan_common::WlanMacRole> out_supported_mac_roles;
+
   wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles];
   uint8_t supported_mac_roles_count;
 
@@ -134,15 +136,20 @@ void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
         lwarn("encountered unknown MAC role: %u", mac_role);
     }
   }
-
-  completer.ReplySuccess(
-      fidl::VectorView<fuchsia_wlan_common::WlanMacRole>::FromExternal(out_supported_mac_roles));
+  auto reply_data =
+      fidl::VectorView<fuchsia_wlan_common::WlanMacRole>::FromExternal(out_supported_mac_roles);
+  completer.ReplySuccess(reply_data);
 }
 
-void Device::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sync& completer) {
+const fidl::Array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+void Device::CreateIface(CreateIfaceRequestView request, CreateIfaceCompleter::Sync& completer) {
   ltrace_fn();
+
   wlan_mac_role_t role = 0;
-  switch (req->req.role) {
+  zx_status_t status;
+
+  switch (request->req.role) {
     case fuchsia_wlan_common::WlanMacRole::kClient:
       role = WLAN_MAC_ROLE_CLIENT;
       break;
@@ -153,55 +160,62 @@ void Device::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sync&
       role = WLAN_MAC_ROLE_MESH;
       break;
     default:
-      completer.Reply({
-          .status = ZX_ERR_NOT_SUPPORTED,
-      });
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
   }
 
+  if (!role) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
   uint16_t iface_id;
-  wlanphy_impl_create_iface_req_t create_req{
-      .role = role,
-      .mlme_channel = req->req.mlme_channel.release(),
-  };
-  if (std::any_of(req->req.init_sta_addr.begin(), req->req.init_sta_addr.end(),
-                  [](uint8_t octet) { return octet != 0; })) {
+  wlanphy_impl_create_iface_req_t create_req{.role = role,
+                                             .mlme_channel = request->req.mlme_channel.release()};
+  if (memcmp(request->req.init_sta_addr.data(), NULL_MAC_ADDR.data(), NULL_MAC_ADDR.size()) != 0) {
     create_req.has_init_sta_addr = true;
-    std::copy(req->req.init_sta_addr.begin(), req->req.init_sta_addr.end(),
+    std::copy(request->req.init_sta_addr.begin(), request->req.init_sta_addr.end(),
               create_req.init_sta_addr);
   } else {
     create_req.has_init_sta_addr = false;
   }
 
-  completer.Reply({
-      .status = wlanphy_impl_.ops->create_iface(wlanphy_impl_.ctx, &create_req, &iface_id),
-      .iface_id = iface_id,
-  });
+  status = wlanphy_impl_.ops->create_iface(wlanphy_impl_.ctx, &create_req, &iface_id);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(iface_id);
 }
 
-void Device::DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter::Sync& completer) {
+void Device::DestroyIface(DestroyIfaceRequestView request, DestroyIfaceCompleter::Sync& completer) {
   ltrace_fn();
-  completer.Reply({
-      .status = wlanphy_impl_.ops->destroy_iface(wlanphy_impl_.ctx, req->req.id),
-  });
+
+  zx_status_t status;
+  status = wlanphy_impl_.ops->destroy_iface(wlanphy_impl_.ctx, request->req.id);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  }
+  completer.ReplySuccess();
 }
 
-void Device::SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync& completer) {
+void Device::SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync& completer) {
   ltrace_fn();
-  ldebug_device("SetCountry to %s\n", wlan::common::Alpha2ToStr(req->req.alpha2).c_str());
+  ldebug_device("SetCountry to %s\n", wlan::common::Alpha2ToStr(request->req.alpha2).c_str());
 
   wlanphy_country_t country;
-  static_assert(std::size(country.alpha2) == decltype(req->req.alpha2)::size());
-  std::copy(req->req.alpha2.begin(), req->req.alpha2.end(), country.alpha2);
-  zx_status_t status = wlanphy_impl_.ops->set_country(wlanphy_impl_.ctx, &country);
+  memcpy(country.alpha2, request->req.alpha2.data(), WLANPHY_ALPHA2_LEN);
+  auto status = wlanphy_impl_.ops->set_country(wlanphy_impl_.ctx, &country);
+
   if (status != ZX_OK) {
     ldebug_device("SetCountry to %s failed with error %s\n",
-                  wlan::common::Alpha2ToStr(req->req.alpha2).c_str(), zx_status_get_string(status));
+                  wlan::common::Alpha2ToStr(request->req.alpha2).c_str(),
+                  zx_status_get_string(status));
   }
+
   completer.Reply(status);
 }
 
-void Device::GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& completer) {
+void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync& completer) {
   ltrace_fn();
 
   wlanphy_country_t country;
@@ -211,6 +225,7 @@ void Device::GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& co
     completer.ReplyError(status);
     return;
   }
+
   fuchsia_wlan_device::wire::CountryCode response;
   static_assert(std::size(country.alpha2) == decltype(response.alpha2)::size());
   std::copy(std::begin(country.alpha2), std::end(country.alpha2), response.alpha2.begin());
@@ -218,30 +233,32 @@ void Device::GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& co
   completer.ReplySuccess(response);
 }
 
-void Device::ClearCountry(ClearCountryRequestView req, ClearCountryCompleter::Sync& completer) {
+void Device::ClearCountry(ClearCountryRequestView request, ClearCountryCompleter::Sync& completer) {
   ltrace_fn();
-  zx_status_t status = wlanphy_impl_.ops->clear_country(wlanphy_impl_.ctx);
+
+  auto status = wlanphy_impl_.ops->clear_country(wlanphy_impl_.ctx);
   if (status != ZX_OK) {
     ldebug_device("ClearCountry failed with error %s\n", zx_status_get_string(status));
   }
   completer.Reply(status);
 }
 
-void Device::SetPsMode(SetPsModeRequestView req, SetPsModeCompleter::Sync& completer) {
+void Device::SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& completer) {
   ltrace_fn();
-  ldebug_device("SetPsMode to %d\n", req->req);
+  ldebug_device("SetPsMode to %d\n", request->req);
 
   wlanphy_ps_mode_t ps_mode_req{
-      .ps_mode = static_cast<power_save_type_t>(req->req),
+      .ps_mode = static_cast<power_save_type_t>(request->req),
   };
   zx_status_t status = wlanphy_impl_.ops->set_ps_mode(wlanphy_impl_.ctx, &ps_mode_req);
   if (status != ZX_OK) {
-    ldebug_device("SetPsMode to %d failed with error %s\n", req->req, zx_status_get_string(status));
+    ldebug_device("SetPsMode to %d failed with error %s\n", request->req,
+                  zx_status_get_string(status));
   }
   completer.Reply(status);
 }
 
-void Device::GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& completer) {
+void Device::GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) {
   ltrace_fn();
 
   wlanphy_ps_mode_t ps_mode;
@@ -251,6 +268,7 @@ void Device::GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& compl
     completer.ReplyError(status);
     return;
   }
+
   fuchsia_wlan_common::PowerSaveType response =
       static_cast<fuchsia_wlan_common::PowerSaveType>(ps_mode.ps_mode);
   ldebug_device("GetPsMode returning %d\n", response);

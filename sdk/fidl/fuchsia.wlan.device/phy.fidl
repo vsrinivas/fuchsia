@@ -42,17 +42,8 @@ type CreateIfaceRequest = resource struct {
     init_sta_addr ieee80211.MacAddr;
 };
 
-type CreateIfaceResponse = struct {
-    status int32;
-    iface_id uint16;
-};
-
 type DestroyIfaceRequest = struct {
     id uint16;
-};
-
-type DestroyIfaceResponse = struct {
-    status int32;
 };
 
 /// The country code for a target WLAN PHY device.
@@ -69,29 +60,33 @@ protocol Phy {
     CreateIface(resource struct {
         req CreateIfaceRequest;
     }) -> (struct {
-        resp CreateIfaceResponse;
-    });
+        iface_id uint16;
+    }) error zx.status;
+
     DestroyIface(struct {
         req DestroyIfaceRequest;
-    }) -> (struct {
-        resp DestroyIfaceResponse;
-    });
+    }) -> (struct {}) error zx.status;
+
     SetCountry(struct {
         req CountryCode;
     }) -> (struct {
         status int32;
     });
+
     GetCountry() -> (struct {
         resp CountryCode;
     }) error int32;
+
     ClearCountry() -> (struct {
         status int32;
     });
+
     SetPsMode(struct {
         req fuchsia.wlan.common.PowerSaveType;
     }) -> (struct {
         status int32;
     });
+
     GetPsMode() -> (struct {
         resp fuchsia.wlan.common.PowerSaveType;
     }) error int32;

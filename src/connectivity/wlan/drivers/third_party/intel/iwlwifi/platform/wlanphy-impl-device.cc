@@ -18,71 +18,179 @@ extern "C" {
 namespace wlan::iwlwifi {
 
 WlanphyImplDevice::WlanphyImplDevice(zx_device_t* parent)
-    : ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable>(parent) {}
+    : ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable,
+                    ddk::ServiceConnectable>(parent) {
+  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) {
+    if (unbind_txn_)
+      unbind_txn_->Reply();
+  });
+  ZX_ASSERT_MSG(!dispatcher.is_error(), "%s(): Dispatcher created failed: %s\n", __func__,
+                zx_status_get_string(dispatcher.status_value()));
+
+  dispatcher_ = std::move(*dispatcher);
+}
 
 WlanphyImplDevice::~WlanphyImplDevice() = default;
 
 void WlanphyImplDevice::DdkRelease() { delete this; }
 
-zx_status_t WlanphyImplDevice::WlanphyImplGetSupportedMacRoles(
-    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
-    uint8_t* out_supported_mac_roles_count) {
-  return phy_get_supported_mac_roles(drvdata(), out_supported_mac_roles_list,
-                                     out_supported_mac_roles_count);
-}
-
-zx_status_t WlanphyImplDevice::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
-                                                      uint16_t* out_iface_id) {
-  zx_status_t status = ZX_OK;
-
-  if (req == nullptr || out_iface_id == nullptr) {
-    IWL_ERR(this, "%s() invalid input args req:%p out_iface_id:%p\n", __func__, req, out_iface_id);
-    return ZX_ERR_INVALID_ARGS;
+zx_status_t WlanphyImplDevice::DdkServiceConnect(const char* service_name, fdf::Channel channel) {
+  // Ensure they are requesting the correct protocol.
+  if (std::string_view(service_name) !=
+      fidl::DiscoverableProtocolName<fuchsia_wlan_wlanphyimpl::WlanphyImpl>) {
+    IWL_ERR(this, "Service name doesn't match. Connection request from a wrong device.\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
-
-  if ((status = phy_create_iface(drvdata(), req, out_iface_id)) != ZX_OK) {
-    IWL_ERR(this, "%s() failed phy create: %s\n", __func__, zx_status_get_string(status));
-    return status;
-  }
-
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(drvdata());
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
-
-  auto wlan_softmac_device =
-      std::make_unique<WlanSoftmacDevice>(parent(), drvdata(), *out_iface_id, mvmvif);
-
-  if ((status = wlan_softmac_device->DdkAdd("iwlwifi-wlan-softmac")) != ZX_OK) {
-    IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));
-    phy_create_iface_undo(drvdata(), *out_iface_id);
-    return status;
-  }
-  wlan_softmac_device.release();
+  fdf::ServerEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> server_end(std::move(channel));
+  fdf::BindServer<fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>>(
+      dispatcher_.get(), std::move(server_end), this);
   return ZX_OK;
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplDestroyIface(uint16_t iface_id) {
-  return phy_destroy_iface(drvdata(), iface_id);
+void WlanphyImplDevice::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
+                                             fdf::Arena& arena,
+                                             GetSupportedMacRolesCompleter::Sync& completer) {
+  // The fidl array which will be returned to Wlanphy driver.
+  fuchsia_wlan_common::WlanMacRole
+      supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles] = {};
+  uint8_t supported_mac_roles_count = 0;
+  zx_status_t status =
+      phy_get_supported_mac_roles(drvdata(), supported_mac_roles_list, &supported_mac_roles_count);
+  if (status != ZX_OK) {
+    IWL_ERR(this, "%s() failed get supported mac roles: %s\n", __func__,
+            zx_status_get_string(status));
+    completer.buffer(arena).ReplyError(status);
+    return;
+  }
+
+  if (supported_mac_roles_count > fuchsia_wlan_common::wire::kMaxSupportedMacRoles) {
+    IWL_ERR(this,
+            "Too many mac roles returned from iwlwifi driver. Number of supported mac roles got "
+            "from driver is %u, but the limitation is: %u\n",
+            supported_mac_roles_count, fuchsia_wlan_common::wire::kMaxSupportedMacRoles);
+    completer.buffer(arena).ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+
+  auto reply_vector = fidl::VectorView<fuchsia_wlan_common::WlanMacRole>::FromExternal(
+      supported_mac_roles_list, supported_mac_roles_count);
+
+  completer.buffer(arena).ReplySuccess(reply_vector);
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplSetCountry(const wlanphy_country_t* country) {
-  return phy_set_country(drvdata(), country);
+void WlanphyImplDevice::CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
+                                    CreateIfaceCompleter::Sync& completer) {
+  zx_status_t status = ZX_OK;
+  auto req = &request->req;
+  uint16_t out_iface_id;
+  wlanphy_impl_create_iface_req_t create_iface_req;
+
+  switch (req->role) {
+    case fuchsia_wlan_common::WlanMacRole::kClient:
+      create_iface_req.role = WLAN_MAC_ROLE_CLIENT;
+      break;
+    case fuchsia_wlan_common::WlanMacRole::kAp:
+      create_iface_req.role = WLAN_MAC_ROLE_AP;
+      break;
+    case fuchsia_wlan_common::WlanMacRole::kMesh:
+      create_iface_req.role = WLAN_MAC_ROLE_MESH;
+      break;
+    default:
+      IWL_ERR(this, "Unrecognized role from the request. Requested role: %u\n", req->role);
+      completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+  }
+
+  create_iface_req.mlme_channel = req->mlme_channel.release();
+
+  if ((status = phy_create_iface(drvdata(), &create_iface_req, &out_iface_id)) != ZX_OK) {
+    IWL_ERR(this, "%s() failed phy create: %s\n", __func__, zx_status_get_string(status));
+    completer.buffer(arena).ReplyError(status);
+    return;
+  }
+
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(drvdata());
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[out_iface_id];
+
+  auto wlan_softmac_device =
+      std::make_unique<WlanSoftmacDevice>(parent(), drvdata(), out_iface_id, mvmvif);
+
+  if ((status = wlan_softmac_device->DdkAdd("iwlwifi-wlan-softmac")) != ZX_OK) {
+    IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));
+    phy_create_iface_undo(drvdata(), out_iface_id);
+    completer.buffer(arena).ReplyError(status);
+    return;
+  }
+  wlan_softmac_device.release();
+  completer.buffer(arena).ReplySuccess(out_iface_id);
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplClearCountry() {
+void WlanphyImplDevice::DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
+                                     DestroyIfaceCompleter::Sync& completer) {
+  zx_status_t status = phy_destroy_iface(drvdata(), request->iface_id);
+  if (status != ZX_OK) {
+    completer.buffer(arena).ReplyError(status);
+    IWL_ERR(this, "%s() failed destroy iface: %s\n", __func__, zx_status_get_string(status));
+    return;
+  }
+
+  completer.buffer(arena).ReplySuccess();
+}
+
+void WlanphyImplDevice::SetCountry(SetCountryRequestView request, fdf::Arena& arena,
+                                   SetCountryCompleter::Sync& completer) {
+  wlanphy_country_t country;
+  if (!request->country.is_alpha2()) {
+    completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+    IWL_ERR(this, "Invalid input format of country code.\n");
+    return;
+  }
+
+  memcpy(&country.alpha2[0], &request->country.alpha2()[0], WLANPHY_ALPHA2_LEN);
+  zx_status_t status = phy_set_country(drvdata(), &country);
+  if (status != ZX_OK) {
+    IWL_ERR(this, "%s() failed set country: %s\n", __func__, zx_status_get_string(status));
+    completer.buffer(arena).ReplyError(status);
+    return;
+  }
+
+  completer.buffer(arena).ReplySuccess();
+}
+
+void WlanphyImplDevice::ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
+                                     ClearCountryCompleter::Sync& completer) {
   IWL_ERR(this, "%s() not implemented ...\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
-  return phy_get_country(drvdata(), out_country);
+void WlanphyImplDevice::GetCountry(GetCountryRequestView request, fdf::Arena& arena,
+                                   GetCountryCompleter::Sync& completer) {
+  fidl::Array<uint8_t, WLANPHY_ALPHA2_LEN> alpha2;
+
+  // TODO(fxbug.dev/95504): Remove the usage of wlanphy_country_t inside the iwlwifi driver.
+  wlanphy_country_t country;
+  zx_status_t status = phy_get_country(drvdata(), &country);
+  if (status != ZX_OK) {
+    completer.buffer(arena).ReplyError(status);
+    IWL_ERR(this, "%s() failed get country: %s\n", __func__, zx_status_get_string(status));
+    return;
+  }
+
+  memcpy(alpha2.begin(), country.alpha2, WLANPHY_ALPHA2_LEN);
+  auto out_country = fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2(alpha2);
+  completer.buffer(arena).ReplySuccess(out_country);
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplSetPsMode(const wlanphy_ps_mode_t* pm_mode) {
-  return ZX_ERR_NOT_SUPPORTED;
+void WlanphyImplDevice::SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
+                                  SetPsModeCompleter::Sync& completer) {
+  IWL_ERR(this, "%s() not implemented ...\n", __func__);
+  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t WlanphyImplDevice::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_pm_mode) {
-  return ZX_ERR_NOT_SUPPORTED;
+void WlanphyImplDevice::GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
+                                  GetPsModeCompleter::Sync& completer) {
+  IWL_ERR(this, "%s() not implemented ...\n", __func__);
+  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace wlan::iwlwifi

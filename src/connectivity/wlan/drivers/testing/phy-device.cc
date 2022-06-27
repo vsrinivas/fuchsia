@@ -114,9 +114,7 @@ void PhyDevice::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sy
   }
   ZX_DEBUG_ASSERT(found_unused);
   if (!found_unused) {
-    completer.Reply({
-        .status = ZX_ERR_NO_RESOURCES,
-    });
+    completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
 
@@ -132,9 +130,7 @@ void PhyDevice::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sy
       role = WLAN_MAC_ROLE_MESH;
       break;
     default:
-      completer.Reply({
-          .status = ZX_ERR_NOT_SUPPORTED,
-      });
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
   }
 
@@ -142,9 +138,7 @@ void PhyDevice::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sy
   auto macdev = std::make_unique<IfaceDevice>(zxdev_, role);
   if (zx_status_t status = macdev->Bind(); status != ZX_OK) {
     zxlogf(ERROR, "could not bind child wlan-softmac device: %d", status);
-    completer.Reply({
-        .status = status,
-    });
+    completer.ReplyError(status);
     return;
   }
 
@@ -156,10 +150,7 @@ void PhyDevice::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sy
   // Since we successfully used the id, increment the next id counter.
   next_id_ = id + 1;
 
-  completer.Reply({
-      .status = ZX_OK,
-      .iface_id = id,
-  });
+  completer.ReplySuccess(id);
 }
 
 void PhyDevice::DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter::Sync& completer) {
@@ -168,9 +159,7 @@ void PhyDevice::DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter:
   std::lock_guard<std::mutex> guard(lock_);
   auto intf = ifaces_.find(req->req.id);
   if (intf == ifaces_.end()) {
-    completer.Reply({
-        .status = ZX_ERR_NOT_FOUND,
-    });
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
 
@@ -179,9 +168,7 @@ void PhyDevice::DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter:
   // call release when it's safe to free the memory.
   ifaces_.erase(intf);
 
-  completer.Reply({
-      .status = ZX_OK,
-  });
+  completer.ReplySuccess();
 }
 
 void PhyDevice::SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync& completer) {

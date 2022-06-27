@@ -1,0 +1,86 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.wlan.wlanphyimpl;
+
+using fuchsia.wlan.common;
+using fuchsia.wlan.ieee80211 as ieee80211;
+using zx;
+
+/// Parameters to create an interface.
+type WlanphyImplCreateIfaceReq = resource struct {
+    /// The station role for this interface. A device may support multiple roles,
+    /// but an interface is instantiated with a single role.
+    role fuchsia.wlan.common.WlanMacRole;
+
+    /// A handle to the direct MLME channel, if supported by the driver.
+    mlme_channel zx.handle:CHANNEL;
+
+    /// Whether this iface creation request come with an initial station address.
+    has_init_sta_addr bool;
+
+    /// The initial station address set from configuration layer.
+    init_sta_addr ieee80211.MacAddr;
+};
+
+const WLANPHY_ALPHA2_LEN uint8 = 2;
+
+@packed
+type WlanphyCountry = strict union {
+    /// ISO Alpha-2 takes two octet alphabet characters.
+    /// This needs to be expanded if at least one WLAN device driver or firmware
+    /// requires more than two octets.
+    1: alpha2 array<uint8, WLANPHY_ALPHA2_LEN>;
+    2: val uint16;
+};
+
+@discoverable
+@transport("Driver")
+protocol WlanphyImpl {
+    /// MAC roles supported for ifaces on the physical device.
+    GetSupportedMacRoles() -> (struct {
+        supported_mac_roles
+                vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+    }) error zx.status;
+
+    /// Create a new interface with the specified role, returning the interface id.
+    /// Some common error codes are:
+    /// ZX_ERR_NO_RESOURCES: maximum number of interfaces have already been created
+    /// ZX_ERR_NOT_SUPPORTED: device does not support the specified role
+    CreateIface(resource struct {
+        req WlanphyImplCreateIfaceReq;
+    }) -> (struct {
+        iface_id uint16;
+    }) error zx.status;
+
+    /// Destroy the interface with the matching id.
+    DestroyIface(struct {
+        iface_id uint16;
+    }) -> (struct {}) error zx.status;
+
+    /// Set country with a WlanphyCountry
+    SetCountry(struct {
+        country WlanphyCountry;
+    }) -> (struct {}) error zx.status;
+
+    /// Set device to a world-safe country
+    ClearCountry() -> (struct {}) error zx.status;
+
+    /// Read currently configured country. Implementations are advised to read the
+    /// country directly from the firmware, where possible.
+    GetCountry() -> (struct {
+        country WlanphyCountry;
+    }) error zx.status;
+
+    /// Set Power Save mode On/Off on device. In most implementations this
+    /// likely to be set in Firmware.
+    SetPsMode(struct {
+        ps_mode fuchsia.wlan.common.PowerSaveType;
+    }) -> (struct {}) error zx.status;
+
+    /// Get current Power Save Mode from device. In most implementation this
+    /// likely to be retrieved from Firmware.
+    GetPsMode() -> (struct {
+        ps_mode fuchsia.wlan.common.PowerSaveType;
+    }) error zx.status;
+};

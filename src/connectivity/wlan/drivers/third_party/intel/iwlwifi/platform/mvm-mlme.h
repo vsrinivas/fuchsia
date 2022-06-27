@@ -7,16 +7,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
 
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <fuchsia/wlan/common/cpp/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
-
-#if defined(__cplusplus)
-extern "C" {
-#endif  // defined(__cplusplus)
 
 // IEEE Std 802.11-2016, Table 9-19
 #define WLAN_MSDU_MAX_LEN 2304UL
@@ -33,7 +30,8 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
 // Phy protocol helpers
 zx_status_t phy_get_supported_mac_roles(
     void* ctx,
-    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    fuchsia_wlan_common::wire::WlanMacRole
+        out_supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles],
     uint8_t* out_supported_mac_roles_count);
 zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                              uint16_t* out_iface_id);
@@ -71,9 +69,5 @@ zx_status_t mac_start_active_scan(void* ctx,
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx);
 void mac_unbind(void* ctx);
 void mac_release(void* ctx);
-
-#if defined(__cplusplus)
-}  // extern "C"
-#endif  // defined(__cplusplus)
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
