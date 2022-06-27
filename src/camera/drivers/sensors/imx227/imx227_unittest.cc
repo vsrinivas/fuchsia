@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/clock/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <zxtest/zxtest.h>
@@ -155,12 +156,19 @@ class FakeImx227Device : public Imx227Device {
   }
 
   void SetProtocols() {
-    i2c_ = ddk::I2cChannel(mock_i2c_.GetProto());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
+
+    i2c_ = ddk::I2cChannel(std::move(endpoints->client));
     gpio_vana_enable_ = ddk::GpioProtocolClient(mock_gpio_vana_enable_.GetProto());
     gpio_vdig_enable_ = ddk::GpioProtocolClient(mock_gpio_vdig_enable_.GetProto());
     gpio_cam_rst_ = ddk::GpioProtocolClient(mock_gpio_cam_rst_.GetProto());
     clk24_ = ddk::ClockProtocolClient(mock_clk24_.GetProto());
     mipi_ = ddk::MipiCsiProtocolClient(mock_mipi_.GetProto());
+
+    EXPECT_OK(loop_.StartThread());
   }
 
   void VerifyAll() {
@@ -190,6 +198,7 @@ class FakeImx227Device : public Imx227Device {
   ddk::MockGpio mock_gpio_cam_rst_;
   ddk::MockClock mock_clk24_;
   ddk::MockMipiCsi mock_mipi_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 class Imx227DeviceTest : public zxtest::Test {

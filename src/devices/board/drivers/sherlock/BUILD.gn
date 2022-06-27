@@ -424,6 +424,7 @@ driver_bind_rules("imx227-sensor-bind") {
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.mipicsi",
+    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sony.platform",
   ]

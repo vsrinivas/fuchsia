@@ -95,6 +95,7 @@ executable("imx227_unittest_bin") {
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }
