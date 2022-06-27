@@ -16,22 +16,29 @@ class Policy(Enum):
     # the current golden. This is useful for batch updates.
     update_golden = 'update_golden'
 
-    # ack_changes is the same as 'no_changes' but communicates the intent
-    # better in places where this script is called.
+    # ack_changes tells this script to fail if any changes are detected.
+    # It will tell the user how to update the golden to acknowledge the
+    # changes.
     ack_changes = 'ack_changes'
 
     # no_breaking_changes tells this script to fail if breaking changes
-    # are detected, or if any changes are detected to prevent a stale
-    # golden.
+    # are detected. If non-breaking changes are detected it will tell
+    # the user how to update the golden to acknowledge the changes.
     no_breaking_changes = 'no_breaking_changes'
 
     # no_changes tells this script to fail if any changes are detected.
-    # It will tell the user how to update the golden to acknowledge the
-    # changes.
+    # It will not ask the user to update the golden.
     no_changes = 'no_changes'
 
     def __str__(self):
         return self.value
+
+
+FIDL_VERSIONING_DOCS_URL = "https://fuchsia.dev/fuchsia-src/reference/fidl/language/versioning"
+
+FIDL_AVAILABILITY_HINT = (
+    f"Are you missing an @available annotation?\n"
+    f"For more information see {FIDL_VERSIONING_DOCS_URL}\n")
 
 
 class CompatibilityError(Exception):
@@ -45,30 +52,32 @@ class CompatibilityError(Exception):
 
     def __str__(self):
         formatted_breaking_changes = '\n - '.join(breaking_changes)
-        cmd = update_cmd(self.current, self.golden)
         return (
             f"These changes are incompatible with API level {self.api_level}\n"
             f"{formatted_breaking_changes}\n\n"
-            f"If possible, please make a soft transition instead.\n"
-            f"To allow a hard transition please run:\n"
-            f"  {cmd}")
+            f"{FIDL_AVAILABILITY_HINT}")
 
 
 class GoldenMismatchError(Exception):
     """Exception raised when a stale golden file is detected."""
 
-    def __init__(self, api_level, current, golden):
+    def __init__(self, api_level, current, golden, show_update_hint=False):
         self.api_level = api_level
         self.current = current
         self.golden = golden
+        self.show_update_hint = show_update_hint
 
     def __str__(self):
-        cmd = update_cmd(self.current, self.golden)
-        return (
-            f"Detected changes to API level {self.api_level}\n"
-            f"Please acknowledge this change by updating the golden.\n"
-            f"You can rebuild with `--args=bless_goldens=true` or run:\n"
-            f"  {cmd}")
+        hints = [FIDL_AVAILABILITY_HINT]
+        if self.show_update_hint:
+            cmd = update_cmd(self.current, self.golden)
+            hints.append(
+                f"Please acknowledge this change by updating the golden.\n"
+                f"You can rebuild with `--args=bless_goldens=true` or run:\n"
+                f"  {cmd}\n")
+
+        hint_lines = '\n'.join(hints)
+        return f"Detected changes to API level {self.api_level}\n" + hint_lines
 
 
 def main():
@@ -104,7 +113,7 @@ def main():
     elif args.policy == Policy.no_changes:
         err = fail_on_changes(args)
     elif args.policy == Policy.ack_changes:
-        err = fail_on_changes(args)
+        err = fail_on_unacknowledged_changes(args)
     else:
         raise ValueError("unknown policy: {}".format(args.policy))
 
@@ -115,10 +124,10 @@ def main():
         return 0
 
     if args.warn_on_changes:
-        print("WARNING: ", err)
+        print("\nWARNING: ", err)
         return 0
 
-    print("ERROR: ", err)
+    print("\nERROR: ", err)
     return 1
 
 
@@ -145,8 +154,19 @@ def fail_on_breaking_changes(args):
             golden=args.golden,
         )
 
-    # Make the developer acknowledge a stale golden file.
-    return fail_on_changes(args)
+    return fail_on_unacknowledged_changes(args)
+
+
+def fail_on_unacknowledged_changes(args):
+    """Asks the user to fix the golden if current and golden aren't identical."""
+    if not filecmp.cmp(args.golden, args.current):
+        return GoldenMismatchError(
+            api_level=args.api_level,
+            current=args.current,
+            golden=args.golden,
+            show_update_hint=True,
+        )
+    return None
 
 
 def fail_on_changes(args):
