@@ -39,8 +39,8 @@ class RealmRoot final {
   RealmRoot(RealmRoot&& other) = default;
   RealmRoot& operator=(RealmRoot&& other) = default;
 
-  RealmRoot(RealmRoot& other) = delete;
-  RealmRoot& operator=(RealmRoot& other) = delete;
+  RealmRoot(const RealmRoot& other) = delete;
+  RealmRoot& operator=(const RealmRoot& other) = delete;
 
   // Connect to an interface in the exposed directory of the root component.
   //
