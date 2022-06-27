@@ -251,14 +251,16 @@ The following code review guidelines are adopted within the Netstack team:
 - If your CL introduces non-trivial changes, also add a secondary reviewer
   picked from `src/connectivity/network/OWNERS`. This should happen
   simultaneously to requesting review from owners. You can choose any team
-  member you want, consider the following criteria:
+  member you want; Consider the following criteria:
   - Listed as readability reviewer in
     [`src/connectivity/network/tests/integration/common/OWNERS`][netemul-owners]
     if the CL consists primarily of changes to netemul integration tests.
   - Ramping up in the target area.
   - Working in tangentially related areas.
-  - Language/patterns experience.
-  - _TODO(https://fxbug.dev/97920): create review queue rules_.
+  - Has language/patterns experience.
+- Before adding reviewer from the closest OWNERS file, you can add the Google
+  group fuchsia-netstack-reviews@google.com as a reviewer. The gwsq bot will
+  pick a random reviewer from the group.
 - Acquiring +2 from both reviewers is strongly recommended, but not strictly
   necessary.
 
