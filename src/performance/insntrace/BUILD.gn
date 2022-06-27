@@ -52,6 +52,5 @@ install_host_tools("host_insntrace_print") {
 }
 
 fuchsia_shell_package("insntrace") {
-  manifest = "meta/insntrace.cmx"
   deps = [ ":bin" ]
 }
