@@ -17,24 +17,24 @@
 
 namespace {
 
-int received_signal[64] = {};
+int g_received_signal[64] = {};
 
-void record_signal(int signo) { received_signal[signo]++; }
+void RecordSignalHandler(int signo) { g_received_signal[signo]++; }
 
-void ignore_signal(int signal) {
+void IgnoreSignal(int signal) {
   struct sigaction action;
   action.sa_handler = SIG_IGN;
   SAFE_SYSCALL(sigaction(signal, &action, nullptr));
 }
 
-void register_signal_handler(int signal) {
-  received_signal[signal] = 0;
+void RecordSignal(int signal) {
+  g_received_signal[signal] = 0;
   struct sigaction action;
-  action.sa_handler = record_signal;
+  action.sa_handler = RecordSignalHandler;
   SAFE_SYSCALL(sigaction(signal, &action, nullptr));
 }
 
-long sleep_ns(uint64_t count) {
+long SleepNs(uint64_t count) {
   const uint64_t NS_PER_SECONDS = 1000000000;
   struct timespec ts = {.tv_sec = static_cast<time_t>(count / NS_PER_SECONDS),
                         .tv_nsec = static_cast<long>(count % NS_PER_SECONDS)};
@@ -42,7 +42,7 @@ long sleep_ns(uint64_t count) {
   return syscall(SYS_nanosleep, &ts, nullptr);
 }
 
-int open_main_terminal(int additional_flags = 0) {
+int OpenMainTerminal(int additional_flags = 0) {
   int fd = SAFE_SYSCALL(posix_openpt(O_RDWR | additional_flags));
   SAFE_SYSCALL(grantpt(fd));
   SAFE_SYSCALL(unlockpt(fd));
@@ -52,11 +52,11 @@ int open_main_terminal(int additional_flags = 0) {
 TEST(JobControl, BackgroundProcessGroupDoNotUpdateOnDeath) {
   ForkHelper helper;
 
-  ignore_signal(SIGTTOU);
+  IgnoreSignal(SIGTTOU);
 
   helper.RunInForkedProcess([&] {
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal();
+    int main_terminal = OpenMainTerminal();
     int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR));
 
     ASSERT_EQ(SAFE_SYSCALL(tcgetpgrp(replica_terminal)), getpid());
@@ -93,14 +93,14 @@ TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
         // Deepest child. Set a SIGHUP handler, stop ourself, and check that we
         // are restarted and received the expected SIGHUP when our immediate
         // parent dies
-        register_signal_handler(SIGHUP);
+        RecordSignal(SIGHUP);
         SAFE_SYSCALL(kill(getpid(), SIGTSTP));
         // At this point, a SIGHUP should have been received.
         // TODO(qsr): Remove the syscall that is there only because starnix
         // currently doesn't handle signal outside of syscalls, and doesn't
         // handle multiple signals at once.
         SAFE_SYSCALL(getpid());
-        EXPECT_EQ(received_signal[SIGHUP], 1);
+        EXPECT_EQ(g_received_signal[SIGHUP], 1);
       });
       // Wait for the child to have stopped.
       SAFE_SYSCALL(waitid(P_PID, pid, nullptr, WSTOPPED));
@@ -116,13 +116,13 @@ TEST(Pty, SigWinch) {
   helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal();
+    int main_terminal = OpenMainTerminal();
     SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
     // Register a signal handler for sigusr1.
-    register_signal_handler(SIGUSR1);
-    ignore_signal(SIGTTOU);
-    ignore_signal(SIGHUP);
+    RecordSignal(SIGUSR1);
+    IgnoreSignal(SIGTTOU);
+    IgnoreSignal(SIGHUP);
 
     // fork a child, move it to its own process group and makes it the
     // foreground one.
@@ -131,20 +131,20 @@ TEST(Pty, SigWinch) {
       SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
 
       // Register a signal handler for sigwinch.
-      ignore_signal(SIGUSR1);
-      register_signal_handler(SIGWINCH);
+      IgnoreSignal(SIGUSR1);
+      RecordSignal(SIGWINCH);
 
       // Send a SIGUSR1 to notify our parent.
       SAFE_SYSCALL(kill(getppid(), SIGUSR1));
 
       // Wait for a SIGWINCH
-      while (received_signal[SIGWINCH] == 0) {
-        sleep_ns(10e7);
+      while (g_received_signal[SIGWINCH] == 0) {
+        SleepNs(10e7);
       }
     });
     // Wait for SIGUSR1
-    while (received_signal[SIGUSR1] == 0) {
-      sleep_ns(10e7);
+    while (g_received_signal[SIGUSR1] == 0) {
+      SleepNs(10e7);
     }
 
     // Resize the window, which must generate a SIGWINCH for the children.
@@ -153,7 +153,7 @@ TEST(Pty, SigWinch) {
   });
 }
 
-ssize_t full_read(int fd, char* buf, size_t count) {
+ssize_t FullRead(int fd, char* buf, size_t count) {
   ssize_t result = 0;
   while (count > 0) {
     ssize_t read_result = read(fd, buf, count);
@@ -177,7 +177,7 @@ TEST(Pty, OpenDevTTY) {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
 
-    int main_terminal = open_main_terminal(O_NONBLOCK);
+    int main_terminal = OpenMainTerminal(O_NONBLOCK);
     SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
     SAFE_SYSCALL(open("/dev/tty", O_RDWR));
@@ -190,7 +190,7 @@ TEST(Pty, OpenDevTTY) {
 
     ASSERT_EQ(write(other_terminal, "h\n", 2), 2);
     char buf[20];
-    ASSERT_EQ(full_read(main_terminal, buf, 20), 3);
+    ASSERT_EQ(FullRead(main_terminal, buf, 20), 3);
     ASSERT_EQ(strncmp(buf, "h\r\n", 3), 0);
   });
 }
@@ -201,7 +201,7 @@ TEST(Pty, ioctl_TCSETSF) {
   helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal();
+    int main_terminal = OpenMainTerminal();
 
     struct termios config;
     SAFE_SYSCALL(ioctl(main_terminal, TCGETS, &config));
@@ -209,7 +209,7 @@ TEST(Pty, ioctl_TCSETSF) {
   });
 }
 
-void full_write(int fd, char* buffer, ssize_t size) { ASSERT_EQ(write(fd, buffer, size), size); }
+void FullWrite(int fd, char* buffer, ssize_t size) { ASSERT_EQ(write(fd, buffer, size), size); }
 
 TEST(Pty, EndOfFile) {
   ForkHelper helper;
@@ -217,7 +217,7 @@ TEST(Pty, EndOfFile) {
   helper.RunInForkedProcess([&] {
     // Create a new session here.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal();
+    int main_terminal = OpenMainTerminal();
     int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK));
 
     char source_buffer[2];
@@ -225,25 +225,25 @@ TEST(Pty, EndOfFile) {
     source_buffer[1] = '\n';
     char target_buffer[2];
 
-    full_write(main_terminal, source_buffer, 1);
+    FullWrite(main_terminal, source_buffer, 1);
     ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(-1, read(replica_terminal, target_buffer, 2));
     ASSERT_EQ(EAGAIN, errno);
 
-    full_write(main_terminal, source_buffer, 2);
+    FullWrite(main_terminal, source_buffer, 2);
     ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ('\n', target_buffer[0]);
 
-    full_write(main_terminal, source_buffer, 1);
-    full_write(main_terminal, source_buffer + 1, 1);
+    FullWrite(main_terminal, source_buffer, 1);
+    FullWrite(main_terminal, source_buffer + 1, 1);
     ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ('\n', target_buffer[0]);
 
     source_buffer[0] = 4;  // ^D
     source_buffer[1] = 4;  // ^D
-    full_write(main_terminal, source_buffer, 2);
+    FullWrite(main_terminal, source_buffer, 2);
     ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(-1, read(replica_terminal, target_buffer, 2));
@@ -251,7 +251,7 @@ TEST(Pty, EndOfFile) {
 
     source_buffer[0] = ' ';
     source_buffer[1] = 4;  // ^D
-    full_write(main_terminal, source_buffer, 2);
+    FullWrite(main_terminal, source_buffer, 2);
     ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
     ASSERT_EQ(' ', target_buffer[0]);
   });
@@ -272,13 +272,13 @@ TEST(Pty, SendSignals) {
     helper.RunInForkedProcess([&] {
       // Create a new session here, and associate it with the new terminal.
       SAFE_SYSCALL(setsid());
-      int main_terminal = open_main_terminal();
+      int main_terminal = OpenMainTerminal();
       SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
       // Register a signal handler for sigusr1.
-      register_signal_handler(SIGUSR1);
-      ignore_signal(SIGTTOU);
-      ignore_signal(SIGHUP);
+      RecordSignal(SIGUSR1);
+      IgnoreSignal(SIGTTOU);
+      IgnoreSignal(SIGHUP);
 
       // fork a child, move it to its own process group and makes it the
       // foreground one.
@@ -291,12 +291,12 @@ TEST(Pty, SendSignals) {
 
         // Wait to be killed by our parent.
         for (;;) {
-          sleep_ns(10e8);
+          SleepNs(10e8);
         }
       });
       // Wait for SIGUSR1
-      while (received_signal[SIGUSR1] == 0) {
-        sleep_ns(10e7);
+      while (g_received_signal[SIGUSR1] == 0) {
+        SleepNs(10e7);
       }
 
       // Send control character.
@@ -324,10 +324,10 @@ TEST(Pty, SendSignals) {
 TEST(Pty, CloseMainTerminal) {
   ForkHelper helper;
   helper.RunInForkedProcess([&] {
-    ignore_signal(SIGHUP);
+    IgnoreSignal(SIGHUP);
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal(O_NONBLOCK | O_NOCTTY);
+    int main_terminal = OpenMainTerminal(O_NONBLOCK | O_NOCTTY);
     int replica_terminal =
         SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK | O_NOCTTY));
     ASSERT_EQ(open("/dev/tty", O_RDWR), -1);
@@ -350,7 +350,7 @@ TEST(Pty, CloseReplicaTerminal) {
   helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal(O_NONBLOCK | O_NOCTTY);
+    int main_terminal = OpenMainTerminal(O_NONBLOCK | O_NOCTTY);
     int replica_terminal =
         SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK | O_NOCTTY));
     ASSERT_EQ(open("/dev/tty", O_RDWR), -1);
@@ -375,26 +375,26 @@ TEST(Pty, DetectReplicaClosing) {
   helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal(O_NOCTTY);
+    int main_terminal = OpenMainTerminal(O_NOCTTY);
     int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NOCTTY));
 
     struct pollfd fds = {main_terminal, POLLIN, 0};
 
-    register_signal_handler(SIGUSR1);
+    RecordSignal(SIGUSR1);
     pid_t child_pid = helper.RunInForkedProcess([&] {
       close(main_terminal);
-      register_signal_handler(SIGUSR2);
+      RecordSignal(SIGUSR2);
       SAFE_SYSCALL(kill(getppid(), SIGUSR1));
       // Wait for SIGUSR2
-      while (received_signal[SIGUSR2] == 0) {
-        sleep_ns(10e7);
+      while (g_received_signal[SIGUSR2] == 0) {
+        SleepNs(10e7);
       }
     });
 
     close(replica_terminal);
     // Wait for SIGUSR1
-    while (received_signal[SIGUSR1] == 0) {
-      sleep_ns(10e7);
+    while (g_received_signal[SIGUSR1] == 0) {
+      SleepNs(10e7);
     }
     SAFE_SYSCALL(kill(child_pid, SIGUSR2));
     ASSERT_EQ(1, SAFE_SYSCALL(poll(&fds, 1, 10000)));
