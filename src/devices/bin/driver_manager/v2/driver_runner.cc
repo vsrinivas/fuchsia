@@ -512,16 +512,18 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
   composite_args_.erase(*it);
 
   // We have all the nodes, create a composite node for the composite driver.
-  auto composite = std::make_shared<Node>("composite", std::move(parents), this, dispatcher_);
   std::vector<std::string> parents_names;
   for (auto name : matched_driver.node_names()) {
     parents_names.emplace_back(name.data(), name.size());
   }
+  auto composite = Node::CreateCompositeNode("composite", std::move(parents),
+                                             std::move(parents_names), {}, this, dispatcher_);
+  if (composite.is_error()) {
+    return composite.take_error();
+  }
 
-  composite->set_parents_names(std::move(parents_names));
-  composite->AddToParents();
   // We can return a pointer, as the composite node is owned by its parents.
-  return zx::ok(composite.get());
+  return zx::ok(composite.value().get());
 }
 
 zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(

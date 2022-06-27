@@ -4,6 +4,8 @@
 
 #include "src/devices/bin/driver_manager/v2/node.h"
 
+#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+
 #include <deque>
 #include <unordered_set>
 
@@ -268,6 +270,23 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
     // different driver host, this value will be updated to match.
     driver_host_ = primary_parent->driver_host_;
   }
+}
+
+zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
+    std::string_view node_name, std::vector<Node*> parents, std::vector<std::string> parents_names,
+    std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
+    DriverBinder* driver_binder, async_dispatcher_t* dispatcher) {
+  auto composite = std::make_shared<Node>(node_name, std::move(parents), driver_binder, dispatcher);
+
+  for (auto& prop : properties) {
+    auto natural = fidl::ToNatural(prop);
+    auto new_prop = fidl::ToWire(composite->arena_, std::move(natural));
+    composite->properties_.push_back(new_prop);
+  }
+
+  composite->parents_names_ = std::move(parents_names);
+  composite->AddToParents();
+  return zx::ok(std::move(composite));
 }
 
 Node::~Node() { UnbindAndReset(controller_ref_); }

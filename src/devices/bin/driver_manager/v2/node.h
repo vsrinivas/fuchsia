@@ -111,12 +111,17 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
        async_dispatcher_t* dispatcher);
   ~Node() override;
 
+  static zx::status<std::shared_ptr<Node>> CreateCompositeNode(
+      std::string_view node_name, std::vector<Node*> parents,
+      std::vector<std::string> parents_names,
+      std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
+      DriverBinder* driver_binder, async_dispatcher_t* dispatcher);
+
   fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
 
   fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
 
   void OnBind() const;
-  void AddToParents();
 
   // Begin the removal process for a Node. This function ensures that a Node is
   // only removed after all of its children are removed. It also ensures that
@@ -144,7 +149,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
   void set_driver_component(std::unique_ptr<DriverComponent> driver_component);
-  void set_parents_names(std::vector<std::string> names) { parents_names_ = std::move(names); }
 
   std::string TopoName() const;
 
@@ -153,6 +157,9 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) override;
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
+
+  // Add this Node to its parents. This should be called when the node is created.
+  void AddToParents();
 
   const std::string name_;
   // If this is a composite device, this stores the list of each parent's names.
