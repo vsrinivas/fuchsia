@@ -70,6 +70,7 @@ fuchsia_driver_component("hid-input-report") {
   deps = [ ":hid-input-report-driver" ]
   info = "hid-input-report-info.json"
   colocate = true
+  fallback = true
 }
 
 fuchsia_driver("hid-input-report-driver-v2") {

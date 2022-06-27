@@ -9,6 +9,7 @@ group("input") {
 group("drivers") {
   testonly = true
   deps = [
+    "drivers/ctaphid",
     "drivers/cypress",
     "drivers/focaltech",
     "drivers/focaltech:focaltech-sherlock",

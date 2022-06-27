@@ -321,6 +321,7 @@
 //src/storage/fvm/driver:fuchsia_driver
 //src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:receiver_driver
 //src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver
+//src/ui/input/drivers/ctaphid:ctaphid-driver
 //src/ui/input/drivers/cypress:cypress-driver
 //src/ui/input/drivers/focaltech:focaltech-driver
 //src/ui/input/drivers/focaltech:focaltech-sherlock-driver

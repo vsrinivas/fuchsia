@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "true"
+        }
+    },
+    {
+        "name": "SecurityKey",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "false"
+        }
+    },
+    {
+        "name": "CTAP device",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "true"
+        }
+    }
+]

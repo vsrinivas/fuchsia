@@ -16,15 +16,68 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 
+#include <bind/fuchsia/hid/cpp/bind.h>
 #include <fbl/auto_lock.h>
 #include <hid/boot.h>
 
+#include "fuchsia/hardware/hiddevice/c/banjo.h"
 #include "src/lib/listnode/listnode.h"
 #include "src/ui/input/drivers/hid/hid_bind.h"
 
 namespace hid_driver {
+
+namespace {
+
+std::map<uint16_t, const std::string> kBindPropKeyMap{
+    {static_cast<uint16_t>(hid::usage::Page::kUndefined), bind_fuchsia_hid::USAGE_PAGE_UNDEFINED},
+    {static_cast<uint16_t>(hid::usage::Page::kGenericDesktop), bind_fuchsia_hid::USAGE_PAGE_GENERIC_DESKTOP},
+    {static_cast<uint16_t>(hid::usage::Page::kSimulationCtrls), bind_fuchsia_hid::USAGE_PAGE_SIMULATION_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kVRCtrls), bind_fuchsia_hid::USAGE_PAGE_VR_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kSportsCtrls), bind_fuchsia_hid::USAGE_PAGE_SPORTS_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kGameCtrls), bind_fuchsia_hid::USAGE_PAGE_GAME_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kGenericDeviceCtrls), bind_fuchsia_hid::USAGE_PAGE_GENERIC_DEVICE_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kKeyboardKeypad), bind_fuchsia_hid::USAGE_PAGE_KEYBOARD_KEYPAD},
+    {static_cast<uint16_t>(hid::usage::Page::kLEDs), bind_fuchsia_hid::USAGE_PAGE_LEDS},
+    {static_cast<uint16_t>(hid::usage::Page::kButton), bind_fuchsia_hid::USAGE_PAGE_BUTTON},
+    {static_cast<uint16_t>(hid::usage::Page::kOrdinal), bind_fuchsia_hid::USAGE_PAGE_ORDINAL},
+    {static_cast<uint16_t>(hid::usage::Page::kTelephony), bind_fuchsia_hid::USAGE_PAGE_TELEPHONY},
+    {static_cast<uint16_t>(hid::usage::Page::kConsumer), bind_fuchsia_hid::USAGE_PAGE_CONSUMER},
+    {static_cast<uint16_t>(hid::usage::Page::kDigitizer), bind_fuchsia_hid::USAGE_PAGE_DIGITIZER},
+    {static_cast<uint16_t>(hid::usage::Page::kPhysicalInterface), bind_fuchsia_hid::USAGE_PAGE_PHYSICAL_INTERFACE},
+    {static_cast<uint16_t>(hid::usage::Page::kUnicode), bind_fuchsia_hid::USAGE_PAGE_UNICODE},
+    {static_cast<uint16_t>(hid::usage::Page::kAlphanumericDisplay), bind_fuchsia_hid::USAGE_PAGE_ALPHANUMERIC_DISPLAY},
+    {static_cast<uint16_t>(hid::usage::Page::kSensor), bind_fuchsia_hid::USAGE_PAGE_SENSOR},
+    {static_cast<uint16_t>(hid::usage::Page::kMedicalInstrument), bind_fuchsia_hid::USAGE_PAGE_MEDICAL_INSTRUMENT},
+    {static_cast<uint16_t>(hid::usage::Page::kMonitor), bind_fuchsia_hid::USAGE_PAGE_MONITOR},
+    {static_cast<uint16_t>(hid::usage::Page::kMonitorEnumerated), bind_fuchsia_hid::USAGE_PAGE_MONITOR_ENUMERATED},
+    {static_cast<uint16_t>(hid::usage::Page::kVESACtrls), bind_fuchsia_hid::USAGE_PAGE_VESA_CTRLS},
+    {static_cast<uint16_t>(hid::usage::Page::kVESACommand), bind_fuchsia_hid::USAGE_PAGE_VESA_COMMAND},
+    {static_cast<uint16_t>(hid::usage::Page::kPowerDevice), bind_fuchsia_hid::USAGE_PAGE_POWER_DEVICE},
+    {static_cast<uint16_t>(hid::usage::Page::kBatterySystem), bind_fuchsia_hid::USAGE_PAGE_BATTERY_SYSTEM},
+    {static_cast<uint16_t>(hid::usage::Page::kBarcodeScanner), bind_fuchsia_hid::USAGE_PAGE_BARCODE_SCANNER},
+    {static_cast<uint16_t>(hid::usage::Page::kScale), bind_fuchsia_hid::USAGE_PAGE_SCALE},
+    {static_cast<uint16_t>(hid::usage::Page::kMagneticStripeReader), bind_fuchsia_hid::USAGE_PAGE_MAGNETIC_STRIPE_READER},
+    {static_cast<uint16_t>(hid::usage::Page::kPointOfSaleDevice), bind_fuchsia_hid::USAGE_PAGE_POINT_OF_SALE_DEVICE},
+    {static_cast<uint16_t>(hid::usage::Page::kCameraControl), bind_fuchsia_hid::USAGE_PAGE_CAMERA_CONTROL},
+    {static_cast<uint16_t>(hid::usage::Page::kArcadeControl), bind_fuchsia_hid::USAGE_PAGE_ARCADE_CONTROL},
+    {static_cast<uint16_t>(hid::usage::Page::kFidoAlliance), bind_fuchsia_hid::USAGE_PAGE_FIDO_ALLIANCE},
+    {static_cast<uint16_t>(hid::usage::Page::kVendorDefinedStart), bind_fuchsia_hid::USAGE_PAGE_VENDOR},
+    {static_cast<uint16_t>(hid::usage::Page::kVendorDefinedEnd), bind_fuchsia_hid::USAGE_PAGE_VENDOR},
+};
+
+}  // namespace
+
+void HidDevice::ParseUsagePage(const hid::ReportDescriptor* descriptor) {
+  auto collection = hid::GetAppCollection(&descriptor->input_fields[0]);
+  if (collection == nullptr) {
+    return;
+  }
+
+  usage_pages_.insert(collection->usage.page);
+}
 
 size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
   for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
@@ -85,13 +138,16 @@ zx_status_t HidDevice::ProcessReportDescriptor() {
 
   size_t num_reports = 0;
   for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
-    if (parsed_hid_desc_->report[i].input_count != 0) {
+    const hid::ReportDescriptor* desc = &parsed_hid_desc_->report[i];
+    if (desc->input_count != 0) {
+      num_reports++;
+
+      ParseUsagePage(desc);
+    }
+    if (desc->output_count != 0) {
       num_reports++;
     }
-    if (parsed_hid_desc_->report[i].output_count != 0) {
-      num_reports++;
-    }
-    if (parsed_hid_desc_->report[i].feature_count != 0) {
+    if (desc->feature_count != 0) {
       num_reports++;
     }
   }
@@ -405,6 +461,19 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
     return status;
   }
 
+  std::vector<zx_device_str_prop_t> props;
+  props.reserve(usage_pages_.size());
+  for (const auto& prop : usage_pages_) {
+    if (kBindPropKeyMap.find(prop) == kBindPropKeyMap.end()) {
+      zxlogf(WARNING, "Usage page %hu not supported as a bind property yet. Skipping.", prop);
+      continue;
+    }
+    props.emplace_back(zx_device_str_prop_t{
+        .key = kBindPropKeyMap[prop].c_str(),
+        .property_value = str_prop_bool_val(true),
+    });
+  }
+
   status = InitReassemblyBuffer();
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: failed to initialize reassembly buffer: %d", status);
@@ -425,7 +494,7 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
     // continue anyway
   }
 
-  status = DdkAdd("hid-device");
+  status = DdkAdd(ddk::DeviceAddArgs("hid-device").set_str_props(cpp20::span(props)));
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: device_add failed for HID device: %d", status);
     ReleaseReassemblyBuffer();

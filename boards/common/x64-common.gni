@@ -35,6 +35,7 @@ _bootfs_deps = [
   "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
   "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
   "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+  "//src/ui/input/drivers/ctaphid",
   "//src/ui/input/drivers/i2c-hid",
   "//src/ui/input/drivers/pc-ps2",
 

@@ -53,6 +53,8 @@ enum class Page : uint16_t {
   kCameraControl = 0x90,
   kArcadeControl = 0x91,
 
+  kFidoAlliance = 0xf1d0,
+
   kVendorDefinedStart = 0xff00,
   kVendorDefinedEnd = 0xffff
 };

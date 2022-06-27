@@ -13,6 +13,7 @@
 
 #include <array>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <ddktl/device.h>
@@ -85,6 +86,9 @@ class HidDevice : public HidDeviceType,
   void ReleaseReassemblyBuffer();
   zx_status_t SetReportDescriptor();
 
+  void ParseUsagePage(const hid::ReportDescriptor* descriptor);
+
+  std::set<uint16_t> usage_pages_;
   hid_info_t info_ = {};
   ddk::HidbusProtocolClient hidbus_;
 

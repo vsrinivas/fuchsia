@@ -1,0 +1,63 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("ctaphid_bind") {
+  rules = "ctaphid.bind"
+  header_output = "ctaphid_bind.h"
+  bind_output = "ctaphid.bindbc"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.hid" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ctaphid-test",
+    ":ctaphid_bind_test",
+  ]
+}
+
+source_set("driver-internals") {
+  sources = [ "ctaphid.cc" ]
+  public_deps = [
+    ":ctaphid_bind",
+    "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
+    "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_driver("ctaphid-driver") {
+  output_name = "ctaphid"
+  deps = [
+    ":driver-internals",
+    "//src/devices/lib/driver",
+  ]
+}
+
+fuchsia_driver_component("ctaphid") {
+  component_name = "ctaphid"
+  deps = [ ":ctaphid-driver" ]
+  info = "ctaphid-info.json"
+  colocate = true
+}
+
+test("ctaphid-test-bin") {
+  sources = [ "test.cc" ]
+  deps = [
+    ":driver-internals",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("ctaphid-test") {
+  deps = [ ":ctaphid-test-bin" ]
+}
