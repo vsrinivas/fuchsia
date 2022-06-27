@@ -393,7 +393,10 @@ fuchsia_test_component("detach_tests_component") {
 fuchsia_test_component("ktrace_integration_tests_component") {
   component_name = "ktrace_integration_tests"
   manifest = "meta/ktrace_integration_tests.cmx"
-  deps = [ ":ktrace_integration_tests" ]
+  deps = [
+    ":ktrace_integration_tests",
+    "//src/developer/tracing/bin/trace:bin",
+  ]
 }
 
 fuchsia_test_component("provider_destruction_tests_component") {

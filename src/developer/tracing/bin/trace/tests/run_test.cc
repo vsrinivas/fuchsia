@@ -37,7 +37,7 @@ namespace test {
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
-const char kTraceProgramPath[] = "/bin/trace";
+const char kTraceProgramPath[] = "/pkg/bin/trace";
 
 static bool BuildTraceProgramArgs(const std::string& app_path, const std::string& test_name,
                                   const std::string& categories, size_t buffer_size_in_mb,

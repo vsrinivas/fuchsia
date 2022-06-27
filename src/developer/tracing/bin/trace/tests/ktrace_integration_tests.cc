@@ -17,7 +17,7 @@ namespace test {
 
 namespace {
 
-const char kChildPath[] = "/bin/trace";
+const char kChildPath[] = "/pkg/bin/trace";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
