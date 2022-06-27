@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::font;
 use crate::keys;
 use crate::keys::{get_accent, Accent, Key, SpecialKey};
 use crate::proxy_view_assistant::ProxyMessages;
@@ -62,7 +61,7 @@ struct KeyButton {
     special_action: bool,
     key: &'static keys::Key,
     label_text: String,
-    face: FontFace,
+    font_face: FontFace,
     background: FacetId,
     label: FacetId,
 }
@@ -70,19 +69,19 @@ struct KeyButton {
 impl KeyButton {
     pub fn new(
         key: &'static keys::Key,
+        font_face: FontFace,
         font_size: f32,
         padding: f32,
         builder: &mut SceneBuilder,
     ) -> Result<KeyButton, Error> {
         let options = StackOptions { alignment: Alignment::center(), ..StackOptions::default() };
         builder.start_group("key_button", Stack::with_options_ptr(options));
-        let face = font::load_default_font_face()?;
         let text = match key {
             Key::Letter(letter_key) => &letter_key.lower,
             Key::Special(_special_key, text) => text,
         };
         let label = builder.text(
-            face.clone(),
+            font_face.clone(),
             text,
             font_size,
             Point::zero(),
@@ -97,7 +96,7 @@ impl KeyButton {
         let bg_size = match key {
             Key::Letter(_letter_key) => size2(font_size + padding, font_size + padding),
             Key::Special(_special_key, text) => {
-                let label_width = measure_text_width(&face, font_size, text);
+                let label_width = measure_text_width(&font_face, font_size, text);
                 size2(label_width + padding * 1.5, font_size + padding)
             }
         };
@@ -119,7 +118,7 @@ impl KeyButton {
             focused: false,
             special_action: false,
             label_text: text.to_string(),
-            face,
+            font_face,
             background,
             label,
         };
@@ -272,6 +271,7 @@ pub struct SceneDetails {
 }
 
 pub struct KeyboardViewAssistant {
+    font_face: FontFace,
     app_sender: AppSender,
     view_key: ViewKey,
     focused: bool,
@@ -288,9 +288,14 @@ pub struct KeyboardViewAssistant {
 }
 
 impl KeyboardViewAssistant {
-    pub fn new(app_sender: AppSender, view_key: ViewKey) -> Result<KeyboardViewAssistant, Error> {
+    pub fn new(
+        app_sender: AppSender,
+        view_key: ViewKey,
+        font_face: FontFace,
+    ) -> Result<KeyboardViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
         Ok(KeyboardViewAssistant {
+            font_face,
             app_sender: app_sender.clone(),
             view_key,
             focused: false,
@@ -485,7 +490,6 @@ impl KeyboardViewAssistant {
             let mut builder = SceneBuilder::new().background_color(self.bg_color);
             let mut user_text = None;
             let mut buttons: VecDeque<KeyButton> = VecDeque::with_capacity(50);
-            let face = font::load_default_font_face_or_panic();
             builder
                 .group()
                 .column()
@@ -502,7 +506,7 @@ impl KeyboardViewAssistant {
                     );
                     builder.space(Size2D { width: 10.0, height: 10.0, _unit: Default::default() });
                     builder.text(
-                        face.clone(),
+                        self.font_face.clone(),
                         &format!("Enter {}: ", self.field_name),
                         35.0,
                         Point::zero(),
@@ -514,7 +518,7 @@ impl KeyboardViewAssistant {
                         },
                     );
                     user_text = Some(builder.text(
-                        face.clone(),
+                        self.font_face.clone(),
                         &format!("{}", self.user_text),
                         35.0,
                         Point::zero(),
@@ -537,8 +541,14 @@ impl KeyboardViewAssistant {
                             )),
                         );
                         for key in *row {
-                            let button = KeyButton::new(key, font_size, padding, builder)
-                                .expect("KeyButton");
+                            let button = KeyButton::new(
+                                key,
+                                self.font_face.clone(),
+                                font_size,
+                                padding,
+                                builder,
+                            )
+                            .expect("KeyButton");
                             buttons.push_back(button);
                         }
                         builder.end_group();

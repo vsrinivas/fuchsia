@@ -880,7 +880,12 @@ impl RecoveryViewAssistant {
                 if !field_text.is_empty() {
                     // Fire up a new keyboard
                     let mut keyboard = Box::new(
-                        KeyboardViewAssistant::new(self.app_sender.clone(), self.view_key).unwrap(),
+                        KeyboardViewAssistant::new(
+                            self.app_sender.clone(),
+                            self.view_key,
+                            self.font_face.clone(),
+                        )
+                        .unwrap(),
                     );
                     keyboard.set_field_name(field_text);
                     keyboard.set_text_field(entry_text);

@@ -12,8 +12,3 @@ const DEFAULT_FONT_PATH: &str = "/pkg/data/fonts/Roboto-Regular.ttf";
 pub fn load_default_font_face() -> Result<FontFace, Error> {
     load_font(PathBuf::from(DEFAULT_FONT_PATH))
 }
-
-#[cfg(feature = "http_setup_server")]
-pub fn load_default_font_face_or_panic() -> FontFace {
-    load_default_font_face().expect("Failed to load font")
-}
