@@ -5,13 +5,22 @@
 //! Private functionality for pbms lib.
 
 use {
-    crate::{gcs::fetch_from_gcs, repo_info::RepoInfo},
+    crate::{
+        gcs::{
+            fetch_from_gcs, get_boto_path, get_gcs_client_with_auth, get_gcs_client_without_auth,
+        },
+        repo_info::RepoInfo,
+    },
     anyhow::{bail, Context, Result},
+    chrono::{DateTime, NaiveDateTime, Utc},
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
-    sdk_metadata::{Metadata, MetadataValue, ProductBundleV1},
+    fuchsia_hyper::new_https_client,
+    futures::{stream::FuturesUnordered, TryStreamExt as _},
+    pkg::repository::{GcsRepository, HttpRepository, Repository, RepositoryBackend},
+    sdk_metadata::{Metadata, PackageBundle},
+    serde_json::Value,
     std::{
-        collections::HashMap,
         io::Write,
         path::{Path, PathBuf},
     },
@@ -215,11 +224,13 @@ where
     log::debug!("Getting product data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
+
     for image in &product_bundle.images {
         if verbose {
             writeln!(writer, "    image: {:?}", image)?;
         } else {
             write!(writer, ".")?;
+            writer.flush()?;
         }
         let base_url = url::Url::parse(&image.base_uri)
             .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
@@ -234,24 +245,9 @@ where
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
-    // TODO(fxbug.dev/89775): Replace this with the library from fxbug.dev/89775.
-    fetch_package_tgz(verbose, writer, &local_dir, &product_bundle).await?;
+    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, verbose, writer)
+        .await?;
 
-    /*
-    for package in &product_bundle.packages {
-        if verbose {
-            writeln!(writer, "    package: {:?}", package.repo_uri)?;
-        } else {
-            write!(writer, ".")?;
-            writer.flush()?;
-        }
-        let repo_url = url::Url::parse(&package.repo_uri)
-            .with_context(|| format!("parse package.repo_uri {:?}", package.repo_uri))?;
-        fetch_by_format(&package.format, &repo_url, &local_dir, verbose, writer)
-            .await
-            .with_context(|| format!("Packages for {}.", product_bundle.name))?;
-    }
-    */
     log::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
     writeln!(writer, "Download of product data for {:?} is complete.", product_bundle.name)?;
@@ -275,193 +271,287 @@ fn pb_dir_name(gcs_url: &url::Url) -> String {
     format!("{}", s.finish())
 }
 
-/// Returns the build_info_version from the metadata if present.
-async fn get_version_for_packages(
-    metadata_collection: &Option<Vec<(String, MetadataValue)>>,
-) -> Result<Option<String>> {
-    let mut version: Option<String> = None;
-    if let Some(metadata) = metadata_collection {
-        if let Some((_, version_value)) =
-            metadata.iter().find(|(key, _)| key == "build_info_version")
-        {
-            match version_value {
-                MetadataValue::StringValue(value) => version = Some(value.to_string()),
-                _ => {}
-            }
-        }
-    }
-    if version.is_none() {
-        // If there is no metadata, or it did not contain build_info_version, use the
-        // SDK version.
-        let sdk = ffx_config::get_sdk().await.context("getting ffx config sdk")?;
-        version = match sdk.get_version() {
-            SdkVersion::Version(version) => Some(version.to_string()),
-            SdkVersion::InTree => None,
-            SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
-        };
-    }
-    Ok(version)
-}
-
-/// Download and extract the packages tarball.
-async fn fetch_package_tgz<W>(
+/// Fetch the product bundle package repository mirror list.
+///
+/// This will try to download a package repository from each mirror in the list, stopping on the
+/// first success. Otherwise it will return the last error encountered.
+async fn fetch_package_repository_from_mirrors<W>(
+    local_dir: &Path,
+    packages: &[PackageBundle],
     verbose: bool,
     writer: &mut W,
-    local_dir: &Path,
-    product_bundle: &ProductBundleV1,
 ) -> Result<()>
 where
     W: Write + Sync,
 {
-    let version = get_version_for_packages(&product_bundle.metadata)
-        .await
-        .context("determining version for package fetching")?;
-
-    // TODO(fxbug.dev/98529): Handle the non-standard name for terminal.*.
-    let file_name = match product_bundle.name.as_str() {
-        "terminal.qemu-arm64" => String::from("qemu-arm64.tar.gz"),
-        "terminal.qemu-x64" => String::from("qemu-x64.tar.gz"),
-        "terminal.x64" => String::from("generic-x64.tar.gz"),
-        "terminal.arm64" => String::from("generic-arm64.tar.gz"),
-        _ => format!("{}-release.tar.gz", product_bundle.name),
-    };
-    let package_url = match version {
-        Some(value) => format!("gs://fuchsia/development/{}/packages/{}", value, file_name),
-        None => format!("gs://fuchsia/development/packages/{}", file_name),
-    };
-    let url = Url::parse(&package_url)?;
-
-    // Download the package tgz into a temp directory.
-    let temp_dir = tempfile::TempDir::new_in(&local_dir).context("creating temp dir")?;
-    match fetch_by_format(&"tgz", &url, &temp_dir.path(), verbose, writer).await {
-        Ok(()) => {}
-        Err(err) => {
-            // Since we're hardcoding the bucket to download artifacts from, it's possible the
-            // actual SDK bucket might not match the hardcoded one. If this happens, emit a warning,
-            // rather than error out.
-            writeln!(
-                writer,
-                "WARNING: Unable to fetch {}: {:?}\n\
-                 Maybe package artifacts are stored in a different bucket?",
-                url, err
-            )?;
-            return Ok(());
+    // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
+    // out if we can't download the packages from any mirror.
+    for (i, package) in packages.iter().enumerate() {
+        let res = fetch_package_repository(&local_dir, package, verbose, writer).await;
+        if !verbose {
+            // If we're not in verbose mode, then we output a '.' after every package we try to
+            // download. Make sure we add a trailing newline once we've done fetching all the
+            // packages or error out.
+            writeln!(writer, "")?;
         }
-    }
 
-    // Open the archive. This is typically compressed with parallel gzip streams, so we need to use
-    // the multiple-stream-aware gzip decoder.
-    let archive_path = temp_dir.path().join(&file_name);
-    let file = std::fs::File::open(&archive_path)
-        .with_context(|| format!("opening archive {:?}", archive_path))?;
-    let file = flate2::read::MultiGzDecoder::new(file);
-    let mut archive = tar::Archive::new(file);
-
-    // Extract all the "amber-files/" entries into the temp directory.
-    let archive_dir = temp_dir.path().join("archive");
-    for entry in archive
-        .entries()
-        .with_context(|| format!("reading package archive entries from {}", file_name))?
-    {
-        let mut entry =
-            entry.with_context(|| format!("reading package entry from {}", file_name))?;
-
-        let path =
-            entry.path().with_context(|| format!("reading entry path from {}", file_name))?;
-
-        if path.starts_with("amber-files") {
-            let path = path.to_path_buf();
-
-            if verbose {
-                writeln!(writer, "    Extract {}:{}", file_name, path.display())?;
-            } else {
-                write!(writer, ".")?;
-                writer.flush()?;
+        match res {
+            Ok(()) => {
+                break;
             }
-
-            entry
-                .unpack_in(&archive_dir)
-                .with_context(|| format!("unpacking {}", path.display()))?;
-        }
-    }
-
-    // Now that we've fully extracted the archive, we need to move the files into the destination.
-    // This is easy if the destination does not exist.
-    let amber_files_dir = archive_dir.join("amber-files");
-    if !local_dir.exists() {
-        std::fs::rename(&amber_files_dir, &local_dir)?;
-        return Ok(());
-    }
-
-    // FIXME(http://fxbug.dev/81098): It's a little more complicated if the directory already
-    // exists. We could rename the old directory out of the way, then move the new directory in
-    // place, but that would confuse the package server. The package server uses a system file
-    // watcher to watch for changes to metadata, but unfortunately it follows the directory inode
-    // if it's moved to another location. So it would not serve any updated artifacts to a device.
-    //
-    // To avoid this, we'll instead move each file over to the new location.
-    let src_entries = get_directory_entries(&amber_files_dir)?;
-    let mut dst_entries = get_directory_entries(&local_dir)?;
-
-    for (rel_path, src_path) in src_entries {
-        let dst_path = if let Some(dst_path) = dst_entries.remove(&rel_path) {
-            dst_path
-        } else {
-            let dst_path = local_dir.join(rel_path);
-            if let Some(parent) = dst_path.parent() {
-                async_fs::create_dir_all(&parent)
-                    .await
-                    .with_context(|| format!("creating directory {}", parent.display()))?;
+            Err(err) => {
+                writeln!(writer, "WARNING: Unable to fetch {:?}: {:?}", package, err)?;
+                if i + 1 == packages.len() {
+                    return Err(err);
+                }
             }
-            dst_path
-        };
-
-        if verbose {
-            writeln!(writer, "    Move {} to {}", src_path.display(), dst_path.display())?;
-        } else {
-            write!(writer, ".")?;
-            writer.flush()?;
         }
-
-        std::fs::rename(&src_path, &dst_path)
-            .with_context(|| format!("moving {} to {}", src_path.display(), dst_path.display()))?;
-    }
-
-    // Remove any old files left in the destination.
-    for dst_path in dst_entries.values() {
-        // The temp directory is in the `local_dir`, so ignore those paths.
-        if dst_path.starts_with(&temp_dir.path()) {
-            continue;
-        }
-
-        if verbose {
-            writeln!(writer, "    Remove {}", dst_path.display())?;
-        } else {
-            write!(writer, ".")?;
-            writer.flush()?;
-        }
-        std::fs::remove_file(&dst_path)
-            .with_context(|| format!("removing {}", dst_path.display()))?;
     }
 
     Ok(())
 }
 
-fn get_directory_entries(root: &Path) -> Result<HashMap<PathBuf, PathBuf>> {
-    let mut entries = HashMap::new();
-    for entry in walkdir::WalkDir::new(&root) {
-        let entry = entry.context("walking directory")?;
-        let path = entry.path();
+/// Fetch packages from this package bundle and write them to `local_dir`.
+async fn fetch_package_repository<W>(
+    local_dir: &Path,
+    package: &PackageBundle,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
+    if verbose {
+        if let Some(blob_uri) = &package.blob_uri {
+            writeln!(writer, "    package repository: {} {}", package.repo_uri, blob_uri)?;
+        } else {
+            writeln!(writer, "    package repository: {}", package.repo_uri)?;
+        }
+    } else {
+        write!(writer, ".")?;
+        writer.flush()?;
+    }
 
-        if path.is_file() {
-            let rel_path = path
-                .strip_prefix(&root)
-                .with_context(|| format!("stripping {} from {}", root.display(), path.display()))?;
+    let mut metadata_repo_uri = url::Url::parse(&package.repo_uri)
+        .with_context(|| format!("parsing package.repo_uri {:?}", package.repo_uri))?;
 
-            entries.insert(rel_path.to_path_buf(), path.to_path_buf());
+    match package.format.as_str() {
+        "files" => {
+            // `Url::join()` treats urls with a trailing slash as a directory, and without as a
+            // file. In the latter case, it will strip off the last segment before joining paths.
+            // Since the metadata and blob url are directories, make sure they have a trailing
+            // slash.
+            if !metadata_repo_uri.path().ends_with('/') {
+                metadata_repo_uri.set_path(&format!("{}/", metadata_repo_uri.path()));
+            }
+
+            metadata_repo_uri = metadata_repo_uri.join("repository/")?;
+
+            let blob_repo_uri = if let Some(blob_repo_uri) = &package.blob_uri {
+                url::Url::parse(blob_repo_uri)
+                    .with_context(|| format!("parsing package.repo_uri {:?}", blob_repo_uri))?
+            } else {
+                // If the blob uri is unspecified, then use `$METADATA_URI/blobs/`.
+                metadata_repo_uri.join("blobs/")?
+            };
+
+            fetch_package_repository_from_files(
+                local_dir,
+                metadata_repo_uri,
+                blob_repo_uri,
+                verbose,
+                writer,
+            )
+            .await
+        }
+        "tgz" => {
+            if package.blob_uri.is_some() {
+                // TODO(fxbug.dev/93850): implement pbms.
+                unimplemented!();
+            }
+
+            fetch_package_repository_from_tgz(local_dir, metadata_repo_uri, verbose, writer).await
+        }
+        _ =>
+        // The schema currently defines only "files" or "tgz" (see RFC-100).
+        // This error could be a typo in the product bundle or a new image
+        // format has been added and this code needs an update.
+        {
+            bail!(
+                "Unexpected image format ({:?}) in product bundle. \
+            Supported formats are \"files\" and \"tgz\". \
+            Please report as a bug.",
+                package.format,
+            )
         }
     }
-    Ok(entries)
+}
+
+/// Fetch a package repository using the `files` package bundle format and writes it to
+/// `local_dir`.
+///
+/// This supports the following URL schemes:
+/// * `http://`
+/// * `https://`
+/// * `gs://`
+async fn fetch_package_repository_from_files<W>(
+    local_dir: &Path,
+    metadata_repo_uri: Url,
+    blob_repo_uri: Url,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
+    match (metadata_repo_uri.scheme(), blob_repo_uri.scheme()) {
+        (GS_SCHEME, GS_SCHEME) => {
+            // First try to fetch with the public client.
+            let client = get_gcs_client_without_auth();
+            let backend = Box::new(GcsRepository::new(
+                client,
+                metadata_repo_uri.clone(),
+                blob_repo_uri.clone(),
+            )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+
+            if fetch_package_repository_from_backend(
+                local_dir,
+                metadata_repo_uri.clone(),
+                blob_repo_uri.clone(),
+                backend,
+                verbose,
+                writer,
+            )
+            .await
+            .is_ok()
+            {
+                return Ok(());
+            }
+
+            let boto_path = get_boto_path().await?;
+            let client = get_gcs_client_with_auth(&boto_path)?;
+
+            let backend = Box::new(GcsRepository::new(
+                client,
+                metadata_repo_uri.clone(),
+                blob_repo_uri.clone(),
+            )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+
+            fetch_package_repository_from_backend(
+                local_dir,
+                metadata_repo_uri.clone(),
+                blob_repo_uri.clone(),
+                backend,
+                verbose,
+                writer,
+            )
+            .await
+        }
+        ("http" | "https", "http" | "https") => {
+            let client = new_https_client();
+            let backend = Box::new(HttpRepository::new(
+                client,
+                metadata_repo_uri.clone(),
+                blob_repo_uri.clone(),
+            )) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+
+            fetch_package_repository_from_backend(
+                local_dir,
+                metadata_repo_uri,
+                blob_repo_uri,
+                backend,
+                verbose,
+                writer,
+            )
+            .await
+        }
+        ("file", "file") => {
+            // The files are already local, so we don't need to download them.
+            Ok(())
+        }
+        (_, _) => {
+            bail!("Unexpected URI scheme in ({}, {})", metadata_repo_uri, blob_repo_uri);
+        }
+    }
+}
+
+async fn fetch_package_repository_from_backend<W>(
+    local_dir: &Path,
+    metadata_repo_uri: Url,
+    blob_repo_uri: Url,
+    backend: Box<dyn RepositoryBackend + Send + Sync + 'static>,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
+    let repo = Repository::new("repo", backend).await.with_context(|| {
+        format!("creating package repository {} {}", metadata_repo_uri, blob_repo_uri)
+    })?;
+
+    let metadata_dir = local_dir.join("repository");
+    let blobs_dir = metadata_dir.join("blobs");
+
+    // TUF metadata may be expired, so pretend we're updating relative to the Unix Epoch so the
+    // metadata won't expired.
+    let start_time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
+
+    let trusted_targets = pkg::resolve::resolve_repository_metadata_with_start_time(
+        &repo,
+        &metadata_dir,
+        &start_time,
+    )
+    .await
+    .with_context(|| format!("downloading repository {} {}", metadata_repo_uri, blob_repo_uri))?;
+
+    // Exit early if there are no targets.
+    if let Some(trusted_targets) = trusted_targets {
+        // Download all the packages.
+        let fetcher = pkg::resolve::PackageFetcher::new(&repo, &blobs_dir, 5).await?;
+
+        let mut futures = FuturesUnordered::new();
+
+        for (package_name, desc) in trusted_targets.targets().iter() {
+            let merkle = desc.custom().get("merkle").context("missing merkle")?;
+            let merkle = if let Value::String(hash) = merkle {
+                hash.parse()?
+            } else {
+                bail!("Merkle field is not a String. {:#?}", desc)
+            };
+
+            if verbose {
+                writeln!(writer, "    package: {}", package_name.as_str())?;
+            } else {
+                write!(writer, ".")?;
+                writer.flush()?;
+            }
+
+            futures.push(fetcher.fetch_package(merkle));
+        }
+
+        while let Some(()) = futures.try_next().await? {}
+    };
+
+    Ok(())
+}
+
+/// Fetch a package repository using the `tgz` package bundle format, and automatically expand the
+/// tarball into the `local_dir` directory.
+async fn fetch_package_repository_from_tgz<W>(
+    local_dir: &Path,
+    repo_uri: Url,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
+    fetch_bundle_uri(&repo_uri, &local_dir, verbose, writer)
+        .await
+        .with_context(|| format!("downloading repo URI {}", repo_uri))?;
+
+    Ok(())
 }
 
 /// Download and expand data.

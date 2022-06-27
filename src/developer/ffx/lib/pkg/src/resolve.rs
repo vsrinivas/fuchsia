@@ -6,17 +6,21 @@ use {
     crate::repository::{get_tuf_client, Repository},
     anyhow::{anyhow, Context, Result},
     async_lock::Mutex,
+    chrono::{DateTime, Utc},
     errors::ffx_bail,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_pkg::MetaContents,
     futures::{
-        future::BoxFuture,
+        channel::oneshot,
+        future::{BoxFuture, Shared},
         io::Cursor,
-        stream::{self, StreamExt},
-        AsyncRead, AsyncReadExt as _, AsyncWriteExt as _, FutureExt as _, TryStreamExt as _,
+        stream::{self, FuturesUnordered},
+        AsyncRead, AsyncReadExt as _, AsyncWriteExt as _, FutureExt as _, StreamExt as _,
+        TryStreamExt as _,
     },
     serde_json::Value,
     std::{
+        collections::HashMap,
         fs::File,
         path::{Path, PathBuf},
         sync::Arc,
@@ -24,8 +28,9 @@ use {
     tempfile::NamedTempFile,
     tuf::{
         interchange::DataInterchange,
-        metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath},
+        metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath, TargetsMetadata},
         repository::{FileSystemRepository, RepositoryProvider, RepositoryStorage},
+        verify::Verified,
         Error,
     },
 };
@@ -42,8 +47,50 @@ pub async fn resolve_repository(
     blobs_dir: impl AsRef<Path>,
     concurrency: usize,
 ) -> Result<()> {
-    let metadata_dir = metadata_dir.as_ref();
     let blobs_dir = blobs_dir.as_ref();
+
+    let trusted_targets = resolve_repository_metadata(repo, metadata_dir).await?;
+
+    // Exit early if there are no targets.
+    if let Some(trusted_targets) = trusted_targets {
+        let fetcher = PackageFetcher::new(repo, blobs_dir, concurrency).await?;
+
+        // Download all the packages.
+        let mut futures = FuturesUnordered::new();
+        for desc in trusted_targets.targets().values() {
+            let merkle = merkle_from_description(&desc)?;
+            futures.push(fetcher.fetch_package(merkle));
+        }
+
+        while let Some(()) = futures.try_next().await? {}
+    };
+
+    Ok(())
+}
+
+/// Download the metadata from a repository.
+///
+/// `repo`: Download the package from this repository.
+/// `metadata_dir`: Write repository metadata to this directory.
+pub async fn resolve_repository_metadata(
+    repo: &Repository,
+    metadata_dir: impl AsRef<Path>,
+) -> Result<Option<Verified<TargetsMetadata>>> {
+    let metadata_dir = metadata_dir.as_ref();
+    resolve_repository_metadata_with_start_time(repo, metadata_dir, &Utc::now()).await
+}
+
+/// Download the metadata from a repository.
+///
+/// `repo`: Download the package from this repository.
+/// `metadata_dir`: Write repository metadata to this directory.
+/// `start_time`: Update metadata relative to this update start time.
+pub async fn resolve_repository_metadata_with_start_time(
+    repo: &Repository,
+    metadata_dir: impl AsRef<Path>,
+    start_time: &DateTime<Utc>,
+) -> Result<Option<Verified<TargetsMetadata>>> {
+    let metadata_dir = metadata_dir.as_ref();
 
     let upstream_repo = repo.get_tuf_repo()?;
 
@@ -58,7 +105,7 @@ pub async fn resolve_repository(
 
         // Fetch the metadata, which will verify that it is correct.
         let mut tuf_client = get_tuf_client(cache_repo).await?;
-        tuf_client.update().await?;
+        tuf_client.update_with_start_time(start_time).await?;
 
         tuf_client.database().trusted_targets().cloned()
     };
@@ -66,16 +113,7 @@ pub async fn resolve_repository(
     // Commit the metadata after we've verified the TUF metadata.
     batch_repo.commit().await?;
 
-    // Exit early if there are no targets.
-    if let Some(trusted_targets) = trusted_targets {
-        // Download all the packages.
-        for desc in trusted_targets.targets().values() {
-            let merkle = merkle_from_description(&desc)?;
-            fetch_package(repo, merkle, &blobs_dir, concurrency).await?;
-        }
-    };
-
-    Ok(())
+    Ok(trusted_targets)
 }
 
 /// Download a package from a repository and write the blobs to a directory.
@@ -99,46 +137,8 @@ pub async fn resolve_package(
 
     let meta_far_hash = merkle_from_description(&desc)?;
 
-    fetch_package(repo, meta_far_hash, &output_blobs_dir, concurrency).await
-}
-
-pub async fn fetch_package(
-    repo: &Repository,
-    meta_far_hash: Hash,
-    output_blobs_dir: impl AsRef<Path>,
-    concurrency: usize,
-) -> Result<Hash> {
-    let output_blobs_dir = output_blobs_dir.as_ref();
-
-    if !output_blobs_dir.exists() {
-        async_fs::create_dir_all(output_blobs_dir).await?;
-    }
-
-    if output_blobs_dir.is_file() {
-        ffx_bail!("Download path points at a file: {}", output_blobs_dir.display());
-    }
-
-    // First, download the meta.far.
-    let meta_far_path =
-        download_blob_to_destination(&repo, &output_blobs_dir, &meta_far_hash).await?;
-
-    let mut archive = File::open(&meta_far_path)?;
-    let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
-    let meta_contents = meta_far.read_file("meta/contents")?;
-    let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
-
-    // Download all the blobs.
-    // FIXME(http://fxbug.dev/97192): Consider replacing this with work_queue to allow the caller to
-    // globally control the concurrency.
-    let mut tasks = stream::iter(
-        meta_contents
-            .values()
-            .map(|hash| download_blob_to_destination(&repo, &output_blobs_dir, hash)),
-    )
-    .buffer_unordered(concurrency);
-
-    // Wait until all the package blobs have finished downloading.
-    while let Some(_) = tasks.try_next().await? {}
+    let fetcher = PackageFetcher::new(repo, output_blobs_dir, concurrency).await?;
+    fetcher.fetch_package(meta_far_hash.clone()).await?;
 
     Ok(meta_far_hash)
 }
@@ -221,11 +221,98 @@ fn merkle_from_description(desc: &TargetDescription) -> Result<Hash> {
     }
 }
 
-/// Download a blob from the repository and save it to the given
-/// destination
-/// `path`: Path on the server from which to download the package.
-/// `repo`: A [Repository] instance.
-/// `destination`: Local path to save the downloaded package.
+/// A tool that downloads a package from a repository and write the blobs to a directory.
+///
+/// This will skip downloading a blob if it already exists in the directory if it has the correct
+/// hash. Otherwise we will redownload it and overwrite the local file.
+///
+/// Note: This caches blob verification of the local blob. This means that it would miss if the
+/// local blob file was modified after verification.
+pub struct PackageFetcher<'a> {
+    /// Download the package from this repository.
+    repo: &'a Repository,
+
+    /// Write the package blobs into this directory.
+    blobs_dir: &'a Path,
+
+    /// Maximum number of blobs to download at the same time.
+    concurrency: usize,
+
+    /// Helper that tracks if we've already verified this blob already.
+    verified_blobs: Mutex<HashMap<Hash, Shared<oneshot::Receiver<PathBuf>>>>,
+}
+
+impl<'a> PackageFetcher<'a> {
+    /// Create a package fetcher, which downloads a package from a repository and write the blobs to
+    /// a directory.
+    pub async fn new(
+        repo: &'a Repository,
+        blobs_dir: &'a Path,
+        concurrency: usize,
+    ) -> Result<PackageFetcher<'a>> {
+        if !blobs_dir.exists() {
+            async_fs::create_dir_all(blobs_dir).await?;
+        }
+
+        if blobs_dir.is_file() {
+            ffx_bail!("Download path points at a file: {}", blobs_dir.display());
+        }
+
+        Ok(Self { repo, blobs_dir, concurrency, verified_blobs: Mutex::new(HashMap::new()) })
+    }
+
+    /// Download a package from a repository and write the blobs to a directory.
+    pub async fn fetch_package(&self, meta_far_hash: Hash) -> Result<()> {
+        // First, download the meta.far.
+        let meta_far_path = self.fetch_blob(&meta_far_hash).await?;
+
+        let mut archive = File::open(&meta_far_path)?;
+        let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
+        let meta_contents = meta_far.read_file("meta/contents")?;
+        let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
+
+        // Download all the blobs.
+        // FIXME(http://fxbug.dev/97192): Consider replacing this with work_queue to allow the
+        // caller to globally control the concurrency.
+        let mut tasks = stream::iter(meta_contents.values().map(|hash| self.fetch_blob(hash)))
+            .buffer_unordered(self.concurrency);
+
+        // Wait until all the package blobs have finished downloading.
+        while let Some(_) = tasks.try_next().await? {}
+
+        Ok(())
+    }
+
+    /// Download a blob from the repository.
+    async fn fetch_blob(&self, blob: &Hash) -> Result<PathBuf> {
+        let result_tx = {
+            let mut verified_blobs = self.verified_blobs.lock().await;
+
+            // Check if we've got a task already to fetch this job. If so, wait for it to complete,
+            // or get canceled if it errors out.
+            if let Some(fut) = verified_blobs.get(blob) {
+                if let Ok(path) = fut.clone().await {
+                    return Ok(path);
+                }
+            }
+
+            let (result_tx, result_rx) = oneshot::channel();
+            verified_blobs.insert(blob.clone(), result_rx.shared());
+
+            result_tx
+        };
+
+        // Try to download the blob. If it fails, we'll drop `result_tx`, which will signal to the
+        // next `fetch_blob(blob)` call to try to redownload this blob.
+        let path = download_blob_to_destination(self.repo, self.blobs_dir, blob).await?;
+
+        // Send the patch to the future so other tasks will resolve.
+        result_tx.send(path.clone()).expect("verified blob receiver should exist");
+
+        Ok(path)
+    }
+}
+
 async fn download_blob_to_destination(
     repo: &Repository,
     dir: &Path,
@@ -247,7 +334,7 @@ async fn download_blob_to_destination(
                 return Err(err.into());
             }
         }
-    };
+    }
 
     // Otherwise download the blob into a temporary file, and validate that it has the right
     // hash.

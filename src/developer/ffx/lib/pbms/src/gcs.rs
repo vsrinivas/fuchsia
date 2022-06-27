@@ -8,7 +8,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     errors::ffx_bail,
     gcs::{
-        client::ClientFactory,
+        client::{Client, ClientFactory},
         gs_url::split_gs_url,
         token_store::{
             auth_code_to_refresh, get_auth_code, read_boto_refresh_token, write_boto_refresh_token,
@@ -20,6 +20,48 @@ use {
         path::{Path, PathBuf},
     },
 };
+
+/// Create a GCS client that only allows access to public buckets.
+pub(crate) fn get_gcs_client_without_auth() -> Client {
+    let no_auth = TokenStore::new_without_auth();
+    let client_factory = ClientFactory::new(no_auth);
+    client_factory.create_client()
+}
+
+/// Returns the path to the .boto (gsutil) configuration file.
+pub(crate) async fn get_boto_path() -> Result<PathBuf> {
+    // TODO(fxb/89584): Change to using ffx client Id and consent screen.
+    let boto: Option<PathBuf> =
+        ffx_config::get("flash.gcs.token").await.context("getting flash.gcs.token config value")?;
+    let boto_path = match boto {
+        Some(boto_path) => boto_path,
+        None => ffx_bail!(
+            "GCS authentication configuration value \"flash.gcs.token\" not \
+            found. Set this value by running `ffx config set flash.gcs.token <path>` \
+            to the path of the .boto file."
+        ),
+    };
+    if !boto_path.is_file() {
+        update_refresh_token(&boto_path).await.context("Set up refresh token")?
+    }
+
+    Ok(boto_path)
+}
+
+/// Returns a GCS client that can access public and private buckets.
+///
+/// `boto_path` is the path to the .boto (gsutil) configuration file.
+pub(crate) fn get_gcs_client_with_auth(boto_path: &Path) -> Result<Client> {
+    let auth = TokenStore::new_with_auth(
+        read_boto_refresh_token(boto_path)
+            .context("read boto refresh")?
+            .ok_or(anyhow!("Could not read boto token store"))?,
+        /*access_token=*/ None,
+    )?;
+
+    let client_factory = ClientFactory::new(auth);
+    Ok(client_factory.create_client())
+}
 
 /// Download from a given `gcs_url`.
 ///
@@ -34,9 +76,7 @@ pub(crate) async fn fetch_from_gcs<W>(
 where
     W: Write + Sync,
 {
-    let no_auth = TokenStore::new_without_auth();
-    let client_factory = ClientFactory::new(no_auth);
-    let client = client_factory.create_client();
+    let client = get_gcs_client_without_auth();
     let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
     if !client.fetch_all(bucket, gcs_path, &local_dir, verbose, writer).await.is_ok() {
         fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, verbose, writer)
@@ -59,30 +99,10 @@ async fn fetch_from_gcs_with_auth<W>(
 where
     W: Write + Sync,
 {
-    // TODO(fxb/89584): Change to using ffx client Id and consent screen.
-    let boto: Option<PathBuf> =
-        ffx_config::get("flash.gcs.token").await.context("getting flash.gcs.token config value")?;
-    let boto_path = match boto {
-        Some(boto_path) => boto_path,
-        None => ffx_bail!(
-            "GCS authentication configuration value \"flash.gcs.token\" not \
-            found. Set this value by running `ffx config set flash.gcs.token <path>` \
-            to the path of the .boto file."
-        ),
-    };
-    if !boto_path.is_file() {
-        update_refresh_token(&boto_path).await.context("Set up refresh token")?
-    }
-    loop {
-        let auth = TokenStore::new_with_auth(
-            read_boto_refresh_token(&boto_path)
-                .context("read boto refresh")?
-                .ok_or(anyhow!("Could not read boto token store"))?,
-            /*access_token=*/ None,
-        )?;
+    let boto_path = get_boto_path().await?;
 
-        let client_factory = ClientFactory::new(auth);
-        let client = client_factory.create_client();
+    loop {
+        let client = get_gcs_client_with_auth(&boto_path)?;
         match client
             .fetch_all(gcs_bucket, gcs_path, &local_dir, verbose, writer)
             .await
@@ -99,7 +119,7 @@ where
                 }
                 Some(_) | None => bail!(
                     "Cannot get product bundle container while \
-                     downloading from gs://{}/{}, saving to {:?}, error {:?}",
+                    downloading from gs://{}/{}, saving to {:?}, error {:?}",
                     gcs_bucket,
                     gcs_path,
                     local_dir,

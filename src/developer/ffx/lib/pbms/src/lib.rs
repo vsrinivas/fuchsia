@@ -29,7 +29,7 @@ use {
     },
     anyhow::{bail, Context, Result},
     fms::Entries,
-    futures_lite::stream::StreamExt,
+    futures::TryStreamExt as _,
     itertools::Itertools as _,
     std::{
         io::Write,

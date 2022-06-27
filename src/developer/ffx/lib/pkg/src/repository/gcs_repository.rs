@@ -73,8 +73,8 @@ where
             return Err(anyhow!("unsupported scheme {}", blob_repo_url));
         }
 
-        // `URL.join` treats urls with a trailing slash as a directory, and without as a file.
-        // In the latter case, it will strip off the last segment before joining paths. Since the
+        // `Url::join()` treats urls with a trailing slash as a directory, and without as a file. In
+        // the latter case, it will strip off the last segment before joining paths. Since the
         // metadata and blob url are directories, make sure they have a trailing slash.
         if !metadata_repo_url.path().ends_with('/') {
             metadata_repo_url.set_path(&format!("{}/", metadata_repo_url.path()));
@@ -101,11 +101,11 @@ where
                 // The package resolver currently requires a 'Content-Length' header, so error out
                 // if one wasn't provided.
                 let content_length = resp.headers().get(CONTENT_LENGTH).ok_or_else(|| {
-                    Error::Other(anyhow!("response missing Content-Length header"))
+                    Error::Other(anyhow!("response missing Content-Length header: {}", url))
                 })?;
 
                 ContentRange::from_http_content_length_header(content_length)
-                    .context("parsing Content-Length header")?
+                    .with_context(|| format!("parsing Content-Length header: {}", url))?
             }
             StatusCode::NOT_FOUND => {
                 return Err(Error::NotFound);
@@ -115,9 +115,28 @@ where
             }
             status => {
                 if status.is_success() {
-                    return Err(Error::Other(anyhow!("unexpected status code: {}", status)));
+                    return Err(Error::Other(anyhow!(
+                        "unexpected status code {}: {}",
+                        url,
+                        status
+                    )));
                 } else {
-                    return Err(Error::Other(anyhow!("error downloading resource: {}", status)));
+                    // GCS may return a more detailed error description in the body.
+                    if let Ok(body) = hyper::body::to_bytes(resp.into_body()).await {
+                        let body_str = String::from_utf8_lossy(&body);
+                        return Err(Error::Other(anyhow!(
+                            "error downloading resource {}: {}\n{}",
+                            url,
+                            status,
+                            body_str
+                        )));
+                    } else {
+                        return Err(Error::Other(anyhow!(
+                            "error downloading resource {}: {}",
+                            url,
+                            status
+                        )));
+                    }
                 }
             }
         };
