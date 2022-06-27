@@ -62,9 +62,7 @@ async fn run_virtio_vsock(
     .await?;
 
     let tx_stream = device.take_stream(wire::TX_QUEUE_IDX)?;
-
-    // TODO(fxb/97355): Implement the RX queue.
-    let _rx_stream = device.take_stream(wire::RX_QUEUE_IDX)?;
+    let rx_stream = device.take_stream(wire::RX_QUEUE_IDX)?;
 
     // Ignore the event queue as we don't support VM migrations.
     let _ = device.take_stream(wire::EVENT_QUEUE_IDX)?;
@@ -82,6 +80,7 @@ async fn run_virtio_vsock(
                 device.handle_tx_queue(ReadableChain::new(chain, guest_mem)).await
             }
         }),
+        vsock_device.handle_rx_stream(rx_stream, &guest_mem),
     )?;
 
     Ok(())

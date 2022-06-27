@@ -7,7 +7,7 @@
 
 use {
     crate::connection::{VsockConnection, VsockConnectionKey},
-    crate::connection_states::StateAction,
+    crate::connection_states::{StateAction, VsockConnectionState},
     crate::port_manager::PortManager,
     crate::wire::{OpType, VirtioVsockConfig, VirtioVsockHeader, VsockType, LE64},
     anyhow::{anyhow, Context, Error},
@@ -17,37 +17,71 @@ use {
         HostVsockEndpointListenResponder,
     },
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
-    std::{cell::RefCell, collections::HashMap, convert::TryFrom, io::Read, mem, rc::Rc},
-    virtio_device::{chain::ReadableChain, mem::DriverMem, queue::DriverNotify},
-    zerocopy::FromBytes,
+    futures::{
+        channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
+        select, StreamExt,
+    },
+    machina_virtio_device::{GuestMem, WrappedDescChainStream},
+    std::{
+        cell::{Cell, RefCell},
+        collections::HashMap,
+        convert::TryFrom,
+        io::{Read, Write},
+        mem,
+        rc::Rc,
+    },
+    virtio_device::{
+        chain::{ReadableChain, WritableChain},
+        mem::DriverMem,
+        queue::DriverNotify,
+    },
+    zerocopy::{AsBytes, FromBytes},
 };
 
 pub struct VsockDevice {
     // Device configuration. This currently only stores the guest CID, which should not change
     // during the lifetime of this device after being set during startup.
-    pub config: RefCell<VirtioVsockConfig>,
+    config: RefCell<VirtioVsockConfig>,
 
     // Active connections in all states. Connections are uniquely keyed by guest/host port, and
     // multiple connections can be multiplexed over the guest or host port as long as the pair is
     // unique.
-    pub connections: RefCell<HashMap<VsockConnectionKey, Rc<VsockConnection>>>,
+    connections: RefCell<HashMap<VsockConnectionKey, Rc<VsockConnection>>>,
 
     // Acceptors registered by clients listening on a given host port. When a guest initiates a
     // connection on a host port, a client must already be listening on that port.
-    pub listeners: RefCell<HashMap<u32, HostVsockAcceptorProxy>>,
+    listeners: RefCell<HashMap<u32, HostVsockAcceptorProxy>>,
 
     // Tracks port usage and allocation. The port manager will allow multiplexing over a single
     // port, but disallow identical connections.
-    pub port_manager: RefCell<PortManager>,
+    port_manager: RefCell<PortManager>,
+
+    // Multi-producer single-consumer queue for sending header only control packets from the device
+    // and connections to the guest. This queue will be drained before regular data packets are
+    // put on the guest RX queue.
+    control_packet_tx: UnboundedSender<VirtioVsockHeader>,
+    control_packet_rx: Cell<Option<UnboundedReceiver<VirtioVsockHeader>>>,
+
+    // Multi-producer single-consumer queue for notifying the RX loop that there is a new
+    // connection available to await on.
+    new_connection_tx: UnboundedSender<VsockConnectionKey>,
+    new_connection_rx: Cell<Option<UnboundedReceiver<VsockConnectionKey>>>,
 }
 
 impl VsockDevice {
     pub fn new() -> Rc<Self> {
+        let (control_tx, control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+        let (connect_tx, connect_rx) = mpsc::unbounded::<VsockConnectionKey>();
+
         Rc::new(Self {
             config: RefCell::new(VirtioVsockConfig::new_with_default_cid()),
             connections: RefCell::new(HashMap::new()),
             listeners: RefCell::new(HashMap::new()),
             port_manager: RefCell::new(PortManager::new()),
+            control_packet_tx: control_tx,
+            control_packet_rx: Cell::new(Some(control_rx)),
+            new_connection_tx: connect_tx,
+            new_connection_rx: Cell::new(Some(connect_rx)),
         })
     }
 
@@ -101,7 +135,7 @@ impl VsockDevice {
                 },
                 op => {
                     if let Some(connection) = self.connections.borrow().get(&key) {
-                        connection.handle_guest_tx(op, header, chain)
+                        connection.handle_guest_tx(op, header, chain).await
                     } else {
                         Err(anyhow!("Received packet for non-existent connection: {:?}", key))
                     }
@@ -109,15 +143,122 @@ impl VsockDevice {
             }
         };
 
-        // The device treats all guest TX errors except header deserialization failures as
-        // recoverable, and so simply closes the connection and allows the guest to restart it.
+        // The device treats all runtime TX errors as recoverable, and so simply closes the
+        // connection and allows the guest to restart it.
         if let Err(err) = result {
             syslog::fx_log_err!(
                 "Failed to handle tx packet for connection {:?} with error {}",
                 key,
                 err
             );
-            self.force_close_connection(key);
+            self.force_close_connection(key).await;
+        }
+
+        Ok(())
+    }
+
+    // Handles the RX queue stream, pulling chains off of the stream sequentially and forwarding
+    // them to a ready connection. This should only be invoked once, and will return when the
+    // stream is closed.
+    pub async fn handle_rx_stream<'a, 'b, N: DriverNotify>(
+        &self,
+        mut rx_stream: WrappedDescChainStream<'a, 'b, N>,
+        guest_mem: &'a GuestMem,
+    ) -> Result<(), Error> {
+        let mut control_packets = self
+            .control_packet_rx
+            .take()
+            .expect("No control packet rx channel; handle_rx_queue was called multiple times");
+        let mut new_connections = self
+            .new_connection_rx
+            .take()
+            .expect("No new connection rx channel; handle_rx_queue was called multiple times");
+
+        while let Some(chain) = rx_stream.next().await {
+            let writable_chain = match WritableChain::new(chain, guest_mem) {
+                Ok(chain) => chain,
+                Err(err) => {
+                    // Ignore this chain and continue processing.
+                    syslog::fx_log_err!("Device received a bad chain on the RX queue: {}", err);
+                    continue;
+                }
+            };
+
+            self.handle_rx_chain(writable_chain, &mut control_packets, &mut new_connections)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // Handles an RX writable chain. Control packets are sent first, followed by data packets.
+    // If multiple connections are ready to transmit, the least recently serviced connection is
+    // selected.
+    //
+    // Returns Err only on an unrecoverable error.
+    async fn handle_rx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        chain: WritableChain<'a, 'b, N, M>,
+        control_packets: &mut UnboundedReceiver<VirtioVsockHeader>,
+        new_connections: &mut UnboundedReceiver<VsockConnectionKey>,
+    ) -> Result<(), Error> {
+        let result = match chain.remaining() {
+            Ok(bytes) => {
+                if bytes < mem::size_of::<VirtioVsockHeader>() {
+                    Err(anyhow!(
+                        "Writable chain ({}) is smaller than a vsock header ({})",
+                        bytes,
+                        mem::size_of::<VirtioVsockHeader>()
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            err => {
+                err.map_err(|err| anyhow!("Failed to read bytes remaining: {}", err)).map(|_| ())
+            }
+        };
+
+        if let Err(err) = result {
+            syslog::fx_log_err!("Device received bad writable chain: {}", err);
+            return Ok(());
+        }
+
+        // Prioritize any control packets. Control packets can be time sensitive (such as
+        // completing the shutdown handshake), or be blocking guest TX (credit updates and
+        // connection establishments). If RX chains are limited, servicing control packets
+        // as soon as possible with what chains are available will allow the most net throughput.
+        let control_packet = match control_packets.try_next() {
+            Ok(header) => match header {
+                None => Err(anyhow!("Unexpected end of control packet stream")),
+                header => Ok(header),
+            },
+            Err(_) => {
+                // It's expected that the queue may be empty of control packets.
+                Ok(None)
+            }
+        }?;
+
+        let result = if let Some(header) = control_packet {
+            VsockDevice::write_header_only_packet(header, chain)
+        } else {
+            loop {
+                select! {
+                    header = control_packets.next() => {
+                        break VsockDevice::write_header_only_packet(
+                            header.ok_or(
+                                anyhow!("Unexpected end of control packet stream"))?, chain);
+                    },
+                    _connection = new_connections.next() => {
+                        // TODO(fxb/97355): Add to futures ordered queue.
+                    }
+                }
+            }
+        };
+
+        // Log the error, but return Ok so avoid stopping the device.
+        if let Err(err) = result {
+            syslog::fx_log_err!("Failed to service RX queue: {}", err);
         }
 
         Ok(())
@@ -182,12 +323,21 @@ impl VsockDevice {
                 );
             }
 
-            let connection = Rc::new(VsockConnection::new_client_initiated(key, responder));
+            let connection = Rc::new(VsockConnection::new_client_initiated(
+                key,
+                responder,
+                self.control_packet_tx.clone(),
+                self.guest_cid(),
+            ));
             self.connections.borrow_mut().insert(key, connection.clone());
+
+            self.new_connection_tx
+                .clone()
+                .unbounded_send(key)
+                .expect("New connection tx end should never be closed");
+
             connection
         };
-
-        // TODO(fxb/97355): Notify RX select! about a new connection.
 
         // This will not return until it removes the connection from the active connection set.
         self.poll_connection_for_actions(connection).await;
@@ -212,12 +362,21 @@ impl VsockDevice {
             }
 
             let response = acceptor.accept(self.guest_cid(), key.guest_port, key.host_port);
-            let connection = Rc::new(VsockConnection::new_guest_initiated(key, response));
+            let connection = Rc::new(VsockConnection::new_guest_initiated(
+                key,
+                response,
+                self.control_packet_tx.clone(),
+                self.guest_cid(),
+            ));
             self.connections.borrow_mut().insert(key, connection.clone());
+
+            self.new_connection_tx
+                .clone()
+                .unbounded_send(key)
+                .expect("New connection tx end should never be closed");
+
             connection
         };
-
-        // TODO(fxb/97355): Notify RX select! about a new connection.
 
         // This will not return until it removes the connection from the active connection set.
         self.poll_connection_for_actions(connection).await;
@@ -264,11 +423,21 @@ impl VsockDevice {
         }
     }
 
+    // Write a header only packet to the chain, and then complete the chain.
+    fn write_header_only_packet<'a, 'b, N: DriverNotify, M: DriverMem>(
+        header: VirtioVsockHeader,
+        mut chain: WritableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        chain
+            .write_all(header.as_bytes())
+            .map_err(|err| anyhow!("failed to write to chain: {}", err))
+    }
+
     // Move the connection into a forced shutdown state. If the connection doesn't exist, sends
     // a reset packet for that connection.
-    fn force_close_connection(&self, key: VsockConnectionKey) {
+    async fn force_close_connection(&self, key: VsockConnectionKey) {
         if let Some(connection) = self.connections.borrow().get(&key) {
-            connection.force_close_connection();
+            connection.force_close_connection(self.control_packet_tx.clone()).await;
         } else {
             self.send_reset_packet(key);
         }
@@ -324,8 +493,12 @@ impl VsockDevice {
 
     // Send a reset packet for a given connection key. Only used if there's no matching connection,
     // as the connection will send a reset itself when it's forced disconnected.
-    fn send_reset_packet(&self, _key: VsockConnectionKey) {
-        // TODO(fxb/97355): Implement this.
+    fn send_reset_packet(&self, key: VsockConnectionKey) {
+        VsockConnectionState::send_reset_packet(
+            key,
+            self.guest_cid(),
+            self.control_packet_tx.clone(),
+        );
     }
 
     fn is_reserved_guest_cid(guest_cid: u32) -> bool {
@@ -348,10 +521,9 @@ mod tests {
             HostVsockEndpointRequest,
         },
         fuchsia_async as fasync,
-        futures::{StreamExt, TryStreamExt},
+        futures::{FutureExt, TryStreamExt},
         std::task::Poll,
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
-        zerocopy::AsBytes,
     };
 
     async fn handle_host_vsock_endpoint_stream(
@@ -388,7 +560,12 @@ mod tests {
         proxy
     }
 
-    fn simple_header(src_port: u32, host_port: u32, len: u32, op: OpType) -> VirtioVsockHeader {
+    fn simple_guest_to_host_header(
+        src_port: u32,
+        host_port: u32,
+        len: u32,
+        op: OpType,
+    ) -> VirtioVsockHeader {
         VirtioVsockHeader {
             src_cid: LE64::new(fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into()),
             dst_cid: LE64::new(fidl_fuchsia_virtualization::HOST_CID.into()),
@@ -414,7 +591,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn parse_header_from_multiple_descriptors_in_chain() {
-        let header = simple_header(1, 2, 0, OpType::Request);
+        let header = simple_guest_to_host_header(1, 2, 0, OpType::Request);
         let header_bytes = header.as_bytes();
         let header_size = header_bytes.len();
 
@@ -444,7 +621,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn chain_does_not_contain_header() {
-        let header = simple_header(1, 2, 0, OpType::Request);
+        let header = simple_guest_to_host_header(1, 2, 0, OpType::Request);
         let header_bytes = header.as_bytes();
 
         let mem = IdentityDriverMem::new();
@@ -466,7 +643,132 @@ mod tests {
     }
 
     #[test]
+    fn malformed_rx_chain_doesnt_consume_packet() {
+        let guest_port = 123;
+        let header_size = mem::size_of::<VirtioVsockHeader>() as u32;
+        let mut executor = fasync::TestExecutor::new().expect("failed to create test executor");
+        let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
+            .expect("failed to create HostVsockEndpoint proxy/stream");
+
+        let device = VsockDevice::new();
+
+        let mut control_packets =
+            device.control_packet_rx.take().expect("No control packet rx channel");
+        let mut new_connections =
+            device.new_connection_rx.take().expect("No new connection rx channel");
+
+        let mut request_fut = proxy.connect2(guest_port);
+        assert!(executor.run_until_stalled(&mut request_fut).is_pending());
+
+        let (port, responder) = if let Poll::Ready(val) =
+            executor.run_until_stalled(&mut stream.try_next())
+        {
+            val.unwrap().unwrap().into_connect2().expect("received unexpected response on stream")
+        } else {
+            panic!("Expected future to be ready")
+        };
+        assert_eq!(port, guest_port);
+
+        let connect_fut = device.client_initiated_connect(port, responder);
+        futures::pin_mut!(connect_fut);
+        assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+
+        // This is a bad chain that is smaller than a vsock header. The device can't
+        // do anything useful with this, so it just drops it without writing anything. Note that
+        // this validation should happen before pulling any packet off of the control packet queue.
+        state
+            .fake_queue
+            .publish(ChainBuilder::new().writable(header_size / 2, &mem).build())
+            .unwrap();
+        let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
+        device
+            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .now_or_never()
+            .expect("future should have completed")
+            .expect("failed to handle rx queue");
+
+        let used_chain = state.fake_queue.next_used().unwrap();
+        assert_eq!(used_chain.written(), 0);
+
+        // Publish a chain that fits a virtio header. The device should write the connection
+        // request packet into this.
+        state.fake_queue.publish(ChainBuilder::new().writable(header_size, &mem).build()).unwrap();
+        let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
+        device
+            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .now_or_never()
+            .expect("future should have completed")
+            .expect("failed to handle rx queue");
+
+        let used_chain = state.fake_queue.next_used().unwrap();
+        assert_eq!(used_chain.written(), header_size);
+        let (data, len) = used_chain.data_iter().next().unwrap();
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+        let header = VirtioVsockHeader::read_from(slice).unwrap();
+
+        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
+        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.dst_port.get(), guest_port);
+        assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Request);
+    }
+
+    #[fuchsia::test]
+    async fn send_reset_packet_for_unknown_connection() {
+        let host_port = 123;
+        let guest_port = 456;
+        let header_size = mem::size_of::<VirtioVsockHeader>() as u32;
+        let device = VsockDevice::new();
+
+        let mut control_packets =
+            device.control_packet_rx.take().expect("No control packet rx channel");
+        let mut new_connections =
+            device.new_connection_rx.take().expect("No new connection rx channel");
+
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+
+        // Send a readable chain with a Response for a non-existent connection. This should result
+        // in a reset packet being sent to the guest via the control packet queue.
+        let header = simple_guest_to_host_header(guest_port, host_port, 0, OpType::Response);
+        let header_bytes = header.as_bytes();
+        state.fake_queue.publish(ChainBuilder::new().readable(header_bytes, &mem).build()).unwrap();
+        let chain = ReadableChain::new(state.queue.next_chain().unwrap(), &mem);
+        device.handle_tx_queue(chain).await.unwrap();
+        state.fake_queue.next_used().unwrap();
+
+        state.fake_queue.publish(ChainBuilder::new().writable(header_size, &mem).build()).unwrap();
+        let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
+        device
+            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .await
+            .expect("failed to handle rx queue");
+
+        let used_chain = state.fake_queue.next_used().unwrap();
+        assert_eq!(used_chain.written(), header_size);
+        let (data, len) = used_chain.data_iter().next().unwrap();
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+        let header = VirtioVsockHeader::read_from(slice).unwrap();
+
+        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
+        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.src_port.get(), host_port);
+        assert_eq!(header.dst_port.get(), guest_port);
+        assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Reset);
+    }
+
+    #[test]
     fn register_client_listener_and_connect_on_port() {
+        let host_port = 12345;
+        let guest_port = 5;
+        let invalid_host_port = 54321;
+
         let mut executor = fasync::TestExecutor::new().expect("failed to create test executor");
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
             .expect("failed to create HostVsockEndpoint proxy/stream");
@@ -476,7 +778,7 @@ mod tests {
         let (client_end, mut client_stream) = create_request_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
 
-        let mut listen_fut = proxy.listen(12345, client_end);
+        let mut listen_fut = proxy.listen(host_port, client_end);
         assert!(executor.run_until_stalled(&mut listen_fut).is_pending());
 
         let responder_fut =
@@ -495,19 +797,34 @@ mod tests {
         };
 
         // Attempt and fail to connect on a port without a listener.
-        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(54321, 1));
+        let connect_fut =
+            device.guest_initiated_connect(VsockConnectionKey::new(invalid_host_port, guest_port));
         futures::pin_mut!(connect_fut);
         if let Poll::Ready(val) = executor.run_until_stalled(&mut connect_fut) {
             assert!(val.is_err());
         } else {
             panic!("Expected future to be ready");
         };
+
+        let mut control_packets =
+            device.control_packet_rx.take().expect("No control packet rx channel");
+        let mut new_connections =
+            device.new_connection_rx.take().expect("No new connection rx channel");
+
+        // Device didn't report this invalid connection.
+        assert!(new_connections.try_next().is_err());
         assert!(device.connections.borrow().is_empty());
 
         // Successfully connect on a port with a listener.
-        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(12345, 1));
+        let connect_fut =
+            device.guest_initiated_connect(VsockConnectionKey::new(host_port, guest_port));
         futures::pin_mut!(connect_fut);
         assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+
+        // Device reported this new connection.
+        let reported_key =
+            new_connections.try_next().unwrap().expect("expected a new connection key");
+        assert_eq!(reported_key, VsockConnectionKey::new(host_port, guest_port));
 
         // Respond to the guest's connection request from the client's acceptor.
         let (_client_socket, device_socket) =
@@ -519,15 +836,47 @@ mod tests {
                 .into_accept()
                 .expect("failed to parse message as an Accept call");
             assert_eq!(src_cid, fidl_fuchsia_virtualization::DEFAULT_GUEST_CID);
-            assert_eq!(src_port, 1);
-            assert_eq!(port, 12345);
+            assert_eq!(src_port, guest_port);
+            assert_eq!(port, host_port);
             responder.send(&mut Ok(device_socket)).expect("failed to send response to device");
         } else {
             panic!("Expected future to be ready");
         };
 
-        // TODO(fxb/97355): Check that the device sent a reply to the guest instead.
-        assert!(device.connections.borrow().contains_key(&VsockConnectionKey::new(12345, 1)));
+        // Continue running the connect future so that the state can transition to read-write.
+        assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+
+        // The device sent a reply to the guest.
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+
+        let header_size = mem::size_of::<VirtioVsockHeader>() as u32;
+        state
+            .fake_queue
+            .publish(ChainBuilder::new().writable(header_size, &mem).build())
+            .expect("failed to publish writable chain");
+        let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem)
+            .expect("failed to get next chain");
+
+        device
+            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .now_or_never()
+            .expect("future should have completed")
+            .expect("failed to handle rx queue");
+
+        let used_chain = state.fake_queue.next_used().expect("no next used chain");
+        assert_eq!(used_chain.written(), header_size);
+        let (data, len) = used_chain.data_iter().next().expect("nothing on chain");
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+        let header = VirtioVsockHeader::read_from(slice).expect("failed to read header from slice");
+
+        assert_eq!(header.src_port.get(), host_port);
+        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
+        assert_eq!(header.dst_port.get(), guest_port);
+        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.len.get(), 0);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Response);
     }
 
     #[fuchsia::test]

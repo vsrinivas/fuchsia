@@ -11,27 +11,17 @@ use {
     },
     crate::wire::{OpType, VirtioVsockFlags, VirtioVsockHeader},
     anyhow::{anyhow, Error},
+    async_lock::RwLock,
     fidl::client::QueryResponseFut,
     fidl_fuchsia_virtualization::HostVsockEndpointConnect2Responder,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::{AbortHandle, Abortable},
-    std::{
-        cell::{Cell, RefCell},
-        convert::TryFrom,
-        rc::Rc,
+    futures::{
+        channel::mpsc::UnboundedSender,
+        future::{AbortHandle, Abortable},
     },
+    std::{cell::Cell, convert::TryFrom, mem},
     virtio_device::{chain::ReadableChain, mem::DriverMem, queue::DriverNotify},
 };
-
-// Credit state of the transmit buffers.
-#[derive(PartialEq, Debug)]
-pub enum CreditState {
-    // Available means the buffer has at least one byte of space for data.
-    Available,
-    // Unavailable means that the buffers are full. This is not an error, the device just needs
-    // to wait for a reader to pull data off of the buffers before writing additional bytes.
-    Unavailable,
-}
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct ConnectionCredit {
@@ -40,8 +30,11 @@ pub struct ConnectionCredit {
     rx_count: u32,
     tx_count: u32,
 
-    // Amount of free buffer space in the host socket, reported to the guest.
-    reported_buf_available: u32,
+    // Snapshot of the guest's view into the device state. If the guest believes that the device
+    // has no buffer space available but it does, the device must inform the guest of the actual
+    // state with a credit update.
+    last_reported_total_buf: u32,
+    last_reported_fwd_count: u32,
 
     // Amount of guest buffer space reported by the guest, and a running count of received bytes.
     guest_buf_alloc: u32,
@@ -54,10 +47,10 @@ impl ConnectionCredit {
         self.tx_count += count;
     }
 
-    // Whether the device informed the guest that no TX buffer was available. Will result in an
-    // unsolicited CreditUpdate when some buffer becomes available.
-    pub fn informed_guest_buffer_full(&self) -> bool {
-        self.reported_buf_available == 0
+    // Whether the guest thinks that there is no TX buffer available. If "true" and if there is
+    // buffer available, the connection must send an unsolicited credit update to the guest.
+    pub fn guest_believes_no_tx_buffer_available(&self) -> bool {
+        (self.tx_count - self.last_reported_fwd_count) >= self.last_reported_total_buf
     }
 
     // Read guest credit from the header. This controls the amount of data this connection can
@@ -67,15 +60,14 @@ impl ConnectionCredit {
         self.guest_fwd_count = header.fwd_cnt.get();
     }
 
-    // Write credit to the header. This function additionally returns whether the host socket
-    // currently has any remaining capacity for data transmission.
+    // Write credit to the header.
     //
     // Errors are non-recoverable, and will result in the connection being reset.
     pub fn write_credit(
         &mut self,
         socket: &fasync::Socket,
         header: &mut VirtioVsockHeader,
-    ) -> Result<CreditState, zx::Status> {
+    ) -> Result<(), zx::Status> {
         let socket_info = socket.as_ref().info()?;
 
         let socket_tx_max =
@@ -87,17 +79,13 @@ impl ConnectionCredit {
         // tx_count is from the perspective of the guest, so fwd_cnt is the number of bytes sent
         // from the guest to the device, minus the bytes sitting in the socket. The guest should
         // not have more outstanding bytes to send than the socket has total buffer space.
-        header.buf_alloc = socket_tx_max.into();
-        header.fwd_cnt = (self.tx_count - socket_tx_current).into();
-        self.reported_buf_available = socket_tx_max - socket_tx_current;
+        self.last_reported_total_buf = socket_tx_max;
+        header.buf_alloc = self.last_reported_total_buf.into();
 
-        // It's not an error to be out of buffer space, it just means that the socket is backed
-        // up and the client needs time to clear it.
-        Ok(if self.reported_buf_available == 0 {
-            CreditState::Unavailable
-        } else {
-            CreditState::Available
-        })
+        self.last_reported_fwd_count = self.tx_count - socket_tx_current;
+        header.fwd_cnt = self.last_reported_fwd_count.into();
+
+        Ok(())
     }
 }
 
@@ -117,21 +105,15 @@ impl VsockConnectionKey {
 
 pub struct VsockConnection {
     key: VsockConnectionKey,
-    socket: Option<fasync::Socket>,
+    guest_cid: u32,
 
     // The current connection state. This carries state specific data for the connection.
-    state: Rc<RefCell<VsockConnectionState>>,
+    state: RwLock<VsockConnectionState>,
 
     // Control handles for state dependent futures that the device can wait on. When potentially
     // transitioning states, all futures are cancelled and restarted on the new state.
     rx_abort: Cell<Option<AbortHandle>>,
     state_action_abort: Cell<Option<AbortHandle>>,
-}
-
-impl Drop for VsockConnection {
-    fn drop(&mut self) {
-        self.cancel_pending_tasks();
-    }
 }
 
 impl VsockConnection {
@@ -140,10 +122,18 @@ impl VsockConnection {
     pub fn new_guest_initiated(
         key: VsockConnectionKey,
         listener_response: QueryResponseFut<Result<zx::Socket, i32>>,
+        control_packets: UnboundedSender<VirtioVsockHeader>,
+        guest_cid: u32,
     ) -> Self {
         VsockConnection::new(
             key,
-            VsockConnectionState::GuestInitiated(GuestInitiated::new(listener_response)),
+            guest_cid,
+            VsockConnectionState::GuestInitiated(GuestInitiated::new(
+                listener_response,
+                control_packets,
+                key,
+                guest_cid,
+            )),
         )
     }
 
@@ -153,18 +143,26 @@ impl VsockConnection {
     pub fn new_client_initiated(
         key: VsockConnectionKey,
         responder: HostVsockEndpointConnect2Responder,
+        control_packets: UnboundedSender<VirtioVsockHeader>,
+        guest_cid: u32,
     ) -> Self {
         VsockConnection::new(
             key,
-            VsockConnectionState::ClientInitiated(ClientInitiated::new(responder)),
+            guest_cid,
+            VsockConnectionState::ClientInitiated(ClientInitiated::new(
+                responder,
+                control_packets,
+                key,
+                guest_cid,
+            )),
         )
     }
 
-    fn new(key: VsockConnectionKey, state: VsockConnectionState) -> Self {
+    fn new(key: VsockConnectionKey, guest_cid: u32, state: VsockConnectionState) -> Self {
         VsockConnection {
             key,
-            socket: None,
-            state: Rc::new(RefCell::new(state)),
+            guest_cid,
+            state: RwLock::new(state),
             rx_abort: Cell::new(None),
             state_action_abort: Cell::new(None),
         }
@@ -177,42 +175,59 @@ impl VsockConnection {
     // Handles a TX chain by delegating the chain to the current state after applying the
     // chain's operation to allow for state transitions. Returning an error will cause
     // this connection to be force dropped and a reset packet to be sent to the guest.
-    pub fn handle_guest_tx<'a, 'b, N: DriverNotify, M: DriverMem>(
+    pub async fn handle_guest_tx<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
         op: OpType,
         header: VirtioVsockHeader,
         chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        // Cancel any pending async tasks as the state may be updated. The tasks waiting on these
-        // tasks will re-wait on them.
-        self.cancel_pending_tasks();
-
         let flags = VirtioVsockFlags::from_bits(header.flags.get())
             .ok_or(anyhow!("Unrecognized VirtioVsockFlags in header: {:#b}", header.flags.get()))?;
 
+        // Cancel any pending async tasks as the state may be updated. The tasks waiting on these
+        // tasks will re-wait on them.
+        let mut state = self.cancel_pending_tasks_and_get_mutable_state().await;
+
         // Apply the operation to the current state, which may cause a state transition.
-        *self.state.borrow_mut() = self.state.take().handle_operation(op, flags);
+        let new_state = mem::take(&mut *state).handle_operation(op, flags);
+        *state = new_state;
 
         // Consume the readable chain. If the chain was not fully walked (such as if the guest
         // thinks the connection is in a different state than it actually is), this will return
         // an error.
-        self.state.borrow_mut().handle_tx_chain(header, chain)
+        state.handle_tx_chain(op, header, chain)
     }
 
-    fn cancel_pending_tasks(&self) {
+    // Cancels all abortable futures, acquires a write lock, and returns it. This is the only
+    // way a write lock on the current state should be acquired and is safe because:
+    // 1) The aborted futures are the only tasks that hold a read lock on the state
+    // 2) A RwLock prioritizes writes, so nothing will reacquire a read lock on this state
+    //    before this write lock is acquired
+    async fn cancel_pending_tasks_and_get_mutable_state(
+        &self,
+    ) -> async_lock::RwLockWriteGuard<'_, VsockConnectionState> {
         if let Some(handle) = self.rx_abort.take() {
             handle.abort();
         }
         if let Some(handle) = self.state_action_abort.take() {
             handle.abort();
         }
+
+        self.state.write().await
     }
 
     // Used by the device in the case of a failure, this immediately moves the connection into
     // a forced shutdown state to be cleaned up.
-    pub fn force_close_connection(&self) {
-        self.cancel_pending_tasks();
-        *self.state.borrow_mut() = VsockConnectionState::ShutdownForced(ShutdownForced);
+    pub async fn force_close_connection(
+        &self,
+        control_packets: UnboundedSender<VirtioVsockHeader>,
+    ) {
+        *self.cancel_pending_tasks_and_get_mutable_state().await =
+            VsockConnectionState::ShutdownForced(ShutdownForced::new(
+                self.key,
+                self.guest_cid,
+                control_packets,
+            ));
     }
 
     pub async fn handle_state_action(&self) -> StateAction {
@@ -220,14 +235,16 @@ impl VsockConnection {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
             self.state_action_abort.set(Some(abort_handle));
 
-            let result =
-                Abortable::new(self.state.borrow().do_state_action(), abort_registration).await;
+            let result = {
+                let state = self.state.read().await;
+                Abortable::new(state.do_state_action(), abort_registration).await
+            };
+
             match result {
                 Ok(result) => {
                     match result {
                         StateAction::UpdateState(new_state) => {
-                            self.cancel_pending_tasks();
-                            *self.state.borrow_mut() = new_state;
+                            *self.cancel_pending_tasks_and_get_mutable_state().await = new_state;
                         }
                         StateAction::ContinueAwaiting => {
                             // The state did something internally.
@@ -255,7 +272,7 @@ mod tests {
         crate::wire::{LE16, LE32},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_virtualization::{HostVsockAcceptorMarker, HostVsockEndpointMarker},
-        futures::TryStreamExt,
+        futures::{channel::mpsc, TryStreamExt},
         std::{convert::TryInto, io::Read, task::Poll},
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
     };
@@ -263,7 +280,7 @@ mod tests {
     // Helper function to simulate putting a header only packet on the guest's TX queue and
     // forwarding it to the given connection. Use for state transitions without any additional data
     // to transmit.
-    fn send_header_to_connection(header: VirtioVsockHeader, connection: &VsockConnection) {
+    async fn send_header_to_connection(header: VirtioVsockHeader, connection: &VsockConnection) {
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
 
@@ -273,7 +290,7 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().readable(&[0u8], &mem).build()).unwrap();
         let mut empty_chain = ReadableChain::new(state.queue.next_chain().unwrap(), &mem);
         let mut buffer = [0u8; 1];
-        empty_chain.read_exact(&mut buffer).unwrap();
+        empty_chain.read_exact(&mut buffer).expect("failed to read bytes from chain");
 
         connection
             .handle_guest_tx(
@@ -281,11 +298,13 @@ mod tests {
                 header,
                 empty_chain,
             )
+            .await
             .expect("failed to handle an empty tx chain");
     }
 
     #[fuchsia::test]
     async fn client_initiated_connection_dropped_without_response() {
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
             .expect("failed to create HostVsockEndpoint proxy/stream");
 
@@ -302,6 +321,8 @@ mod tests {
             let connection = VsockConnection::new_client_initiated(
                 VsockConnectionKey::new(1, guest_port),
                 responder,
+                control_tx,
+                fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
             );
             drop(connection)
         })
@@ -334,10 +355,8 @@ mod tests {
         credit.tx_count = (tx_bytes_to_use as u32) + bytes_actually_transferred;
 
         let mut header = VirtioVsockHeader::default();
-        let status =
-            credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
+        credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
 
-        assert_eq!(status, CreditState::Available);
         assert_eq!(header.buf_alloc.get(), max_tx_bytes as u32);
         assert_eq!(header.fwd_cnt.get(), bytes_actually_transferred);
     }
@@ -345,7 +364,7 @@ mod tests {
     #[fuchsia::test]
     async fn write_credit_with_no_credit_available() {
         let mut credit = ConnectionCredit::default();
-        let (_remote, local) =
+        let (remote, local) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
 
         // Max out the host socket, leaving zero bytes available.
@@ -361,23 +380,37 @@ mod tests {
         credit.tx_count = max_tx_bytes as u32;
 
         let mut header = VirtioVsockHeader::default();
-        let status =
-            credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
+        credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
 
-        assert_eq!(status, CreditState::Unavailable);
         assert_eq!(header.buf_alloc.get(), max_tx_bytes as u32);
         assert_eq!(header.fwd_cnt.get(), 0); // tx_count == the bytes pending on the socket
+
+        // Read 5 bytes from the socket. Without sending a packet to the guest, the guest still
+        // thinks the socket buffer is full even though there is now space.
+        let mut buf = [0u8; 5];
+        assert_eq!(buf.len(), remote.read(&mut buf).expect("failed to read 5 bytes from socket"));
+        assert!(credit.guest_believes_no_tx_buffer_available());
+
+        // Writing the credit to an RX packet updates the guest's view of the device, so now it
+        // knows there is some TX buffer available.
+        credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
+        assert!(!credit.guest_believes_no_tx_buffer_available());
     }
 
     #[test]
     fn guest_initiated_and_client_closed_connection() {
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
 
         let response_fut = proxy.accept(1, 2, 3);
-        let connection =
-            VsockConnection::new_guest_initiated(VsockConnectionKey::new(3, 2), response_fut);
+        let connection = VsockConnection::new_guest_initiated(
+            VsockConnectionKey::new(3, 2),
+            response_fut,
+            control_tx,
+            fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
+        );
 
         // State transition relies on client acceptor response.
         let state_action_fut = connection.handle_state_action();
@@ -385,7 +418,7 @@ mod tests {
         assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
 
         // Respond to the guest's connection request from the client's acceptor.
-        let (_client_socket, device_socket) =
+        let (client_socket, device_socket) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
         if let Poll::Ready(val) = executor.run_until_stalled(&mut stream.try_next()) {
             let (_, _, _, responder) =
@@ -395,12 +428,27 @@ mod tests {
             panic!("Expected future to be ready");
         };
 
-        // Transition to the ReadWrite state. This will immediately send a credit update to the
-        // guest.
-        // TODO(fxb/97355): Check for credit update message.
+        // Device sends response to the guest after receiving a socket from the client.
         assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Response);
 
-        // TODO(fxb/97355): Close connection by closing client socket.
+        // After transitioning to the read-write state, the device immediately sends a credit
+        // to the guest since the guest has no idea what the credit status of the client is and so
+        // cannot send any packets.
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::CreditUpdate);
+
+        // Close connection by closing the client socket.
+        drop(client_socket);
+
+        // TODO(fxb/97355): Poll whether the connection will ever want another RX chain.
     }
 
     // This test case is testing the following:
@@ -419,6 +467,7 @@ mod tests {
     //    shutdown.
     #[test]
     fn client_initiated_connection_write_data_to_port() {
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
             .expect("failed to create HostVsockEndpoint proxy/stream");
@@ -438,16 +487,29 @@ mod tests {
         let connection = VsockConnection::new_client_initiated(
             VsockConnectionKey::new(1, guest_port),
             responder,
+            control_tx,
+            fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
         );
 
+        // A client initiated connection sends a request to the guest which must be responded to.
+        let state_action_fut = connection.handle_state_action();
+        futures::pin_mut!(state_action_fut);
+        assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+        let header = control_rx.try_next().unwrap().unwrap();
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Request);
+
         // Transition into a ReadWrite state.
-        send_header_to_connection(
+        let send_fut = send_header_to_connection(
             VirtioVsockHeader {
                 op: LE16::new(OpType::Response.into()),
                 ..VirtioVsockHeader::default()
             },
             &connection,
         );
+        futures::pin_mut!(send_fut);
+        assert!(executor.run_until_stalled(&mut send_fut).is_pending());
+        assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+        assert!(!executor.run_until_stalled(&mut send_fut).is_pending());
 
         // Now that the connection state has changed from ClientInitiated, there should be a socket
         // available on the client's FIDL response.
@@ -482,13 +544,17 @@ mod tests {
             )
             .expect("failed to publish readable chains");
 
-        connection
-            .handle_guest_tx(
-                OpType::ReadWrite,
-                header,
-                ReadableChain::new(state.queue.next_chain().unwrap(), &mem),
-            )
-            .expect("failed to handle guest tx chain");
+        let send_fut = connection.handle_guest_tx(
+            OpType::ReadWrite,
+            header,
+            ReadableChain::new(state.queue.next_chain().unwrap(), &mem),
+        );
+        futures::pin_mut!(send_fut);
+        if let Poll::Ready(val) = executor.run_until_stalled(&mut send_fut) {
+            val.expect("failed to handle guest tx chain")
+        } else {
+            panic!("Expected future to be ready")
+        };
 
         // Remote socket now has data available on it. Validate the amount of bytes written, and
         // that they match the expected values.
@@ -499,7 +565,7 @@ mod tests {
 
         // Close the RX half of the connection from the perspective of the guest. This is not a
         // full shutdown, and so does not transition to a shutdown state.
-        send_header_to_connection(
+        let send_fut = send_header_to_connection(
             VirtioVsockHeader {
                 op: LE16::new(OpType::Shutdown.into()),
                 flags: LE32::new(VirtioVsockFlags::SHUTDOWN_RECIEVE.bits()),
@@ -507,6 +573,8 @@ mod tests {
             },
             &connection,
         );
+        futures::pin_mut!(send_fut);
+        assert!(!executor.run_until_stalled(&mut send_fut).is_pending());
 
         // Cannot write to the remote socket since it's now half closed, but we can happily
         // write to the device socket and read from the remote socket.
@@ -527,13 +595,17 @@ mod tests {
             .publish(ChainBuilder::new().readable(&data, &mem).build())
             .expect("failed to publish readable chain");
 
-        connection
-            .handle_guest_tx(
-                OpType::ReadWrite,
-                header,
-                ReadableChain::new(state.queue.next_chain().unwrap(), &mem),
-            )
-            .expect("failed to handle guest tx chain");
+        let send_fut = connection.handle_guest_tx(
+            OpType::ReadWrite,
+            header,
+            ReadableChain::new(state.queue.next_chain().unwrap(), &mem),
+        );
+        futures::pin_mut!(send_fut);
+        if let Poll::Ready(val) = executor.run_until_stalled(&mut send_fut) {
+            val.expect("failed to handle guest tx chain")
+        } else {
+            panic!("Expected future to be ready")
+        };
 
         let mut remote_data = [0u8; 5];
         assert_eq!(socket.read(&mut remote_data).unwrap(), data.len());
@@ -542,7 +614,7 @@ mod tests {
 
         // Finally transition to a guest initiated shutdown by closing both halves of this
         // connection.
-        send_header_to_connection(
+        let send_fut = send_header_to_connection(
             VirtioVsockHeader {
                 op: LE16::new(OpType::Shutdown.into()),
                 flags: LE32::new(VirtioVsockFlags::SHUTDOWN_SEND.bits()),
@@ -550,10 +622,9 @@ mod tests {
             },
             &connection,
         );
+        futures::pin_mut!(send_fut);
+        assert!(!executor.run_until_stalled(&mut send_fut).is_pending());
 
-        // The connection should have transitioned through a guest initiated shutdown state
-        // and into a clean shutdown.
-        // TODO(fxb/97355): Verify reset packet.
         let state_action_fut = connection.handle_state_action();
         futures::pin_mut!(state_action_fut);
         if let Poll::Ready(val) = executor.run_until_stalled(&mut state_action_fut) {
@@ -561,5 +632,13 @@ mod tests {
         } else {
             panic!("Expected future to be ready");
         }
+
+        // The connection should have transitioned through a guest initiated shutdown state
+        // and into a clean shutdown, replying to the guest with a Reset packet.
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Reset);
     }
 }
