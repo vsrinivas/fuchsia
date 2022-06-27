@@ -755,8 +755,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     let mut entities = HashSet::new();
 
-    // TODO(fxbug.dev/58893): make max attempts a configurable option.
-    // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.
     for setting_type in &components {
         let _ = SettingProxy::create(
             *setting_type,
