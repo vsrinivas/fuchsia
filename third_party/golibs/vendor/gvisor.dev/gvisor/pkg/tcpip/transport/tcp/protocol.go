@@ -157,13 +157,10 @@ func (p *protocol) QueuePacket(ep stack.TransportEndpoint, id stack.TransportEnd
 // particular, SYNs addressed to a non-existent connection are rejected by this
 // means."
 func (p *protocol) HandleUnknownDestinationPacket(id stack.TransportEndpointID, pkt *stack.PacketBuffer) stack.UnknownDestinationPacketDisposition {
-	s, err := newIncomingSegment(id, p.stack.Clock(), pkt)
-	if err != nil {
-		return stack.UnknownDestinationPacketMalformed
-	}
+	s := newIncomingSegment(id, p.stack.Clock(), pkt)
 	defer s.decRef()
 
-	if !s.csumValid {
+	if !s.parse(pkt.RXTransportChecksumValidated) || !s.csumValid {
 		return stack.UnknownDestinationPacketMalformed
 	}
 

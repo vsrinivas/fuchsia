@@ -87,19 +87,8 @@ type segment struct {
 	lost bool
 }
 
-func newIncomingSegment(id stack.TransportEndpointID, clock tcpip.Clock, pkt *stack.PacketBuffer) (*segment, error) {
-	hdr := header.TCP(pkt.TransportHeader().View())
+func newIncomingSegment(id stack.TransportEndpointID, clock tcpip.Clock, pkt *stack.PacketBuffer) *segment {
 	netHdr := pkt.Network()
-	csum, csumValid, ok := header.TCPValid(
-		hdr,
-		func() uint16 { return pkt.Data().AsRange().Checksum() },
-		uint16(pkt.Data().Size()),
-		netHdr.SourceAddress(),
-		netHdr.DestinationAddress(),
-		pkt.RXTransportChecksumValidated)
-	if !ok {
-		return nil, fmt.Errorf("header data offset does not respect size constraints: %d < offset < %d, got offset=%d", header.TCPMinimumSize, len(hdr), hdr.DataOffset())
-	}
 	s := &segment{
 		refCnt:   1,
 		id:       id,
@@ -107,23 +96,12 @@ func newIncomingSegment(id stack.TransportEndpointID, clock tcpip.Clock, pkt *st
 		dstAddr:  netHdr.DestinationAddress(),
 		netProto: pkt.NetworkProtocolNumber,
 		nicID:    pkt.NICID,
-
-		options:        hdr[header.TCPMinimumSize:],
-		parsedOptions:  header.ParseTCPOptions(hdr[header.TCPMinimumSize:]),
-		csumValid:      csumValid,
-		sequenceNumber: seqnum.Value(hdr.SequenceNumber()),
-		ackNumber:      seqnum.Value(hdr.AckNumber()),
-		flags:          hdr.Flags(),
-		window:         seqnum.Size(hdr.WindowSize()),
 	}
 	s.data = pkt.Data().ExtractVV().Clone(s.views[:])
 	s.hdr = header.TCP(pkt.TransportHeader().View())
 	s.rcvdTime = clock.NowMonotonic()
 	s.dataMemSize = s.data.Size()
-	if !pkt.RXTransportChecksumValidated {
-		s.csum = csum
-	}
-	return s, nil
+	return s
 }
 
 func newOutgoingSegment(id stack.TransportEndpointID, clock tcpip.Clock, v buffer.View) *segment {
@@ -227,6 +205,48 @@ func (s *segment) payloadSize() int {
 // the associated metadata.
 func (s *segment) segMemSize() int {
 	return SegSize + s.dataMemSize
+}
+
+// parse populates the sequence & ack numbers, flags, and window fields of the
+// segment from the TCP header stored in the data. It then updates the view to
+// skip the header.
+//
+// Returns boolean indicating if the parsing was successful.
+//
+// If checksum verification may not be skipped, parse also verifies the
+// TCP checksum and stores the checksum and result of checksum verification in
+// the csum and csumValid fields of the segment.
+func (s *segment) parse(skipChecksumValidation bool) bool {
+	// h is the header followed by the payload. We check that the offset to
+	// the data respects the following constraints:
+	// 1. That it's at least the minimum header size; if we don't do this
+	//    then part of the header would be delivered to user.
+	// 2. That the header fits within the buffer; if we don't do this, we
+	//    would panic when we tried to access data beyond the buffer.
+	//
+	// N.B. The segment has already been validated as having at least the
+	//      minimum TCP size before reaching here, so it's safe to read the
+	//      fields.
+	offset := int(s.hdr.DataOffset())
+	if offset < header.TCPMinimumSize || offset > len(s.hdr) {
+		return false
+	}
+
+	s.options = s.hdr[header.TCPMinimumSize:]
+	s.parsedOptions = header.ParseTCPOptions(s.options)
+	if skipChecksumValidation {
+		s.csumValid = true
+	} else {
+		s.csum = s.hdr.Checksum()
+		payloadChecksum := header.ChecksumVV(s.data, 0)
+		payloadLength := uint16(s.data.Size())
+		s.csumValid = s.hdr.IsChecksumValid(s.srcAddr, s.dstAddr, payloadChecksum, payloadLength)
+	}
+	s.sequenceNumber = seqnum.Value(s.hdr.SequenceNumber())
+	s.ackNumber = seqnum.Value(s.hdr.AckNumber())
+	s.flags = s.hdr.Flags()
+	s.window = seqnum.Size(s.hdr.WindowSize())
+	return true
 }
 
 // sackBlock returns a header.SACKBlock that represents this segment.
