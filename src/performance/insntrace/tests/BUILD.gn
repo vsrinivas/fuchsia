@@ -30,7 +30,10 @@ executable("insntrace_integration_tests") {
 fuchsia_test_component("insntrace_integration_tests_component") {
   component_name = "insntrace_integration_tests"
   manifest = "meta/insntrace_integration_tests.cmx"
-  deps = [ ":insntrace_integration_tests" ]
+  deps = [
+    ":insntrace_integration_tests",
+    "//src/performance/insntrace:bin",
+  ]
 }
 
 fuchsia_test_package("insntrace_tests") {

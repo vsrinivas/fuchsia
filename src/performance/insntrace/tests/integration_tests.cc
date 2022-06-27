@@ -24,7 +24,7 @@ const char kInsntraceDevicePath[] = "/dev/sys/cpu-trace/insntrace";
 
 #ifdef __x86_64__
 
-const char kInsntracePath[] = "/bin/insntrace";
+const char kInsntracePath[] = "/pkg/bin/insntrace";
 
 // These files should be created when running insntrace.
 const char* const kResultFileList[] = {
