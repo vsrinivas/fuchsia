@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{format_err, Error},
-    bt_test_harness::{emulator, low_energy_peripheral_v2::PeripheralHarness},
+    bt_test_harness::{emulator, low_energy_peripheral::PeripheralHarness},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_bluetooth::{ConnectionRole, Uuid},
     fidl_fuchsia_bluetooth_le::{
@@ -27,7 +27,7 @@ use {
 
 mod expectation {
     use {
-        bt_test_harness::low_energy_peripheral_v2::PeripheralState,
+        bt_test_harness::low_energy_peripheral::PeripheralState,
         fuchsia_bluetooth::expectation::Predicate,
     };
 

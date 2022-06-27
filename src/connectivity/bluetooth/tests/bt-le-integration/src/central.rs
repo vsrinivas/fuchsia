@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     bt_test_harness::{
         emulator::{add_le_peer, default_le_peer},
-        low_energy_central_v2::CentralHarness,
+        low_energy_central::CentralHarness,
     },
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
@@ -20,7 +20,7 @@ use {
 };
 
 mod expect {
-    use bt_test_harness::low_energy_central_v2::{CentralState, ScanStateChange};
+    use bt_test_harness::low_energy_central::{CentralState, ScanStateChange};
     use fuchsia_bluetooth::expectation::Predicate;
     use fuchsia_bluetooth::types::le::RemoteDevice;
 

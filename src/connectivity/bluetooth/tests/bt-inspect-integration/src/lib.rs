@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    bt_test_harness::inspect_v2::InspectHarness, diagnostics_reader::DiagnosticsHierarchy,
+    bt_test_harness::inspect::InspectHarness, diagnostics_reader::DiagnosticsHierarchy,
     fuchsia_bluetooth::expectation::asynchronous::ExpectableExt,
 };
 

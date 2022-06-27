@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context as _},
     bt_test_harness::{
-        access_v2::{AccessHarness, AccessState},
-        bootstrap_v2::BootstrapHarness,
+        access::{AccessHarness, AccessState},
+        bootstrap::BootstrapHarness,
     },
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{

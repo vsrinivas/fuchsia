@@ -1,10 +1,13 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy},
+    fidl_fuchsia_bluetooth_sys::{
+        AccessConnectResult, AccessDisconnectResult, AccessMakeDiscoverableResult, AccessMarker,
+        AccessProxy, AccessStartDiscoveryResult, ProcedureTokenMarker,
+    },
     fuchsia_bluetooth::{
         expectation::asynchronous::{expectable, Expectable, ExpectableExt, ExpectableState},
         types::{Peer, PeerId},
@@ -20,6 +23,50 @@ use {
     tracing::warn,
 };
 
+use crate::core_realm::{CoreRealm, SHARED_STATE_INDEX};
+
+/// This wrapper class prevents test code from invoking WatchPeers, a hanging-get method which fails
+/// if invoked again before the prior invocation has returned. The AccessHarness itself continuously
+/// monitors WatchPeers, so if test code is also permitted to invoke WatchPeers, tests could fail
+/// (or worse, flake, since the multiple-calls issue is timing-dependent). Instead, test code should
+/// check peer state via AccessState.peers.
+#[derive(Clone)]
+pub struct AccessWrapper(AccessProxy);
+
+impl AccessWrapper {
+    pub fn start_discovery(
+        &self,
+        token: fidl::endpoints::ServerEnd<ProcedureTokenMarker>,
+    ) -> fidl::client::QueryResponseFut<AccessStartDiscoveryResult> {
+        self.0.start_discovery(token)
+    }
+
+    pub fn make_discoverable(
+        &self,
+        token: fidl::endpoints::ServerEnd<ProcedureTokenMarker>,
+    ) -> fidl::client::QueryResponseFut<AccessMakeDiscoverableResult> {
+        self.0.make_discoverable(token)
+    }
+
+    pub fn connect(
+        &self,
+        id: &mut fidl_fuchsia_bluetooth::PeerId,
+    ) -> fidl::client::QueryResponseFut<AccessConnectResult> {
+        self.0.connect(id)
+    }
+
+    pub fn disconnect(
+        &self,
+        id: &mut fidl_fuchsia_bluetooth::PeerId,
+    ) -> fidl::client::QueryResponseFut<AccessDisconnectResult> {
+        self.0.disconnect(id)
+    }
+
+    pub fn set_local_name(&self, name: &str) -> Result<(), fidl::Error> {
+        self.0.set_local_name(name)
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct AccessState {
     /// Remote Peers seen
@@ -27,10 +74,10 @@ pub struct AccessState {
 }
 
 #[derive(Clone)]
-pub struct AccessHarness(Expectable<AccessState, AccessProxy>);
+pub struct AccessHarness(Expectable<AccessState, AccessWrapper>);
 
 impl Deref for AccessHarness {
-    type Target = Expectable<AccessState, AccessProxy>;
+    type Target = Expectable<AccessState, AccessWrapper>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -43,38 +90,51 @@ impl DerefMut for AccessHarness {
     }
 }
 
-async fn watch_peers(harness: AccessHarness) -> Result<(), Error> {
-    let proxy = harness.aux().clone();
+async fn update_peer_state(harness: &AccessHarness) -> Result<(), Error> {
+    let access = harness.aux().clone();
+    let (updated, removed) =
+        access.0.watch_peers().await.context("Error calling Access.watch_peers()")?;
+    for peer in updated.into_iter() {
+        let peer: Peer = peer.try_into().context("Invalid peer received from WatchPeers()")?;
+        let _ = harness.write_state().peers.insert(peer.id, peer);
+    }
+    for id in removed.into_iter() {
+        if harness.write_state().peers.remove(&id.into()).is_none() {
+            warn!(?id, "Unknown peer removed from peer state");
+        }
+    }
+    harness.notify_state_changed();
+    Ok(())
+}
+
+async fn run_peer_watcher(harness: AccessHarness) -> Result<(), Error> {
     loop {
-        let (updated, removed) =
-            proxy.watch_peers().await.context("Error calling Access.watch_peers()")?;
-        for peer in updated.into_iter() {
-            let peer: Peer = peer.try_into().context("Invalid peer received from WatchPeers()")?;
-            let _ = harness.write_state().peers.insert(peer.id, peer);
-        }
-        for id in removed.into_iter() {
-            if harness.write_state().peers.remove(&id.into()).is_none() {
-                warn!(?id, "Unknown peer removed from peer state");
-            }
-        }
-        harness.notify_state_changed();
+        update_peer_state(&harness).await?;
     }
 }
 
 impl TestHarness for AccessHarness {
-    type Env = ();
+    type Env = Arc<CoreRealm>;
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let access = fuchsia_component::client::connect_to_protocol::<AccessMarker>()
+        let shared_state = shared_state.clone();
+        async move {
+            let realm =
+                shared_state.get_or_insert_with(SHARED_STATE_INDEX, CoreRealm::create).await?;
+            let access = realm
+                .instance()
+                .connect_to_protocol_at_exposed_dir::<AccessMarker>()
                 .context("Failed to connect to access service")?;
 
-            let harness = AccessHarness(expectable(Default::default(), access));
-            let run_access = watch_peers(harness.clone()).boxed();
-            Ok((harness, (), run_access))
+            let harness = AccessHarness(expectable(Default::default(), AccessWrapper(access)));
+
+            // Ensure that the harness' peer state is accurate when initialization is finished.
+            update_peer_state(&harness).await?;
+            let run_access = run_peer_watcher(harness.clone()).boxed();
+            Ok((harness, realm, run_access))
         }
         .boxed()
     }

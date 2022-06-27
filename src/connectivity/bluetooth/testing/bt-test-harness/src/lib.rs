@@ -4,21 +4,16 @@
 
 use fuchsia_zircon::{Duration, DurationNum};
 
-// TODO(fxbug.dev/98163): Once all v1 tests are migrated, remove v1 harnesses and subsequently
-// remove the `_v2` suffix for the v2 harness mods.
 pub mod access;
-pub mod access_v2;
 pub mod bootstrap;
-pub mod bootstrap_v2;
 pub mod core_realm;
 pub mod emulator;
 pub mod host_driver;
 pub mod host_watcher;
-pub mod host_watcher_v2;
-pub mod inspect_v2;
-pub mod low_energy_central_v2;
-pub mod low_energy_peripheral_v2;
-pub mod profile_v2;
+pub mod inspect;
+pub mod low_energy_central;
+pub mod low_energy_peripheral;
+pub mod profile;
 
 // Use a framework-wide timeout of 4 minutes.
 //

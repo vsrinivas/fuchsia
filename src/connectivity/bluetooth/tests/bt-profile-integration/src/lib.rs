@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context, Error},
     bt_test_harness::{
-        access_v2::{expectation, AccessHarness},
-        profile_v2::ProfileHarness,
+        access::{expectation, AccessHarness},
+        profile::ProfileHarness,
     },
     fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,

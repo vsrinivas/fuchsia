@@ -4,9 +4,9 @@
 use {
     anyhow::{format_err, Error},
     bt_test_harness::{
-        access_v2::{expectation, AccessHarness},
+        access::{expectation, AccessHarness},
         core_realm::DEFAULT_TEST_DEVICE_NAME,
-        host_watcher_v2::{activate_fake_host, HostWatcherHarness},
+        host_watcher::{activate_fake_host, HostWatcherHarness},
     },
     fidl,
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,

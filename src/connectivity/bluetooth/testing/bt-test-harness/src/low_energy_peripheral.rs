@@ -25,7 +25,7 @@ use {
 use crate::{
     core_realm::{CoreRealm, SHARED_STATE_INDEX},
     emulator::{watch_advertising_states, EmulatorState},
-    host_watcher_v2::ActivatedFakeHost,
+    host_watcher::ActivatedFakeHost,
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.

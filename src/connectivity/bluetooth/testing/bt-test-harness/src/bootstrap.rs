@@ -1,9 +1,9 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_sys::{BootstrapMarker, BootstrapProxy},
     fuchsia_bluetooth::expectation::asynchronous::{expectable, Expectable},
     futures::future::{self, BoxFuture, FutureExt},
@@ -14,7 +14,10 @@ use {
     test_harness::{SharedState, TestHarness},
 };
 
-use crate::host_watcher::ActivatedFakeHost;
+use crate::{
+    core_realm::{CoreRealm, SHARED_STATE_INDEX},
+    host_watcher::ActivatedFakeHost,
+};
 
 #[derive(Clone)]
 pub struct BootstrapHarness(Expectable<(), BootstrapProxy>);
@@ -34,27 +37,36 @@ impl DerefMut for BootstrapHarness {
 }
 
 impl TestHarness for BootstrapHarness {
-    type Env = ActivatedFakeHost;
+    type Env = (ActivatedFakeHost, Arc<CoreRealm>);
     type Runner = future::Pending<Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let fake_host = ActivatedFakeHost::new().await?;
-            match fuchsia_component::client::connect_to_protocol::<BootstrapMarker>() {
-                Ok(proxy) => Ok((
-                    BootstrapHarness(expectable(Default::default(), proxy)),
-                    fake_host,
-                    future::pending(),
-                )),
-                Err(e) => Err(format_err!("Failed to connect to Bootstrap service: {:?}", e)),
-            }
+        let shared_state = shared_state.clone();
+        async move {
+            let realm =
+                shared_state.get_or_insert_with(SHARED_STATE_INDEX, CoreRealm::create).await?;
+            let fake_host = ActivatedFakeHost::new(realm.clone()).await?;
+            let proxy = realm
+                .instance()
+                .connect_to_protocol_at_exposed_dir::<BootstrapMarker>()
+                .context("Failed to connect to bootstrap service")?;
+            Ok((
+                BootstrapHarness(expectable(Default::default(), proxy)),
+                (fake_host, realm),
+                future::pending(),
+            ))
         }
         .boxed()
     }
 
-    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
-        env.release().boxed()
+    fn terminate((emulator, realm): Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        // The realm must be kept alive in order for emulator.release() to work properly.
+        async move {
+            let _realm = realm;
+            emulator.release().await
+        }
+        .boxed()
     }
 }

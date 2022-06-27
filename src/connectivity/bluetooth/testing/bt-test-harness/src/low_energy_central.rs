@@ -22,7 +22,7 @@ use {
 
 use crate::{
     core_realm::{CoreRealm, SHARED_STATE_INDEX},
-    host_watcher_v2::ActivatedFakeHost,
+    host_watcher::ActivatedFakeHost,
 };
 
 #[derive(PartialEq, Debug, Clone, Copy)]

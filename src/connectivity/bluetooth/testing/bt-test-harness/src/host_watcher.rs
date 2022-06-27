@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -26,7 +26,10 @@ use {
     tracing::error,
 };
 
-use crate::timeout_duration;
+use crate::{
+    core_realm::{CoreRealm, SHARED_STATE_INDEX},
+    timeout_duration,
+};
 
 #[derive(Clone, Default)]
 pub struct HostWatcherState {
@@ -35,19 +38,22 @@ pub struct HostWatcherState {
 }
 
 #[derive(Clone)]
-pub struct HostWatcherHarness(Expectable<HostWatcherState, HostWatcherProxy>);
+pub struct HostWatcherHarness {
+    pub expect: Expectable<HostWatcherState, HostWatcherProxy>,
+    pub realm: Arc<CoreRealm>,
+}
 
 impl Deref for HostWatcherHarness {
     type Target = Expectable<HostWatcherState, HostWatcherProxy>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.expect
     }
 }
 
 impl DerefMut for HostWatcherHarness {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.expect
     }
 }
 
@@ -72,26 +78,31 @@ async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
     }
 }
 
-pub async fn new_host_watcher_harness() -> Result<HostWatcherHarness, Error> {
-    let proxy = fuchsia_component::client::connect_to_protocol::<HostWatcherMarker>()
+pub async fn new_host_watcher_harness(realm: Arc<CoreRealm>) -> Result<HostWatcherHarness, Error> {
+    let proxy = realm
+        .instance()
+        .connect_to_protocol_at_exposed_dir::<HostWatcherMarker>()
         .context("Failed to connect to host_watcher service")?;
 
-    Ok(HostWatcherHarness(expectable(Default::default(), proxy)))
+    Ok(HostWatcherHarness { expect: expectable(Default::default(), proxy), realm })
 }
 
 impl TestHarness for HostWatcherHarness {
-    type Env = ();
+    type Env = Arc<CoreRealm>;
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let harness = new_host_watcher_harness().await?;
+        let shared_state = shared_state.clone();
+        async move {
+            let realm =
+                shared_state.get_or_insert_with(SHARED_STATE_INDEX, CoreRealm::create).await?;
+            let harness = new_host_watcher_harness(realm.clone()).await?;
             let run_host_watcher = watch_hosts(harness.clone())
                 .map_err(|e| e.context("Error running HostWatcher harness"))
                 .boxed();
-            Ok((harness, (), run_host_watcher))
+            Ok((harness, realm, run_host_watcher))
         }
         .boxed()
     }
@@ -119,7 +130,7 @@ pub async fn activate_fake_host(
     let initial_hosts: Vec<HostId> = host_watcher.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let hci = Emulator::create_and_publish(None).await?;
+    let hci = Emulator::create_and_publish(Some(host_watcher.realm.instance())).await?;
 
     let host_watcher_state = host_watcher
         .when_satisfied(
@@ -153,8 +164,8 @@ pub async fn activate_fake_host(
 }
 
 impl ActivatedFakeHost {
-    pub async fn new() -> Result<ActivatedFakeHost, Error> {
-        let host_watcher = new_host_watcher_harness().await?;
+    pub async fn new(realm: Arc<CoreRealm>) -> Result<ActivatedFakeHost, Error> {
+        let host_watcher = new_host_watcher_harness(realm).await?;
         fuchsia_async::Task::spawn(
             watch_hosts(host_watcher.clone())
                 .unwrap_or_else(|e| error!("Error watching hosts: {:?}", e)),

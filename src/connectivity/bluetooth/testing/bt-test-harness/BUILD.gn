@@ -63,21 +63,18 @@ rustc_library("bt-test-harness") {
 
   sources = [
     "src/access.rs",
-    "src/access_v2.rs",
     "src/bootstrap.rs",
-    "src/bootstrap_v2.rs",
     "src/core_realm.rs",
     "src/emulator.rs",
     "src/host_driver/mod.rs",
     "src/host_driver/realm.rs",
     "src/host_driver/v2.rs",
     "src/host_watcher.rs",
-    "src/host_watcher_v2.rs",
-    "src/inspect_v2.rs",
+    "src/inspect.rs",
     "src/lib.rs",
-    "src/low_energy_central_v2.rs",
-    "src/low_energy_peripheral_v2.rs",
-    "src/profile_v2.rs",
+    "src/low_energy_central.rs",
+    "src/low_energy_peripheral.rs",
+    "src/profile.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
