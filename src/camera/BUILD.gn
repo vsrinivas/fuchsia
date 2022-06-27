@@ -55,3 +55,11 @@ group("tools") {
 core_shard("camera_core_shard") {
   shard_file = "meta/camera.core_shard.cml"
 }
+
+# TODO(b/236962910) - Must clean this up later.
+#   Temporary core shard designed to accommodate USB webcam's.
+#   This is likely not the final form of capabilities routing for USB webcam's
+#   because the routing structure must support both Sherlock and USB webcam's.
+core_shard("usb_webcam_core_shard") {
+  shard_file = "meta/usb_webcam.core_shard.cml"
+}

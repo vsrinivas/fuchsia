@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(b/236962910) - Must clean this up later.
+#   Temporary core shard designed to accommodate USB webcam's.
+#   This is likely not the final form of capabilities routing for USB webcam's
+#   because the routing structure must support both Sherlock and USB webcam's.
+core_realm_shards += [ "//src/camera:usb_webcam_core_shard" ]
