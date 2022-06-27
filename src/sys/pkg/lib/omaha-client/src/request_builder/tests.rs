@@ -301,7 +301,7 @@ fn test_simple_event() {
             .version([6, 7, 8, 9])
             .cohort(Cohort::new("event-channel"))
             .build(),
-        &Event {
+        Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
             errorcode: Some(EventErrorCode::Installation),
@@ -343,7 +343,7 @@ fn test_multiple_events() {
     )
     .add_event(
         &app_1,
-        &Event {
+        Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
             errorcode: Some(EventErrorCode::Installation),
@@ -352,7 +352,7 @@ fn test_multiple_events() {
     )
     .add_event(
         &app_1,
-        &Event {
+        Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Error,
             errorcode: Some(EventErrorCode::DeniedByPolicy),
@@ -526,7 +526,7 @@ fn test_event_added_to_first_app_update_entry() {
     .add_update_check(&app_2)
     .add_event(
         &app_1,
-        &Event {
+        Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,
             errorcode: Some(EventErrorCode::Installation),
@@ -588,7 +588,7 @@ fn test_event_added_to_second_app_update_entry() {
     .add_update_check(&app_2)
     .add_event(
         &app_2,
-        &Event {
+        Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,
             errorcode: Some(EventErrorCode::Installation),

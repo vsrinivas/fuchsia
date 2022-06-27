@@ -179,7 +179,7 @@ impl<'a> RequestBuilder<'a> {
     /// already exists in the request (by app id), just run the closure on the AppEntry.
     fn insert_and_modify_entry<F>(&mut self, app: &App, modify: F)
     where
-        F: Fn(&mut AppEntry),
+        F: FnOnce(&mut AppEntry),
     {
         if let Some(app_entry) = self.app_entries.iter_mut().find(|e| e.app.id == app.id) {
             // found an existing App in the Vec, so just run the closure on this AppEntry.
@@ -221,9 +221,9 @@ impl<'a> RequestBuilder<'a> {
     /// This function adds an Event for the given App, in the given Cohort.  This function is an
     /// idempotent accumulator, in that it only once adds the App with it's associated Cohort to the
     /// request.  Afterward, it just adds the Event to the App.
-    pub fn add_event(mut self, app: &App, event: &Event) -> Self {
+    pub fn add_event(mut self, app: &App, event: Event) -> Self {
         self.insert_and_modify_entry(app, |entry| {
-            entry.events.push(event.clone());
+            entry.events.push(event);
         });
         self
     }

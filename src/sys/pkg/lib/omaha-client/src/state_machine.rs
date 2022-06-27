@@ -1041,7 +1041,7 @@ where
                                 .and_then(|d| d.as_millis().try_into().ok()),
                             ..event
                         };
-                        request_builder = request_builder.add_event(app, &event);
+                        request_builder = request_builder.add_event(app, event.clone());
                         events.push(event);
                     }
                     None => {
@@ -1173,7 +1173,7 @@ where
                     download_time_ms: install_duration.and_then(|d| d.as_millis().try_into().ok()),
                     ..event.clone()
                 };
-                request_builder = request_builder.add_event(app, &event);
+                request_builder = request_builder.add_event(app, event);
             }
         }
         request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
@@ -1644,7 +1644,7 @@ mod tests {
             };
             let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
             assert_request(&state_machine.http, request_builder).await;
@@ -1681,7 +1681,7 @@ mod tests {
             };
             let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
             assert_request(&state_machine.http, request_builder).await;
@@ -1735,7 +1735,7 @@ mod tests {
             };
             let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(3));
             assert_request(&state_machine.http, request_builder).await;
@@ -1836,7 +1836,7 @@ mod tests {
                 ..Event::success(EventType::UpdateComplete)
             };
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(4));
             assert_request(&state_machine.http, request_builder).await;
@@ -1857,8 +1857,8 @@ mod tests {
                 ..Event::default()
             };
             request_builder = request_builder
-                .add_event(&apps[2], &event2)
-                .add_event(&apps[0], &event1)
+                .add_event(&apps[2], event2)
+                .add_event(&apps[0], event1)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(3));
             assert_request(&state_machine.http, request_builder).await;
@@ -1923,7 +1923,7 @@ mod tests {
             };
             let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
             assert_request(&state_machine.http, request_builder).await;
@@ -1959,7 +1959,7 @@ mod tests {
             };
             let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
-                .add_event(&apps[0], &event)
+                .add_event(&apps[0], event)
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(2));
             assert_request(&state_machine.http, request_builder).await;
