@@ -5,6 +5,7 @@ use {
     anyhow::{Context as _, Result},
     async_net::TcpListener,
     async_trait::async_trait,
+    ffx_config::ConfigLevel,
     fidl, fidl_fuchsia_developer_ffx as ffx, fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_net::SocketAddress,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
@@ -184,9 +185,8 @@ impl FidlProtocol for Forward {
                     target_address: target_address_cfg,
                 })?;
 
-                if let Err(e) =
-                    ffx_config::add((TUNNEL_CFG, ffx_config::ConfigLevel::User), cfg).await
-                {
+                let query = ffx_config::query(TUNNEL_CFG).level(Some(ConfigLevel::User));
+                if let Err(e) = query.add(cfg).await {
                     log::warn!("Failed to persist tunnel configuration: {:?}", e);
                 }
 

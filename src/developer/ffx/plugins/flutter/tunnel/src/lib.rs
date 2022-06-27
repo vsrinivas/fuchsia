@@ -134,7 +134,7 @@ pub async fn tunnel_impl<W: std::io::Write>(
     let dart_vm_socket = SocketAddr::new(ip, vm_service_port);
 
     let ssh_file_path: String =
-        ffx_config::file("ssh.priv").await.context("getting ssh private key path")?;
+        ffx_config::query("ssh.priv").get_file().await.context("getting ssh private key path")?;
 
     let mut command = Command::new("ssh");
     command.args(DEFAULT_SSH_OPTIONS);

@@ -40,8 +40,8 @@ fn generate_id() -> u64 {
 }
 
 pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
-    let mut log_path: PathBuf = super::get(LOG_DIR).await?;
-    let log_rotations: Option<u64> = super::get(LOG_ROTATIONS).await?;
+    let mut log_path: PathBuf = super::query(LOG_DIR).get().await?;
+    let log_rotations: Option<u64> = super::query(LOG_ROTATIONS).get().await?;
     let log_rotations = log_rotations.unwrap_or(0);
     create_dir_all(&log_path)?;
     log_path.push(format!("{}.log", name));
@@ -49,7 +49,7 @@ pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
     if rotate && log_rotations > 0 {
         let mut rot_path = log_path.clone();
 
-        let log_rotate_size: Option<u64> = super::get(LOG_ROTATE_SIZE).await?;
+        let log_rotate_size: Option<u64> = super::query(LOG_ROTATE_SIZE).get().await?;
         if let Some(log_rotate_size) = log_rotate_size {
             // log.rotate_size was set. We only rotate if the current file is bigger than that size,
             // so open the current file and, if it's smaller than that size, return it.
@@ -135,11 +135,12 @@ pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
 }
 
 pub async fn is_enabled() -> bool {
-    super::get(LOG_ENABLED).await.unwrap_or(false)
+    super::query(LOG_ENABLED).get().await.unwrap_or(false)
 }
 
-pub async fn filter_level() -> LevelFilter {
-    super::get::<String, _>(LOG_LEVEL)
+async fn filter_level() -> LevelFilter {
+    super::query(LOG_LEVEL)
+        .get::<String>()
         .await
         .ok()
         .map(|str| {

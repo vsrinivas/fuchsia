@@ -7,7 +7,7 @@ use {
         query::{ConfigQuery, SelectMode},
         ConfigError,
     },
-    crate::mapping::{filter::filter, flatten::flatten},
+    crate::mapping::{filter, flatten},
     crate::nested::RecursiveMap,
     anyhow::anyhow,
     serde_json::{Map, Value},

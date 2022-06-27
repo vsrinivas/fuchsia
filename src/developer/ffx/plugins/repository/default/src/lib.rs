@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Result,
-    ffx_core::ffx_plugin,
-    ffx_repository_default_args::{RepositoryDefaultCommand, SubCommand},
-};
+use anyhow::Result;
+use ffx_core::ffx_plugin;
+use ffx_repository_default_args::{RepositoryDefaultCommand, SubCommand};
 
 pub(crate) const CONFIG_KEY_DEFAULT: &str = "repository.default";
 
@@ -25,14 +23,17 @@ pub async fn exec_repository_default_impl<W: std::io::Write>(
             writeln!(writer, "{}", res)?;
         }
         SubCommand::Set(set) => {
-            ffx_config::set(
-                (CONFIG_KEY_DEFAULT, &set.level, &set.build_dir),
-                serde_json::Value::String(set.name.clone()),
-            )
-            .await?
+            ffx_config::query(CONFIG_KEY_DEFAULT)
+                .level(Some(set.level))
+                .build(set.build_dir.as_deref())
+                .set(serde_json::Value::String(set.name.clone()))
+                .await?
         }
         SubCommand::Unset(unset) => {
-            let _ = ffx_config::remove((CONFIG_KEY_DEFAULT, &unset.level, &unset.build_dir))
+            let _ = ffx_config::query(CONFIG_KEY_DEFAULT)
+                .level(Some(unset.level))
+                .build(unset.build_dir.as_deref())
+                .remove()
                 .await
                 .map_err(|e| eprintln!("warning: {}", e));
         }

@@ -9,30 +9,40 @@ use {
     std::path::PathBuf,
 };
 
-pub(crate) mod cache;
-pub(crate) mod config;
-pub(crate) mod data;
-pub(crate) mod env_var;
-pub(crate) mod file_check;
-pub(crate) mod filter;
-pub(crate) mod flatten;
-pub(crate) mod home;
-pub(crate) mod runtime;
+mod cache;
+mod config;
+mod data;
+mod env_var;
+mod file_check;
+mod filter;
+mod flatten;
+mod home;
+mod runtime;
+
+pub(crate) use self::home::home;
+pub(crate) use cache::cache;
+pub(crate) use config::config;
+pub(crate) use data::data;
+pub(crate) use env_var::env_var;
+pub(crate) use file_check::file_check;
+pub(crate) use filter::filter;
+pub(crate) use flatten::flatten;
+pub(crate) use runtime::runtime;
 
 // Negative lookbehind (or lookahead for that matter) is not supported in Rust's regex.
 // Instead, replace with this string - which hopefully will not be used by anyone in the
 // configuration.  Insert joke here about how hope is not a strategy.
 const TEMP_REPLACE: &str = "#<#ffx!!replace#>#";
 
-pub(crate) fn preprocess(value: &Value) -> Option<String> {
+fn preprocess(value: &Value) -> Option<String> {
     value.as_str().map(|s| s.to_string()).map(|s| s.replace("$$", TEMP_REPLACE))
 }
 
-pub(crate) fn postprocess(value: String) -> Value {
+fn postprocess(value: String) -> Value {
     Value::String(value.to_string().replace(TEMP_REPLACE, "$"))
 }
 
-pub(crate) fn replace_regex<T>(value: &String, regex: &Regex, replacer: T) -> String
+fn replace_regex<T>(value: &String, regex: &Regex, replacer: T) -> String
 where
     T: Fn(&str) -> Result<String>,
 {
@@ -47,7 +57,7 @@ where
         .into_owned()
 }
 
-pub(crate) fn replace<'a, P>(regex: &'a Regex, base_path: P, value: Value) -> Option<Value>
+fn replace<'a, P>(regex: &'a Regex, base_path: P, value: Value) -> Option<Value>
 where
     P: Fn() -> Result<PathBuf> + Sync + Send + 'a,
 {

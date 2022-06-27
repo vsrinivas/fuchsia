@@ -86,7 +86,7 @@ impl FfxConfigWrapper {
     pub async fn file(&self, property_name: &str) -> Result<PathBuf, ConfigError> {
         // If the overrides map is empty, use ffx_config API directly.
         if self.overrides.is_empty() {
-            ffx_config::file(property_name).await
+            ffx_config::query(property_name).get_file().await
         } else {
             Ok(PathBuf::from(self.from_overrides(property_name)?))
         }

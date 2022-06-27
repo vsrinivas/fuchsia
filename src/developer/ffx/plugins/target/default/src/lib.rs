@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Result,
-    ffx_core::ffx_plugin,
-    ffx_target_default_args::{SubCommand, TargetDefaultCommand},
-};
+use anyhow::Result;
+use ffx_core::ffx_plugin;
+use ffx_target_default_args::{SubCommand, TargetDefaultCommand};
 
 pub(crate) const TARGET_DEFAULT_KEY: &str = "target.default";
 
@@ -25,14 +23,17 @@ pub async fn exec_target_default_impl<W: std::io::Write>(
             writeln!(writer, "{}", res)?;
         }
         SubCommand::Set(set) => {
-            ffx_config::set(
-                (TARGET_DEFAULT_KEY, &set.level, &set.build_dir),
-                serde_json::Value::String(set.nodename.clone()),
-            )
-            .await?
+            ffx_config::query(TARGET_DEFAULT_KEY)
+                .level(Some(set.level))
+                .build(set.build_dir.as_deref())
+                .set(serde_json::Value::String(set.nodename.clone()))
+                .await?
         }
         SubCommand::Unset(unset) => {
-            let _ = ffx_config::remove((TARGET_DEFAULT_KEY, &unset.level, &unset.build_dir))
+            let _ = ffx_config::query(TARGET_DEFAULT_KEY)
+                .level(Some(unset.level))
+                .build(unset.build_dir.as_deref())
+                .remove()
                 .await
                 .map_err(|e| eprintln!("warning: {}", e));
         }

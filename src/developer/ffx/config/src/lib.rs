@@ -2,33 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::api::{
-        get_config,
-        query::ConfigQuery,
-        validate_type,
-        value::{ConfigValue, ValueStrategy},
-        ConfigError,
-    },
-    crate::cache::load_config,
-    crate::environment::Environment,
-    crate::mapping::{
-        cache::cache, config::config, data::data, env_var::env_var, file_check::file_check,
-        home::home, runtime::runtime,
-    },
-    crate::nested::RecursiveMap,
-    crate::paths::get_default_user_file_path,
-    crate::storage::Config,
-    analytics::{is_opted_in, set_opt_in_status},
-    anyhow::{anyhow, bail, Context, Result},
-    serde_json::Value,
-    std::{
-        convert::{From, TryFrom, TryInto},
-        fs::File,
-        io::Write,
-        path::PathBuf,
-    },
+use crate::api::{
+    get_config, validate_type,
+    value::{ConfigValue, ValueStrategy},
+    ConfigError,
 };
+use crate::cache::load_config;
+use crate::environment::Environment;
+use crate::paths::get_default_user_file_path;
+use crate::storage::Config;
+use analytics::{is_opted_in, set_opt_in_status};
+use anyhow::{anyhow, bail, Context, Result};
+use std::{convert::From, fs::File, io::Write, path::PathBuf};
 
 pub use config_macros::FfxConfigBacked;
 
@@ -43,6 +28,8 @@ mod nested;
 mod paths;
 mod runtime;
 mod storage;
+
+pub use api::query::{ConfigQuery, SelectMode};
 
 pub use cache::{env_file, init, test_env_file, test_init};
 
@@ -78,87 +65,47 @@ impl argh::FromArgValue for ConfigLevel {
     }
 }
 
-pub async fn raw<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
+/// Creates a [`ConfigQuery`] against the global config cache and environment.
+///
+/// Example:
+///
+/// ```no_run
+/// use ffx_config::ConfigLevel;
+/// use ffx_config::SelectMode;
+///
+/// let query = ffx_config::build()
+///     .name("testing")
+///     .level(Some(ConfigLevel::Build))
+///     .build(Some("/tmp/build.json"))
+///     .select(SelectMode::All);
+/// let value = query.get().await?;
+/// ```
+pub fn build<'a>() -> ConfigQuery<'a> {
+    ConfigQuery::default()
+}
+
+/// Creates a [`ConfigQuery`] against the global config cache and environment,
+/// using the provided value converted in to a base query.
+///
+/// Example:
+///
+/// ```no_run
+/// ffx_config::query("a_key").get();
+/// ffx_config::query(ffx_config::ConfigLevel::User).get();
+/// ```
+pub fn query<'a>(with: impl Into<ConfigQuery<'a>>) -> ConfigQuery<'a> {
+    with.into()
+}
+
+/// A shorthand for the very common case of querying a value from the global config
+/// cache and environment, using the provided value converted into a query.
+pub async fn get<'a, T, U>(with: U) -> std::result::Result<T, T::Error>
 where
     T: TryFrom<ConfigValue> + ValueStrategy,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
-    let converted_query = query.into();
-    T::validate_query(&converted_query)?;
-    get_config(converted_query)
-        .await
-        .map_err(|e| e.into())?
-        .recursive_map(&validate_type::<T>)
-        .try_into()
-}
-
-pub async fn get<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
-where
-    T: TryFrom<ConfigValue> + ValueStrategy,
-    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
-    U: Into<ConfigQuery<'a>>,
-{
-    let converted_query = query.into();
-    T::validate_query(&converted_query)?;
-
-    get_config(converted_query)
-        .await
-        .map_err(|e| e.into())?
-        .recursive_map(&runtime)
-        .recursive_map(&cache)
-        .recursive_map(&data)
-        .recursive_map(&config)
-        .recursive_map(&home)
-        .recursive_map(&env_var)
-        .recursive_map(&T::handle_arrays)
-        .recursive_map(&validate_type::<T>)
-        .try_into()
-}
-
-pub async fn file<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
-where
-    T: TryFrom<ConfigValue> + ValueStrategy,
-    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
-    U: Into<ConfigQuery<'a>>,
-{
-    let converted_query = query.into();
-    T::validate_query(&converted_query)?;
-    get_config(converted_query)
-        .await
-        .map_err(|e| e.into())?
-        .recursive_map(&runtime)
-        .recursive_map(&cache)
-        .recursive_map(&data)
-        .recursive_map(&config)
-        .recursive_map(&home)
-        .recursive_map(&env_var)
-        .recursive_map(&T::handle_arrays)
-        .recursive_map(&file_check)
-        .try_into()
-}
-
-pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
-    let config_query: ConfigQuery<'a> = query.into();
-    let level = if let Some(l) = config_query.level {
-        l
-    } else {
-        bail!("level of configuration is required to set a value");
-    };
-    check_config_files(&level, &config_query.build_dir.map(String::from))?;
-    let config = load_config(&config_query.build_dir.map(String::from)).await?;
-    let mut write_guard = config.write().await;
-    let config_changed = (*write_guard).set(&config_query, value)?;
-
-    // FIXME(81502): There is a race between the ffx CLI and the daemon service
-    // in updating the config. We can lose changes if both try to change the
-    // config at the same time. We can reduce the rate of races by only writing
-    // to the config if the value actually changed.
-    if config_changed {
-        save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
-    } else {
-        Ok(())
-    }
+    query(with).get().await
 }
 
 fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result<()> {
@@ -214,52 +161,7 @@ fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result
     Ok(())
 }
 
-pub async fn remove<'a, U: Into<ConfigQuery<'a>>>(query: U) -> Result<()> {
-    let config_query: ConfigQuery<'a> = query.into();
-    let config = load_config(&config_query.build_dir.map(String::from)).await?;
-    let mut write_guard = config.write().await;
-    (*write_guard).remove(&config_query)?;
-    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
-}
-
-pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
-    let config_query: ConfigQuery<'a> = query.into();
-    let level = if let Some(l) = config_query.level {
-        l
-    } else {
-        bail!("level of configuration is required to add a value");
-    };
-    check_config_files(&level, &config_query.build_dir.map(String::from))?;
-    let config = load_config(&config_query.build_dir.map(String::from)).await?;
-    let mut write_guard = config.write().await;
-    let config_changed = if let Some(mut current) = (*write_guard).get(&config_query) {
-        if current.is_object() {
-            bail!("cannot add a value to a subtree");
-        } else {
-            match current.as_array_mut() {
-                Some(v) => {
-                    v.push(value);
-                    (*write_guard).set(&config_query, Value::Array(v.to_vec()))?
-                }
-                None => (*write_guard).set(&config_query, Value::Array(vec![current, value]))?,
-            }
-        }
-    } else {
-        (*write_guard).set(&config_query, value)?
-    };
-
-    // FIXME(81502): There is a race between the ffx CLI and the daemon service
-    // in updating the config. We can lose changes if both try to change the
-    // config at the same time. We can reduce the rate of races by only writing
-    // to the config if the value actually changed.
-    if config_changed {
-        save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
-    } else {
-        Ok(())
-    }
-}
-
-pub fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
+fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
     let build = build_dir.as_ref().and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
@@ -273,17 +175,21 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
 }
 
 pub async fn get_log_dirs() -> Result<Vec<String>> {
-    match get("log.dir").await {
+    match query("log.dir").get().await {
         Ok(log_dirs) => Ok(log_dirs),
         Err(e) => errors::ffx_bail!("Failed to load host log directories from ffx config: {:?}", e),
     }
 }
 
 pub async fn get_sdk() -> Result<sdk::Sdk> {
-    match (get("sdk.root").await, get("sdk.type").await.unwrap_or("".to_string())) {
+    // All gets in this function should declare that they don't want the build directory searched, because
+    // if there is a build directory it *is* generally the sdk.
+    let sdk_root = query("sdk.root").get().await;
+    let sdk_type = query("sdk.type").get().await.unwrap_or("".to_string());
+    match (sdk_root, sdk_type) {
         (Ok(manifest), sdk_type) => {
             if sdk_type == SDK_TYPE_IN_TREE {
-                let module_manifest: Option<String> = get("sdk.module").await.ok();
+                let module_manifest: Option<String> = query("sdk.module").get().await.ok();
                 sdk::Sdk::from_build_dir(manifest, module_manifest)
             } else {
                 sdk::Sdk::from_sdk_dir(manifest)
@@ -353,7 +259,7 @@ mod test {
     // This is to get the FfxConfigBacked derive to compile, as it
     // creates a token stream referencing `ffx_config` on the inside.
     use crate as ffx_config;
-    use serde_json::json;
+    use serde_json::{json, Value};
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -366,10 +272,10 @@ mod test {
             ConfigLevel::Build,
         ];
         let build_dir = None;
-        levels.iter().for_each(|level| {
+        for level in levels {
             let result = check_config_files(&level, &build_dir);
             assert!(result.is_err());
-        });
+        }
     }
 
     #[test]
@@ -449,18 +355,16 @@ mod test {
         assert!(empty_config_struct.reverse_value.is_none());
         assert_eq!(empty_config_struct.reverse_value().await.unwrap(), "what");
 
-        ffx_config::set(
-            ("test.test.thing", ConfigLevel::User),
-            Value::String("config_value_thingy".to_owned()),
-        )
-        .await
-        .unwrap();
-        ffx_config::set(
-            ("other.test.thing", ConfigLevel::User),
-            Value::Number(serde_json::Number::from_f64(2f64).unwrap()),
-        )
-        .await
-        .unwrap();
+        ffx_config::query("test.test.thing")
+            .level(Some(ConfigLevel::User))
+            .set(Value::String("config_value_thingy".to_owned()))
+            .await
+            .unwrap();
+        ffx_config::query("other.test.thing")
+            .level(Some(ConfigLevel::User))
+            .set(Value::Number(serde_json::Number::from_f64(2f64).unwrap()))
+            .await
+            .unwrap();
 
         // If this is set, this should pop up before the config values.
         empty_config_struct.value = Some("wat".to_owned());
@@ -468,12 +372,11 @@ mod test {
         empty_config_struct.value = None;
         assert_eq!(empty_config_struct.value().await.unwrap(), "config_value_thingy");
         assert_eq!(empty_config_struct.other_value().await.unwrap().unwrap(), 2f64);
-        ffx_config::set(
-            ("other.test.thing", ConfigLevel::User),
-            Value::String("oaiwhfoiwh".to_owned()),
-        )
-        .await
-        .unwrap();
+        ffx_config::query("other.test.thing")
+            .level(Some(ConfigLevel::User))
+            .set(Value::String("oaiwhfoiwh".to_owned()))
+            .await
+            .unwrap();
 
         // This should just compile and drop without panicking is all.
         let _ignore = TestEmptyBackedStruct {};

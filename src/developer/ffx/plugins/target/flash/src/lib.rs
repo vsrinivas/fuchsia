@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Result},
     errors::ffx_bail,
-    ffx_config::file,
+    ffx_config::query,
     ffx_core::ffx_plugin,
     ffx_fastboot::common::{cmd::OemFile, from_manifest},
     ffx_flash_args::FlashCommand,
@@ -46,7 +46,7 @@ pub async fn flash_plugin_impl<W: Write>(
         }
         None => {
             if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_none() {
-                let key: Option<String> = file("ssh.pub").await?;
+                let key: Option<String> = query("ssh.pub").get_file().await?;
                 match key {
                     Some(k) => {
                         eprintln!("No `--authorized-keys` flag, using {}", k);

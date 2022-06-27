@@ -329,7 +329,7 @@ impl fmt::Display for Config {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::nested::RecursiveMap;
+    use crate::{nested::RecursiveMap, query};
     use regex::Regex;
     use serde_json::json;
     use std::io::{BufReader, BufWriter};
@@ -533,7 +533,10 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(&("name", &ConfigLevel::User).into(), Value::String(String::from("whatever")))?;
+        test.set(
+            &query("name").level(Some(ConfigLevel::User)),
+            Value::String(String::from("whatever")),
+        )?;
         let value = test.get(&"name".into());
         assert_eq!(value, Some(Value::String(String::from("whatever"))));
         Ok(())
@@ -562,7 +565,10 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
         };
-        test.set(&("name", &ConfigLevel::User).into(), Value::String(String::from("user-test")))?;
+        test.set(
+            &query("name").level(Some(ConfigLevel::User)),
+            Value::String(String::from("user-test")),
+        )?;
         let value = test.get(&"name".into());
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
@@ -579,19 +585,19 @@ mod test {
             runtime: None,
         };
         assert!(test.set(
-            &("name", &ConfigLevel::User).into(),
+            &query("name").level(Some(ConfigLevel::User)),
             Value::String(String::from("user-test1"))
         )?);
         assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test1")));
 
         assert!(!test.set(
-            &("name", &ConfigLevel::User).into(),
+            &query("name").level(Some(ConfigLevel::User)),
             Value::String(String::from("user-test1"))
         )?);
         assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test1")));
 
         assert!(test.set(
-            &("name", &ConfigLevel::User).into(),
+            &query("name").level(Some(ConfigLevel::User)),
             Value::String(String::from("user-test2"))
         )?);
         assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test2")));
@@ -605,23 +611,34 @@ mod test {
             Config { user: None, build: None, global: None, default: None, runtime: None };
         let value_none = test.get(&"name".into());
         assert!(value_none.is_none());
-        let error_set = test
-            .set(&("name", &ConfigLevel::Default).into(), Value::String(String::from("default")));
+        let error_set = test.set(
+            &query("name").level(Some(ConfigLevel::Default)),
+            Value::String(String::from("default")),
+        );
         assert!(error_set.is_err(), "Should not be able to set default values at runtime");
         let value_default = test.get(&"name".into());
         assert!(
             value_default.is_none(),
             "Default value should be unset after failed attempt to set it"
         );
-        test.set(&("name", &ConfigLevel::Global).into(), Value::String(String::from("global")))?;
+        test.set(
+            &query("name").level(Some(ConfigLevel::Global)),
+            Value::String(String::from("global")),
+        )?;
         let value_global = test.get(&"name".into());
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
-        test.set(&("name", &ConfigLevel::Build).into(), Value::String(String::from("build")))?;
+        test.set(
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build")),
+        )?;
         let value_build = test.get(&"name".into());
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
-        test.set(&("name", &ConfigLevel::User).into(), Value::String(String::from("user")))?;
+        test.set(
+            &query("name").level(Some(ConfigLevel::User)),
+            Value::String(String::from("user")),
+        )?;
         let value_user = test.get(&"name".into());
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
@@ -637,19 +654,19 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
         };
-        test.remove(&("name", &ConfigLevel::User).into())?;
+        test.remove(&query("name").level(Some(ConfigLevel::User)))?;
         let user_value = test.get(&"name".into());
         assert!(user_value.is_some());
         assert_eq!(user_value.unwrap(), Value::String(String::from("Build")));
-        test.remove(&("name", &ConfigLevel::Build).into())?;
+        test.remove(&query("name").level(Some(ConfigLevel::Build)))?;
         let global_value = test.get(&"name".into());
         assert!(global_value.is_some());
         assert_eq!(global_value.unwrap(), Value::String(String::from("Global")));
-        test.remove(&("name", &ConfigLevel::Global).into())?;
+        test.remove(&query("name").level(Some(ConfigLevel::Global)))?;
         let default_value = test.get(&"name".into());
         assert!(default_value.is_some());
         assert_eq!(default_value.unwrap(), Value::String(String::from("Default")));
-        let error_removed = test.remove(&("name", &ConfigLevel::Default).into());
+        let error_removed = test.remove(&query("name").level(Some(ConfigLevel::Default)));
         assert!(error_removed.is_err(), "Should not be able to remove a default value");
         let default_value = test.get(&"name".into());
         assert_eq!(
@@ -781,7 +798,7 @@ mod test {
     fn test_nested_set_from_none() -> Result<()> {
         let mut test =
             Config { user: None, build: None, global: None, default: None, runtime: None };
-        test.set(&("name.nested", &ConfigLevel::User).into(), Value::Bool(false))?;
+        test.set(&query("name.nested").level(Some(ConfigLevel::User)), Value::Bool(false))?;
         let nested_value = test.get(&"name".into());
         assert_eq!(nested_value, Some(serde_json::from_str("{\"nested\": false}")?));
         Ok(())
@@ -796,7 +813,7 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(&("name.updated", &ConfigLevel::User).into(), Value::Bool(true))?;
+        test.set(&query("name.updated").level(Some(ConfigLevel::User)), Value::Bool(true))?;
         let expected = json!({
            "nested": "Nested",
            "updated": true
@@ -815,13 +832,16 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(&("name.updated", &ConfigLevel::User).into(), Value::Bool(true))?;
+        test.set(&query("name.updated").level(Some(ConfigLevel::User)), Value::Bool(true))?;
         let expected = json!({
            "updated": true
         });
         let nested_value = test.get(&"name".into());
         assert_eq!(nested_value, Some(expected));
-        test.set(&("name.updated", &ConfigLevel::User).into(), serde_json::from_str(NESTED)?)?;
+        test.set(
+            &query("name.updated").level(Some(ConfigLevel::User)),
+            serde_json::from_str(NESTED)?,
+        )?;
         let nested_value = test.get(&"name.updated.name.nested".into());
         assert_eq!(nested_value, Some(Value::String(String::from("Nested"))));
         Ok(())
@@ -831,7 +851,7 @@ mod test {
     fn test_nested_remove_from_none() -> Result<()> {
         let mut test =
             Config { user: None, build: None, global: None, default: None, runtime: None };
-        let result = test.remove(&("name.nested", &ConfigLevel::User).into());
+        let result = test.remove(&query("name.nested").level(Some(ConfigLevel::User)));
         assert!(result.is_err());
         Ok(())
     }
@@ -845,7 +865,7 @@ mod test {
             default: None,
             runtime: None,
         };
-        let result = test.remove(&("name.unknown", &ConfigLevel::User).into());
+        let result = test.remove(&query("name.unknown").level(Some(ConfigLevel::User)));
         assert!(result.is_err());
         Ok(())
     }
@@ -859,7 +879,7 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.remove(&("name.nested.deep.name", &ConfigLevel::User).into())?;
+        test.remove(&query("name.nested.deep.name").level(Some(ConfigLevel::User)))?;
         let value = test.get(&"name".into());
         assert_eq!(value, None);
         Ok(())
@@ -874,7 +894,7 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.remove(&("name.nested", &ConfigLevel::User).into())?;
+        test.remove(&query("name.nested").level(Some(ConfigLevel::User)))?;
         let value = test.get(&"name".into());
         assert_eq!(value, None);
         Ok(())
@@ -889,7 +909,7 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: Some(serde_json::from_str(RUNTIME)?),
         };
-        let value = test.get(&("name", &SelectMode::All).into());
+        let value = test.get(&query("name").select(SelectMode::All));
         match value {
             Some(Value::Array(v)) => {
                 assert_eq!(v.len(), 5);

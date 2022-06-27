@@ -1551,25 +1551,26 @@ mod tests {
 
             // Since ffx_config is global, it's possible to leave behind entries
             // across tests. Let's clean them up.
-            let _ = ffx_config::remove("repository.server.mode").await;
-            let _ = ffx_config::remove("repository.server.listen").await;
+            let _ = ffx_config::query("repository.server.mode").remove().await;
+            let _ = ffx_config::query("repository.server.listen").remove().await;
             let _ = pkg::config::remove_repository(REPO_NAME).await;
             let _ = pkg::config::remove_registration(REPO_NAME, TARGET_NODENAME).await;
 
             // Most tests want the server to be running.
             pkg_config::set_repository_server_enabled(true).await.unwrap();
-            ffx_config::set(("repository.server.mode", ConfigLevel::User), "ffx".into())
+            ffx_config::query("repository.server.mode")
+                .level(Some(ConfigLevel::User))
+                .set("ffx".into())
                 .await
                 .unwrap();
 
             // Repo will automatically start a server, so make sure it picks a random local port.
             let addr: SocketAddr = (Ipv4Addr::LOCALHOST, 0).into();
-            ffx_config::set(
-                ("repository.server.listen", ConfigLevel::User),
-                addr.to_string().into(),
-            )
-            .await
-            .unwrap();
+            ffx_config::query("repository.server.listen")
+                .level(Some(ConfigLevel::User))
+                .set(addr.to_string().into())
+                .await
+                .unwrap();
 
             fut.await
         })
@@ -1579,7 +1580,9 @@ mod tests {
     fn test_load_from_config_empty() {
         run_test(async {
             // Initialize a simple repository.
-            ffx_config::set(("repository", ConfigLevel::User), serde_json::json!({}))
+            ffx_config::query("repository")
+                .level(Some(ConfigLevel::User))
+                .set(serde_json::json!({}))
                 .await
                 .unwrap();
 
@@ -1600,9 +1603,9 @@ mod tests {
             let repo_path =
                 fs::canonicalize(EMPTY_REPO_PATH).unwrap().to_str().unwrap().to_string();
 
-            ffx_config::set(
-                ("repository", ConfigLevel::User),
-                serde_json::json!({
+            ffx_config::query("repository")
+                .level(Some(ConfigLevel::User))
+                .set(serde_json::json!({
                     "repositories": {
                         REPO_NAME: {
                             "type": "pm",
@@ -1624,10 +1627,9 @@ mod tests {
                         "mode": "ffx",
                         "listen": SocketAddr::from((Ipv4Addr::LOCALHOST, 0)).to_string(),
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
             let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
@@ -1711,9 +1713,9 @@ mod tests {
             let repo_path =
                 fs::canonicalize(EMPTY_REPO_PATH).unwrap().to_str().unwrap().to_string();
 
-            ffx_config::set(
-                ("repository", ConfigLevel::User),
-                serde_json::json!({
+            ffx_config::query("repository")
+                .level(Some(ConfigLevel::User))
+                .set(serde_json::json!({
                     "repositories": {
                         REPO_NAME: {
                             "type": "pm",
@@ -1735,10 +1737,9 @@ mod tests {
                         "mode": "ffx",
                         "listen": SocketAddr::from((Ipv4Addr::LOCALHOST, 0)).to_string(),
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
             let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
@@ -2150,12 +2151,11 @@ mod tests {
         ssh_host_addr: String,
         expected_repo_host: String,
     ) {
-        ffx_config::set(
-            ("repository.server.listen", ConfigLevel::User),
-            format!("{}", listen_addr).into(),
-        )
-        .await
-        .unwrap();
+        ffx_config::query("repository.server.listen")
+            .level(Some(ConfigLevel::User))
+            .set(format!("{}", listen_addr).into())
+            .await
+            .unwrap();
 
         let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
         let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();

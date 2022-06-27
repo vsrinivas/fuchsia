@@ -8,6 +8,7 @@ use {
     ascendd::Ascendd,
     async_trait::async_trait,
     ffx_build_version::build_info,
+    ffx_config::ConfigLevel,
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_events::{
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
@@ -312,7 +313,7 @@ impl Daemon {
     async fn log_startup_info(&self) -> Result<()> {
         let pid = std::process::id();
         let hash: String =
-            ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime)).await?;
+            ffx_config::query(CURRENT_EXE_BUILDID).level(Some(ConfigLevel::Runtime)).get().await?;
         let version_info = build_info();
         let commit_hash = version_info.commit_hash.as_deref().unwrap_or("<unknown>");
         let commit_timestamp =
@@ -580,9 +581,10 @@ impl Daemon {
             }
             DaemonRequest::GetVersionInfo { responder } => {
                 let mut info = build_info();
-                let build_id: String =
-                    ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime))
-                        .await?;
+                let build_id: String = ffx_config::query(CURRENT_EXE_BUILDID)
+                    .level(Some(ConfigLevel::Runtime))
+                    .get()
+                    .await?;
                 info.build_id = Some(build_id);
                 return responder.send(info).context("sending GetVersionInfo response");
             }

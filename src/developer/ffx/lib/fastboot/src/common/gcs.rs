@@ -33,7 +33,7 @@ impl GcsResolver {
     pub async fn new(version: String, bundle: String) -> Result<Self> {
         let temp_dir = tempdir()?;
         // TODO(fxb/89584): Change to using ffx client Id and consent screen.
-        let boto: Option<PathBuf> = ffx_config::file("flash.gcs.token").await?;
+        let boto: Option<PathBuf> = ffx_config::query("flash.gcs.token").get_file().await?;
         let auth = match boto {
             Some(boto_path) => {
                 TokenStore::new_with_auth(

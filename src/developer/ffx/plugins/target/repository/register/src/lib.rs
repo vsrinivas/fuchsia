@@ -135,7 +135,9 @@ mod test {
         ffx_config::test_init().unwrap();
 
         let default_repo_name = "default-repo";
-        ffx_config::set(("repository.default", ConfigLevel::User), default_repo_name.into())
+        ffx_config::query("repository.default")
+            .level(Some(ConfigLevel::User))
+            .set(default_repo_name.into())
             .await
             .unwrap();
 

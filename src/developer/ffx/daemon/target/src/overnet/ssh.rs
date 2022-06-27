@@ -28,7 +28,10 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
 async fn get_ssh_key_paths() -> Result<Vec<String>> {
     use anyhow::Context;
     const SSH_PRIV: &str = "ssh.priv";
-    ffx_config::file(SSH_PRIV).await.context("getting path to an ssh private key from ssh.priv")
+    ffx_config::query(SSH_PRIV)
+        .get_file()
+        .await
+        .context("getting path to an ssh private key from ssh.priv")
 }
 
 #[cfg(test)]

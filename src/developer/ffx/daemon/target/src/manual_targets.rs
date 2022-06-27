@@ -46,11 +46,15 @@ pub struct Config();
 #[async_trait(?Send)]
 impl ManualTargets for Config {
     async fn storage_get(&self) -> Result<Value> {
-        ffx_config::get((MANUAL_TARGETS, ConfigLevel::User)).await.context("manual_targets::get")
+        ffx_config::query(MANUAL_TARGETS)
+            .level(Some(ConfigLevel::User))
+            .get()
+            .await
+            .context("manual_targets::get")
     }
 
     async fn storage_set(&self, targets: Value) -> Result<()> {
-        ffx_config::set((MANUAL_TARGETS, ConfigLevel::User), targets.into()).await
+        ffx_config::query(MANUAL_TARGETS).level(Some(ConfigLevel::User)).set(targets.into()).await
     }
 }
 
@@ -105,12 +109,11 @@ mod test {
         async fn test_get_manual_targets() {
             ffx_config::test_init().unwrap();
 
-            ffx_config::set(
-                (MANUAL_TARGETS, ConfigLevel::User),
-                json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}),
-            )
-            .await
-            .unwrap();
+            ffx_config::query(MANUAL_TARGETS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}))
+                .await
+                .unwrap();
 
             let mt = Config::default();
             let value = mt.get().await.unwrap();
@@ -142,12 +145,11 @@ mod test {
         async fn test_remove_manual_target() {
             ffx_config::test_init().unwrap();
 
-            ffx_config::set(
-                (MANUAL_TARGETS, ConfigLevel::User),
-                json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}),
-            )
-            .await
-            .unwrap();
+            ffx_config::query(MANUAL_TARGETS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}))
+                .await
+                .unwrap();
 
             let mt = Config::default();
             let value = mt.get().await.unwrap();

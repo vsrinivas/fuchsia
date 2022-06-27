@@ -74,7 +74,10 @@ pub async fn get_repository_server_enabled() -> Result<bool> {
 
 /// Sets if the repository server is enabled.
 pub async fn set_repository_server_enabled(enabled: bool) -> Result<()> {
-    ffx_config::set((CONFIG_KEY_SERVER_ENABLED, ConfigLevel::User), enabled.into()).await
+    ffx_config::query(CONFIG_KEY_SERVER_ENABLED)
+        .level(Some(ConfigLevel::User))
+        .set(enabled.into())
+        .await
 }
 
 /// Return the repository server address.
@@ -123,12 +126,15 @@ pub async fn get_default_repository() -> Result<Option<String>> {
 
 /// Sets the default repository from the config.
 pub async fn set_default_repository(repo_name: &str) -> Result<()> {
-    ffx_config::set((CONFIG_KEY_DEFAULT_REPOSITORY, ConfigLevel::User), repo_name.into()).await
+    ffx_config::query(CONFIG_KEY_DEFAULT_REPOSITORY)
+        .level(Some(ConfigLevel::User))
+        .set(repo_name.into())
+        .await
 }
 
 /// Unsets the default repository from the config.
 pub async fn unset_default_repository() -> Result<()> {
-    ffx_config::remove((CONFIG_KEY_DEFAULT_REPOSITORY, ConfigLevel::User)).await
+    ffx_config::query(CONFIG_KEY_DEFAULT_REPOSITORY).level(Some(ConfigLevel::User)).remove().await
 }
 
 /// Get repository spec from config.
@@ -188,12 +194,15 @@ pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
 pub async fn set_repository(repo_name: &str, repo_spec: &RepositorySpec) -> Result<()> {
     let repo_spec = serde_json::to_value(repo_spec.clone())?;
 
-    ffx_config::set((&repository_query(repo_name), ConfigLevel::User), repo_spec).await
+    ffx_config::query(&repository_query(repo_name))
+        .level(Some(ConfigLevel::User))
+        .set(repo_spec)
+        .await
 }
 
 /// Removes the repository named `repo_name` from the configuration.
 pub async fn remove_repository(repo_name: &str) -> Result<()> {
-    ffx_config::remove((&repository_query(repo_name), ConfigLevel::User)).await
+    ffx_config::query(&repository_query(repo_name)).level(Some(ConfigLevel::User)).remove().await
 }
 
 /// Get the target registration from the config if exists.
@@ -302,15 +311,17 @@ pub async fn set_registration(target_nodename: &str, target_info: &RepositoryTar
     let json_target_info =
         serde_json::to_value(&target_info).context("serializing RepositorySpec")?;
 
-    ffx_config::set(
-        (&registration_query(&target_info.repo_name, &target_nodename), ConfigLevel::User),
-        json_target_info,
-    )
-    .await
+    ffx_config::query(&registration_query(&target_info.repo_name, &target_nodename))
+        .level(Some(ConfigLevel::User))
+        .set(json_target_info)
+        .await
 }
 
 pub async fn remove_registration(repo_name: &str, target_identifier: &str) -> Result<()> {
-    ffx_config::remove((&registration_query(repo_name, target_identifier), ConfigLevel::User)).await
+    ffx_config::query(&registration_query(repo_name, target_identifier))
+        .level(Some(ConfigLevel::User))
+        .remove()
+        .await
 }
 
 #[cfg(test)]
@@ -378,7 +389,11 @@ mod tests {
     #[test]
     fn test_get_default_repository_with_only_one_configured() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_ROOT, ConfigLevel::User), json!({})).await.unwrap();
+            ffx_config::query(CONFIG_KEY_ROOT)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
+                .await
+                .unwrap();
 
             // Initially there's no default.
             assert_eq!(get_default_repository().await.unwrap(), None);
@@ -403,7 +418,11 @@ mod tests {
     #[test]
     fn test_get_set_unset_default_repository() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_ROOT, ConfigLevel::User), json!({})).await.unwrap();
+            ffx_config::query(CONFIG_KEY_ROOT)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
+                .await
+                .unwrap();
 
             // Initially there's no default.
             assert_eq!(get_default_repository().await.unwrap(), None);
@@ -441,7 +460,11 @@ mod tests {
     #[test]
     fn test_get_set_remove_repository() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REPOSITORIES, ConfigLevel::User), json!({})).await.unwrap();
+            ffx_config::query(CONFIG_KEY_REPOSITORIES)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
+                .await
+                .unwrap();
 
             // Initially the repositoy does not exist.
             assert_eq!(get_repository("repo").await.unwrap(), None);
@@ -481,7 +504,11 @@ mod tests {
     #[test]
     fn test_set_repository_encoding() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REPOSITORIES, ConfigLevel::User), json!({})).await.unwrap();
+            ffx_config::query(CONFIG_KEY_REPOSITORIES)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
+                .await
+                .unwrap();
 
             set_repository("repo.name", &RepositorySpec::Pm { path: "foo/bar/baz".into() })
                 .await
@@ -511,7 +538,9 @@ mod tests {
     #[test]
     fn test_get_set_remove_registration() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REGISTRATIONS, ConfigLevel::User), json!({}))
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
                 .await
                 .unwrap();
 
@@ -559,7 +588,9 @@ mod tests {
     #[test]
     fn test_set_registration_encoding() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REGISTRATIONS, ConfigLevel::User), json!({}))
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
                 .await
                 .unwrap();
 
@@ -615,7 +646,11 @@ mod tests {
     #[test]
     fn test_get_repositories_empty() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REPOSITORIES, ConfigLevel::User), json!({})).await.unwrap();
+            ffx_config::query(CONFIG_KEY_REPOSITORIES)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
+                .await
+                .unwrap();
             assert_eq!(get_repositories().await, hashmap! {});
         });
     }
@@ -624,9 +659,9 @@ mod tests {
     #[test]
     fn test_get_repositories() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REPOSITORIES, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REPOSITORIES)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Parse a normal repository.
                     "repo-name": {
                         "type": "pm",
@@ -644,10 +679,9 @@ mod tests {
                         "type": "pm",
                         "path": "foo/bar/baz",
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_repositories().await,
@@ -670,9 +704,9 @@ mod tests {
     #[test]
     fn test_get_repositories_ignores_invalid_entries() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REPOSITORIES, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REPOSITORIES)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Ignores invalid repositories.
                     "invalid-entries": {},
 
@@ -681,10 +715,9 @@ mod tests {
                         "type": "pm",
                         "path": "repo/bar/baz",
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(get_repositories().await, hashmap! {});
         });
@@ -694,7 +727,9 @@ mod tests {
     #[test]
     fn test_get_registrations_empty() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REGISTRATIONS, ConfigLevel::User), json!({}))
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
                 .await
                 .unwrap();
             assert_eq!(get_registrations().await, hashmap! {});
@@ -705,9 +740,9 @@ mod tests {
     #[test]
     fn test_get_registrations() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     "repo1": {
                         "target1": {
                             "repo_name": "repo1",
@@ -740,10 +775,9 @@ mod tests {
                             "storage_type": (),
                         },
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_registrations().await,
@@ -785,9 +819,9 @@ mod tests {
     #[test]
     fn test_get_registrations_encoding() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Parse an encoded `repo.name`.
                     "repo%2Ename": {
                         // Parse an encoded `target.name`.
@@ -816,10 +850,9 @@ mod tests {
                             "storage_type": (),
                         },
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_registrations().await,
@@ -855,9 +888,9 @@ mod tests {
     #[test]
     fn test_get_registrations_invalid_entries() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Ignores empty repositories.
                     "empty-entries": {},
 
@@ -883,10 +916,9 @@ mod tests {
                             "storage_type": (),
                         },
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_registrations().await,
@@ -901,7 +933,9 @@ mod tests {
     #[test]
     fn test_get_repository_registrations_empty() {
         run_async_test(async {
-            ffx_config::set((CONFIG_KEY_REGISTRATIONS, ConfigLevel::User), json!({}))
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({}))
                 .await
                 .unwrap();
             assert_eq!(get_repository_registrations("repo").await, hashmap! {});
@@ -912,9 +946,9 @@ mod tests {
     #[test]
     fn test_get_repository_registrations() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     "repo": {
                         "target1": {
                             "repo_name": "repo1",
@@ -932,10 +966,9 @@ mod tests {
                         // Ignores invalid targets.
                         "target3": {},
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_repository_registrations("repo").await,
@@ -964,9 +997,9 @@ mod tests {
     #[test]
     fn test_get_repository_registrations_encoding() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Parse an encoded `repo.name`.
                     "repo%2Ename": {
                         // Parse an encoded `target.name`.
@@ -985,10 +1018,9 @@ mod tests {
                             "storage_type": (),
                         },
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(
                 get_repository_registrations("repo.name").await,
@@ -1014,9 +1046,9 @@ mod tests {
     #[test]
     fn test_get_repository_registrations_invalid_entries() {
         run_async_test(async {
-            ffx_config::set(
-                (CONFIG_KEY_REGISTRATIONS, ConfigLevel::User),
-                json!({
+            ffx_config::query(CONFIG_KEY_REGISTRATIONS)
+                .level(Some(ConfigLevel::User))
+                .set(json!({
                     // Ignores empty repositories.
                     "empty-entries": {},
 
@@ -1042,10 +1074,9 @@ mod tests {
                             "storage_type": (),
                         },
                     },
-                }),
-            )
-            .await
-            .unwrap();
+                }))
+                .await
+                .unwrap();
 
             assert_eq!(get_repository_registrations("empty-entries").await, hashmap! {});
 

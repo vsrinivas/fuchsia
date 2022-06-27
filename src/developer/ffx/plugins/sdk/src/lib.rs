@@ -5,8 +5,9 @@
 use {
     anyhow::{Context, Result},
     ffx_config::{
+        query,
         sdk::{Sdk, SdkVersion},
-        set, ConfigLevel,
+        ConfigLevel,
     },
     ffx_core::ffx_plugin,
     ffx_sdk_args::{SdkCommand, SetCommand, SetRootCommand, SetSubCommand, SubCommand},
@@ -39,7 +40,10 @@ async fn exec_set(cmd: &SetCommand) -> Result<()> {
         SetSubCommand::Root(SetRootCommand { path }) => {
             let abs_path =
                 path.canonicalize().context(format!("making path absolute: {:?}", path))?;
-            set(("sdk.root", ConfigLevel::User), abs_path.to_string_lossy().into()).await?;
+            query("sdk.root")
+                .level(Some(ConfigLevel::User))
+                .set(abs_path.to_string_lossy().into())
+                .await?;
             Ok(())
         }
     }

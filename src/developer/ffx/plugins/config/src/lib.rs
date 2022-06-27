@@ -6,8 +6,8 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_bail_with_code},
     ffx_config::{
-        add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, file,
-        get, print_config, raw, remove, set, set_metrics_status, show_metrics_status, ConfigLevel,
+        api::ConfigError, env_file, environment::Environment, get, print_config,
+        set_metrics_status, show_metrics_status, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
@@ -62,24 +62,18 @@ fn output_array<W: Write + Sync>(
 }
 
 async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()> {
-    let query = ConfigQuery::new(
-        get_cmd.name.as_ref().map(|s| s.as_str()),
-        None,
-        get_cmd.build_dir.as_ref().map(|s| s.as_str()),
-        get_cmd.select,
-    );
     match get_cmd.name.as_ref() {
         Some(_) => match get_cmd.process {
             MappingMode::Raw => {
-                let value: Option<Value> = raw(query).await?;
+                let value: Option<Value> = get_cmd.query().get_raw().await?;
                 output(writer, value)
             }
             MappingMode::Substitute => {
-                let value: std::result::Result<Vec<Value>, _> = get(query).await;
+                let value: std::result::Result<Vec<Value>, _> = get(get_cmd.query()).await;
                 output_array(writer, value)
             }
             MappingMode::File => {
-                let value = file(query).await?;
+                let value = get_cmd.query().get_file().await?;
                 output(writer, value)
             }
         },
@@ -88,19 +82,15 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
 }
 
 async fn exec_set(set_cmd: &SetCommand) -> Result<()> {
-    set((&set_cmd.name, &set_cmd.level, &set_cmd.build_dir), set_cmd.value.clone()).await
+    set_cmd.query().set(set_cmd.value.clone()).await
 }
 
 async fn exec_remove(remove_cmd: &RemoveCommand) -> Result<()> {
-    remove((&remove_cmd.name, &remove_cmd.level, &remove_cmd.build_dir)).await
+    remove_cmd.query().remove().await
 }
 
 async fn exec_add(add_cmd: &AddCommand) -> Result<()> {
-    add(
-        (&add_cmd.name, &add_cmd.level, &add_cmd.build_dir),
-        Value::String(format!("{}", add_cmd.value)),
-    )
-    .await
+    add_cmd.query().add(Value::String(format!("{}", add_cmd.value))).await
 }
 
 fn exec_env_set<W: Write + Sync>(

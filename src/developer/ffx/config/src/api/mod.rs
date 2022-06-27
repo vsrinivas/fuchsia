@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{query::ConfigQuery, value::ConfigValue},
     crate::cache::load_config,
     anyhow::Result,
     serde_json::Value,
@@ -15,6 +14,8 @@ pub mod query;
 pub mod value;
 
 pub type ConfigResult = Result<ConfigValue>;
+pub use query::ConfigQuery;
+pub use value::ConfigValue;
 
 #[derive(Debug, Error)]
 #[error("Configuration error")]
@@ -26,7 +27,7 @@ impl ConfigError {
     }
 }
 
-pub(crate) async fn get_config<'a>(query: ConfigQuery<'a>) -> ConfigResult {
+pub(crate) async fn get_config<'a>(query: &'a ConfigQuery<'a>) -> ConfigResult {
     let config = load_config(&query.build_dir.map(String::from)).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(&query).into())

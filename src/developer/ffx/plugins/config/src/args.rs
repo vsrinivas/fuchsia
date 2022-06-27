@@ -4,7 +4,7 @@
 
 use {
     argh::FromArgs,
-    ffx_config::{api::query::SelectMode, ConfigLevel},
+    ffx_config::{api::query::SelectMode, ConfigLevel, ConfigQuery},
     ffx_core::ffx_command,
 };
 
@@ -54,6 +54,17 @@ pub struct SetCommand {
     pub build_dir: Option<String>,
 }
 
+impl SetCommand {
+    pub fn query<'a>(&'a self) -> ConfigQuery<'a> {
+        ConfigQuery::new(
+            Some(self.name.as_str()),
+            Some(self.level),
+            self.build_dir.as_deref().into(),
+            SelectMode::default(),
+        )
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum MappingMode {
     Raw,
@@ -98,6 +109,12 @@ pub struct GetCommand {
     pub build_dir: Option<String>,
 }
 
+impl GetCommand {
+    pub fn query<'a>(&'a self) -> ConfigQuery<'a> {
+        ConfigQuery::new(self.name.as_deref(), None, self.build_dir.as_deref().into(), self.select)
+    }
+}
+
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(
     subcommand,
@@ -123,6 +140,17 @@ pub struct RemoveCommand {
     /// an optional build directory to associate the build config provided - use used for "build"
     /// configs
     pub build_dir: Option<String>,
+}
+
+impl RemoveCommand {
+    pub fn query<'a>(&'a self) -> ConfigQuery<'a> {
+        ConfigQuery::new(
+            Some(self.name.as_str()),
+            Some(self.level),
+            self.build_dir.as_deref().into(),
+            SelectMode::default(),
+        )
+    }
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -155,6 +183,17 @@ pub struct AddCommand {
     /// an optional build directory to associate the build config provided - use used for "build"
     /// configs
     pub build_dir: Option<String>,
+}
+
+impl AddCommand {
+    pub fn query<'a>(&'a self) -> ConfigQuery<'a> {
+        ConfigQuery::new(
+            Some(self.name.as_str()),
+            Some(self.level),
+            self.build_dir.as_deref().into(),
+            SelectMode::default(),
+        )
+    }
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

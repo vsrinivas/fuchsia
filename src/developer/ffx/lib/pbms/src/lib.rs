@@ -241,14 +241,12 @@ pub async fn get_metadata_glob(product_url: &url::Url) -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::pbms::CONFIG_METADATA,
-        ffx_config::ConfigLevel,
-        serde_json,
-        std::{fs::File, io::Write},
-        tempfile::TempDir,
-    };
+    use super::*;
+    use crate::pbms::CONFIG_METADATA;
+    use ffx_config::ConfigLevel;
+    use serde_json;
+    use std::{fs::File, io::Write};
+    use tempfile::TempDir;
 
     const CORE_JSON: &str = include_str!("../test_data/test_core.json");
     const IMAGES_JSON: &str = include_str!("../test_data/test_images.json");
@@ -280,13 +278,19 @@ mod tests {
         drop(pbm_file);
 
         let sdk_root = temp_path.to_str().expect("path to str");
-        ffx_config::set(("sdk.root", ConfigLevel::User), sdk_root.into())
+        ffx_config::query("sdk.root")
+            .level(Some(ConfigLevel::User))
+            .set(sdk_root.into())
             .await
             .expect("set sdk root path");
-        ffx_config::set(("sdk.type", ConfigLevel::User), "in-tree".into())
+        ffx_config::query("sdk.type")
+            .level(Some(ConfigLevel::User))
+            .set("in-tree".into())
             .await
             .expect("set sdk type");
-        ffx_config::set((CONFIG_METADATA, ConfigLevel::User), serde_json::json!([""]))
+        ffx_config::query(CONFIG_METADATA)
+            .level(Some(ConfigLevel::User))
+            .set(serde_json::json!([""]))
             .await
             .expect("set pbms metadata");
         let mut writer = Box::new(std::io::stdout());

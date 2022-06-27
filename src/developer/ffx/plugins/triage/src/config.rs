@@ -154,12 +154,11 @@ mod tests {
         let tempdir = tempdir().expect("Unable to create tempdir for testing.");
         let root = tempdir.path();
 
-        ffx_config::set(
-            (DEFAULT_CONFIG_PATHS_VARIABLE, ffx_config::ConfigLevel::User),
-            serde_json::json!(oot_test_default_configs),
-        )
-        .await
-        .expect("Unable to set oot default config variable.");
+        ffx_config::query(DEFAULT_CONFIG_PATHS_VARIABLE)
+            .level(Some(ffx_config::ConfigLevel::User))
+            .set(serde_json::json!(oot_test_default_configs))
+            .await
+            .expect("Unable to set oot default config variable.");
 
         let config_files = get_or_default_config_files(vec![], root.to_path_buf())
             .await
