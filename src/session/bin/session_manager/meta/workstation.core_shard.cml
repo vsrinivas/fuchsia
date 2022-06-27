@@ -1,8 +1,19 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-// workstation.core_shard.cml
 {
+    // This core realm shard [1] routes protocols required by the workstation
+    // session [2] from components that run above the session (v1 components,
+    // and children/parent of core) to session-manager.
+    //
+    // session-manager then routes these protocols to the session component,
+    // smart_session, in session_manager.cml [3].
+    //
+    // [1]: https://fuchsia.googlesource.com/experiences/+/refs/heads/main/session_shells/ermine/session/meta/
+    // [2]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0089_core_realm_variations
+    // [3]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/session_manager/meta/session_manager.cml
+    //
+    // TODO(fxbug.dev/103234): Remove this shard
     offer: [
         {
             protocol: [ "fuchsia.ui.input.PointerCaptureListenerRegistry" ],
