@@ -379,7 +379,7 @@ impl StorageAdmin {
                     _ => (),
                 }
             }
-            for component in component_state.instanced_children().map(|(_, v)| v) {
+            for component in component_state.children().map(|(_, v)| v) {
                 components_to_visit.push(component.clone())
             }
         }

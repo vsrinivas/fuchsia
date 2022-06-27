@@ -146,10 +146,10 @@ pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -
     }
 }
 
-/// Return the instance id of the given live child.
-pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a str) -> u32 {
+/// Return the incarnation id of the given child.
+pub async fn get_incarnation_id<'a>(component: &'a ComponentInstance, moniker: &'a str) -> u32 {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.get_child_instance_id(&moniker.into()).unwrap(),
+        InstanceState::Resolved(ref s) => s.get_child(&moniker.into()).unwrap().incarnation_id(),
         _ => panic!("not resolved"),
     }
 }

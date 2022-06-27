@@ -13,7 +13,7 @@ use {
     },
     anyhow::format_err,
     async_trait::async_trait,
-    cm_moniker::InstanceId,
+    cm_moniker::IncarnationId,
     cm_rust::{CapabilityName, ComponentDecl},
     cm_util::io::clone_dir,
     config_encoder::ConfigFields,
@@ -296,7 +296,7 @@ pub enum EventPayload {
         node: fio::NodeProxy,
     },
     Discovered {
-        instance_id: InstanceId,
+        instance_id: IncarnationId,
     },
     Destroyed,
     Resolved {

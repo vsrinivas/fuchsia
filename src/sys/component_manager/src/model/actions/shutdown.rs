@@ -2835,7 +2835,7 @@ mod tests {
             let state = component_a.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref s) => {
-                    s.get_child(&"b".into()).expect("child b not found")
+                    s.get_child(&"b".into()).expect("child b not found").clone()
                 }
                 _ => panic!("not resolved"),
             }

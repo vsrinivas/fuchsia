@@ -10,20 +10,20 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    cm_moniker::InstancedChildMoniker,
-    moniker::AbsoluteMonikerBase,
-    routing::component_instance::ComponentInstanceInterface,
+    cm_moniker::IncarnationId,
+    moniker::ChildMoniker,
     std::sync::Arc,
 };
 
 /// Completely destroys the given child of a component.
 pub struct DestroyChildAction {
-    moniker: InstancedChildMoniker,
+    moniker: ChildMoniker,
+    incarnation: IncarnationId,
 }
 
 impl DestroyChildAction {
-    pub fn new(moniker: InstancedChildMoniker) -> Self {
-        Self { moniker }
+    pub fn new(moniker: ChildMoniker, incarnation: IncarnationId) -> Self {
+        Self { moniker, incarnation }
     }
 }
 
@@ -31,23 +31,24 @@ impl DestroyChildAction {
 impl Action for DestroyChildAction {
     type Output = Result<(), ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
-        do_destroy_child(component, self.moniker.clone()).await
+        do_destroy_child(component, &self.moniker, self.incarnation).await
     }
     fn key(&self) -> ActionKey {
-        ActionKey::DestroyChild(self.moniker.clone())
+        ActionKey::DestroyChild(self.moniker.clone(), self.incarnation)
     }
 }
 
 async fn do_destroy_child(
     component: &Arc<ComponentInstance>,
-    moniker: InstancedChildMoniker,
+    moniker: &ChildMoniker,
+    incarnation: IncarnationId,
 ) -> Result<(), ModelError> {
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child = {
         let state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref s) => {
-                let child = s.get_child(&moniker.without_instance_id()).map(|r| r.clone());
+                let child = s.get_child(moniker).map(|r| r.clone());
                 child
             }
             InstanceState::Destroyed => None,
@@ -57,7 +58,7 @@ async fn do_destroy_child(
         }
     };
     if let Some(child) = child {
-        if child.instanced_moniker().path().last() != Some(&moniker) {
+        if child.incarnation_id() != incarnation {
             // The instance of the child we pulled from our live children does not match the
             // instance of the child we were asked to delete. This is possible if a
             // `DestroyChild` action was registered twice on the same component, and after the
@@ -77,7 +78,7 @@ async fn do_destroy_child(
             let mut state = component.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref mut s) => {
-                    s.remove_child(&moniker.without_instance_id());
+                    s.remove_child(moniker);
                 }
                 InstanceState::Destroyed => {}
                 InstanceState::New | InstanceState::Discovered => {

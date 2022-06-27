@@ -340,13 +340,11 @@ where
                 let expose_decl = find_matching_expose(use_decl.source_name(), &child_exposes)
                     .cloned()
                     .ok_or_else(|| {
-                        let child_moniker = child_component
-                            .instanced_child_moniker()
-                            .expect("InstancedChildMoniker should exist")
-                            .without_instance_id();
+                        let child_moniker =
+                            child_component.child_moniker().expect("ChildMoniker should exist");
                         <U as ErrorNotFoundInChild>::error_not_found_in_child(
                             use_target.abs_moniker().clone(),
-                            child_moniker,
+                            child_moniker.clone(),
                             use_decl.source_name().clone(),
                         )
                     })?;
@@ -1317,18 +1315,16 @@ where
                     find_matching_expose(registration.source_name(), &child_exposes)
                         .cloned()
                         .ok_or_else(|| {
-                            let child_moniker = child_component
-                                .instanced_child_moniker()
-                                .expect("InstancedChildMoniker should exist")
-                                .without_instance_id();
+                            let child_moniker =
+                                child_component.child_moniker().expect("ChildMoniker should exist");
                             <R as ErrorNotFoundInChild>::error_not_found_in_child(
                                 target.abs_moniker().clone(),
-                                child_moniker,
+                                child_moniker.clone(),
                                 registration.source_name().clone(),
                             )
                         })?
                 };
-                Ok(RegistrationResult::FromChild(child_expose, child_component))
+                Ok(RegistrationResult::FromChild(child_expose, child_component.clone()))
             }
         }
     }
@@ -1546,19 +1542,17 @@ where
                 let child_exposes = child_component.lock_resolved_state().await?.exposes();
                 find_matching_expose(offer.source_name(), &child_exposes).cloned().ok_or_else(
                     || {
-                        let child_moniker = child_component
-                            .instanced_child_moniker()
-                            .expect("ChildMoniker should exist")
-                            .without_instance_id();
+                        let child_moniker =
+                            child_component.child_moniker().expect("ChildMoniker should exist");
                         <O as ErrorNotFoundInChild>::error_not_found_in_child(
                             component.abs_moniker().clone(),
-                            child_moniker,
+                            child_moniker.clone(),
                             offer.source_name().clone(),
                         )
                     },
                 )?
             };
-            Ok((expose, child_component))
+            Ok((expose, child_component.clone()))
         }
         _ => panic!("change_direction called with offer that does not change direction"),
     }
@@ -1645,18 +1639,17 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 let child_moniker = child_component
-                                    .instanced_child_moniker()
-                                    .expect("ChildMoniker should exist")
-                                    .without_instance_id();
+                                    .child_moniker()
+                                    .expect("ChildMoniker should exist");
                                 <E as ErrorNotFoundInChild>::error_not_found_in_child(
                                     target.abs_moniker().clone(),
-                                    child_moniker,
+                                    child_moniker.clone(),
                                     expose.source_name().clone(),
                                 )
                             })?
                     };
                     expose = child_expose;
-                    target = child_component;
+                    target = child_component.clone();
                 }
                 ExposeSource::Collection(name) => {
                     sources.collection_source()?;

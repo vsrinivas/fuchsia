@@ -13,7 +13,7 @@ use {
         DebugRouteMapper,
     },
     async_trait::async_trait,
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, OfferSource, UseDecl},
     derivative::Derivative,
     moniker::{AbsoluteMoniker, ChildMoniker},
@@ -37,10 +37,6 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Returns this `ComponentInstanceInterface`'s child moniker, if it is
     /// not the root instance.
     fn child_moniker(&self) -> Option<&ChildMoniker>;
-
-    /// Returns this `ComponentInstanceInterface`'s instanced child moniker,
-    /// if it is not the root instance.
-    fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker>;
 
     /// Returns this `ComponentInstanceInterface`'s instanced absolute moniker.
     fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker;
@@ -107,10 +103,8 @@ pub trait ResolvedInstanceInterface: Send + Sync {
     fn get_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>>;
 
     /// Returns a vector of the live children in `collection`.
-    fn children_in_collection(
-        &self,
-        collection: &str,
-    ) -> Vec<(ChildMoniker, Arc<Self::Component>)>;
+    fn children_in_collection(&self, collection: &str)
+        -> Vec<(ChildMoniker, Arc<Self::Component>)>;
 
     /// Returns the resolver-ready location of the component, which is either
     /// an absolute component URL or a relative path URL with context.
@@ -206,17 +200,12 @@ where
 pub struct WeakComponentInstanceInterface<C: ComponentInstanceInterface> {
     #[derivative(Debug = "ignore")]
     inner: Weak<C>,
-    pub instanced_moniker: InstancedAbsoluteMoniker,
     pub abs_moniker: AbsoluteMoniker,
 }
 
 impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
     pub fn new(component: &Arc<C>) -> Self {
-        Self {
-            inner: Arc::downgrade(component),
-            instanced_moniker: component.instanced_moniker().clone(),
-            abs_moniker: component.abs_moniker().clone(),
-        }
+        Self { inner: Arc::downgrade(component), abs_moniker: component.abs_moniker().clone() }
     }
 
     /// Attempts to upgrade this `WeakComponentInterface<C>` into an `Arc<C>`, if the
@@ -230,11 +219,7 @@ impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
 
 impl<C: ComponentInstanceInterface> From<&Arc<C>> for WeakComponentInstanceInterface<C> {
     fn from(component: &Arc<C>) -> Self {
-        Self {
-            inner: Arc::downgrade(component),
-            instanced_moniker: component.instanced_moniker().clone(),
-            abs_moniker: component.abs_moniker().clone(),
-        }
+        Self { inner: Arc::downgrade(component), abs_moniker: component.abs_moniker().clone() }
     }
 }
 

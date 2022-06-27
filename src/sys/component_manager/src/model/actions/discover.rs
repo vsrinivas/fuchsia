@@ -10,7 +10,6 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    routing::component_instance::ComponentInstanceInterface,
     std::sync::Arc,
 };
 
@@ -50,11 +49,7 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
     if is_discovered {
         return Ok(());
     }
-    let instance_id = match component.instanced_child_moniker() {
-        Some(m) => m.instance(),
-        // Assign 0 to the root component instance
-        None => 0,
-    };
+    let instance_id = component.incarnation_id();
     let event = Event::new(&component, Ok(EventPayload::Discovered { instance_id }));
     component.hooks.dispatch(&event).await?;
     {

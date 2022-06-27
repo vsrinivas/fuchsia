@@ -75,7 +75,7 @@ pub(self) use destroy::DestroyAction;
 use {
     crate::model::component::ComponentInstance,
     async_trait::async_trait,
-    cm_moniker::InstancedChildMoniker,
+    cm_moniker::IncarnationId,
     fuchsia_async as fasync,
     futures::{
         channel::oneshot,
@@ -83,6 +83,7 @@ use {
         task::{Context, Poll},
         Future,
     },
+    moniker::ChildMoniker,
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -111,7 +112,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    DestroyChild(InstancedChildMoniker),
+    DestroyChild(ChildMoniker, IncarnationId),
     Destroy,
 }
 

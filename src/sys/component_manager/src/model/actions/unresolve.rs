@@ -426,7 +426,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_child(&ChildMoniker::from("a")).expect("child a not found")
+                s.get_child(&ChildMoniker::from("a")).expect("child a not found").clone()
             }
             _ => panic!("not resolved"),
         };

@@ -9,7 +9,7 @@ mod instanced_relative_moniker;
 
 pub use self::{
     instanced_abs_moniker::InstancedAbsoluteMoniker,
-    instanced_child_moniker::{InstanceId, InstancedChildMoniker},
+    instanced_child_moniker::{IncarnationId, InstancedChildMoniker},
     instanced_extended_moniker::InstancedExtendedMoniker,
     instanced_relative_moniker::InstancedRelativeMoniker,
 };

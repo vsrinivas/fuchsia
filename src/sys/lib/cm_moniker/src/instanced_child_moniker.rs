@@ -21,11 +21,11 @@ use serde::{Deserialize, Serialize};
 pub struct InstancedChildMoniker {
     name: String,
     collection: Option<String>,
-    instance: InstanceId,
+    instance: IncarnationId,
     rep: String,
 }
 
-pub type InstanceId = u32;
+pub type IncarnationId = u32;
 
 impl ChildMonikerBase for InstancedChildMoniker {
     /// Parses an `ChildMoniker` from a string.
@@ -50,7 +50,7 @@ impl ChildMonikerBase for InstancedChildMoniker {
             true => {
                 let name = parts[1].to_string();
                 let coll = parts[0].to_string();
-                let instance: InstanceId = match parts[2].parse() {
+                let instance: IncarnationId = match parts[2].parse() {
                     Ok(i) => i,
                     _ => {
                         return Err(invalid());
@@ -59,7 +59,7 @@ impl ChildMonikerBase for InstancedChildMoniker {
                 (name, Some(coll), instance)
             }
             false => {
-                let instance: InstanceId = match parts[1].parse() {
+                let instance: IncarnationId = match parts[1].parse() {
                     Ok(i) => i,
                     _ => {
                         return Err(invalid());
@@ -89,7 +89,7 @@ impl ChildMonikerBase for InstancedChildMoniker {
 
 impl InstancedChildMoniker {
     // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new(name: String, collection: Option<String>, instance: InstanceId) -> Self {
+    pub fn new(name: String, collection: Option<String>, instance: IncarnationId) -> Self {
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
             assert!(!c.is_empty());
@@ -110,7 +110,7 @@ impl InstancedChildMoniker {
     }
 
     /// Converts this child moniker into an instanced moniker.
-    pub fn from_child_moniker(m: &ChildMoniker, instance: InstanceId) -> Self {
+    pub fn from_child_moniker(m: &ChildMoniker, instance: IncarnationId) -> Self {
         Self::new(m.name.clone(), m.collection.clone(), instance)
     }
 
@@ -120,7 +120,7 @@ impl InstancedChildMoniker {
         ChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 
-    pub fn instance(&self) -> InstanceId {
+    pub fn instance(&self) -> IncarnationId {
         self.instance
     }
 }

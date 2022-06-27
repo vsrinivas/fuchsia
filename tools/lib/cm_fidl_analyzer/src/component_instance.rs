@@ -170,10 +170,6 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         self.abs_moniker.leaf()
     }
 
-    fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker> {
-        self.instanced_moniker.leaf()
-    }
-
     fn url(&self) -> &str {
         &self.url
     }

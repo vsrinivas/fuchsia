@@ -85,8 +85,8 @@ impl Model {
         for moniker in look_up_abs_moniker.path().iter() {
             cur = {
                 let cur_state = cur.lock_resolved_state().await?;
-                if let Some(r) = cur_state.get_child(moniker) {
-                    r
+                if let Some(c) = cur_state.get_child(moniker) {
+                    c.clone()
                 } else {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
@@ -109,7 +109,7 @@ impl Model {
                 match &*state {
                     InstanceState::Resolved(r) => {
                         if let Some(c) = r.get_child(moniker) {
-                            c
+                            c.clone()
                         } else {
                             return None;
                         }
@@ -133,7 +133,7 @@ impl Model {
                 let state = cur.lock_state().await;
                 match &*state {
                     InstanceState::Resolved(r) => match r.get_child(moniker) {
-                        Some(c) => c,
+                        Some(c) => c.clone(),
                         _ => return None,
                     },
                     _ => return None,

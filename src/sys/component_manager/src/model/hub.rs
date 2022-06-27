@@ -16,7 +16,7 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_moniker::InstanceId,
+    cm_moniker::IncarnationId,
     cm_rust::ComponentDecl,
     cm_task_scope::TaskScope,
     cm_util::{channel, io::clone_dir},
@@ -160,7 +160,7 @@ impl Hub {
     fn add_instance_if_necessary(
         moniker: &AbsoluteMoniker,
         component_url: String,
-        instance_id: InstanceId,
+        incarnation: IncarnationId,
         instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<Option<(u128, Directory)>, ModelError> {
         if instance_map.contains_key(&moniker) {
@@ -183,8 +183,8 @@ impl Hub {
         instance.add_node("url", read_only_static(component_url.clone().into_bytes()), moniker)?;
 
         // Add an 'id' file.
-        let component_type = if instance_id > 0 { "dynamic" } else { "static" };
-        instance.add_node("id", read_only_static(instance_id.to_string().into_bytes()), moniker)?;
+        let component_type = if incarnation > 0 { "dynamic" } else { "static" };
+        instance.add_node("id", read_only_static(incarnation.to_string().into_bytes()), moniker)?;
 
         // Add a 'component_type' file.
         instance.add_node(
@@ -232,13 +232,13 @@ impl Hub {
     async fn add_instance_to_parent_if_necessary<'a>(
         moniker: &'a AbsoluteMoniker,
         component_url: String,
-        instance_id: InstanceId,
+        incarnation: IncarnationId,
         mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         let (uuid, controlled) = match Hub::add_instance_if_necessary(
             moniker,
             component_url,
-            instance_id,
+            incarnation,
             &mut instance_map,
         )? {
             Some(c) => c,
@@ -511,14 +511,14 @@ impl Hub {
         &self,
         target_moniker: &AbsoluteMoniker,
         component_url: String,
-        instance_id: InstanceId,
+        incarnation: IncarnationId,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
         Self::add_instance_to_parent_if_necessary(
             target_moniker,
             component_url,
-            instance_id,
+            incarnation,
             &mut instance_map,
         )
         .await?;

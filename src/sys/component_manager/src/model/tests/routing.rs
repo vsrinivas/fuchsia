@@ -34,7 +34,6 @@ use {
     anyhow::Error,
     assert_matches::assert_matches,
     async_trait::async_trait,
-    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::*,
     cm_rust_testing::*,
     cm_task_scope::TaskScope,
@@ -71,12 +70,12 @@ instantiate_common_routing_tests! { RoutingTestBuilder }
 #[fuchsia::test]
 async fn use_framework_service() {
     pub struct MockRealmCapabilityProvider {
-        scope_moniker: InstancedAbsoluteMoniker,
+        scope_moniker: AbsoluteMoniker,
         host: MockRealmCapabilityHost,
     }
 
     impl MockRealmCapabilityProvider {
-        pub fn new(scope_moniker: InstancedAbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
+        pub fn new(scope_moniker: AbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
             Self { scope_moniker, host }
         }
     }
@@ -120,7 +119,7 @@ async fn use_framework_service() {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
-                        component.instanced_moniker.clone(),
+                        component.abs_moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
@@ -147,7 +146,7 @@ async fn use_framework_service() {
 
         async fn serve(
             &self,
-            scope_moniker: InstancedAbsoluteMoniker,
+            scope_moniker: AbsoluteMoniker,
             mut stream: fcomponent::RealmRequestStream,
         ) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await? {
@@ -171,7 +170,7 @@ async fn use_framework_service() {
 
         pub async fn on_scoped_framework_capability_routed_async<'a>(
             &'a self,
-            scope_moniker: InstancedAbsoluteMoniker,
+            scope_moniker: AbsoluteMoniker,
             capability: &'a InternalCapability,
             capability_provider: Option<Box<dyn CapabilityProvider>>,
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -312,7 +311,7 @@ async fn capability_requested_event_at_parent() {
     };
 
     // 'b' is the target and 'a' is receiving the event so the relative moniker
-    // is './b:0'.
+    // is './b'.
     assert_matches!(&event,
         fsys::Event {
             header: Some(fsys::EventHeader {
@@ -1252,7 +1251,7 @@ async fn destroying_instance_kills_framework_service_task() {
 
     // Destroy `b`. This should cause the task hosted for `Realm` to be cancelled.
     let root = test.model.look_up(&vec![].into()).await.unwrap();
-    ActionSet::register(root.clone(), DestroyChildAction::new("b:0".into()))
+    ActionSet::register(root.clone(), DestroyChildAction::new("b".into(), 0))
         .await
         .expect("destroy failed");
     let mut event_stream = proxy.take_event_stream();

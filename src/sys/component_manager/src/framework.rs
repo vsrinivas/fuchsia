@@ -1042,7 +1042,7 @@ mod tests {
         }
 
         let child = get_live_child(test.component(), "coll:a").await;
-        let instance_id = get_instance_id(test.component(), "coll:a").await;
+        let instance_id = get_incarnation_id(test.component(), "coll:a").await;
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
         assert_eq!(child.component_url, "test:///a".to_string());
         assert_eq!(instance_id, 1);
@@ -1099,7 +1099,7 @@ mod tests {
 
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
         let child = get_live_child(test.component(), "coll:a").await;
-        let instance_id = get_instance_id(test.component(), "coll:a").await;
+        let instance_id = get_incarnation_id(test.component(), "coll:a").await;
         assert_eq!(child.component_url, "test:///a_alt".to_string());
         assert_eq!(instance_id, 3);
     }
