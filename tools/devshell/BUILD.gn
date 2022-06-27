@@ -215,7 +215,6 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/gn.gni",
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/python3.py",
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/rust.rs",
-        "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx",
         "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json",
         "//tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.manifest",
         "//tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni",
