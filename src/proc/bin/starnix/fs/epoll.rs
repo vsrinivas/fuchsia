@@ -9,7 +9,7 @@ use crate::types::*;
 use fuchsia_zircon as zx;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 /// Maximum depth of epoll instances monitoring one another.
@@ -22,10 +22,16 @@ const MAX_NESTED_DEPTH: u32 = 5;
 /// to store a pointer to the data that needs to be processed
 /// after an event.
 struct WaitObject {
-    target: FileHandle,
+    target: Weak<FileObject>,
     events: FdEvents,
     data: u64,
     cancel_key: WaitKey,
+}
+
+impl WaitObject {
+    fn target(&self) -> Result<FileHandle, Errno> {
+        self.target.upgrade().ok_or(EBADF)
+    }
 }
 
 /// EpollKey acts as an key to a map of WaitObject.
@@ -102,7 +108,7 @@ impl EpollFileObject {
         current_task: &CurrentTask,
         key: EpollKey,
         wait_object: &mut WaitObject,
-    ) {
+    ) -> Result<(), Errno> {
         self.wait_on_file_with_options(current_task, key, wait_object, WaitAsyncOptions::empty())
     }
 
@@ -112,19 +118,20 @@ impl EpollFileObject {
         key: EpollKey,
         wait_object: &mut WaitObject,
         options: WaitAsyncOptions,
-    ) {
+    ) -> Result<(), Errno> {
         let state = self.state.clone();
         let handler = move |observed: FdEvents| {
             state.write().trigger_list.push_back(ReadyObject { key, observed })
         };
 
-        wait_object.cancel_key = wait_object.target.wait_async(
+        wait_object.cancel_key = wait_object.target()?.wait_async(
             current_task,
             &self.waiter,
             wait_object.events,
             Box::new(handler),
             options,
         );
+        Ok(())
     }
 
     /// Checks if this EpollFileObject monitors the `epoll_file_object` at `epoll_file_handle`.
@@ -133,26 +140,26 @@ impl EpollFileObject {
         epoll_file_handle: &FileHandle,
         epoll_file_object: &EpollFileObject,
         depth_left: u32,
-    ) -> bool {
+    ) -> Result<bool, Errno> {
         if depth_left == 0 {
-            return true;
+            return Ok(true);
         }
 
         let state = self.state.read();
         for nested_object in state.wait_objects.values() {
-            match nested_object.target.downcast_file::<EpollFileObject>() {
+            match nested_object.target()?.downcast_file::<EpollFileObject>() {
                 None => continue,
                 Some(target) => {
-                    if target.monitors(epoll_file_handle, epoll_file_object, depth_left - 1)
-                        || Arc::ptr_eq(&nested_object.target, epoll_file_handle)
+                    if target.monitors(epoll_file_handle, epoll_file_object, depth_left - 1)?
+                        || Arc::ptr_eq(&nested_object.target()?, epoll_file_handle)
                     {
-                        return true;
+                        return Ok(true);
                     }
                 }
             }
         }
 
-        false
+        Ok(false)
     }
 
     /// Asynchronously wait on certain events happening on a FileHandle.
@@ -173,7 +180,7 @@ impl EpollFileObject {
 
         // Check if adding this file would cause a cycle at a max depth of 5.
         if let Some(epoll_to_add) = file.downcast_file::<EpollFileObject>() {
-            if epoll_to_add.monitors(epoll_file_handle, self, MAX_NESTED_DEPTH) {
+            if epoll_to_add.monitors(epoll_file_handle, self, MAX_NESTED_DEPTH)? {
                 return error!(ELOOP);
             }
         }
@@ -184,13 +191,12 @@ impl EpollFileObject {
             Entry::Occupied(_) => return error!(EEXIST),
             Entry::Vacant(entry) => {
                 let wait_object = entry.insert(WaitObject {
-                    target: file.clone(),
+                    target: Arc::downgrade(file),
                     events: FdEvents::from(epoll_event.events),
                     data: epoll_event.data,
                     cancel_key: WaitKey::empty(),
                 });
-                self.wait_on_file(current_task, key, wait_object);
-                Ok(())
+                self.wait_on_file(current_task, key, wait_object)
             }
         }
     }
@@ -211,10 +217,13 @@ impl EpollFileObject {
         match state.wait_objects.entry(key) {
             Entry::Occupied(mut entry) => {
                 let wait_object = entry.get_mut();
-                wait_object.target.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
+                wait_object.target()?.cancel_wait(
+                    &current_task,
+                    &self.waiter,
+                    wait_object.cancel_key,
+                );
                 wait_object.events = FdEvents::from(epoll_event.events);
-                self.wait_on_file(current_task, key, wait_object);
-                Ok(())
+                self.wait_on_file(current_task, key, wait_object)
             }
             Entry::Vacant(_) => return error!(ENOENT),
         }
@@ -226,7 +235,7 @@ impl EpollFileObject {
         let mut state = self.state.write();
         let key = as_epoll_key(&file);
         if let Some(wait_object) = state.wait_objects.remove(&key) {
-            wait_object.target.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
+            wait_object.target()?.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
             state.rearm_list.retain(|x| x.key != key);
             Ok(())
         } else {
@@ -243,21 +252,22 @@ impl EpollFileObject {
         current_task: &CurrentTask,
         pending_list: &mut Vec<ReadyObject>,
         max_events: i32,
-    ) {
+    ) -> Result<(), Errno> {
         let mut state = self.state.write();
         while pending_list.len() < max_events as usize && !state.trigger_list.is_empty() {
             if let Some(pending) = state.trigger_list.pop_front() {
                 if let Some(wait) = state.wait_objects.get_mut(&pending.key) {
-                    let observed = wait.target.query_events(current_task);
+                    let observed = wait.target()?.query_events(current_task);
                     if observed & wait.events {
                         let ready = ReadyObject { key: pending.key, observed };
                         pending_list.push(ready);
                     } else {
-                        self.wait_on_file(current_task, pending.key, wait);
+                        self.wait_on_file(current_task, pending.key, wait)?;
                     }
                 }
             }
         }
+        Ok(())
     }
 
     /// Waits until an event exists in `pending_list` or until `timeout` has
@@ -290,7 +300,7 @@ impl EpollFileObject {
             // simultaneously.  We break early if the max_events
             // is reached, leaving items on the trigger list for
             // the next wait.
-            self.process_triggered_events(current_task, pending_list, max_events);
+            self.process_triggered_events(current_task, pending_list, max_events)?;
             if pending_list.len() == max_events as usize {
                 break;
             }
@@ -315,13 +325,13 @@ impl EpollFileObject {
             for to_wait in rearm_list.clone().iter() {
                 // TODO handle interrupts here
                 let w = state.wait_objects.get_mut(&to_wait.key).unwrap();
-                self.wait_on_file(current_task, to_wait.key, w);
+                self.wait_on_file(current_task, to_wait.key, w)?;
             }
         }
 
         // Process any events that are already available.
         let mut pending_list: Vec<ReadyObject> = vec![];
-        self.process_triggered_events(current_task, &mut pending_list, max_events);
+        self.process_triggered_events(current_task, &mut pending_list, max_events)?;
 
         self.wait_until_pending_event(current_task, &mut pending_list, max_events, timeout)?;
 
@@ -347,7 +357,7 @@ impl EpollFileObject {
                         pending_event.key,
                         wait,
                         WaitAsyncOptions::EDGE_TRIGGERED,
-                    );
+                    )?;
                 } else {
                     state.rearm_list.push(pending_event.clone());
                 }
