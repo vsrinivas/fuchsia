@@ -409,7 +409,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() {
+    fn try_from_ipv4addr_with_consecutive_ones_returns_mask() {
         assert_eq!(
             SubnetMask::try_from(std_ip_v4!("255.255.255.0"))
                 .expect("failed to create /24 subnet mask"),
@@ -423,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_ipv4addr_with_nonconsecutive_ones_returns_err() {
+    fn try_from_ipv4addr_with_nonconsecutive_ones_returns_err() {
         assert!(SubnetMask::try_from(std_ip_v4!("255.255.255.1")).is_err());
     }
 
@@ -438,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    fn test_into_ipv4addr_returns_ipv4addr() {
+    fn into_ipv4addr_returns_ipv4addr() {
         let mask: Ipv4Addr =
             SubnetMask::new(24).expect("expected 24 to be a valid subnet mask").into();
         assert_eq!(mask, std_ip_v4!("255.255.255.0"));
@@ -453,7 +453,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lease_length_try_from_fidl() {
+    fn lease_length_try_from_fidl() {
         let both = fidl_fuchsia_net_dhcp::LeaseLength {
             default: Some(42),
             max: Some(42),
@@ -488,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    fn test_managed_addresses_try_from_fidl() {
+    fn managed_addresses_try_from_fidl() {
         let prefix_length = 24;
         let start_addr = fidl_ip_v4!("192.168.0.2");
         let stop_addr = fidl_ip_v4!("192.168.0.254");
@@ -558,7 +558,7 @@ mod tests {
     }
 
     #[test]
-    fn test_static_assignments_try_from_fidl() {
+    fn static_assignments_try_from_fidl() {
         use std::iter::FromIterator;
 
         let mac = random_mac_generator().bytes();

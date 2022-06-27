@@ -2033,7 +2033,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_returns_correct_bytes() {
+    fn serialize_returns_correct_bytes() {
         let mut msg = new_test_msg();
         msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
 
@@ -2061,7 +2061,7 @@ mod tests {
     }
 
     #[test]
-    fn test_message_from_buffer_returns_correct_message() {
+    fn message_from_buffer_returns_correct_message() {
         use std::string::ToString;
 
         let mut buf = Vec::new();
@@ -2119,7 +2119,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
+    fn serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
         let msg = || {
             let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
@@ -2130,14 +2130,14 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_then_deserialize_with_no_options_is_equal_to_starting_value() {
+    fn serialize_then_deserialize_with_no_options_is_equal_to_starting_value() {
         let msg = new_test_msg();
 
         assert_eq!(Message::from_buffer(&msg.serialize()), Ok(new_test_msg()));
     }
 
     #[test]
-    fn test_serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
+    fn serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
         let msg = || {
             let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
@@ -2150,7 +2150,7 @@ mod tests {
     }
 
     #[test]
-    fn test_message_from_too_short_buffer_returns_error() {
+    fn message_from_too_short_buffer_returns_error() {
         let buf = vec![0u8, 0u8, 0u8];
 
         assert_eq!(
@@ -2160,7 +2160,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_with_valid_option_returns_correct_bytes() {
+    fn serialize_with_valid_option_returns_correct_bytes() {
         let opt = DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK);
         let mut bytes = Vec::with_capacity(6);
         let () = opt.serialize_to(&mut bytes);
@@ -2174,7 +2174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
+    fn serialize_with_fixed_len_option_returns_correct_bytes() {
         let opt = DhcpOption::End();
         let mut bytes = Vec::with_capacity(1);
         let () = opt.serialize_to(&mut bytes);
@@ -2183,7 +2183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_valid_buffer_has_correct_value() {
+    fn option_from_valid_buffer_has_correct_value() {
         let buf = vec![1, 4, 255, 255, 255, 0, 255];
         assert_eq!(
             parse_options(&buf[..], Vec::new()),
@@ -2192,25 +2192,25 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_valid_buffer_with_fixed_length_returns_empty_options() {
+    fn option_from_valid_buffer_with_fixed_length_returns_empty_options() {
         let buf = vec![255];
         assert_eq!(parse_options(&buf[..], Vec::new()), Ok(Vec::new()));
     }
 
     #[test]
-    fn test_option_from_valid_buffer_ignores_unknown_opcodes() {
+    fn option_from_valid_buffer_ignores_unknown_opcodes() {
         let buf = vec![254, 2, 1, 2, 255];
         assert_eq!(parse_options(&buf[..], Vec::new()), Ok(Vec::new()));
     }
 
     #[test]
-    fn test_option_stops_at_end_of_options() {
+    fn option_stops_at_end_of_options() {
         let buf = vec![26, 2, 4, 0, 255, 26, 2, 4, 0];
         assert_eq!(parse_options(&buf[..], Vec::new()), Ok(vec![DhcpOption::InterfaceMtu(1024)]));
     }
 
     #[test]
-    fn test_option_from_buffer_with_invalid_length_returns_err() {
+    fn option_from_buffer_with_invalid_length_returns_err() {
         let buf = vec![1, 6, 255, 255, 255, 0];
         assert_eq!(
             parse_options(&buf[..], Vec::new()),
@@ -2219,7 +2219,7 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_buffer_missing_length_returns_err() {
+    fn option_from_buffer_missing_length_returns_err() {
         let buf = vec![1];
         assert_eq!(
             parse_options(&buf[..], Vec::new()),
@@ -2228,7 +2228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_buffer_missing_end_option_returns_err() {
+    fn option_from_buffer_missing_end_option_returns_err() {
         assert_eq!(
             parse_options(&[], Vec::new()),
             Err(ProtocolError::MissingOption(OptionCode::End))
@@ -2236,7 +2236,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_dhcp_type_with_dhcp_type_option_returns_value() {
+    fn get_dhcp_type_with_dhcp_type_option_returns_value() {
         let mut msg = new_test_msg();
         msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
 
@@ -2244,7 +2244,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_dhcp_type_without_dhcp_type_option_returns_err() {
+    fn get_dhcp_type_without_dhcp_type_option_returns_err() {
         let msg = new_test_msg();
 
         assert_eq!(
@@ -2254,7 +2254,7 @@ mod tests {
     }
 
     #[test]
-    fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
+    fn buf_into_options_with_invalid_option_parses_other_valid_options() {
         let msg = || {
             let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
@@ -2274,7 +2274,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parameter_request_list_with_known_and_unknown_options_returns_known_options() {
+    fn parameter_request_list_with_known_and_unknown_options_returns_known_options() {
         assert_eq!(
             DhcpOption::from_raw_parts(
                 OptionCode::ParameterRequestList,
@@ -2361,14 +2361,14 @@ mod tests {
     }
 
     #[test]
-    fn test_message_with_option_overload_parses_extra_options() {
+    fn message_with_option_overload_parses_extra_options() {
         test_option_overload(Overload::SName);
         test_option_overload(Overload::File);
         test_option_overload(Overload::Both);
     }
 
     #[test]
-    fn test_client_identifier_from_str() {
+    fn client_identifier_from_str() {
         assert_matches::assert_matches!(
             ClientIdentifier::from_str("id:1234567890abcd"),
             Ok(ClientIdentifier { .. })

@@ -1070,7 +1070,7 @@ mod tests {
     /// Test that a malformed message does not cause MessageHandler to return an
     /// error.
     #[test]
-    fn test_handle_failed_parse() {
+    fn handle_failed_parse() {
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
         let mut handler = MessageHandler::new(&server);
         assert_matches::assert_matches!(

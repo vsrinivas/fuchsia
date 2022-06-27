@@ -1822,7 +1822,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_when_giaddr_set() {
+    fn dispatch_with_discover_returns_correct_offer_and_dest_giaddr_when_giaddr_set() {
         let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         disc.giaddr = random_ipv4_generator();
@@ -1852,8 +1852,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_unspecified(
-    ) {
+    fn dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_unspecified() {
         let mut server = new_test_minimal_server();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -1877,7 +1876,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_correct_offer_and_dest_yiaddr_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
+    fn dispatch_with_discover_returns_correct_offer_and_dest_yiaddr_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
     ) {
         let mut server = new_test_minimal_server();
         let disc = {
@@ -1910,8 +1909,8 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_broadcast_bit_is_set(
-    ) {
+    fn dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_broadcast_bit_is_set()
+    {
         let mut server = new_test_minimal_server();
         let giaddr = random_ipv4_generator();
         let disc = {
@@ -1942,7 +1941,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_error_if_ciaddr_set() {
+    fn dispatch_with_discover_returns_error_if_ciaddr_set() {
         use std::string::ToString as _;
         let mut server = new_test_minimal_server();
         let ciaddr = random_ipv4_generator();
@@ -1965,7 +1964,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_updates_server_state() {
+    fn dispatch_with_discover_updates_server_state() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
 
@@ -2035,19 +2034,19 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_updates_stash() {
+    fn dispatch_with_discover_updates_stash() {
         dispatch_with_discover_updates_stash_helper(std::iter::empty())
     }
 
     #[test]
-    fn test_dispatch_with_discover_with_client_id_updates_stash() {
+    fn dispatch_with_discover_with_client_id_updates_stash() {
         dispatch_with_discover_updates_stash_helper(std::iter::once(DhcpOption::ClientIdentifier(
             vec![1, 2, 3, 4, 5],
         )))
     }
 
     #[test]
-    fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
+    fn dispatch_with_discover_client_binding_returns_bound_addr() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2084,7 +2083,7 @@ pub mod tests {
 
     #[test]
     #[should_panic(expected = "active lease is unallocated in address pool")]
-    fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated() {
+    fn dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
 
@@ -2110,7 +2109,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
+    fn dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2148,8 +2147,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_expired_client_binding_unavailable_addr_returns_next_free_addr()
-    {
+    fn dispatch_with_discover_expired_client_binding_unavailable_addr_returns_next_free_addr() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2189,7 +2187,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_expired_client_binding_returns_available_requested_addr() {
+    fn dispatch_with_discover_expired_client_binding_returns_available_requested_addr() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2231,7 +2229,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_unavailable_requested_addr(
+    fn dispatch_with_discover_expired_client_binding_returns_next_addr_for_unavailable_requested_addr(
     ) {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut disc = new_test_discover();
@@ -2276,7 +2274,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_available_requested_addr_returns_requested_addr() {
+    fn dispatch_with_discover_available_requested_addr_returns_requested_addr() {
         let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2303,7 +2301,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_free_addr() {
+    fn dispatch_with_discover_unavailable_requested_addr_returns_next_free_addr() {
         let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
@@ -2326,7 +2324,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_unavailable_requested_addr_no_available_addr_returns_error() {
+    fn dispatch_with_discover_unavailable_requested_addr_no_available_addr_returns_error() {
         let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
 
@@ -2343,7 +2341,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_discover_no_requested_addr_no_available_addr_returns_error() {
+    fn dispatch_with_discover_no_requested_addr_no_available_addr_returns_error() {
         let mut server = new_test_minimal_server();
         let disc = new_test_discover();
         server.pool.universe.clear();
@@ -2377,27 +2375,27 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_client_offer_message_returns_error() {
+    fn dispatch_with_client_offer_message_returns_error() {
         test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPOFFER)
     }
 
     #[test]
-    fn test_dispatch_with_client_ack_message_returns_error() {
+    fn dispatch_with_client_ack_message_returns_error() {
         test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPACK)
     }
 
     #[test]
-    fn test_dispatch_with_client_nak_message_returns_error() {
+    fn dispatch_with_client_nak_message_returns_error() {
         test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPNAK)
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_returns_correct_ack() {
+    fn dispatch_with_selecting_request_returns_correct_ack() {
         test_selecting(true)
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_bdcast_unset_returns_unicast_ack() {
+    fn dispatch_with_selecting_request_bdcast_unset_returns_unicast_ack() {
         test_selecting(false)
     }
 
@@ -2455,7 +2453,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_maintains_server_invariants() {
+    fn dispatch_with_selecting_request_maintains_server_invariants() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
@@ -2477,7 +2475,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_wrong_server_ip_returns_error() {
+    fn dispatch_with_selecting_request_wrong_server_ip_returns_error() {
         let mut server = new_test_minimal_server();
         let mut req = new_test_request_selecting_state(&server, random_ipv4_generator());
 
@@ -2493,8 +2491,8 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_unknown_client_mac_returns_nak_maintains_server_invariants(
-    ) {
+    fn dispatch_with_selecting_request_unknown_client_mac_returns_nak_maintains_server_invariants()
+    {
         let mut server = new_test_minimal_server();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
@@ -2515,7 +2513,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_nak() {
+    fn dispatch_with_selecting_request_mismatched_requested_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let client_requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, client_requested_ip);
@@ -2553,7 +2551,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_expired_client_binding_returns_nak() {
+    fn dispatch_with_selecting_request_expired_client_binding_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
@@ -2582,7 +2580,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_no_reserved_addr_returns_nak() {
+    fn dispatch_with_selecting_request_no_reserved_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
@@ -2608,12 +2606,12 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_returns_correct_ack() {
+    fn dispatch_with_init_boot_request_returns_correct_ack() {
         test_init_reboot(true)
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_bdcast_unset_request_returns_correct_ack() {
+    fn dispatch_with_init_boot_bdcast_unset_request_returns_correct_ack() {
         test_init_reboot(false)
     }
 
@@ -2676,7 +2674,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak() {
+    fn dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak() {
         let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
@@ -2692,7 +2690,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_with_giaddr_set_returns_nak_with_broadcast_bit_set() {
+    fn dispatch_with_init_boot_request_with_giaddr_set_returns_nak_with_broadcast_bit_set() {
         let mut server = new_test_minimal_server();
         let mut req = new_test_request();
         req.giaddr = random_ipv4_generator();
@@ -2707,7 +2705,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_error() {
+    fn dispatch_with_init_boot_request_unknown_client_mac_returns_error() {
         let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
@@ -2721,7 +2719,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_mismatched_requested_addr_returns_nak() {
+    fn dispatch_with_init_boot_request_mismatched_requested_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2761,7 +2759,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_expired_client_binding_returns_nak() {
+    fn dispatch_with_init_boot_request_expired_client_binding_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2799,7 +2797,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_no_reserved_addr_returns_nak() {
+    fn dispatch_with_init_boot_request_no_reserved_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2836,7 +2834,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_returns_correct_ack() {
+    fn dispatch_with_renewing_request_returns_correct_ack() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2890,7 +2888,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_unknown_client_mac_returns_nak() {
+    fn dispatch_with_renewing_request_unknown_client_mac_returns_nak() {
         let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
@@ -2911,7 +2909,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_nak() {
+    fn dispatch_with_renewing_request_mismatched_requested_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2950,7 +2948,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_expired_client_binding_returns_nak() {
+    fn dispatch_with_renewing_request_expired_client_binding_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -2986,7 +2984,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_no_reserved_addr_returns_nak() {
+    fn dispatch_with_renewing_request_no_reserved_addr_returns_nak() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
@@ -3021,7 +3019,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_unknown_client_state_returns_error() {
+    fn dispatch_with_unknown_client_state_returns_error() {
         let mut server = new_test_minimal_server();
 
         let req = new_test_request();
@@ -3030,7 +3028,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_client_state_with_selecting_returns_selecting() {
+    fn get_client_state_with_selecting_returns_selecting() {
         let mut req = new_test_request();
 
         // Selecting state request must have server id and requested ip populated.
@@ -3041,7 +3039,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_client_state_with_initreboot_returns_initreboot() {
+    fn get_client_state_with_initreboot_returns_initreboot() {
         let mut req = new_test_request();
 
         // Init reboot state request must have requested ip populated.
@@ -3051,7 +3049,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_client_state_with_renewing_returns_renewing() {
+    fn get_client_state_with_renewing_returns_renewing() {
         let mut req = new_test_request();
 
         // Renewing state request must have ciaddr populated.
@@ -3061,14 +3059,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_client_state_with_unknown_returns_unknown() {
+    fn get_client_state_with_unknown_returns_unknown() {
         let msg = new_test_request();
 
         assert_eq!(get_client_state(&msg), Err(()));
     }
 
     #[test]
-    fn test_dispatch_with_client_msg_missing_message_type_option_returns_error() {
+    fn dispatch_with_client_msg_missing_message_type_option_returns_error() {
         let mut server = new_test_minimal_server();
         let mut msg = new_test_request();
         msg.options.clear();
@@ -3082,7 +3080,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_release_expired_leases_with_none_expired_releases_none() {
+    fn release_expired_leases_with_none_expired_releases_none() {
         let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
@@ -3133,7 +3131,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_release_expired_leases_with_all_expired_releases_all() {
+    fn release_expired_leases_with_all_expired_releases_all() {
         let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
@@ -3205,7 +3203,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_release_expired_leases_with_some_expired_releases_expired() {
+    fn release_expired_leases_with_some_expired_releases_expired() {
         let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
@@ -3264,7 +3262,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_known_release_updates_address_pool_retains_client_record() {
+    fn dispatch_with_known_release_updates_address_pool_retains_client_record() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut release = new_test_release();
 
@@ -3306,7 +3304,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_unknown_release_maintains_server_state_returns_unknown_mac_error() {
+    fn dispatch_with_unknown_release_maintains_server_state_returns_unknown_mac_error() {
         let mut server = new_test_minimal_server();
         let mut release = new_test_release();
 
@@ -3323,7 +3321,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_inform_returns_correct_ack() {
+    fn dispatch_with_inform_returns_correct_ack() {
         let mut server = new_test_minimal_server();
         let mut inform = new_test_inform();
 
@@ -3346,7 +3344,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_allocated_addr_returns_ok() {
+    fn dispatch_with_decline_for_allocated_addr_returns_ok() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
@@ -3378,7 +3376,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_available_addr_returns_ok() {
+    fn dispatch_with_decline_for_available_addr_returns_ok() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
@@ -3407,7 +3405,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_mismatched_addr_returns_err() {
+    fn dispatch_with_decline_for_mismatched_addr_returns_err() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
@@ -3449,7 +3447,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_expired_lease_returns_ok() {
+    fn dispatch_with_decline_for_expired_lease_returns_ok() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
@@ -3480,7 +3478,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_unknown_client_returns_err() {
+    fn dispatch_with_decline_for_unknown_client_returns_err() {
         let mut server = new_test_minimal_server();
         let mut decline = new_test_decline(&server);
 
@@ -3500,7 +3498,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_for_incorrect_server_returns_err() {
+    fn dispatch_with_decline_for_incorrect_server_returns_err() {
         let (mut server, time_source) = new_test_minimal_server_with_time_source();
         server.params.server_ips = vec![random_ipv4_generator()];
 
@@ -3530,7 +3528,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dispatch_with_decline_without_requested_addr_returns_err() {
+    fn dispatch_with_decline_without_requested_addr_returns_err() {
         let mut server = new_test_minimal_server();
         let decline = new_test_decline(&server);
 
@@ -3538,7 +3536,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_client_requested_lease_time() {
+    fn client_requested_lease_time() {
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -3577,7 +3575,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_client_requested_lease_time_greater_than_max() {
+    fn client_requested_lease_time_greater_than_max() {
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -3619,14 +3617,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_get_option_with_unset_option_returns_not_found() {
+    fn server_dispatcher_get_option_with_unset_option_returns_not_found() {
         let server = new_test_minimal_server();
         let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask);
         assert_eq!(result, Err(Status::NOT_FOUND));
     }
 
     #[test]
-    fn test_server_dispatcher_get_option_with_set_option_returns_option() {
+    fn server_dispatcher_get_option_with_set_option_returns_option() {
         let mut server = new_test_minimal_server();
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         assert_matches::assert_matches!(
@@ -3644,7 +3642,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_get_parameter_returns_parameter() {
+    fn server_dispatcher_get_parameter_returns_parameter() {
         let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         server.params.server_ips = vec![addr];
@@ -3656,7 +3654,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_set_option_returns_unit() {
+    fn server_dispatcher_set_option_returns_unit() {
         let mut server = new_test_minimal_server();
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         let () = server.dispatch_set_option(option()).expect("failed to set dhcp option");
@@ -3674,7 +3672,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_set_option_saves_to_stash() {
+    fn server_dispatcher_set_option_saves_to_stash() {
         let mask = [255, 255, 255, 0];
         let fidl_mask = fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
             addr: mask,
@@ -3698,7 +3696,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_set_parameter_saves_to_stash() {
+    fn server_dispatcher_set_parameter_saves_to_stash() {
         let (default, max) = (42, 100);
         let fidl_lease =
             fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
@@ -3720,7 +3718,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_set_parameter() {
+    fn server_dispatcher_set_parameter() {
         let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         let valid_parameter = || fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
@@ -3779,7 +3777,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_list_options_returns_set_options() {
+    fn server_dispatcher_list_options_returns_set_options() {
         let mut server = new_test_minimal_server();
         let mask = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
@@ -3805,7 +3803,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_list_parameters_returns_parameters() {
+    fn server_dispatcher_list_parameters_returns_parameters() {
         let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         server.params.server_ips = vec![addr];
@@ -3817,7 +3815,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_reset_options() {
+    fn server_dispatcher_reset_options() {
         let mut server = new_test_minimal_server();
         let empty_map = HashMap::new();
         assert_ne!(empty_map, server.options_repo);
@@ -3840,7 +3838,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_reset_parameters() {
+    fn server_dispatcher_reset_parameters() {
         let mut server = new_test_minimal_server();
         let default_params = test_server_params(
             vec![std_ip_v4!("192.168.0.1")],
@@ -3858,7 +3856,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_clear_leases() {
+    fn server_dispatcher_clear_leases() {
         let mut server = new_test_minimal_server();
         server.params.managed_addrs.pool_range_stop = std_ip_v4!("192.168.0.4");
         server.pool = AddressPool::new(server.params.managed_addrs.pool_range());
@@ -3901,14 +3899,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_server_dispatcher_validate_params() {
+    fn server_dispatcher_validate_params() {
         let mut server = new_test_minimal_server();
         let () = server.pool.universe.clear();
         assert_eq!(server.try_validate_parameters(), Err(Status::INVALID_ARGS));
     }
 
     #[test]
-    fn test_set_address_pool_fails_if_leases_present() {
+    fn set_address_pool_fails_if_leases_present() {
         let mut server = new_test_minimal_server();
         assert_matches::assert_matches!(
             server.records.insert(
@@ -3931,7 +3929,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_set_address_pool_updates_internal_pool() {
+    fn set_address_pool_updates_internal_pool() {
         let mut server = new_test_minimal_server();
         let () = server.pool.universe.clear();
         let () = server
@@ -3952,7 +3950,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_recovery_from_expired_persistent_record() {
+    fn recovery_from_expired_persistent_record() {
         let client_ip = net_declare::std::ip_v4!("192.168.0.1");
         let mut time_source = TestSystemTime::with_current_time();
         const LEASE_EXPIRATION_SECONDS: u32 = 60;
@@ -4072,7 +4070,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_build_offer_with_custom_t1_t2() {
+    fn build_offer_with_custom_t1_t2() {
         let mut server = new_test_minimal_server();
         let initial_disc = new_test_discover();
         let initial_offer_ip = random_ipv4_generator();
