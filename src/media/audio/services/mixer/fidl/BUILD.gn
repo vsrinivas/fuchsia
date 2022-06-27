@@ -29,8 +29,10 @@ source_set("fidl") {
     "ptr_decls.h",
     "reachability.cc",
     "reachability.h",
-    "real_clock_registry.cc",
-    "real_clock_registry.h",
+    "real_clock_factory.cc",
+    "real_clock_factory.h",
+    "synthetic_clock_factory.cc",
+    "synthetic_clock_factory.h",
   ]
 
   public_deps = [
@@ -57,15 +59,18 @@ executable("fidl_unittests") {
   testonly = true
 
   sources = [
+    "clock_registry_unittest.cc",
     "fidl_synthetic_clock_unittest.cc",
     "node_unittest.cc",
     "reachability_unittest.cc",
-    "real_clock_registry_unittest.cc",
+    "real_clock_factory_unittest.cc",
+    "synthetic_clock_factory_unittest.cc",
   ]
 
   deps = [
     ":fidl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/clock/testing",
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/fidl/testing",
     "//third_party/googletest:gmock",

@@ -103,10 +103,10 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT>, public internal::Base
     // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
     struct WithPublicCtor : public ServerT {
      public:
-      explicit WithPublicCtor(Args... args) : ServerT(args...) {}
+      explicit WithPublicCtor(Args... args) : ServerT(std::forward<Args>(args)...) {}
     };
 
-    auto server = std::make_shared<WithPublicCtor>(args...);
+    auto server = std::make_shared<WithPublicCtor>(std::forward<Args>(args)...);
     server->dispatcher_ = dispatcher;
 
     // Callback invoked when the server shuts down.

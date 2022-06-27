@@ -75,17 +75,15 @@ void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
 
   auto clock = realm_->CreateClock(name, request->domain(), request->adjustable());
 
-  std::unordered_set<std::shared_ptr<FidlSyntheticClock>> servers;
-  if (request->has_control()) {
-    auto server = FidlSyntheticClock::Create(dispatcher(), std::move(request->control()), clock);
-    servers.insert(server);
-    AddChildServer(server);
-  }
+  // This should not fail: since we just created `clock`, no other clock should have the same koid.
+  auto add_result = registry_->AddClock(clock);
+  FX_CHECK(add_result.is_ok()) << "Unexpected failure in ClockRegistry::AddClock: "
+                               << add_result.status_string();
 
-  clocks_[clock->koid()] = {
-      std::make_shared<::media_audio::UnadjustableClockWrapper>(clock),
-      std::move(servers),
-  };
+  // If the user wants explicit control, create a server.
+  if (request->has_control()) {
+    AddChildServer(FidlSyntheticClock::Create(dispatcher(), std::move(request->control()), clock));
+  }
 
   // Since the underlying zx::clock does not represent the SyntheticClock's actual value, send the
   // client a zx::clock handle that is unreadable. The client should read the clock via their handle
@@ -104,23 +102,11 @@ void FidlSyntheticClockRealm::ForgetClock(ForgetClockRequestView request,
     return;
   }
 
-  const auto koid_result = ZxClockToKoid(request->handle());
-  if (!koid_result.is_ok()) {
-    completer.ReplyError(koid_result.status_value());
+  if (auto result = registry_->ForgetClock(request->handle()); !result.is_ok()) {
+    completer.ReplyError(result.status_value());
     return;
   }
 
-  auto it = clocks_.find(koid_result.value());
-  if (it == clocks_.end()) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
-    return;
-  }
-
-  for (auto& server : it->second.servers) {
-    server->Shutdown();
-  }
-
-  clocks_.erase(it);
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockResponse::Builder(arena).Build());
@@ -133,23 +119,15 @@ void FidlSyntheticClockRealm::ObserveClock(ObserveClockRequestView request,
     return;
   }
 
-  const auto koid_result = ZxClockToKoid(request->handle());
-  if (!koid_result.is_ok()) {
-    completer.ReplyError(koid_result.status_value());
-    return;
-  }
-
-  auto it = clocks_.find(koid_result.value());
-  if (it == clocks_.end()) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
+  auto clock_result = registry_->FindClock(request->handle());
+  if (!clock_result.is_ok()) {
+    completer.ReplyError(clock_result.status_value());
     return;
   }
 
   // ObserveClock does not give permission to adjust.
-  auto clock = std::make_shared<::media_audio::UnadjustableClockWrapper>(it->second.clock);
-  auto server = FidlSyntheticClock::Create(dispatcher(), std::move(request->observe()), clock);
-  it->second.servers.insert(server);
-  AddChildServer(server);
+  auto clock = std::make_shared<::media_audio::UnadjustableClockWrapper>(clock_result.value());
+  AddChildServer(FidlSyntheticClock::Create(dispatcher(), std::move(request->observe()), clock));
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -174,34 +152,6 @@ void FidlSyntheticClockRealm::AdvanceBy(AdvanceByRequestView request,
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::SyntheticClockRealmAdvanceByResponse::Builder(arena).Build());
-}
-
-zx::clock FidlSyntheticClockRealm::CreateGraphControlled() {
-  auto clock =
-      realm_->CreateClock(std::string("GraphControlled") + std::to_string(num_graph_controlled_),
-                          Clock::kExternalDomain, /* adjustable = */ true);
-  num_graph_controlled_++;
-  clocks_[clock->koid()] = {.clock = clock};
-  return clock->DuplicateZxClockUnreadable();
-}
-
-std::shared_ptr<Clock> FidlSyntheticClockRealm::FindOrCreate(zx::clock zx_clock,
-                                                             std::string_view name,
-                                                             uint32_t domain) {
-  const auto koid_result = ZxClockToKoid(zx_clock);
-  if (!koid_result.is_ok()) {
-    return nullptr;
-  }
-
-  const auto koid = koid_result.value();
-  if (auto it = clocks_.find(koid); it != clocks_.end()) {
-    return it->second.clock;
-  }
-
-  // This is likely a client error: when the client is using a synthetic clock realm, all clocks
-  // MUST be created by that realm, either via CreateClock or CreateGraphControlled.
-  FX_LOGS(WARNING) << "clock not created by SyntheticClockRealm; koid=" << koid;
-  return nullptr;
 }
 
 }  // namespace media_audio

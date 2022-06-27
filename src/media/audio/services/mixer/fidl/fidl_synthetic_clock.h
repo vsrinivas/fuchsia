@@ -18,6 +18,7 @@
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_factory.h"
 
 namespace media_audio {
 
@@ -47,12 +48,14 @@ class FidlSyntheticClock
 };
 
 class FidlSyntheticClockRealm
-    : public BaseFidlServer<FidlSyntheticClockRealm, fuchsia_audio_mixer::SyntheticClockRealm>,
-      public ClockRegistry {
+    : public BaseFidlServer<FidlSyntheticClockRealm, fuchsia_audio_mixer::SyntheticClockRealm> {
  public:
   static std::shared_ptr<FidlSyntheticClockRealm> Create(
       async_dispatcher_t* fidl_thread_dispatcher,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end);
+
+  // Returns the clock registry used by this realm.
+  std::shared_ptr<ClockRegistry> registry() const { return registry_; }
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::SyntheticClockRealm>.
   void CreateClock(CreateClockRequestView request, CreateClockCompleter::Sync& completer) override;
@@ -62,11 +65,6 @@ class FidlSyntheticClockRealm
   void Now(NowRequestView request, NowCompleter::Sync& completer) override;
   void AdvanceBy(AdvanceByRequestView request, AdvanceByCompleter::Sync& completer) override;
 
-  // Implementation of ClockRegistry.
-  zx::clock CreateGraphControlled() override;
-  std::shared_ptr<Clock> FindOrCreate(zx::clock zx_clock, std::string_view name,
-                                      uint32_t domain) override;
-
  private:
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
@@ -75,14 +73,9 @@ class FidlSyntheticClockRealm
 
   FidlSyntheticClockRealm() = default;
 
-  struct ClockInfo {
-    std::shared_ptr<Clock> clock;
-    std::unordered_set<std::shared_ptr<FidlSyntheticClock>> servers;
-  };
-
   std::shared_ptr<SyntheticClockRealm> realm_ = SyntheticClockRealm::Create();
-  std::unordered_map<zx_koid_t, ClockInfo> clocks_;
-  uint64_t num_graph_controlled_ = 0;
+  std::shared_ptr<ClockRegistry> registry_ =
+      std::make_shared<ClockRegistry>(std::make_shared<SyntheticClockFactory>(realm_));
 };
 
 }  // namespace media_audio
