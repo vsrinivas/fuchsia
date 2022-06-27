@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "src/cobalt/bin/utils/status_utils.h"
+#include "src/cobalt/bin/utils/error_utils.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -20,30 +20,13 @@ namespace cobalt {
 namespace {
 
 using async::PostDelayedTask;
-using ::cobalt::StatusToString;
-using fuchsia::cobalt::LoggerFactory;
-using fuchsia::cobalt::Status;
+using ::cobalt::ErrorToString;
 using fxl::StringPrintf;
 
 constexpr uint32_t kMaxPendingEvents = 500u;
 
 uint64_t CurrentTimeUSecs(const timekeeper::Clock* clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
-}
-
-inline std::string ErrorToString(fuchsia::metrics::Error error) {
-  switch (error) {
-    case fuchsia::metrics::Error::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case fuchsia::metrics::Error::EVENT_TOO_BIG:
-      return "EVENT_TOO_BIG";
-    case fuchsia::metrics::Error::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case fuchsia::metrics::Error::SHUT_DOWN:
-      return "SHUT_DOWN";
-    case fuchsia::metrics::Error::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-  }
 }
 
 }  // namespace

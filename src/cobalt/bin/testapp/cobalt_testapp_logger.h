@@ -12,22 +12,9 @@
 #include <map>
 #include <string>
 
-namespace cobalt::testapp {
+#include "src/cobalt/bin/utils/error_utils.h"
 
-inline std::string ErrorToString(fuchsia::metrics::Error error) {
-  switch (error) {
-    case fuchsia::metrics::Error::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case fuchsia::metrics::Error::EVENT_TOO_BIG:
-      return "EVENT_TOO_BIG";
-    case fuchsia::metrics::Error::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case fuchsia::metrics::Error::SHUT_DOWN:
-      return "SHUT_DOWN";
-    case fuchsia::metrics::Error::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-  }
-}
+namespace cobalt::testapp {
 
 inline std::string ResultToString(fpromise::result<void, fuchsia::metrics::Error>&& result) {
   if (result.is_ok()) {
