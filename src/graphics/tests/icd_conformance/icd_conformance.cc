@@ -18,6 +18,8 @@
 #include "rapidjson/schema.h"
 #include "src/lib/elflib/elflib.h"
 #include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/json_parser/pretty_print.h"
 
@@ -55,6 +57,23 @@ const char* kManifestSchema = R"(
 }
 )";
 
+std::set<std::string> GetSymbolAllowlist() {
+  std::string allowlist;
+  EXPECT_TRUE(files::ReadFileToString("/pkg/data/imported_symbols.allowlist", &allowlist));
+  auto split_strings =
+      fxl::SplitStringCopy(allowlist, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::set<std::string> split_allowlist;
+  for (auto& string : split_strings) {
+    // Remove commented lines.
+    if (string.compare(0, 1, "#") == 0) {
+      continue;
+    }
+    split_allowlist.insert(std::move(string));
+  }
+
+  return split_allowlist;
+}
+
 void ValidateSharedObject(const zx::vmo& vmo) {
   fzl::VmoMapper mapper;
   ASSERT_EQ(ZX_OK, mapper.Map(vmo, 0, 0, ZX_VM_PERM_READ));
@@ -73,6 +92,21 @@ void ValidateSharedObject(const zx::vmo& vmo) {
     EXPECT_TRUE(kSoAllowlist.count(dep)) << "Disallowed library: " << dep;
   }
   EXPECT_LT(0u, deps->size());
+
+  auto dynamic_symbols = lib->GetAllDynamicSymbols();
+  ASSERT_TRUE(dynamic_symbols);
+
+  // Validate imported symbols against the Magma allowlist.
+  auto symbol_allowlist = GetSymbolAllowlist();
+  for (const auto& [name, symbol] : *dynamic_symbols) {
+    // We could also consider weak symbol references here, as resolving a weak symbol could change
+    // the behavior of the ICD. However, the Intel ICD uses a lot of weak symbols.
+    // TODO(fxbug.dev/103444): Consider checking weak symbols.
+    if (symbol.getBinding() == elflib::STB_GLOBAL && symbol.st_shndx == elflib::SHN_UNDEF) {
+      EXPECT_TRUE(symbol_allowlist.count(name))
+          << "Disallowed import: " << name << " type " << symbol.getType();
+    }
+  }
 
   auto warnings = lib->GetAndClearWarnings();
 
