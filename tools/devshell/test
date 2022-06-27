@@ -22,19 +22,30 @@ fx-config-read
 
 # Device discovery and building missing symbolizer are slow operations that
 # don't need to happen when the user requests specific operations, like help and
-# info.
-skip_slow_setup=false
+# info, or runs tests that only affect the host.
+# In future, we should consider moving these within fx test, which can better determine
+# whether or not the target device is affected by reading tests.json.
+info_only=false
+has_e2e=false
+host_tests_only=false
 for arg in "$@"; do
   if [[ "$arg" == "--help" || "$arg" == "-h" || "$arg" == "--info" || "$arg" == "--dry" ]]; then
-    skip_slow_setup=true
-    break
+    info_only=true
+  elif [[ "$arg" == "--e2e" || "$arg" == "--only-e2e" ]]; then
+    has_e2e=true
+  elif [[ "$arg" == "--host" ]]; then
+    host_tests_only=true
   fi
+
   if [[ "$arg" == "--" ]]; then
     break
   fi
 done
 
-if ! $skip_slow_setup; then
+if $info_only || ( ! $has_e2e && $host_tests_only ); then
+  # skip slow operations when not necessary.
+  :
+else
   # force build of required symbolizer host tools if they don't exist:
   fx-command-run host-tool --print symbolizer > /dev/null
   fx-command-run host-tool --print symbol-index > /dev/null
