@@ -180,12 +180,7 @@ impl Terminal {
     ) -> Result<usize, Errno> {
         let (bytes, signals) = self.write().main_read(current_task, data)?;
         self.send_signals(signals);
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(bytes)
     }
 
     /// `write` implementation of the main side of the terminal.
@@ -196,12 +191,7 @@ impl Terminal {
     ) -> Result<usize, Errno> {
         let (bytes, signals) = self.write().main_write(current_task, data)?;
         self.send_signals(signals);
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(bytes)
     }
 
     /// `wait_async` implementation of the replica side of the terminal.
@@ -233,12 +223,7 @@ impl Terminal {
     ) -> Result<usize, Errno> {
         let (bytes, signals) = self.write().replica_read(current_task, data)?;
         self.send_signals(signals);
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(bytes)
     }
 
     /// `write` implementation of the replica side of the terminal.
@@ -249,12 +234,7 @@ impl Terminal {
     ) -> Result<usize, Errno> {
         let (bytes, signals) = self.write().replica_write(current_task, data)?;
         self.send_signals(signals);
-
-        if bytes == 0 {
-            error!(EAGAIN)
-        } else {
-            Ok(bytes)
-        }
+        Ok(bytes)
     }
 
     /// Send the pending signals to the associated foreground process groups if they exist.
@@ -890,7 +870,7 @@ impl Queue {
 
     /// Returns whether the queue is ready to be read from.
     fn read_readyness(&self) -> FdEvents {
-        if self.readable_size() > 0 {
+        if self.readable {
             FdEvents::POLLIN
         } else {
             FdEvents::empty()

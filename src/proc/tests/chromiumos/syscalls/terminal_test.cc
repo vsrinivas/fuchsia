@@ -150,7 +150,7 @@ TEST(Pty, SigWinch) {
   });
 }
 
-ssize_t full_read(int fd, char *buf, size_t count) {
+ssize_t full_read(int fd, char* buf, size_t count) {
   ssize_t result = 0;
   while (count > 0) {
     ssize_t read_result = read(fd, buf, count);
@@ -203,6 +203,54 @@ TEST(Pty, ioctl_TCSETSF) {
     struct termios config;
     SAFE_SYSCALL(ioctl(main_terminal, TCGETS, &config));
     SAFE_SYSCALL(ioctl(main_terminal, TCSETSF, &config));
+  });
+}
+
+void full_write(int fd, char* buffer, ssize_t size) { ASSERT_EQ(write(fd, buffer, size), size); }
+
+TEST(Pty, EndOfFile) {
+  ForkHelper helper;
+
+  helper.RunInForkedProcess([&] {
+    // Create a new session here.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal();
+    int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR | O_NONBLOCK));
+
+    char source_buffer[2];
+    source_buffer[0] = 4;  // ^D
+    source_buffer[1] = '\n';
+    char target_buffer[2];
+
+    full_write(main_terminal, source_buffer, 1);
+    ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(-1, read(replica_terminal, target_buffer, 2));
+    ASSERT_EQ(EAGAIN, errno);
+
+    full_write(main_terminal, source_buffer, 2);
+    ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ('\n', target_buffer[0]);
+
+    full_write(main_terminal, source_buffer, 1);
+    full_write(main_terminal, source_buffer + 1, 1);
+    ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ('\n', target_buffer[0]);
+
+    source_buffer[0] = 4;  // ^D
+    source_buffer[1] = 4;  // ^D
+    full_write(main_terminal, source_buffer, 2);
+    ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(0, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(-1, read(replica_terminal, target_buffer, 2));
+    ASSERT_EQ(EAGAIN, errno);
+
+    source_buffer[0] = ' ';
+    source_buffer[1] = 4;  // ^D
+    full_write(main_terminal, source_buffer, 2);
+    ASSERT_EQ(1, SAFE_SYSCALL(read(replica_terminal, target_buffer, 2)));
+    ASSERT_EQ(' ', target_buffer[0]);
   });
 }
 
