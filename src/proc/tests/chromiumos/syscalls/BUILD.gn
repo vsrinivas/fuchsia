@@ -23,7 +23,9 @@ test("syscalls_test_bin") {
     "restart_read_test.cc",
     "socket_test.cc",
     "terminal_test.cc",
+    "test_helper.cc",
     "test_helper.h",
+    "test_helper_test.cc",
     "trivial_test.cc",
   ]
   deps = [

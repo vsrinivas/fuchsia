@@ -10,6 +10,8 @@
 
 namespace {
 TEST(PrctlTest, SubReaperTest) {
+  ForkHelper helper;
+
   // Reap children.
   prctl(PR_SET_CHILD_SUBREAPER, 1);
 
@@ -19,22 +21,19 @@ TEST(PrctlTest, SubReaperTest) {
   ASSERT_NE(0, parent_pid);
   ASSERT_NE(ancestor_pid, parent_pid);
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     // Fork again
-    if (SAFE_SYSCALL(fork()) == 0) {
-      // Nothing to do. Return and makes the child an orphan.
-    } else {
+    helper.RunInForkedProcess([&] {
       // Wait to be reparented.
       while (SAFE_SYSCALL(getppid()) != ancestor_pid) {
       }
-    }
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Expect that both child ends up being repated to this process.
-    for (size_t i = 0; i < 2; ++i) {
-      EXPECT_GT(wait(nullptr), 0);
-    }
+    });
+    // Parent return and makes the child an orphan.
+  });
+
+  // Expect that both child ends up being reaped to this process.
+  for (size_t i = 0; i < 2; ++i) {
+    EXPECT_GT(wait(nullptr), 0);
   }
 }
 }  // namespace

@@ -7,14 +7,18 @@
 
 #include <gtest/gtest.h>
 
-static int rfd = -1;
-static int wfd = -1;
+#include "src/proc/tests/chromiumos/syscalls/test_helper.h"
 
-static volatile pid_t child_pid = -1;
-static volatile bool child_wrote_data = false;
-static volatile bool parent_read_started = false;
+namespace {
 
-static void sig_handler(int, siginfo_t*, void*) {
+int rfd = -1;
+int wfd = -1;
+
+volatile pid_t child_pid = -1;
+volatile bool child_wrote_data = false;
+volatile bool parent_read_started = false;
+
+void sig_handler(int, siginfo_t*, void*) {
   if (!parent_read_started || child_pid <= 0) {
     // The parent has not entered the read syscall or the child PID as not been retrieved yet:
     // ignore.
@@ -25,7 +29,7 @@ static void sig_handler(int, siginfo_t*, void*) {
   kill(child_pid, SIGUSR2);
 }
 
-static void sig_handler_child(int, siginfo_t* siginfo, void*) {
+void sig_handler_child(int, siginfo_t* siginfo, void*) {
   if (child_wrote_data) {
     // The child already wrote the data: ignore.
     return;
@@ -40,6 +44,7 @@ static void sig_handler_child(int, siginfo_t* siginfo, void*) {
 }
 
 TEST(RestartRead, ReadFromPipeRestarts) {
+  ForkHelper helper;
   // Install the signal handler that will interrupt the read syscall. The `SA_RESTART` flag tells
   // the kernel to restart any interrupted syscalls that support being restarted.
   struct sigaction sa = {};
@@ -53,9 +58,7 @@ TEST(RestartRead, ReadFromPipeRestarts) {
   rfd = pipefd[0];
   wfd = pipefd[1];
 
-  pid_t pid = fork();
-  ASSERT_NE(pid, -1);
-  if (pid == 0) {
+  child_pid = helper.RunInForkedProcess([&] {
     // Child process.
 
     // Install a signal handler that will write the expected payload to the parent when signaled by
@@ -73,28 +76,18 @@ TEST(RestartRead, ReadFromPipeRestarts) {
 
     close(rfd);
     close(wfd);
+  });
 
-    // Explicitly exit so that we don't run the gtest reporting in the child as well.
-    _exit(EXIT_SUCCESS);
-  } else {
-    // Parent process.
+  // Parent process.
 
-    // Let the signal handler know which child to send a signal to.
-    child_pid = pid;
+  // Read the expected payload. The syscall will be interrupted, but userspace shouldn't be
+  // aware of this (as in, the result should NOT be EINTR).
+  int expected_data = 0;
+  parent_read_started = true;
+  ASSERT_EQ(read(rfd, &expected_data, sizeof(expected_data)), (ssize_t)sizeof(expected_data));
+  EXPECT_EQ(expected_data, 1);
 
-    // Read the expected payload. The syscall will be interrupted, but userspace shouldn't be
-    // aware of this (as in, the result should NOT be EINTR).
-    int expected_data = 0;
-    parent_read_started = true;
-    ASSERT_EQ(read(rfd, &expected_data, sizeof(expected_data)), (ssize_t)sizeof(expected_data));
-    EXPECT_EQ(expected_data, 1);
-
-    close(rfd);
-    close(wfd);
-
-    // Wait for the child to exit cleanly.
-    int child_status = 0;
-    ASSERT_EQ(wait(&child_status), child_pid);
-    ASSERT_EQ(child_status, 0);
-  }
+  close(rfd);
+  close(wfd);
 }
+}  // namespace

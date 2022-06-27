@@ -39,108 +39,54 @@ long sleep_ns(int count) {
   return syscall(SYS_nanosleep, &ts, nullptr);
 }
 
-int reap_children() {
-  for (;;) {
-    int wstatus;
-    if (waitpid(-1, &wstatus, 0) == -1) {
-      if (errno == EINTR) {
-        continue;
-      }
-      if (errno == ECHILD) {
-        // No more child, reaping is done.
-        return 0;
-      }
-      // Another error is unexpected.
-      perror("reap_children");
-      return -1;
-    }
-    if (!WIFEXITED(wstatus)) {
-      fprintf(stderr, "Child process did not exit normally.\n");
-      return -1;
-    }
-    if (WEXITSTATUS(wstatus) != 0) {
-      fprintf(stderr, "Child process did exit with an error: %d.\n", WEXITSTATUS(wstatus));
-      return -1;
-    }
-  }
-}
-
 int open_main_terminal() {
-  int fd = SAFE_SYSCALL(posix_openpt(O_RDWR));
+  int fd = SAFE_SYSCALL(posix_openpt(O_RDWR | O_NONBLOCK));
   SAFE_SYSCALL(grantpt(fd));
   SAFE_SYSCALL(unlockpt(fd));
   return fd;
 }
 
 TEST(JobControl, BackgroundProcessGroupDoNotUpdateOnDeath) {
-  // Reap children.
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
   ignore_signal(SIGTTOU);
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     SAFE_SYSCALL(setsid());
     int main_terminal = open_main_terminal();
     int replica_terminal = SAFE_SYSCALL(open(ptsname(main_terminal), O_RDWR));
 
-    if (SAFE_SYSCALL(tcgetpgrp(replica_terminal)) != getpid()) {
-      fprintf(stderr, "Expected foreground process group (%d) to be the current one (%d).\n",
-              tcgetpgrp(replica_terminal), getpid());
-      exit(-1);
-    }
-    pid_t child_pid;
-    if ((child_pid = SAFE_SYSCALL(fork())) == 0) {
+    ASSERT_EQ(SAFE_SYSCALL(tcgetpgrp(replica_terminal)), getpid());
+    pid_t child_pid = helper.RunInForkedProcess([&] {
       SAFE_SYSCALL(setpgid(0, 0));
       SAFE_SYSCALL(tcsetpgrp(replica_terminal, getpid()));
 
-      if (SAFE_SYSCALL(tcgetpgrp(replica_terminal)) != getpid()) {
-        fprintf(stderr, "Expected foreground process group (%d) to be the current one (%d).\n",
-                tcgetpgrp(replica_terminal), getpid());
-        exit(-1);
-      }
-    } else {
-      if (reap_children() != 0) {
-        exit(-1);
-      }
+      ASSERT_EQ(SAFE_SYSCALL(tcgetpgrp(replica_terminal)), getpid());
+    });
 
-      if (SAFE_SYSCALL(tcgetpgrp(replica_terminal)) != child_pid) {
-        fprintf(stderr, "Expected foreground process group (%d) to be the current one (%d).\n",
-                tcgetpgrp(replica_terminal), child_pid);
-        exit(-1);
-      }
+    // Wait for the child to die.
+    ASSERT_TRUE(helper.WaitForChildren());
 
-      if (setpgid(0, child_pid) != -1) {
-        fprintf(stderr,
-                "Expected not being able to join a process group that has no member anymore\n");
-        exit(-1);
-      }
-      if (errno != EPERM) {
-        fprintf(stderr, "Unexpected errnor. Expected EPERM (%d), got %d\n", EPERM, errno);
-        exit(-1);
-      }
-    }
+    // The foreground process group should still be the one from the child.
+    ASSERT_EQ(SAFE_SYSCALL(tcgetpgrp(replica_terminal)), child_pid);
 
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
-  }
+    ASSERT_EQ(setpgid(0, child_pid), -1)
+        << "Expected not being able to join a process group that has no member anymore";
+    ASSERT_EQ(errno, EPERM);
+  });
 }
 
 TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
-  // Reap children.
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
 
-    if (SAFE_SYSCALL(fork()) == 0) {
+    helper.RunInForkedProcess([&] {
       // Create a new, non leader, process group.
       SAFE_SYSCALL(setpgid(0, 0));
-      pid_t pid;
-      if ((pid = SAFE_SYSCALL(fork())) == 0) {
+      pid_t pid = helper.RunInForkedProcess([&] {
         // Deepest child. Set a SIGHUP handler, stop ourself, and check that we
         // are restarted and received the expected SIGHUP when our immediate
         // parent dies
@@ -151,32 +97,20 @@ TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
         // currently doesn't handle signal outside of syscalls, and doesn't
         // handle multiple signals at once.
         SAFE_SYSCALL(getpid());
-        if (received_signal[SIGHUP] == 0) {
-          fprintf(stderr, "Did not received expected SIGHUP\n");
-          exit(-1);
-        }
-      } else {
-        // Wait for the child to have stopped.
-        SAFE_SYSCALL(waitid(P_PID, pid, nullptr, WSTOPPED));
-      }
-    } else {
-      // Wait for the child to die and check it exited normally.
-      exit(reap_children());
-    }
-
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
-  }
+        EXPECT_EQ(received_signal[SIGHUP], 1);
+      });
+      // Wait for the child to have stopped.
+      SAFE_SYSCALL(waitid(P_PID, pid, nullptr, WSTOPPED));
+    });
+    // Wait for the child to die.
+    ASSERT_TRUE(helper.WaitForChildren());
+  });
 }
 
 TEST(Pty, SigWinch) {
-  // Reap children.
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
     int main_terminal = open_main_terminal();
@@ -185,11 +119,11 @@ TEST(Pty, SigWinch) {
     // Register a signal handler for sigusr1.
     register_signal_handler(SIGUSR1);
     ignore_signal(SIGTTOU);
+    ignore_signal(SIGHUP);
 
     // fork a child, move it to its own process group and makes it the
     // foreground one.
-    pid_t child_pid;
-    if ((child_pid = SAFE_SYSCALL(fork())) == 0) {
+    helper.RunInForkedProcess([&] {
       SAFE_SYSCALL(setpgid(0, 0));
       SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
 
@@ -204,35 +138,42 @@ TEST(Pty, SigWinch) {
       while (received_signal[SIGWINCH] == 0) {
         sleep_ns(10e7);
       }
-
-    } else {
-      // Wait for SIGUSR1
-      while (received_signal[SIGUSR1] == 0) {
-        sleep_ns(10e7);
-      }
-
-      // Resize the window, which must generate a SIGWINCH for the children.
-      struct winsize ws = {.ws_row = 10, .ws_col = 10};
-      SAFE_SYSCALL(ioctl(main_terminal, TIOCSWINSZ, &ws));
-
-      ASSERT_EQ(0, reap_children());
+    });
+    // Wait for SIGUSR1
+    while (received_signal[SIGUSR1] == 0) {
+      sleep_ns(10e7);
     }
 
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
+    // Resize the window, which must generate a SIGWINCH for the children.
+    struct winsize ws = {.ws_row = 10, .ws_col = 10};
+    SAFE_SYSCALL(ioctl(main_terminal, TIOCSWINSZ, &ws));
+  });
+}
+
+ssize_t full_read(int fd, char *buf, size_t count) {
+  ssize_t result = 0;
+  while (count > 0) {
+    ssize_t read_result = read(fd, buf, count);
+    if (read_result == -1) {
+      if (errno == EAGAIN) {
+        break;
+      }
+      return -1;
+    }
+    buf += read_result;
+    count -= read_result;
+    result += read_result;
   }
+  return result;
 }
 
 TEST(Pty, OpenDevTTY) {
-  // Reap children.
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
+
     int main_terminal = open_main_terminal();
     SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
@@ -241,38 +182,20 @@ TEST(Pty, OpenDevTTY) {
     struct stat stats;
     SAFE_SYSCALL(fstat(other_terminal, &stats));
 
-    if (major(stats.st_rdev) != 5 || minor(stats.st_rdev) != 0) {
-      fprintf(stderr, "Unexpected device identifier, expected 5, 0 but got %d, %d\n",
-              major(stats.st_rdev), minor(stats.st_rdev));
-      exit(1);
-    }
+    ASSERT_EQ(major(stats.st_rdev), 5u);
+    ASSERT_EQ(minor(stats.st_rdev), 0u);
 
-    if (write(other_terminal, "h\n", 2) != 2) {
-      fprintf(stderr, "Unable to write 2 bytes to /dev/tty\n");
-      exit(1);
-    }
+    ASSERT_EQ(write(other_terminal, "h\n", 2), 2);
     char buf[20];
-    if (read(main_terminal, buf, 20) != 3) {
-      fprintf(stderr, "Unable to read 2 bytes from main terminal.\n");
-      exit(1);
-    }
-    if (strncmp(buf, "h\r\n", 3) != 0) {
-      fprintf(stderr, "Unexpected buffer.\n");
-      exit(1);
-    }
-
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
-  }
+    ASSERT_EQ(full_read(main_terminal, buf, 20), 3);
+    ASSERT_EQ(strncmp(buf, "h\r\n", 3), 0);
+  });
 }
 
 TEST(Pty, ioctl_TCSETSF) {
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
-  if (SAFE_SYSCALL(fork()) == 0) {
+  helper.RunInForkedProcess([&] {
     // Create a new session here, and associate it with the new terminal.
     SAFE_SYSCALL(setsid());
     int main_terminal = open_main_terminal();
@@ -280,39 +203,35 @@ TEST(Pty, ioctl_TCSETSF) {
     struct termios config;
     SAFE_SYSCALL(ioctl(main_terminal, TCGETS, &config));
     SAFE_SYSCALL(ioctl(main_terminal, TCSETSF, &config));
-
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
-  }
+  });
 }
 
 TEST(Pty, SendSignals) {
-  // Reap children.
-  prctl(PR_SET_CHILD_SUBREAPER, 1);
+  ForkHelper helper;
 
-  if (SAFE_SYSCALL(fork()) == 0) {
-    // Create a new session here, and associate it with the new terminal.
-    SAFE_SYSCALL(setsid());
-    int main_terminal = open_main_terminal();
-    SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
+  std::map<int, char> signal_and_control_character;
+  signal_and_control_character[SIGINT] = 3;
+  signal_and_control_character[SIGQUIT] = 28;
+  signal_and_control_character[SIGSTOP] = 26;
 
-    // Register a signal handler for sigusr1.
-    register_signal_handler(SIGUSR1);
-    ignore_signal(SIGTTOU);
+  for (auto [s, c] : signal_and_control_character) {
+    auto signal = s;
+    auto character = c;
 
-    std::map<int, char> signal_and_control_character;
-    signal_and_control_character[SIGINT] = 3;
-    signal_and_control_character[SIGQUIT] = 28;
-    signal_and_control_character[SIGSTOP] = 26;
+    helper.RunInForkedProcess([&] {
+      // Create a new session here, and associate it with the new terminal.
+      SAFE_SYSCALL(setsid());
+      int main_terminal = open_main_terminal();
+      SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
 
-    for (auto [signal, character] : signal_and_control_character) {
+      // Register a signal handler for sigusr1.
+      register_signal_handler(SIGUSR1);
+      ignore_signal(SIGTTOU);
+      ignore_signal(SIGHUP);
+
       // fork a child, move it to its own process group and makes it the
       // foreground one.
-      pid_t child_pid;
-      if ((child_pid = SAFE_SYSCALL(fork())) == 0) {
+      pid_t child_pid = helper.RunInForkedProcess([&] {
         SAFE_SYSCALL(setpgid(0, 0));
         SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
 
@@ -323,52 +242,31 @@ TEST(Pty, SendSignals) {
         for (;;) {
           sleep_ns(10e8);
         }
-
-      } else {
-        // Wait for SIGUSR1
-        while (received_signal[SIGUSR1] == 0) {
-          sleep_ns(10e7);
-        }
-
-        // Send control character.
-        char buffer[1];
-        buffer[0] = character;
-        SAFE_SYSCALL(write(main_terminal, buffer, 1));
-
-        int wstatus;
-        pid_t received_pid = SAFE_SYSCALL(waitpid(child_pid, &wstatus, WUNTRACED));
-        if (received_pid != child_pid) {
-          fprintf(stderr, "Unexpected children. Expected %d, but got %d\n", child_pid,
-                  received_pid);
-          exit(1);
-        }
-        if (signal == SIGSTOP) {
-          if (!WIFSTOPPED(wstatus)) {
-            fprintf(stderr, "Expected the child to have been stopped.\n");
-            exit(1);
-          }
-          // Ensure the children is called, even when only stopped.
-          SAFE_SYSCALL(kill(child_pid, SIGKILL));
-          SAFE_SYSCALL(waitpid(child_pid, NULL, 0));
-        } else {
-          if (!WIFSIGNALED(wstatus)) {
-            fprintf(stderr, "Expected the child to have been killed by a signal.\n");
-            exit(1);
-          }
-          if (WTERMSIG(wstatus) != signal) {
-            fprintf(stderr, "Expected the child to have been killed by signal %d.\n", signal);
-            exit(1);
-          }
-        }
-        exit(0);
+      });
+      // Wait for SIGUSR1
+      while (received_signal[SIGUSR1] == 0) {
+        sleep_ns(10e7);
       }
-    }
 
-    // Ensure all forked process will exit and not reach back to gtest.
-    exit(0);
-  } else {
-    // Wait for all children to die.
-    ASSERT_EQ(0, reap_children());
+      // Send control character.
+      char buffer[1];
+      buffer[0] = character;
+      SAFE_SYSCALL(write(main_terminal, buffer, 1));
+
+      int wstatus;
+      pid_t received_pid = SAFE_SYSCALL(waitpid(child_pid, &wstatus, WUNTRACED));
+      ASSERT_EQ(received_pid, child_pid);
+      if (signal == SIGSTOP) {
+        ASSERT_TRUE(WIFSTOPPED(wstatus));
+        // Ensure the children is called, even when only stopped.
+        SAFE_SYSCALL(kill(child_pid, SIGKILL));
+        SAFE_SYSCALL(waitpid(child_pid, NULL, 0));
+      } else {
+        ASSERT_TRUE(WIFSIGNALED(wstatus));
+        ASSERT_EQ(WTERMSIG(wstatus), signal);
+      }
+    });
+    ASSERT_TRUE(helper.WaitForChildren());
   }
 }
 
