@@ -11,6 +11,7 @@
 
 import("//build/security/policies.gni")
 import("//products/bringup.gni")
+import("//src/sys/appmgr/core_shards.gni")
 
 # Minimal, and all products based on it, use the "standard" assembled_system()
 # impl in `//build/images/fuchsia`
@@ -27,7 +28,7 @@ product_bootfs_labels +=
 product_bootfs_labels += [ "//src/sys/core:bootfs" ]
 
 core_realm_package_name = "core-minimal"
-core_realm_shards += [
+core_realm_shards = [
   # TODO(fxbug.dev/102772)
   # The goal is to remove all developer packages and their capability routes from this product
   # config. This will require some refactoring of core shards.
@@ -46,6 +47,10 @@ core_realm_shards += [
   # needed in core.gni for tests that use the core image.
   "//src/intl/intl_services:intl_services_small_timezones_shard",
 ]
+
+# TODO(fxbug.dev/102390): deprecate appmgr from minimal.
+# Try to move up to core.gni or "higher" / specific product configurations.
+core_realm_shards += appmgr_core_shards
 
 # TODO(fxbug.dev/103301) Seems like virtualization shouldn't be needed by "minimal"
 core_realm_shards += [
