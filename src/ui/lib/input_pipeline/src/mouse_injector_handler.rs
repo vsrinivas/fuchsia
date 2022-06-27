@@ -614,6 +614,8 @@ mod tests {
                 },
             }),
             buttons: None,
+            // TODO(https://fxbug.dev/102570) Use millimeters.
+            counts_per_mm: 1,
         });
 
     /// Returns an TouchDescriptor.
@@ -1070,6 +1072,8 @@ mod tests {
                 wheel_v_range: None,
                 wheel_h_range: None,
                 buttons: None,
+                // TODO(https://fxbug.dev/102570) Use millimeters.
+                counts_per_mm: 1,
             });
         let input_event = create_mouse_event(
             cursor_location,

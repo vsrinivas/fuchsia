@@ -62,8 +62,8 @@ impl Default for RelativeLocation {
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse(MouseEvent::new(
 ///     MouseLocation::Relative(RelativePosition {
-///       counts: Position { x: 40.0, y: 20.0 },
-///       millimeters: Position { x: _, y: _ },
+///       counts: Position { x: 48.0, y: 24.0 },
+///       millimeters: Position { x: 4.0, y: 2.0 },
 ///     }),
 ///     Some(1),
 ///     Some(1),
@@ -151,7 +151,16 @@ pub struct MouseDeviceDescriptor {
 
     /// This is a vector of ids for the mouse buttons.
     pub buttons: Option<Vec<MouseButton>>,
+
+    /// This is the conversion factor between counts and millimeters for the
+    /// connected mouse input device. Default to DEFAULT_COUNTS_PER_MM.
+    pub counts_per_mm: i64,
 }
+
+/// By default, we use 12 counts per millimeter instead of the more common
+/// value of 39 counts per millimeter (1000 counts per inch), since that will
+/// throw off the PointerMotionSensorScaleHandler which is tuned for touchpads.
+pub const DEFAULT_COUNTS_PER_MM: i64 = 12;
 
 #[async_trait]
 impl input_device::InputDeviceBinding for MouseBinding {
@@ -234,6 +243,7 @@ impl MouseBinding {
             wheel_v_range: mouse_input_descriptor.scroll_v,
             wheel_h_range: mouse_input_descriptor.scroll_h,
             buttons: mouse_input_descriptor.buttons,
+            counts_per_mm: DEFAULT_COUNTS_PER_MM,
         };
 
         Ok(MouseBinding { event_sender: input_event_sender, device_descriptor })
@@ -298,13 +308,14 @@ impl MouseBinding {
         {
             MouseLocation::Absolute(Position { x: position_x as f32, y: position_y as f32 })
         } else {
+            let movement_x = mouse_report.movement_x.unwrap_or_default() as f32;
+            let movement_y = mouse_report.movement_y.unwrap_or_default() as f32;
             MouseLocation::Relative(RelativeLocation {
-                counts: Position {
-                    x: mouse_report.movement_x.unwrap_or_default() as f32,
-                    y: mouse_report.movement_y.unwrap_or_default() as f32,
+                counts: Position { x: movement_x, y: movement_y },
+                millimeters: Position {
+                    x: movement_x / DEFAULT_COUNTS_PER_MM as f32,
+                    y: movement_y / DEFAULT_COUNTS_PER_MM as f32,
                 },
-                // TODO(https://fxbug.dev/102566): Implement millimeters.
-                millimeters: Position::zero(),
             })
         };
 
@@ -495,6 +506,7 @@ mod tests {
                 },
             }),
             buttons: None,
+            counts_per_mm: DEFAULT_COUNTS_PER_MM,
         })
     }
 
@@ -541,7 +553,10 @@ mod tests {
     async fn movement_without_button() {
         let location = MouseLocation::Relative(RelativeLocation {
             counts: Position { x: 10.0, y: 16.0 },
-            millimeters: Position::zero(),
+            millimeters: Position {
+                x: 10.0 / DEFAULT_COUNTS_PER_MM as f32,
+                y: 16.0 / DEFAULT_COUNTS_PER_MM as f32,
+            },
         });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
@@ -613,7 +628,10 @@ mod tests {
     async fn down_with_movement() {
         let location = MouseLocation::Relative(RelativeLocation {
             counts: Position { x: 10.0, y: 16.0 },
-            millimeters: Position::zero(),
+            millimeters: Position {
+                x: 10.0 / DEFAULT_COUNTS_PER_MM as f32,
+                y: 16.0 / DEFAULT_COUNTS_PER_MM as f32,
+            },
         });
         let mouse_button: MouseButton = 3;
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -716,7 +734,10 @@ mod tests {
     async fn down_up_with_movement() {
         let location = MouseLocation::Relative(RelativeLocation {
             counts: Position { x: 10.0, y: 16.0 },
-            millimeters: Position::zero(),
+            millimeters: Position {
+                x: 10.0 / DEFAULT_COUNTS_PER_MM as f32,
+                y: 16.0 / DEFAULT_COUNTS_PER_MM as f32,
+            },
         });
         let button = 1;
 
@@ -786,7 +807,10 @@ mod tests {
     async fn down_move_up() {
         let location = MouseLocation::Relative(RelativeLocation {
             counts: Position { x: 10.0, y: 16.0 },
-            millimeters: Position::zero(),
+            millimeters: Position {
+                x: 10.0 / DEFAULT_COUNTS_PER_MM as f32,
+                y: 16.0 / DEFAULT_COUNTS_PER_MM as f32,
+            },
         });
         let button = 1;
 

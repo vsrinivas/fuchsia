@@ -127,6 +127,8 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
+            // TODO(https://fxbug.dev/102569) Use millimeters.
+            counts_per_mm: 1,
         });
 
     std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}

@@ -386,6 +386,8 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
+            // TODO(https://fxbug.dev/102567) Use millimeters.
+            counts_per_mm: 1,
         });
     const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
     const SMALL_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD * 0.1;

@@ -616,8 +616,10 @@ mod tests {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
                 mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                     counts: offset,
-                    // TODO(https://fxbug.dev/102566): Implement millimeters.
-                    millimeters: Position::zero(),
+                    millimeters: Position {
+                        x: offset.x / mouse_binding::DEFAULT_COUNTS_PER_MM as f32,
+                        y: offset.y / mouse_binding::DEFAULT_COUNTS_PER_MM as f32,
+                    },
                 }),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
@@ -633,6 +635,7 @@ mod tests {
                     wheel_v_range: None,
                     wheel_h_range: None,
                     buttons: None,
+                    counts_per_mm: mouse_binding::DEFAULT_COUNTS_PER_MM,
                 },
             ),
             event_time: zx::Time::get_monotonic(),
@@ -872,7 +875,8 @@ mod tests {
                 absolute_y_range: None,
                 wheel_v_range: None,
                 wheel_h_range: None,
-                buttons: Some(vec![0])
+                buttons: Some(vec![0]),
+                counts_per_mm: mouse_binding::DEFAULT_COUNTS_PER_MM,
             })
         );
     }

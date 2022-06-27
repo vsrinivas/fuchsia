@@ -277,6 +277,8 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
+            // TODO(https://fxbug.dev/102568) Use millimeters field.
+            counts_per_mm: 1,
         });
 
     // Maximum tolerable difference between "equal" scale factors. This is
