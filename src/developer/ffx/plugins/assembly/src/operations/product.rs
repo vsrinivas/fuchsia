@@ -45,14 +45,15 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         builder.set_structured_config(package, config)?;
     }
 
+    // Add product-specified packages and configuration
     builder
-        .add_product_packages(&config.product.packages)
+        .add_product_packages(config.product.packages)
         .context("Adding product-provided packages")?;
 
     if let Some(package_config_path) = additional_packages_path {
         let additional_packages =
             util::read_config(&package_config_path).context("Loading additional package config")?;
-        builder.add_product_packages(&additional_packages).context("Adding additional packages")?;
+        builder.add_product_packages(additional_packages).context("Adding additional packages")?;
     }
 
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;

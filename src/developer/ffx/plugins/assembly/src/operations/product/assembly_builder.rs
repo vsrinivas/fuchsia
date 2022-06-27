@@ -6,14 +6,17 @@ use crate::util;
 use anyhow::{anyhow, ensure, Context, Result};
 use assembly_config::{
     self as image_assembly_config,
-    product_config::{AssemblyInputBundle, PackageConfigPatch, StructuredConfigPatches},
+    product_config::{
+        AssemblyInputBundle, PackageConfigPatch, ProductPackageDetails, ProductPackagesConfig,
+        StructuredConfigPatches,
+    },
     FileEntry,
 };
 use assembly_config_data::ConfigDataBuilder;
+use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
 use assembly_structured_config::Repackager;
 use assembly_util::{InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
-use image_assembly_config::product_config::ProductPackagesConfig;
 use std::path::Path;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -119,7 +122,7 @@ impl ImageAssemblyConfigBuilder {
             .try_insert_all_unique(bundle.boot_args)
             .map_err(|arg| anyhow!("duplicate boot_arg found: {}", arg))?;
 
-        for entry in Self::file_entry_paths_from(bundle_path, bundle.bootfs_files) {
+        for entry in Self::file_entry_paths_from_bundle(bundle_path, bundle.bootfs_files) {
             self.bootfs_files.add_entry(entry)?;
         }
 
@@ -142,7 +145,7 @@ impl ImageAssemblyConfigBuilder {
         }
 
         for (package, entries) in config_data {
-            for entry in Self::file_entry_paths_from(bundle_path, entries) {
+            for entry in Self::file_entry_paths_from_bundle(bundle_path, entries) {
                 self.add_config_data_entry(&package, entry)?;
             }
         }
@@ -153,21 +156,6 @@ impl ImageAssemblyConfigBuilder {
             anyhow!("Only one input bundle can specify a qemu kernel path"),
         )?;
 
-        Ok(())
-    }
-
-    /// Add all the product-provided packages to the assembly configuration.
-    ///
-    /// This should be performed after the platform's bundles have been added,
-    /// so that any packages that are in conflict with the platform bundles are
-    /// flagged as being the issue (and not the platform being the issue).
-    pub fn add_product_packages(&mut self, packages: &ProductPackagesConfig) -> Result<()> {
-        for p in &packages.base {
-            self.base.add_package_from_path(p.manifest.as_std_path())?
-        }
-        for p in &packages.cache {
-            self.cache.add_package_from_path(p.manifest.as_std_path())?
-        }
         Ok(())
     }
 
@@ -185,7 +173,7 @@ impl ImageAssemblyConfigBuilder {
         Ok(())
     }
 
-    fn file_entry_paths_from(
+    fn file_entry_paths_from_bundle(
         base: &Path,
         entries: impl IntoIterator<Item = FileEntry>,
     ) -> Vec<FileEntry> {
@@ -196,6 +184,69 @@ impl ImageAssemblyConfigBuilder {
                 source: base.join(entry.source),
             })
             .collect()
+    }
+
+    /// Add all the product-provided packages to the assembly configuration.
+    ///
+    /// This should be performed after the platform's bundles have been added,
+    /// so that any packages that are in conflict with the platform bundles are
+    /// flagged as being the issue (and not the platform being the issue).
+    pub fn add_product_packages(&mut self, packages: ProductPackagesConfig) -> Result<()> {
+        // This closure provides us with a way to write this once, but also get
+        // around the multiple mutable borrows of self that are needed.
+        let add_to_package_set = |builder_pkg_set: &mut PackageSet,
+                                  builder_config_data: &mut ConfigDataMap,
+                                  product_pkg_set|
+         -> Result<()> {
+            for entry in product_pkg_set {
+                // Parse the package_manifest.json into a PackageManifest, returning
+                // both along with any config_data entries defined for the package.
+                let (path, manifest, config_data) = Self::parse_product_package_entry(entry)?;
+
+                // Add the config data entries to the map
+                if !config_data.is_empty() {
+                    builder_config_data
+                        .entry(manifest.name().to_string())
+                        .or_default()
+                        .add_all(config_data)?;
+                }
+
+                // Now add it to the builder's package set.
+                builder_pkg_set
+                    .add_package(PackageEntry { path: path.into_std_path_buf(), manifest })?;
+            }
+            Ok(())
+        };
+
+        add_to_package_set(&mut self.base, &mut self.config_data, packages.base)?;
+        add_to_package_set(&mut self.cache, &mut self.config_data, packages.cache)?;
+        Ok(())
+    }
+
+    /// Given the parsed json of the product package set entry, parse out the
+    /// package manifest, and any configuration associated with the package.
+    fn parse_product_package_entry(
+        entry: ProductPackageDetails,
+    ) -> Result<(PackageManifestPathBuf, PackageManifest, Vec<FileEntry>)> {
+        // Load the PackageManifest from the given path
+        let manifest = PackageManifest::try_load_from(&entry.manifest)
+            .with_context(|| format!("parsing {} as a package manifest", &entry.manifest))?;
+
+        // If there are config_data entries, convert the TypedPathBuf pairs into
+        // FileEntry objects.  From this point on, they are handled as FileEntry
+        // TODO(tbd): Switch FileEntry to use TypedPathBuf instead of String and
+        // PathBuf.
+        let config_data_entries = entry
+            .config_data
+            .into_iter()
+            // Explicitly call out the path types to make sure that they
+            // are ordered as expected in the tuple.
+            .map(|(destination, source): (PackageInternalPathBuf, SourcePathBuf)| FileEntry {
+                destination: destination.to_string(),
+                source: source.into_std_path_buf(),
+            })
+            .collect();
+        Ok((entry.manifest, manifest, config_data_entries))
     }
 
     /// Add an entry to `config_data` for the given package.  If the entry
@@ -436,11 +487,17 @@ impl<T> IntoIterator for NamedMap<T> {
 /// A named set of packages with their manifests parsed into memory, keyed by package name.
 type PackageSet = NamedMap<PackageEntry>;
 impl PackageSet {
+    /// Add the package described by the ProductPackageSetEntry to the
+    /// PackageSet
+    fn add_package(&mut self, entry: PackageEntry) -> Result<()> {
+        self.try_insert_unique(entry.name().to_owned(), entry)
+    }
+
     /// Parse the given path as a PackageManifest, and add it to the PackageSet.
     fn add_package_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         {
             let entry = PackageEntry::parse_from(path)?;
-            self.try_insert_unique(entry.name().to_owned(), entry)
+            self.add_package(entry)
         }
         .with_context(|| format!("Adding package to set: {}", self.name))
     }
@@ -453,11 +510,23 @@ impl PackageSet {
 
 type FileEntryMap = NamedMap<PathBuf>;
 impl FileEntryMap {
+    /// Add a single FileEntry to the map, if the 'destination' path is a
+    /// duplicate, return an error, otherwise add the entry.
     fn add_entry(&mut self, entry: FileEntry) -> Result<()> {
         self.try_insert_unique(entry.destination, entry.source)
             .with_context(|| format!("Adding entry to set: {}", self.name))
     }
 
+    /// Add FileEntries to the map, ensuring that the destination paths are all
+    /// unique within the map.
+    fn add_all(&mut self, entries: impl IntoIterator<Item = FileEntry>) -> Result<()> {
+        for entry in entries.into_iter() {
+            self.add_entry(entry)?;
+        }
+        Ok(())
+    }
+
+    /// Return the contents of the FileMap as a Vec<FileEntry>.
     fn into_file_entries(self) -> Vec<FileEntry> {
         self.entries
             .into_iter()
@@ -471,6 +540,7 @@ mod tests {
     use super::*;
     use assembly_package_utils::PackageManifestPathBuf;
     use camino::Utf8PathBuf;
+    use fuchsia_archive;
     use fuchsia_pkg::{PackageBuilder, PackageManifest};
     use std::fs::File;
     use tempfile::TempDir;
@@ -602,13 +672,32 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_with_product_packages() {
+    fn test_builder_with_product_packages_and_config() {
         let outdir = TempDir::new().unwrap();
+
+        // Create some config_data source files
+        let config_data_source_dir = outdir.path().join("config_data_source");
+        let config_data_source_a = config_data_source_dir.join("cfg.txt");
+        let config_data_source_b = config_data_source_dir.join("other.json");
+        std::fs::create_dir_all(&config_data_source_dir).unwrap();
+        std::fs::write(&config_data_source_a, "source a").unwrap();
+        std::fs::write(&config_data_source_b, "{}").unwrap();
 
         let packages = ProductPackagesConfig {
             base: vec![
                 write_empty_pkg(&outdir, "base_a").into(),
-                write_empty_pkg(&outdir, "base_b").into(),
+                ProductPackageDetails {
+                    manifest: write_empty_pkg(&outdir, "base_b").into(),
+                    config_data: BTreeMap::default(),
+                },
+                ProductPackageDetails {
+                    manifest: write_empty_pkg(&outdir, "base_c").into(),
+                    config_data: BTreeMap::from([
+                        ("dest/path/cfg.txt".into(), config_data_source_a.to_str().unwrap().into()),
+                        ("other_data.json".into(), config_data_source_b.to_str().unwrap().into()),
+                    ]),
+                }
+                .into(),
             ],
             cache: vec![
                 write_empty_pkg(&outdir, "cache_a").into(),
@@ -634,20 +723,45 @@ mod tests {
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
-        builder.add_product_packages(&packages).unwrap();
+        builder.add_product_packages(packages).unwrap();
         let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         assert_eq!(
             result.base,
-            ["base_a", "base_b", "platform_a", "platform_b"]
-                .iter()
-                .map(|p| outdir.path().join(p))
-                .collect::<Vec<_>>()
+            [
+                "base_a",
+                "base_b",
+                "base_c",
+                "config_data/package_manifest.json",
+                "platform_a",
+                "platform_b",
+            ]
+            .iter()
+            .map(|p| outdir.path().join(p))
+            .collect::<Vec<_>>()
         );
         assert_eq!(
             result.cache,
             vec![outdir.path().join("cache_a"), outdir.path().join("cache_b")]
         );
+
+        // Validate product-provided config-data is correct
+        let config_data_pkg =
+            PackageManifest::try_load_from(outdir.path().join("config_data/package_manifest.json"))
+                .unwrap();
+        let metafar_blobinfo = config_data_pkg.blobs().iter().find(|b| b.path == "meta/").unwrap();
+        let mut far_reader =
+            fuchsia_archive::Reader::new(File::open(&metafar_blobinfo.source_path).unwrap())
+                .unwrap();
+
+        // Assert both config_data files match those written above
+        let config_data_a_bytes =
+            far_reader.read_file("meta/data/base_c/dest/path/cfg.txt").unwrap();
+        let config_data_a = std::str::from_utf8(&config_data_a_bytes).unwrap();
+        let config_data_b_bytes = far_reader.read_file("meta/data/base_c/other_data.json").unwrap();
+        let config_data_b = std::str::from_utf8(&config_data_b_bytes).unwrap();
+        assert_eq!(config_data_a, "source a");
+        assert_eq!(config_data_b, "{}");
     }
 
     #[test]
@@ -674,7 +788,7 @@ mod tests {
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
-        let result = builder.add_product_packages(&packages);
+        let result = builder.add_product_packages(packages);
         assert!(result.is_err());
     }
 

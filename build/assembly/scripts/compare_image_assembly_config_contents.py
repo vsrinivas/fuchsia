@@ -18,7 +18,8 @@ FileHash = str
 T = TypeVar('T')
 
 # packages and bootfs filenames which we knowingly mutate in the product assembly process
-MISMATCH_EXCEPTIONS = {"session_manager", "meta/console.cvf"}
+MISMATCH_PACKAGE_EXCEPTIONS = ["session_manager", "config-data"]
+MISMATCH_FILE_EXCEPTIONS = ["meta/console.cvf"]
 
 
 def compare_pkg_sets(
@@ -79,7 +80,7 @@ def compare_packages(
 
     for name in sorted(set(first_by_name.keys()).intersection(
             second_by_name.keys())):
-        if name in MISMATCH_EXCEPTIONS:
+        if name in MISMATCH_PACKAGE_EXCEPTIONS:
             continue
 
         first_path, first_manifest = first_by_name[name]
@@ -129,7 +130,7 @@ def compare_file_hash_maps(
         second_map: Dict[FilePath, FileHash], item_type: str) -> List[str]:
     errors: List[str] = []
     for (name, file_hash) in sorted(first_map.items()):
-        if name in MISMATCH_EXCEPTIONS:
+        if name in MISMATCH_FILE_EXCEPTIONS:
             continue
 
         if name not in second_map:
@@ -146,7 +147,7 @@ def compare_file_hash_maps(
 
     if second_map:
         for name in second_map.keys():
-            if name in MISMATCH_EXCEPTIONS:
+            if name in MISMATCH_FILE_EXCEPTIONS:
                 continue
             errors.append(f"added ({item_type}): {name}")
 

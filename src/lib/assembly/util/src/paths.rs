@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -84,6 +84,18 @@ impl<P: PathTypeMarker> TypedPathBuf<P> {
     }
 }
 
+impl<P: PathTypeMarker> AsRef<Utf8Path> for TypedPathBuf<P> {
+    fn as_ref(&self) -> &Utf8Path {
+        self.inner.as_ref()
+    }
+}
+
+impl<P: PathTypeMarker> AsRef<Path> for TypedPathBuf<P> {
+    fn as_ref(&self) -> &Path {
+        self.inner.as_ref()
+    }
+}
+
 /// The Debug implementation displays like a type-struct that carries the marker
 /// type for the path:
 ///
@@ -110,7 +122,7 @@ impl<P: PathTypeMarker> std::fmt::Display for TypedPathBuf<P> {
 /// places where multiple different type markers are used:
 ///
 /// ```
-/// fn some_func(source: TypedPathBuf<Source>, TypedPathBuf<Destination>);
+/// fn some_func(source: TypedPathBuf<Source>,     TypedPathBuf<Destination>);
 ///
 /// // This infers the types of the paths:
 /// some_func("source_path".into(), "destination_path".into());
@@ -410,6 +422,20 @@ mod tests {
         let typed = TypedPathBuf::<TestPathType>::from("some/path");
         let utf8_path = Utf8PathBuf::from("some/path");
         assert_eq!(*typed, utf8_path);
+    }
+
+    #[test]
+    fn typed_path_as_ref_utf8path() {
+        let original = TypedPathBuf::<TestPathType>::from("a/path");
+        let path: &Utf8Path = original.as_ref();
+        assert_eq!(path, Utf8Path::new("a/path"))
+    }
+
+    #[test]
+    fn typed_path_as_ref_path() {
+        let original = TypedPathBuf::<TestPathType>::from("a/path");
+        let path: &Path = original.as_ref();
+        assert_eq!(path, Path::new("a/path"))
     }
 
     #[test]
