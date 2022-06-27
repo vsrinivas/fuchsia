@@ -286,6 +286,7 @@ fuchsia_unittest_package("appmgr_unittests") {
   deps = [
     ":test_component_using_storage",
     ":unittest_bin",
+    "//third_party/sbase:sleep_bin",
   ]
 
   manifest = "meta/appmgr_unittests.cmx"
