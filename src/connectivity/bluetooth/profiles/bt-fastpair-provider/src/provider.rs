@@ -49,7 +49,7 @@ impl Provider {
         let host_watcher = HostWatcher::new(watcher);
         Ok(Self {
             config,
-            account_keys: AccountKeyList::new(),
+            account_keys: AccountKeyList::load()?,
             advertiser,
             gatt,
             host_watcher,
@@ -358,6 +358,7 @@ mod tests {
     use crate::types::packets::tests::{
         ACCOUNT_KEY_REQUEST, KEY_BASED_PAIRING_REQUEST, PASSKEY_REQUEST,
     };
+    use crate::types::tests::expect_keys_at_path;
     use crate::types::{keys, ModelId};
 
     async fn setup_provider(
@@ -379,7 +380,7 @@ mod tests {
 
         let this = Provider {
             config,
-            account_keys: AccountKeyList::new(),
+            account_keys: AccountKeyList::with_capacity_and_keys(10, vec![]),
             advertiser,
             gatt,
             host_watcher,
@@ -544,6 +545,9 @@ mod tests {
         pin_mut!(server_fut);
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
+        // Before starting the pairing procedure, there should be no saved Account Keys.
+        expect_keys_at_path(AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH, vec![]);
+
         // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
         // defined in the GFPS.
         let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
@@ -603,8 +607,11 @@ mod tests {
             /* expect_item= */ false,
         );
         let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
-        // TODO(fxbug.dev/97271): When the keys are actually written to persistent storage, verify
-        // that the key was actually saved.
+        // Account Key should be saved to persistent storage.
+        expect_keys_at_path(
+            AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH,
+            vec![AccountKey::new(ACCOUNT_KEY_REQUEST)],
+        );
     }
 
     #[fuchsia::test]

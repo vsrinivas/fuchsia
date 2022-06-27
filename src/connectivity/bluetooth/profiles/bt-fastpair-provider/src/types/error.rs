@@ -35,6 +35,15 @@ pub enum Error {
     #[error("No Account Key could decrypt the key-based pairing payload")]
     NoAvailableKeys,
 
+    /// Encountered when trying to commit/load the set of saved Account Keys to/from isolated
+    /// persistent storage.
+    #[error("Account Key storage error: {:?}. Message: {}", err, msg)]
+    AccountKeyStorage { err: std::io::Error, msg: String },
+
+    /// Encountered when trying to serialize or deserialize data using the `serde_json` crate.
+    #[error("Serde error: {0:?}")]
+    Serde(serde_json::Error),
+
     /// Internal component Error.
     #[error("Internal component Error: {0}")]
     InternalError(#[from] anyhow::Error),
@@ -46,6 +55,10 @@ pub enum Error {
 impl Error {
     pub fn internal(msg: &str) -> Self {
         Self::InternalError(format_err!("{}", msg))
+    }
+
+    pub fn key_storage(err: std::io::Error, msg: &str) -> Self {
+        Self::AccountKeyStorage { err, msg: msg.to_string() }
     }
 }
 
@@ -64,5 +77,11 @@ impl From<gatt::PublishServiceError> for Error {
 impl From<le::PeripheralError> for Error {
     fn from(src: le::PeripheralError) -> Error {
         Self::AdvertiseError(src)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(src: serde_json::Error) -> Error {
+        Self::Serde(src)
     }
 }

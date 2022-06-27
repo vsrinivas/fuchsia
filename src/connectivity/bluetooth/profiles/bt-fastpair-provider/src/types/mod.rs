@@ -5,8 +5,10 @@
 use aes::cipher::generic_array::GenericArray;
 use aes::{Aes128, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use lru_cache::LruCache;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
-use tracing::debug;
+use std::{fs, io, path};
+use tracing::{debug, warn};
 
 use crate::advertisement::bloom_filter;
 
@@ -43,7 +45,7 @@ impl From<ModelId> for [u8; 3] {
 
 /// A key used during the Fast Pair Pairing Procedure.
 /// This key is a temporary value that lives for the lifetime of a procedure.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SharedSecret([u8; 16]);
 
 impl SharedSecret {
@@ -76,7 +78,7 @@ impl SharedSecret {
 
 /// A long-lived key that allows the Provider to be recognized as belonging to a certain user
 /// account.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct AccountKey(SharedSecret);
 
 impl AccountKey {
@@ -106,17 +108,44 @@ impl From<&SharedSecret> for AccountKey {
 const MAX_ACCOUNT_KEYS: usize = 10;
 
 /// Manages the set of saved Account Keys.
+///
 /// By default, the maximum number of keys that will be saved is `MAX_ACCOUNT_KEYS`. When full, the
 /// `AccountKeyList` will evict the least recently used Account Key.
+///
+/// Account Keys are written to isolated persistent storage and are maintained across reboots. The
+/// set of saved keys will only be erased on device factory resets.
+/// To avoid writing to persistent storage too often, only new Account Keys are written to storage.
+/// Writes for existing keys will result in cache "hits" (e.g LRU ordering updated) but will not be
+/// updated in the backing storage file.
 pub struct AccountKeyList {
     /// The set of saved Account Keys. Keys are evicted in an LRU manner. There is no cache value
     /// as we only care about maintaining the keys.
     keys: LruCache<AccountKey, ()>,
+    /// The file path pointing to the isolated persistent storage which saves the Account Keys.
+    path: path::PathBuf,
 }
 
 impl AccountKeyList {
-    pub fn new() -> Self {
-        Self { keys: LruCache::new(MAX_ACCOUNT_KEYS) }
+    /// Attempts to load the current set of saved Account Keys from isolated persistent storage.
+    /// Returns the updated AccountKeyList of keys on success, Error otherwise.
+    pub fn load() -> Result<Self, Error> {
+        Self::load_from_path(Self::PERSISTED_ACCOUNT_KEYS_FILEPATH)
+    }
+
+    #[cfg(test)]
+    pub fn with_capacity_and_keys(capacity: usize, keys: Vec<AccountKey>) -> Self {
+        let mut cache = LruCache::new(capacity);
+        keys.into_iter().for_each(|k| {
+            let _ = cache.insert(k, ());
+        });
+        Self { keys: cache, path: path::PathBuf::from(Self::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH) }
+    }
+
+    /// Test-only hook to override the file path of the isolated persistent storage. Useful to avoid
+    /// multiple tests concurrently writing to the same place.
+    #[cfg(test)]
+    fn set_path(&mut self, path: String) {
+        self.path = path::PathBuf::from(path);
     }
 
     /// Returns an Iterator over the saved Account Keys.
@@ -131,22 +160,18 @@ impl AccountKeyList {
         self.keys.get_mut(&key).map(|_| ()).ok_or(Error::internal("no key to mark as used"))
     }
 
-    #[cfg(test)]
-    pub fn with_capacity_and_keys(capacity: usize, keys: Vec<AccountKey>) -> Self {
-        let mut cache = LruCache::new(capacity);
-        keys.into_iter().for_each(|k| {
-            let _ = cache.insert(k, ());
-        });
-        Self { keys: cache }
-    }
-
+    /// Save an Account Key to the persisted set of keys.
     pub fn save(&mut self, key: AccountKey) {
-        // If the key has already been saved, it will be updated in the LRU cache.
+        // If the `key` already exists, it will be updated in the LRU cache. If the cache is
+        // full, the least-recently used (LRU) key will be evicted.
         if self.keys.insert(key, ()).is_some() {
             debug!("Account Key already saved");
         }
 
-        // TODO(fxbug.dev/97271): Save set of keys to persistent storage to persist across reboots.
+        // Store the updated set of keys in persistent storage.
+        if let Err(e) = self.store() {
+            warn!("Couldn't update key list in isolated persistent storage: {:?}", e);
+        }
     }
 
     /// Returns the service data payload associated with the current set of Account Keys.
@@ -187,13 +212,92 @@ impl AccountKeyList {
 
         Ok(result)
     }
+
+    // Default file path for Account Keys written to isolated persistent storage.
+    const PERSISTED_ACCOUNT_KEYS_FILEPATH: &'static str = "/data/account_keys.json";
+
+    // Default file path for Account Keys written to isolated persistent storage. Test only.
+    #[cfg(test)]
+    pub(crate) const TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH: &'static str =
+        "data/test_account_keys.json";
+
+    /// Attempts to read and parse the contents of the persistent storage at the provided `path`.
+    /// Returns an `AccountKeyList` on success, Error otherwise.
+    fn load_from_path<P: AsRef<path::Path>>(path: P) -> Result<Self, Error> {
+        let mut this = Self {
+            keys: LruCache::new(MAX_ACCOUNT_KEYS),
+            path: path::PathBuf::from(path.as_ref()),
+        };
+        this.load_internal()?;
+        Ok(this)
+    }
+
+    /// Attempts to update the locally-saved set of keys from persistent storage.
+    /// Returns Error if the storage file is unable to be opened.
+    fn load_internal(&mut self) -> Result<(), Error> {
+        match fs::File::open(&self.path) {
+            Ok(file) => {
+                // Build the LRU cache from the contents of the file. Because keys are stored in
+                // LRU order, we build the cache in the same order to preserve LRU status.
+                debug!("Reading Account Keys from existing file");
+                let key_list = KeyList::load(file)?;
+                key_list.0.into_iter().for_each(|k| {
+                    let _ = self.keys.insert(k, ());
+                });
+                Ok(())
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                debug!("Persistent storage file not found");
+                Ok(())
+            }
+            Err(e) => Err(Error::key_storage(e, "couldn't load key storage file")),
+        }
+    }
+
+    /// Commits the current set of Account Keys to isolated persistent storage.
+    /// Keys are stored in LRU order.
+    fn store(&self) -> Result<(), Error> {
+        let path = path::Path::new(&self.path);
+        let file_name = path.file_name().ok_or(Error::key_storage(
+            io::ErrorKind::InvalidInput.into(),
+            "couldn't build file name from path",
+        ))?;
+        let file_path = path.with_file_name(file_name.to_os_string());
+
+        let file = fs::File::create(&file_path)
+            .map_err(|e| Error::key_storage(e, "couldn't create file"))?;
+        let values = KeyList(self.keys().cloned().collect());
+        serde_json::to_writer(file, &values)?;
+        Ok(())
+    }
+}
+
+/// Convenience type for the serialization and deserialization of Account Keys.
+#[derive(Serialize, Deserialize)]
+struct KeyList(Vec<AccountKey>);
+
+impl KeyList {
+    fn load<R: io::Read>(reader: R) -> Result<Self, Error> {
+        serde_json::from_reader(reader).map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+
+    /// Loads the set of saved Account Keys from storage and verifies that it's equal to the
+    /// provided `expected_keys`.
+    #[track_caller]
+    pub(crate) fn expect_keys_at_path<P: AsRef<path::Path>>(
+        path: P,
+        expected_keys: Vec<AccountKey>,
+    ) {
+        let read_keys = AccountKeyList::load_from_path(path).expect("can read from file");
+        assert_eq!(read_keys.keys().cloned().collect::<Vec<_>>(), expected_keys);
+    }
 
     #[test]
     fn model_id_from_u32() {
@@ -221,7 +325,7 @@ mod tests {
 
     #[test]
     fn empty_account_key_list_service_data() {
-        let empty = AccountKeyList::new();
+        let empty = AccountKeyList::with_capacity_and_keys(1, vec![]);
         let service_data = empty.service_data().expect("can build service data");
         let expected = [0x00];
         assert_eq!(service_data, expected);
@@ -284,7 +388,7 @@ mod tests {
 
     #[test]
     fn account_key_lru_eviction() {
-        let mut list = AccountKeyList::new();
+        let mut list = AccountKeyList::with_capacity_and_keys(MAX_ACCOUNT_KEYS, vec![]);
         let max: u8 = MAX_ACCOUNT_KEYS as u8;
 
         for i in 1..max + 1 {
@@ -317,8 +421,62 @@ mod tests {
 
     #[test]
     fn mark_used_nonexistent_key_is_error() {
-        let mut list = AccountKeyList::new();
+        let mut list = AccountKeyList::with_capacity_and_keys(1, vec![]);
         let key = AccountKey::new([1; 16]);
         assert_matches!(list.mark_used(&key), Err(_));
+    }
+
+    #[fuchsia::test]
+    fn load_keys_from_nonexistent_file() {
+        const EXAMPLE_FILEPATH: &str = "/data/test_account_keys0.json";
+        expect_keys_at_path(EXAMPLE_FILEPATH, vec![]);
+    }
+
+    #[fuchsia::test]
+    fn commit_and_load_keys_to_and_from_a_file() {
+        const EXAMPLE_FILEPATH: &str = "/data/test_account_keys1.json";
+
+        let key1 = AccountKey::new([1; 16]);
+        let key2 = AccountKey::new([2; 16]);
+        let key3 = AccountKey::new([3; 16]);
+        let example_keys = vec![key1, key2, key3];
+        let mut keys = AccountKeyList::with_capacity_and_keys(5, example_keys.clone());
+        // Override the file path with a test-local path so that tests don't access/overwrite the
+        // same data file.
+        keys.set_path(EXAMPLE_FILEPATH.to_string());
+
+        keys.store().expect("can store Account Keys");
+        expect_keys_at_path(EXAMPLE_FILEPATH, example_keys);
+    }
+
+    #[fuchsia::test]
+    fn lru_eviction_from_storage() {
+        const EXAMPLE_FILEPATH: &str = "/data/test_account_keys2.json";
+
+        let key1 = AccountKey::new([1; 16]);
+        let key2 = AccountKey::new([2; 16]);
+        let key3 = AccountKey::new([3; 16]);
+        // New collection with maximum capacity of 2 keys.
+        let mut keys = AccountKeyList::with_capacity_and_keys(2, vec![]);
+        keys.set_path(EXAMPLE_FILEPATH.to_string());
+
+        // Because this key has never been written before, it should be saved to persistent storage.
+        keys.save(key1.clone());
+        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1.clone()]);
+
+        // Because this key has never been written before, it should be saved to persistent storage.
+        keys.save(key2.clone());
+        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1.clone(), key2.clone()]);
+
+        // Because `key1` already exists in the collection, we expect a cache "refresh" so the key
+        // ordering in storage should change.
+        keys.save(key1.clone());
+        // e.g The LRU order should change whereby `key2` is now the LRU.
+        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key2, key1.clone()]);
+
+        // The collection is at max capacity so `key2` (LRU) should be evicted. Local storage
+        // should be updated.
+        keys.save(key3.clone());
+        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1, key3]);
     }
 }

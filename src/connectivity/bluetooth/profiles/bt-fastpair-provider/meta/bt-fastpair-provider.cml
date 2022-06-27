@@ -9,6 +9,10 @@
     },
     use: [
         {
+            storage: "data",
+            path: "/data",
+        },
+        {
             protocol: [
                 "fuchsia.bluetooth.gatt2.Server",
                 "fuchsia.bluetooth.le.Peripheral",
