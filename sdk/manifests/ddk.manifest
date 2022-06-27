@@ -36,6 +36,7 @@ sdk://pkg/driver2-llcpp
 sdk://pkg/driver2-record
 sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp
+sdk://pkg/driver_runtime_shared_lib
 sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl_base
@@ -51,6 +52,7 @@ sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_component_llcpp
+sdk://pkg/syslog
 sdk://pkg/syslog_structured_backend
 sdk://pkg/trace
 sdk://pkg/trace-engine

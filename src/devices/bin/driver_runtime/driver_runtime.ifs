@@ -1,0 +1,33 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libdriver_runtime.so
+Symbols:
+  - { Name: fdf_arena_allocate, Type: Func }
+  - { Name: fdf_arena_contains, Type: Func }
+  - { Name: fdf_arena_create, Type: Func }
+  - { Name: fdf_arena_destroy, Type: Func }
+  - { Name: fdf_arena_free, Type: Func }
+  - { Name: fdf_channel_call, Type: Func }
+  - { Name: fdf_channel_cancel_wait, Type: Func }
+  - { Name: fdf_channel_create, Type: Func }
+  - { Name: fdf_channel_read, Type: Func }
+  - { Name: fdf_channel_wait_async, Type: Func }
+  - { Name: fdf_channel_write, Type: Func }
+  - { Name: fdf_dispatcher_create, Type: Func }
+  - { Name: fdf_dispatcher_destroy, Type: Func }
+  - { Name: fdf_dispatcher_from_async_dispatcher, Type: Func }
+  - { Name: fdf_dispatcher_get_async_dispatcher, Type: Func }
+  - { Name: fdf_dispatcher_get_current_dispatcher, Type: Func }
+  - { Name: fdf_dispatcher_get_options, Type: Func }
+  - { Name: fdf_dispatcher_shutdown_async, Type: Func }
+  - { Name: fdf_handle_close, Type: Func }
+  - { Name: fdf_internal_destroy_all_dispatchers, Type: Func }
+  - { Name: fdf_internal_dispatcher_has_queued_tasks, Type: Func }
+  - { Name: fdf_internal_get_current_driver, Type: Func }
+  - { Name: fdf_internal_pop_driver, Type: Func }
+  - { Name: fdf_internal_push_driver, Type: Func }
+  - { Name: fdf_internal_shutdown_dispatchers_async, Type: Func }
+  - { Name: fdf_internal_wait_until_all_dispatchers_destroyed, Type: Func }
+  - { Name: fdf_internal_wait_until_all_dispatchers_idle, Type: Func }
+  - { Name: fdf_internal_wait_until_dispatcher_idle, Type: Func }
+...

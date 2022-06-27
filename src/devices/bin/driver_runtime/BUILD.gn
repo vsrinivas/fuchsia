@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/cpp/library_headers.gni")
+import("//build/cpp/sdk_shared_library.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -43,10 +44,21 @@ source_set("driver_runtime_impl") {
   ]
 }
 
-shared_library("driver_runtime") {
+sdk_shared_library("driver_runtime") {
+  category = "partner"
+  libcxx_linkage = "static"
+  no_headers = true
+  sdk_name = "driver_runtime_shared_lib"
+  symbols_api = "driver_runtime.ifs"
   sources = []
 
   deps = [ ":driver_runtime_impl" ]
+  runtime_deps = [
+    "//sdk/lib/fdio:fdio_sdk",
+    "//zircon/system/ulib/async-default:async-default_sdk",
+    "//zircon/system/ulib/syslog:syslog_sdk",
+    "//zircon/system/ulib/trace-engine:trace-engine_sdk",
+  ]
 }
 
 test("driver_runtime_test") {
