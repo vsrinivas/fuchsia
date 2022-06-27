@@ -17,11 +17,11 @@ pub enum MeshcopTlv<'a> {
     PanId(PanId),
     Channel(u8, u16),
 
-    /// Active Timestamp. Value in ns.
-    ActiveTimestamp(u64),
+    /// Active Timestamp.
+    ActiveTimestamp(Timestamp),
 
-    /// Pending Timestamp. Value in ns.
-    PendingTimestamp(u64),
+    /// Pending Timestamp.
+    PendingTimestamp(Timestamp),
 
     /// Delay Timer. Value in ms.
     DelayTimer(u32),
@@ -143,7 +143,8 @@ impl<'a> MeshcopTlv<'a> {
         match self {
             MeshcopTlv::NetworkName(x) => out.write_all(x.as_slice()),
 
-            MeshcopTlv::ActiveTimestamp(a_u64) | MeshcopTlv::PendingTimestamp(a_u64) => {
+            MeshcopTlv::ActiveTimestamp(Timestamp(a_u64))
+            | MeshcopTlv::PendingTimestamp(Timestamp(a_u64)) => {
                 out.write_all(a_u64.to_le_bytes().as_slice())
             }
             MeshcopTlv::DelayTimer(a_u32) => out.write_all(a_u32.to_le_bytes().as_slice()),
@@ -180,13 +181,13 @@ impl<'a> MeshcopTlv<'a> {
             OT_MESHCOP_TLV_ACTIVETIMESTAMP if value.len() == 8 => {
                 let mut bytes = [0u8; 8];
                 bytes.copy_from_slice(value);
-                MeshcopTlv::ActiveTimestamp(u64::from_le_bytes(bytes))
+                MeshcopTlv::ActiveTimestamp(Timestamp(u64::from_le_bytes(bytes)))
             }
 
             OT_MESHCOP_TLV_PENDINGTIMESTAMP if value.len() == 8 => {
                 let mut bytes = [0u8; 8];
                 bytes.copy_from_slice(value);
-                MeshcopTlv::PendingTimestamp(u64::from_le_bytes(bytes))
+                MeshcopTlv::PendingTimestamp(Timestamp(u64::from_le_bytes(bytes)))
             }
 
             OT_MESHCOP_TLV_NETWORKNAME

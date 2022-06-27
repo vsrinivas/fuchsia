@@ -65,6 +65,16 @@ impl std::fmt::Display for MalformedOrNoBufs {
     }
 }
 
+/// Error type for when a system time cannot be converted to a timestamp.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
+pub struct BadSystemTime;
+
+impl std::fmt::Display for BadSystemTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
 /// Error type for OpenThread calls. Functional equivalent of
 /// [`otsys::otError`](crate::otsys::otError).
 #[derive(

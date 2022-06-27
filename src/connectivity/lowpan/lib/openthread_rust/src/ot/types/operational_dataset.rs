@@ -130,13 +130,13 @@ impl OperationalDataset {
     }
 
     /// Returns the active timestamp, if present.
-    pub fn get_active_timestamp(&self) -> Option<u64> {
-        self.0.mComponents.mIsActiveTimestampPresent().then(|| self.0.mActiveTimestamp)
+    pub fn get_active_timestamp(&self) -> Option<Timestamp> {
+        self.0.mComponents.mIsActiveTimestampPresent().then(|| self.0.mActiveTimestamp.into())
     }
 
     /// Returns the pending timestamp, if present.
-    pub fn get_pending_timestamp(&self) -> Option<u64> {
-        self.0.mComponents.mIsPendingTimestampPresent().then(|| self.0.mPendingTimestamp)
+    pub fn get_pending_timestamp(&self) -> Option<Timestamp> {
+        self.0.mComponents.mIsPendingTimestampPresent().then(|| self.0.mPendingTimestamp.into())
     }
 
     /// Returns the security policy, if present.
@@ -229,7 +229,7 @@ impl OperationalDataset {
     }
 
     /// Sets or clears the active timestamp
-    pub fn set_active_timestamp(&mut self, opt: Option<u64>) {
+    pub fn set_active_timestamp(&mut self, opt: Option<Timestamp>) {
         if let Some(x) = opt {
             self.0.mActiveTimestamp = x.into();
             self.0.mComponents.set_mIsActiveTimestampPresent(true);
@@ -239,9 +239,9 @@ impl OperationalDataset {
     }
 
     /// Sets or clears the pending timestamp.
-    pub fn set_pending_timestamp(&mut self, opt: Option<u64>) {
+    pub fn set_pending_timestamp(&mut self, opt: Option<Timestamp>) {
         if let Some(x) = opt {
-            self.0.mPendingTimestamp = x;
+            self.0.mPendingTimestamp = x.into();
             self.0.mComponents.set_mIsPendingTimestampPresent(true);
         } else {
             self.0.mComponents.set_mIsPendingTimestampPresent(false);
