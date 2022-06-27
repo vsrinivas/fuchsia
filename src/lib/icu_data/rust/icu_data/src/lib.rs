@@ -282,8 +282,8 @@ mod tests {
     #[test]
     fn test_tz_res_loading_with_validation_valid() -> Result<(), Error> {
         let _loader = Loader::new_with_tz_resources_and_validation(
-            "/config/data/tzdata/icu/44/le",
-            "/config/data/tzdata/revision.txt",
+            "/pkg/data/tzdata/icu/44/le",
+            "/pkg/data/tzdata/revision.txt",
         )
         .expect("loader is constructed successfully");
         let tz: String = uenum::open_time_zones()?.take(1).map(|e| e.unwrap()).collect();
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_tz_res_loading_with_validation_invalid() -> Result<(), Error> {
         let result = Loader::new_with_tz_resources_and_validation(
-            "/config/data/tzdata/icu/44/le",
+            "/pkg/data/tzdata/icu/44/le",
             "/pkg/data/test_inconsistent_revision.txt",
         );
         let err = result.unwrap_err();

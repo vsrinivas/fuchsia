@@ -34,8 +34,8 @@ rustc_library("icu_data") {
   sources = [ "src/lib.rs" ]
 }
 
-icu_tzdata_config_data("icu_tzdata_for_icu_data_rust_tests") {
-  for_pkg = "icu_data_rust_tests"
+icu_tzdata_resource("icu_tzdata_for_icu_data_rust_tests") {
+  testonly = true
 }
 
 resource("icu_data_test_files") {
@@ -44,7 +44,6 @@ resource("icu_data_test_files") {
 }
 
 fuchsia_unittest_package("icu_data_rust_tests") {
-  manifest = "meta/icu_data_lib_test.cmx"
   deps = [
     ":icu_data_test",
     ":icu_data_test_files",
