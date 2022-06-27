@@ -1,43 +1,62 @@
 # Introduction
 
 Thin wrapper around the [Criterion benchmark suite]. This library is intended to be used as both a
-simple means of generating benchmark data for the dashboard, but also for local benchmarking with
-Criterion.
+simple means of generating benchmark data for the Chromeperf dashboard, but also for local
+benchmarking with Criterion.
 
 When generating Fuchsia benchmarking results (`FuchsiaCriterion::default`), the main function where
 this constructor is called will expect an output JSON path where it will store the results according
 to the [Fuchsia benchmarking schema].
 
-## Benchmarking locally
+## Example - Criterion Bench
 
-A convenient way to make use of this crate for local benchmarking and fine-tuning is to pass
-`--args=local_bench='true'` to `fx set`. This will build fuchsia-criterion in a way that grants
-CMD-access to Criterion's interface from the `fx shell`.
+See [examples/main.rs] for an example of how to use the FuchsiaCriterion library to benchmark
+Fuchsia targets.
 
-For the following example's `main.rs`:
+Note that this example runs the benchmarks in an emulator, which results in highly variable
+performance data that should be treated only as a rough approximation at best. Integrating the
+benchmarks with Chromeperf will allow for precise results against specific devices, and enable
+performance comparisons via the perfcompare tool.
 
-```rust
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
-    }
-}
+### Running the Example
 
-fn main() {
-    let mut c = FuchsiaCriterion::default();
-    c.bench_function("fib 10", |b| b.iter(|| fibonacci(criterion::black_box(10))));
-}
-```
+1. Add the criterion_bench target to your `fx set` line:
 
-One can run:
+    ```
+    fx set <product>.<board> --with //src/developer/fuchsia-criterion:criterion_bench
+    ```
+2. Build Fuchsia:
 
-```shell
-$ fx set PRODUCT.BOARD --args=local_bench='true'
-$ fx build
-$ fx shell my_fib_bench -n
-```
+    ```
+    fx build
+    ```
+
+3. Start the Fuchsia emulator:
+
+    ```
+    ffx emu start --headless
+    ```
+
+4. In a separate terminal, serve Fuchsia packages:
+
+    ```
+    fx serve -v
+    ```
+
+5. Connect to the emulator shell, and run the benchmarks, storing the output in
+ `/tmp/criterion_bench_results.fuchsiaperf.json`:
+
+    ```
+    fx shell criterion_bench /tmp/criterion_bench_results.fuchsiaperf.json
+    ```
+
+### Local Bench
+By default, the FuchsiaCriterion library will only output a fuchsiaperf.json file. However, adding
+`--args=local_bench='true'` to your fx set line (e.g.  Step 1, above) overrides that behavior so
+that FuchsiaCriterion provides the command line interface from the upstream Criterion library. This
+allows you to replace Step 5 above with `fx shell criterion_bench`, and directly stream the
+benchmark output to console.
 
 [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
 [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
+[examples/main.rs]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/fuchsia-criterion/examples/main.rs

@@ -8,7 +8,6 @@ group("examples") {
     ":tests",
     "components",
     "cowsay",
-    "criterion_bench",
     "diagnostics",
     "drivers",
     "fidl",

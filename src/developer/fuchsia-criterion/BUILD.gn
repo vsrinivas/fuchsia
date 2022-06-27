@@ -35,3 +35,25 @@ fuchsia_unittest_package("fuchsia-criterion-tests") {
   deps = [ ":fuchsia-criterion_test" ]
   manifest = "meta/fuchsia_criterion_lib_test.cmx"
 }
+
+rustc_binary("criterion_bench_bin") {
+  version = "-1.1.0"
+  name = "criterion_bench"
+  edition = "2021"
+  deps = [ ":fuchsia-criterion" ]
+
+  sources = [ "examples/main.rs" ]
+  source_root = "examples/main.rs"
+}
+
+fuchsia_shell_package("criterion_bench") {
+  deps = [ ":criterion_bench_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":criterion_bench",
+    ":fuchsia-criterion-tests",
+  ]
+}
