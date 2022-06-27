@@ -38,9 +38,6 @@
         "binary": "bin/web_runner_pixel_tests_bin"
     },
     "sandbox": {
-        "features": [
-            "shell-commands"
-        ],
         "services": [
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",

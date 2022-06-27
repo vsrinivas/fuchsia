@@ -71,7 +71,7 @@ void Input(std::vector<const char*> args) {
 
   zx_handle_t proc;
   zx_status_t status =
-      fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
+      fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/pkg/bin/input", args.data(), &proc);
   FX_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
 
   status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,

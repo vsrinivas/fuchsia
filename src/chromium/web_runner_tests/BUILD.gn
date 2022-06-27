@@ -119,7 +119,10 @@ fuchsia_component("web_runner_integration_tests") {
 
 fuchsia_component("web_runner_pixel_tests") {
   testonly = true
-  deps = [ ":web_runner_pixel_tests_bin" ]
+  deps = [
+    ":web_runner_pixel_tests_bin",
+    "//src/ui/tools/input",
+  ]
   manifest = "meta/web_runner_pixel_tests.cmx"
 }
 
