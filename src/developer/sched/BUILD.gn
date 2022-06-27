@@ -58,8 +58,11 @@ executable("bin_test") {
 }
 
 fuchsia_test_component("sched_tests_component") {
-  manifest = "meta/sched_tests.cmx"
-  deps = [ ":bin_test" ]
+  manifest = "meta/sched_tests.cml"
+  deps = [
+    ":bin_test",
+    "//third_party/sbase:echo_bin",
+  ]
 }
 
 fuchsia_test_package("sched_tests") {

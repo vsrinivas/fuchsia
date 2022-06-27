@@ -65,7 +65,7 @@ TEST(SchedTest, TestGoodLaunch) {
   zx::process process;
   std::string error_message;
   zx_status_t result =
-      Launch(ZX_HANDLE_INVALID, {"/boot/bin/sh", "-c", "echo success"}, &process, &error_message);
+      Launch(ZX_HANDLE_INVALID, {"/pkg/bin/echo", "success"}, &process, &error_message);
   EXPECT_EQ(result, ZX_OK);
   EXPECT_TRUE(error_message.empty());
 }
