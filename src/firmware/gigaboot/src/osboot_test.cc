@@ -137,11 +137,58 @@ TEST_F(GetBootActionTest, MenuSelectFastboot) {
 }
 
 TEST_F(GetBootActionTest, MenuSelectDfv2) {
-  const char* input = "d1";
+  const char* input = "dyes1";
   mock_input_.ExpectReadKeyStrokes(&input);
   bool use_dfv2 = false;
   EXPECT_EQ(kBootActionSlotA, get_boot_action(true, true, &use_dfv2));
   EXPECT_TRUE(use_dfv2);
+}
+
+TEST_F(GetBootActionTest, MenuSelectDfv2Cancelled) {
+  const char* input = "dn1";
+  mock_input_.ExpectReadKeyStrokes(&input);
+  bool use_dfv2 = false;
+  EXPECT_EQ(kBootActionSlotA, get_boot_action(true, true, &use_dfv2));
+  EXPECT_FALSE(use_dfv2);
+}
+
+TEST_F(GetBootActionTest, MenuSelectDfv2NoUserInput) {
+  const efi_event kEventValue = reinterpret_cast<void* const>(0xd00dfeed);
+  EXPECT_CALL(mock_services_, CreateEvent)
+      .WillRepeatedly([kEventValue](uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn,
+                                    void* notify_ctx, efi_event* event) {
+        *event = kEventValue;
+        return EFI_SUCCESS;
+      });
+  EXPECT_CALL(mock_services_, SetTimer)
+      .WillRepeatedly([kEventValue](efi_event event, efi_timer_delay type,
+                                    uint64_t trigger_time) -> efi_status {
+        if (type != TimerRelative) {
+          return EFI_SUCCESS;
+        }
+        EXPECT_EQ(event, kEventValue);
+        EXPECT_GT(trigger_time, 0u);
+        return EFI_SUCCESS;
+      });
+  EXPECT_CALL(mock_services_, CheckEvent).WillRepeatedly([kEventValue](efi_event event) {
+    EXPECT_EQ(event, kEventValue);
+    return EFI_SUCCESS;
+  });
+
+  bool called = false;
+  EXPECT_CALL(mock_input_, ReadKeyStroke)
+      .WillRepeatedly([&called](efi_input_key* key) -> efi_status {
+        if (!called) {
+          key->ScanCode = 0;
+          key->UnicodeChar = 'd';
+          called = true;
+          return EFI_SUCCESS;
+        }
+        return EFI_TIMEOUT;
+      });
+  bool use_dfv2 = false;
+  EXPECT_EQ(kBootActionNetboot, get_boot_action(true, true, &use_dfv2));
+  EXPECT_FALSE(use_dfv2);
 }
 
 TEST_F(GetBootActionTest, MenuSelectNetboot) {

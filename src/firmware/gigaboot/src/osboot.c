@@ -129,6 +129,25 @@ char key_prompt(const char* valid_keys, int timeout_s) {
   return valid_keys[0];
 }
 
+// Wait for the user to type "yes". Returns true if they did, false if they didn't.
+static bool confirm(void) {
+  const char* expected = "yes";
+  for (size_t i = 0; i < strlen(expected); i++) {
+    int key = xefi_getc(15000);
+    if (key < 0) {
+      printf("xefi_getc failed, aborting\n");
+      return false;
+    }
+
+    printf("%c", key);
+    if (key != expected[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void list_abr_info(void) {
   for (uint32_t i = 0; i <= kAbrSlotIndexR; i++) {
     AbrSlotInfo info;
@@ -389,6 +408,13 @@ static BootAction main_boot_menu(bool have_network, bool have_fb, bool* use_dfv2
       case 'z':
         return kBootActionSlotR;
       case 'd':
+        printf("Type yes to confirm %sabling DFv2: ", (use_dfv2 ? "dis" : "en"));
+        bool confirmed = confirm();
+        printf("\n");
+        if (!confirmed) {
+          printf("Aborting, DFv2 still %sabled.\n", (use_dfv2 ? "en" : "dis"));
+          continue;
+        }
         use_dfv2 = !use_dfv2;
         if (use_dfv2_p) {
           *use_dfv2_p = use_dfv2;
