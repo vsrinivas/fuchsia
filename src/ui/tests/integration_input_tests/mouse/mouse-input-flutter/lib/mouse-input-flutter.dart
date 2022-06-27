@@ -82,6 +82,8 @@ class _MyHomePageState extends State<MyHomePage> {
               buttons: data.buttons,
               type: data.change.name,
               timeReceived: nowNanos,
+              wheelX: data.scrollDeltaX,
+              wheelY: data.scrollDeltaY,
               componentName: 'mouse-input-flutter'));
         }
       }

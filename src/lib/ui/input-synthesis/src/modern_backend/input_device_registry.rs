@@ -127,8 +127,17 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
                         range: Range { min: 0, max: i64::from(height) },
                         unit: Unit { type_: UnitType::Other, exponent: 0 },
                     }),
-                    scroll_v: None,
-                    scroll_h: None,
+                    // `scroll_v` and `scroll_h` are range of tick number on
+                    // driver's report. [-100, 100] should be enough for
+                    // testing.
+                    scroll_v: Some(Axis {
+                        range: Range { min: -100, max: 100 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    scroll_h: Some(Axis {
+                        range: Range { min: -100, max: 100 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
                     buttons: Some(vec![0, 1, 2]),
                     position_x: None,
                     position_y: None,

@@ -182,10 +182,27 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
         epoch_msec: Date.now(),
         x: event.clientX,
         y: event.clientY,
+        wheel_h: event.deltaX,
+        wheel_v: event.deltaY,
         device_scale_factor: window.devicePixelRatio,
         buttons: event.buttons
       });
       console.info('Reporting mouse up event ', response);
+      port.postMessage(response);
+    };
+    document.body.onwheel = function(event) {
+      console.assert(port != null);
+      let response = JSON.stringify({
+        type: event.type,
+        epoch_msec: Date.now(),
+        x: event.clientX,
+        y: event.clientY,
+        wheel_h: event.deltaX,
+        wheel_v: event.deltaY,
+        device_scale_factor: window.devicePixelRatio,
+        buttons: event.buttons
+      });
+      console.info('Reporting mouse wheel event ', response);
       port.postMessage(response);
     };
     window.onresize = function(event) {
@@ -193,7 +210,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
         console.info('size: ', window.innerWidth, window.innerHeight);
         document.title = 'window_resized';
       }
-    }
+    };
     function receiveMessage(event) {
       if (event.data == "REGISTER_PORT") {
         console.log("received REGISTER_PORT");
@@ -321,6 +338,15 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
         pointer_data.set_device_scale_factor(mouse_resp["device_scale_factor"].GetDouble());
         pointer_data.set_type(mouse_resp["type"].GetString());
         pointer_data.set_buttons(mouse_resp["buttons"].GetInt());
+
+        if (mouse_resp.HasMember("wheel_h")) {
+          FX_CHECK(mouse_resp["wheel_h"].IsNumber());
+          pointer_data.set_wheel_x(mouse_resp["wheel_h"].GetDouble());
+        }
+        if (mouse_resp.HasMember("wheel_v")) {
+          FX_CHECK(mouse_resp["wheel_v"].IsNumber());
+          pointer_data.set_wheel_y(mouse_resp["wheel_v"].GetDouble());
+        }
 
         pointer_data.set_component_name("mouse-input-chromium");
 

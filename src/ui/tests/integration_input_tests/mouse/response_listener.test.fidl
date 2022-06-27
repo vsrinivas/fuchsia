@@ -25,8 +25,14 @@ type PointerData = table {
     /// The type that the client has reported with the pointer data.
     6: type string;
 
-    // The scale factor used. On Chrome, the movement exposed to JS has applied this scale.
+    /// The scale factor used. On Chrome, the movement exposed to JS has applied this scale.
     7: device_scale_factor float64;
+
+    /// The horizontal wheel scroll delta reported in the client's coordinate system.
+    8: wheel_x float64;
+
+    /// The vertical wheel scroll delta reported in the client's coordinate system.
+    9: wheel_y float64;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.

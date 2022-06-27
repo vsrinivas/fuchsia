@@ -673,6 +673,129 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
       /*component_name=*/"mouse-input-flutter");
 }
 
+// TODO(fxbug.dev/103098): This test shows the issue when sending mouse wheel as the first event to
+// Flutter.
+// 1. expect Flutter app receive 2 events: ADD - Scroll, but got 3 events: Move - Scroll - Scroll.
+// 2. the first event flutter app received has random value in buttons field
+TEST_F(FlutterInputTest, FlutterMouseWheelIssue103098) {
+  LaunchClient();
+
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
+
+  auto wheel_h_injection_time = zx::clock::get_monotonic();
+  auto ts = static_cast<uint64_t>(wheel_h_injection_time.get());
+  fuchsia::input::report::MouseInputReport report;
+  report.set_scroll_h(1);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  // Here we expected 2 events, ADD - Scroll, but got 3, Move - Scroll - Scroll.
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 3; });
+
+  double initial_x = static_cast<double>(display_width()) / 2.f;
+  double initial_y = static_cast<double>(display_height()) / 2.f;
+
+  auto event_1 = response_listener_->PopEvent();
+  EXPECT_NEAR(event_1.local_x(), initial_x, 1);
+  EXPECT_NEAR(event_1.local_y(), initial_y, 1);
+  // Flutter will scale the count of ticks to pixel.
+  EXPECT_GT(event_1.wheel_x(), 0);
+  EXPECT_EQ(event_1.wheel_y(), 0);
+  EXPECT_EQ(event_1.type(), "move");
+  // Got a random number here in buttons field.
+  EXPECT_NE(event_1.buttons(), 0);
+
+  auto event_2 = response_listener_->PopEvent();
+  VerifyEvent(event_2,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"hover", wheel_h_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+  // Flutter will scale the count of ticks to pixel.
+  EXPECT_GT(event_2.wheel_x(), 0);
+  EXPECT_EQ(event_2.wheel_y(), 0);
+
+  auto event_3 = response_listener_->PopEvent();
+  VerifyEvent(event_3,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"hover", wheel_h_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+  // Flutter will scale the count of ticks to pixel.
+  EXPECT_GT(event_3.wheel_x(), 0);
+  EXPECT_EQ(event_3.wheel_y(), 0);
+}
+
+TEST_F(FlutterInputTest, FlutterMouseWheel) {
+  LaunchClient();
+
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
+
+  // TODO(fxbug.dev/103098): Send a mouse move as the first event to workaround.
+  auto add_injection_time = zx::clock::get_monotonic();
+  auto ts = static_cast<uint64_t>(add_injection_time.get());
+  fuchsia::input::report::MouseInputReport report;
+  report.set_movement_x(1);
+  report.set_movement_y(2);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  double initial_x = static_cast<double>(display_width()) / 2.f + 1;
+  double initial_y = static_cast<double>(display_height()) / 2.f + 2;
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_add = response_listener_->PopEvent();
+  VerifyEvent(event_add,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"add", add_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  auto wheel_h_injection_time = zx::clock::get_monotonic();
+  ts = static_cast<uint64_t>(wheel_h_injection_time.get());
+  report = {};
+  report.set_scroll_h(1);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_wheel_h = response_listener_->PopEvent();
+
+  VerifyEvent(event_wheel_h,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"hover", wheel_h_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+  // Flutter will scale the count of ticks to pixel.
+  EXPECT_GT(event_wheel_h.wheel_x(), 0);
+  EXPECT_EQ(event_wheel_h.wheel_y(), 0);
+
+  auto wheel_v_injection_time = zx::clock::get_monotonic();
+  ts = static_cast<uint64_t>(wheel_v_injection_time.get());
+  report = {};
+  report.set_scroll_v(1);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_wheel_v = response_listener_->PopEvent();
+
+  VerifyEvent(event_wheel_v,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"hover", wheel_v_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+  // Flutter will scale the count of ticks to pixel.
+  EXPECT_LT(event_wheel_v.wheel_y(), 0);
+  EXPECT_EQ(event_wheel_v.wheel_x(), 0);
+}
+
 class ChromiumInputTest : public MouseInputBase {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
@@ -928,6 +1051,59 @@ TEST_F(ChromiumInputTest, ChromiumMouseDownMoveUp) {
               /*expected_buttons=*/0,
               /*expected_type=*/"mouseup", up_injection_time,
               /*component_name=*/"mouse-input-chromium");
+}
+
+TEST_F(ChromiumInputTest, ChromiumMouseWheel) {
+  LaunchWebEngineClient();
+
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
+  auto initial_position = EnsureMouseIsReadyAndGetPosition(input_synthesis, device_id);
+
+  double initial_x = initial_position.x;
+  double initial_y = initial_position.y;
+
+  auto wheel_h_injection_time = zx::clock::get_monotonic();
+  auto ts = static_cast<uint64_t>(wheel_h_injection_time.get());
+  fuchsia::input::report::MouseInputReport report;
+  report.set_scroll_h(1);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_wheel_h = response_listener_->PopEvent();
+
+  VerifyEvent(event_wheel_h,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"wheel", wheel_h_injection_time,
+              /*component_name=*/"mouse-input-chromium");
+  // Chromium will scale the count of ticks to pixel.
+  // Positive delta in Fuchsia  means scroll left, and scroll left in JS is negative delta.
+  EXPECT_LT(event_wheel_h.wheel_x(), 0);
+  EXPECT_EQ(event_wheel_h.wheel_y(), 0);
+
+  auto wheel_v_injection_time = zx::clock::get_monotonic();
+  ts = static_cast<uint64_t>(wheel_v_injection_time.get());
+  report = {};
+  report.set_scroll_v(1);
+  SendMouseEvent(input_synthesis, device_id, std::move(report), ts);
+
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  auto event_wheel_v = response_listener_->PopEvent();
+
+  VerifyEvent(event_wheel_v,
+              /*expected_x=*/initial_x,
+              /*expected_y=*/initial_y,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"wheel", wheel_v_injection_time,
+              /*component_name=*/"mouse-input-chromium");
+  // Chromium will scale the count of ticks to pixel.
+  // Positive delta in Fuchsia means scroll up, and scroll up in JS is negative delta.
+  EXPECT_LT(event_wheel_v.wheel_y(), 0);
+  EXPECT_EQ(event_wheel_v.wheel_x(), 0);
 }
 
 }  // namespace
