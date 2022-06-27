@@ -46,7 +46,7 @@ class FshostBootArgs {
 
  protected:
  private:
-  zx::status<std::string> GetStringArgument(std::string key);
+  zx::status<std::string> GetStringArgument(const std::string& key);
 
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args_;
   bool netsvc_netboot_ = false;

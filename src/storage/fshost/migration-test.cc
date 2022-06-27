@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <cstddef>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
@@ -36,7 +37,7 @@ namespace {
 constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kSliceSize = 32'768;
-constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+constexpr size_t kDeviceSize = static_cast<const size_t>(kBlockCount) * kBlockSize;
 
 using MigrationTest = testing::FshostIntegrationTest;
 

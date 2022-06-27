@@ -44,7 +44,7 @@ class InspectManagerTest : public zxtest::Test {
   void TearDown() override { memfs_.reset(); }
 
  protected:
-  fidl::ClientEnd<fuchsia_io::Directory> GetDir() {
+  static fidl::ClientEnd<fuchsia_io::Directory> GetDir() {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(endpoints.is_ok());
     auto [client, server] = *std::move(endpoints);
@@ -55,7 +55,7 @@ class InspectManagerTest : public zxtest::Test {
     return std::move(client);
   }
 
-  void AddFile(const std::string& path, size_t content_size) {
+  static void AddFile(const std::string& path, size_t content_size) {
     std::string contents(content_size, 'X');
     fbl::unique_fd fd(open(fxl::Substitute("$0/$1", kTmpfsPath, path).c_str(), O_RDWR | O_CREAT,
                            S_IRUSR | S_IWUSR));
@@ -63,12 +63,12 @@ class InspectManagerTest : public zxtest::Test {
     ASSERT_EQ(write(fd.get(), contents.c_str(), content_size), content_size);
   }
 
-  void MakeDir(const std::string& path) {
+  static void MakeDir(const std::string& path) {
     ASSERT_EQ(0, mkdir(fxl::Substitute("$0/$1", kTmpfsPath, path).c_str(), 0666));
   }
 
-  void AssertValue(const inspect::Hierarchy& hierarchy, const std::vector<std::string>& path,
-                   size_t expected, size_t other_children = 0) {
+  static void AssertValue(const inspect::Hierarchy& hierarchy, const std::vector<std::string>& path,
+                          size_t expected, size_t other_children = 0) {
     auto file_node = hierarchy.GetByPath(path);
     EXPECT_NOT_NULL(file_node);
     ASSERT_EQ(1, file_node->node().properties().size());

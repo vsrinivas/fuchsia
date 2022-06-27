@@ -38,6 +38,7 @@
 #include <zircon/types.h>
 
 #include <cctype>
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -99,7 +100,7 @@ int OpenVerityDeviceThread(void* arg) {
   }
 
   fbl::unique_fd inner_block_fd;
-  status = vvc->OpenForVerifiedRead(std::move(state->seal), zx::sec(5), inner_block_fd);
+  status = vvc->OpenForVerifiedRead(state->seal, zx::sec(5), inner_block_fd);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "OpenForVerifiedRead failed: " << zx_status_get_string(status);
     return 1;
@@ -184,12 +185,12 @@ Copier TryReadingFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root) 
     [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root);
   });
 
-  if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
+  auto copier_or = Copier::Read(std::move(fd));
+  if (copier_or.is_error()) {
     FX_LOGS(ERROR) << "Copier::Read: " << copier_or.status_string();
     return {};
-  } else {
-    return std::move(copier_or).value();
   }
+  return std::move(copier_or).value();
 }
 
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
@@ -224,7 +225,7 @@ std::string GetTopologicalPath(int fd) {
 }
 
 fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
+    const fshost_config::Config* config, const FshostBootArgs* boot_args) {
   fuchsia_fs_startup::wire::StartOptions options;
   options.write_compression_level = -1;
   options.sandbox_decompression = config->sandbox_decompression();
@@ -271,8 +272,7 @@ zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
                      << strerror(errno);
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  return zx::ok(
-      std::unique_ptr<BlockDevice>(new BlockDevice(mounter_, std::move(fd), device_config_)));
+  return zx::ok(std::make_unique<BlockDevice>(mounter_, std::move(fd), device_config_));
 }
 
 void BlockDevice::AddData(Copier copier) { source_data_ = std::move(copier); }
@@ -419,9 +419,9 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
     close(loose_fd);
     delete raw_fd_ptr;
     return ZX_ERR_INTERNAL;
-  } else {
-    thrd_detach(th);
   }
+  thrd_detach(th);
+
   return ZX_OK;
 }
 
@@ -444,11 +444,10 @@ zx_status_t BlockDevice::OpenBlockVerityForVerifiedRead(std::string seal_hex) {
   if (err != thrd_success) {
     FX_LOGS(ERROR) << "failed to spawn block-verity worker thread";
     return ZX_ERR_INTERNAL;
-  } else {
-    // Release our reference to the state now owned by the other thread.
-    state.release();
-    thrd_detach(th);
   }
+  // Release our reference to the state now owned by the other thread.
+  static_cast<void>(state.release());
+  thrd_detach(th);
 
   return ZX_OK;
 }
@@ -716,7 +715,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
       if (zx_status_t status =
               mounter_->MountBlob(std::move(block_device),
-                                  GetBlobfsStartOptions(device_config_, mounter_->boot_args()));
+                                  GetBlobfsStartOptions(device_config_, mounter_->boot_args().get()));
           status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
         return status;
@@ -803,9 +802,11 @@ zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
 
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
+  }
+  if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountData(std::move(block_device), options, format_);
-  } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
+  }
+  if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountDurable(std::move(block_device), options);
   }
   FX_LOGS(ERROR) << "Unrecognized type GUID for data partition; not mounting";
@@ -942,10 +943,10 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
     fs_management::FsckOptions options;
     options.crypt_client = [] {
       auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-      if (crypt_client_or.is_error())
+      if (crypt_client_or.is_error()) {
         return zx::channel();
-      else
-        return crypt_client_or->TakeChannel();
+      }
+      return crypt_client_or->TakeChannel();
     };
     auto res = startup_client->Check(std::move(block_client_end), options.as_check_options());
     if (!res.ok()) {
@@ -957,15 +958,14 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
       return res.value().error_value();
     }
     return ZX_OK;
-  } else {
-    const std::string binary_path(BinaryPathForFormat(format));
-    if (binary_path.empty()) {
-      FX_LOGS(ERROR) << "Unsupported data format";
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    return RunBinary({binary_path.c_str(), "fsck", nullptr}, std::move(device_or).value());
   }
+  const std::string binary_path(BinaryPathForFormat(format));
+  if (binary_path.empty()) {
+    FX_LOGS(ERROR) << "Unsupported data format";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return RunBinary({binary_path.c_str(), "fsck", nullptr}, std::move(device_or).value());
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
@@ -1118,10 +1118,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     fs_management::MkfsOptions options;
     options.crypt_client = [] {
       auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-      if (crypt_client_or.is_error())
+      if (crypt_client_or.is_error()) {
         return zx::channel();
-      else
-        return crypt_client_or->TakeChannel();
+      }
+      return crypt_client_or->TakeChannel();
     };
     auto res = startup_client->Format(std::move(block_client_end), options.as_format_options());
     if (!res.ok()) {

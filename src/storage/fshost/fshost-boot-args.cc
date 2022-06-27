@@ -68,7 +68,7 @@ FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boo
   }
 }
 
-zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
+zx::status<std::string> FshostBootArgs::GetStringArgument(const std::string& key) {
   if (!boot_args_) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }

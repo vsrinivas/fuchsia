@@ -8,6 +8,6 @@ namespace fshost {
 
 bool ExtractMetadataEnabled() { return false; }
 
-void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options) {}
+void MaybeDumpMetadata(fbl::unique_fd device_fd, const DumpMetadataOptions& options) {}
 
 }  // namespace fshost

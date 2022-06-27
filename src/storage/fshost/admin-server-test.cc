@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
+#include <cstddef>
+
 #include <gtest/gtest.h>
 
 #include "sdk/lib/fdio/include/lib/fdio/spawn.h"
@@ -35,7 +37,7 @@ void Join(const zx::process& process, int64_t* return_code) {
 }
 
 TEST_F(AdminServerTest, MountAndUnmount) {
-  auto ram_disk_or = storage::RamDisk::Create(1024, 64 * 1024);
+  auto ram_disk_or = storage::RamDisk::Create(1024, 64L * 1024L);
   ASSERT_EQ(ram_disk_or.status_value(), ZX_OK);
   ASSERT_EQ(fs_management::Mkfs(ram_disk_or->path().c_str(), fs_management::kDiskFormatMinfs,
                                 fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
@@ -127,7 +129,7 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   constexpr uint32_t kBlockCount = 9 * 1024 * 256;
   constexpr uint32_t kBlockSize = 512;
   constexpr uint32_t kSliceSize = 32'768;
-  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+  constexpr size_t kDeviceSize = static_cast<const size_t>(kBlockCount) * kBlockSize;
 
   const std::string fshost_hub_path =
       "/hub/children/" + FshostComponentCollection() + ":" + FshostComponentName();

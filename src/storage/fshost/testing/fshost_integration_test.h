@@ -24,9 +24,9 @@ class FshostIntegrationTest : public ::testing::Test {
 
   void ResetFshost();
 
-  std::string DataFilesystemFormat() const;
-  std::string FshostComponentName() const;
-  std::string FshostComponentCollection() const;
+  static std::string DataFilesystemFormat();
+  static std::string FshostComponentName();
+  static std::string FshostComponentCollection();
 
   const fidl::WireSyncClient<fuchsia_io::Directory>& exposed_dir() const { return exposed_dir_; }
 
@@ -41,7 +41,7 @@ class FshostIntegrationTest : public ::testing::Test {
   // descriptor opened on the root and the filesystem type (VFS_TYPE_MINFS, etc.).
   //
   // Times out after 10s.
-  std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name);
+  std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name) const;
 
  private:
   fidl::WireSyncClient<fuchsia_io::Directory> exposed_dir_;

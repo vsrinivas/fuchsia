@@ -16,7 +16,7 @@ namespace fshost {
 // provided, as well as some other environmental setup, like providing /svc.
 zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv, const char** envp,
                    int stdiofd, const zx::resource& root_resource, const zx_handle_t* handles,
-                   const uint32_t* types, size_t hcount, zx::process* proc_out);
+                   const uint32_t* types, size_t hcount, zx::process* out_proc);
 
 // Returns the result of splitting |args| into an argument vector.
 class ArgumentVector {

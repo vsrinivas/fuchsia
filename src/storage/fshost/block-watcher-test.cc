@@ -570,10 +570,9 @@ TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
       if (formatted) {
         postformat_unseal_attempt_count++;
         return ZX_OK;
-      } else {
-        preformat_unseal_attempt_count++;
-        return ZX_ERR_ACCESS_DENIED;
       }
+      preformat_unseal_attempt_count++;
+      return ZX_ERR_ACCESS_DENIED;
     }
     zx_status_t Format() final {
       formatted = true;
@@ -600,9 +599,8 @@ TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
       unseal_attempt_count++;
       if (unseal_attempt_count > 1) {
         return ZX_OK;
-      } else {
-        return ZX_ERR_ACCESS_DENIED;
       }
+      return ZX_ERR_ACCESS_DENIED;
     }
 
     zx_status_t Format() final {
@@ -737,7 +735,7 @@ TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
 
 class BlockWatcherTest : public testing::FshostIntegrationTest {
  protected:
-  storage::RamDisk CreateGptRamdisk() {
+  static storage::RamDisk CreateGptRamdisk() {
     zx::vmo ramdisk_vmo;
     EXPECT_EQ(zx::vmo::create(kTestDiskSectors * kBlockSize, 0, &ramdisk_vmo), ZX_OK);
     // Write the GPT into the VMO.
@@ -748,7 +746,7 @@ class BlockWatcherTest : public testing::FshostIntegrationTest {
     return storage::RamDisk::CreateWithVmo(std::move(ramdisk_vmo), kBlockSize).value();
   }
 
-  fbl::unique_fd WaitForBlockDevice(int number) {
+  static fbl::unique_fd WaitForBlockDevice(int number) {
     auto path = fbl::StringPrintf("/dev/class/block/%03d", number);
     EXPECT_EQ(wait_for_device(path.data(), ZX_TIME_INFINITE), ZX_OK);
     return fbl::unique_fd(open(path.data(), O_RDWR));
@@ -764,7 +762,7 @@ class BlockWatcherTest : public testing::FshostIntegrationTest {
   //
   // We make sure that this entry's toplogical path corresponds to it being the first partition
   // of the block device we added.
-  void CheckEventsDropped(int& next_device_number, storage::RamDisk& ramdisk) {
+  static void CheckEventsDropped(int& next_device_number, storage::RamDisk& ramdisk) {
     ASSERT_NO_FATAL_FAILURE(ramdisk = CreateGptRamdisk());
 
     // Wait for the basic block driver to be bound

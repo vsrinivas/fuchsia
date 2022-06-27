@@ -88,10 +88,9 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   // up with a deadlock.  To avoid this, spawn a separate thread.  Unfortunately, this isn't
   // thread-safe if we're shutting down, but since mounting is a debug only thing for now, we don't
   // worry about it.
-  std::thread thread([device_path = std::move(device_path), name = std::move(name),
+  std::thread thread([device_path = std::move(device_path), name,
                       completer = completer.ToAsync(), options = std::move(options),
-                      fd = std::move(fd), df = std::move(df), fs_manager = fs_manager_,
-                      dispatcher]() mutable {
+                      fd = std::move(fd), df, fs_manager = fs_manager_, dispatcher]() mutable {
     static int mount_index = 0;
     std::string component_child_name = name + "." + std::to_string(mount_index++);
     options.component_child_name = component_child_name.c_str();

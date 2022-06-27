@@ -31,7 +31,7 @@
 namespace fshost {
 namespace {
 
-void Dump(fbl::unique_fd image_fd, DumpMetadataOptions& dump_options) {
+void Dump(fbl::unique_fd image_fd, const DumpMetadataOptions& dump_options) {
   lseek(image_fd.get(), 0, SEEK_SET);
   extractor::HexDumpGeneratorOptions options = {
       .tag = dump_options.tag,
@@ -81,7 +81,7 @@ void Dump(fbl::unique_fd image_fd, DumpMetadataOptions& dump_options) {
 
 bool ExtractMetadataEnabled() { return true; }
 
-void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options) {
+void MaybeDumpMetadata(fbl::unique_fd device_fd, const DumpMetadataOptions& options) {
   // At the moment, extraction is supported only for minfs.
   if (options.disk_format != fs_management::kDiskFormatMinfs) {
     return;

@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include "src/storage/fshost/block-device.h"
 
 namespace fshost {
@@ -24,8 +26,7 @@ zx::status<std::unique_ptr<BlockDeviceInterface>> NandDevice::OpenBlockDevice(
                      << strerror(errno);
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  return zx::ok(
-      std::unique_ptr<NandDevice>(new NandDevice(mounter_, std::move(fd), device_config_)));
+  return zx::ok(std::make_unique<NandDevice>(mounter_, std::move(fd), device_config_));
 }
 
 }  // namespace fshost

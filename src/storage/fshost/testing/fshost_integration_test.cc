@@ -61,18 +61,16 @@ void FshostIntegrationTest::ResetFshost() {
   SetUp();
 }
 
-std::string FshostIntegrationTest::DataFilesystemFormat() const {
+std::string FshostIntegrationTest::DataFilesystemFormat() {
   if (strlen(DATA_FILESYSTEM_FORMAT) == 0) {
     return "minfs";
   }
   return DATA_FILESYSTEM_FORMAT;
 }
 
-std::string FshostIntegrationTest::FshostComponentName() const { return kTestFshostName; }
+std::string FshostIntegrationTest::FshostComponentName() { return kTestFshostName; }
 
-std::string FshostIntegrationTest::FshostComponentCollection() const {
-  return kTestFshostCollection;
-}
+std::string FshostIntegrationTest::FshostComponentCollection() { return kTestFshostCollection; }
 
 void FshostIntegrationTest::PauseWatcher() const {
   auto res = block_watcher_->Pause();
@@ -86,7 +84,8 @@ void FshostIntegrationTest::ResumeWatcher() const {
   ASSERT_EQ(res.value().status, ZX_OK);
 }
 
-std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const std::string& name) {
+std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(
+    const std::string& name) const {
   // The mount point will always exist so we expect open() to work regardless of whether the device
   // is actually mounted. We retry until the mount point has the expected filesystem type.
   //

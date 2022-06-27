@@ -30,7 +30,7 @@ std::string GetTopologicalPath(int fd);
 
 // Collect and synthesize the blobfs startup options.
 fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args);
+    const fshost_config::Config* config, const FshostBootArgs* boot_args);
 
 // A concrete implementation of the block device interface.
 //

@@ -45,7 +45,7 @@ struct DumpMetadataOptions {
 // We link extractor library only in specific build types.
 bool ExtractMetadataEnabled();
 
-void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options = {});
+void MaybeDumpMetadata(fbl::unique_fd device_fd, const DumpMetadataOptions& options = {});
 
 }  // namespace fshost
 

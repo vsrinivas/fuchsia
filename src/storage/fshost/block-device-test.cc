@@ -14,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/hw/gpt.h>
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 
@@ -80,7 +81,7 @@ class BlockDeviceTest : public testing::Test {
 
   fbl::unique_fd GetRamdiskFd() { return fbl::unique_fd(open(ramdisk_->path().c_str(), O_RDWR)); }
 
-  fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
+  static fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
 
  protected:
   FsManager manager_;
@@ -272,7 +273,7 @@ TEST_F(BlockDeviceTest, TestMinfsCorruptionEventLogged) {
 }
 
 std::unique_ptr<std::string> GetData(int fd) {
-  constexpr size_t kBufferSize = 10 * 1024 * 1024;
+  constexpr size_t kBufferSize = 10L * 1024L * 1024L;
   auto buffer = std::make_unique<char[]>(kBufferSize);
   memset(buffer.get(), 0, kBufferSize);
   ssize_t read_length;
@@ -315,14 +316,14 @@ TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   // Corrupt minfs.
-  uint64_t buffer_size = minfs::kMinfsBlockSize * 8;
+  uint64_t buffer_size = minfs::kMinfsBlockSize * 8LL;
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
   memset(buffer.get(), 0, buffer_size);
   ASSERT_EQ(pread(GetRamdiskFd().get(), buffer.get(), buffer_size, 0),
             static_cast<ssize_t>(buffer_size));
   // Corrupt checksum of both copies of superblocks.
   buffer.get()[offsetof(minfs::Superblock, checksum)] += 1;
-  buffer.get()[(minfs::kMinfsBlockSize * 7) + offsetof(minfs::Superblock, checksum)] += 1;
+  buffer.get()[(minfs::kMinfsBlockSize * 7LL) + offsetof(minfs::Superblock, checksum)] += 1;
   ASSERT_EQ(pwrite(GetRamdiskFd().get(), buffer.get(), buffer_size, 0),
             static_cast<ssize_t>(buffer_size));
 

@@ -102,11 +102,9 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
     }
 
     return ZX_OK;
-  } else {
-    FX_LOGS(ERROR) << "could not produce an unsealed volume for minfs: "
-                   << zx_status_get_string(rc);
-    return rc;
   }
+  FX_LOGS(ERROR) << "could not produce an unsealed volume for minfs: " << zx_status_get_string(rc);
+  return rc;
 }
 
 }  // namespace fshost
