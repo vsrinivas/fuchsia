@@ -8,7 +8,6 @@
 
 use alloc::{vec, vec::Vec};
 use core::{fmt::Debug, hash::Hash};
-use todo_unused::todo_unused;
 
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
@@ -492,7 +491,6 @@ impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
             .map_err(|(e, (state, _)): (_, (_, PosixSharingOptions))| (e, state))
     }
 
-    #[todo_unused("https://fxbug.dev/95688")]
     pub(crate) fn get_listener_by_id_mut(
         &mut self,
         id: P::ListenerId,
@@ -503,7 +501,6 @@ impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
             .map(|((state, sharing), addr)| (state, *sharing, &*addr))
     }
 
-    #[todo_unused("https://fxbug.dev/95688")]
     pub(crate) fn get_conn_by_id_mut(
         &mut self,
         id: P::ConnId,

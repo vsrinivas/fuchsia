@@ -221,10 +221,12 @@ impl<I: IpExt, C, SC: IpDeviceIdContext<I> + ?Sized, B: BufferMut>
 pub trait TransportIpContext<I: IpExt, C>: IpDeviceIdContext<I> + IpSocketHandler<I, C> {
     /// Is this one of our local addresses, and is it in the assigned state?
     ///
-    /// `is_assigned_local_addr` returns whether `addr` is the address
-    /// associated with one of our local interfaces and, for IPv6, whether it is
-    /// in the "assigned" state.
-    fn is_assigned_local_addr(&self, addr: I::Addr) -> bool;
+    /// If `addr` is the address associated with a local interface and, for
+    /// IPv6, if it is in the "assigned" state, this method returns the
+    /// identifier for the device with the address assigned. Otherwise returns
+    /// `None`.
+    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>)
+        -> Option<Self::DeviceId>;
 }
 
 /// The execution context provided by the IP layer to transport layer protocols
@@ -290,31 +292,31 @@ where
 impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpContext<Ipv4, C>
     for SC
 {
-    fn is_assigned_local_addr(&self, addr: Ipv4Addr) -> bool {
-        SpecifiedAddr::new(addr).map_or(false, |addr| match self.address_status(None, addr) {
-            AddressStatus::Present(state) => match state {
-                Ipv4PresentAddressStatus::Unicast => true,
+    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv4Addr>) -> Option<SC::DeviceId> {
+        match self.address_status(addr) {
+            AddressStatus::Present((device, state)) => match state {
+                Ipv4PresentAddressStatus::Unicast => Some(device),
                 Ipv4PresentAddressStatus::LimitedBroadcast
                 | Ipv4PresentAddressStatus::SubnetBroadcast
-                | Ipv4PresentAddressStatus::Multicast => false,
+                | Ipv4PresentAddressStatus::Multicast => None,
             },
-            AddressStatus::Unassigned => false,
-        })
+            AddressStatus::Unassigned => None,
+        }
     }
 }
 
 impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpContext<Ipv6, C>
     for SC
 {
-    fn is_assigned_local_addr(&self, addr: Ipv6Addr) -> bool {
-        SpecifiedAddr::new(addr).map_or(false, |addr| match self.address_status(None, addr) {
-            AddressStatus::Present(status) => match status {
+    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv6Addr>) -> Option<SC::DeviceId> {
+        match self.address_status(addr) {
+            AddressStatus::Present((device, status)) => match status {
+                Ipv6PresentAddressStatus::UnicastAssigned => Some(device),
                 Ipv6PresentAddressStatus::Multicast
-                | Ipv6PresentAddressStatus::UnicastTentative => false,
-                Ipv6PresentAddressStatus::UnicastAssigned => true,
+                | Ipv6PresentAddressStatus::UnicastTentative => None,
             },
-            AddressStatus::Unassigned => false,
-        })
+            AddressStatus::Unassigned => None,
+        }
     }
 }
 
@@ -347,6 +349,15 @@ pub(crate) enum AddressStatus<S> {
     Unassigned,
 }
 
+impl<D: IpDeviceId, S> AddressStatus<(D, S)> {
+    fn drop_device(self) -> AddressStatus<S> {
+        match self {
+            Self::Present((_d, s)) => AddressStatus::Present(s),
+            Self::Unassigned => AddressStatus::Unassigned,
+        }
+    }
+}
+
 /// The status of an IPv4 address.
 pub(crate) enum Ipv4PresentAddressStatus {
     LimitedBroadcast,
@@ -368,11 +379,11 @@ pub(crate) trait IpLayerIpExt: IpExt {
 }
 
 impl IpLayerIpExt for Ipv4 {
-    type AddressStatus = AddressStatus<Ipv4PresentAddressStatus>;
+    type AddressStatus = Ipv4PresentAddressStatus;
 }
 
 impl IpLayerIpExt for Ipv6 {
-    type AddressStatus = AddressStatus<Ipv6PresentAddressStatus>;
+    type AddressStatus = Ipv6PresentAddressStatus;
 }
 
 /// An extension trait providing IP layer state properties.
@@ -411,14 +422,23 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
 
     /// Gets the status of an address.
     ///
-    /// If the device ID is specified, only the specified device will be checked
-    /// for the address. If the device ID is unspecified, then all devices will
-    /// be checked for the address.
+    /// Returns the status of the address if it is assigned, and the device it
+    /// is assigned to.
     fn address_status(
         &self,
-        device_id: Option<Self::DeviceId>,
         addr: SpecifiedAddr<I::Addr>,
-    ) -> I::AddressStatus;
+    ) -> AddressStatus<(Self::DeviceId, I::AddressStatus)>;
+
+    /// Gets the status of an address.
+    ///
+    /// Only the specified device will be checked for the address. Returns
+    /// [`AddressStatus::Unassigned`] if the address is not assigned to the
+    /// device.
+    fn address_status_for_device(
+        &self,
+        addr: SpecifiedAddr<I::Addr>,
+        device_id: Self::DeviceId,
+    ) -> AddressStatus<I::AddressStatus>;
 
     /// Returns true iff the device has routing enabled.
     fn is_device_routing_enabled(&self, device_id: Self::DeviceId) -> bool;
@@ -1936,8 +1956,12 @@ fn receive_ipv4_packet_action<
     //
     // TODO(https://fxbug.dev/93870): This should instead be controlled by the
     // routing table.
-    let address_device = if device.is_loopback() { None } else { Some(device) };
-    match sync_ctx.address_status(address_device, dst_ip) {
+    let address_status = if device.is_loopback() {
+        sync_ctx.address_status(dst_ip).drop_device()
+    } else {
+        sync_ctx.address_status_for_device(dst_ip, device)
+    };
+    match address_status {
         AddressStatus::Present(state) => match state {
             Ipv4PresentAddressStatus::LimitedBroadcast
             | Ipv4PresentAddressStatus::SubnetBroadcast
@@ -1974,8 +1998,12 @@ fn receive_ipv6_packet_action<
     //
     // TODO(https://fxbug.dev/93870): This should instead be controlled by the
     // routing table.
-    let address_device = if device.is_loopback() { None } else { Some(device) };
-    match sync_ctx.address_status(address_device, dst_ip) {
+    let address_status = if device.is_loopback() {
+        sync_ctx.address_status(dst_ip).drop_device()
+    } else {
+        sync_ctx.address_status_for_device(dst_ip, device)
+    };
+    match address_status {
         AddressStatus::Present(Ipv6PresentAddressStatus::Multicast) => {
             sync_ctx.increment_counter("receive_ipv6_packet_action::deliver_multicast");
             ReceivePacketAction::Deliver

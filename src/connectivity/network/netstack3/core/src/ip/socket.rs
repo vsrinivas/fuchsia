@@ -955,6 +955,13 @@ pub(crate) mod testutil {
 
             DummyIpSocketCtx { table, device_state }
         }
+
+        pub(crate) fn find_device_with_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<D> {
+            let Self { table: _, device_state } = self;
+            device_state.iter().find_map(|(device, state)| {
+                state.find_addr(&addr).map(|_: &I::AssignedAddress| *device)
+            })
+        }
     }
 
     pub(crate) struct DummyDeviceConfig<D, A: IpAddress> {

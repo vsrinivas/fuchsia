@@ -257,7 +257,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
 
-    fn remove_unbound(sync_ctx: &mut SC, id: Self::UnboundId);
+    fn remove_unbound(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId);
 
     fn set_socket_device(
         sync_ctx: &mut SC,
@@ -426,8 +426,8 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         (local_ip, local_port)
     }
 
-    fn remove_unbound(sync_ctx: &mut SC, id: Self::UnboundId) {
-        remove_udp_unbound(sync_ctx, id)
+    fn remove_unbound(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId) {
+        remove_udp_unbound(sync_ctx, ctx, id)
     }
 
     fn set_socket_device(
@@ -884,7 +884,11 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
-    fn remove_unbound(sync_ctx: &mut SyncCtx<NonSyncCtx>, id: Self::UnboundId) {
+    fn remove_unbound(
+        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        id: Self::UnboundId,
+    ) {
         I::remove_icmp_unbound(sync_ctx, id)
     }
 
@@ -2151,7 +2155,7 @@ where
     ) {
         let SocketControlInfo { _properties, state } = info;
         match state {
-            SocketState::Unbound { unbound_id } => T::remove_unbound(sync_ctx, unbound_id),
+            SocketState::Unbound { unbound_id } => T::remove_unbound(sync_ctx, ctx, unbound_id),
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
                 assert_ne!(I::get_collection_mut(ctx).listeners.remove(&listener_id), None);

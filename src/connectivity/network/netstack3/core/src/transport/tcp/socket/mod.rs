@@ -322,7 +322,7 @@ where
     let inactive = sync_ctx.as_mut().inactive.remove(idmap_key).expect("invalid unbound socket id");
     let local_ip = SpecifiedAddr::new(local_ip);
     if let Some(ip) = local_ip {
-        if !sync_ctx.is_assigned_local_addr(*ip) {
+        if sync_ctx.get_device_with_assigned_addr(ip).is_none() {
             return Err(BindError::NoLocalAddr);
         }
     }
@@ -635,9 +635,13 @@ mod tests {
     impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
     where
         TcpSyncCtx<I>: IpSocketHandler<I, TcpNonSyncCtx>,
+        TcpSyncCtx<I>: IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
-        fn is_assigned_local_addr(&self, _addr: <I as Ip>::Addr) -> bool {
-            true
+        fn get_device_with_assigned_addr(
+            &self,
+            _addr: SpecifiedAddr<I::Addr>,
+        ) -> Option<DummyDeviceId> {
+            Some(DummyDeviceId)
         }
     }
 

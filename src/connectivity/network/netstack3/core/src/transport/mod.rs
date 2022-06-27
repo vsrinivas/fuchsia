@@ -55,6 +55,7 @@
 //!       connection will be accepted from a different interface. This is part
 //!       of the "weak host model" vs "strong host model" discussion.
 
+mod integration;
 // TODO(https://fxbug.dev/95688): Integrate TCP with the rest of netstack3 core.
 // Note: we can't use `todo_unused` here because of the following issue:
 // https://github.com/rust-lang/rust/issues/54727
