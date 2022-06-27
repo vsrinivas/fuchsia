@@ -14,23 +14,25 @@ __BEGIN_CDECLS
 
 // zx_object_wait_async() options
 // Do not use ZX_WAIT_ASYNC_ONCE. It is now superfluous and will be removed.
-#define ZX_WAIT_ASYNC_ONCE          ((uint32_t)0u)
-#define ZX_WAIT_ASYNC_TIMESTAMP     ((uint32_t)1u)
-#define ZX_WAIT_ASYNC_EDGE          ((uint32_t)2u)
+#define ZX_WAIT_ASYNC_ONCE            ((uint32_t)0u)
+#define ZX_WAIT_ASYNC_TIMESTAMP       ((uint32_t)1u)
+#define ZX_WAIT_ASYNC_EDGE            ((uint32_t)2u)
+
+typedef uint32_t zx_packet_type_t;
 
 // packet types.  zx_port_packet_t::type
-#define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
-#define ZX_PKT_TYPE_SIGNAL_ONE      ((uint8_t)0x01u)
+#define ZX_PKT_TYPE_USER              ((zx_packet_type_t)0x00u)
+#define ZX_PKT_TYPE_SIGNAL_ONE        ((zx_packet_type_t)0x01u)
 // 0x02 was previously used for "ZX_PKT_TYPE_SIGNAL_REP".
-#define ZX_PKT_TYPE_GUEST_BELL      ((uint8_t)0x03u)
-#define ZX_PKT_TYPE_GUEST_MEM       ((uint8_t)0x04u)
-#define ZX_PKT_TYPE_GUEST_IO        ((uint8_t)0x05u)
-#define ZX_PKT_TYPE_GUEST_VCPU      ((uint8_t)0x06u)
-#define ZX_PKT_TYPE_INTERRUPT       ((uint8_t)0x07u)
-#define ZX_PKT_TYPE_PAGE_REQUEST    ((uint8_t)0x09u)
+#define ZX_PKT_TYPE_GUEST_BELL        ((zx_packet_type_t)0x03u)
+#define ZX_PKT_TYPE_GUEST_MEM         ((zx_packet_type_t)0x04u)
+#define ZX_PKT_TYPE_GUEST_IO          ((zx_packet_type_t)0x05u)
+#define ZX_PKT_TYPE_GUEST_VCPU        ((zx_packet_type_t)0x06u)
+#define ZX_PKT_TYPE_INTERRUPT         ((zx_packet_type_t)0x07u)
+#define ZX_PKT_TYPE_PAGE_REQUEST      ((zx_packet_type_t)0x09u)
 
 // For options passed to port_create
-#define ZX_PORT_BIND_TO_INTERRUPT   ((uint32_t)(0x1u << 0))
+#define ZX_PORT_BIND_TO_INTERRUPT     ((uint32_t)(0x1u << 0))
 
 #define ZX_PKT_IS_USER(type)          ((type) == ZX_PKT_TYPE_USER)
 #define ZX_PKT_IS_SIGNAL_ONE(type)    ((type) == ZX_PKT_TYPE_SIGNAL_ONE)
@@ -42,8 +44,8 @@ __BEGIN_CDECLS
 #define ZX_PKT_IS_PAGE_REQUEST(type)  ((type) == ZX_PKT_TYPE_PAGE_REQUEST)
 
 // zx_packet_guest_vcpu_t::type
-#define ZX_PKT_GUEST_VCPU_INTERRUPT  ((uint8_t)0)
-#define ZX_PKT_GUEST_VCPU_STARTUP    ((uint8_t)1)
+#define ZX_PKT_GUEST_VCPU_INTERRUPT   ((uint32_t)0)
+#define ZX_PKT_GUEST_VCPU_STARTUP     ((uint32_t)1)
 
 // zx_packet_page_request_t::command
 #define ZX_PAGER_VMO_READ ((uint16_t) 0)
@@ -119,6 +121,8 @@ typedef struct zx_packet_guest_io {
 } zx_packet_guest_io_t;
 
 typedef struct zx_packet_guest_vcpu {
+  uint32_t type;
+  uint8_t padding1[4];
   union {
     struct {
       uint64_t mask;
@@ -130,8 +134,6 @@ typedef struct zx_packet_guest_vcpu {
       zx_gpaddr_t entry;
     } startup;
   };
-  uint8_t type;
-  uint8_t padding1[7];
   uint64_t reserved;
 } zx_packet_guest_vcpu_t;
 
@@ -153,7 +155,7 @@ typedef struct zx_packet_page_request {
 
 typedef struct zx_port_packet {
   uint64_t key;
-  uint32_t type;
+  zx_packet_type_t type;
   zx_status_t status;
   union {
     zx_packet_user_t user;

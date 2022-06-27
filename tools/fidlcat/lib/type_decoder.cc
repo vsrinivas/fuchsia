@@ -142,7 +142,7 @@ std::string_view TypeName(SyscallType type) {
     case SyscallType::kVaddr:
       return "zx_vaddr_t";
     case SyscallType::kVcpu:
-      return "zx_vcpu_t";
+      return "zx_vcpu_state_topic_t";
     case SyscallType::kVmOption:
       return "zx_vm_option_t";
     case SyscallType::kVmoCreationOption:

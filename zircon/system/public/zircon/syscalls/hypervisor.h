@@ -5,9 +5,6 @@
 #ifndef SYSROOT_ZIRCON_SYSCALLS_HYPERVISOR_H_
 #define SYSROOT_ZIRCON_SYSCALLS_HYPERVISOR_H_
 
-#include <assert.h>
-
-#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -19,10 +16,10 @@ typedef uint32_t zx_guest_trap_t;
 #define ZX_GUEST_TRAP_MEM  ((zx_guest_trap_t) 1u)
 #define ZX_GUEST_TRAP_IO   ((zx_guest_trap_t) 2u)
 
-typedef uint32_t zx_vcpu_t;
+typedef uint32_t zx_vcpu_state_topic_t;
 
-#define ZX_VCPU_STATE ((zx_vcpu_t) 0u)
-#define ZX_VCPU_IO    ((zx_vcpu_t) 1u)
+#define ZX_VCPU_STATE ((zx_vcpu_state_topic_t) 0u)
+#define ZX_VCPU_IO    ((zx_vcpu_state_topic_t) 1u)
 // clang-format on
 
 // Structure to read and write VCPU state.

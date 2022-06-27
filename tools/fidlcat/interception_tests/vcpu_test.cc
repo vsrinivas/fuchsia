@@ -61,12 +61,12 @@ std::unique_ptr<SystemCallTest> ZxVcpuResume(int64_t result, std::string_view re
       .status = ZX_OK,                                                                        \
       .guest_vcpu =                                                                           \
           {                                                                                   \
+              .type = ZX_PKT_GUEST_VCPU_STARTUP,                                              \
               .startup =                                                                      \
                   {                                                                           \
                       .id = 1234,                                                             \
                       .entry = 0x123456,                                                      \
                   },                                                                          \
-              .type = ZX_PKT_GUEST_VCPU_STARTUP,                                              \
               .reserved = 0,                                                                  \
           },                                                                                  \
   };                                                                                          \
