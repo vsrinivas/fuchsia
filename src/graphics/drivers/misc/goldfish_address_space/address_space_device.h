@@ -6,11 +6,11 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -71,7 +71,7 @@ class AddressSpaceDevice : public DeviceType {
  private:
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
 
-  ddk::PciProtocolClient pci_;
+  ddk::Pci pci_;
   zx::bti bti_;
   zx::vmo dma_region_;
   uint64_t dma_region_paddr_;
