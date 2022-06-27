@@ -179,7 +179,7 @@ be visible to Driver Manager. These package labels are also considered to be in 
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:56
+From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
@@ -187,7 +187,7 @@ From //BUILD.gn:38
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:56
+From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
@@ -630,7 +630,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:11
+From //products/bringup.gni:9
 
 **Overridden from the default:** `false`
 
@@ -638,7 +638,7 @@ From //build/images/args.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:11
+From //products/bringup.gni:9
 
 **Overridden from the default:** `false`
 
@@ -1011,19 +1011,7 @@ From //build/product.gni:32
 
 ### core_realm_shards
 
-**Current value for `target_cpu = "arm64"`:** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
-
-From //products/bringup.gni:52
-
-**Overridden from the default:** `[]`
-
-From //build/product.gni:31
-
-**Current value for `target_cpu = "x64"`:** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
-
-From //products/bringup.gni:52
-
-**Overridden from the default:** `[]`
+**Current value (from the default):** `[]`
 
 From //build/product.gni:31
 
@@ -2675,7 +2663,7 @@ From //src/modular/build/args.gni:7
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:57
+From //products/bringup.gni:51
 
 **Overridden from the default:** `[]`
 
@@ -2683,7 +2671,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:57
+From //products/bringup.gni:51
 
 **Overridden from the default:** `[]`
 
@@ -2693,7 +2681,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:60
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -2701,7 +2689,7 @@ From //BUILD.gn:47
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:60
+From //products/bringup.gni:54
 
 **Overridden from the default:** `[]`
 
@@ -2711,7 +2699,7 @@ From //BUILD.gn:47
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
@@ -2719,7 +2707,7 @@ From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
@@ -2751,7 +2739,7 @@ From //BUILD.gn:73
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
-From //products/bringup.gni:66
+From //products/bringup.gni:60
 
 **Overridden from the default:** `[]`
 
@@ -2759,7 +2747,7 @@ From //BUILD.gn:65
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
-From //products/bringup.gni:66
+From //products/bringup.gni:60
 
 **Overridden from the default:** `[]`
 
@@ -2952,7 +2940,7 @@ they must be separated into their own list.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -2960,7 +2948,7 @@ From //build/images/args.gni:88
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -3614,7 +3602,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:78
+From //products/bringup.gni:72
 
 **Overridden from the default:** `[]`
 
@@ -3622,7 +3610,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:78
+From //products/bringup.gni:72
 
 **Overridden from the default:** `[]`
 
@@ -3697,7 +3685,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:oom.reboot-timeout--low", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:47
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -3705,7 +3693,7 @@ From //build/product.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:oom.reboot-timeout--low", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:47
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -3725,7 +3713,7 @@ this is true (should be set in bringup.gni)
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
@@ -3733,7 +3721,7 @@ From //BUILD.gn:93
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
@@ -4084,7 +4072,7 @@ an extension mechanism for SDK bits outside of the main repository.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:80
+From //products/bringup.gni:74
 
 **Overridden from the default:** `[]`
 
@@ -4092,7 +4080,7 @@ From //BUILD.gn:89
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:80
+From //products/bringup.gni:74
 
 **Overridden from the default:** `[]`
 
@@ -4609,7 +4597,7 @@ one or the bringup one?
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:10
+From //products/bringup.gni:8
 
 **Overridden from the default:** `false`
 
@@ -4617,7 +4605,7 @@ From //build/product.gni:8
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:10
+From //products/bringup.gni:8
 
 **Overridden from the default:** `false`
 
