@@ -7,48 +7,10 @@ import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("fuchsia-component-v1-test") {
-  edition = "2021"
-  source_root = "components_v1/lib.rs"
-  deps = [
-    ":fuchsia.component.test-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/vfs/rust:vfs",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [ "components_v1/lib.rs" ]
-}
-
 fidl("fuchsia.component.test") {
   sources = [ "test.test.fidl" ]
 }
 
 fidl("fuchsia.component.client.test") {
   sources = [ "client.test.fidl" ]
-}
-
-fuchsia_component("fuchsia_component_v1_test_component") {
-  component_name = "fuchsia_component_v1_test"
-  manifest = "meta/fuchsia_component_v1_test.cmx"
-  testonly = true
-  deps = [ ":fuchsia-component-v1-test" ]
-}
-
-fuchsia_test_package("fuchsia-component-tests") {
-  test_components = [ ":fuchsia_component_v1_test_component" ]
-  deps = [ "//src/sys/component_manager/testing/echo_server" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":fuchsia-component-tests" ]
 }

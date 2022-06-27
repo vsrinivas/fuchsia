@@ -49,8 +49,5 @@ fuchsia_unittest_package("fuchsia-component-unittests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia-component-unittests",
-    "tests",
-  ]
+  deps = [ ":fuchsia-component-unittests" ]
 }
