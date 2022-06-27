@@ -84,6 +84,10 @@ group("non_hermetic_deps") {
     "//third_party/arm-mali-bifrost/*",
     "//third_party/vulkan-cts/fuchsia/*",
   ]
+
+  # TODO(https://fxbug.dev/87512): Remove this entry when it no longer executes
+  # fx tools.
+  visibility += [ "//tools/docsgen:invoke_helpdoc" ]
 }
 
 # Build targets that use the legacy zx_library and zx_host_tool templates

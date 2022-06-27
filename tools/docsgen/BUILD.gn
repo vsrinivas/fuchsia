@@ -211,8 +211,11 @@ group("tests") {
 }
 
 # Runs one time python helpdoc generation script.
-# TODO (https://fxbug.dev/87512) to add depsfile.
 action("invoke_helpdoc") {
+  # TODO(https://fxbug.dev/87512): Remove this exception when this action no
+  # longer executes fx tools.
+  hermetic_deps = false
+
   script_output = get_target_outputs(":${_helpdoc_script_target}")
   script = script_output[0]
   testonly = true
