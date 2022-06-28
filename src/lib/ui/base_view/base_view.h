@@ -16,6 +16,9 @@
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/lib/ui/base_view/math.h"
 
+
+// Deprecated. See fxb/103477.
+
 namespace scenic {
 
 // Parameters for creating a BaseView.
@@ -33,6 +36,8 @@ struct ViewContext {
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
+//
+// Deprecated. See fxb/103477.
 class BaseView : private fuchsia::ui::scenic::SessionListener,
                  private fuchsia::ui::input::InputMethodEditorClient {
  public:

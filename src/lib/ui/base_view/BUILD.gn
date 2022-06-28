@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 
+# Deprecated. See fxb/103477.
 source_set("base_view") {
   sources = [
     "base_view.cc",
