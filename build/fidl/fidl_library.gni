@@ -190,7 +190,8 @@ template("fidl_library") {
     }
   }
 
-  # Enforce compatibility checks for all published SDK FIDLs.
+  # Enforce compatibility checks for all published SDK FIDLs in the Fuchsia
+  # namespace.
   if (is_sdk_publishable) {
     # A kill switch for API summarization and compatibility testing.
     # Set to true to permit compilations that have summary errors.
@@ -237,7 +238,15 @@ template("fidl_library") {
       }
       sdk_atom_deps += [ ":$fidl_ir_target_name" ]
 
-      if (api_compatibility_testing) {
+      # TODO(101964): Remove this. It's needed because we use the goldens as
+      # action.inputs so the build expects them to exist, but APIs outside the
+      # "fuchsia" namespace aren't compatibility tested and don't have goldens.
+      in_fuchsia_namespace =
+          library_name ==
+          "fuchsia." + string_replace(library_name, "fuchsia.", "", 1)
+      not_needed([ "in_fuchsia_namespace" ])
+
+      if (api_compatibility_testing && in_fuchsia_namespace) {
         test_target = "${target_name}_${level}_compatibility_test"
         fidl_api_compatibility_test(test_target) {
           forward_variables_from(invoker, [ "testonly" ])
