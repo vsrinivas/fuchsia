@@ -1,0 +1,14 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("calculator") {
+  # TODO(fxbug.dev/98622) - The structure and location of FIDL libraries along
+  # with their names can be confusing. We should update this once we land on a
+  # decision in the linked bug.
+  name = "fuchsia.examples.calculator"
+
+  sources = [ "calculator.test.fidl" ]
+}

@@ -1,0 +1,53 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("server") {
+  testonly = true
+  deps = [
+    ":package",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":calculator-server-rust-unittests" ]
+}
+
+rustc_binary("bin") {
+  output_name = "calculator_server"
+  with_unit_tests = true
+  edition = "2021"
+  deps = [
+    "//examples/fidl/calculator/fidl:calculator-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("component") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("package") {
+  package_name = "server"
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("calculator-server-rust-unittests") {
+  deps = [ ":bin_test" ]
+}

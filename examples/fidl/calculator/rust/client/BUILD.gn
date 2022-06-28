@@ -1,0 +1,67 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("client") {
+  testonly = true
+  deps = [
+    ":package",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":calculator-client-rust-unittests" ]
+}
+
+resource("input") {
+  sources = [ "src/input.txt" ]
+
+  # {{source_file_part}} is something specific to GN. It allows us to get
+  # "input.txt" from "src/input.txt" in a general way.
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+rustc_binary("bin") {
+  output_name = "calculator-client"
+  with_unit_tests = true
+  edition = "2021"
+  deps = [
+    "//examples/fidl/calculator/fidl:calculator-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:nom",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [
+    "src/main.rs",
+    "src/parse.rs",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [
+    ":bin",
+    ":input",
+  ]
+}
+
+fuchsia_package("package") {
+  package_name = "client"
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("calculator-client-rust-unittests") {
+  deps = [ ":bin_test" ]
+}

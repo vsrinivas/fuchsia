@@ -1,0 +1,94 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Library containing a simple calculator protocol.
+library fuchsia.examples.calculator;
+
+/// A protocol for a simple calculator.
+///
+/// Supports the following operations:
+/// + [`fuchsia.examples.calculator/Calculator.Add`]
+/// + [`fuchsia.examples.calculator/Calculator.Subtract`]
+/// + [`fuchsia.examples.calculator/Calculator.Multiply`]
+/// + [`fuchsia.examples.calculator/Calculator.Divide`]
+/// + [`fuchsia.examples.calculator/Calculator.Pow`]
+@discoverable
+protocol Calculator {
+    /// Adds two numbers togther and returns their `sum`.
+    ///
+    /// For example, with `a` being 4.5 and `b` being 3.2, the response `sum` is
+    /// 7.7.
+    ///
+    /// + request `a` the first number to be added.
+    /// + request `b` the second number to be added.
+    /// - response `sum` the sum of a and b.
+    Add(struct {
+        a float64;
+        b float64;
+    }) -> (struct {
+        sum float64;
+    });
+
+    /// Subtracts two numbers and returns their `difference`.
+    ///
+    /// For example, with `a` being 7.7 and `b` being 3.2, the response
+    /// `difference` is 4.5
+    ///
+    /// + request `a` the number to be subracted _from_.
+    /// + request `b` the number to subtract.
+    /// - response `difference` the difference between `a` and `b`.
+    Subtract(struct {
+        a float64;
+        b float64;
+    }) -> (struct {
+        difference float64;
+    });
+
+    /// Multiplies two numbers and returns their `product`.
+    ///
+    /// For example, with `a` being 1.5 and `b` being 2.0, the response
+    /// `product` is 3.0
+    ///
+    /// + request `a` the first number used to calculatorulate the `product`.
+    /// + request `b` the second number used to calculatorulate the `product`.
+    /// - response `product` the result of multiplying `a` and `b`.
+    Multiply(struct {
+        a float64;
+        b float64;
+    }) -> (struct {
+        product float64;
+    });
+
+    /// Divides one number by another and return the `quotient`.
+    ///
+    /// For example with a `dividend` of 2.0 and a `divisor` of 4.0, the
+    /// response `quotient` is 0.5.
+    ///
+    /// + request `dividend` the number to divide with.
+    /// + request `divisor` the number to divide into.
+    /// - response `quotient` the result of dividing the `dividend` into the `divisor`.
+    Divide(struct {
+        dividend float64;
+        divisor float64;
+    }) -> (struct {
+        quotient float64;
+    });
+
+    /// Takes `base` to the `exponent` and returns the `power`.
+    ///
+    /// For example with a `base` of 3.0 and an `exponent` of 4.0, the response
+    /// `power` is 81.0.
+    ///
+    /// + request `base` the number to multiply by itself.
+    /// + request `exponent` the number of times to successively multiply
+    /// `base`.
+    /// - response `power` the result of multiplying `base` by itself `exponent`
+    /// times..
+    Pow(struct {
+        base float64;
+        exponent float64;
+    }) -> (struct {
+        power float64;
+    });
+};

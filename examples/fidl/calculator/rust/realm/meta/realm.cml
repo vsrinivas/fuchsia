@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "server",
+            url: "#meta/server.cm",
+        },
+        {
+            name: "client",
+            url: "#meta/client.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.examples.calculator.Calculator",
+            from: "#server",
+            to: "#client",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#client",
+                "#server",
+            ],
+        },
+    ],
+}
