@@ -28,8 +28,8 @@ namespace {
 // interpolation of those two neighbouring frames. To avoid this issue, we always snap to the
 // forward nearest neighbor sample directly without interpolation, i.e. choosing the newer frame
 // position when the fractional sampling position is exactly in the middle between two positions.
-constexpr int64_t kFracPositiveFilterLength = kHalfFrame.raw_value() + 1;
-constexpr int64_t kFracNegativeFilterLength = kHalfFrame.raw_value();
+constexpr int64_t kFracPositiveFilterLength = kFracHalfFrame + 1;
+constexpr int64_t kFracNegativeFilterLength = kFracHalfFrame;
 
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
 class PointSamplerImpl : public PointSampler {

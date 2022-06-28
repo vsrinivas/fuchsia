@@ -105,7 +105,7 @@ class PositionManager {
   int32_t source_channel_count_ = 1;
   int32_t dest_channel_count_ = 1;
   int64_t frac_positive_length_ = 1;
-  int64_t frac_negative_length_ = kOneFrame.raw_value();
+  int64_t frac_negative_length_ = kFracOneFrame;
 
   void* source_void_ptr_ = nullptr;
   int64_t source_frame_count_ = 0;
@@ -119,7 +119,7 @@ class PositionManager {
   int64_t dest_offset_ = 0;
 
   // If `SetRateValues` is never called, we successfully operate at 1:1 (without rate change).
-  int64_t frac_step_size_ = kOneFrame.raw_value();
+  int64_t frac_step_size_ = kFracOneFrame;
   uint64_t rate_modulo_ = 0;
   uint64_t denominator_ = 1;
   uint64_t source_pos_modulo_ = 0;  // This should always be less than `rate_modulo_` (or both 0).

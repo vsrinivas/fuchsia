@@ -35,9 +35,11 @@ using Fixed = ffl::Fixed<int64_t, kPtsFractionalBits>;
 
 // One frame in fixed-point.
 inline constexpr Fixed kOneFrame = Fixed(1);
+inline constexpr int64_t kFracOneFrame = kOneFrame.raw_value();
 
 // Half frame in fixed-point.
 inline constexpr Fixed kHalfFrame = ffl::FromRatio(1, 2);
+inline constexpr int64_t kFracHalfFrame = kHalfFrame.raw_value();
 
 }  // namespace media_audio
 

@@ -32,7 +32,7 @@ TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
   CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits,
                          cpp20::span<const float>{});
 
-  for (int64_t fraction = 0; fraction < kOneFrame.raw_value(); ++fraction) {
+  for (int64_t fraction = 0; fraction < kFracOneFrame; ++fraction) {
     // Each fractional value will have a block in the vector. Now check that every valid integral
     // value is contiguous for this fractional value.
     auto block_index = fraction * width.Ceiling();
@@ -53,7 +53,7 @@ TEST(CoefficientTableTest, ReadSlice) {
   }
 
   auto table = builder.Build();
-  for (int64_t fraction = 0; fraction < kOneFrame.raw_value(); ++fraction) {
+  for (int64_t fraction = 0; fraction < kFracOneFrame; ++fraction) {
     auto slice = table->ReadSlice(fraction, width.Ceiling());
     ASSERT_NE(slice, nullptr);
 

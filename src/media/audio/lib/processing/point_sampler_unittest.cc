@@ -112,7 +112,7 @@ TEST_P(PassthroughTest, PassthroughMono) {
   // Create mono sampler.
   auto mono_sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kUnsigned8),
                                            CreateFormat(1, 48000, AudioSampleFormat::kFloat));
-  EXPECT_EQ(mono_sampler->pos_filter_length(), Fixed::FromRaw(kHalfFrame.raw_value() + 1));
+  EXPECT_EQ(mono_sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
   EXPECT_EQ(mono_sampler->neg_filter_length(), kHalfFrame);
 
   // Process with unity gain.
@@ -136,8 +136,7 @@ TEST_P(PassthroughTest, PassthroughMono) {
 
 INSTANTIATE_TEST_SUITE_P(PointSamplerTest, PassthroughTest,
                          testing::Values(-kHalfFrame, Fixed(0),
-                                         ffl::FromRaw<kPtsFractionalBits>(kHalfFrame.raw_value() -
-                                                                          1)));
+                                         ffl::FromRaw<kPtsFractionalBits>(kFracHalfFrame - 1)));
 
 // TODO(fxbug.dev/87651): Move the rest of the `media::audio::mixer::PointSampler` unit tests once
 // `media::audio::mixer::Mixer` code is fully migrated.

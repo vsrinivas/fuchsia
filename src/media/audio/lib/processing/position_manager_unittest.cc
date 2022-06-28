@@ -13,13 +13,10 @@
 namespace media_audio {
 namespace {
 
-constexpr int64_t kFracFrame = kOneFrame.raw_value();
-constexpr int64_t kFracHalfFrame = kHalfFrame.raw_value();
-
 TEST(PositionManagerTest, CurrentSourceFrame) {
   constexpr auto source_chans = 2u;
   constexpr auto dest_chans = 1u;
-  PositionManager pos_mgr(source_chans, dest_chans, 1, kFracFrame);
+  PositionManager pos_mgr(source_chans, dest_chans, 1, kFracOneFrame);
 
   constexpr int64_t source_frame_count = 2;
 
@@ -59,7 +56,7 @@ TEST(PositionManagerTest, CurrentSourceFrame) {
 TEST(PositionManagerTest, CurrentDestFrame) {
   constexpr auto source_chans = 1u;
   constexpr auto dest_chans = 4u;
-  PositionManager pos_mgr(source_chans, dest_chans, 1, kFracFrame);
+  PositionManager pos_mgr(source_chans, dest_chans, 1, kFracOneFrame);
 
   constexpr auto dest_frame_count = 2;
   float dest[dest_frame_count * dest_chans];
@@ -76,7 +73,7 @@ TEST(PositionManagerTest, CurrentDestFrame) {
 }
 
 TEST(PositionManagerTest, UpdateOffsets) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   float input;
   void* source_void_ptr = static_cast<void*>(&input);
@@ -90,7 +87,7 @@ TEST(PositionManagerTest, UpdateOffsets) {
   int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, dest_frame_count, &dest_offset);
 
-  auto step_size = kFracFrame;
+  auto step_size = kFracOneFrame;
   auto rate_modulo = 0ul;
   auto denominator = 1ul;
   auto source_position_modulo = 0ul;
@@ -146,7 +143,7 @@ TEST(PositionManagerTest, CanFrameBeMixed) {
 }
 
 TEST(PositionManagerTest, AdvanceFrameBasic) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   uint8_t source[3];
   auto source_offset = Fixed(1);
@@ -157,7 +154,7 @@ TEST(PositionManagerTest, AdvanceFrameBasic) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(kFracFrame, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, &source_position_modulo);
 
   Fixed expected_source_offset = source_offset + Fixed(1);
   auto received_source_offset = Fixed::FromRaw(pos_mgr.AdvanceFrame());
@@ -167,7 +164,7 @@ TEST(PositionManagerTest, AdvanceFrameBasic) {
 }
 
 TEST(PositionManagerTest, AdvanceFrameSourceReachesEnd) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   int32_t source[2];
   auto source_offset = Fixed(1);
@@ -178,7 +175,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceReachesEnd) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(kFracFrame, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, &source_position_modulo);
 
   Fixed expected_source_offset = source_offset + Fixed(1);
   auto received_source_offset = Fixed::FromRaw(pos_mgr.AdvanceFrame());
@@ -188,7 +185,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceReachesEnd) {
 }
 
 TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   int16_t source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -200,7 +197,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
 
   // Source modulo starts just one shy of incrementing `source_offset`, and `rate_modulo` increments
   // it. This is the boundary case, exactly where source modulo affects `source_offset`.
-  constexpr auto step_size = kFracFrame;
+  constexpr auto step_size = kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 243ul;
   auto source_position_modulo = 242ul;
@@ -223,7 +220,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
 }
 
 TEST(PositionManagerTest, AdvanceFrameSourceModuloAlmostReachesEnd) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   float source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -233,7 +230,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceModuloAlmostReachesEnd) {
   int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  constexpr auto step_size = kFracFrame;
+  constexpr auto step_size = kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 243ul;
   auto source_position_modulo = 241ul;
@@ -259,7 +256,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceModuloAlmostReachesEnd) {
 }
 
 TEST(PositionManagerTest, AdvanceFrameDestReachesEnd) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   int16_t source[3];
   auto source_offset = Fixed(1);
@@ -272,7 +269,7 @@ TEST(PositionManagerTest, AdvanceFrameDestReachesEnd) {
   int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, dest_frame_count, &dest_offset);
 
-  constexpr auto step_size = kFracFrame;
+  constexpr auto step_size = kFracOneFrame;
   auto source_position_modulo = 0ul;
   pos_mgr.SetRateValues(step_size, 0, 1, &source_position_modulo);
 
@@ -288,7 +285,7 @@ TEST(PositionManagerTest, AdvanceFrameDestReachesEnd) {
 }
 
 TEST(PositionManagerTest, AdvanceFrameNoRateValues) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   int16_t source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -317,7 +314,7 @@ TEST(PositionManagerTest, AdvanceFrameNoRateValues) {
 }
 
 TEST(PositionManagerTest, AdvanceToEndDest) {
-  PositionManager pos_mgr(1, 1, 1, kFracFrame);
+  PositionManager pos_mgr(1, 1, 1, kFracOneFrame);
 
   int16_t source[12];
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
@@ -327,7 +324,7 @@ TEST(PositionManagerTest, AdvanceToEndDest) {
   int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
-  constexpr auto step_size = kFracFrame * 2 - 1;
+  constexpr auto step_size = kFracOneFrame * 2 - 1;
   auto source_position_modulo = 1ul;
   auto denominator = 2ul;
   pos_mgr.SetRateValues(step_size, 0, denominator, &source_position_modulo);
@@ -385,7 +382,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExactModulo) {
   int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
-  constexpr auto step_size = 2 * kFracFrame;
+  constexpr auto step_size = 2 * kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
   auto source_position_modulo = 20ul;
@@ -417,7 +414,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExtraModulo) {
   int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
-  constexpr auto step_size = kFracFrame * 2;
+  constexpr auto step_size = kFracOneFrame * 2;
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
   auto source_position_modulo = 24ul;
