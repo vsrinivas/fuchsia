@@ -12,7 +12,7 @@ The radarutil tool takes the following arguments:
 - Burst processing time (`--burst-process-time`/`-p`): The amount of time to
   sleep for each burst to simulate processing delay. Requires a suffix (`h`,
   `m`, `s`, `ms`, `us`, `ns`) indicating the units. Defaults to no delay.
-- Run time (`--run-time`/`-t`): The amount of time spend reading bursts before
+- Run time (`--time`/`-t`): The amount of time spend reading bursts before
   exiting. Requires a suffix indicating the units. Incompatible with the burst
   count option. Defaults to 1 second.
 - Burst count (`--burst-count`/`-b`): The number of bursts to read before

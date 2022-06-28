@@ -317,7 +317,8 @@ TEST(RadarUtilTest, InjectError) {
   FakeRadarDevice device;
   device.SetErrorOnBurst(10);
 
-  EXPECT_EQ(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}), ZX_ERR_IO);
+  EXPECT_EQ(device.RunRadarUtil({"radarutil", "--time", "10s", "-v", "20", "-p", "1ms"}),
+            ZX_ERR_IO);
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
@@ -345,7 +346,7 @@ TEST(RadarUtilTest, ErrorRateFail) {
 
 TEST(RadarUtilTest, BurstPeriod) {
   FakeRadarDevice device;
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "5s", "--burst-period-ns", "33333000"}));
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "--time", "5s", "--burst-period-ns", "33333000"}));
 }
 
 }  // namespace radarutil
