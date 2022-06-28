@@ -7,6 +7,12 @@
 
 zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
                                          pci_interrupt_mode_t* out_mode) {
+  // NOTE: Any changes to this method should likely also be reflected in the C++
+  // version, Pci::ConfigureInterruptMode. These two implementations are
+  // temporarily coexisting while we migrate PCI from Banjo to FIDL. Eventually
+  // the C version will go away.
+  //
+  // TODO(fxbug.dev/99914): Remove this function once PCI over Banjo is removed.
   if (requested_irq_count == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -153,9 +159,34 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
 
 zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count,
                                         pci_interrupt_mode_t* out_mode) const {
-  pci_protocol_t proto{};
-  client_.GetProto(&proto);
-  return pci_configure_interrupt_mode(&proto, requested_irq_count, out_mode);
+  // NOTE: Any changes to this method should likely also be reflected in the C
+  // version, pci_configure_interrupt_mode. These two implementations are
+  // temporarily coexisting while we migrate PCI from Banjo to FIDL. Eventually
+  // the C version will go away.
+  //
+  // TODO(fxbug.dev/99914): Remove this notice once PCI over Banjo is removed.
+  if (requested_irq_count == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  pci_interrupt_modes modes{};
+  GetInterruptModes(&modes);
+  std::pair<pci_interrupt_mode_t, uint32_t> pairs[] = {
+      {PCI_INTERRUPT_MODE_MSI_X, modes.msix_count},
+      {PCI_INTERRUPT_MODE_MSI, modes.msi_count},
+      {PCI_INTERRUPT_MODE_LEGACY, modes.has_legacy}};
+  for (auto& [mode, irq_cnt] : pairs) {
+    if (irq_cnt >= requested_irq_count) {
+      zx_status_t status = SetInterruptMode(mode, requested_irq_count);
+      if (status == ZX_OK) {
+        if (out_mode) {
+          *out_mode = mode;
+        }
+        return status;
+      }
+    }
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace ddk
