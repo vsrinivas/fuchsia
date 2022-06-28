@@ -10,10 +10,10 @@
 namespace media_audio {
 
 // static
-std::shared_ptr<FidlGraph> FidlGraph::Create(
-    async_dispatcher_t* fidl_thread_dispatcher,
-    fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end) {
-  return BaseFidlServer::Create(fidl_thread_dispatcher, std::move(server_end));
+std::shared_ptr<FidlGraph> FidlGraph::Create(Args args) {
+  auto server_end = std::move(args.server_end);
+  return BaseFidlServer::Create(args.main_fidl_thread_dispatcher, std::move(server_end),
+                                std::move(args));
 }
 
 void FidlGraph::CreateProducer(CreateProducerRequestView request,
@@ -88,7 +88,19 @@ void FidlGraph::CreateGraphControlledReferenceClock(
     CreateGraphControlledReferenceClockRequestView request,
     CreateGraphControlledReferenceClockCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateGraphControlledReferenceClock");
-  FX_CHECK(false) << "not implemented";
+
+  auto result = clock_registry_->CreateGraphControlledClock();
+  if (!result.is_ok()) {
+    completer.ReplyError(result.status_value());
+    return;
+  }
+
+  auto handle = std::move(result.value().second);
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateGraphControlledReferenceClockResponse::Builder(arena)
+          .reference_clock(std::move(handle))
+          .Build());
 }
 
 void FidlGraph::ForgetGraphControlledReferenceClock(

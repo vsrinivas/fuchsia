@@ -60,6 +60,7 @@ executable("fidl_unittests") {
 
   sources = [
     "clock_registry_unittest.cc",
+    "fidl_graph_creator_unittest.cc",
     "fidl_synthetic_clock_unittest.cc",
     "node_unittest.cc",
     "reachability_unittest.cc",

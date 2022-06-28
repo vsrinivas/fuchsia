@@ -25,6 +25,7 @@ namespace media_audio {
 class FidlSyntheticClock
     : public BaseFidlServer<FidlSyntheticClock, fuchsia_audio_mixer::SyntheticClock> {
  public:
+  // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlSyntheticClock> Create(
       async_dispatcher_t* fidl_thread_dispatcher,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClock> server_end,
@@ -50,6 +51,7 @@ class FidlSyntheticClock
 class FidlSyntheticClockRealm
     : public BaseFidlServer<FidlSyntheticClockRealm, fuchsia_audio_mixer::SyntheticClockRealm> {
  public:
+  // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlSyntheticClockRealm> Create(
       async_dispatcher_t* fidl_thread_dispatcher,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end);

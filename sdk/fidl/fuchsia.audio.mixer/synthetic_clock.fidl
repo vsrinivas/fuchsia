@@ -47,8 +47,8 @@ protocol SyntheticClockRealm {
         /// [`Graph`] will recognized this handle until [`ForgetClock`] is
         /// called.
         ///
-        /// This handle has rights `ZX_RIGHTS_DUPLICATE | ZX_RIGHTS_TRANSFER`.
-        /// It does not have `ZX_RIGHTS_READ` or `ZX_RIGHTS_WRITE` and cannot
+        /// This handle has rights `ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER`.
+        /// It does not have `ZX_RIGHT_READ` or `ZX_RIGHT_WRITE` and cannot
         /// be read or updated directly. The clock's value is meaningless. To
         /// read the clock, use the `control`, below.
         1: handle zx.handle:CLOCK;

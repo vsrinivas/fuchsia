@@ -18,6 +18,7 @@ namespace media_audio {
 class FidlGraphCreator
     : public BaseFidlServer<FidlGraphCreator, fuchsia_audio_mixer::GraphCreator> {
  public:
+  // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlGraphCreator> Create(
       async_dispatcher_t* fidl_thread_dispatcher,
       fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end);

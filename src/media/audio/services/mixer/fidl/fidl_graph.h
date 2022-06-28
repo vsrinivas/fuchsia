@@ -6,19 +6,40 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_GRAPH_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
+#include <lib/zx/profile.h>
 #include <zircon/errors.h>
 
 #include <memory>
 #include <optional>
 
+#include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
+#include "src/media/audio/services/mixer/fidl/clock_registry.h"
 
 namespace media_audio {
 
 class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
  public:
-  static std::shared_ptr<FidlGraph> Create(async_dispatcher_t* fidl_thread_dispatcher,
-                                           fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end);
+  struct Args {
+    fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end;
+
+    // Name of this graph.
+    // For debugging only: may be empty or not unique.
+    std::string name;
+
+    // Dispatcher for the main (not-real-time) FIDL thread, which may be shared
+    // with other Graph servers.
+    async_dispatcher_t* main_fidl_thread_dispatcher;
+
+    // Deadline profile for the real-time FIDL thread.
+    zx::profile realtime_fidl_thread_deadline_profile;
+
+    // Registry for all clocks used by this graph.
+    std::shared_ptr<ClockRegistry> clock_registry;
+  };
+
+  // The returned server will live until the `args.server_end` channel is closed.
+  static std::shared_ptr<FidlGraph> Create(Args args);
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::Graph>.
   void CreateProducer(CreateProducerRequestView request,
@@ -48,12 +69,22 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
       ForgetGraphControlledReferenceClockRequestView request,
       ForgetGraphControlledReferenceClockCompleter::Sync& completer) override;
 
+  // Name of this graph.
+  // For debugging only: may be empty or not unique.
+  std::string_view name() const { return name_; }
+
  private:
   static inline constexpr std::string_view Name = "FidlGraph";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  FidlGraph() = default;
+  // Note: args.server_end is consumed by BaseFidlServer.
+  FidlGraph(Args args)
+      : name_(std::move(args.name)), clock_registry_(std::move(args.clock_registry)) {}
+
+  const std::string name_;
+
+  std::shared_ptr<ClockRegistry> clock_registry_;
 };
 
 }  // namespace media_audio

@@ -27,7 +27,7 @@ protocol GraphCreator {
     /// Creates a new graph that lives until the channel is closed.
     Create(resource table {
         /// Required.
-        1: graph client_end:Graph;
+        1: graph server_end:Graph;
 
         /// Name of this graph, used for diagnostics only.
         /// If specified, ideally this should be globally unique and have a
@@ -524,7 +524,10 @@ protocol Graph {
 };
 
 /// Type of errors return by [`CreateGraph`].
-type CreateGraphError = flexible enum {};
+type CreateGraphError = flexible enum {
+    /// The provided `server_end:Graph` was invalid.
+    INVALID_GRAPH_CHANNEL = 1;
+};
 
 /// Type of errors return by CreateNode methods.
 type CreateNodeError = flexible enum {
