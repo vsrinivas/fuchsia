@@ -26,8 +26,8 @@ namespace {
 constexpr uint32_t kHandleReservedBits = 2;
 constexpr uint32_t kHandleReservedBitsMask = (1 << kHandleReservedBits) - 1;
 // LSB must be zero.
-constexpr uint32_t kHandleReservedBitsValue = 1 < 1;
-static_assert(kHandleReservedBitsValue < kHandleReservedBits,
+constexpr uint32_t kHandleReservedBitsValue = 1 << 1;
+static_assert(cpp20::bit_width(kHandleReservedBitsValue) <= kHandleReservedBits,
               "kHandleReservedBitsValue does not fit!");
 
 constexpr uint32_t kHandleIndexShift = kHandleReservedBits;
@@ -81,7 +81,7 @@ fdf_handle_t new_handle_value(uint32_t dir_index, uint32_t index, fdf_handle_t o
     old_gen = (old_handle_value & kHandleGenerationMask) >> kHandleGenerationShift;
   }
   uint32_t new_gen = (((old_gen + 1) << kHandleGenerationShift) & kHandleGenerationMask);
-  return (kHandleReservedBitsValue | index << kHandleIndexShift |
+  return (kHandleReservedBitsValue | (index << kHandleIndexShift) |
           (dir_index << kHandleDirIndexShift) | new_gen);
 }
 
@@ -171,6 +171,7 @@ HandleOwner Handle::Create(fbl::RefPtr<Object> object) {
   if (!handle) {
     return nullptr;
   }
+  ZX_ASSERT(handle_value != FDF_HANDLE_INVALID);
   return HandleOwner(new (handle) Handle(std::move(object), handle_value));
 }
 

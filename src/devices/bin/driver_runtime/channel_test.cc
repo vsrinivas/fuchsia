@@ -1715,3 +1715,13 @@ TEST(ChannelTest, IsValid) {
   channels->end0.close();
   ASSERT_FALSE(channels->end0.is_valid());
 }
+
+TEST(ChannelTest2, CreateAllThePairs) {
+  static constexpr uint32_t kNumIterations = 100000;
+
+  for (uint32_t i = 0; i < kNumIterations; i++) {
+    auto channels = fdf::ChannelPair::Create(0);
+    ASSERT_TRUE(channels->end0.is_valid());
+    ASSERT_TRUE(channels->end1.is_valid());
+  }
+}

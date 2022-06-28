@@ -55,6 +55,9 @@ fdf_status_t Channel::Create(uint32_t options, fdf_handle_t* out0, fdf_handle_t*
   *out0 = handle0->handle_value();
   *out1 = handle1->handle_value();
 
+  ZX_ASSERT(*out0 != FDF_HANDLE_INVALID);
+  ZX_ASSERT(*out1 != FDF_HANDLE_INVALID);
+
   // These handles will be reclaimed when they are closed.
   handle0.release();
   handle1.release();
