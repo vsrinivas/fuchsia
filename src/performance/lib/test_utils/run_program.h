@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_TRACING_LIB_TEST_UTILS_RUN_PROGRAM_H_
-#define SRC_DEVELOPER_TRACING_LIB_TEST_UTILS_RUN_PROGRAM_H_
+#ifndef SRC_PERFORMANCE_LIB_TEST_UTILS_RUN_PROGRAM_H_
+#define SRC_PERFORMANCE_LIB_TEST_UTILS_RUN_PROGRAM_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -71,4 +71,4 @@ bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context, cons
 }  // namespace test
 }  // namespace tracing
 
-#endif  // SRC_DEVELOPER_TRACING_LIB_TEST_UTILS_RUN_PROGRAM_H_
+#endif  // SRC_PERFORMANCE_LIB_TEST_UTILS_RUN_PROGRAM_H_

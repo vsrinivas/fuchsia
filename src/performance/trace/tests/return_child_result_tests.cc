@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/tracing/lib/test_utils/run_program.h"
+#include "src/performance/lib/test_utils/run_program.h"
 #include "src/performance/trace/tests/integration_test_utils.h"
 #include "src/performance/trace/tests/run_test.h"
 

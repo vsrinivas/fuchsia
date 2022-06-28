@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/tracing/lib/test_utils/run_program.h"
+#include <lib/zx/eventpair.h>
 
 #include <gtest/gtest.h>
-#include <lib/zx/eventpair.h>
+
+#include "src/performance/lib/test_utils/run_program.h"
 
 namespace tracing {
 namespace test {

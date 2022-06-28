@@ -23,10 +23,10 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/lib/test_utils/run_program.h"
 #include "src/performance/trace/options.h"
 #include "src/performance/trace/tests/component_context.h"
 #include "src/performance/trace/tests/integration_test_utils.h"

@@ -29,7 +29,7 @@ source_set("lib") {
   deps = [ "//src/lib/fxl" ]
 
   public_deps = [
-    "//src/developer/tracing/lib/trace_converters:chromium",
+    "//src/performance/lib/trace_converters:chromium",
     "//third_party/rapidjson",
     "//third_party/zlib:zfstream",
     "//zircon/system/ulib/trace-reader",

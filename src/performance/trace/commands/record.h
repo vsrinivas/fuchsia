@@ -17,8 +17,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/developer/tracing/lib/trace_converters/chromium_exporter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/performance/lib/trace_converters/chromium_exporter.h"
 #include "src/performance/trace/cmd_utils.h"
 #include "src/performance/trace/command.h"
 #include "src/performance/trace/tracer.h"

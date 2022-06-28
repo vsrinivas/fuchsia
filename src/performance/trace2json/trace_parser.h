@@ -14,7 +14,7 @@
 
 #include <trace-reader/reader.h>
 
-#include "src/developer/tracing/lib/trace_converters/chromium_exporter.h"
+#include "src/performance/lib/trace_converters/chromium_exporter.h"
 
 namespace tracing {
 

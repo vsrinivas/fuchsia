@@ -12,7 +12,6 @@ group("developer") {
     "forensics",
     "fuchsia-criterion",
     "remote-control",
-    "tracing",
   ]
 }
 
@@ -30,6 +29,5 @@ group("tests") {
     "shell:tests",
     "ssh-key-manager:tests",
     "sshd-host:tests",
-    "tracing:tests",
   ]
 }

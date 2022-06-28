@@ -1,4 +1,4 @@
-include /src/developer/tracing/OWNERS
+include /src/performance/OWNERS
 marshallk@google.com
 
 # COMPONENT: PerformanceTools>tracing
