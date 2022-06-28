@@ -98,6 +98,7 @@
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",

@@ -16,6 +16,7 @@
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",

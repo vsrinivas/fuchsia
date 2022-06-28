@@ -43,6 +43,7 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.bluetooth.sys.Access",
+                "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",

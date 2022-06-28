@@ -149,6 +149,7 @@
         {
             protocol: [
                 "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
