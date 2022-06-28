@@ -75,7 +75,6 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void QueryMacSublayerSupport(QueryMacSublayerSupportCallback cb) override;
   void QuerySecuritySupport(QuerySecuritySupportCallback cb) override;
   void QuerySpectrumManagementSupport(QuerySpectrumManagementSupportCallback cb) override;
-  void StatsQueryReq() override;
   void GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) override;
   void GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) override;
   void ListMinstrelPeers(ListMinstrelPeersCallback cb) override;
@@ -113,7 +112,6 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void EapolConf(const wlan_fullmac_eapol_confirm_t* resp);
   void SignalReport(const wlan_fullmac_signal_report_indication_t* ind);
   void EapolInd(const wlan_fullmac_eapol_indication_t* ind);
-  void StatsQueryResp(const wlan_fullmac_stats_query_response_t* resp);
   void RelayCapturedFrame(const wlan_fullmac_captured_frame_result* result);
   void OnChannelSwitched(const wlan_fullmac_channel_switch_info_t* ind);
   void OnPmkAvailable(const wlan_fullmac_pmk_info_t* info);

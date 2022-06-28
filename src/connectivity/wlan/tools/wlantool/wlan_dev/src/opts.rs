@@ -242,8 +242,6 @@ pub enum IfaceCmd {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
     },
-    #[structopt(name = "stats")]
-    Stats { iface_id: Option<u16> },
     #[structopt(name = "minstrel")]
     Minstrel(MinstrelCmd),
     #[structopt(name = "status")]

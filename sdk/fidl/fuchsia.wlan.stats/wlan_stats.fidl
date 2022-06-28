@@ -3,39 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.wlan.stats;
 
-type Counter = struct {
-    count uint64;
-    name string;
-};
-
-type PacketCounter = struct {
-    in Counter;
-    out Counter;
-    drop Counter;
-    in_bytes Counter;
-    out_bytes Counter;
-    drop_bytes Counter;
-};
-
 // LINT.IfChange
-type DispatcherStats = struct {
-    any_packet PacketCounter;
-    mgmt_frame PacketCounter;
-    ctrl_frame PacketCounter;
-    data_frame PacketCounter;
-};
 
-const RSSI_BINS uint8 = 129;
-
-/// RssiStats count the occurrence of the RSSIs.
-/// RSSI value r's occurrence is counted in the bin[-r],
-/// where r is defined in [-128, 0] in dBm.
-type RssiStats = struct {
-    // TODO(alexandrew): Change this to array.
-    hist vector<uint64>:RSSI_BINS;
-};
-
-// LINT.IfChange
 /// Histogram bucket.
 type HistBucket = struct {
     /// Index into a lookup table for each histogram type. The lookup table for each type is
@@ -159,42 +128,8 @@ type SnrHistogram = struct {
 /// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
 /// antennas used by the interface.
 const MAX_HISTOGRAMS_PER_TYPE uint8 = 8;
+
 // LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlan.fullmac/wlanif.banjo)
-
-type ClientMlmeStats = struct {
-    svc_msg PacketCounter;
-    data_frame PacketCounter;
-    mgmt_frame PacketCounter;
-    tx_frame PacketCounter;
-    rx_frame PacketCounter;
-    assoc_data_rssi RssiStats;
-    beacon_rssi RssiStats;
-    /// Noise floor histogram(s).
-    noise_floor_histograms vector<NoiseFloorHistogram>:MAX_HISTOGRAMS_PER_TYPE;
-    /// Received signal strength indicator (RSSI) histogram(s).
-    rssi_histograms vector<RssiHistogram>:MAX_HISTOGRAMS_PER_TYPE;
-    /// Received rate index histogram(s).
-    rx_rate_index_histograms vector<RxRateIndexHistogram>:MAX_HISTOGRAMS_PER_TYPE;
-    /// Signal to noise ratio (SNR) histogram(s).
-    snr_histograms vector<SnrHistogram>:MAX_HISTOGRAMS_PER_TYPE;
-};
-
-type ApMlmeStats = struct {
-    not_used PacketCounter;
-};
-
-// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/stats.h)
-@deprecated("Use IfaceCounterStats or IfaceHistogramStats instead")
-type MlmeStats = strict union {
-    1: client_mlme_stats ClientMlmeStats;
-    2: ap_mlme_stats ApMlmeStats;
-};
-
-@deprecated("Use IfaceCounterStats or IfaceHistogramStats instead")
-type IfaceStats = struct {
-    dispatcher_stats DispatcherStats;
-    mlme_stats MlmeStats:optional;
-};
 
 type IfaceCounterStats = struct {
     rx_unicast_total uint64;

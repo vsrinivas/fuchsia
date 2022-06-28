@@ -100,7 +100,6 @@ class SimInterface {
   virtual void OnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind);
   virtual void OnSignalReport(const wlan_fullmac_signal_report_indication_t* ind) {}
   virtual void OnEapolInd(const wlan_fullmac_eapol_indication_t* ind) {}
-  virtual void OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {}
   virtual void OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* resp) {}
   virtual void OnRelayCapturedFrame(const wlan_fullmac_captured_frame_result_t* result) {}
   virtual void OnDataRecv(const void* data, size_t data_size, uint32_t flags) {}

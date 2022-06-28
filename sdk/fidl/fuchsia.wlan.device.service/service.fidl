@@ -206,12 +206,6 @@ protocol DeviceService {
     }) -> (struct {
         status int32;
     });
-    GetIfaceStats(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        stats box<fuchsia.wlan.stats.IfaceStats>;
-    });
     GetIfaceCounterStats(struct {
         iface_id uint16;
     }) -> (struct {

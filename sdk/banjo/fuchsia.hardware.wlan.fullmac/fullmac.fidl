@@ -404,27 +404,6 @@ type WlanFullmacQueryInfo = struct {
     band_cap_count uint8;
 };
 
-type WlanFullmacCounter = struct {
-    count uint64;
-    name string:MAX;
-};
-
-type WlanFullmacPacketCounter = struct {
-    in WlanFullmacCounter;
-    out WlanFullmacCounter;
-    drop WlanFullmacCounter;
-    in_bytes WlanFullmacCounter;
-    out_bytes WlanFullmacCounter;
-    drop_bytes WlanFullmacCounter;
-};
-
-type WlanFullmacDispatcherStats = struct {
-    any_packet WlanFullmacPacketCounter;
-    mgmt_frame WlanFullmacPacketCounter;
-    ctrl_frame WlanFullmacPacketCounter;
-    data_frame WlanFullmacPacketCounter;
-};
-
 type WlanFullmacRssiStats = struct {
     hist vector<uint64>:MAX;
 };
@@ -565,56 +544,6 @@ const WLAN_FULLMAC_NUM_RATES_N uint8 = 64;
 /// The number of 802.11AC rates in the WlanFullmacRxRateIndexHistogram lookup table.
 const WLAN_FULLMAC_NUM_RATES_AC uint8 = 120;
 
-type WlanFullmacMlmeStatsType = strict enum : uint8 {
-    CLIENT = 0;
-    AP = 1;
-};
-
-type WlanFullmacClientMlmeStats = struct {
-    svc_msg WlanFullmacPacketCounter;
-    data_frame WlanFullmacPacketCounter;
-    mgmt_frame WlanFullmacPacketCounter;
-    tx_frame WlanFullmacPacketCounter;
-    rx_frame WlanFullmacPacketCounter;
-    assoc_data_rssi WlanFullmacRssiStats;
-    beacon_rssi WlanFullmacRssiStats;
-    /// Noise floor histogram(s).
-    noise_floor_histograms
-            vector<WlanFullmacNoiseFloorHistogram>:WLAN_FULLMAC_MAX_HISTOGRAMS_PER_TYPE;
-    /// Received signal strength indicator (RSSI) histogram(s).
-    rssi_histograms vector<WlanFullmacRssiHistogram>:WLAN_FULLMAC_MAX_HISTOGRAMS_PER_TYPE;
-    /// Received rate index histogram(s).
-    rx_rate_index_histograms
-            vector<WlanFullmacRxRateIndexHistogram>:WLAN_FULLMAC_MAX_HISTOGRAMS_PER_TYPE;
-    /// Signal to noise ratio (SNR) histogram(s).
-    snr_histograms vector<WlanFullmacSnrHistogram>:WLAN_FULLMAC_MAX_HISTOGRAMS_PER_TYPE;
-};
-
-type WlanFullmacApMlmeStats = struct {
-    not_used WlanFullmacPacketCounter;
-};
-
-type StatsUnion = strict union {
-    1: client_mlme_stats WlanFullmacClientMlmeStats;
-    2: ap_mlme_stats WlanFullmacApMlmeStats;
-};
-
-type WlanFullmacMlmeStats = struct {
-    tag WlanFullmacMlmeStatsType;
-    stats StatsUnion;
-};
-
-@deprecated("Use WlanFullmacIfaceCounterStats or WlanFullmacIfaceHistogramStats instead")
-type WlanFullmacStats = struct {
-    dispatcher_stats WlanFullmacDispatcherStats;
-    mlme_stats vector<WlanFullmacMlmeStats>:MAX;
-};
-
-@deprecated("Use WlanFullmacIfaceCounterStats or WlanFullmacIfaceHistogramStats instead")
-type WlanFullmacStatsQueryResponse = struct {
-    stats WlanFullmacStats;
-};
-
 // TODO(fxbug.dev/83621): Use wlan_stats.fidl structure after fxbug.dev/85462 is fixed
 type WlanFullmacIfaceCounterStats = struct {
     rx_unicast_total uint64;
@@ -701,10 +630,6 @@ protocol WlanFullmacImplIfc {
     }) -> ();
     EapolInd(struct {
         ind WlanFullmacEapolIndication;
-    }) -> ();
-    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
-    StatsQueryResp(struct {
-        resp WlanFullmacStatsQueryResponse;
     }) -> ();
     RelayCapturedFrame(struct {
         result WlanFullmacCapturedFrameResult;
@@ -801,8 +726,6 @@ protocol WlanFullmacImpl {
     }) -> ();
 
     // MLME extensions
-    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
-    StatsQueryReq() -> ();
     GetIfaceCounterStats() -> (struct {
         status int32;
         stats WlanFullmacIfaceCounterStats;

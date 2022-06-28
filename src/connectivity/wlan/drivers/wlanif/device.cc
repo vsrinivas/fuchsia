@@ -94,10 +94,6 @@ static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
         },
     .eapol_ind = [](void* cookie,
                     const wlan_fullmac_eapol_indication_t* ind) { DEV(cookie)->EapolInd(ind); },
-    .stats_query_resp =
-        [](void* cookie, const wlan_fullmac_stats_query_response_t* resp) {
-          DEV(cookie)->StatsQueryResp(resp);
-        },
     .relay_captured_frame =
         [](void* cookie, const wlan_fullmac_captured_frame_result_t* result) {
           DEV(cookie)->RelayCapturedFrame(result);
@@ -668,12 +664,6 @@ void Device::QuerySpectrumManagementSupport(QuerySpectrumManagementSupportCallba
   cb(fidl_support);
 }
 
-void Device::StatsQueryReq() {
-  if (wlan_fullmac_impl_.ops->stats_query_req != nullptr) {
-    wlan_fullmac_impl_stats_query_req(&wlan_fullmac_impl_);
-  }
-}
-
 void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
   auto status = ZX_ERR_BAD_STATE;
   wlan_fullmac_iface_counter_stats_t out_stats = {};
@@ -1115,17 +1105,6 @@ void Device::EapolInd(const wlan_fullmac_eapol_indication_t* ind) {
   fidl_ind.data.assign(ind->data_list, ind->data_list + ind->data_count);
 
   binding_->events().EapolInd(std::move(fidl_ind));
-}
-
-void Device::StatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
-  std::lock_guard<std::mutex> lock(lock_);
-  if (binding_ == nullptr) {
-    return;
-  }
-
-  wlan_mlme::StatsQueryResponse fidl_resp;
-  ConvertIfaceStats(&fidl_resp.stats, resp->stats);
-  binding_->events().StatsQueryResp(std::move(fidl_resp));
 }
 
 void Device::RelayCapturedFrame(const wlan_fullmac_captured_frame_result* result) {

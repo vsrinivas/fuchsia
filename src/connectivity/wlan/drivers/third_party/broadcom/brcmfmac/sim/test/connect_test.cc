@@ -123,7 +123,6 @@ class ConnectTest : public SimTest {
   void ConnectErrorInject();
   void ConnectErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
 
-  void SendStatsQuery();
   void GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats);
   void GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats);
   void DetailedHistogramErrorInject();
@@ -164,8 +163,6 @@ class ConnectTest : public SimTest {
     int16_t signal_ind_snr = 0;
     // RSSI seen in the signal report indication.
     int16_t signal_ind_rssi = 0;
-    // IfaceStats from StatsQuery response, if non-empty.
-    fuchsia::wlan::stats::IfaceStats iface_stats;
   };
 
   struct AssocRespInfo {
@@ -229,7 +226,6 @@ class ConnectTest : public SimTest {
   void OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp);
   void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
   void OnSignalReport(const wlan_fullmac_signal_report_indication* ind);
-  void OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp);
 };
 
 // Since we're acting as wlan_fullmac, we need handlers for any protocol calls we may receive
@@ -265,10 +261,6 @@ wlan_fullmac_impl_ifc_protocol_ops_t ConnectTest::sme_ops_ = {
     .signal_report =
         [](void* cookie, const wlan_fullmac_signal_report_indication* ind) {
           static_cast<ConnectTest*>(cookie)->OnSignalReport(ind);
-        },
-    .stats_query_resp =
-        [](void* cookie, const wlan_fullmac_stats_query_response_t* resp) {
-          static_cast<ConnectTest*>(cookie)->OnStatsQueryResp(resp);
         },
 };
 
@@ -325,7 +317,6 @@ void ConnectTest::Init() {
   context_.signal_ind_count = 0;
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
-  context_.iface_stats = {};
 
   // Reset all of these settings, which should be set in tests that need them.
   start_disassoc_ = false;
@@ -410,10 +401,6 @@ void ConnectTest::OnSignalReport(const wlan_fullmac_signal_report_indication* in
   context_.signal_ind_snr = ind->snr_db;
 }
 
-void ConnectTest::OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
-  wlanif::ConvertIfaceStats(&context_.iface_stats, resp->stats);
-}
-
 void ConnectTest::StartConnect() {
   // Send connect request
   wlan_fullmac_connect_req connect_req = {};
@@ -457,127 +444,12 @@ TEST_F(ConnectTest, SignalReportTest) {
   EXPECT_EQ(context_.signal_ind_rssi, kDefaultSimFwRssi);
 }
 
-void ConnectTest::SendStatsQuery() {
-  client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
-}
-
 void ConnectTest::GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_counter_stats(client_ifc_.if_impl_ctx_, out_stats);
 }
 
 void ConnectTest::GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_histogram_stats(client_ifc_.if_impl_ctx_, out_stats);
-}
-
-// Verify that StatsQueryReq works when associated.
-TEST_F(ConnectTest, StatsQueryReqTest) {
-  // Create our device instance
-  Init();
-
-  // Start up our fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
-
-  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-
-  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&ConnectTest::SendStatsQuery, this), zx::msec(30));
-
-  env_->Run(kTestDuration);
-
-  // Verify that a stats query response was received.
-  ASSERT_THAT(context_.iface_stats.mlme_stats, NotNull());
-  ASSERT_TRUE(context_.iface_stats.mlme_stats->is_client_mlme_stats());
-  const auto& client_mlme_stats = context_.iface_stats.mlme_stats->client_mlme_stats();
-
-  // Sim firmware returns these fake values for packet counters.
-  const uint8_t rx_in = 10;
-  const uint8_t rx_out = 6;
-  const uint8_t rx_drop = 4;
-  const uint8_t tx_in = 5;
-  const uint8_t tx_out = 3;
-  const uint8_t tx_drop = 2;
-  EXPECT_EQ(client_mlme_stats.rx_frame.in.name, "Good+Bad+Ocast");
-  EXPECT_EQ(client_mlme_stats.rx_frame.in.count, rx_in);
-  EXPECT_EQ(client_mlme_stats.rx_frame.out.name, "Good+Ocast");
-  EXPECT_EQ(client_mlme_stats.rx_frame.out.count, rx_out);
-  EXPECT_EQ(client_mlme_stats.rx_frame.drop.name, "Bad");
-  EXPECT_EQ(client_mlme_stats.rx_frame.drop.count, rx_drop);
-  EXPECT_EQ(client_mlme_stats.tx_frame.in.name, "Good+Bad");
-  EXPECT_EQ(client_mlme_stats.tx_frame.in.count, tx_in);
-  EXPECT_EQ(client_mlme_stats.tx_frame.out.name, "Good");
-  EXPECT_EQ(client_mlme_stats.tx_frame.out.count, tx_out);
-  EXPECT_EQ(client_mlme_stats.tx_frame.drop.name, "Bad");
-  EXPECT_EQ(client_mlme_stats.tx_frame.drop.count, tx_drop);
-
-  // Sim firmware returns these fake values for per-antenna histograms.
-  const auto& expected_hist_scope = fuchsia::wlan::stats::HistScope::PER_ANTENNA;
-  const auto& expected_antenna_freq = fuchsia::wlan::stats::AntennaFreq::ANTENNA_2_G;
-  const uint8_t expected_antenna_index = 0;
-  const uint8_t expected_snr_index = 60;
-  const uint8_t expected_snr_num_frames = 50;
-  // TODO(fxbug.dev/29698): Test all bucket values when sim firmware fully supports wstats_counters.
-  // Sim firmware populates only SNR buckets, probably due to the discrepancies between the iovar
-  // get handling between real and sim firmware (e.g. fxr/404141). When wstats_counters is fully
-  // supported in sim firmware we can test for the expected noise floor, RSSI, and rate buckets.
-
-  ASSERT_THAT(client_mlme_stats.noise_floor_histograms, SizeIs(1));
-  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(client_mlme_stats.noise_floor_histograms[0].antenna_id, NotNull());
-  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].antenna_id->freq, expected_antenna_freq);
-  EXPECT_EQ(client_mlme_stats.noise_floor_histograms[0].antenna_id->index, expected_antenna_index);
-
-  ASSERT_THAT(client_mlme_stats.rssi_histograms, SizeIs(1));
-  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(client_mlme_stats.rssi_histograms[0].antenna_id, NotNull());
-  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].antenna_id->freq, expected_antenna_freq);
-  EXPECT_EQ(client_mlme_stats.rssi_histograms[0].antenna_id->index, expected_antenna_index);
-
-  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms, SizeIs(1));
-  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms[0].antenna_id, NotNull());
-  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].antenna_id->freq, expected_antenna_freq);
-  EXPECT_EQ(client_mlme_stats.rx_rate_index_histograms[0].antenna_id->index,
-            expected_antenna_index);
-
-  ASSERT_THAT(client_mlme_stats.snr_histograms, SizeIs(1));
-  EXPECT_EQ(client_mlme_stats.snr_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(client_mlme_stats.snr_histograms[0].antenna_id, NotNull());
-  EXPECT_EQ(client_mlme_stats.snr_histograms[0].antenna_id->freq, expected_antenna_freq);
-  EXPECT_EQ(client_mlme_stats.snr_histograms[0].antenna_id->index, expected_antenna_index);
-  ASSERT_THAT(client_mlme_stats.snr_histograms[0].snr_samples, SizeIs(1));
-  EXPECT_EQ(client_mlme_stats.snr_histograms[0].snr_samples[0].bucket_index, expected_snr_index);
-  EXPECT_EQ(client_mlme_stats.snr_histograms[0].snr_samples[0].num_samples,
-            expected_snr_num_frames);
-}
-
-// Verify that StatsQueryReq works when detailed histogram feature is disabled.
-TEST_F(ConnectTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
-  // Create our device instance
-  Init();
-
-  // Start up our fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
-
-  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-
-  DetailedHistogramErrorInject();
-  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&ConnectTest::SendStatsQuery, this), zx::msec(30));
-
-  env_->Run(kTestDuration);
-
-  // Verify that a stats query response was received.
-  ASSERT_THAT(context_.iface_stats.mlme_stats, NotNull());
-  ASSERT_TRUE(context_.iface_stats.mlme_stats->is_client_mlme_stats());
-  const auto& client_mlme_stats = context_.iface_stats.mlme_stats->client_mlme_stats();
-
-  // All detailed histogram fields should be empty.
-  ASSERT_THAT(client_mlme_stats.noise_floor_histograms, IsEmpty());
-  ASSERT_THAT(client_mlme_stats.rssi_histograms, IsEmpty());
-  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms, IsEmpty());
-  ASSERT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
 }
 
 TEST_F(ConnectTest, GetIfaceCounterStatsTest) {

@@ -115,7 +115,6 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, const wlan_fullmac_eapol_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->EapolReq(req);
         },
-    .stats_query_req = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->StatsQueryReq(); },
     .get_iface_counter_stats =
         [](void* ctx, wlan_fullmac_iface_counter_stats_t* out_stats) {
           return static_cast<WlanInterface*>(ctx)->GetIfaceCounterStats(out_stats);
@@ -406,13 +405,6 @@ void WlanInterface::EapolReq(const wlan_fullmac_eapol_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_eapol_req(wdev_->netdev, req);
-  }
-}
-
-void WlanInterface::StatsQueryReq() {
-  std::shared_lock<std::shared_mutex> guard(lock_);
-  if (wdev_ != nullptr) {
-    brcmf_if_stats_query_req(wdev_->netdev);
   }
 }
 

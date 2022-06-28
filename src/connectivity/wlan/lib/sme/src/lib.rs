@@ -102,7 +102,6 @@ fn mlme_event_name(event: &MlmeEvent) -> &str {
         MlmeEvent::IncomingMpConfirmAction { .. } => "IncomingMpConfirmAction",
         MlmeEvent::SignalReport { .. } => "SignalReport",
         MlmeEvent::EapolInd { .. } => "EapolInd",
-        MlmeEvent::StatsQueryResp { .. } => "StatsQueryResp",
         MlmeEvent::RelayCapturedFrame { .. } => "RelayCapturedFrame",
         MlmeEvent::OnChannelSwitched { .. } => "OnChannelSwitched",
         MlmeEvent::OnPmkAvailable { .. } => "OnPmkAvailable",

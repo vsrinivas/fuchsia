@@ -68,8 +68,6 @@ void ConvertSnrHistogram(::fuchsia::wlan::stats::SnrHistogram* fidl_stats,
                          const wlan_fullmac_snr_histogram_t& stats);
 void ConvertPmkInfo(::fuchsia::wlan::mlme::PmkInfo* fidl_ind, const wlan_fullmac_pmk_info_t& ind);
 
-void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats,
-                       const wlan_fullmac_stats_t& stats);
 void ConvertIfaceCounterStats(::fuchsia::wlan::stats::IfaceCounterStats* fidl_stats,
                               const wlan_fullmac_iface_counter_stats_t& stats);
 void ConvertIfaceHistogramStats(::fuchsia::wlan::stats::IfaceHistogramStats* fidl_stats,

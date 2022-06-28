@@ -80,10 +80,6 @@ wlan_fullmac_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
         [](void* ctx, const wlan_fullmac_eapol_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnEapolInd(ind);
         },
-    .stats_query_resp =
-        [](void* ctx, const wlan_fullmac_stats_query_response_t* resp) {
-          static_cast<SimInterface*>(ctx)->OnStatsQueryResp(resp);
-        },
     .relay_captured_frame =
         [](void* ctx, const wlan_fullmac_captured_frame_result_t* result) {
           static_cast<SimInterface*>(ctx)->OnRelayCapturedFrame(result);

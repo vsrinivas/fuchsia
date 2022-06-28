@@ -38,7 +38,6 @@ source_set("common") {
     "include/wlan/common/moving_average.h",
     "include/wlan/common/parse_element.h",
     "include/wlan/common/phy.h",
-    "include/wlan/common/stats.h",
     "include/wlan/common/tx_vector.h",
     "include/wlan/common/write_element.h",
     "logging.cc",

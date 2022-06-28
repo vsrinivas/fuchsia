@@ -9,7 +9,6 @@ mod convert_beacon;
 mod lost_bss;
 mod scanner;
 mod state;
-mod stats;
 #[cfg(test)]
 mod test_utils;
 
@@ -241,7 +240,6 @@ impl ClientMlme {
             // Handle non station specific MLME messages first (Join, Scan, etc.)
             MlmeMsg::StartScan { req, .. } => Ok(self.on_sme_scan(req)),
             MlmeMsg::ConnectReq { req, .. } => self.on_sme_connect(req),
-            MlmeMsg::StatsQueryReq { .. } => self.on_sme_stats_query(),
             MlmeMsg::GetIfaceCounterStats { responder } => {
                 self.on_sme_get_iface_counter_stats(responder)
             }
@@ -419,16 +417,11 @@ impl ClientMlme {
             .map_err(|status| Error::Status(format!("Error setting BSS in driver"), status))
     }
 
-    fn on_sme_stats_query(&self) -> Result<(), Error> {
-        // TODO(fxbug.dev/43456): Implement stats
-        let mut resp = stats::empty_stats_query_response();
-        self.ctx.device.mlme_control_handle().send_stats_query_resp(&mut resp).map_err(|e| e.into())
-    }
-
     fn on_sme_get_iface_counter_stats(
         &self,
         responder: fidl_mlme::MlmeGetIfaceCounterStatsResponder,
     ) -> Result<(), Error> {
+        // TODO(fxbug.dev/43456): Implement stats
         let mut resp =
             fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED);
         responder.send(&mut resp).map_err(|e| e.into())
@@ -438,6 +431,7 @@ impl ClientMlme {
         &self,
         responder: fidl_mlme::MlmeGetIfaceHistogramStatsResponder,
     ) -> Result<(), Error> {
+        // TODO(fxbug.dev/43456): Implement stats
         let mut resp =
             fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED);
         responder.send(&mut resp).map_err(|e| e.into())
@@ -3414,22 +3408,6 @@ mod tests {
                 association_ies: vec![],
             },
         );
-    }
-
-    #[test]
-    fn mlme_respond_to_stats_query_with_empty_response() {
-        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut m = MockObjects::new(&exec);
-        let mut me = m.make_mlme();
-        let (control_handle, _) = fake_control_handle(&exec);
-        let stats_query_req = fidl_mlme::MlmeRequest::StatsQueryReq { control_handle };
-        let result = me.handle_mlme_msg(stats_query_req);
-        assert_variant!(result, Ok(()));
-        let stats_query_resp = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::StatsQueryResponse>()
-            .expect("Should receive a stats query response");
-        assert_eq!(stats_query_resp, stats::empty_stats_query_response());
     }
 
     #[test]

@@ -579,37 +579,6 @@ void ConvertQueryInfoToDeviceInfo(wlan_mlme::DeviceInfo* fidl_device_info,
   fidl_device_info->qos_capable = false;
 }
 
-void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlan_fullmac_counter_t& counter) {
-  fidl_counter->count = counter.count;
-  if (counter.name != nullptr) {
-    fidl_counter->name = counter.name;
-  } else {
-    fidl_counter->name = "";
-  }
-}
-
-void ConvertPacketCounter(wlan_stats::PacketCounter* fidl_counter,
-                          const wlan_fullmac_packet_counter_t& counter) {
-  ConvertCounter(&fidl_counter->in, counter.in);
-  ConvertCounter(&fidl_counter->out, counter.out);
-  ConvertCounter(&fidl_counter->drop, counter.drop);
-  ConvertCounter(&fidl_counter->in_bytes, counter.in_bytes);
-  ConvertCounter(&fidl_counter->out_bytes, counter.out_bytes);
-  ConvertCounter(&fidl_counter->drop_bytes, counter.drop_bytes);
-}
-
-void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
-                            const wlan_fullmac_dispatcher_stats_t& stats) {
-  ConvertPacketCounter(&fidl_stats->any_packet, stats.any_packet);
-  ConvertPacketCounter(&fidl_stats->mgmt_frame, stats.mgmt_frame);
-  ConvertPacketCounter(&fidl_stats->ctrl_frame, stats.ctrl_frame);
-  ConvertPacketCounter(&fidl_stats->data_frame, stats.data_frame);
-}
-
-void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlan_fullmac_rssi_stats& stats) {
-  fidl_stats->hist.assign(stats.hist_list, stats.hist_list + stats.hist_count);
-}
-
 namespace {
 
 // Convert a Banjo antenna ID to a FIDL antenna ID (in a unique_ptr).
@@ -717,72 +686,6 @@ void ConvertPmkInfo(wlan_mlme::PmkInfo* fidl_info, const wlan_fullmac_pmk_info_t
   fidl_info->pmk.assign(info.pmk_list, info.pmk_list + info.pmk_count);
   fidl_info->pmkid.resize(info.pmkid_count);
   fidl_info->pmkid.assign(info.pmkid_list, info.pmkid_list + info.pmkid_count);
-}
-
-wlan_stats::ClientMlmeStats BuildClientMlmeStats(
-    const wlan_fullmac_client_mlme_stats_t& client_stats) {
-  wlan_stats::ClientMlmeStats fidl_client_stats;
-
-  ConvertPacketCounter(&fidl_client_stats.svc_msg, client_stats.svc_msg);
-  ConvertPacketCounter(&fidl_client_stats.data_frame, client_stats.data_frame);
-  ConvertPacketCounter(&fidl_client_stats.mgmt_frame, client_stats.mgmt_frame);
-  ConvertPacketCounter(&fidl_client_stats.tx_frame, client_stats.tx_frame);
-  ConvertPacketCounter(&fidl_client_stats.rx_frame, client_stats.rx_frame);
-
-  ConvertRssiStats(&fidl_client_stats.assoc_data_rssi, client_stats.assoc_data_rssi);
-  ConvertRssiStats(&fidl_client_stats.beacon_rssi, client_stats.beacon_rssi);
-
-  fidl_client_stats.noise_floor_histograms.resize(client_stats.noise_floor_histograms_count);
-  for (size_t i = 0; i < client_stats.noise_floor_histograms_count; ++i) {
-    ConvertNoiseFloorHistogram(&fidl_client_stats.noise_floor_histograms[i],
-                               client_stats.noise_floor_histograms_list[i]);
-  }
-  fidl_client_stats.rssi_histograms.resize(client_stats.rssi_histograms_count);
-  for (size_t i = 0; i < client_stats.rssi_histograms_count; ++i) {
-    ConvertRssiHistogram(&fidl_client_stats.rssi_histograms[i],
-                         client_stats.rssi_histograms_list[i]);
-  }
-  fidl_client_stats.rx_rate_index_histograms.resize(client_stats.rx_rate_index_histograms_count);
-  for (size_t i = 0; i < client_stats.rx_rate_index_histograms_count; ++i) {
-    ConvertRxRateIndexHistogram(&fidl_client_stats.rx_rate_index_histograms[i],
-                                client_stats.rx_rate_index_histograms_list[i]);
-  }
-  fidl_client_stats.snr_histograms.resize(client_stats.snr_histograms_count);
-  for (size_t i = 0; i < client_stats.snr_histograms_count; ++i) {
-    ConvertSnrHistogram(&fidl_client_stats.snr_histograms[i], client_stats.snr_histograms_list[i]);
-  }
-
-  return fidl_client_stats;
-}
-
-wlan_stats::ApMlmeStats BuildApMlmeStats(const wlan_fullmac_ap_mlme_stats_t& ap_stats) {
-  wlan_stats::ApMlmeStats fidl_ap_stats;
-
-  ConvertPacketCounter(&fidl_ap_stats.not_used, ap_stats.not_used);
-
-  return fidl_ap_stats;
-}
-
-void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlan_fullmac_mlme_stats_t& stats) {
-  switch (stats.tag) {
-    case WLAN_FULLMAC_MLME_STATS_TYPE_CLIENT:
-      fidl_stats->set_client_mlme_stats(BuildClientMlmeStats(stats.stats.client_mlme_stats));
-      break;
-    case WLAN_FULLMAC_MLME_STATS_TYPE_AP:
-      fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.stats.ap_mlme_stats));
-      break;
-    default:
-      lerror("bad mlme stats type: %u\n", stats.tag);
-      ZX_ASSERT(0);
-  }
-}
-
-void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlan_fullmac_stats_t& stats) {
-  ConvertDispatcherStats(&fidl_stats->dispatcher_stats, stats.dispatcher_stats);
-  if (stats.mlme_stats_list != nullptr) {
-    fidl_stats->mlme_stats = ::std::make_unique<wlan_stats::MlmeStats>();
-    ConvertMlmeStats(fidl_stats->mlme_stats.get(), *stats.mlme_stats_list);
-  }
 }
 
 void ConvertIfaceCounterStats(wlan_stats::IfaceCounterStats* fidl_stats,

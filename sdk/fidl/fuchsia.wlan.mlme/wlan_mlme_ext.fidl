@@ -76,12 +76,6 @@ type SetKeysConfirm = struct {
     results vector<SetKeyResult>;
 };
 
-// STATS_QUERY.response
-
-type StatsQueryResponse = struct {
-    stats fuchsia.wlan.stats.IfaceStats;
-};
-
 // TODO(fxbug.dev/83621): Move this to wlan_internal.fidl after fxbug.dev/85462 is fixed
 type GetIfaceCounterStatsResponse = strict union {
     1: stats fuchsia.wlan.stats.IfaceCounterStats;

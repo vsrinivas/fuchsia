@@ -70,21 +70,9 @@ test("device_unittest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test("impl_unittest") {
-  output_name = "wlanif_impl_unittest"
-
-  sources = [ "impl_unittest.cc" ]
-
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
 tests = [
   "convert",
   "device",
-  "impl",
 ]
 
 foreach(test, tests) {

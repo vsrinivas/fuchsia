@@ -104,11 +104,6 @@ pub async fn serve_device_requests(
                 let status = get_mesh_sme(&ifaces, iface_id, sme);
                 responder.send(status.into_raw())
             }
-            DeviceServiceRequest::GetIfaceStats { .. } => {
-                // TODO(fxbug.dev/82654) - Remove this API call
-                warn!("GetIfaceStats is no longer supported");
-                Ok(())
-            }
             DeviceServiceRequest::GetIfaceCounterStats { iface_id, responder } => {
                 let mut resp = match get_iface_counter_stats(&ifaces, iface_id).await {
                     Ok(resp) => match resp {

@@ -28,9 +28,6 @@ class Mlme {
 
   virtual zx_status_t StopMainLoop() = 0;
   virtual zx_status_t QueueEthFrameTx(std::unique_ptr<Packet> pkt) = 0;
-  // Called when the hardware reports an indication such as Pre-TBTT.
-  virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; }
-  virtual void ResetMlmeStats() {}
 };
 
 }  // namespace wlan

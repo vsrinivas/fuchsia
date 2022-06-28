@@ -75,7 +75,6 @@ pub enum IfaceSubCommand {
     Delete(Delete),
     List(IfaceList),
     Query(IfaceQuery),
-    Stats(Stats),
     Minstrel(Minstrel),
     Status(Status),
 }
@@ -290,7 +289,6 @@ impl From<IfaceSubCommand> for wlan_dev::opts::Opt {
             IfaceSubCommand::Delete(arg) => wlan_dev::opts::IfaceCmd::from(arg),
             IfaceSubCommand::List(arg) => wlan_dev::opts::IfaceCmd::from(arg),
             IfaceSubCommand::Query(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubCommand::Stats(arg) => wlan_dev::opts::IfaceCmd::from(arg),
             IfaceSubCommand::Minstrel(arg) => wlan_dev::opts::IfaceCmd::from(arg),
             IfaceSubCommand::Status(arg) => wlan_dev::opts::IfaceCmd::from(arg),
         })
@@ -383,22 +381,6 @@ pub struct IfaceQuery {
 impl From<IfaceQuery> for wlan_dev::opts::IfaceCmd {
     fn from(query: IfaceQuery) -> Self {
         wlan_dev::opts::IfaceCmd::Query { iface_id: query.iface_id }
-    }
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "stats", description = "Query WLAN interface stats.")]
-pub struct Stats {
-    #[argh(
-        positional,
-        description = "interface ID to display stats from, if no ID is provided, all interfaces are queried."
-    )]
-    iface_id: Option<u16>,
-}
-
-impl From<Stats> for wlan_dev::opts::IfaceCmd {
-    fn from(stats: Stats) -> Self {
-        wlan_dev::opts::IfaceCmd::Stats { iface_id: stats.iface_id }
     }
 }
 
@@ -926,14 +908,6 @@ mod tests {
         assert_eq!(
             wlan_dev::opts::IfaceCmd::from(IfaceQuery { iface_id: 123 }),
             wlan_dev::opts::IfaceCmd::Query { iface_id: 123 }
-        );
-    }
-
-    #[test]
-    fn test_iface_stats_conversion() {
-        assert_eq!(
-            wlan_dev::opts::IfaceCmd::from(Stats { iface_id: Some(123) }),
-            wlan_dev::opts::IfaceCmd::Stats { iface_id: Some(123) }
         );
     }
 

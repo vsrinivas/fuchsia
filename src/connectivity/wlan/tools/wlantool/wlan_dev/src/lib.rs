@@ -342,26 +342,6 @@ async fn do_iface(
                 status => println!("error querying Iface {}: {}", iface_id, status),
             }
         }
-        opts::IfaceCmd::Stats { iface_id } => {
-            let ids = get_iface_ids(dev_svc_proxy.clone(), iface_id).await?;
-
-            for iface_id in ids {
-                let (status, resp) = dev_svc_proxy
-                    .get_iface_stats(iface_id)
-                    .await
-                    .context("error getting stats for iface")?;
-                match status {
-                    zx_sys::ZX_OK => {
-                        match resp {
-                            // TODO(eyw): Implement fmt::Display
-                            Some(r) => println!("Iface {}: {:#?}", iface_id, r),
-                            None => println!("Iface {} returns empty stats response", iface_id),
-                        }
-                    }
-                    status => println!("error getting stats for Iface {}: {}", iface_id, status),
-                }
-            }
-        }
         opts::IfaceCmd::Minstrel(cmd) => match cmd {
             opts::MinstrelCmd::List { iface_id } => {
                 let ids = get_iface_ids(dev_svc_proxy.clone(), iface_id).await?;

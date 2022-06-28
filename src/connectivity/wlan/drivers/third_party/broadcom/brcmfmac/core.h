@@ -327,7 +327,6 @@ struct net_device {
 
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
-    wlan_fullmac_mlme_stats_t mlme_stats;
     std::vector<wlan_fullmac_noise_floor_histogram_t> noise_floor_histograms;
     std::vector<wlan_fullmac_hist_bucket_t> noise_floor_samples;
     std::vector<wlan_fullmac_rssi_histogram_t> rssi_histograms;
