@@ -4,13 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <asm.h>
+#include <lib/arch/asm.h>
 #include <zircon/errors.h>
 
 lr .req x30
-dst .req x0
-src .req x1
-len .req x2
 fault_return_ptr .req x3
 fault_return_mask .req x4
 temp .req x9
@@ -24,7 +21,7 @@ saved_lr .req x17
 // Arm64UserCopyRet _arm64_user_copy(void *dst, const void *src, size_t len, uint64_t *fault_return, uint64_t fault_return_mask)
 .section .text._arm64_user_copy,"ax"
 .balign 64 // Align to cache line.  This code fits in one cache line.
-FUNCTION(_arm64_user_copy)
+.function _arm64_user_copy, global
 
     adr temp, .Lfault_from_user
     and temp, temp, fault_return_mask
@@ -53,8 +50,8 @@ FUNCTION(_arm64_user_copy)
     mov lr, saved_lr
     .cfi_same_value lr
     ret
-    SPECULATION_POSTFENCE
-END_FUNCTION(_arm64_user_copy)
+    speculation_postfence
+.end_function
 
 .section .text.cold._arm64_user_copy,"ax"
 // If we are capturing faults the exception handler will have placed the faulting virtual address

@@ -4,14 +4,45 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-source_set("user-copy") {
-  sources = [
-    "user-copy.S",
-    "user-copy.cc",
-  ]
-  deps = [
-    "//zircon/kernel/lib/arch",
-    "//zircon/kernel/lib/libc",
-    "//zircon/kernel/lib/user_copy",
-  ]
+import("//build/components.gni")
+import("//build/test.gni")
+
+if (is_kernel) {
+  source_set("user-copy") {
+    sources = [
+      "user-copy.S",
+      "user-copy.cc",
+    ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/lib/user_copy",
+    ]
+  }
+}
+
+if (is_fuchsia) {
+  fuchsia_unittest_package("tests") {
+    component_name = "arm64-user-copy-tests"
+    package_name = component_name
+    deps = [ ":arm64-user-copy-tests" ]
+  }
+
+  test("arm64-user-copy-tests") {
+    testonly = true
+    visibility = [ ":*" ]
+    sources = [
+      "user-copy-tests.cc",
+      "user-copy.S",
+    ]
+    deps = [
+      "//sdk/lib/stdcompat",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+      "//zircon/kernel/lib/arch",
+
+      # unsanitized memcpy symbol.
+      "//zircon/kernel/lib/libc/string/arch/arm64",
+    ]
+  }
 }

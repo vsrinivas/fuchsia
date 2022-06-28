@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "user-copy.h"
+
 #include <lib/user_copy/internal.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -15,16 +17,6 @@
 
 #define ARM64_USER_COPY_CAPTURE_FAULTS (~(1ull << ARM64_DFR_RUN_FAULT_HANDLER_BIT))
 #define ARM64_USER_COPY_DO_FAULTS (~0ull)
-
-// Typically we would not use structs as function return values, but in this case it enables us to
-// very efficiently use the 2 registers for return values to encode the optional flags and va
-// page fault values.
-struct Arm64UserCopyRet {
-  zx_status_t status;
-  uint pf_flags;
-  vaddr_t pf_va;
-};
-static_assert(sizeof(Arm64UserCopyRet) == 16, "Arm64UserCopyRet has unexpected size");
 
 // This is the same as memcpy, except that it takes the additional argument of
 // &current_thread()->arch.data_fault_resume, where it temporarily stores the fault recovery PC for
