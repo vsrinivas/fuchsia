@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
-use assembly_config::ImageAssemblyConfig;
+use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_manifest::{Image, ImagesManifest};
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;

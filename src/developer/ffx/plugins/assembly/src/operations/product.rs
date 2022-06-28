@@ -5,7 +5,7 @@
 use crate::operations::product::assembly_builder::ImageAssemblyConfigBuilder;
 use crate::util;
 use anyhow::{Context, Result};
-use assembly_config::product_config::ProductAssemblyConfig;
+use assembly_config_schema::product_config::ProductAssemblyConfig;
 use ffx_assembly_args::ProductArgs;
 use log::info;
 
@@ -40,8 +40,10 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     }
 
     // Set structured configuration
-    builder.set_bootfs_structured_config(config.define_bootfs_config()?);
-    for (package, config) in config.define_repackaging()? {
+    builder.set_bootfs_structured_config(assembly_platform_configuration::define_bootfs_config(
+        &config,
+    )?);
+    for (package, config) in assembly_platform_configuration::define_repackaging(&config)? {
         builder.set_structured_config(package, config)?;
     }
 

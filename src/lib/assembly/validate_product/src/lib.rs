@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
-use assembly_config::{FileEntry, ImageAssemblyConfig};
+use assembly_config_schema::{FileEntry, ImageAssemblyConfig};
 use assembly_validate_util::{BootfsContents, PkgNamespace};
 use fuchsia_pkg::PackageManifest;
 use rayon::iter::{ParallelBridge, ParallelIterator};

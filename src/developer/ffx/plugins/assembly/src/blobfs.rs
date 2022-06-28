@@ -6,7 +6,7 @@ use crate::base_package::BasePackage;
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
-use assembly_config::ImageAssemblyConfig;
+use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
 use assembly_images_manifest::BlobfsContents;
 use assembly_tool::Tool;
@@ -51,7 +51,7 @@ pub fn construct_blobfs(
 mod tests {
     use super::construct_blobfs;
     use crate::base_package::BasePackage;
-    use assembly_config::ImageAssemblyConfig;
+    use assembly_config_schema::ImageAssemblyConfig;
     use assembly_images_config::{BlobFS, BlobFSLayout};
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;

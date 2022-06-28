@@ -6,7 +6,7 @@ use crate::base_package::BasePackage;
 use crate::blobfs::construct_blobfs;
 
 use anyhow::{Context, Result};
-use assembly_config::ImageAssemblyConfig;
+use assembly_config_schema::ImageAssemblyConfig;
 use assembly_fvm::{Filesystem, FilesystemAttributes, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_images_config::{Fvm, FvmFilesystem, FvmOutput, SparseFvm};
 use assembly_images_manifest::{Image, ImagesManifest};
@@ -331,7 +331,7 @@ mod tests {
     use super::MultiFvmBuilder;
 
     use crate::base_package::BasePackage;
-    use assembly_config::{ImageAssemblyConfig, KernelConfig};
+    use assembly_config_schema::{ImageAssemblyConfig, KernelConfig};
     use assembly_images_config::{
         BlobFS, BlobFSLayout, EmptyAccount, EmptyMinFS, FvmFilesystem, FvmOutput, MinFS, NandFvm,
         Reserved, SparseFvm, StandardFvm,

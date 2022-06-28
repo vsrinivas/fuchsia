@@ -9,7 +9,7 @@ use crate::vbmeta;
 use crate::zbi;
 
 use anyhow::{anyhow, Context, Result};
-use assembly_config::ImageAssemblyConfig;
+use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::{Fvm, Image, ImagesConfig, VBMeta, Zbi};
 use assembly_images_manifest::ImagesManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};

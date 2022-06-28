@@ -4,16 +4,13 @@
 
 use crate::util;
 use anyhow::{anyhow, ensure, Context, Result};
-use assembly_config::{
-    self as image_assembly_config,
-    product_config::{
-        AssemblyInputBundle, PackageConfigPatch, ProductPackageDetails, ProductPackagesConfig,
-        StructuredConfigPatches,
-    },
+use assembly_config_data::ConfigDataBuilder;
+use assembly_config_schema::{
+    product_config::{AssemblyInputBundle, ProductPackageDetails, ProductPackagesConfig},
     FileEntry,
 };
-use assembly_config_data::ConfigDataBuilder;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
+use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_structured_config::Repackager;
 use assembly_util::{InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
@@ -285,7 +282,7 @@ impl ImageAssemblyConfigBuilder {
     pub fn build(
         self,
         outdir: impl AsRef<Path>,
-    ) -> Result<image_assembly_config::ImageAssemblyConfig> {
+    ) -> Result<assembly_config_schema::ImageAssemblyConfig> {
         let outdir = outdir.as_ref();
         // Decompose the fields in self, so that they can be recomposed into the generated
         // image assembly configuration.
@@ -368,11 +365,11 @@ impl ImageAssemblyConfigBuilder {
         // Construct a single "partial" config from the combined fields, and
         // then pass this to the ImageAssemblyConfig::try_from_partials() to get the
         // final validation that it's complete.
-        let partial = image_assembly_config::PartialImageAssemblyConfig {
+        let partial = assembly_config_schema::PartialImageAssemblyConfig {
             system: system.into_paths().collect(),
             base: base.into_paths().collect(),
             cache: cache.into_paths().collect(),
-            kernel: Some(image_assembly_config::PartialKernelConfig {
+            kernel: Some(assembly_config_schema::PartialKernelConfig {
                 path: kernel_path,
                 args: kernel_args.into_iter().collect(),
                 clock_backstop: kernel_clock_backstop,
@@ -383,7 +380,7 @@ impl ImageAssemblyConfigBuilder {
             bootfs_packages: bootfs_packages.into_paths().collect(),
         };
 
-        let image_assembly_config = image_assembly_config::ImageAssemblyConfig::try_from_partials(
+        let image_assembly_config = assembly_config_schema::ImageAssemblyConfig::try_from_partials(
             std::iter::once(partial),
         )?;
 
@@ -558,12 +555,12 @@ mod tests {
         let write_empty_bundle_pkg =
             |name: &str| write_empty_pkg(bundle_path, name).clone().into_std_path_buf();
         AssemblyInputBundle {
-            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
+            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![write_empty_bundle_pkg("base_package0")],
                 system: vec![write_empty_bundle_pkg("sys_package0")],
                 cache: vec![write_empty_bundle_pkg("cache_package0")],
                 bootfs_packages: vec![write_empty_bundle_pkg("bootfs_package0")],
-                kernel: Some(image_assembly_config::PartialKernelConfig {
+                kernel: Some(assembly_config_schema::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: vec!["kernel_arg0".into()],
                     clock_backstop: Some(56244),
@@ -585,7 +582,7 @@ mod tests {
         let outdir = TempDir::new().unwrap();
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path(), make_test_assembly_bundle(outdir.path())).unwrap();
-        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         assert_eq!(result.base, vec![outdir.path().join("base_package0")]);
         assert_eq!(result.cache, vec![outdir.path().join("cache_package0")]);
@@ -631,7 +628,7 @@ mod tests {
         );
 
         builder.add_parsed_bundle(&bundle_path, bundle).unwrap();
-        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         // config_data's manifest is in outdir
         let expected_config_data_manifest_path =
@@ -705,18 +702,18 @@ mod tests {
             ],
         };
         let minimum_bundle = AssemblyInputBundle {
-            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
+            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![
                     write_empty_pkg(&outdir, "platform_a").into_std_path_buf(),
                     write_empty_pkg(&outdir, "platform_b").into_std_path_buf(),
                 ],
-                kernel: Some(image_assembly_config::PartialKernelConfig {
+                kernel: Some(assembly_config_schema::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: Vec::default(),
                     clock_backstop: Some(0),
                 }),
                 qemu_kernel: Some("kernel/qemu/path".into()),
-                ..image_assembly_config::PartialImageAssemblyConfig::default()
+                ..assembly_config_schema::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
@@ -724,7 +721,7 @@ mod tests {
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
         builder.add_product_packages(packages).unwrap();
-        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         assert_eq!(
             result.base,
@@ -773,15 +770,15 @@ mod tests {
             ..ProductPackagesConfig::default()
         };
         let minimum_bundle = AssemblyInputBundle {
-            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
+            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![write_empty_pkg(&outdir, "base_a").into_std_path_buf()],
-                kernel: Some(image_assembly_config::PartialKernelConfig {
+                kernel: Some(assembly_config_schema::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: Vec::default(),
                     clock_backstop: Some(0),
                 }),
                 qemu_kernel: Some("kernel/qemu/path".into()),
-                ..image_assembly_config::PartialImageAssemblyConfig::default()
+                ..assembly_config_schema::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),
             blobs: Vec::default(),

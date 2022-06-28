@@ -5,7 +5,7 @@
 use crate::base_package::BasePackage;
 
 use anyhow::{anyhow, Result};
-use assembly_config::ImageAssemblyConfig;
+use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_package_list::{PackageList, WritablePackageList};
@@ -163,7 +163,7 @@ mod tests {
     use super::{construct_zbi, vendor_sign_zbi, BOOTFS_PACKAGE_INDEX};
 
     use crate::base_package::BasePackage;
-    use assembly_config::ImageAssemblyConfig;
+    use assembly_config_schema::ImageAssemblyConfig;
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
     use assembly_images_manifest::ImagesManifest;
     use assembly_tool::testing::FakeToolProvider;

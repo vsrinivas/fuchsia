@@ -4,15 +4,10 @@
 
 use crate as image_assembly_config;
 use crate::FileEntry;
-use anyhow::ensure;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
 use camino::Utf8PathBuf;
-use fidl_fuchsia_logger::MAX_TAGS;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
-
-/// ffx config flag for enabling configuring the assembly+structured config example.
-const EXAMPLE_ENABLED_FLAG: &str = "assembly_example_enabled";
+use std::collections::BTreeMap;
 
 /// Configuration for a Product Assembly operation.  This is a high-level operation
 /// that takes a more abstract description of what is desired in the assembled
@@ -34,7 +29,7 @@ pub struct PlatformConfig {
     ///
     /// Appended to the list of tags defined for the platform.
     #[serde(default)]
-    additional_serial_log_tags: Vec<String>,
+    pub additional_serial_log_tags: Vec<String>,
 }
 
 /// The platform BuildTypes.
@@ -65,7 +60,7 @@ pub struct ProductConfig {
     ///
     /// Default to the empty string which creates a "paused" config that launches nothing to start.
     #[serde(default)]
-    session_url: String,
+    pub session_url: String,
 }
 
 /// Packages provided by the product, to add to the assembled images.
@@ -127,142 +122,6 @@ impl From<PackageManifestPathBuf> for ProductPackageDetails {
 impl From<&str> for ProductPackageDetails {
     fn from(s: &str) -> Self {
         ProductPackageDetails { manifest: s.into(), config_data: BTreeMap::default() }
-    }
-}
-
-const BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
-    "console-launcher",
-    "driver_manager.cm",
-    "driver_host2.cm",
-    "driver",
-    "device",
-    "mdns",
-    "netcfg",
-    "netstack",
-    "fshost",
-    "blobfs",
-    "minfs",
-    "wlan",
-    "fxfs",
-    "sshd-host",
-];
-static_assertions::const_assert!(BASE_CONSOLE_ALLOWED_TAGS.len() <= MAX_TAGS as usize);
-
-const BASE_CONSOLE_DENIED_TAGS: &[&str] = &["NUD", "klog"];
-
-impl ProductAssemblyConfig {
-    /// Convert the high-level description of product configuration into a series of configuration
-    /// value files with concrete component tuples.
-    ///
-    /// Returns a map from components manifest paths to configuration fields.
-    pub fn define_bootfs_config(&self) -> anyhow::Result<PackageConfigPatch> {
-        let mut bootfs_patches = PackageConfigPatch::default();
-
-        // Configure the serial console.
-        let allowed_log_tags = {
-            let mut allowed_log_tags: BTreeSet<_> =
-                BASE_CONSOLE_ALLOWED_TAGS.iter().map(|s| s.to_string()).collect();
-
-            let num_product_tags = self.platform.additional_serial_log_tags.len();
-            let max_product_tags = MAX_TAGS as usize - BASE_CONSOLE_ALLOWED_TAGS.len();
-            ensure!(
-                num_product_tags <= max_product_tags,
-                "Max {max_product_tags} tags can be forwarded to serial, got {num_product_tags}."
-            );
-            allowed_log_tags.extend(self.platform.additional_serial_log_tags.iter().cloned());
-            allowed_log_tags.into_iter().collect::<Vec<_>>()
-        };
-        let denied_log_tags: Vec<_> =
-            BASE_CONSOLE_DENIED_TAGS.iter().map(|s| s.to_string()).collect();
-        bootfs_patches
-            .component("meta/console.cm")
-            .field("allowed_log_tags", allowed_log_tags)
-            .field("denied_log_tags", denied_log_tags);
-
-        Ok(bootfs_patches)
-    }
-
-    /// Convert the high-level description of product configuration into a series of configuration
-    /// value files with concrete package/component tuples.
-    ///
-    /// Returns a map from package names to configuration updates.
-    pub fn define_repackaging(&self) -> anyhow::Result<StructuredConfigPatches> {
-        let mut patches = PatchesBuilder::default();
-
-        // Configure the Product Assembly + Structured Config example, if enabled.
-        if should_configure_example() {
-            patches
-                .package("configured_by_assembly")
-                .component("meta/to_configure.cm")
-                .field("enable_foo", matches!(self.platform.build_type, BuildType::Eng));
-        }
-
-        // Configure the session URL.
-        ensure!(
-            self.product.session_url.is_empty()
-                || self.product.session_url.starts_with("fuchsia-pkg://"),
-            "valid session URLs must start with `fuchsia-pkg://`, got `{}`",
-            self.product.session_url
-        );
-        patches
-            .package("session_manager")
-            .component("meta/session_manager.cm")
-            .field("session_url", self.product.session_url.to_owned());
-
-        Ok(patches.inner)
-    }
-}
-
-/// Check ffx config for whether we should execute example code.
-fn should_configure_example() -> bool {
-    futures::executor::block_on(ffx_config::get::<bool, _>(EXAMPLE_ENABLED_FLAG))
-        .unwrap_or_default()
-}
-
-/// A builder for collecting all of the structure configuration repackaging to perform in a given
-/// system.
-#[derive(Default)]
-struct PatchesBuilder {
-    inner: StructuredConfigPatches,
-}
-
-impl PatchesBuilder {
-    fn package(&mut self, name: &str) -> &mut PackageConfigPatch {
-        self.inner.entry(name.to_string()).or_default()
-    }
-}
-
-/// A map from package names to patches to apply to their structured configuration.
-pub type StructuredConfigPatches = BTreeMap<String, PackageConfigPatch>;
-
-#[derive(Clone, Debug, Default)]
-pub struct PackageConfigPatch {
-    /// A map from manifest paths within the package namespace to the values for the component.
-    pub components: BTreeMap<String, ComponentConfig>,
-}
-
-impl PackageConfigPatch {
-    fn component(&mut self, pkg_path: &str) -> &mut ComponentConfig {
-        assert!(
-            self.components.insert(pkg_path.to_owned(), Default::default()).is_none(),
-            "each component's config can only be defined once"
-        );
-        self.components.get_mut(pkg_path).expect("just inserted this value")
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ComponentConfig {
-    pub fields: BTreeMap<String, serde_json::Value>,
-}
-
-impl ComponentConfig {
-    fn field(&mut self, key: &str, value: impl Into<serde_json::Value>) -> &mut Self {
-        assert!(
-            self.fields.insert(key.to_owned(), value.into()).is_none(),
-            "each configuration key can only be defined once"
-        );
-        self
     }
 }
 

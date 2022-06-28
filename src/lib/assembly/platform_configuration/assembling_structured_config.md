@@ -12,8 +12,8 @@ a schema, identify how values will be derived from a product's configuration,
 and generate your component's config.
 
 **Warning: this feature is under active development. If you have any questions
-when following this guide, ask in the [Product Assembly chat][pa-chat] or
-schedule a slot in [product assembly office hours][pa-hours].**
+when following this guide, ask in the [Software Assembly chat][sa-chat] or
+schedule a slot in [Software Assembly office hours][sa-hours].**
 
 # Define a configuration schema
 
@@ -33,14 +33,14 @@ For more information see the [documentation for structured config][sc-docs].
 Many configuration options can be represented as the difference between
 engineering builds and non-engineering builds. If the configuration of your
 component can't be deduced solely from build type, schedule a slot in [product
-assembly office hours][pa-hours] and decide on how your component's
-configuration will be represented in the product assembly configuration.
+assembly office hours][sa-hours] and decide on how your component's
+configuration will be represented in the [software assembly schema][sa-schema].
 
 # Configure the package
 
 Determine your package's name and your component's manifest resource path.
 Define logic to populate configuration for it in the [product assembly
-tool][product-config]:
+tool][configure-product]:
 
 ```rs
 patches
@@ -75,9 +75,10 @@ See [this diff][session-manager-diff] for an example of changing
 session_manager's size limit configuration to match the new location.
 
 [sc-docs]: https://fuchsia.dev/fuchsia-src/development/components/structured_config?hl=en
-[pa-chat]: https://goto.google.com/fuchsia-product-assembly-chat
-[pa-hours]: https://goto.google.com/fuchsia-product-assembly-office-hours
+[sa-chat]: https://goto.google.com/fuchsia-product-assembly-chat
+[sa-hours]: https://goto.google.com/fuchsia-product-assembly-office-hours
 [example-cml]: /examples/assembly/structured_config/configured_by_assembly/meta/to_configure.cml
-[product-config]: /src/lib/assembly/config/src/product_config.rs
+[configure-product]: /src/lib/assembly/platform_configuration/src/lib.rs
+[sa-schema]: /src/lib/assembly/config_schema/src/product_config.rs
 [mismatch-exceptions]: /build/assembly/scripts/compare_image_assembly_config_contents.py
 [session-manager-diff]: https://goto.google.com/fuchsia-session-manager-size-limits-path-update
