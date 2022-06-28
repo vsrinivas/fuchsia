@@ -12,6 +12,7 @@ use lowpan_driver_common::net::*;
 use lowpan_driver_common::spinel::mock::*;
 use lowpan_driver_common::spinel::*;
 use lowpan_driver_common::Driver as _;
+use openthread::ot::Trel;
 use openthread_fuchsia::Platform;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -48,8 +49,14 @@ where
     let _singleton_lock =
         TEST_HARNESS_SINGLETON_LOCK.lock().expect("TEST_HARNESS_SINGLETON_LOCK is poisoned");
 
-    // Adjust our logging so that we don't get inundated with useless logs.
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
+    static TEST_INIT: std::sync::Once = std::sync::Once::new();
+    TEST_INIT.call_once(|| {
+        // Sure all of our logging macros continue to work.
+        let _dont_care_if_fails = log::set_logger(&*fuchsia_syslog::LOGGER);
+
+        // Adjust our logging so that we don't get inundated with useless logs.
+        fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
+    });
 
     let (sink, stream, ncp_task) = new_fake_spinel_pair();
 
@@ -67,9 +74,13 @@ where
 
     let instance = ot::Instance::new(Platform::build().init(sink, stream));
 
-    // Ignore all persistent storage and perform a factory reset.
+    // Ignore all persistent storage.
     instance.erase_persistent_info().unwrap();
-    instance.factory_reset();
+
+    // Explicitly turn off services like TREL and SRP by default for tests.
+    // If needed, it can be enabled in the individual tests.
+    instance.trel_set_enabled(false);
+    instance.srp_server_set_enabled(false);
 
     ot::set_logging_level(ot::LogLevel::Crit);
 
