@@ -57,12 +57,15 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
 zx_koid_t ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle) {
   fuchsia::io::DirectorySyncPtr runtime_dir = runtime_dir_handle.BindSync();
   fuchsia::io::FileSyncPtr job_id_file;
-  runtime_dir->Open(
+  zx_status_t status = runtime_dir->Open(
       fuchsia::io::OpenFlags::RIGHT_READABLE, 0, "elf/job_id",
       fidl::InterfaceRequest<fuchsia::io::Node>(job_id_file.NewRequest().TakeChannel()));
+  if (status != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
   fuchsia::io::File2_Read_Result job_id_res;
-  job_id_file->Read(fuchsia::io::MAX_TRANSFER_SIZE, &job_id_res);
-  if (job_id_res.is_err()) {
+  status = job_id_file->Read(fuchsia::io::MAX_TRANSFER_SIZE, &job_id_res);
+  if (status != ZX_OK || !job_id_res.is_response()) {
     return ZX_KOID_INVALID;
   }
   std::string job_id_str(reinterpret_cast<const char*>(job_id_res.response().data.data()),
@@ -198,10 +201,14 @@ ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirec
       }
       fuchsia::sys2::RealmQuery_GetInstanceInfo_Result instace_info_res;
       realm_query->GetInstanceInfo(info.moniker, &instace_info_res);
-      if (instace_info_res.is_err() || !instace_info_res.response().resolved->started ||
+      if (!instace_info_res.is_response() || !instace_info_res.response().resolved ||
+          !instace_info_res.response().resolved->started ||
           !instace_info_res.response().resolved->started->runtime_dir) {
         continue;
       }
+      // TODO: remove this after fxbug.dev/103480 is fixed.
+      if (info.moniker == "./core/session-manager/session:session/workstation_session")
+        continue;
       zx_koid_t job_id =
           ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir));
       if (job_id != ZX_KOID_INVALID) {
