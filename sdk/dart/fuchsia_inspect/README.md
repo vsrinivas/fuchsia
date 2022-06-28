@@ -27,10 +27,8 @@ invocation and run the following command:
 $ fx build && fx run-host-tests fuchsia_inspect_package_unittests
 ```
 
-Integration tests are available in the `test/inspect_flutter_integration_tester`
-and `test/integration` directories. The former has more documentation
-[here][flutter_integration]. The latter may be run with the `fx set` invocation
-described above and the following command:
+Integration tests are available in the `test/integration` directory.
+It may be run with the `fx set` invocation described above and the following command:
 
 ```
 $ fx run-test dart_inspect_vmo_test
@@ -45,4 +43,3 @@ implementations are in `lib/src/*`. Unit and integration tests may be found in
 [inspect]:/docs/development/inspect/README.md
 [inspect_api]:https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/Inspect-class.html
 [iquery]:/docs/development/inspect/iquery.md
-[flutter_integration]:test/inspect_flutter_integration_tester/README.md
