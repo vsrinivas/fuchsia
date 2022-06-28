@@ -20,9 +20,9 @@ static_assert(SMP_MAX_CPUS <= sizeof(cpu_mask_t) * CHAR_BIT, "");
 #define INVALID_CPU ((cpu_num_t)-1)
 #define CPU_MASK_ALL ((cpu_mask_t)-1)
 
-static inline bool is_valid_cpu_num(cpu_num_t num) { return (num < SMP_MAX_CPUS); }
+static constexpr bool is_valid_cpu_num(cpu_num_t num) { return (num < SMP_MAX_CPUS); }
 
-static inline cpu_mask_t cpu_num_to_mask(cpu_num_t num) {
+static constexpr cpu_mask_t cpu_num_to_mask(cpu_num_t num) {
   if (!is_valid_cpu_num(num)) {
     return 0;
   }
@@ -30,11 +30,11 @@ static inline cpu_mask_t cpu_num_to_mask(cpu_num_t num) {
   return ((cpu_mask_t)1u << num);
 }
 
-static inline cpu_mask_t mask_all_but_one(cpu_num_t num) {
+static constexpr cpu_mask_t mask_all_but_one(cpu_num_t num) {
   return CPU_MASK_ALL ^ cpu_num_to_mask(num);
 }
 
-static inline cpu_num_t highest_cpu_set(cpu_mask_t mask) {
+static constexpr cpu_num_t highest_cpu_set(cpu_mask_t mask) {
   if (mask == 0) {
     return 0;
   }
@@ -42,7 +42,7 @@ static inline cpu_num_t highest_cpu_set(cpu_mask_t mask) {
   return (cpu_num_t)(sizeof(cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(mask);
 }
 
-static inline cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
+static constexpr cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
   if (mask == 0) {
     return 0;
   }
@@ -53,7 +53,7 @@ static inline cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
 // Removes one CPU from the mask and returns its ID.
 //
 // Returns INVALID_CPU if the mask is empty.
-static inline cpu_num_t remove_cpu_from_mask(cpu_mask_t& mask) {
+static constexpr cpu_num_t remove_cpu_from_mask(cpu_mask_t& mask) {
   if (mask == 0) {
     return INVALID_CPU;
   }
