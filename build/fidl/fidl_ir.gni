@@ -7,7 +7,7 @@ import("//build/fidl/fidlc.gni")
 
 # Compiles a FIDL library to IR and optionally generates API summaries.
 #
-# Compilation Parameters
+# Compilation parameters
 #
 #   fidl_target_name (required)
 #     [string] The name of the `fidl` target declaration.
@@ -15,112 +15,97 @@ import("//build/fidl/fidlc.gni")
 #   fidl_library_name (required)
 #     [string] The name of the `fidl` library.
 #
+#   gen_dir (required)
+#     [path] Effectively replaces target_gen_dir. This is used to prevent
+#     multiple fidl targets from generating the same output files.
+#
+#   json_representation (required)
+#     [path] Where to generate the FIDL IR. Must be relative to gen_dir.
+#
 #   target_api_level
-#     [int] Only compile APIs availble at this level. See the FIDL compiler's
-#     --avalable flag for more info.
-#
-#   target_api_platform
-#     [int] Only compile APIs available on this platform. See the FIDL
-#     compiler's --available flag for more info.
-#
-#   gen_dir
-#     [Path] If set, effectively replaces target_gen_dir. This is generally
-#     used to prevent multiple fidl targets from generating the same output
-#     files.
-#
-# Output Parameters
+#     [string] Only compile APIs available at this Fuchsia API level. See the
+#     FIDL compiler's --available flag for more info.
 #
 #   out_summary
-#     [Path] If set, generates an API summary file at the given path.
+#     [path] If set, generates an API summary file at the given path.
+#     Must be relative to gen_dir.
 #
 #   out_json_summary
-#     [Path] If set, generates a JSON API summary file at the given path.
+#     [path] If set, generates a JSON API summary file at the given path.
+#     Must be relative to gen_dir.
 #
-#   json_representation
-#     [Path] Where to generate the FIDL IR.
+# Other parameters (see //build/fidl/fidl.gni for descriptions):
 #
-#   deps
+#   sources (required)
+#   goldens_dir
+#   experimental_flags
+#   non_fidl_deps
 #   public_deps
-#   fidl_deps
+#   testonly
+#   visibility
+#
 template("fidl_ir") {
+  assert(
+      current_toolchain == fidl_toolchain,
+      "This template can only be used in the FIDL toolchain $fidl_toolchain.")
+
   assert(defined(invoker.fidl_target_name), "fidl_target_name is required")
   assert(defined(invoker.fidl_library_name), "fidl_library_name is required")
-
-  out_summary = ""
-  if (defined(invoker.out_summary)) {
-    out_summary = invoker.out_summary
-  }
-
-  out_json_summary = ""
-  if (defined(invoker.out_json_summary)) {
-    out_json_summary = invoker.out_json_summary
-  }
-
-  gen_dir = target_gen_dir
-  if (defined(invoker.gen_dir)) {
-    gen_dir = invoker.gen_dir
-  }
-
-  json_representation = "$gen_dir/${invoker.fidl_target_name}.fidl.json"
-  if (defined(invoker.json_representation)) {
-    json_representation = invoker.json_representation
-  }
+  assert(defined(invoker.gen_dir), "gen_dir is required")
+  assert(defined(invoker.json_representation),
+         "json_representation is required")
+  assert(defined(invoker.sources), "sources is required")
 
   main_target_deps = []
 
   fidlc_target_name = "${target_name}_fidlc"
   fidlc(fidlc_target_name) {
     forward_variables_from(invoker,
+                           "*",
                            [
-                             "deps",
-                             "experimental_flags",
-                             "fidl_deps",
-                             "fidl_target_name",
-                             "public_deps",
-                             "sources",
-                             "target_api_level",
-                             "target_api_platform",
-                             "testonly",
+                             "goldens_dir",
+                             "out_json_summary",
+                             "out_summary",
+                             "visibility",
                            ])
-    library_name = invoker.fidl_library_name
-    gen_dir = gen_dir
-    json_representation = json_representation
+    visibility = [ ":*" ]
   }
 
   main_target_deps += [ ":$fidlc_target_name" ]
 
-  if (out_summary != "") {
+  if (defined(invoker.out_summary)) {
     fidl_summary_target_name = "${target_name}_summary"
     main_target_deps += [ ":$fidl_summary_target_name" ]
     fidl_summary(fidl_summary_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
-      inputs = [ json_representation ]
-      outputs = [ out_summary ]
+      inputs = [ invoker.json_representation ]
+      outputs = [ invoker.out_summary ]
       deps = [ ":$fidlc_target_name" ]
     }
   }
 
-  if (out_json_summary != "") {
+  if (defined(invoker.out_json_summary)) {
     fidl_summary_json_target_name = "${target_name}_summary_json"
     main_target_deps += [ ":$fidl_summary_json_target_name" ]
     fidl_summary_json(fidl_summary_json_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-      inputs = [ json_representation ]
-      outputs = [ out_json_summary ]
+      visibility = [ ":*" ]
+      inputs = [ invoker.json_representation ]
+      outputs = [ invoker.out_json_summary ]
       dest = "fidl"
       deps = [ ":$fidlc_target_name" ]
 
       metadata = {
         compatibility_testing_goldens = [
           {
-            src = rebase_path(out_json_summary, root_build_dir)
+            src = rebase_path(invoker.out_json_summary, root_build_dir)
             if (!defined(invoker.target_api_level) ||
                 invoker.target_api_level == "HEAD") {
-              dst = rebase_path(out_json_summary, root_build_dir)
+              dst = rebase_path(invoker.out_json_summary, root_build_dir)
             } else {
-              dst = "//sdk/history/${invoker.target_api_level}/" +
-                    get_path_info(out_json_summary, "file")
+              dst = "${invoker.goldens_dir}/${invoker.target_api_level}/" +
+                    get_path_info(invoker.out_json_summary, "file")
             }
           },
         ]
@@ -129,8 +114,11 @@ template("fidl_ir") {
   }
 
   group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     public_deps = main_target_deps
-    deps = main_target_deps
   }
 }

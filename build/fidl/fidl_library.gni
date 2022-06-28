@@ -19,25 +19,38 @@ declare_args() {
   api_compatibility_testing = true
 }
 
-# Generates some representation of a FIDL library that's consumable by Language
-# bindings generators.
+# Declares a bindings agnostic FIDL library. See //build/fidl/fidl.gni for the
+# full FIDL template which produces bindings. This template does the following:
 #
-# The parameters for this template are defined in //build/fidl/fidl.gni. The
-# relevant parameters in this template are:
-#   - api;
-#   - name;
-#   - sdk_category;
-#   - sources.
-#   - lenient_api_summary
+# - Generates JSON IR for the library.
+# - Validates the JSON IR against //tools/fidl/fidlc/schema.json.
+# - Lints source files with fidl-lint.
+# - Performs SDK checks and produces an sdk_atom target (if applicable).
+# - Generates API summaries (if applicable).
+# - Runs API compatibility tests (if applicable).
 #
-#   should_lint (optional, boolean)
-#     If set to false, the linting step is skipped.
+# Parameters (see //build/fidl/fidl.gni for descriptions):
+#
+#   sources (required)
+#   api
+#   excluded_checks
+#   experimental_flags
+#   goldens_dir
+#   lenient_api_summary
+#   name
+#   non_fidl_deps
+#   public_deps
+#   sdk_category
+#   should_lint
+#   testonly
+#   visibility
+#
 template("fidl_library") {
   assert(
       current_toolchain == fidl_toolchain,
       "This template can only be used in the FIDL toolchain $fidl_toolchain.")
 
-  assert(defined(invoker.sources), "A FIDL library requires some sources.")
+  assert(defined(invoker.sources), "sources is required")
 
   main_target_name = target_name
   library_name = target_name
@@ -45,19 +58,31 @@ template("fidl_library") {
     library_name = invoker.name
   }
 
-  experimental_flags = []
-  if (defined(invoker.experimental_flags)) {
-    experimental_flags = invoker.experimental_flags
-  }
-
-  is_sdk_publishable =
-      defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
-      invoker.sdk_category != "experimental" &&
-      invoker.sdk_category != "excluded"
+  is_sdk_included =
+      defined(invoker.sdk_category) && invoker.sdk_category != "excluded"
+  is_sdk_included_publishable =
+      is_sdk_included && invoker.sdk_category != "internal" &&
+      invoker.sdk_category != "experimental"
+  is_sdk_included_publishable_nontest =
+      is_sdk_included_publishable && invoker.sdk_category != "cts"
 
   # Additional dependencies to add when this target is published in an SDK.
   sdk_atom_deps = []
-  not_needed([ "sdk_atom_deps" ])
+
+  goldens_dir = "//sdk/history"
+  if (defined(invoker.goldens_dir)) {
+    goldens_dir = invoker.goldens_dir
+  }
+
+  if (!is_sdk_included) {
+    not_needed([ "sdk_atom_deps" ])
+  }
+  if (!is_sdk_included_publishable) {
+    not_needed([ "goldens_dir" ])
+  }
+  if (!is_sdk_included_publishable_nontest) {
+    not_needed(invoker, [ "api" ])
+  }
 
   json_representation = "$target_gen_dir/$target_name.fidl.json"
   lint_stamp_file = "$target_gen_dir/$target_name.linted"
@@ -66,50 +91,34 @@ template("fidl_library") {
   verification_target_name = "${target_name}_verify"
   lint_target_name = "${target_name}_lint"
 
-  # Only artifacts that have various associated FIDL generated targets.
-  fidl_deps = []
-
-  # Artifacts other than FIDL, that are also dependencies.
-  non_fidl_deps = []
-
-  if (defined(invoker.non_fidl_deps)) {
-    non_fidl_deps += invoker.non_fidl_deps
-  }
-
-  if (defined(invoker.deps)) {
-    fidl_deps += invoker.deps - non_fidl_deps
-  }
-  if (defined(invoker.public_deps)) {
-    fidl_deps += invoker.public_deps
-  }
-
   summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
   fidl_ir(compilation_target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
-                             "fidl_deps",
+                             "experimental_flags",
                              "json_representation",
+                             "non_fidl_deps",
                              "public_deps",
                              "sources",
                              "testonly",
                            ])
+    visibility = [ ":*" ]
     fidl_target_name = main_target_name
     fidl_library_name = library_name
+    gen_dir = target_gen_dir
+    json_representation = json_representation
     out_json_summary = summary_file_json
-    deps += [ ":$lint_target_name" ] + non_fidl_deps
   }
 
   action(lint_target_name) {
-    visibility = [ ":*" ]
-
-    script = "//build/scripts/run_and_stamp.sh"
-
     forward_variables_from(invoker,
                            [
                              "sources",
                              "testonly",
                            ])
+    visibility = [ ":*" ]
+
+    script = "//build/scripts/run_and_stamp.sh"
 
     # run_and_stamp.sh runs this tool, and touches lint_stamp_file if successful
     _tool_with_no_output = "//tools/fidl/fidlc:fidl-lint"
@@ -124,7 +133,10 @@ template("fidl_library") {
     tool_out_dir = get_label_info(host_tool, "root_out_dir")
     host_executable = "$tool_out_dir/$tool_output_name"
 
-    deps = [ host_tool ] + non_fidl_deps
+    deps = [ host_tool ]
+    if (defined(invoker.non_fidl_deps)) {
+      deps += invoker.non_fidl_deps
+    }
 
     # Add the executable itself as an input.
     inputs = [ host_executable ]
@@ -161,6 +173,7 @@ template("fidl_library") {
     args = [ rebase_path(lint_stamp_file, root_build_dir) ]
     if (fidl_to_lint == []) {
       args += [ ":" ]  # NOOP - Nothing to lint, but touch the stamp file
+      not_needed(invoker, [ "excluded_checks" ])
     } else {
       args += [ rebase_path(host_executable, root_build_dir) ]
 
@@ -192,7 +205,7 @@ template("fidl_library") {
 
   # Enforce compatibility checks for all published SDK FIDLs in the Fuchsia
   # namespace.
-  if (is_sdk_publishable) {
+  if (is_sdk_included_publishable) {
     # A kill switch for API summarization and compatibility testing.
     # Set to true to permit compilations that have summary errors.
     lenient_api_summary = false
@@ -219,22 +232,21 @@ template("fidl_library") {
       fidl_ir(fidl_ir_target_name) {
         forward_variables_from(invoker,
                                [
-                                 "deps",
-                                 "fidl_deps",
+                                 "experimental_flags",
+                                 "non_fidl_deps",
                                  "public_deps",
                                  "sources",
-                                 "experimental_flags",
                                  "testonly",
                                ])
         fidl_target_name = main_target_name
         fidl_library_name = library_name
         target_api_level = "$level"
+        goldens_dir = goldens_dir
 
         # Avoid clobbering existing FIDL sources.
         gen_dir = "$target_gen_dir/$level"
-        out_json_summary = "$gen_dir/$library_name.api_summary.json"
         json_representation = "$gen_dir/$target_name.fidl.json"
-        deps = non_fidl_deps
+        out_json_summary = "$gen_dir/$library_name.api_summary.json"
       }
       sdk_atom_deps += [ ":$fidl_ir_target_name" ]
 
@@ -252,11 +264,6 @@ template("fidl_library") {
           forward_variables_from(invoker, [ "testonly" ])
           warn_on_changes = lenient_api_summary
           target_api_level = "$level"
-
-          goldens_dir = "//sdk/history"
-          if (defined(invoker.goldens_dir)) {
-            goldens_dir = invoker.goldens_dir
-          }
 
           golden = "$goldens_dir/$level/$library_name.api_summary.json"
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
@@ -298,15 +305,12 @@ template("fidl_library") {
       ":$lint_target_name",
     ]
 
-    deps = [
-      ":$compilation_target_name",
-      ":$verification_target_name",
-    ]
+    deps = [ ":$verification_target_name" ]
   }
 
-  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+  if (is_sdk_included) {
     sdk_category = invoker.sdk_category
-    if (sdk_category == "partner" || sdk_category == "public") {
+    if (is_sdk_included_publishable_nontest) {
       api_reference = "$library_name.api"
       if (defined(invoker.api)) {
         api_reference = invoker.api
@@ -337,13 +341,15 @@ template("fidl_library") {
     # Identify metadata for dependencies.
     sdk_metas = []
     sdk_deps = []
-    foreach(dep, fidl_deps) {
-      full_label = get_label_info(dep, "label_no_toolchain")
-      sdk_dep = "${full_label}_sdk"
-      sdk_deps += [ sdk_dep ]
-      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
-      name = get_label_info(sdk_dep, "name")
-      sdk_metas += [ "$gen_dir/$name.meta.json" ]
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        full_label = get_label_info(dep, "label_no_toolchain")
+        sdk_dep = "${full_label}_sdk"
+        sdk_deps += [ sdk_dep ]
+        gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+        name = get_label_info(sdk_dep, "name")
+        sdk_metas += [ "$gen_dir/$name.meta.json" ]
+      }
     }
 
     # Generate the library metadata.
@@ -465,9 +471,11 @@ template("fidl_library") {
                      ] + sdk_atom_deps
 
       deps = []
-      foreach(dep, fidl_deps) {
-        label = get_label_info(dep, "label_no_toolchain")
-        deps += [ "${label}_sdk" ]
+      if (defined(invoker.public_deps)) {
+        foreach(dep, invoker.public_deps) {
+          label = get_label_info(dep, "label_no_toolchain")
+          deps += [ "${label}_sdk" ]
+        }
       }
     }
   }

@@ -7,34 +7,26 @@ import("//build/fidl/toolchain.gni")
 
 # Runs the FIDL compiler.
 #
-# Parameters
+# Parameters (see //build/fidl/fidl_ir.gni for descriptions):
+#
+#   fidl_library_name (required)
 #   fidl_target_name (required)
-#     The name of the `fidl` target.
-#
-#   library_name (required)
-#     The name of the fidl library.
-#
+#   gen_dir (required)
 #   json_representation (required)
-#     The path to the JSON to generate.
-#
-#   target_api_level
-#     Only compile APIs available at this level. Defaults to "HEAD".
-#
-#   target_api_platform
-#     Only compile APIs available on this platform. Defaults to "fuchsia"
-#
-#   fidl_deps
-#   non_fidl_deps
-#   sources
+#   sources (required)
 #   experimental_flags
-#   deps
+#   non_fidl_deps
 #   public_deps
+#   target_api_level
+#   testonly
+#   visibility
+#
 template("fidlc") {
+  assert(defined(invoker.fidl_library_name), "fidl_library_name is required")
   assert(defined(invoker.fidl_target_name), "fidl_target_name is required")
+  assert(defined(invoker.gen_dir), "gen_dir is required")
   assert(defined(invoker.json_representation),
          "json_representation is required")
-  assert(defined(invoker.library_name), "library_name is required")
-  assert(defined(invoker.fidl_deps), "fidl_deps is required")
   assert(defined(invoker.sources), "sources is required")
 
   experimental_flags = [ "no_optional_structs" ]
@@ -42,47 +34,28 @@ template("fidlc") {
     experimental_flags += invoker.experimental_flags
   }
 
-  fidl_deps = []
-  if (defined(invoker.fidl_deps)) {
-    fidl_deps += invoker.fidl_deps
-  }
-
-  non_fidl_deps = []
-  if (defined(invoker.non_fidl_deps)) {
-    non_fidl_deps += invoker.non_fidl_deps
-  }
-
-  gen_dir = target_gen_dir
-  if (defined(invoker.gen_dir)) {
-    gen_dir = invoker.gen_dir
-  }
-
   main_target_name = target_name
   fidl_target_name = invoker.fidl_target_name
-  library_name = invoker.library_name
-  json_representation = invoker.json_representation
 
   # These paths are expected by the templates in //build/c/fidlc.gni.
-  generated_binding_dir = "$gen_dir/$fidl_target_name/c"
-  c_stem = string_replace(invoker.library_name, ".", "/") + "/c/fidl"
+  generated_binding_dir = "${invoker.gen_dir}/$fidl_target_name/c"
+  c_stem = string_replace(invoker.fidl_library_name, ".", "/") + "/c/fidl"
   c_client = "$generated_binding_dir/$c_stem.client.c"
   c_header = "$generated_binding_dir/$c_stem.h"
   c_server = "$generated_binding_dir/$c_stem.server.c"
   coding_tables = "$generated_binding_dir/$fidl_target_name.fidl.tables.c"
-  fidlc_depfile_path = "$generated_binding_dir/$library_name.d"
+  fidlc_depfile_path = "$generated_binding_dir/${invoker.fidl_library_name}.d"
 
-  libraries_file = "$gen_dir/$fidl_target_name.libraries"
-  response_file = "$gen_dir/$target_name.args"
+  libraries_file = "${invoker.gen_dir}/$fidl_target_name.libraries"
+  response_file = "${invoker.gen_dir}/$target_name.args"
   response_file_target_name = "${main_target_name}_response_file"
   action(response_file_target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
-                             "public_deps",
-                             "sources",
                              "testonly",
-                             "visibility",
+                             "public_deps",
                            ])
+    visibility = [ ":*" ]
 
     script = "//build/fidl/gen_response_file.py"
 
@@ -97,7 +70,7 @@ template("fidlc") {
              "--out-libraries",
              rebase_path(libraries_file, root_build_dir),
              "--json",
-             rebase_path(json_representation, root_build_dir),
+             rebase_path(invoker.json_representation, root_build_dir),
              "--deprecated-fuchsia-only-c-client",
              rebase_path(c_client, root_build_dir),
              "--deprecated-fuchsia-only-c-header",
@@ -107,11 +80,11 @@ template("fidlc") {
              "--tables",
              rebase_path(coding_tables, root_build_dir),
              "--name",
-             library_name,
+             invoker.fidl_library_name,
              "--depfile",
              rebase_path(fidlc_depfile_path, root_build_dir),
              "--sources",
-           ] + rebase_path(sources, root_build_dir)
+           ] + rebase_path(invoker.sources, root_build_dir)
 
     if (defined(invoker.target_api_level)) {
       args += [
@@ -119,21 +92,19 @@ template("fidlc") {
         invoker.target_api_level,
       ]
     }
-    if (defined(invoker.target_api_platform)) {
-      args += [
-        "--target-platform",
-        invoker.target_api_platform,
-      ]
-    }
-    if (defined(invoker.fidl_deps)) {
-      dep_libraries = []
-      foreach(dep, invoker.fidl_deps) {
-        dep_gen_dir = get_label_info(dep, "target_gen_dir")
-        dep_name = get_label_info(dep, "name")
-        dep_libraries += [ "$dep_gen_dir/$dep_name.libraries" ]
+    if (defined(invoker.public_deps)) {
+      inputs = []
+      foreach(dep, invoker.public_deps) {
+        # Note: We are using the .libraries file from the dependency's
+        # target_gen_dir, even though this template invocation may have received
+        # a custom gen_dir for API compatibility testing. This is OK since the
+        # .libraries file will be identical for all target API levels (imports
+        # are not versioned, i.e. @available is not allowed on `using`).
+        _dep_gen_dir = get_label_info(dep, "target_gen_dir")
+        _dep_name = get_label_info(dep, "name")
+        inputs += [ "$_dep_gen_dir/$_dep_name.libraries" ]
       }
-      args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
-      inputs = dep_libraries
+      args += [ "--dep-libraries" ] + rebase_path(inputs, root_build_dir)
     }
 
     foreach(flag, experimental_flags) {
@@ -147,9 +118,9 @@ template("fidlc") {
   compiled_action(main_target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "sources",
                              "testonly",
+                             "visibility",
                            ])
 
     tool = "//tools/fidl/fidlc:fidlc"
@@ -160,10 +131,12 @@ template("fidlc") {
       c_header,
       c_server,
       coding_tables,
-      json_representation,
+      invoker.json_representation,
     ]
     args = [ "@" + rebase_path(response_file, root_build_dir) ]
-    deps += non_fidl_deps
+    if (defined(invoker.non_fidl_deps)) {
+      deps = invoker.non_fidl_deps
+    }
     public_deps = [ ":$response_file_target_name" ]
     if (defined(invoker.public_deps)) {
       public_deps += invoker.public_deps

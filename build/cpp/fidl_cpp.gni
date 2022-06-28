@@ -16,7 +16,7 @@ template("_fidl_cpp_codegen_impl") {
   fidl_target_name = invoker.fidl_target_name
 
   fidl_target_gen_dir =
-      get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   root = "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
 
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
@@ -156,7 +156,7 @@ template("_fidl_cpp_library_impl") {
   not_needed(invoker, [ "library_name" ])
   fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   root = "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
 
   if (defined(invoker.generated_headers)) {
@@ -206,15 +206,9 @@ template("_fidl_cpp_library_impl") {
       configs += invoker.additional_configs
     }
 
-    if (defined(invoker.public_configs)) {
-      public_configs = invoker.public_configs
-    } else {
-      public_configs = []
-    }
-
     if (defined(invoker.generated_headers)) {
       # Let dependencies use `#include "$file_stem.h"`.
-      public_configs += [ ":$config_target_name" ]
+      public_configs = [ ":$config_target_name" ]
     }
 
     public_deps = [
@@ -248,10 +242,6 @@ template("_fidl_cpp_library_impl") {
     }
 
     public_deps += invoker.additional_public_deps
-
-    if (defined(invoker.deps)) {
-      public_deps += invoker.deps
-    }
   }
 }
 
@@ -345,9 +335,9 @@ template("fidl_cpp_family") {
   # back it up here.
   fidl_target_name = target_name
 
-  # `sources` is only required to invoke `fidlc`;
-  # the bindings code generation consumes the JSON IR instead.
-  not_needed(invoker, [ "sources" ])
+  if (current_toolchain == fidl_toolchain) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
 
   # Determine the C++ bindings dependencies based on Fuchsia/host.
   if (is_fuchsia) {

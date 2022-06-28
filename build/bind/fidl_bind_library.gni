@@ -4,62 +4,75 @@
 
 import("//build/bind/bind.gni")
 
-# Declares the generated bind library invocation
+# Generates a driver bind library for a FIDL library.
+#
+# Parameters (see //build/fidl/fidl.gni for descriptions):
+#
+#   name
+#   testonly
+#   visibility
+#
 template("fidl_bind_library") {
-  library_name = "${target_name}"
+  not_needed(invoker,
+             [
+               "public_deps",
+               "sdk_category",
+             ])
+
+  generation_target_name = "${target_name}_bindlib_generate"
+
+  library_name = target_name
   if (defined(invoker.name)) {
-    library_name = "${invoker.name}"
+    library_name = invoker.name
   }
 
-  bind_library_target_name = "${target_name}_bindlib"
-
-  fidl_library = ":$target_name($fidl_toolchain)"
-  ir_target_name = get_label_info(fidl_library, "name")
-  ir_gen_dir = get_label_info(fidl_library, "target_gen_dir")
-  ir_file = "$ir_gen_dir/$ir_target_name.fidl.json"
-  generation_target_name = "${target_name}_bind_lib_generate"
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
 
   bind_library_file_name = "${library_name}.bind"
   generated_bind_library =
-      "$target_gen_dir/${target_name}/fidl_bindlibs/$bind_library_file_name"
+      "$fidl_target_gen_dir/$target_name/fidl_bindlibs/$bind_library_file_name"
 
-  compiled_action(generation_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
+  if (current_toolchain == fidl_toolchain) {
+    not_needed(invoker, [ "visibility" ])
 
-    tool = "//tools/bindc:bin"
-    tool_output_name = "bindc"
+    main_target_name = target_name
+    ir_file = "$fidl_target_gen_dir/$target_name.fidl.json"
+    compiled_action(generation_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":*" ]
 
-    inputs = [ ir_file ]
+      tool = "//tools/bindc:bin"
+      tool_output_name = "bindc"
 
-    outputs = [ generated_bind_library ]
+      inputs = [ ir_file ]
 
-    deps = [ fidl_library ]
+      outputs = [ generated_bind_library ]
 
-    args = [
-      "generate-bind",
-      "--output",
-      rebase_path("${generated_bind_library}", root_build_dir),
-      rebase_path("${ir_file}", root_build_dir),
-    ]
+      deps = [ ":${main_target_name}($fidl_toolchain)" ]
 
-    metadata = {
-      generated_sources = rebase_path(outputs, root_build_dir)
+      args = [
+        "generate-bind",
+        "--output",
+        rebase_path("${generated_bind_library}", root_build_dir),
+        rebase_path("${ir_file}", root_build_dir),
+      ]
+
+      metadata = {
+        generated_sources = rebase_path(outputs, root_build_dir)
+      }
     }
-  }
+  } else {
+    bind_library("${target_name}_bindlib") {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
 
-  bind_library(bind_library_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    source_dep = ":$generation_target_name"
-    source = generated_bind_library
-    name = library_name
+      source_dep = ":$generation_target_name($fidl_toolchain)"
+      source = generated_bind_library
+      name = library_name
+    }
   }
 }
