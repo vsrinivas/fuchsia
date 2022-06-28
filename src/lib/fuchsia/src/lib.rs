@@ -36,7 +36,7 @@ pub fn init_logging_for_component_with_executor<'a, R>(
         #[cfg(target_os = "fuchsia")]
         diagnostics_log::init!(_logging_tags, _interest);
         #[cfg(not(target_os = "fuchsia"))]
-        crate::host::logger::init();
+        crate::host::logger::init(_interest.min_severity);
 
         func()
     }
@@ -53,7 +53,7 @@ pub fn init_logging_for_component_with_threads<'a, R>(
         #[cfg(target_os = "fuchsia")]
         let _guard = init_logging_with_threads(_logging_tags.to_vec(), _interest);
         #[cfg(not(target_os = "fuchsia"))]
-        crate::host::logger::init();
+        crate::host::logger::init(_interest.min_severity);
 
         func()
     }
@@ -75,7 +75,7 @@ pub fn init_logging_for_test_with_executor<'a, R>(
             diagnostics_log::init!(tags.as_slice(), _interest.clone());
         }
         #[cfg(not(target_os = "fuchsia"))]
-        crate::host::logger::init();
+        crate::host::logger::init(_interest.min_severity);
 
         func(n)
     }
@@ -97,7 +97,7 @@ pub fn init_logging_for_test_with_threads<'a, R>(
             init_logging_with_threads(tags, _interest.clone())
         };
         #[cfg(not(target_os = "fuchsia"))]
-        crate::host::logger::init();
+        crate::host::logger::init(_interest.min_severity);
 
         func(n)
     }

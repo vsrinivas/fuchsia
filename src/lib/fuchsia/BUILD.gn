@@ -29,7 +29,9 @@ rustc_library("fuchsia") {
     ]
     deps += [
       "//third_party/rust_crates:chrono",
-      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tracing",
+      "//third_party/rust_crates:tracing-log",
+      "//third_party/rust_crates:tracing-subscriber",
     ]
   }
 }
