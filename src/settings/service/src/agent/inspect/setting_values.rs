@@ -18,7 +18,7 @@ use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as SettingPayload, Request};
 use crate::handler::setting_handler::{Event, Payload as HandlerPayload};
-use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::message::Messenger;
@@ -37,7 +37,7 @@ blueprint_definition!(
 pub(crate) struct SettingValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    setting_values: InspectMap<SettingValuesInspectInfo>,
+    setting_values: InspectWritableMap<SettingValuesInspectInfo>,
     setting_types: HashSet<SettingType>,
     _setting_types_inspect_info: SettingTypesInspectInfo,
 }
@@ -142,7 +142,7 @@ impl SettingValuesInspectAgent {
         let mut agent = Self {
             messenger_client,
             inspect_node,
-            setting_values: InspectMap::new(),
+            setting_values: InspectWritableMap::new(),
             setting_types: context.available_components.clone(),
             _setting_types_inspect_info: setting_types_inspect_info,
         };

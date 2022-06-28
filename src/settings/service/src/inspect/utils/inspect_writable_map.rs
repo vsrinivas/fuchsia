@@ -6,14 +6,14 @@ use fuchsia_inspect::Node;
 use fuchsia_inspect_derive::{AttachError, Inspect};
 use std::collections::HashMap;
 
-/// A map from String to inspect-writeable item T. InspectMap is compatible
+/// A map from String to inspect-writeable item T. InspectWritableMap is compatible
 /// with inspect_derive.
 #[derive(Default)]
-pub(crate) struct InspectMap<T> {
+pub(crate) struct InspectWritableMap<T> {
     map: HashMap<String, T>,
 }
 
-impl<T> InspectMap<T> {
+impl<T> InspectWritableMap<T> {
     pub(crate) fn new() -> Self {
         Self { map: HashMap::new() }
     }
@@ -33,12 +33,12 @@ impl<T> InspectMap<T> {
 
     /// Retrieves the existing value of key [key] if it exists, otherwise sets
     /// the value to [value] and returns it.
-    pub(crate) fn get_or_insert(&mut self, key: String, value: impl FnOnce() -> T) -> &mut T {
+    pub(crate) fn get_or_insert_with(&mut self, key: String, value: impl FnOnce() -> T) -> &mut T {
         self.map.entry(key).or_insert_with(value)
     }
 }
 
-impl<T> Inspect for &mut InspectMap<T>
+impl<T> Inspect for &mut InspectWritableMap<T>
 where
     for<'a> &'a mut T: Inspect,
 {
@@ -54,19 +54,19 @@ where
 #[cfg(test)]
 mod tests {
     use crate::base::SettingType;
-    use crate::inspect::utils::inspect_map::InspectMap;
+    use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
     use fuchsia_inspect::{self as inspect, assert_data_tree, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 
     #[derive(Inspect)]
     struct TestInspectWrapper {
         inspect_node: Node,
-        map: InspectMap<TestInspectItem>,
+        map: InspectWritableMap<TestInspectItem>,
     }
 
     impl TestInspectWrapper {
-        fn new(inspect_map: InspectMap<TestInspectItem>) -> Self {
-            Self { inspect_node: Node::default(), map: inspect_map }
+        fn new(inspect_writable_map: InspectWritableMap<TestInspectItem>) -> Self {
+            Self { inspect_node: Node::default(), map: inspect_writable_map }
         }
     }
 
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_single_item_map() {
         let inspector = inspect::Inspector::new();
-        let mut map = InspectMap::<TestInspectItem>::new();
+        let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
         map.set(format!("{:?}", SettingType::Unknown), test_val_1);
         let _wrapper = TestInspectWrapper::new(map)
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_multiple_item_map() {
         let inspector = inspect::Inspector::new();
-        let mut map = InspectMap::<TestInspectItem>::new();
+        let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(7);
         let test_val_3 = TestInspectItem::new(8);
@@ -134,7 +134,7 @@ mod tests {
     // Test that a value written to a key can be retrieved again.
     #[test]
     fn test_get() {
-        let mut map = InspectMap::<TestInspectItem>::new();
+        let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
         map.set(format!("{:?}", SettingType::Unknown), test_val_1);
         assert_eq!(
@@ -148,15 +148,15 @@ mod tests {
     // Test the get_or_insert function.
     #[test]
     fn test_get_or_insert() {
-        let mut map = InspectMap::<TestInspectItem>::new();
+        let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(7);
         let unknown_type_key = format!("{:?}", SettingType::Unknown);
 
-        let first_val = map.get_or_insert(unknown_type_key.clone(), || test_val_1);
+        let first_val = map.get_or_insert_with(unknown_type_key.clone(), || test_val_1);
         assert_eq!(*(*first_val).id, 6);
 
-        let second_val = map.get_or_insert(unknown_type_key, || test_val_2);
+        let second_val = map.get_or_insert_with(unknown_type_key, || test_val_2);
         assert_eq!(*(*second_val).id, 6);
 
         second_val.set_id(7);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 
 use std::sync::Arc;
 
@@ -21,7 +21,7 @@ pub struct StashInspectLogger {
     inspect_node: inspect::Node,
 
     /// Map from a setting's device storage key to its inspect data.
-    flush_failure_counts: InspectMap<StashInspectInfo>,
+    flush_failure_counts: InspectWritableMap<StashInspectInfo>,
 }
 
 /// Contains the node and property used to record the number of stash failures for a given
@@ -58,7 +58,7 @@ impl StashInspectLogger {
     fn new() -> Self {
         let inspector = component::inspector();
         let inspect_node = inspector.root().create_child(STASH_INSPECT_NODE_NAME);
-        Self { inspector, inspect_node, flush_failure_counts: InspectMap::new() }
+        Self { inspector, inspect_node, flush_failure_counts: InspectWritableMap::new() }
     }
 
     /// Records a write failure for the given setting.

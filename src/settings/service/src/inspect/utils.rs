@@ -9,5 +9,8 @@ pub mod enums;
 /// inspect-writeable itself.
 pub mod inspect_queue;
 
-/// A map from String to inspect-writeable item.
-pub mod inspect_map;
+/// A map from String to inspect-writeable item that can be written to inspect.
+pub mod inspect_writable_map;
+
+/// A map that controls an inspect node and writes inserted items to the node automatically.
+pub mod managed_inspect_map;

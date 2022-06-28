@@ -4,7 +4,7 @@
 
 use crate::clock;
 use crate::config;
-use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
 use fuchsia_inspect_derive::{Inspect, WithInspect};
@@ -22,7 +22,7 @@ pub struct InspectConfigLogger {
     inspect_node: inspect::Node,
 
     /// The saved information about each load.
-    config_load_values: InspectMap<ConfigInspectInfo>,
+    config_load_values: InspectWritableMap<ConfigInspectInfo>,
 }
 
 /// Information about a config file load to be written to inspect.
@@ -67,7 +67,7 @@ impl InspectConfigLogger {
         Self {
             inspector,
             inspect_node: inspector.root().create_child(CONFIG_INSPECT_NODE_NAME),
-            config_load_values: InspectMap::new(),
+            config_load_values: InspectWritableMap::new(),
         }
     }
 

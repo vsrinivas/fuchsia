@@ -3,23 +3,16 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::inspect::utils::inspect_map::InspectMap;
-
+use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use fuchsia_inspect::{self as inspect, component, NumericProperty};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::Inspect;
 use fuchsia_syslog::fx_log_err;
 
 const LISTENER_INSPECT_NODE_NAME: &str = "active_listeners";
 
 pub struct ListenerInspectLogger {
-    /// The inspector, stored for access in tests.
-    pub inspector: &'static inspect::Inspector,
-
-    /// The saved inspect node for the active listeners.
-    inspect_node: inspect::Node,
-
     /// The saved information about each setting type's active listeners.
-    listener_counts: InspectMap<ListenerInspectInfo>,
+    listener_counts: ManagedInspectMap<ListenerInspectInfo>,
 }
 
 impl Default for ListenerInspectLogger {
@@ -41,42 +34,65 @@ struct ListenerInspectInfo {
     count: inspect::UintProperty,
 }
 
-impl ListenerInspectInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default().with_inspect(node, key).expect("Failed to create ListenerInspectInfo node")
-    }
-}
-
 impl ListenerInspectLogger {
+    /// Creates a new [ListenerInspectLogger] that writes to the default
+    /// [fuchsia_inspect::component::inspector()].
     pub fn new() -> Self {
-        let inspector = component::inspector();
+        Self::with_inspector(component::inspector())
+    }
+
+    pub fn with_inspector(inspector: &inspect::Inspector) -> Self {
+        let listener_counts_node = inspector.root().create_child(LISTENER_INSPECT_NODE_NAME);
         Self {
-            inspector,
-            inspect_node: inspector.root().create_child(LISTENER_INSPECT_NODE_NAME),
-            listener_counts: InspectMap::new(),
+            listener_counts: ManagedInspectMap::<ListenerInspectInfo>::with_node(
+                listener_counts_node,
+            ),
         }
     }
 
     /// Adds a listener to the count for [setting_type].
     pub fn add_listener(&mut self, setting_type: SettingType) {
         let setting_type_str = format!("{:?}", setting_type);
-        match self.listener_counts.get_mut(&setting_type_str) {
-            Some(listener_inspect_info) => listener_inspect_info.count.add(1u64),
-            None => {
-                let listener_inspect_info =
-                    ListenerInspectInfo::new(&self.inspect_node, &setting_type_str);
-                listener_inspect_info.count.add(1u64);
-                self.listener_counts.set(setting_type_str, listener_inspect_info);
-            }
-        }
+        let inspect_info =
+            self.listener_counts.get_or_insert_with(setting_type_str, ListenerInspectInfo::default);
+        inspect_info.count.add(1u64);
     }
 
     /// Removes a listener from the count for [setting_type].
     pub fn remove_listener(&mut self, setting_type: SettingType) {
         let setting_type_str = format!("{:?}", setting_type);
-        match self.listener_counts.get_mut(&setting_type_str) {
+        match self.listener_counts.map_mut().get_mut(&setting_type_str) {
             Some(listener_inspect_info) => listener_inspect_info.count.subtract(1u64),
             None => fx_log_err!("Tried to subtract from nonexistent listener count"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ListenerInspectLogger;
+    use fuchsia_inspect::assert_data_tree;
+
+    #[test]
+    fn test_listener_logger() {
+        let inspector = inspect::Inspector::new();
+
+        let mut logger = ListenerInspectLogger::with_inspector(&inspector);
+
+        logger.add_listener(SettingType::Unknown);
+        logger.add_listener(SettingType::Unknown);
+        logger.add_listener(SettingType::Unknown);
+
+        logger.remove_listener(SettingType::Unknown);
+
+        // Since listeners were added thrice and removed once, the count at the end is 2.
+        assert_data_tree!(inspector, root: {
+            active_listeners: {
+                Unknown: {
+                    "count": 2u64,
+                }
+            }
+        });
     }
 }

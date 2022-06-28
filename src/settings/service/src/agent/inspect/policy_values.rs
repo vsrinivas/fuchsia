@@ -9,7 +9,7 @@ use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
-use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};
@@ -33,7 +33,7 @@ blueprint_definition!(
 pub(crate) struct PolicyValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    policy_values: InspectMap<PolicyValuesInspectInfo>,
+    policy_values: InspectWritableMap<PolicyValuesInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
@@ -103,7 +103,8 @@ impl PolicyValuesInspectAgent {
             }
         };
 
-        let mut agent = Self { messenger_client, inspect_node, policy_values: InspectMap::new() };
+        let mut agent =
+            Self { messenger_client, inspect_node, policy_values: InspectWritableMap::new() };
 
         fasync::Task::spawn(async move {
             let _ = &context;

@@ -18,8 +18,8 @@ use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::inspect::utils::enums::ResponseType;
-use crate::inspect::utils::inspect_map::InspectMap;
 use crate::inspect::utils::inspect_queue::InspectQueue;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
@@ -45,7 +45,7 @@ const INSPECT_REQUESTS_COUNT: usize = 15;
 struct SettingTypeInspectInfo {
     /// Map from the name of the Request variant to a RequestInspectInfo that holds a list of
     /// recent requests.
-    requests_by_type: InspectMap<InspectQueue<RequestInspectInfo>>,
+    requests_by_type: InspectWritableMap<InspectQueue<RequestInspectInfo>>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -70,7 +70,7 @@ impl SettingTypeInspectInfo {
 struct SettingTypeResponseCountInfo {
     /// Map from the name of the ResponseType variant to a ResponseCountInfo that holds the number
     /// of occurrences of that response.
-    response_counts_by_type: InspectMap<ResponseTypeCount>,
+    response_counts_by_type: InspectWritableMap<ResponseTypeCount>,
     inspect_node: inspect::Node,
 }
 
@@ -152,9 +152,9 @@ pub(crate) struct SettingProxyInspectAgent {
     /// Inspect node for the response type accumulation counts.
     response_counts_node: inspect::Node,
     /// Last requests for inspect to save.
-    last_requests: InspectMap<SettingTypeInspectInfo>,
+    last_requests: InspectWritableMap<SettingTypeInspectInfo>,
     /// Response type accumulation info.
-    response_counts: InspectMap<SettingTypeResponseCountInfo>,
+    response_counts: InspectWritableMap<SettingTypeResponseCountInfo>,
 }
 
 impl DeviceStorageAccess for SettingProxyInspectAgent {
@@ -194,8 +194,8 @@ impl SettingProxyInspectAgent {
         let mut agent = SettingProxyInspectAgent {
             inspect_node: node,
             response_counts_node: request_counts_node,
-            last_requests: InspectMap::<SettingTypeInspectInfo>::new(),
-            response_counts: InspectMap::<SettingTypeResponseCountInfo>::new(),
+            last_requests: InspectWritableMap::<SettingTypeInspectInfo>::new(),
+            response_counts: InspectWritableMap::<SettingTypeResponseCountInfo>::new(),
         };
 
         fasync::Task::spawn({
@@ -294,14 +294,15 @@ impl SettingProxyInspectAgent {
     fn record_request(&mut self, setting_type: SettingType, request: &Request) -> String {
         let inspect_node = &self.inspect_node;
         let setting_type_str = format!("{:?}", setting_type);
-        let setting_type_info = self.last_requests.get_or_insert(setting_type_str.clone(), || {
-            SettingTypeInspectInfo::new(inspect_node, &setting_type_str)
-        });
+        let setting_type_info =
+            self.last_requests.get_or_insert_with(setting_type_str.clone(), || {
+                SettingTypeInspectInfo::new(inspect_node, &setting_type_str)
+            });
 
         let key = request.for_inspect();
         let inspect_queue_node = &setting_type_info.inspect_node;
         let inspect_queue =
-            setting_type_info.requests_by_type.get_or_insert(key.to_string(), || {
+            setting_type_info.requests_by_type.get_or_insert_with(key.to_string(), || {
                 InspectQueue::<RequestInspectInfo>::new(INSPECT_REQUESTS_COUNT)
                     .with_inspect(inspect_queue_node, key)
                     // `with_inspect` will only return an error on types with
@@ -336,9 +337,10 @@ impl SettingProxyInspectAgent {
         // Get the response count info for the setting type, creating a new info object
         // if it doesn't exist in the map yet.
         let response_counts_node = &self.response_counts_node;
-        let response_count_info = self.response_counts.get_or_insert(setting_type.clone(), || {
-            SettingTypeResponseCountInfo::new(response_counts_node, &setting_type)
-        });
+        let response_count_info =
+            self.response_counts.get_or_insert_with(setting_type.clone(), || {
+                SettingTypeResponseCountInfo::new(response_counts_node, &setting_type)
+            });
 
         // Get the count for the response type, creating a new count if it doesn't exist
         // in the map yet, then increment the response count
@@ -347,7 +349,7 @@ impl SettingProxyInspectAgent {
         let response_count_info_node = &response_count_info.inspect_node;
         let response_count = response_count_info
             .response_counts_by_type
-            .get_or_insert(response_type_str.clone(), || {
+            .get_or_insert_with(response_type_str.clone(), || {
                 ResponseTypeCount::new(response_count_info_node, &response_type_str)
             });
         response_count.count.add(1u64);

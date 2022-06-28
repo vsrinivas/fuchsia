@@ -14,7 +14,7 @@ use crate::agent::Payload;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Payload as HandlerPayload, Request};
-use crate::inspect::utils::inspect_map::InspectMap;
+use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
@@ -36,7 +36,7 @@ blueprint_definition!(
 #[derive(Default, Inspect)]
 struct SettingTypeUsageInspectInfo {
     /// Map from the name of the Request variant to its calling counts.
-    requests_by_type: InspectMap<UsageInfo>,
+    requests_by_type: InspectWritableMap<UsageInfo>,
 
     /// Node of this info.
     inspect_node: inspect::Node,
@@ -72,7 +72,7 @@ pub(crate) struct SettingTypeUsageInspectAgent {
     inspect_node: inspect::Node,
 
     /// Mapping from SettingType key to api usage counts.
-    api_call_counts: InspectMap<SettingTypeUsageInspectInfo>,
+    api_call_counts: InspectWritableMap<SettingTypeUsageInspectInfo>,
 }
 
 impl DeviceStorageAccess for SettingTypeUsageInspectAgent {
@@ -105,7 +105,7 @@ impl SettingTypeUsageInspectAgent {
 
         let mut agent = SettingTypeUsageInspectAgent {
             inspect_node: node,
-            api_call_counts: InspectMap::<SettingTypeUsageInspectInfo>::new(),
+            api_call_counts: InspectWritableMap::<SettingTypeUsageInspectInfo>::new(),
         };
 
         fasync::Task::spawn({
@@ -166,7 +166,7 @@ impl SettingTypeUsageInspectAgent {
     fn record_usage(&mut self, setting_type: SettingType, request: &Request) {
         let inspect_node = &self.inspect_node;
         let setting_type_info =
-            self.api_call_counts.get_or_insert(format!("{:?}", setting_type), || {
+            self.api_call_counts.get_or_insert_with(format!("{:?}", setting_type), || {
                 SettingTypeUsageInspectInfo::new(inspect_node, &format!("{:?}", setting_type))
             });
 
@@ -174,7 +174,7 @@ impl SettingTypeUsageInspectAgent {
         let usage_inspect_node = &setting_type_info.inspect_node;
         let usage = setting_type_info
             .requests_by_type
-            .get_or_insert(key.to_string(), || UsageInfo::new(usage_inspect_node, key));
+            .get_or_insert_with(key.to_string(), || UsageInfo::new(usage_inspect_node, key));
         usage.count.add(1);
     }
 }

@@ -240,7 +240,8 @@ impl TestEnvironmentBuilder {
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
 
         let inspector = Inspector::new();
-        let listener_logger = Arc::new(Mutex::new(ListenerInspectLogger::new()));
+        let listener_logger =
+            Arc::new(Mutex::new(ListenerInspectLogger::with_inspector(&inspector)));
         let proxy_handler_signature = SettingProxy::create(
             self.setting_type,
             handler_factory.clone(),
@@ -277,7 +278,7 @@ impl TestEnvironmentBuilder {
             setting_handler: handler,
             setting_type: self.setting_type,
             delegate,
-            listener_logger,
+            inspector,
         }
     }
 }
@@ -290,7 +291,7 @@ struct TestEnvironment {
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
     delegate: service::message::Delegate,
-    listener_logger: Arc<Mutex<ListenerInspectLogger>>,
+    inspector: Inspector,
 }
 
 impl TestEnvironment {
@@ -553,7 +554,7 @@ async fn inspect_catches_errors() {
         None,
         false,
         inspector.root().create_child("test"),
-        Arc::new(Mutex::new(ListenerInspectLogger::new())),
+        Arc::new(Mutex::new(ListenerInspectLogger::with_inspector(&inspector))),
     )
     .await
     .expect("proxy creation should succeed");
@@ -573,7 +574,7 @@ async fn inspect_catches_errors() {
         ))))
     );
 
-    assert_data_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: contains {
         test: {
             errors: {
                 "00000000000000000000": {
@@ -595,8 +596,8 @@ async fn test_active_listener_inspect() {
     {
         let env_handle_clone = env_handle.clone();
         let env_lock = env_handle_clone.lock().await;
-        let logger = env_lock.listener_logger.lock().await;
-        assert_data_tree!(logger.inspector, root: {
+        let inspector = &env_lock.inspector;
+        assert_data_tree!(inspector, root: contains {
             active_listeners: {
                 "Unknown": {
                     count: 1u64,
@@ -611,8 +612,8 @@ async fn test_active_listener_inspect() {
     {
         let env_handle_clone = env_handle.clone();
         let env_lock = env_handle_clone.lock().await;
-        let logger = env_lock.listener_logger.lock().await;
-        assert_data_tree!(logger.inspector, root: {
+        let inspector = &env_lock.inspector;
+        assert_data_tree!(inspector, root: contains {
             active_listeners: {
                 "Unknown": {
                     count: 0u64,
@@ -641,7 +642,7 @@ async fn inspect_errors_roll_after_limit() {
         None,
         false,
         inspector.root().create_child("test"),
-        Arc::new(Mutex::new(ListenerInspectLogger::new())),
+        Arc::new(Mutex::new(ListenerInspectLogger::with_inspector(&inspector))),
     )
     .await
     .expect("proxy creation should succeed");
@@ -664,7 +665,7 @@ async fn inspect_errors_roll_after_limit() {
         );
     }
 
-    assert_data_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: contains {
         test: {
             errors: {
                 "00000000000000000001": {
