@@ -12,12 +12,6 @@ pub struct LightInfo {
     pub light_groups: HashMap<String, LightGroup>,
 }
 
-impl LightInfo {
-    pub(crate) fn contains_light_group_name(self, name: String) -> bool {
-        self.light_groups.contains_key(name.as_str())
-    }
-}
-
 /// Internal representation of a light group.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct LightGroup {

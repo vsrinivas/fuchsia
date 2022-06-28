@@ -42,35 +42,22 @@ const LAST_VALUE_KEY: &str = "LAST_VALUE";
 /// A custom function used to compare an existing setting value with a new one to determine if
 /// listeners should be notified. If true is returned, listeners will be notified.
 pub(crate) struct ChangeFunction {
+    /// The function that will be used to evaluate whether or not a setting has changed.
     function: Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>,
+
+    /// An identifier for the change function that is used to group hanging gets. This identifier
+    /// should be the same for all change functions in a given sequence. For example, when a client
+    /// calls a setting API that allows a Watch method to take parameters, subsequent calls with the
+    /// same parameters should create ChangeFunctions with the same ID.
     id: u64,
 }
 
-/// This struct can be used to manage construction of [ChangeFunctions](ChangeFunction). It tracks
-/// the ids of all ChangeFunctions it has generated, so that each new one is unique from the others.
-/// Given that [Signatures](Signature) use the responder type and this generated id, only one
-/// ChangeFunctionGenerator needs to be managed per fidl interface.
-pub(crate) struct ChangeFunctionGenerator {
-    next_id: u64,
-}
-
-impl ChangeFunctionGenerator {
-    #[allow(dead_code)]
-    fn new() -> Self {
-        Self { next_id: 0 }
-    }
-}
-
-impl ChangeFunctionGenerator {
-    // TODO(fxbug.dev/79044): remove allow dead_code once used
-    #[allow(dead_code)]
-    fn make<F>(&mut self, function: F) -> ChangeFunction
-    where
-        F: Fn(&'_ SettingInfo, &'_ SettingInfo) -> bool + Send + Sync + 'static,
-    {
-        let id = self.next_id;
-        self.next_id += 1;
-        ChangeFunction { function: Box::new(function), id }
+impl ChangeFunction {
+    pub fn new(
+        id: u64,
+        function: Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>,
+    ) -> ChangeFunction {
+        ChangeFunction { function, id }
     }
 }
 
@@ -119,6 +106,7 @@ impl<
             _error_type: PhantomData,
         }
     }
+
     pub(crate) fn new_job(setting_type: SettingType, responder: T) -> Job
     where
         T: 'static,
@@ -128,8 +116,20 @@ impl<
         Job::from((work, cancelation_tx))
     }
 
-    // TODO(fxbug.dev/79044): remove allow dead_code once used
-    #[allow(dead_code)]
+    pub(crate) fn new_job_with_change_function(
+        setting_type: SettingType,
+        responder: T,
+        change_function: ChangeFunction,
+    ) -> Job
+    where
+        T: 'static,
+    {
+        let (cancelation_tx, cancelation_rx) = oneshot::channel();
+        let work =
+            Self::with_change_function(setting_type, responder, cancelation_rx, change_function);
+        Job::from((work, cancelation_tx))
+    }
+
     pub(crate) fn with_change_function(
         setting_type: SettingType,
         responder: T,
@@ -304,22 +304,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn change_function_ids_do_not_match() {
-        let mut generator = ChangeFunctionGenerator::new();
-        let closure = |_: &SettingInfo, _: &SettingInfo| true;
-        let change_fn1 = generator.make(closure);
-        let change_fn2 = generator.make(closure);
-        assert_ne!(change_fn1.id, change_fn2.id);
-
-        let signature1 = Signature::with::<()>(change_fn1.id);
-        let signature2 = Signature::with::<()>(change_fn2.id);
-        assert_ne!(signature1, signature2);
-
-        let signature3 = Signature::with::<()>(change_fn1.id);
-        assert_eq!(signature1, signature3);
-    }
-
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_basic_functionality() {
         // Create store for job.
@@ -434,7 +418,6 @@ mod tests {
             .lock()
             .await
             .insert(Key::Identifier(LAST_VALUE_KEY), Data::SettingInfo(unchanged_info.clone()));
-        let mut change_function_generator = ChangeFunctionGenerator::new();
 
         verify_watch(
             store_handle,
@@ -444,9 +427,10 @@ mod tests {
             unchanged_info.clone(),
             unchanged_info,
             // Use a custom change function that always reports a change.
-            Some(
-                change_function_generator.make(move |_old: &SettingInfo, _new: &SettingInfo| true),
-            ),
+            Some(ChangeFunction::new(
+                0,
+                Box::new(move |_old: &SettingInfo, _new: &SettingInfo| true),
+            )),
         )
         .await;
     }

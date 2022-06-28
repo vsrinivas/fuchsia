@@ -2,23 +2,147 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::hash_map::DefaultHasher;
+use std::convert::TryFrom;
+use std::hash::Hash;
+use std::hash::Hasher;
+
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupResponder,
+    LightError, LightGroup, LightMarker, LightRequest, LightSetLightGroupValuesResponder,
+    LightSetLightGroupValuesResult, LightState, LightWatchLightGroupResponder,
     LightWatchLightGroupsResponder,
 };
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon::Status;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_process_full;
-use crate::fidl_processor::settings::RequestContext;
-use crate::handler::base::{Error, Request};
+use crate::handler;
+use crate::handler::base::{Request, Response};
 use crate::hanging_get_handler::Sender;
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::Error as JobError;
+use crate::job::Job;
 use crate::light::light_controller::ARG_NAME;
 use crate::shutdown_responder_with_error;
+
+impl watch::Responder<Vec<LightGroup>, fuchsia_zircon::Status> for LightWatchLightGroupsResponder {
+    fn respond(self, response: Result<Vec<LightGroup>, fuchsia_zircon::Status>) {
+        match response {
+            Ok(light_groups) => {
+                let _ = self.send(&mut light_groups.into_iter());
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl watch::Responder<Vec<LightGroup>, fuchsia_zircon::Status> for IndividualLightGroupResponder {
+    fn respond(self, response: Result<Vec<LightGroup>, fuchsia_zircon::Status>) {
+        let light_group_name = self.light_group_name;
+        match response {
+            Ok(light_groups) => {
+                match light_groups.into_iter().find(|group| {
+                    group.name.as_ref().map(|n| *n == light_group_name).unwrap_or(false)
+                }) {
+                    Some(group) => {
+                        let _ = self.responder.send(group);
+                    }
+                    None => {
+                        // Failed to find the given light group, close the connection.
+                        self.responder.control_handle().shutdown_with_epitaph(Status::NOT_FOUND);
+                    }
+                }
+            }
+            Err(error) => {
+                self.responder.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl From<SettingInfo> for Vec<LightGroup> {
+    fn from(info: SettingInfo) -> Self {
+        if let SettingInfo::Light(light_info) = info {
+            // Internally we store the data in a HashMap, need to flatten it out into a vector.
+            light_info.light_groups.values().cloned().map(LightGroup::from).collect::<Vec<_>>()
+        } else {
+            panic!("incorrect value sent to light: {:?}", info);
+        }
+    }
+}
+
+impl From<Response> for Scoped<LightSetLightGroupValuesResult> {
+    fn from(response: Response) -> Self {
+        Scoped(response.map(|_| ()).map_err(|e| match e {
+            handler::base::Error::InvalidArgument(_, argument, _) => {
+                if ARG_NAME == argument {
+                    LightError::InvalidName
+                } else {
+                    LightError::InvalidValue
+                }
+            }
+            _ => LightError::Failed,
+        }))
+    }
+}
+
+impl request::Responder<Scoped<LightSetLightGroupValuesResult>>
+    for LightSetLightGroupValuesResponder
+{
+    fn respond(self, Scoped(mut response): Scoped<LightSetLightGroupValuesResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl TryFrom<LightRequest> for Job {
+    type Error = JobError;
+
+    fn try_from(item: LightRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            LightRequest::WatchLightGroups { responder } => {
+                Ok(watch::Work::new_job(SettingType::Light, responder))
+            }
+            LightRequest::WatchLightGroup { name, responder } => {
+                let mut hasher = DefaultHasher::new();
+                name.hash(&mut hasher);
+                let name_clone = name.clone();
+                Ok(watch::Work::new_job_with_change_function(
+                    SettingType::Light,
+                    IndividualLightGroupResponder { responder, light_group_name: name },
+                    watch::ChangeFunction::new(
+                        hasher.finish(),
+                        Box::new(move |old: &SettingInfo, new: &SettingInfo| match (old, new) {
+                            (SettingInfo::Light(old_info), SettingInfo::Light(new_info)) => {
+                                let old_light_group = old_info.light_groups.get(&name_clone);
+                                let new_light_group = new_info.light_groups.get(&name_clone);
+                                old_light_group != new_light_group
+                            }
+                            _ => false,
+                        }),
+                    ),
+                ))
+            }
+            LightRequest::SetLightGroupValues { name, state, responder } => Ok(request::Work::new(
+                SettingType::Light,
+                Request::SetLightGroupValue(
+                    name,
+                    state.into_iter().map(LightState::into).collect::<Vec<_>>(),
+                ),
+                responder,
+            )
+            .into()),
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
+        }
+    }
+}
 
 impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
     fn send_response(self, data: Vec<LightGroup>) {
@@ -66,131 +190,20 @@ impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
     }
 }
 
-impl From<SettingInfo> for Vec<LightGroup> {
-    fn from(response: SettingInfo) -> Self {
-        if let SettingInfo::Light(info) = response {
-            // Internally we store the data in a HashMap, need to flatten it out into a vector.
-            return info.light_groups.values().cloned().map(LightGroup::from).collect::<Vec<_>>();
-        }
-
-        panic!("incorrect value sent to light");
-    }
-}
-
-fidl_process_full!(
-    Light,
-    SettingType::Light,
-    Vec<LightGroup>,
-    LightWatchLightGroupsResponder,
-    String,
-    process_request,
-    SettingType::Light,
-    Vec<LightGroup>,
-    IndividualLightGroupResponder,
-    String,
-    process_watch_light_group_request
-);
-
-async fn process_request(
-    context: RequestContext<Vec<LightGroup>, LightWatchLightGroupsResponder>,
-    req: LightRequest,
-) -> Result<Option<LightRequest>, anyhow::Error> {
-    match req {
-        LightRequest::SetLightGroupValues { name, state, responder } => {
-            fasync::Task::spawn(async move {
-                let mut res = context
-                    .request(
-                        SettingType::Light,
-                        Request::SetLightGroupValue(
-                            name,
-                            state.into_iter().map(LightState::into).collect::<Vec<_>>(),
-                        ),
-                    )
-                    .await
-                    .map(|_| ())
-                    .map_err(|e| match e {
-                        Error::InvalidArgument(_, argument, _) => {
-                            if ARG_NAME == argument {
-                                LightError::InvalidName
-                            } else {
-                                LightError::InvalidValue
-                            }
-                        }
-                        _ => LightError::Failed,
-                    });
-                responder.send(&mut res).log_fidl_response_error(LightMarker::DEBUG_NAME);
-            })
-            .detach();
-        }
-        LightRequest::WatchLightGroups { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    Ok(None)
-}
-
-/// Processes a request to watch a single light group.
-async fn process_watch_light_group_request(
-    context: RequestContext<Vec<LightGroup>, IndividualLightGroupResponder>,
-    req: LightRequest,
-) -> Result<Option<LightRequest>, anyhow::Error> {
-    match req {
-        LightRequest::WatchLightGroup { name, responder } => {
-            if !validate_light_group_name(name.clone(), context.clone()).await {
-                // Light group name not known, close the connection.
-                responder.control_handle().shutdown_with_epitaph(Status::INTERNAL);
-                return Ok(None);
-            }
-
-            let name_clone = name.clone();
-            context
-                .watch_with_change_fn(
-                    name.clone(),
-                    Box::new(move |old_data: &Vec<LightGroup>, new_data: &Vec<LightGroup>| {
-                        let old_light_group = old_data.iter().find(|group| {
-                            group.name.as_ref().map(|n| *n == name_clone).unwrap_or(false)
-                        });
-                        let new_light_group = new_data.iter().find(|group| {
-                            group.name.as_ref().map(|n| *n == name_clone).unwrap_or(false)
-                        });
-                        old_light_group != new_light_group
-                    }),
-                    IndividualLightGroupResponder { responder, light_group_name: name },
-                    true,
-                )
-                .await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    Ok(None)
-}
-
-/// Returns true if the given string is the name of a known light group, else returns false.
-async fn validate_light_group_name(
-    name: String,
-    context: RequestContext<Vec<LightGroup>, IndividualLightGroupResponder>,
-) -> bool {
-    let result = context.request(SettingType::Light, Request::Get).await;
-
-    match result {
-        Ok(Some(SettingInfo::Light(info))) => info.contains_light_group_name(name),
-        _ => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
+    use fidl_fuchsia_settings::{LightMarker, LightRequestStream};
+    use futures::StreamExt;
+
+    use assert_matches::assert_matches;
+
     use crate::base::SettingInfo;
+    use crate::job::{execution, work, Signature};
     use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
+
+    use super::*;
 
     #[test]
     fn test_response_to_vector_empty() {
@@ -232,5 +245,90 @@ mod tests {
         response.sort_by_key(|l| l.name.clone());
 
         assert_eq!(response, vec![light_group_1.into(), light_group_2.into()]);
+    }
+
+    // Verify that a WatchLightGroups request is converted into a sequential job.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_watch_light_groups_request() {
+        // Connect to the Light service and make a watch request.
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<LightMarker>().expect("should be able to create proxy");
+        let _fut = proxy.watch_light_groups();
+        let mut request_stream: LightRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have an request before stream is closed")
+            .expect("should have gotten a request");
+
+        // Verify the request is sequential.
+        let job = Job::try_from(request).expect("job conversion should succeed");
+        assert_matches!(job.workload(), work::Load::Sequential(_, _));
+        assert_matches!(job.execution_type(), execution::Type::Sequential(_));
+    }
+
+    /// Converts a WatchLightGroup call with the given light group name to a job and returns the
+    /// signature. Also asserts that the created job is sequential.
+    ///
+    /// This method creates a FIDL proxy to make requests through because directly creating FIDL
+    /// request objects is difficult and not intended by the API.
+    async fn signature_from_watch_light_group_request(light_name: &str) -> Signature {
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<LightMarker>().expect("should be able to create proxy");
+        let _fut = proxy.watch_light_group(light_name);
+        let mut request_stream: LightRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have an request before stream is closed")
+            .expect("should have gotten a request");
+        let job = Job::try_from(request).expect("job conversion should succeed");
+        assert_matches!(job.workload(), work::Load::Sequential(_, _));
+        assert_matches!(job.execution_type(), execution::Type::Sequential(signature) => signature)
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_watch_individual_light_group_request() {
+        const TEST_LIGHT_NAME: &str = "test_light";
+
+        // Verify that a request is transformed into a sequential job and save the signature.
+        let signature = signature_from_watch_light_group_request(TEST_LIGHT_NAME).await;
+
+        // Make another request with the same light group name and save the signature.
+        let signature2 = signature_from_watch_light_group_request(TEST_LIGHT_NAME).await;
+
+        // Verify the two requests have the same signature, since they provide the same light group
+        // name as input.
+        assert_eq!(signature, signature2);
+
+        // Make a request with a different light group name and save the signature.
+        let signature3 = signature_from_watch_light_group_request("different_name").await;
+
+        // Verify that the signature of the third request differs from the other two, as it provides
+        // a different light group name as input.
+        assert_ne!(signature, signature3);
+    }
+
+    // Verify that a SetLightGroupValues request is converted into an independent job
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_set_light_group_values_request() {
+        // Connect to the Light service and make a set request.
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<LightMarker>().expect("should be able to create proxy");
+        let _fut = proxy.set_light_group_values("arbitrary name", &mut vec![].into_iter());
+        let mut request_stream: LightRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have an request before stream is closed")
+            .expect("should have gotten a request");
+
+        // Verify the request is sequential.
+        let job = Job::try_from(request).expect("job conversion should succeed");
+        assert_matches!(job.workload(), work::Load::Independent(_));
+        assert_matches!(job.execution_type(), execution::Type::Independent);
     }
 }
