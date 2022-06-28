@@ -470,6 +470,8 @@ duration_event!(
 /// async_enter! macro.
 #[must_use = "AsyncScope must be dropped for event parity"]
 pub struct AsyncScope {
+    // AsyncScope::end uses std::mem::forget to bypass AsyncScope's Drop impl, so if any fields
+    // with Drop impls are added, AsyncScope::end should be updated.
     id: u64,
     category: &'static CStr,
     name: &'static CStr,
@@ -481,11 +483,23 @@ impl AsyncScope {
         async_begin(id, category, name, args);
         Self { id, category, name }
     }
+
+    /// Manually end the async event scope with `args` instead of waiting until the guard is
+    /// dropped (which would end the event scope with an empty `args`).
+    pub fn end(self, args: &[Arg<'_>]) {
+        let Self { id, category, name } = self;
+        async_end(id, category, name, args);
+        std::mem::forget(self);
+    }
 }
 
 impl Drop for AsyncScope {
     fn drop(&mut self) {
-        async_end(self.id, self.category, self.name, &[]);
+        // AsyncScope::end uses std::mem::forget to bypass this Drop impl (to avoid emitting
+        // extraneous end events), so any logic added to this Drop impl (or any fields added to
+        // AsyncScope that have Drop impls) should addressed (if necessary) in AsyncScope::end.
+        let Self { id, category, name } = *self;
+        async_end(id, category, name, &[]);
     }
 }
 
@@ -1085,10 +1099,7 @@ mod sys {
             num_args: libc::size_t,
         );
 
-        pub fn trace_context_send_alert(
-            context: *const trace_context_t,
-            name: *const libc::c_char,
-        );
+        pub fn trace_context_send_alert(context: *const trace_context_t, name: *const libc::c_char);
 
         pub fn trace_context_write_counter_event_record(
             context: *const trace_context_t,
