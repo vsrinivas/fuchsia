@@ -80,14 +80,13 @@ zx_status_t Tmp112Device::Bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
   // Get I2C protocol
-  i2c_protocol_t i2c;
-  status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
-  if (status != ZX_OK) {
-    LOG_ERROR("Could not obtain I2C protocol: %d\n", status);
-    return status;
+  ddk::I2cChannel i2c(parent);
+  if (!i2c.is_valid()) {
+    LOG_ERROR("Could not obtain I2C protocol\n");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  auto dev = std::make_unique<Tmp112Device>(parent, ddk::I2cChannel(&i2c));
+  auto dev = std::make_unique<Tmp112Device>(parent, std::move(i2c));
   if ((status = dev->Init()) != ZX_OK) {
     return status;
   }
