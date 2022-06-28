@@ -664,8 +664,8 @@ async fn use_restricted_storage_open_failure() {
         }),
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
+            flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_DIRECTORY,
-            start_reason: StartReason::Eager,
             server_chan: &mut server_end,
         }),
     )
@@ -700,8 +700,8 @@ async fn use_restricted_storage_open_failure() {
         }),
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
+            flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_DIRECTORY,
-            start_reason: StartReason::Eager,
             server_chan: &mut server_end,
         }),
     )

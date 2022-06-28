@@ -164,6 +164,55 @@ mod tests {
     };
 
     #[fuchsia::test]
+    async fn read_only_storage() {
+        // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
+        // and a `ComponentDecl` with `use` declarations.
+        let routing_factory = mocks::proxy_use_routing_factory();
+        let decl = ComponentDecl {
+            uses: vec![UseDecl::Storage(UseStorageDecl {
+                source_name: "data".into(),
+                target_path: "/data".try_into().unwrap(),
+                availability: Availability::Required,
+            })],
+            ..default_component_decl()
+        };
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "test://root".to_string(),
+        );
+        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), decl.clone());
+
+        // Convert the tree to a directory.
+        let mut in_dir = pfs::simple();
+        tree.install(&root.abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
+
+        // Ensure that we can't create a file if the permission is read-only
+        let (data_dir, data_server) = zx::Channel::create().unwrap();
+        in_dir.open(
+            ExecutionScope::new(),
+            fio::OpenFlags::RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            path::Path::validate_and_split("data").unwrap(),
+            ServerEnd::<fio::NodeMarker>::new(data_server.into()),
+        );
+        let data_dir = ClientEnd::<fio::DirectoryMarker>::new(data_dir.into());
+        let data_dir = data_dir.into_proxy().unwrap();
+        let error = fuchsia_fs::directory::open_file(
+            &data_dir,
+            "test",
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .unwrap_err();
+        match error {
+            fuchsia_fs::node::OpenError::OpenError(zx::Status::ACCESS_DENIED) => {}
+            e => panic!("Unexpected open error: {}", e),
+        }
+    }
+
+    #[fuchsia::test]
     async fn build_from_uses() {
         // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
         // and a `ComponentDecl` with `use` declarations.

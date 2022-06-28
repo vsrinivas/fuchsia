@@ -14,7 +14,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{ComponentInstance, StartReason, WeakComponentInstance},
+            component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -221,11 +221,9 @@ impl StorageAdmin {
                         component.persistent_storage,
                         instanced_relative_moniker,
                         instance_id.as_ref(),
-                        mode,
-                        &StartReason::StorageAdmin,
                     )
                     .await?;
-                    dir_proxy.clone(flags, object)?;
+                    dir_proxy.open(flags, mode, ".", object)?;
                 }
                 fsys::StorageAdminRequest::ListStorageInRealm {
                     relative_moniker,
@@ -276,7 +274,6 @@ impl StorageAdmin {
                     match storage::open_isolated_storage_by_id(
                         storage_capability_source_info.clone(),
                         id,
-                        &StartReason::StorageAdmin,
                     )
                     .await
                     {

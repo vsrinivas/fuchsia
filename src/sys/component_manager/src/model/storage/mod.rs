@@ -158,8 +158,6 @@ impl StorageError {
 
 async fn open_storage_root(
     storage_source_info: &StorageCapabilitySource,
-    open_mode: u32,
-    start_reason: &StartReason,
 ) -> Result<fio::DirectoryProxy, ModelError> {
     let (mut dir_proxy, local_server_end) =
         endpoints::create_proxy::<fio::DirectoryMarker>().expect("failed to create proxy");
@@ -169,11 +167,13 @@ async fn open_storage_root(
         None => storage_source_info.backing_directory_path.to_path_buf(),
     };
     if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
-        dir_source_component.start(start_reason).await?;
+        // TODO(fxbug.dev/50716): This should be StartReason::AccessCapability, but we haven't
+        // plumbed in all the details needed to use it.
+        dir_source_component.start(&StartReason::StorageAdmin).await?;
         dir_source_component
             .open_outgoing(
                 FLAGS,
-                open_mode,
+                fio::MODE_TYPE_DIRECTORY,
                 full_backing_directory_path.clone(),
                 &mut local_server_end,
             )
@@ -215,10 +215,8 @@ pub async fn open_isolated_storage(
     persistent_storage: bool,
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
-    open_mode: u32,
-    start_reason: &StartReason,
 ) -> Result<fio::DirectoryProxy, ModelError> {
-    let root_dir = open_storage_root(&storage_source_info, open_mode, start_reason).await?;
+    let root_dir = open_storage_root(&storage_source_info).await?;
     let storage_path = match instance_id {
         Some(id) => generate_instance_id_based_storage_path(id),
         // if persistent_storage is `true`, generate a moniker-based storage path that ignores
@@ -250,10 +248,8 @@ pub async fn open_isolated_storage(
 pub async fn open_isolated_storage_by_id(
     storage_source_info: StorageCapabilitySource,
     instance_id: ComponentInstanceId,
-    start_reason: &StartReason,
 ) -> Result<fio::DirectoryProxy, ModelError> {
-    let root_dir =
-        open_storage_root(&storage_source_info, fio::MODE_TYPE_DIRECTORY, start_reason).await?;
+    let root_dir = open_storage_root(&storage_source_info).await?;
     let storage_path = generate_instance_id_based_storage_path(&instance_id);
 
     fuchsia_fs::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
@@ -274,12 +270,7 @@ pub async fn delete_isolated_storage(
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
-    let root_dir = open_storage_root(
-        &storage_source_info,
-        fio::MODE_TYPE_DIRECTORY,
-        &StartReason::StorageAdmin,
-    )
-    .await?;
+    let root_dir = open_storage_root(&storage_source_info).await?;
 
     let (dir, name) = if let Some(instance_id) = instance_id {
         let storage_path = generate_instance_id_based_storage_path(instance_id);
@@ -434,7 +425,6 @@ mod tests {
     use super::*;
     use {
         crate::model::{
-            component::StartReason,
             routing::error::OpenResourceError,
             testing::{
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -495,8 +485,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -515,8 +503,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -537,8 +523,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -589,8 +573,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             instance_id.as_ref(),
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -626,8 +608,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             instance_id.as_ref(),
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -662,8 +642,6 @@ mod tests {
             false,
             relative_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await;
         assert_matches!(
@@ -716,8 +694,6 @@ mod tests {
             false,
             child_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -736,8 +712,6 @@ mod tests {
             false,
             parent_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -771,8 +745,6 @@ mod tests {
             false,
             parent_moniker.clone(),
             None,
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -847,8 +819,6 @@ mod tests {
             false,
             child_moniker.clone(),
             instance_id.as_ref(),
-            0,
-            &StartReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");

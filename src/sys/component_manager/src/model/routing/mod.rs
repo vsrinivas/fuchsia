@@ -404,23 +404,21 @@ async fn open_storage_capability(
     let dir_source = source.storage_provider.clone();
     let relative_moniker_2 = relative_moniker.clone();
     match options {
-        OpenOptions::Storage(OpenStorageOptions { open_mode, server_chan, start_reason }) => {
+        OpenOptions::Storage(OpenStorageOptions { flags, open_mode, server_chan, .. }) => {
             let storage_dir_proxy = storage::open_isolated_storage(
                 source,
                 target.persistent_storage,
                 relative_moniker,
                 target.instance_id().as_ref(),
-                open_mode,
-                &start_reason,
             )
             .await
             .map_err(|e| ModelError::from(e))?;
 
-            // clone the final connection to connect the channel we're routing to its destination
+            // Open the storage with the provided flags, mode and server_chan.
+            // We don't clone the directory because we can't specify the mode that way.
             let server_chan = channel::take_channel(server_chan);
-            storage_dir_proxy
-                .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_chan))
-                .map_err(|e| {
+            storage_dir_proxy.open(flags, open_mode, ".", ServerEnd::new(server_chan)).map_err(
+                |e| {
                     let moniker = match &dir_source {
                         Some(r) => InstancedExtendedMoniker::ComponentInstance(
                             r.instanced_moniker().clone(),
@@ -433,7 +431,8 @@ async fn open_storage_capability(
                         "",
                         e,
                     ))
-                })?;
+                },
+            )?;
             return Ok(());
         }
         _ => unreachable!("expected OpenStorageOptions"),
