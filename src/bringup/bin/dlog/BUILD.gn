@@ -7,6 +7,7 @@ executable("dlog") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

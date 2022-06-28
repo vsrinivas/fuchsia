@@ -10,7 +10,6 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/syslog/global.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -52,9 +51,9 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod
       outgoing_codec_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
           [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
             ZX_DEBUG_ASSERT(startup_context_);
-            FX_LOGF(INFO, kLogTag,
-                    "codec_factory handling request for LoggerFactory -- handle value: %u",
-                    request.channel().get());
+            FX_SLOG(INFO, kLogTag,
+                    "codec_factory handling request for LoggerFactory" KV("tag", kLogTag),
+                    KV("handle value", request.channel().get()));
             startup_context_->svc()->Connect(std::move(request));
           });
   outgoing_codec_aux_service_directory_ =

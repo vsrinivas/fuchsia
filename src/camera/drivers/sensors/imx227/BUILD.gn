@@ -65,7 +65,7 @@ fuchsia_driver("fuchsia_driver") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

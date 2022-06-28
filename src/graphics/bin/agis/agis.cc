@@ -7,7 +7,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
 #include <zircon/system/ulib/fbl/include/fbl/unique_fd.h>
 
@@ -60,8 +61,8 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
     zx::socket gapii_layer_socket, agi_socket;
     auto status = zx::socket::create(0u, &gapii_layer_socket, &agi_socket);
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, "agis",
-              "ComponentRegistryImpl::Register zx::socket::create() failed with %ull", status);
+      FX_SLOG(ERROR, "ComponentRegistryImpl::Register zx::socket::create() failed",
+              KV("status", status));
       result.set_err(fuchsia::gpu::agis::Error::INTERNAL_ERROR);
       callback(std::move(result));
     }
@@ -111,7 +112,7 @@ class ObserverImpl final : public fuchsia::gpu::agis::Observer {
       zx_status_t status =
           element.second.agi_socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &agi_socket_clone);
       if (status != ZX_OK) {
-        FX_LOGF(ERROR, "agis", "ObserverImpl::Vtcs socket duplicate failed with %ull", status);
+        FX_SLOG(ERROR, "ObserverImpl::Vtcs socket duplicate failed", KV("status", status));
         result.set_err(fuchsia::gpu::agis::Error::INTERNAL_ERROR);
         callback(std::move(result));
       }
@@ -134,6 +135,8 @@ class ObserverImpl final : public fuchsia::gpu::agis::Observer {
 };
 
 int main(int argc, const char **argv) {
+  syslog::SetTags({"agis"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();

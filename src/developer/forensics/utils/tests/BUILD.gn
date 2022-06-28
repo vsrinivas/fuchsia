@@ -122,6 +122,7 @@ executable("log_format_unittest_exe") {
     "//src/developer/forensics/utils:logs",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/syslog",
   ]
 }
 

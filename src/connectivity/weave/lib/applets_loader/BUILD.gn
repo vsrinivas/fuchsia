@@ -30,7 +30,6 @@ test("weave_applets_loader_unittests") {
   deps = [
     ":applets_loader",
     "testing",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation:adaptation.shared",
     "//src/lib/fxl/test:gtest_main",
   ]

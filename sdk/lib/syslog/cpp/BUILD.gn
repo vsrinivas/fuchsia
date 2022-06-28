@@ -97,25 +97,6 @@ sdk_source_set("backend_host") {
   public_configs = [ "//sdk/config" ]
 }
 
-sdk_source_set("backend_legacy") {
-  # Keep internal for now until the API stabilizes.
-  category = "internal"
-
-  sdk_name = "syslog_cpp_backend_legacy"
-
-  include_base = "//sdk"
-
-  if (is_fuchsia) {
-    public_deps = [
-      ":backend_fuchsia_lib",
-      "//zircon/system/ulib/syslog",
-      "//zircon/system/ulib/zx",
-    ]
-  } else {
-    public_deps = [ ":backend_host" ]
-  }
-}
-
 sdk_shared_library("backend_fuchsia_globals") {
   category = "internal"
 
@@ -226,7 +207,7 @@ test("logging_cpp_unittests") {
     "logging_unittest.cc",
   ]
   deps = [
-    ":backend_legacy",
+    ":backend",
     ":cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -245,6 +226,7 @@ test("logging_cpp_unittests") {
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/syslog",
     ]
   }
 }

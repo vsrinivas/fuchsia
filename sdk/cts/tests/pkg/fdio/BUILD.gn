@@ -43,7 +43,10 @@ cts_executable("spawn-child-util-bin") {
 
   output_name = "spawn_child_util"
   sources = [ "spawn_child_util.cc" ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
 }
 
 cts_fuchsia_component("spawn-child-util-component") {
@@ -62,7 +65,10 @@ cts_executable("fake-launcher-util-bin") {
     "fake_launcher_util.cc",
     "fake_launcher_util.h",
   ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
 }
 
 cts_fuchsia_component("fake-launcher-util-component") {
