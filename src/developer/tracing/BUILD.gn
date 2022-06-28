@@ -6,7 +6,6 @@ group("tracing") {
   testonly = true
   deps = [
     ":tests",
-    "bin",
     "lib",
   ]
 }
@@ -14,8 +13,5 @@ group("tracing") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "bin:tests",
-    "lib:tests",
-  ]
+  deps = [ "lib:tests" ]
 }

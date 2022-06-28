@@ -18,7 +18,7 @@ use futures::{future, io::AsyncReadExt, TryFutureExt};
 use parking_lot::RwLock;
 use serde_json::{self, from_value, to_value, Value};
 
-// This list should be kept in sync with defaultCategories in //src/developer/tracing/bin/traceutil/actions.go
+// This list should be kept in sync with defaultCategories in //src/performance/traceutil/actions.go
 const DEFAULT_CATEGORIES: &[&'static str] = &[
     "app",
     "audio",

@@ -17,5 +17,7 @@ group("tests") {
     "cpuperf:tests",
     "insntrace:tests",
     "lib:tests",
+    "trace/tests",
+    "trace_manager/tests",
   ]
 }

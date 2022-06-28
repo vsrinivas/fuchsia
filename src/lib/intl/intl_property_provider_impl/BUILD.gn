@@ -60,13 +60,13 @@ executable("intl_property_provider_impl_test_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/tracing/bin/trace/tests:component_context",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fostr/fidl/fuchsia.intl",
     "//src/lib/fostr/fidl/fuchsia.settings",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:clone",
+    "//src/performance/trace/tests:component_context",
   ]
 }
 

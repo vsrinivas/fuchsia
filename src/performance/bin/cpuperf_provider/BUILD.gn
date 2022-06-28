@@ -97,11 +97,11 @@ if (current_cpu == "x64") {
     sources = [ "cpuperf_provider_integration_tests.cc" ]
 
     deps = [
-      "//src/developer/tracing/bin/trace:bin",
       "//src/developer/tracing/lib/test_utils",
       "//src/lib/fxl",
       "//src/lib/fxl/test:test_settings",
       "//src/performance/lib/perfmon",
+      "//src/performance/trace:bin",
       "//third_party/googletest:gtest",
       "//zircon/system/ulib/trace-reader",
       "//zircon/system/ulib/zx",

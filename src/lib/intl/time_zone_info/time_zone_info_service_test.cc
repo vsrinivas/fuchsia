@@ -14,9 +14,9 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/tracing/bin/trace/tests/component_context.h"
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/performance/trace/tests/component_context.h"
 
 namespace intl {
 namespace testing {
