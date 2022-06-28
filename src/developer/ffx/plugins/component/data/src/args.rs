@@ -4,7 +4,7 @@
 
 use {argh::FromArgs, ffx_core::ffx_command};
 
-pub use ffx_component_storage_args::{StorageCommand, SubcommandEnum};
+pub use ffx_component_storage_args::{StorageCommand, SubCommandEnum};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -15,5 +15,5 @@ pub use ffx_component_storage_args::{StorageCommand, SubcommandEnum};
 )]
 pub struct DataCommand {
     #[argh(subcommand)]
-    pub subcommand: SubcommandEnum,
+    pub subcommand: SubCommandEnum,
 }

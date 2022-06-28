@@ -9,12 +9,12 @@ use {argh::FromArgs, eui48::MacAddress, ffx_core::ffx_command};
 #[argh(subcommand, name = "deprecated", description = "Controls to-be-deleted WLAN functionality.")]
 pub struct DeprecatedCommand {
     #[argh(subcommand)]
-    pub subcommand: DeprecatedSubcommand,
+    pub subcommand: DeprecatedSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum DeprecatedSubcommand {
+pub enum DeprecatedSubCommand {
     SuggestMac(SuggestMac),
 }
 

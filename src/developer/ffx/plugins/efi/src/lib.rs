@@ -7,7 +7,7 @@ use {
     errors::ffx_bail,
     fatfs,
     ffx_core::ffx_plugin,
-    ffx_efi_args::{EfiCommand, EfiSubcommand},
+    ffx_efi_args::{EfiCommand, EfiSubCommand},
     std::{
         cmp::max,
         collections::HashMap,
@@ -94,7 +94,7 @@ fn load_files<'a>(
 #[ffx_plugin()]
 pub async fn command(cmd: EfiCommand) -> Result<()> {
     match &cmd.subcommand {
-        EfiSubcommand::Create(create) => {
+        EfiSubCommand::Create(create) => {
             let output_path = Path::new(&create.output);
 
             let mut names = HashMap::new();
@@ -130,7 +130,7 @@ pub async fn command(cmd: EfiCommand) -> Result<()> {
 mod test {
     use {
         super::*,
-        ffx_efi_args::{CreateCommand, EfiCommand, EfiSubcommand},
+        ffx_efi_args::{CreateCommand, EfiCommand, EfiSubCommand},
         std::fs::metadata,
         tempfile::tempdir,
     };
@@ -161,7 +161,7 @@ mod test {
         let output = tmpdir.path().join("test_output").to_str().unwrap().to_string();
 
         let result = command(EfiCommand {
-            subcommand: EfiSubcommand::Create(CreateCommand {
+            subcommand: EfiSubCommand::Create(CreateCommand {
                 output: output.clone(),
                 cmdline: None,
                 bootdata: None,
@@ -199,7 +199,7 @@ mod test {
         set_file_content(&zedboot, zedboot_content)?;
 
         let result = command(EfiCommand {
-            subcommand: EfiSubcommand::Create(CreateCommand {
+            subcommand: EfiSubCommand::Create(CreateCommand {
                 output: output.clone(),
                 cmdline: Some(cmdline),
                 bootdata: Some(bootdata),
@@ -241,7 +241,7 @@ mod test {
         set_file_content(&bootloader, &bootloader_content)?;
 
         let result = command(EfiCommand {
-            subcommand: EfiSubcommand::Create(CreateCommand {
+            subcommand: EfiSubCommand::Create(CreateCommand {
                 output: output.clone(),
                 cmdline: None,
                 bootdata: None,

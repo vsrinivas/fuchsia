@@ -7,7 +7,7 @@ use {
     errors::ffx_error,
     ffx_component::connect_to_lifecycle_controller,
     ffx_component::storage::{copy, delete, list, make_directory},
-    ffx_component_storage_args::{StorageCommand, SubcommandEnum},
+    ffx_component_storage_args::{StorageCommand, SubCommandEnum},
     ffx_core::ffx_plugin,
     fidl::endpoints::ServerEnd,
     fidl::handle::Channel,
@@ -51,14 +51,14 @@ pub async fn storage(remote_proxy: RemoteControlProxy, args: StorageCommand) -> 
     }
 }
 
-async fn storage_cmd(storage_admin: StorageAdminProxy, subcommand: SubcommandEnum) -> Result<()> {
+async fn storage_cmd(storage_admin: StorageAdminProxy, subcommand: SubCommandEnum) -> Result<()> {
     match subcommand {
-        SubcommandEnum::Copy(args) => {
+        SubCommandEnum::Copy(args) => {
             copy(storage_admin, args.source_path, args.destination_path).await
         }
-        SubcommandEnum::Delete(args) => delete(storage_admin, args.path).await,
-        SubcommandEnum::List(args) => print_list(storage_admin, args.path).await,
-        SubcommandEnum::MakeDirectory(args) => make_directory(storage_admin, args.path).await,
+        SubCommandEnum::Delete(args) => delete(storage_admin, args.path).await,
+        SubCommandEnum::List(args) => print_list(storage_admin, args.path).await,
+        SubCommandEnum::MakeDirectory(args) => make_directory(storage_admin, args.path).await,
     }
 }
 

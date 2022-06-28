@@ -15,7 +15,7 @@ pub async fn handle_deprecated_command(
     cmd: arg_types::DeprecatedCommand,
 ) -> Result<(), Error> {
     match cmd.subcommand {
-        arg_types::DeprecatedSubcommand::SuggestMac(mac) => {
+        arg_types::DeprecatedSubCommand::SuggestMac(mac) => {
             donut_lib::handle_suggest_ap_mac(proxy, mac.mac).await
         }
     }

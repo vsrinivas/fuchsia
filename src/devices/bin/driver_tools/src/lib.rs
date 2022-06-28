@@ -11,7 +11,7 @@ mod subcommands;
 
 use {
     anyhow::{Context, Result},
-    args::{DriverCommand, DriverSubcommand},
+    args::{DriverCommand, DriverSubCommand},
     fidl_fuchsia_device_manager as fdm, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_playground as fdp, fidl_fuchsia_driver_registrar as fdr,
     fidl_fuchsia_io as fio,
@@ -33,7 +33,7 @@ pub trait DriverConnector {
 
 pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) -> Result<()> {
     match cmd.subcommand {
-        DriverSubcommand::DebugBind(subcmd) => {
+        DriverSubCommand::DebugBind(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -46,14 +46,14 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
             .await
             .context("Debug-bind subcommand failed")?;
         }
-        DriverSubcommand::Device(subcmd) => {
+        DriverSubCommand::Device(subcmd) => {
             let dev = driver_connector
                 .get_dev_proxy(subcmd.select)
                 .await
                 .context("Failed to get dev proxy")?;
             subcommands::device::device(subcmd, dev).await.context("Device subcommand failed")?;
         }
-        DriverSubcommand::Dump(subcmd) => {
+        DriverSubCommand::Dump(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -62,7 +62,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Dump subcommand failed")?;
         }
-        DriverSubcommand::List(subcmd) => {
+        DriverSubCommand::List(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -71,7 +71,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("List subcommand failed")?;
         }
-        DriverSubcommand::ListDevices(subcmd) => {
+        DriverSubCommand::ListDevices(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -80,7 +80,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("List-devices subcommand failed")?;
         }
-        DriverSubcommand::ListHosts(subcmd) => {
+        DriverSubCommand::ListHosts(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -89,21 +89,21 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("List-hosts subcommand failed")?;
         }
-        DriverSubcommand::Lsblk(subcmd) => {
+        DriverSubCommand::Lsblk(subcmd) => {
             let dev = driver_connector
                 .get_dev_proxy(subcmd.select)
                 .await
                 .context("Failed to get dev proxy")?;
             subcommands::lsblk::lsblk(subcmd, dev).await.context("Lsblk subcommand failed")?;
         }
-        DriverSubcommand::Lspci(subcmd) => {
+        DriverSubCommand::Lspci(subcmd) => {
             let dev = driver_connector
                 .get_dev_proxy(subcmd.select)
                 .await
                 .context("Failed to get dev proxy")?;
             subcommands::lspci::lspci(subcmd, dev).await.context("Lspci subcommand failed")?;
         }
-        DriverSubcommand::Lsusb(subcmd) => {
+        DriverSubCommand::Lsusb(subcmd) => {
             let device_watcher_proxy = driver_connector
                 .get_device_watcher_proxy()
                 .await
@@ -112,7 +112,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Lsusb subcommand failed")?;
         }
-        DriverSubcommand::PrintInputReport(ref subcmd) => {
+        DriverSubCommand::PrintInputReport(ref subcmd) => {
             let writer = Arc::new(Mutex::new(io::stdout()));
             let dev =
                 driver_connector.get_dev_proxy(false).await.context("Failed to get dev proxy")?;
@@ -120,7 +120,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Print-input-report subcommand failed")?;
         }
-        DriverSubcommand::Register(subcmd) => {
+        DriverSubCommand::Register(subcmd) => {
             let driver_registrar_proxy = driver_connector
                 .get_driver_registrar_proxy(subcmd.select)
                 .await
@@ -138,7 +138,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
             .await
             .context("Register subcommand failed")?;
         }
-        DriverSubcommand::Restart(subcmd) => {
+        DriverSubCommand::Restart(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
@@ -147,7 +147,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Restart subcommand failed")?;
         }
-        DriverSubcommand::RunTool(subcmd) => {
+        DriverSubCommand::RunTool(subcmd) => {
             let tool_runner_proxy = driver_connector
                 .get_tool_runner_proxy(false)
                 .await

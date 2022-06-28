@@ -19,7 +19,7 @@ pub struct Update {
     pub cmd: Command,
 }
 
-/// Subcommands for `update`.
+/// SubCommands for `update`.
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum Command {
@@ -48,7 +48,7 @@ pub struct Channel {
     pub cmd: channel::Command,
 }
 
-/// Subcommands for `channel`.
+/// SubCommands for `channel`.
 // TODO(fxbug.dev/60016): Make get/set symmetrical.
 pub mod channel {
     use argh::FromArgs;

@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_core::ffx_plugin,
-    ffx_scrutiny_verify_args::{Command, Subcommand},
+    ffx_scrutiny_verify_args::{Command, SubCommand},
     std::{fs, io::Write},
 };
 
@@ -23,12 +23,12 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
     }
 
     let deps_set = match cmd.subcommand {
-        Subcommand::Bootfs(cmd) => bootfs::verify(cmd).await,
-        Subcommand::ComponentResolvers(cmd) => component_resolvers::verify(cmd).await,
-        Subcommand::KernelCmdline(cmd) => kernel_cmdline::verify(cmd).await,
-        Subcommand::RouteSources(cmd) => route_sources::verify(cmd).await,
-        Subcommand::Routes(cmd) => routes::verify(cmd).await,
-        Subcommand::StaticPkgs(cmd) => static_pkgs::verify(cmd).await,
+        SubCommand::Bootfs(cmd) => bootfs::verify(cmd).await,
+        SubCommand::ComponentResolvers(cmd) => component_resolvers::verify(cmd).await,
+        SubCommand::KernelCmdline(cmd) => kernel_cmdline::verify(cmd).await,
+        SubCommand::RouteSources(cmd) => route_sources::verify(cmd).await,
+        SubCommand::Routes(cmd) => routes::verify(cmd).await,
+        SubCommand::StaticPkgs(cmd) => static_pkgs::verify(cmd).await,
     }?;
 
     if let Some(depfile_path) = cmd.depfile.as_ref() {

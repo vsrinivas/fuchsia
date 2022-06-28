@@ -4,12 +4,12 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use ffx_package_sub_command::Subcommand;
+use ffx_package_sub_command::SubCommand;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "package", description = "Create and publish Fuchsia packages")]
 pub struct PackageCommand {
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }

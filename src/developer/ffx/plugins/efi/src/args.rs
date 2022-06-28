@@ -9,12 +9,12 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(subcommand, name = "efi", description = "Manipulate efi partition")]
 pub struct EfiCommand {
     #[argh(subcommand)]
-    pub subcommand: EfiSubcommand,
+    pub subcommand: EfiSubCommand,
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum EfiSubcommand {
+pub enum EfiSubCommand {
     Create(CreateCommand),
 }
 

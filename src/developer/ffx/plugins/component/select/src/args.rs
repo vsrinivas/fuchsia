@@ -36,12 +36,12 @@ A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.)."
 )]
 pub struct ComponentSelectCommand {
     #[argh(subcommand)]
-    pub nested: SubcommandEnum,
+    pub nested: SubCommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum SubcommandEnum {
+pub enum SubCommandEnum {
     Moniker(MonikerStruct),
     Capability(CapabilityStruct),
 }
@@ -75,7 +75,7 @@ mod tests {
             assert_eq!(
                 ComponentSelectCommand::from_args(CMD_NAME, args),
                 Ok(ComponentSelectCommand {
-                    nested: SubcommandEnum::Moniker(MonikerStruct { moniker: expected_moniker },)
+                    nested: SubCommandEnum::Moniker(MonikerStruct { moniker: expected_moniker },)
                 })
             )
         }
@@ -90,7 +90,7 @@ mod tests {
             assert_eq!(
                 ComponentSelectCommand::from_args(CMD_NAME, args),
                 Ok(ComponentSelectCommand {
-                    nested: SubcommandEnum::Capability(CapabilityStruct {
+                    nested: SubCommandEnum::Capability(CapabilityStruct {
                         capability: expected_capability,
                     },)
                 })

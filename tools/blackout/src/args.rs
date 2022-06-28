@@ -7,5 +7,5 @@
 #[argh(subcommand, name = "blackout", description = "Power failure testing for the filesystems")]
 pub struct BlackoutCommand {
     #[argh(subcommand)]
-    pub subcommand: ffx_storage_blackout_sub_command::Subcommand,
+    pub subcommand: ffx_storage_blackout_sub_command::SubCommand,
 }

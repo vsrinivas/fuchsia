@@ -13,7 +13,7 @@ use {
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
-    ffx_lib_sub_command::Subcommand,
+    ffx_lib_sub_command::SubCommand,
     ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_writer::Writer,
     fidl::{endpoints::create_proxy, prelude::*},
@@ -364,9 +364,9 @@ async fn proxy_timeout() -> Result<Duration> {
     Ok(Duration::from_secs_f64(proxy_timeout))
 }
 
-fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
-    if let Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
-        subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
+fn is_daemon(subcommand: &Option<SubCommand>) -> bool {
+    if let Some(SubCommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+        subcommand: ffx_daemon_plugin_sub_command::SubCommand::FfxDaemonStart(_),
     })) = subcommand
     {
         return true;
@@ -374,8 +374,8 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     false
 }
 
-fn is_schema(subcommand: &Option<Subcommand>) -> bool {
-    matches!(subcommand, Some(Subcommand::FfxSchema(_)))
+fn is_schema(subcommand: &Option<SubCommand>) -> bool {
+    matches!(subcommand, Some(SubCommand::FfxSchema(_)))
 }
 
 fn set_buildid_config(overrides: Option<String>) -> Result<Option<String>> {

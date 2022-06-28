@@ -11,12 +11,12 @@ use ffx_core::ffx_command;
 /// read or configure volume policy
 pub struct VolumePolicy {
     #[argh(subcommand)]
-    pub subcommand: SubcommandEnum,
+    pub subcommand: SubCommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum SubcommandEnum {
+pub enum SubCommandEnum {
     /// adds a policy transform.
     Add(AddArgs),
     /// gets the current policy.
@@ -80,7 +80,7 @@ mod tests {
         assert_eq!(
             VolumePolicy::from_args(CMD_NAME, args),
             Ok(VolumePolicy {
-                subcommand: SubcommandEnum::Add(AddArgs {
+                subcommand: SubCommandEnum::Add(AddArgs {
                     target: str_to_audio_stream(target).unwrap(),
                     min: Some(0.5),
                     max: None
@@ -95,7 +95,7 @@ mod tests {
         let args = &["get"];
         assert_eq!(
             VolumePolicy::from_args(CMD_NAME, args),
-            Ok(VolumePolicy { subcommand: SubcommandEnum::Get(GetArgs {}) })
+            Ok(VolumePolicy { subcommand: SubCommandEnum::Get(GetArgs {}) })
         )
     }
 
@@ -106,7 +106,7 @@ mod tests {
         let args = &["remove", "-p", id];
         assert_eq!(
             VolumePolicy::from_args(CMD_NAME, args),
-            Ok(VolumePolicy { subcommand: SubcommandEnum::Remove(RemoveArgs { policy_id: 12 }) })
+            Ok(VolumePolicy { subcommand: SubCommandEnum::Remove(RemoveArgs { policy_id: 12 }) })
         )
     }
 }

@@ -25,12 +25,12 @@ ffx wlan ap start --ssid <SSID_HERE>"
 )]
 pub struct DevCommand {
     #[argh(subcommand)]
-    pub subcommand: DevSubcommand,
+    pub subcommand: DevSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum DevSubcommand {
+pub enum DevSubCommand {
     Phy(PhyCommand),
     Iface(IfaceCommand),
     Client(ClientCommand),
@@ -42,12 +42,12 @@ pub enum DevSubcommand {
 #[argh(subcommand, name = "phy", description = "Configure WLAN PHY device.")]
 pub struct PhyCommand {
     #[argh(subcommand)]
-    pub subcommand: PhySubcommand,
+    pub subcommand: PhySubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum PhySubcommand {
+pub enum PhySubCommand {
     List(PhyList),
     Query(PhyQuery),
     GetCountry(GetCountry),
@@ -65,12 +65,12 @@ pub enum PhySubcommand {
 )]
 pub struct IfaceCommand {
     #[argh(subcommand)]
-    pub subcommand: IfaceSubcommand,
+    pub subcommand: IfaceSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum IfaceSubcommand {
+pub enum IfaceSubCommand {
     New(NewIface),
     Delete(Delete),
     List(IfaceList),
@@ -84,12 +84,12 @@ pub enum IfaceSubcommand {
 #[argh(subcommand, name = "client", description = "Controls a WLAN client interface.")]
 pub struct ClientCommand {
     #[argh(subcommand)]
-    pub subcommand: ClientSubcommand,
+    pub subcommand: ClientSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum ClientSubcommand {
+pub enum ClientSubCommand {
     Connect(Connect),
     Scan(Scan),
     Disconnect(Disconnect),
@@ -100,12 +100,12 @@ pub enum ClientSubcommand {
 #[argh(subcommand, name = "ap", description = "Controls a WLAN AP interface.")]
 pub struct ApCommand {
     #[argh(subcommand)]
-    pub subcommand: ApSubcommand,
+    pub subcommand: ApSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum ApSubcommand {
+pub enum ApSubCommand {
     Start(Start),
     Stop(Stop),
 }
@@ -114,27 +114,27 @@ pub enum ApSubcommand {
 #[argh(subcommand, name = "mesh", description = "Controls a WLAN mesh interface.")]
 pub struct MeshCommand {
     #[argh(subcommand)]
-    pub subcommand: MeshSubcommand,
+    pub subcommand: MeshSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum MeshSubcommand {
+pub enum MeshSubCommand {
     Join(Join),
     Leave(Leave),
     Paths(Paths),
 }
 
-impl From<PhySubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: PhySubcommand) -> Self {
+impl From<PhySubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: PhySubCommand) -> Self {
         wlan_dev::opts::Opt::Phy(match cmd {
-            PhySubcommand::List(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::Query(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::GetCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::SetCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::ClearCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::SetPsMode(arg) => wlan_dev::opts::PhyCmd::from(arg),
-            PhySubcommand::GetPsMode(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::List(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::Query(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::GetCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::SetCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::ClearCountry(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::SetPsMode(arg) => wlan_dev::opts::PhyCmd::from(arg),
+            PhySubCommand::GetPsMode(arg) => wlan_dev::opts::PhyCmd::from(arg),
         })
     }
 }
@@ -271,28 +271,28 @@ impl From<GetPsMode> for wlan_dev::opts::PhyCmd {
     }
 }
 
-impl From<DevSubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: DevSubcommand) -> Self {
+impl From<DevSubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: DevSubCommand) -> Self {
         match cmd {
-            DevSubcommand::Phy(phy_cmd) => wlan_dev::opts::Opt::from(phy_cmd.subcommand),
-            DevSubcommand::Iface(iface_cmd) => wlan_dev::opts::Opt::from(iface_cmd.subcommand),
-            DevSubcommand::Client(client_cmd) => wlan_dev::opts::Opt::from(client_cmd.subcommand),
-            DevSubcommand::Ap(ap_cmd) => wlan_dev::opts::Opt::from(ap_cmd.subcommand),
-            DevSubcommand::Mesh(mesh_cmd) => wlan_dev::opts::Opt::from(mesh_cmd.subcommand),
+            DevSubCommand::Phy(phy_cmd) => wlan_dev::opts::Opt::from(phy_cmd.subcommand),
+            DevSubCommand::Iface(iface_cmd) => wlan_dev::opts::Opt::from(iface_cmd.subcommand),
+            DevSubCommand::Client(client_cmd) => wlan_dev::opts::Opt::from(client_cmd.subcommand),
+            DevSubCommand::Ap(ap_cmd) => wlan_dev::opts::Opt::from(ap_cmd.subcommand),
+            DevSubCommand::Mesh(mesh_cmd) => wlan_dev::opts::Opt::from(mesh_cmd.subcommand),
         }
     }
 }
 
-impl From<IfaceSubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: IfaceSubcommand) -> Self {
+impl From<IfaceSubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: IfaceSubCommand) -> Self {
         wlan_dev::opts::Opt::Iface(match cmd {
-            IfaceSubcommand::New(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::Delete(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::List(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::Query(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::Stats(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::Minstrel(arg) => wlan_dev::opts::IfaceCmd::from(arg),
-            IfaceSubcommand::Status(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::New(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::Delete(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::List(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::Query(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::Stats(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::Minstrel(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubCommand::Status(arg) => wlan_dev::opts::IfaceCmd::from(arg),
         })
     }
 }
@@ -408,7 +408,7 @@ impl From<Stats> for wlan_dev::opts::IfaceCmd {
 // positionals.
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum MinstrelSubcommand {
+pub enum MinstrelSubCommand {
     List(MinstrelList),
     Show(Show),
 }
@@ -446,18 +446,18 @@ pub struct Show {
 #[argh(subcommand, name = "minstrel", description = "Query interface minstrel stats.")]
 pub struct Minstrel {
     #[argh(subcommand)]
-    pub subcommand: MinstrelSubcommand,
+    pub subcommand: MinstrelSubCommand,
 }
 
 impl From<Minstrel> for wlan_dev::opts::IfaceCmd {
     fn from(minstrel: Minstrel) -> Self {
         match minstrel.subcommand {
-            MinstrelSubcommand::List(list) => {
+            MinstrelSubCommand::List(list) => {
                 wlan_dev::opts::IfaceCmd::Minstrel(wlan_dev::opts::MinstrelCmd::List {
                     iface_id: list.iface_id,
                 })
             }
-            MinstrelSubcommand::Show(show) => {
+            MinstrelSubCommand::Show(show) => {
                 wlan_dev::opts::IfaceCmd::Minstrel(wlan_dev::opts::MinstrelCmd::Show {
                     iface_id: show.iface_id,
                     peer_addr: show.peer_addr,
@@ -482,13 +482,13 @@ impl From<Status> for wlan_dev::opts::IfaceCmd {
     }
 }
 
-impl From<ClientSubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: ClientSubcommand) -> Self {
+impl From<ClientSubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: ClientSubCommand) -> Self {
         wlan_dev::opts::Opt::Client(match cmd {
-            ClientSubcommand::Scan(arg) => wlan_dev::opts::ClientCmd::from(arg),
-            ClientSubcommand::Connect(arg) => wlan_dev::opts::ClientCmd::from(arg),
-            ClientSubcommand::Disconnect(arg) => wlan_dev::opts::ClientCmd::from(arg),
-            ClientSubcommand::WmmStatus(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubCommand::Scan(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubCommand::Connect(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubCommand::Disconnect(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubCommand::WmmStatus(arg) => wlan_dev::opts::ClientCmd::from(arg),
         })
     }
 }
@@ -696,11 +696,11 @@ impl From<WmmStatus> for wlan_dev::opts::ClientCmd {
     }
 }
 
-impl From<ApSubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: ApSubcommand) -> Self {
+impl From<ApSubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: ApSubCommand) -> Self {
         wlan_dev::opts::Opt::Ap(match cmd {
-            ApSubcommand::Start(arg) => wlan_dev::opts::ApCmd::from(arg),
-            ApSubcommand::Stop(arg) => wlan_dev::opts::ApCmd::from(arg),
+            ApSubCommand::Start(arg) => wlan_dev::opts::ApCmd::from(arg),
+            ApSubCommand::Stop(arg) => wlan_dev::opts::ApCmd::from(arg),
         })
     }
 }
@@ -754,12 +754,12 @@ impl From<Stop> for wlan_dev::opts::ApCmd {
     }
 }
 
-impl From<MeshSubcommand> for wlan_dev::opts::Opt {
-    fn from(cmd: MeshSubcommand) -> Self {
+impl From<MeshSubCommand> for wlan_dev::opts::Opt {
+    fn from(cmd: MeshSubCommand) -> Self {
         wlan_dev::opts::Opt::Mesh(match cmd {
-            MeshSubcommand::Join(arg) => wlan_dev::opts::MeshCmd::from(arg),
-            MeshSubcommand::Leave(arg) => wlan_dev::opts::MeshCmd::from(arg),
-            MeshSubcommand::Paths(arg) => wlan_dev::opts::MeshCmd::from(arg),
+            MeshSubCommand::Join(arg) => wlan_dev::opts::MeshCmd::from(arg),
+            MeshSubCommand::Leave(arg) => wlan_dev::opts::MeshCmd::from(arg),
+            MeshSubCommand::Paths(arg) => wlan_dev::opts::MeshCmd::from(arg),
         })
     }
 }
@@ -941,7 +941,7 @@ mod tests {
     fn test_iface_minstrel_list_conversion() {
         assert_eq!(
             wlan_dev::opts::IfaceCmd::from(Minstrel {
-                subcommand: MinstrelSubcommand::List(MinstrelList { iface_id: Some(123) })
+                subcommand: MinstrelSubCommand::List(MinstrelList { iface_id: Some(123) })
             }),
             wlan_dev::opts::IfaceCmd::Minstrel({
                 wlan_dev::opts::MinstrelCmd::List { iface_id: Some(123) }
@@ -953,7 +953,7 @@ mod tests {
     fn test_iface_minstrel_show_conversion() {
         assert_eq!(
             wlan_dev::opts::IfaceCmd::from(Minstrel {
-                subcommand: MinstrelSubcommand::Show(Show {
+                subcommand: MinstrelSubCommand::Show(Show {
                     iface_id: Some(123),
                     peer_addr: Some(String::from("peer addr")),
                 })

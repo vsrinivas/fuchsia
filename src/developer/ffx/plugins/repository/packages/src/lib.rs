@@ -8,7 +8,7 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_packages_args::{
-        ListSubcommand, PackagesCommand, PackagesSubcommand, ShowSubCommand,
+        ListSubCommand, PackagesCommand, PackagesSubCommand, ShowSubCommand,
     },
     fidl,
     fidl_fuchsia_developer_ffx::{
@@ -29,8 +29,8 @@ const MAX_HASH: usize = 11;
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn packages(cmd: PackagesCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     match cmd.subcommand {
-        PackagesSubcommand::List(subcmd) => list_impl(subcmd, repos, None, stdout()).await,
-        PackagesSubcommand::Show(subcmd) => show_impl(subcmd, repos, None, stdout()).await,
+        PackagesSubCommand::List(subcmd) => list_impl(subcmd, repos, None, stdout()).await,
+        PackagesSubCommand::Show(subcmd) => show_impl(subcmd, repos, None, stdout()).await,
     }
 }
 
@@ -118,7 +118,7 @@ async fn show_impl<W: Write>(
 }
 
 async fn list_impl<W: Write>(
-    cmd: ListSubcommand,
+    cmd: ListSubCommand,
     repos_proxy: RepositoryRegistryProxy,
     table_format: Option<TableFormat>,
     mut writer: W,
@@ -370,7 +370,7 @@ mod test {
         })
     }
 
-    async fn run_impl(cmd: ListSubcommand) -> String {
+    async fn run_impl(cmd: ListSubCommand) -> String {
         let repos = setup_repo_proxy(if cmd.include_components {
             ListFields::COMPONENTS
         } else {
@@ -406,7 +406,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_truncated_hash() {
         assert_eq!(
-            run_impl(ListSubcommand {
+            run_impl(ListSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: false,
                 include_components: false
@@ -422,7 +422,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_full_hash() {
         assert_eq!(
-            run_impl(ListSubcommand {
+            run_impl(ListSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: true,
                 include_components: false,
@@ -437,7 +437,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_including_components() {
-        assert_eq!(run_impl(ListSubcommand {
+        assert_eq!(run_impl(ListSubCommand {
             repository: Some("devhost".to_string()),
             full_hash: false,
             include_components: true

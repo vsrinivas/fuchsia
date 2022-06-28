@@ -28,12 +28,12 @@ properly."
 /// Top-level command.
 pub struct Command {
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum Subcommand {
+pub enum SubCommand {
     Start(StartCommand),
     Stop(StopCommand),
 }

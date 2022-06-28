@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, ffx_selftest_sub_command::Subcommand};
+use {argh::FromArgs, ffx_core::ffx_command, ffx_selftest_sub_command::SubCommand};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -29,5 +29,5 @@ pub struct SelftestCommand {
     pub filter: Option<String>,
 
     #[argh(subcommand)]
-    pub subcommand: Option<Subcommand>,
+    pub subcommand: Option<SubCommand>,
 }

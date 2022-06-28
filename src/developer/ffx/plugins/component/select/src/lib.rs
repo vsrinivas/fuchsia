@@ -8,7 +8,7 @@ use {
     errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_component_select_args::{
-        CapabilityStruct, ComponentSelectCommand, MonikerStruct, SubcommandEnum,
+        CapabilityStruct, ComponentSelectCommand, MonikerStruct, SubCommandEnum,
     },
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
@@ -24,10 +24,10 @@ pub async fn select_cmd(
 ) -> Result<()> {
     let writer = Box::new(stdout());
     match &cmd.nested {
-        SubcommandEnum::Capability(CapabilityStruct { capability: c }) => {
+        SubCommandEnum::Capability(CapabilityStruct { capability: c }) => {
             select_capability(remote_proxy, c).await
         }
-        SubcommandEnum::Moniker(MonikerStruct { moniker: m }) => {
+        SubCommandEnum::Moniker(MonikerStruct { moniker: m }) => {
             select_moniker(remote_proxy, writer, m).await
         }
     }

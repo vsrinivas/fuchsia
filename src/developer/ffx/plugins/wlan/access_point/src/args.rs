@@ -17,12 +17,12 @@ use {
 #[argh(subcommand, name = "ap", description = "Controls WLAN AP policy API.")]
 pub struct ApCommand {
     #[argh(subcommand)]
-    pub subcommand: ApSubcommand,
+    pub subcommand: ApSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum ApSubcommand {
+pub enum ApSubCommand {
     Listen(Listen),
     Start(Start),
     Stop(Stop),

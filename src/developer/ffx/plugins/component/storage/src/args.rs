@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(subcommand, name = "storage", description = "Manages storage capabilities of components")]
 pub struct StorageCommand {
     #[argh(subcommand)]
-    pub subcommand: SubcommandEnum,
+    pub subcommand: SubCommandEnum,
 
     #[argh(option, default = "String::from(\"/core\")")]
     /// the moniker of the storage provider component.
@@ -25,7 +25,7 @@ pub struct StorageCommand {
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum SubcommandEnum {
+pub enum SubCommandEnum {
     Copy(CopyArgs),
     Delete(DeleteArgs),
     List(ListArgs),

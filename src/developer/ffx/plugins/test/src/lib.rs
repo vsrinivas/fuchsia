@@ -13,7 +13,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_test_args::{
         DeleteResultCommand, ListCommand, ResultCommand, ResultSubCommand, RunCommand,
-        ShowResultCommand, TestCommand, TestSubcommand,
+        ShowResultCommand, TestCommand, TestSubCommand,
     },
     fidl::endpoints::create_proxy,
     fidl::endpoints::ProtocolMarker,
@@ -89,11 +89,11 @@ pub async fn test(
     .await
     .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     match cmd.subcommand {
-        TestSubcommand::Run(run) => {
+        TestSubCommand::Run(run) => {
             run_test(RunBuilderConnector::new(remote_control), writer, run).await
         }
-        TestSubcommand::List(list) => get_tests(query_proxy, writer, list).await,
-        TestSubcommand::Result(result) => result_command(result, writer).await,
+        TestSubCommand::List(list) => get_tests(query_proxy, writer, list).await,
+        TestSubCommand::Result(result) => result_command(result, writer).await,
     }
 }
 

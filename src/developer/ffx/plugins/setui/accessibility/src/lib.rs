@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use ffx_core::ffx_plugin;
-use ffx_setui_accessibility_args::{Accessibility, SubcommandEnum};
+use ffx_setui_accessibility_args::{Accessibility, SubCommandEnum};
 use fidl_fuchsia_settings::AccessibilityProxy;
 
 pub use utils;
@@ -22,10 +22,10 @@ pub async fn run_command(
     accessibility: Accessibility,
 ) -> Result<()> {
     match accessibility.subcommand {
-        SubcommandEnum::AddCaption(args) => {
+        SubCommandEnum::AddCaption(args) => {
             add_caption::add_caption(accessibility_proxy, args).await
         }
-        SubcommandEnum::Set(args) => set::set(accessibility_proxy, args).await,
-        SubcommandEnum::Watch(_) => watch::watch(accessibility_proxy).await,
+        SubCommandEnum::Set(args) => set::set(accessibility_proxy, args).await,
+        SubCommandEnum::Watch(_) => watch::watch(accessibility_proxy).await,
     }
 }

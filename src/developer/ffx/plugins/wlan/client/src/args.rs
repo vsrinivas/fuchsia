@@ -17,12 +17,12 @@ use {
 #[argh(subcommand, name = "client", description = "Controls WLAN client policy API.")]
 pub struct ClientCommand {
     #[argh(subcommand)]
-    pub subcommand: ClientSubcommand,
+    pub subcommand: ClientSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum ClientSubcommand {
+pub enum ClientSubCommand {
     BatchConfig(BatchConfig),
     Connect(Connect),
     Listen(Listen),
@@ -42,12 +42,12 @@ pub enum ClientSubcommand {
 )]
 pub struct BatchConfig {
     #[argh(subcommand)]
-    pub subcommand: BatchConfigSubcommand,
+    pub subcommand: BatchConfigSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum BatchConfigSubcommand {
+pub enum BatchConfigSubCommand {
     Dump(Dump),
     Restore(Restore),
 }

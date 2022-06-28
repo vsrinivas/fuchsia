@@ -22,12 +22,12 @@ pub struct Command {
     #[argh(option)]
     pub stamp: Option<PathBuf>,
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum Subcommand {
+pub enum SubCommand {
     Bootfs(bootfs::Command),
     ComponentResolvers(component_resolvers::Command),
     KernelCmdline(kernel_cmdline::Command),

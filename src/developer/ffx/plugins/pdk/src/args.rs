@@ -4,12 +4,12 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use ffx_pdk_sub_command::Subcommand;
+use ffx_pdk_sub_command::SubCommand;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "pdk", description = "PDK related tool.")]
 pub struct PdkCommand {
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }

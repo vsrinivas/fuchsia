@@ -13,7 +13,7 @@ pub async fn ffx_plugin_impl(
   match cmd.subcommand {
       Some(sub) => match sub {
 {% for plugin in plugins %}
-        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
+        {{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
 {% endfor %}
       },
       None => {{execution_lib}}::ffx_plugin_impl(injector, cmd).await,
@@ -26,11 +26,11 @@ pub async fn ffx_plugin_impl(
 {% if includes_subcommands %}
     match cmd.subcommand {
 {% for plugin in plugins %}
-      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
+      {{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
 {% endfor %}
     }
 {% else %}
-    println!("Subcommand not implemented yet.");
+    println!("SubCommand not implemented yet.");
     Ok(())
 {% endif %}
 {% endif %}
@@ -68,7 +68,7 @@ pub fn ffx_plugin_is_machine_supported(
   match &cmd.subcommand {
       Some(sub) => match sub {
 {% for plugin in plugins %}
-        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
+        {{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
 {% endfor %}
       },
       None => {{execution_lib}}::ffx_plugin_is_machine_supported()
@@ -81,7 +81,7 @@ pub fn ffx_plugin_is_machine_supported(
 {% if includes_subcommands %}
     match &cmd.subcommand {
 {% for plugin in plugins %}
-      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
+      {{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
 {% endfor %}
     }
 {% else %}

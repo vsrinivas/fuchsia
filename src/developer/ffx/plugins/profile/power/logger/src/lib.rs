@@ -19,8 +19,8 @@ pub async fn logger(
     cmd: args_mod::Command,
 ) -> Result<()> {
     match cmd.subcommand {
-        args_mod::Subcommand::Start(start_cmd) => start(power_logger, start_cmd).await,
-        args_mod::Subcommand::Stop(_) => stop(power_logger).await,
+        args_mod::SubCommand::Start(start_cmd) => start(power_logger, start_cmd).await,
+        args_mod::SubCommand::Stop(_) => stop(power_logger).await,
     }
 }
 

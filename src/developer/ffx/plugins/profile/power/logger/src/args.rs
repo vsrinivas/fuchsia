@@ -29,12 +29,12 @@ properly. Add --with //src/testing/metrics-logger to fx set."
 /// Top-level command for "ffx profile power logger".
 pub struct Command {
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum Subcommand {
+pub enum SubCommand {
     Start(StartCommand),
     Stop(StopCommand),
 }

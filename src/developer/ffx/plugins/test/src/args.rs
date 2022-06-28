@@ -14,12 +14,12 @@ use {argh::FromArgs, diagnostics_data::Severity, ffx_core::ffx_command};
 )]
 pub struct TestCommand {
     #[argh(subcommand)]
-    pub subcommand: TestSubcommand,
+    pub subcommand: TestSubCommand,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum TestSubcommand {
+pub enum TestSubCommand {
     Run(RunCommand),
     List(ListCommand),
     Result(ResultCommand),

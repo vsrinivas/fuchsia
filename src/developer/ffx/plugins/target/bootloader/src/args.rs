@@ -38,12 +38,12 @@ pub struct BootloaderCommand {
     pub skip_verify: bool,
 
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum Subcommand {
+pub enum SubCommand {
     Lock(LockCommand),
     Unlock(UnlockCommand),
     Boot(BootCommand),
@@ -98,10 +98,10 @@ pub struct BootCommand {
 impl Into<ManifestParams> for BootloaderCommand {
     fn into(self) -> ManifestParams {
         let op = match self.subcommand {
-            Subcommand::Boot(BootCommand { zbi, vbmeta, slot }) => {
+            SubCommand::Boot(BootCommand { zbi, vbmeta, slot }) => {
                 Command::Boot(BootParams { zbi, vbmeta, slot })
             }
-            Subcommand::Unlock(UnlockCommand { cred, force }) => {
+            SubCommand::Unlock(UnlockCommand { cred, force }) => {
                 Command::Unlock(UnlockParams { cred, force })
             }
             _ => panic!(), // Should never get here

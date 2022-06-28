@@ -6,7 +6,7 @@ use {
     argh::{FromArgs, TopLevelCommand},
     ffx_config::FfxConfigBacked,
     ffx_core::ffx_command,
-    ffx_lib_sub_command::Subcommand,
+    ffx_lib_sub_command::SubCommand,
     ffx_writer::Format,
 };
 
@@ -52,7 +52,7 @@ pub struct Ffx {
     pub verbose: bool,
 
     #[argh(subcommand)]
-    pub subcommand: Option<Subcommand>,
+    pub subcommand: Option<SubCommand>,
 }
 
 /// Extract the base cmd from a path

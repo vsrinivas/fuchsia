@@ -11,12 +11,12 @@ use ffx_core::ffx_command;
 /// watch or set accessibility settings
 pub struct Accessibility {
     #[argh(subcommand)]
-    pub subcommand: SubcommandEnum,
+    pub subcommand: SubCommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-pub enum SubcommandEnum {
+pub enum SubCommandEnum {
     AddCaption(CaptionArgs),
     Set(SetArgs),
     Watch(WatchArgs),
@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(
             Accessibility::from_args(CMD_NAME, args),
             Ok(Accessibility {
-                subcommand: SubcommandEnum::AddCaption(CaptionArgs {
+                subcommand: SubCommandEnum::AddCaption(CaptionArgs {
                     for_media: None,
                     for_tts: None,
                     window_color: Some(str_to_color(window_color).unwrap()),
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(
             Accessibility::from_args(CMD_NAME, args),
             Ok(Accessibility {
-                subcommand: SubcommandEnum::Set(SetArgs {
+                subcommand: SubCommandEnum::Set(SetArgs {
                     audio_description: None,
                     screen_reader: None,
                     color_inversion: None,
@@ -204,7 +204,7 @@ mod tests {
         let args = &["watch"];
         assert_eq!(
             Accessibility::from_args(CMD_NAME, args),
-            Ok(Accessibility { subcommand: SubcommandEnum::Watch(WatchArgs {}) })
+            Ok(Accessibility { subcommand: SubCommandEnum::Watch(WatchArgs {}) })
         )
     }
 }

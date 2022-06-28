@@ -18,12 +18,12 @@ use {
 #[argh(name = "driver", description = "Support driver development workflows")]
 pub struct DriverCommand {
     #[argh(subcommand)]
-    pub subcommand: DriverSubcommand,
+    pub subcommand: DriverSubCommand,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum DriverSubcommand {
+pub enum DriverSubCommand {
     DebugBind(DebugBindCommand),
     Device(DeviceCommand),
     Dump(DumpCommand),

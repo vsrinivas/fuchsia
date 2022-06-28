@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use ffx_core::ffx_plugin;
-use ffx_setui_volume_policy_args::{SubcommandEnum, VolumePolicy};
+use ffx_setui_volume_policy_args::{SubCommandEnum, VolumePolicy};
 use fidl_fuchsia_settings_policy::VolumePolicyControllerProxy;
 
 pub use utils;
@@ -22,9 +22,9 @@ pub async fn run_command(
     volume_policy: VolumePolicy,
 ) -> Result<()> {
     match volume_policy.subcommand {
-        SubcommandEnum::Add(args) => add::add(proxy, args).await,
-        SubcommandEnum::Get(_) => get::get(proxy).await,
-        SubcommandEnum::Remove(args) => remove::remove(proxy, args).await,
+        SubCommandEnum::Add(args) => add::add(proxy, args).await,
+        SubCommandEnum::Get(_) => get::get(proxy).await,
+        SubCommandEnum::Remove(args) => remove::remove(proxy, args).await,
     }
 }
 
@@ -61,7 +61,7 @@ mod test {
             }
         });
 
-        let policy = VolumePolicy { subcommand: SubcommandEnum::Get(GetArgs {}) };
+        let policy = VolumePolicy { subcommand: SubCommandEnum::Get(GetArgs {}) };
         let response = run_command(proxy, policy).await;
         assert!(response.is_ok());
     }

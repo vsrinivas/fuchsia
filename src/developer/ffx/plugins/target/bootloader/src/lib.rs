@@ -7,7 +7,7 @@ use {
     errors::ffx_bail,
     ffx_bootloader_args::{
         BootCommand, BootloaderCommand,
-        Subcommand::{Boot, Info, Lock, Unlock},
+        SubCommand::{Boot, Info, Lock, Unlock},
         UnlockCommand,
     },
     ffx_core::ffx_plugin,
@@ -37,7 +37,7 @@ pub async fn bootloader_plugin_impl<W: Write>(
     cmd: BootloaderCommand,
     writer: &mut W,
 ) -> Result<()> {
-    // Subcommands can overwrite the manifest with their own parameters, so check for those
+    // SubCommands can overwrite the manifest with their own parameters, so check for those
     // conditions before continuing through to check the flash manifest.
     match &cmd.subcommand {
         Info(_) => return info(writer, &fastboot_proxy).await,

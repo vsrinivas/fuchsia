@@ -20,18 +20,18 @@ pub async fn handle_client_command(
     let listener_stream = ffx_wlan_common::get_ap_listener_stream(ap_listener)?;
 
     match cmd.subcommand {
-        arg_types::ApSubcommand::Listen(arg_types::Listen {}) => {
+        arg_types::ApSubCommand::Listen(arg_types::Listen {}) => {
             donut_lib::handle_ap_listen(listener_stream).await
         }
-        arg_types::ApSubcommand::Start(config) => {
+        arg_types::ApSubCommand::Start(config) => {
             let config = wlan_policy::NetworkConfig::from(config);
             donut_lib::handle_start_ap(ap_controller, listener_stream, config).await
         }
-        arg_types::ApSubcommand::Stop(config) => {
+        arg_types::ApSubCommand::Stop(config) => {
             let config = wlan_policy::NetworkConfig::from(config);
             donut_lib::handle_stop_ap(ap_controller, config).await
         }
-        arg_types::ApSubcommand::StopAll(arg_types::StopAll {}) => {
+        arg_types::ApSubCommand::StopAll(arg_types::StopAll {}) => {
             donut_lib::handle_stop_all_aps(ap_controller).await
         }
     }

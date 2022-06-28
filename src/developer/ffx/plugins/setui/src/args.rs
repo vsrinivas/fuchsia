@@ -4,12 +4,12 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use ffx_setui_sub_command::Subcommand;
+use ffx_setui_sub_command::SubCommand;
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "setui", description = "Modify and query settings.")]
 pub struct SetuiCommand {
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: SubCommand,
 }
