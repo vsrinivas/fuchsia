@@ -92,6 +92,12 @@
 
 #define A5_SPICC1_IRQ 216  // 184+32
 
+#define A5_ETH_GMAC_IRQ 106  // 74+32
+
+// Ethernet
+#define A5_ETH_MAC_BASE 0xfdc00000
+#define A5_ETH_MAC_LENGTH 0x10000
+
 // PWM
 #define A5_PWM_LENGTH 0x2000  // applies to each PWM bank
 #define A5_PWM_AB_BASE 0xfe058000

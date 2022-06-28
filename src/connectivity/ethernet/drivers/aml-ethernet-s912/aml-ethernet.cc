@@ -82,31 +82,32 @@ zx_status_t AmlEthernet::Bind() {
     gpios_[PHY_RESET].ConfigOut(0);
   }
 
-  // Initialize AMLogic peripheral registers associated with dwmac.
-  // Sorry about the magic...rtfm
-  periph_mmio_->Write32(0x1621, PER_ETH_REG0);
-
   pdev_board_info_t board;
   bool is_vim3 = false;
   zx_status_t status = pdev_.GetBoardInfo(&board);
 
-  if (status == ZX_OK) {
-    is_vim3 = ((board.vid == PDEV_VID_KHADAS) && (board.pid == PDEV_PID_VIM3));
+  if (status != ZX_OK || board.pid != PDEV_PID_AV400) {
+    // Initialize AMLogic peripheral registers associated with dwmac.
+    // Sorry about the magic...rtfm
+    periph_mmio_->Write32(0x1621, PER_ETH_REG0);
+    if (status == ZX_OK) {
+      is_vim3 = ((board.vid == PDEV_VID_KHADAS) && (board.pid == PDEV_PID_VIM3));
+    }
+
+    if (!is_vim3) {
+      periph_mmio_->Write32(0x20000, PER_ETH_REG1);
+    }
+
+    periph_mmio_->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
+
+    periph_mmio_->Write32(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD | REG3_CFG_PHY_ADDR |
+                              REG3_CFG_MODE | REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
+                          PER_ETH_REG3);
+
+    // Enable clocks and power domain for dwmac
+    hhi_mmio_->SetBits32(1 << 3, HHI_GCLK_MPEG1);
+    hhi_mmio_->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
   }
-
-  if (!is_vim3) {
-    periph_mmio_->Write32(0x20000, PER_ETH_REG1);
-  }
-
-  periph_mmio_->Write32(REG2_ETH_REG2_REVERSED | REG2_INTERNAL_PHY_ID, PER_ETH_REG2);
-
-  periph_mmio_->Write32(REG3_CLK_IN_EN | REG3_ETH_REG3_19_RESVERD | REG3_CFG_PHY_ADDR |
-                            REG3_CFG_MODE | REG3_CFG_EN_HIGH | REG3_ETH_REG3_2_RESERVED,
-                        PER_ETH_REG3);
-
-  // Enable clocks and power domain for dwmac
-  hhi_mmio_->SetBits32(1 << 3, HHI_GCLK_MPEG1);
-  hhi_mmio_->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
 
   if (i2c_.is_valid()) {
     // WOL reset enable to MCU

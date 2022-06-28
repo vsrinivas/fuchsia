@@ -156,6 +156,9 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
       "spi-1/aml-spi-1/spi/spi-1-0",
       "pwm-init",
+      "dwmac/dwmac/eth_phy/phy_null_device",
+      "dwmac/dwmac/Designware-MAC/ethernet",
+      "ethernet_mac/aml-ethernet",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

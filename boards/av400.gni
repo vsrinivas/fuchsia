@@ -12,6 +12,10 @@ amlogic_decoder_firmware_path = "//fake"
 
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:av400",
+  "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
+  "//src/connectivity/ethernet/drivers/dwmac",
+  "//src/connectivity/ethernet/drivers/ethernet",
+  "//src/connectivity/ethernet/drivers/realtek-8211f",
   "//src/devices/block/drivers/aml-sdmmc",
   "//src/devices/block/drivers/bootpart",
   "//src/devices/board/drivers/av400",
