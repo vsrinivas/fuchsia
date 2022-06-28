@@ -6,9 +6,9 @@
         "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
-        "sys/testing/system-test.shard.cml",
     ],
     program: {
         binary: "test/platform-bus-bti-test",

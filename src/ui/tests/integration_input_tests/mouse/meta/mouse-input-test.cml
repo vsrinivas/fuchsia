@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/sys/test_runners/gtest/default.shard.cml",
-        "sys/component/realm_builder.shard.cml",
-
         // system-test is needed to access fuchsia.sysmem.Allocator
         // and fuchsia.vulkan.loader.Loader.
-        "sys/testing/system-test.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
     ],
     program: {
         binary: "bin/mouse-input-test",

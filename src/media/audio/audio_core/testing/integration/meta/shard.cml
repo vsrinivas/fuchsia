@@ -7,7 +7,7 @@
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/sys/component/realm_builder.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "sys/testing/system-test.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
     ],
     use: [
         {

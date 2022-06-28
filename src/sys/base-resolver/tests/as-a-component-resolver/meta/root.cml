@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sys/testing/system-test.shard.cml" ],
+    include: [ "//src/sys/test_manager/system-test.shard.cml" ],
     children: [
         {
             name: "fake_dependencies",

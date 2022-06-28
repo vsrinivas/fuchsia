@@ -6,7 +6,7 @@
         "//sdk/lib/syslog/client.shard.cml",
 
         // Depends on config_data which is a system capability.
-        "sys/testing/system-test.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
     ],
     children: [
         {
