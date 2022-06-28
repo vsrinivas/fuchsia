@@ -286,6 +286,7 @@ executable("device_tests") {
     "virtio_queue_test.cc",
     "virtio_rng_test.cc",
     "virtio_sound_test.cc",
+    "virtio_vsock_test.cc",
     "virtio_wl_unittest.cc",
   ]
 
