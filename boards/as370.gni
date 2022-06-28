@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+board_name = "as370"
+board_description = "as370"
+
+board_configs += [ "//build/config/arm64:cortex-a53" ]
+
+# TODO(fxbug.dev/94099): Add back drivers that have been restored.
+_common_bootfs_deps = [
+  "//boards/kernel_cmdline:as370",
+  "//src/devices/block/drivers/as370-sdhci",
+  "//src/devices/block/drivers/ftl",
+  "//src/devices/block/drivers/sdhci",
+  "//src/devices/board/drivers/as370",
+  "//src/devices/clock/drivers/as370-clk",
+  "//src/devices/gpio/drivers/as370-gpio",
+  "//src/devices/nand/drivers/cadence-hpnfc",
+  "//src/devices/nand/drivers/nand",
+  "//src/devices/nand/drivers/nandpart",
+  "//src/devices/nand/drivers/skip-block",
+  "//src/devices/power/drivers/as370-power",
+  "//src/devices/thermal/drivers/as370-thermal",
+  "//src/devices/usb/drivers/as370-usb-phy",
+  "//src/devices/usb/drivers/dwc2",
+]
+
+# TODO(fxbug.dev/94099): drivers that exist but disable for now
+_common_bootfs_deps += [
+  #   "//src/devices/shareddma/drivers/syn-dma",
+  #   "//src/media/audio/drivers/as370-pdm-input",
+  #   "//src/media/audio/drivers/as370-tdm-output",
+  #   "//src/media/audio/drivers/codecs/max98373",
+  #   "//src/ui/input/drivers/cypress",
+]
+
+# TODO(fxbug.dev/94099): still to be brought back
+_common_bootfs_deps += [
+  #   "//src/ui/light/drivers/lp50xx-light",
+  #   "//src/devices/i2c/drivers/dw-i2c",
+]
+_common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
+# TODO(fxbug.dev/94099): add back in the future
+board_package_labels += [
+  #   "//src/power/thermd",
+  #   "//src/power/thermd:config",
+]
+
+custom_signing_script =
+    "//zircon/kernel/target/arm64/board/as370/package-as370-image.sh"
+
+custom_signing_script_deps = [ "//zircon/kernel/target/arm64/boot-shim:as370" ]
+
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
+
+zircon_a_partition = "boot"
+pre_erase_flash = true
+
+# Supports only physical devices.
+board_is_emu = false
+board_is_phys = true

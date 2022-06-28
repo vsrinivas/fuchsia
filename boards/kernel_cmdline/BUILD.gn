@@ -134,6 +134,10 @@ kernel_cmdline("gce") {
   args = [ "kernel.serial=legacy" ]
 }
 
+kernel_cmdline("as370") {
+  args = [ "kernel.bypass-debuglog=true" ]
+}
+
 kernel_cmdline("vim3") {
   deps = [ ":pmm-checker-from-board" ]
   args = [
