@@ -6,6 +6,7 @@ package summarize
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -122,9 +123,10 @@ func (e ElementStr) HasStrictness() bool {
 func LoadSummariesJSON(rs ...io.Reader) ([][]ElementStr, error) {
 	var rets [][]ElementStr
 	for _, r := range rs {
-		var ret []ElementStr
+		ret := []ElementStr{}
 		d := json.NewDecoder(r)
-		if err := d.Decode(&ret); err != nil {
+		err := d.Decode(&ret)
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, fmt.Errorf("while decoding the summary: %w", err)
 		}
 		rets = append(rets, ret)

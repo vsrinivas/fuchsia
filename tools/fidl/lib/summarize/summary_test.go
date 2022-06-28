@@ -1911,3 +1911,39 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase, format Summa
 		})
 	}
 }
+
+func TestLoadSummariesJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		json string
+		want [][]ElementStr
+	}{
+		{
+			name: "eof",
+			json: "",
+			want: [][]ElementStr{{}},
+		}, {
+			name: "empty list",
+			json: "[]",
+			want: [][]ElementStr{{}},
+		}, {
+			name: "library only",
+			json: `[{"kind": "library", "name": "l"}]`,
+			want: [][]ElementStr{
+				{{Kind: libraryKind, Name: "l"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summaries, err := LoadSummariesJSON(strings.NewReader(tt.json))
+			if err != nil {
+				t.Fatalf("LoadSummariesJSON(%q) got unexpected error: %v", tt.json, err)
+			}
+
+			if diff := cmp.Diff(tt.want, summaries); diff != "" {
+				t.Fatalf("LoadSummariesJSON(%q) got diff (-want,+got):\n%s", tt.json, diff)
+			}
+		})
+	}
+}
