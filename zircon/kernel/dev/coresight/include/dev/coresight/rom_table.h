@@ -19,14 +19,13 @@
 namespace coresight {
 
 // [CS] D5
-// A ROM table is a basic component (of type
-// ComponentIDRegister::Class::k0x1ROMTable or
-// ComponentIDRegister::Class::kCoreSight) that provides pointers to other
+// A ROM table is a basic CoreSight component that provides pointers to other
 // components (including other ROM tables) in its lower registers. It is an
-// organizational structure that can be used to find all CoreSight components
-// on a chip (or system of chips). Thought of as a tree, the leaves are the
-// system's CoreSight components and the root is typically referred to as the
-// "base ROM table" (or, more plainly, "the ROM table").
+// organizational structure that can be used to find all CoreSight components -
+// possibly as well as legacy or vendor-specific ones - on an SoC. Thought of
+// as a tree, the leaves are the system's CoreSight components and the root is
+// typically referred to as the "base ROM table" (or, more plainly, "the ROM
+// table").
 class ROMTable {
  public:
   // [CS] D6.4.4
@@ -92,15 +91,8 @@ class ROMTable {
   // transitively refers to.
   ROMTable(uintptr_t base, uint32_t span_size) : base_(base), span_size_(span_size) {}
 
-  // The underlying tree of tables is walked with no dynamic allocation,
-  // calling a ComponentCallback on each CoreSight component found, the
-  // callback having a signature of uintptr_t -> void.
-  //
-  // The callback is also called on any global timestamp generator components
-  // found; these morally should be CoreSight components and ARM includes them
-  // as top-level table entries. A timestamp generator can be characterized as
-  // having a class of |ComponentIDRegister::Class::kNonStandard| and a part ID
-  // of |arm::partid::kTimestampGenerator|.
+  // Walks the underlying tree of components with no dynamic allocation,
+  // calling `callback` on the address of each component found.
   template <typename IoProvider, typename ComponentCallback>
   fitx::result<std::string_view> Walk(IoProvider io, ComponentCallback&& callback) {
     return WalkFrom(io, callback, 0);
@@ -169,22 +161,16 @@ class ROMTable {
       return fitx::ok();
     }
 
-    const uint16_t partid = GetPartIDAt(io, offset);
-    if (IsTerminalEntry(offset, classid, partid)) {
-      std::forward<ComponentCallback>(callback)(base_ + offset);
-      return fitx::ok();
+    // There should be a ROM table at offset zero.
+    if (offset == 0) {
+      return fitx::error{"not a ROM table"};
     }
 
-    printf(
-        "expected ROM table or component at offset %u: "
-        "(class, architect, archid) = (%#x (%s), %#x, %#x)",
-        offset, static_cast<uint8_t>(classid), ToString(classid).data(), architect, archid);
-    return fitx::error("unexpected component found");
+    std::forward<ComponentCallback>(callback)(base_ + offset);
+    return fitx::ok();
   }
 
   bool IsTable(ComponentIDRegister::Class classid, uint16_t architect, uint16_t archid) const;
-
-  bool IsTerminalEntry(uint32_t offset, ComponentIDRegister::Class classid, uint16_t partid);
 
   fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ComponentIDRegister::Class classid,
                                                                 uint8_t format) const;

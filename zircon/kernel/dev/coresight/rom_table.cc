@@ -21,17 +21,6 @@ bool ROMTable::IsTable(ComponentIDRegister::Class classid, uint16_t architect,
   return false;
 }
 
-bool ROMTable::IsTerminalEntry(uint32_t offset, ComponentIDRegister::Class classid,
-                               uint16_t partid) {
-  if (offset == 0) {
-    return false;
-  } else if (classid == ComponentIDRegister::Class::kCoreSight) {
-    return true;
-  }
-  return classid == ComponentIDRegister::Class::kNonStandard &&
-         partid == arm::partid::kTimestampGenerator;
-}
-
 fitx::result<std::string_view, uint32_t> ROMTable::EntryIndexUpperBound(
     ComponentIDRegister::Class classid, uint8_t format) const {
   if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
