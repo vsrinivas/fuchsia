@@ -8,6 +8,7 @@ group("drivers") {
     "drivers/aml-thermal-s905d2g",
     "drivers/aml-thermal-s905d2g-legacy",
     "drivers/aml-thermistor",
+    "drivers/as370-thermal",
   ]
 }
 

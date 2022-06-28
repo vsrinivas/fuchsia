@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AS370_THERMAL_AS370_THERMAL_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AS370_THERMAL_AS370_THERMAL_H_
 
+#include <fidl/fuchsia.hardware.thermal/cpp/fidl.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 

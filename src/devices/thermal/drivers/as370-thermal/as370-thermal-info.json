@@ -1,0 +1,9 @@
+{
+    "short_description": "Synaptics thermal driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Thermal"
+    ]
+}
