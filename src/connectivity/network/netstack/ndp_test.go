@@ -92,6 +92,8 @@ func waitForEmptyQueue(n *ndpDispatcher) {
 // Test that interface state watchers receive an event on DAD and SLAAC address
 // invalidation events.
 func TestInterfacesChangeEvent(t *testing.T) {
+	addGoleakCheck(t)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -119,6 +121,8 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create interface watcher protocol channel pair: %s", err)
 	}
+	defer watcher.Close()
+
 	if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
 		t.Fatalf("failed to initialize interface watcher: %s", err)
 	}

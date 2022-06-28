@@ -219,7 +219,10 @@ go_library("lib") {
 
 go_test("netstack_test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//third_party/golibs:go.uber.org/goleak",
+  ]
 }
 
 fuchsia_unittest_package("netstack-gotests") {

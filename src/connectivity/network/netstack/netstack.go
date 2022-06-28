@@ -486,21 +486,27 @@ func (ifs *ifState) addAddress(protocolAddr tcpip.ProtocolAddress, properties st
 
 // onInterfaceAddLocked must be called with `ifs.mu` locked.
 func (ns *Netstack) onInterfaceAddLocked(ifs *ifState, name string) {
-	ns.interfaceEventChan <- interfaceAdded(initialProperties(ifs, name))
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- interfaceAdded(initialProperties(ifs, name))
+	}
 }
 
 // onInterfaceRemoveLocked must be called with `ifState.mu` of the interface
 // identified by `nicid` locked.
 func (ns *Netstack) onInterfaceRemoveLocked(nicid tcpip.NICID) {
-	ns.interfaceEventChan <- interfaceRemoved(nicid)
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- interfaceRemoved(nicid)
+	}
 }
 
 // onOnlineChangeLocked must be called with `ifState.mu` of the interface
 // identified by `nicid` locked.
 func (ns *Netstack) onOnlineChangeLocked(nicid tcpip.NICID, online bool) {
-	ns.interfaceEventChan <- onlineChanged{
-		nicid:  nicid,
-		online: online,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- onlineChanged{
+			nicid:  nicid,
+			online: online,
+		}
 	}
 }
 
@@ -508,9 +514,11 @@ func (ns *Netstack) onOnlineChangeLocked(nicid tcpip.NICID, online bool) {
 // interface identified by `nicid` and the route table locked (in that order)
 // to avoid races against other route changes.
 func (ns *Netstack) onDefaultIPv4RouteChangeLocked(nicid tcpip.NICID, hasDefaultRoute bool) {
-	ns.interfaceEventChan <- defaultRouteChanged{
-		nicid:               nicid,
-		hasDefaultIPv4Route: &hasDefaultRoute,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- defaultRouteChanged{
+			nicid:               nicid,
+			hasDefaultIPv4Route: &hasDefaultRoute,
+		}
 	}
 }
 
@@ -518,9 +526,11 @@ func (ns *Netstack) onDefaultIPv4RouteChangeLocked(nicid tcpip.NICID, hasDefault
 // interface identified by `nicid` and the route table locked (in that order)
 // to avoid races against other route changes.
 func (ns *Netstack) onDefaultIPv6RouteChangeLocked(nicid tcpip.NICID, hasDefaultRoute bool) {
-	ns.interfaceEventChan <- defaultRouteChanged{
-		nicid:               nicid,
-		hasDefaultIPv6Route: &hasDefaultRoute,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- defaultRouteChanged{
+			nicid:               nicid,
+			hasDefaultIPv6Route: &hasDefaultRoute,
+		}
 	}
 }
 
@@ -528,36 +538,44 @@ func (ns *Netstack) onDefaultIPv6RouteChangeLocked(nicid tcpip.NICID, hasDefault
 // interface identified by `nicid` and the route table locked (in that order)
 // to avoid races against other route changes.
 func (ns *Netstack) onDefaultRouteChangeLocked(nicid tcpip.NICID, hasDefaultIPv4Route bool, hasDefaultIPv6Route bool) {
-	ns.interfaceEventChan <- defaultRouteChanged{
-		nicid:               nicid,
-		hasDefaultIPv4Route: &hasDefaultIPv4Route,
-		hasDefaultIPv6Route: &hasDefaultIPv6Route,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- defaultRouteChanged{
+			nicid:               nicid,
+			hasDefaultIPv4Route: &hasDefaultIPv4Route,
+			hasDefaultIPv6Route: &hasDefaultIPv6Route,
+		}
 	}
 }
 
 func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
-	ns.interfaceEventChan <- addressAdded{
-		nicid:  nicid,
-		subnet: fidlconv.ToNetSubnet(addrWithPrefix),
-		strict: strict,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- addressAdded{
+			nicid:  nicid,
+			subnet: fidlconv.ToNetSubnet(addrWithPrefix),
+			strict: strict,
+		}
 	}
 }
 
 // TODO(https://fxbug.dev/95578): Remove `strict` parameter once we can always
 // enforce strictness.
 func (ns *Netstack) onAddressRemoveLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
-	ns.interfaceEventChan <- addressRemoved{
-		nicid:  nicid,
-		subnet: fidlconv.ToNetSubnet(addrWithPrefix),
-		strict: strict,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- addressRemoved{
+			nicid:  nicid,
+			subnet: fidlconv.ToNetSubnet(addrWithPrefix),
+			strict: strict,
+		}
 	}
 }
 
 func (ns *Netstack) onAddressValidUntilChangeLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, validUntil zxtime.Time) {
-	ns.interfaceEventChan <- validUntilChanged{
-		nicid:      nicid,
-		subnet:     fidlconv.ToNetSubnet(addrWithPrefix),
-		validUntil: validUntil,
+	if ns.interfaceEventChan != nil {
+		ns.interfaceEventChan <- validUntilChanged{
+			nicid:      nicid,
+			subnet:     fidlconv.ToNetSubnet(addrWithPrefix),
+			validUntil: validUntil,
+		}
 	}
 }
 

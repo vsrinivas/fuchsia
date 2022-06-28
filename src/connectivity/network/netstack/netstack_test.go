@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"os"
 	"sort"
 	"syscall/zx"
 	"testing"
@@ -37,6 +36,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/goleak"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/faketime"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -83,10 +83,15 @@ func TestMain(m *testing.M) {
 		sniffer.LogPackets.Store(1)
 	}
 
-	os.Exit(m.Run())
+	// Verifies that none of the tests in this package leak any goroutines.
+	goleak.VerifyTestMain(
+		m,
+		append(goroutineTopFunctionsToIgnore(), goleak.IgnoreCurrent())...,
+	)
 }
 
 func TestDelRouteErrors(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -125,6 +130,7 @@ func TestDelRouteErrors(t *testing.T) {
 // TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
 // disabled when the underlying link is brought up or down, respectively.
 func TestStackNICEnableDisable(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	ifs := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifs.RemoveByUser)
@@ -182,6 +188,7 @@ func (h *testNicRemovedHandler) RemovedNIC(nicID tcpip.NICID) {
 // TestStackNICRemove tests that the NIC in stack.Stack is removed when the
 // underlying link is closed.
 func TestStackNICRemove(t *testing.T) {
+	addGoleakCheck(t)
 	nicRemovedHandler := testNicRemovedHandler{}
 	ns, _ := newNetstack(t, netstackTestOptions{nicRemovedHandler: &nicRemovedHandler})
 	var obs noopObserver
@@ -246,6 +253,7 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 }
 
 func TestEndpoint_Close(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	var wq waiter.Queue
 	// Avoid polluting everything with err of type tcpip.Error.
@@ -411,6 +419,7 @@ func TestEndpoint_Close(t *testing.T) {
 // isn't added to the endpoints map, since such an endpoint wouldn't receive a
 // hangup notification and its reference in the map would leak.
 func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	if err := ns.addLoopback(); err != nil {
 		t.Fatalf("ns.addLoopback() = %s", err)
@@ -511,6 +520,7 @@ func createEP(t *testing.T, ns *Netstack, wq *waiter.Queue) *endpointWithSocket 
 }
 
 func TestTCPEndpointMapClose(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	eps := createEP(t, ns, new(waiter.Queue))
 
@@ -525,6 +535,7 @@ func TestTCPEndpointMapClose(t *testing.T) {
 }
 
 func TestTCPEndpointMapConnect(t *testing.T) {
+	addGoleakCheck(t)
 	ns, clock := newNetstack(t, netstackTestOptions{})
 
 	var linkEP tcpipstack.LinkEndpoint = &noopEndpoint{
@@ -606,6 +617,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 // FIN_WAIT2 to be present in the endpoints map and is deleted when the
 // endpoint transitions to CLOSED state.
 func TestTCPEndpointMapClosing(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	if err := ns.addLoopback(); err != nil {
 		t.Fatalf("ns.addLoopback() = %s", err)
@@ -693,6 +705,7 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 }
 
 func TestEndpointsMapKey(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	if ns.endpoints.nextKey != 0 {
 		t.Fatalf("got ns.endpoints.nextKey = %d, want 0", ns.endpoints.nextKey)
@@ -745,6 +758,7 @@ func TestEndpointsMapKey(t *testing.T) {
 }
 
 func TestNICName(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	if want, got := "unknown(NICID=0)", ns.name(0); got != want {
@@ -770,6 +784,7 @@ func TestNICName(t *testing.T) {
 }
 
 func TestNotStartedByDefault(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	startCalled := false
@@ -857,6 +872,7 @@ func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, ipv6.DHCPv6Configur
 }
 
 func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
+	addGoleakCheck(t)
 	if got, want := ipv6LinkLocalOnLinkRoute(6), (tcpip.Route{Destination: header.IPv6LinkLocalPrefix.Subnet(), NIC: 6}); got != want {
 		t.Fatalf("got ipv6LinkLocalOnLinkRoute(6) = %s, want = %s", got, want)
 	}
@@ -865,6 +881,7 @@ func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
 // Test that NICs get an on-link route to the IPv6 link-local subnet when it is
 // brought up.
 func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	ep := noopEndpoint{
@@ -911,6 +928,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 }
 
 func TestOnLinkV6Route(t *testing.T) {
+	addGoleakCheck(t)
 	subAddr := util.Parse("abcd:1234::")
 	subMask := tcpip.AddressMask(util.Parse("ffff:ffff::"))
 	subnet, err := tcpip.NewSubnet(subAddr, subMask)
@@ -924,6 +942,7 @@ func TestOnLinkV6Route(t *testing.T) {
 }
 
 func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	multicastPromiscuousModeEnabled := false
@@ -933,9 +952,11 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 		return int32(zx.ErrOk), nil
 	}
 
-	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &eth); err != nil {
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &eth)
+	if err != nil {
 		t.Fatal(err)
 	}
+	defer ifs.RemoveByUser()
 
 	if !multicastPromiscuousModeEnabled {
 		t.Error("expected a call to ConfigMulticastSetPromiscuousMode(true) by addEth")
@@ -943,6 +964,7 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 }
 
 func TestUniqueFallbackNICNames(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -967,6 +989,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 }
 
 func TestStaticIPConfiguration(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
@@ -1084,16 +1107,12 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 		},
 		Clock: clock,
 	})
+	t.Cleanup(func() {
+		stk.Close()
+		stk.Wait()
+	})
 
 	interfaceEventChan := options.interfaceEventChan
-	if interfaceEventChan == nil {
-		ch := make(chan interfaceEvent)
-		go func() {
-			for range ch {
-			}
-		}()
-		interfaceEventChan = ch
-	}
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
@@ -1123,7 +1142,45 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 	return ns, clock
 }
 
-func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
+func goroutineTopFunctionsToIgnore() []goleak.Option {
+	return []goleak.Option{
+		// Only one interfaceWatcherEventLoop is ever started per netstack,
+		// so it's not worth adding go test-level teardown just for this.
+		goleak.IgnoreTopFunction(
+			"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack.interfaceWatcherEventLoop",
+		),
+		// The only usage of this is when the system-level sysWaiter is initialized,
+		// but we have to ignore it since this initialization can race with IgnoreCurrent().
+		goleak.IgnoreTopFunction(
+			"syscall/zx.(*Port).Wait",
+		),
+	}
+}
+
+// addGoleakCheck adds an assertion that no goroutines are leaked by the current
+// test. Each test should begin with addGoleakCheck(t). While the invocation of
+// goleak.VerifyTestMain in TestMain will ensure that no goroutines are leaked
+// even if addGoleakCheck(t) is omitted from a test, the inclusion of
+// addGoleakCheck in each test produces more useful failure messages for
+// narrowing down which test is leaking a goroutine.
+func addGoleakCheck(t *testing.T) {
+	t.Helper()
+
+	opts := append(goroutineTopFunctionsToIgnore(), goleak.IgnoreCurrent())
+
+	t.Cleanup(func() {
+		goleak.VerifyNone(
+			t,
+			opts...,
+		)
+	})
+}
+
+func getInterfaceAddresses(
+	t *testing.T,
+	ni *stackImpl,
+	nicid tcpip.NICID,
+) []tcpip.AddressWithPrefix {
 	t.Helper()
 	nicInfos := ni.ns.stack.NICInfo()
 	nicInfo, ok := nicInfos[nicid]
@@ -1149,6 +1206,7 @@ func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix
 // Test adding a list of both IPV4 and IPV6 addresses and then removing them
 // again one-by-one.
 func TestListInterfaceAddresses(t *testing.T) {
+	addGoleakCheck(t)
 	ndpDisp := testNDPDispatcher{
 		dadC: make(chan ndpDADEvent, 1),
 	}
@@ -1268,6 +1326,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 // Test that adding an address with one prefix and then adding the same address
 // but with a different prefix will simply replace the first address.
 func TestAddAddressesThenChangePrefix(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	ni := &stackImpl{ns: ns}
 	ifState := addNoopEndpoint(t, ns, "")
@@ -1315,6 +1374,7 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 }
 
 func TestAddRouteParameterValidation(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	addr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
@@ -1389,6 +1449,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 }
 
 func TestDHCPAcquired(t *testing.T) {
+	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.RemoveByUser)

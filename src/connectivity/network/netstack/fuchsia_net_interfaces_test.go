@@ -90,6 +90,7 @@ func (w *watcherHelper) blockingWatch(t *testing.T, ch chan watchResult) {
 }
 
 func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
+	addGoleakCheck(t)
 	eventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
 
@@ -117,6 +118,8 @@ func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 }
 
 func TestInterfacesWatcherExisting(t *testing.T) {
+	addGoleakCheck(t)
+
 	eventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
 
@@ -138,6 +141,8 @@ func TestInterfacesWatcherExisting(t *testing.T) {
 }
 
 func TestInterfacesWatcher(t *testing.T) {
+	addGoleakCheck(t)
+
 	eventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
 
