@@ -290,6 +290,7 @@ function ffx-register-repository {
     target repository register \
     --repository "${repo_name}" \
     --alias "fuchsia.com" \
+    --alias "chromium.org" \
     "$@"
   err=$?
   if [[ "${err}" -ne 0 ]]; then

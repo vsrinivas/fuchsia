@@ -144,6 +144,12 @@ function main {
           \"host_replacement\": \"${source_name}\",
           \"path_prefix_match\": \"/\",
           \"path_prefix_replacement\": \"/\"
+        },
+        {
+          \"host_match\": \"chromium.org\",
+          \"host_replacement\": \"${source_name}\",
+          \"path_prefix_match\": \"/\",
+          \"path_prefix_replacement\": \"/\"
         }
       ]
     }'"
