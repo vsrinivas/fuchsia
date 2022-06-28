@@ -124,6 +124,7 @@
 //src/devices/bus/drivers/platform:platform-bus-driver
 //src/devices/bus/drivers/platform:platform-bus.proxy-driver
 //src/devices/clock/drivers/amlogic-clk:amlogic-clk-driver
+//src/devices/clock/drivers/as370-clk:as370-clk-driver
 //src/devices/clock/drivers/clock:clock-driver
 //src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-driver
 //src/devices/cpu/drivers/aml-cpu:aml-cpu-driver

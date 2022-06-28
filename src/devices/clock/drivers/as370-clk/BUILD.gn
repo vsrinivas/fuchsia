@@ -4,12 +4,13 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
-bind_rules("syn_clk_bind") {
+driver_bind_rules("syn_clk_bind") {
   rules = "syn_clk.bind"
-  output = "syn_clk_bind.h"
+  header_output = "syn_clk_bind.h"
+  bind_output = "syn_clk.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
@@ -17,12 +18,12 @@ bind_rules("syn_clk_bind") {
   ]
 }
 
-driver_module("as370-clk") {
+fuchsia_driver("as370-clk-driver") {
+  output_name = "as370-clk"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-clk.cc" ]
   deps = [
     ":syn_clk_bind",
@@ -38,15 +39,14 @@ driver_module("as370-clk") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
   ]
 }
 
 test("as370-clk-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "as370-clk-test"
   sources = [
     "as370-clk-test.cc",
@@ -68,12 +68,20 @@ test("as370-clk-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
+}
+
+fuchsia_driver_component("as370-clk") {
+  component_name = "as370-clk"
+  deps = [ ":as370-clk-driver" ]
+  info = "as370-clk-info.json"
+  colocate = true
+  root_resource = true
 }
 
 fuchsia_unittest_package("as370-clk-test") {

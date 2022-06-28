@@ -1,0 +1,11 @@
+{
+    "short_description": "Synaptics clock subsystem driver",
+    "manufacturer": "Synaptics",
+    "families": [
+        "as370"
+    ],
+    "models": [],
+    "areas": [
+        "Clock"
+    ]
+}
