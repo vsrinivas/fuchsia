@@ -13,7 +13,9 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace {
 
@@ -41,7 +43,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
     }
 
     void NotImplemented_(const std::string& name) override {
-      ADD_FAILURE("Unexpected %s", name.c_str());
+      FAIL() << "Unexpected " << name.c_str();
     }
 
    private:
@@ -50,7 +52,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
   };
 
   EventHandler event_handler;
-  ASSERT_OK(event_handler.HandleOneEvent(endpoints->client));
+  ASSERT_OK(event_handler.HandleOneEvent(endpoints->client).status());
   ASSERT_TRUE(event_handler.status().has_value());
   if (expected.is_ok()) {
     ASSERT_OK(event_handler.status().value());
@@ -65,57 +67,50 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
 
 // Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly
 // for open event messages (on both success and error).
-TEST(FidlTestCase, Open) {
-  {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_OK(endpoints.status_value());
-    fdio_ns_t* ns;
-    ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_service_connect(ns, "/dev", endpoints->server.channel().release()));
-    ASSERT_NO_FAILURES(
-        FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice)));
-    ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "class/platform-bus/000",
-                                         zx::ok(fio::wire::NodeInfo::Tag::kDevice)));
-    ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
-                                         zx::error(ZX_ERR_NOT_FOUND)));
-    ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client,
-                                         "zero/this-path-better-not-actually-exist",
-                                         zx::error(ZX_ERR_NOT_FOUND)));
-  }
+TEST(FidlTestCase, OpenDev) {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  fdio_ns_t* ns;
+  ASSERT_OK(fdio_ns_get_installed(&ns));
+  ASSERT_OK(fdio_ns_service_connect(ns, "/dev", endpoints->server.channel().release()));
 
-  {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_OK(endpoints.status_value());
-    fdio_ns_t* ns;
-    ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_service_connect(ns, "/boot", endpoints->server.channel().release()));
-    ASSERT_NO_FAILURES(
-        FidlOpenValidator(endpoints->client, "lib", zx::ok(fio::wire::NodeInfo::Tag::kDirectory)));
-    ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
-                                         zx::error(ZX_ERR_NOT_FOUND)));
-  }
+  FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice));
+  FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
+                    zx::error(ZX_ERR_NOT_FOUND));
+  FidlOpenValidator(endpoints->client, "zero/this-path-better-not-actually-exist",
+                    zx::error(ZX_ERR_NOT_FOUND));
 }
 
-TEST(FidlTestCase, Basic) {
-  {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
-    ASSERT_OK(endpoints.status_value());
-    ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
-    const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
-    ASSERT_OK(result.status());
-    const auto& response = result.value();
-    ASSERT_TRUE(response.info.is_directory());
-  }
+TEST(FidlTestCase, OpenPkg) {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  fdio_ns_t* ns;
+  ASSERT_OK(fdio_ns_get_installed(&ns));
+  ASSERT_OK(fdio_ns_service_connect(ns, "/pkg", endpoints->server.channel().release()));
 
-  {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
-    ASSERT_OK(endpoints.status_value());
-    ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
-    const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
-    ASSERT_OK(result.status());
-    const auto& response = result.value();
-    ASSERT_TRUE(response.info.is_device());
-  }
+  FidlOpenValidator(endpoints->client, "bin", zx::ok(fio::wire::NodeInfo::Tag::kDirectory));
+  FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
+                    zx::error(ZX_ERR_NOT_FOUND));
+}
+
+TEST(FidlTestCase, BasicDevClass) {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
+  ASSERT_OK(result.status());
+  const auto& response = result.value();
+  ASSERT_TRUE(response.info.is_directory());
+}
+
+TEST(FidlTestCase, BasicDevZero) {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
+  ASSERT_OK(result.status());
+  const auto& response = result.value();
+  ASSERT_TRUE(response.info.is_device());
 }
 
 using watch_buffer_t = struct {
@@ -129,7 +124,7 @@ using watch_buffer_t = struct {
 };
 
 void CheckLocalEvent(watch_buffer_t* wb, const char** name, fio::WatchEvent* event) {
-  ASSERT_NOT_NULL(wb->ptr);
+  ASSERT_NE(wb->ptr, nullptr);
 
   // Used a cached event
   *event = static_cast<fio::WatchEvent>(wb->ptr[0]);
@@ -157,7 +152,7 @@ void ReadEvent(watch_buffer_t* wb, const fidl::ClientEnd<fio::DirectoryWatcher>&
     wb->size = actual;
     wb->ptr = wb->buf;
   }
-  ASSERT_NO_FAILURES(CheckLocalEvent(wb, name, event));
+  CheckLocalEvent(wb, name, event);
 }
 
 TEST(FidlTestCase, DirectoryWatcherExisting) {
@@ -181,7 +176,7 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   while (true) {
     const char* name = nullptr;
     fio::wire::WatchEvent event;
-    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher_endpoints->client, &name, &event));
+    ReadEvent(&wb, watcher_endpoints->client, &name, &event);
     if (event == fio::wire::WatchEvent::kIdle) {
       ASSERT_STREQ(name, "");
       break;
@@ -228,7 +223,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
     watch_buffer_t wb = {};
     const char* name = nullptr;
     fio::wire::WatchEvent event;
-    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher_endpoints->client, &name, &event));
+    ReadEvent(&wb, watcher_endpoints->client, &name, &event);
     ASSERT_EQ(event, fio::wire::WatchEvent::kExisting);
   }
 }

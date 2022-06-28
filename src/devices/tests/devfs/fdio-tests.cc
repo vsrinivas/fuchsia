@@ -7,7 +7,9 @@
 #include <lib/zx/handle.h>
 
 #include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace {
 

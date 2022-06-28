@@ -322,6 +322,7 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/devices/tee/drivers/optee:optee-message-test-bin",
     "//src/devices/tee/drivers/optee:optee_lib",
     "//src/devices/tests/ddk-fallback-test-v2:test",
+    "//src/devices/tests/devfs",
     "//src/devices/tests/fidl-protocol:test",
     "//src/devices/tests/v2/composite:root_driver",
     "//src/devices/tests/v2/dynamic_offers:root_driver",
