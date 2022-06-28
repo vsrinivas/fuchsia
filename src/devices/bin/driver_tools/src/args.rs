@@ -5,7 +5,7 @@
 use {
     super::subcommands::{
         debug_bind::args::DebugBindCommand, device::args::DeviceCommand, dump::args::DumpCommand,
-        list::args::ListCommand, list_devices::args::ListDevicesCommand,
+        i2c::args::I2cCommand, list::args::ListCommand, list_devices::args::ListDevicesCommand,
         list_hosts::args::ListHostsCommand, lsblk::args::LsblkCommand, lspci::args::LspciCommand,
         lsusb::args::LsusbCommand, print_input_report::args::PrintInputReportCommand,
         register::args::RegisterCommand, restart::args::RestartCommand,
@@ -27,6 +27,7 @@ pub enum DriverSubCommand {
     DebugBind(DebugBindCommand),
     Device(DeviceCommand),
     Dump(DumpCommand),
+    I2c(I2cCommand),
     List(ListCommand),
     ListDevices(ListDevicesCommand),
     ListHosts(ListHostsCommand),

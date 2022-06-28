@@ -33,6 +33,7 @@ impl driver_tools::DriverConnector for DriverConnector {
         client::connect_to_protocol::<fdd::DriverDevelopmentMarker>()
             .context("Failed to connect to driver development service")
     }
+
     async fn get_dev_proxy(&self, select: bool) -> Result<fio::DirectoryProxy> {
         if select {
             anyhow::bail!("The 'driver' tool cannot use the select flag. Please use 'ffx driver' in order to select a component.");
@@ -42,6 +43,7 @@ impl driver_tools::DriverConnector for DriverConnector {
         let fasync_channel = fasync::Channel::from_channel(zx_channel)?;
         Ok(fio::DirectoryProxy::from_channel(fasync_channel))
     }
+
     async fn get_device_watcher_proxy(&self) -> Result<fdm::DeviceWatcherProxy> {
         let (proxy, server) = endpoints::create_proxy::<fdm::DeviceWatcherMarker>()
             .context("Failed to create proxy")?;
@@ -49,6 +51,7 @@ impl driver_tools::DriverConnector for DriverConnector {
             .context("Failed to connect to USB service")?;
         Ok(proxy)
     }
+
     async fn get_driver_registrar_proxy(&self, select: bool) -> Result<fdr::DriverRegistrarProxy> {
         if select {
             anyhow::bail!("The 'driver' tool cannot use the select flag. Please use 'ffx driver' in order to select a component.");
@@ -56,6 +59,7 @@ impl driver_tools::DriverConnector for DriverConnector {
         client::connect_to_protocol::<fdr::DriverRegistrarMarker>()
             .context("Failed to connect to driver registrar service")
     }
+
     async fn get_tool_runner_proxy(&self, select: bool) -> Result<fdp::ToolRunnerProxy> {
         if select {
             anyhow::bail!("The 'driver' tool cannot use the select flag. Please use 'ffx driver' in order to select a component.");

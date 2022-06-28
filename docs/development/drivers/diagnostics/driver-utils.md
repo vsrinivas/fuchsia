@@ -5,11 +5,12 @@ version of the driver framework (DFv1).
 
 Driver utilities are Fuchsia applications that communicate with devices used for
 diagnostics and exported by drivers. For example Inter-Integrated Circuit (I2C)
-devices can be scanned and communicated through the
-[i2cutil](/src/devices/i2c/bin) command line utility. For example:
+devices can be scanned and communicated through the [driver
+i2c](/src/devices/bin/driver_tools/src/subcommands/i2c) command line utility.
+For example:
 
 ```
-i2cutil ping
+driver i2c ping
 /dev/class/i2c/000: OK
 [00164.657] 04506:05266> i2c: error on bus
 Error -1
@@ -91,7 +92,7 @@ choice, for C++:
 * [LLCPP](/docs/reference/fidl/bindings/llcpp-bindings.md)
 * [HLCPP](/docs/reference/fidl/bindings/hlcpp-bindings.md)
 
-For example for I2C in [i2cutil](/src/devices/i2c/bin) using LLCPP we have:
+For example for I2C using LLCPP we have:
 
 ```
 fuchsia_hardware_i2c::Device2::SyncClient client((zx::channel(channel)));

@@ -5,6 +5,7 @@
 pub mod debug_bind;
 pub mod device;
 pub mod dump;
+pub mod i2c;
 pub mod list;
 pub mod list_devices;
 pub mod list_hosts;
