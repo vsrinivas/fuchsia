@@ -4,15 +4,13 @@
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/syslog/cpp/log_settings.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 
 int main() {
-  syslog::SetTags({"simple_driver_test_realm"});
-
   auto client_end = service::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
-    FX_SLOG(ERROR, "Failed to connect to Realm FIDL", KV("error", client_end.error_value()));
+    FX_LOGF(ERROR, "simple_driver_test_realm", "Failed to connect to Realm FIDL: %d",
+            client_end.error_value());
     return 1;
   }
   auto client = fidl::BindSyncClient(std::move(*client_end));
@@ -20,11 +18,13 @@ int main() {
   fidl::Arena arena;
   auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));
   if (wire_result.status() != ZX_OK) {
-    FX_SLOG(ERROR, "Failed to connect to Realm:Start", KV("error", wire_result.status()));
+    FX_LOGF(ERROR, "simple_driver_test_realm", "Failed to call to Realm:Start: %d",
+            wire_result.status());
     return 1;
   }
   if (wire_result.value().is_error()) {
-    FX_SLOG(ERROR, "Realm:Start failed", KV("error", wire_result.value().error_value()));
+    FX_LOGF(ERROR, "simple_driver_test_realm", "Realm:Start failed: %d",
+            wire_result.value().error_value());
     return 1;
   }
 

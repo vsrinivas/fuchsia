@@ -21,10 +21,7 @@ group("tests") {
 
 zbi_test_executable("cprng-draw") {
   sources = [ "cprng-draw.cc" ]
-  deps = [
-    "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/zx",
-  ]
+  deps = [ "//src/zircon/lib/zircon" ]
 }
 
 zbi_test("cprng-draw-zbi") {

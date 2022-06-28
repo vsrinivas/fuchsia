@@ -5,5 +5,8 @@ import("//src/connectivity/weave/lib/applets/applets.gni")
 
 weave_applet("test_applets") {
   sources = [ "test_applets.cc" ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }

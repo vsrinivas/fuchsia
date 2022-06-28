@@ -22,7 +22,6 @@ executable("log_message_store_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -62,7 +61,6 @@ executable("reader_unittest_exe") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -85,7 +83,6 @@ executable("system_log_recorder_unittest_exe") {
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -108,7 +105,6 @@ executable("writer_unittest_exe") {
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 

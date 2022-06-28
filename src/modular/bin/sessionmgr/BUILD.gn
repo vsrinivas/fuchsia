@@ -179,6 +179,7 @@ source_set("startup_agent_launcher") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/connect",
     "//src/modular/lib/modular_config:modular_config_accessor",
   ]

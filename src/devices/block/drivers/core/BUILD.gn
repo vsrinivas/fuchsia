@@ -15,7 +15,7 @@ fuchsia_driver("core-driver") {
   ]
   deps = [
     ":shared",
-    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
   ]
 }

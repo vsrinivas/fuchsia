@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/syslog/cpp/log_settings.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
@@ -16,12 +15,11 @@ TEST(DdkFirmwaretest, DriverWasLoaded) {
 }
 
 int main(int argc, char **argv) {
-  syslog::SetTags({"driver_test_realm_test"});
-
   // Connect to DriverTestRealm.
   auto client_end = service::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
-    FX_SLOG(ERROR, "Failed to connect to Realm FIDL", KV("error", client_end.error_value()));
+    FX_LOGF(ERROR, "driver_test_realm_test", "Failed to connect to Realm FIDL: %d",
+            client_end.error_value());
     return 1;
   }
   auto client = fidl::BindSyncClient(std::move(*client_end));
@@ -30,11 +28,13 @@ int main(int argc, char **argv) {
   fidl::Arena arena;
   auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));
   if (wire_result.status() != ZX_OK) {
-    FX_SLOG(ERROR, "Failed to call to Realm:Start", KV("status", wire_result.status()));
+    FX_LOGF(ERROR, "driver_test_realm_test", "Failed to call to Realm:Start: %d",
+            wire_result.status());
     return 1;
   }
   if (wire_result.value().is_error()) {
-    FX_SLOG(ERROR, "Realm:Start failed", KV("status", wire_result.value().error_value()));
+    FX_LOGF(ERROR, "driver_test_realm_test", "Realm:Start failed: %d",
+            wire_result.value().error_value());
     return 1;
   }
 

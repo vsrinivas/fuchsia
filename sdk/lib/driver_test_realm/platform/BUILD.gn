@@ -31,7 +31,6 @@ executable("bin") {
   sources = [ "platform.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
-    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 

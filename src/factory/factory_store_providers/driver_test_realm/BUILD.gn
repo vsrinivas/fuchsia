@@ -22,7 +22,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/lib/files:files",
     "//src/lib/fsl",
     "//src/lib/storage/block_client/cpp",

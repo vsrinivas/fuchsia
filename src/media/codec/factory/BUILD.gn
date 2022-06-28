@@ -33,6 +33,9 @@ source_set("factory_source") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+
+    # For FX_LOGF
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -67,7 +67,7 @@ fuchsia_driver("ge2d-driver-driver") {
     ":ge2d_bind",
     ":ge2d_on_device_test",
     ":lib",
-    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/driver-unit-test",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

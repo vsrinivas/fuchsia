@@ -73,7 +73,7 @@ fuchsia_driver("fuchsia_driver") {
   output_name = "gdc"
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

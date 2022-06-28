@@ -64,7 +64,7 @@ if (target_cpu == "arm64") {
       ":amlogic_video_bind",
       ":sources",
       ":test_support",
-      "//sdk/lib/syslog/cpp:backend",
+      "//sdk/lib/syslog/cpp:backend_legacy",
     ]
 
     sources = [ "binding.c" ]
@@ -90,7 +90,7 @@ if (target_cpu == "arm64") {
       ":test_support",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
       "//sdk/lib/fdio",
-      "//sdk/lib/syslog/cpp:backend",
+      "//sdk/lib/syslog/cpp:backend_legacy",
     ]
     sources = [
       "test_binding.c",

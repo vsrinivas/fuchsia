@@ -75,6 +75,7 @@ source_set("codec_impl") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
 
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",

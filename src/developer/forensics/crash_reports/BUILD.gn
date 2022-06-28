@@ -334,6 +334,7 @@ source_set("snapshot_manager") {
   deps = [
     ":errors",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/uuid",
   ]
 }

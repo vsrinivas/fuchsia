@@ -142,6 +142,7 @@ group("common_test_deps") {
   testonly = true
   public_deps = [
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

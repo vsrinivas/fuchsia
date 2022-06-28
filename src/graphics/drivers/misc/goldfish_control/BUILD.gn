@@ -22,7 +22,7 @@ common_deps = [
   "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
   "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
   "//sdk/lib/fit-promise",
-  "//sdk/lib/syslog/cpp:backend",
+  "//sdk/lib/syslog/cpp:backend_legacy",
   "//src/devices/lib/driver",
   "//src/devices/lib/goldfish/pipe_headers",
   "//src/lib/ddk",

@@ -2929,8 +2929,9 @@ template("executable") {
       }
 
       if (!has_syslog_backend) {
-        # All executables automatically get the structured backend.
-        deps += [ "//sdk/lib/syslog/cpp:backend" ]
+        # All executables automatically get the legacy backend.
+        deps += [ "//sdk/lib/syslog/cpp:backend_legacy" ]
+        assert_no_deps += [ "//sdk/lib/syslog/cpp:backend" ]
       }
     }
 

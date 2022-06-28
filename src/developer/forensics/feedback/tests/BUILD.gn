@@ -333,7 +333,6 @@ executable("namespace_init_unittest_exe") {
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
