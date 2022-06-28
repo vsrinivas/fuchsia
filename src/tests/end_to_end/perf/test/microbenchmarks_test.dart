@@ -40,18 +40,12 @@ void main() {
 
   test('fuchsia_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results.json';
-
-    final List<File> resultsFiles = [];
-    for (var process = 0; process < processRuns; ++process) {
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/fuchsia_microbenchmarks -p --quiet --out $resultsFile'
-              ' --runs $iterationsPerTestPerProcess');
-      expect(result.exitCode, equals(0));
-      resultsFiles.add(await helper.storage.dumpFile(resultsFile,
-          'results_microbenchmarks_process$process', 'fuchsiaperf_full.json'));
-    }
-    await helper.processResultsSummarized(resultsFiles);
+    await helper.runTestComponentV1(
+        packageName: 'fuchsia_microbenchmarks_perftestmode',
+        componentName: 'fuchsia_microbenchmarks_perftestmode.cmx',
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentV1OutputPath}'
+            ' --runs $iterationsPerTestPerProcess',
+        processRuns: processRuns);
   }, timeout: Timeout.none);
 
   // Run some of the microbenchmarks with tracing enabled to measure the
