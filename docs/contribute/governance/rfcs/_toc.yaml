@@ -354,3 +354,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0168_exposing_inspect_through_inspectsink.md
   - title: "RFC-0170: Remove binary images from the update package"
     path: /docs/contribute/governance/rfcs/0170_remove_binary_images_from_the_update_package.md
+  - title: "RFC-0171: Improved diagnostics routing"
+    path: /docs/contribute/governance/rfcs/0171_improved_diagnostics_routing.md

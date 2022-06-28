@@ -2205,3 +2205,16 @@
   reviewers: ['wittrock@google.com', 'jsankey@google.com', 'gtsai@google.com', 'awolter@google.com', 'kevinwells@google.com', 'ampearce@google.com', 'billstevenson@google.com']
   submitted: '2022-05-12'
   reviewed: '2022-06-22'
+
+- name: 'RFC-0171'
+  title: 'Improved diagnostics routing'
+  short_description: 'Introduction of CML and CMC utilities to improve diagnostics routing'
+  authors: ['miguelfrde@google.com']
+  file: '0171_improved_diagnostics_routing.md'
+  area: ['Diagnostics', 'Component Framework']
+  issue: ['93346']
+  gerrit_change_id: ['681567']
+  status: 'Accepted'
+  reviewers: ['crjohns@google.com', 'geb@google.com', 'hjfreyer@google.com', 'shayba@google.com', 'zarvox@google.com']
+  submitted: '2022-05-19'
+  reviewed: '2022-06-23'
