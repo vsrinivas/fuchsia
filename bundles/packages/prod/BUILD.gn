@@ -224,13 +224,13 @@ group("tiles") {
 group("tracing") {
   testonly = true
   public_deps = [
-    "//src/developer/trace2json",
     "//src/developer/tracing/bin/trace",
     "//src/developer/tracing/bin/trace_manager",
     "//src/developer/tracing/bin/traceutil",
     "//src/performance//bin/cpuperf_provider",
     "//src/performance//bin/cpuperf_provider:report_generators",
     "//src/performance//bin/ktrace_provider",
+    "//src/performance/trace2json",
   ]
 }
 

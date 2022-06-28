@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/trace2json/convert.h"
+#include "src/performance/trace2json/convert.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
@@ -16,7 +16,7 @@
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
 #include <trace-reader/reader.h>
 
-#include "src/developer/trace2json/trace_parser.h"
+#include "src/performance/trace2json/trace_parser.h"
 
 namespace {
 

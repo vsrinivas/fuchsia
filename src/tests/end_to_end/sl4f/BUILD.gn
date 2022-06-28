@@ -99,7 +99,7 @@ if (is_host) {
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-    deps = [ "//src/developer/trace2json:bin" ]
+    deps = [ "//src/performance/trace2json:bin" ]
   }
 }
 
