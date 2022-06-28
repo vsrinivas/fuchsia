@@ -72,7 +72,8 @@ def main():
     parser = argparse.ArgumentParser(
         description=
         'Process the given selector pipeline files into selectors for Inspect.')
-    parser.add_argument('-f', '--file', action='append', help='Selector file')
+    parser.add_argument(
+        '-f', '--file', action='append', help='Selector file', default=[])
     parser.add_argument('-n', '--name', help='The pipeline name', required=True)
     parser.add_argument(
         '-o',
