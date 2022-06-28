@@ -12,11 +12,14 @@ group("test") {
   testonly = true
   deps = [
     ":audio_decoder_test",
+    ":audio_decoder_test_v2",
     ":audio_encoder_test",
+    ":audio_encoder_test_v2",
     ":h264-stream-test",
     ":h264_decoder_test",
+    ":h264_decoder_test_v2",
     ":h264_encoder_test",
-    ":h264_encoder_unittest",
+    ":h264_encoder_test_v2",
     ":stream_processor_lib_test",
     ":video-frame-stream-test",
     ":video_frame_hasher_test",
@@ -144,20 +147,28 @@ resource("sbc_file") {
   outputs = [ "data/s16le44100mono.sbc" ]
 }
 
-fuchsia_test_component("audio_decoder_test_comp") {
-  component_name = "audio_decoder_test"
-  manifest = "meta/audio_decoder_test.cml"
+fuchsia_test_component("audio_decoder_test_v2_comp") {
+  component_name = "audio_decoder_test_v2"
+  manifest = "meta/audio_decoder_test_v2.cml"
   deps = [
     ":audio_decoder_test_bin",
     ":sbc_file",
   ]
 }
 
-fuchsia_test_package("audio_decoder_test") {
-  test_components = [ ":audio_decoder_test_comp" ]
+fuchsia_test_package("audio_decoder_test_v2") {
+  test_components = [ ":audio_decoder_test_v2_comp" ]
   deps = [
     ":sbc_file",
     "//src/media/codec:codec_factory",
+  ]
+}
+
+fuchsia_unittest_package("audio_decoder_test") {
+  manifest = "meta/audio_decoder_test.cmx"
+  deps = [
+    ":audio_decoder_test_bin",
+    ":sbc_file",
   ]
 }
 
@@ -193,18 +204,23 @@ rustc_test("audio_encoder_test_bin") {
   ]
 }
 
-fuchsia_test_component("audio_encoder_test_comp") {
-  component_name = "audio_encoder_test"
-  manifest = "meta/audio_encoder_test.cml"
+fuchsia_test_component("audio_encoder_test_v2_comp") {
+  component_name = "audio_encoder_test_v2"
+  manifest = "meta/audio_encoder_test_v2.cml"
   deps = [
     ":audio_encoder_test_bin",
     ":sbc_file",
   ]
 }
 
-fuchsia_test_package("audio_encoder_test") {
-  test_components = [ ":audio_encoder_test_comp" ]
+fuchsia_test_package("audio_encoder_test_v2") {
+  test_components = [ ":audio_encoder_test_v2_comp" ]
   deps = [ "//src/media/codec:codec_factory" ]
+}
+
+fuchsia_unittest_package("audio_encoder_test") {
+  manifest = "meta/audio_encoder_test.cmx"
+  deps = [ ":audio_encoder_test_bin" ]
 }
 
 rustc_library("video_frame_hasher_lib") {
@@ -316,14 +332,14 @@ resource("bear_video") {
   outputs = [ "data/bear.h264" ]
 }
 
-fuchsia_test_component("h264_decoder_test_comp") {
-  component_name = "h264_decoder_test"
-  manifest = "meta/h264_decoder_test.cml"
+fuchsia_test_component("h264_decoder_test_v2_comp") {
+  component_name = "h264_decoder_test_v2"
+  manifest = "meta/h264_decoder_test_v2.cml"
   deps = [ ":h264_decoder_test_bin" ]
 }
 
-fuchsia_test_package("h264_decoder_test") {
-  test_components = [ ":h264_decoder_test_comp" ]
+fuchsia_test_package("h264_decoder_test_v2") {
+  test_components = [ ":h264_decoder_test_v2_comp" ]
   deps = [
     ":bear_video",
     "//src/media/codec:codec_factory",
@@ -334,6 +350,22 @@ fuchsia_test_package("h264_decoder_test") {
                      sherlock_env,
                      vim3_env,
                      nuc_env,
+                   ]
+  }
+}
+
+fuchsia_unittest_package("h264_decoder_test") {
+  manifest = "meta/h264_decoder_test.cmx"
+  deps = [
+    ":bear_video",
+    ":h264_decoder_test_bin",
+  ]
+
+  test_specs = {
+    environments = basic_envs + [
+                     astro_env,
+                     sherlock_env,
+                     vim3_env,
                    ]
   }
 }
@@ -368,14 +400,14 @@ rustc_test("h264_encoder_test_bin") {
   ]
 }
 
-fuchsia_test_component("h264_encoder_test_comp") {
-  component_name = "h264_encoder_test"
-  manifest = "meta/h264_encoder_test.cml"
+fuchsia_test_component("h264_encoder_test_v2_comp") {
+  component_name = "h264_encoder_test_v2"
+  manifest = "meta/h264_encoder_test_v2.cml"
   deps = [ ":h264_encoder_test_bin" ]
 }
 
-fuchsia_test_package("h264_encoder_test") {
-  test_components = [ ":h264_encoder_test_comp" ]
+fuchsia_test_package("h264_encoder_test_v2") {
+  test_components = [ ":h264_encoder_test_v2_comp" ]
   deps = [ "//src/media/codec:codec_factory" ]
   test_specs = {
     environments = [
@@ -385,7 +417,8 @@ fuchsia_test_package("h264_encoder_test") {
   }
 }
 
-fuchsia_unittest_package("h264_encoder_unittest") {
+fuchsia_unittest_package("h264_encoder_test") {
+  manifest = "meta/h264_encoder_test.cmx"
   deps = [ ":h264_encoder_test_bin" ]
 
   test_specs = {
@@ -423,13 +456,30 @@ rustc_test("h265_encoder_test_bin") {
   ]
 }
 
-fuchsia_test_component("h265-encoder-test") {
-  manifest = "meta/h265_encoder_test.cml"
+fuchsia_unittest_package("h265-encoder-test") {
+  manifest = "meta/h265_encoder_test.cmx"
+  deps = [ ":h265_encoder_test_bin" ]
+
+  test_specs = {
+    environments = [ sherlock_env ]
+  }
+}
+
+fuchsia_unittest_component("h265-encoder-test-legacy") {
+  manifest = "meta/h265_encoder_test.cmx"
+  deps = [ ":h265_encoder_test_bin" ]
+}
+
+fuchsia_test_component("h265-encoder-test-v2") {
+  manifest = "meta/h265_encoder_test_v2.cml"
   deps = [ ":h265_encoder_test_bin" ]
 }
 
 fuchsia_test_package("h265-encoder-tests") {
-  test_components = [ ":h265-encoder-test" ]
+  test_components = [
+    ":h265-encoder-test-legacy",
+    ":h265-encoder-test-v2",
+  ]
   test_specs = {
     environments = [ sherlock_env ]
   }
