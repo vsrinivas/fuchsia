@@ -7,10 +7,6 @@ group("tests") {
   deps = [
     "fake-drivers",
     "fake-drivers/fake-ot-radio:tests",
-    "test-components:ot-radio-component-tests",
-
-    # TODO(fxbug.dev/92760): Re-enable after OpenThread update lands.
-    # "test-components:ot-stack-component-tests",
   ]
 }
 
@@ -19,6 +15,5 @@ group("all-tests") {
   deps = [
     ":tests",
     "fake-drivers",
-    "test-components:ot-radio-tests",
   ]
 }
