@@ -18,6 +18,65 @@
 
 namespace coresight {
 
+// [CS] D6.4.4
+struct Class0x1RomEntry : public hwreg::RegisterBase<Class0x1RomEntry, uint32_t> {
+  DEF_FIELD(31, 12, offset);
+  DEF_RSVDZ_FIELD(11, 9);
+  DEF_FIELD(8, 4, powerid);
+  DEF_RSVDZ_BIT(3);
+  DEF_BIT(2, powerid_valid);
+  DEF_BIT(1, format);
+  DEF_BIT(0, present);
+
+  static auto GetAt(uint32_t offset, uint32_t N) {
+    return hwreg::RegisterAddr<Class0x1RomEntry>(offset +
+                                                 N * static_cast<uint32_t>(sizeof(uint32_t)));
+  }
+};
+
+// [CS] D7.5.17
+struct Class0x9RomNarrowEntry : public hwreg::RegisterBase<Class0x9RomNarrowEntry, uint32_t> {
+  DEF_FIELD(31, 12, offset);
+  DEF_RSVDZ_FIELD(11, 9);
+  DEF_FIELD(8, 4, powerid);
+  DEF_RSVDZ_BIT(3);
+  DEF_BIT(2, powerid_valid);
+  DEF_FIELD(1, 0, present);
+
+  static auto GetAt(uint32_t offset, uint32_t N) {
+    return hwreg::RegisterAddr<Class0x9RomNarrowEntry>(offset +
+                                                       N * static_cast<uint32_t>(sizeof(uint32_t)));
+  }
+};
+
+// [CS] D7.5.17
+struct Class0x9RomWideEntry : public hwreg::RegisterBase<Class0x9RomWideEntry, uint64_t> {
+  DEF_FIELD(63, 12, offset);
+  DEF_RSVDZ_FIELD(11, 9);
+  DEF_FIELD(8, 4, powerid);
+  DEF_RSVDZ_BIT(3);
+  DEF_BIT(2, powerid_valid);
+  DEF_FIELD(1, 0, present);
+
+  static auto GetAt(uint32_t offset, uint32_t N) {
+    return hwreg::RegisterAddr<Class0x9RomWideEntry>(offset +
+                                                     N * static_cast<uint32_t>(sizeof(uint64_t)));
+  }
+};
+
+// [CS] D7.5.10
+struct Class0x9RomDeviceIdRegister
+    : public hwreg::RegisterBase<Class0x9RomDeviceIdRegister, uint32_t> {
+  DEF_RSVDZ_FIELD(31, 6);
+  DEF_BIT(5, prr);
+  DEF_BIT(4, sysmem);
+  DEF_FIELD(3, 0, format);
+
+  static auto GetAt(uint32_t offset) {
+    return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(offset + 0xfcc);
+  }
+};
+
 // [CS] D5
 // A ROM table is a basic CoreSight component that provides pointers to other
 // components (including other ROM tables) in its lower registers. It is an
@@ -26,70 +85,12 @@ namespace coresight {
 // as a tree, the leaves are the system's CoreSight components and the root is
 // typically referred to as the "base ROM table" (or, more plainly, "the ROM
 // table").
-class ROMTable {
+class RomTable {
  public:
-  // [CS] D6.4.4
-  struct Class0x1Entry : public hwreg::RegisterBase<Class0x1Entry, uint32_t> {
-    DEF_FIELD(31, 12, offset);
-    DEF_RSVDZ_FIELD(11, 9);
-    DEF_FIELD(8, 4, powerid);
-    DEF_RSVDZ_BIT(3);
-    DEF_BIT(2, powerid_valid);
-    DEF_BIT(1, format);
-    DEF_BIT(0, present);
-
-    static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x1Entry>(offset +
-                                                N * static_cast<uint32_t>(sizeof(uint32_t)));
-    }
-  };
-
-  // [CS] D7.5.17
-  struct Class0x9NarrowEntry : public hwreg::RegisterBase<Class0x9NarrowEntry, uint32_t> {
-    DEF_FIELD(31, 12, offset);
-    DEF_RSVDZ_FIELD(11, 9);
-    DEF_FIELD(8, 4, powerid);
-    DEF_RSVDZ_BIT(3);
-    DEF_BIT(2, powerid_valid);
-    DEF_FIELD(1, 0, present);
-
-    static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x9NarrowEntry>(offset +
-                                                      N * static_cast<uint32_t>(sizeof(uint32_t)));
-    }
-  };
-
-  // [CS] D7.5.17
-  struct Class0x9WideEntry : public hwreg::RegisterBase<Class0x9WideEntry, uint64_t> {
-    DEF_FIELD(63, 12, offset);
-    DEF_RSVDZ_FIELD(11, 9);
-    DEF_FIELD(8, 4, powerid);
-    DEF_RSVDZ_BIT(3);
-    DEF_BIT(2, powerid_valid);
-    DEF_FIELD(1, 0, present);
-
-    static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x9WideEntry>(offset +
-                                                    N * static_cast<uint32_t>(sizeof(uint64_t)));
-    }
-  };
-
-  // [CS] D7.5.10
-  struct Class0x9DeviceIDRegister : public hwreg::RegisterBase<Class0x9DeviceIDRegister, uint32_t> {
-    DEF_RSVDZ_FIELD(31, 6);
-    DEF_BIT(5, prr);
-    DEF_BIT(4, sysmem);
-    DEF_FIELD(3, 0, format);
-
-    static auto GetAt(uint32_t offset) {
-      return hwreg::RegisterAddr<Class0x9DeviceIDRegister>(offset + 0xfcc);
-    }
-  };
-
   // Conceptually, we construct a ROM table from a span of bytes, the span
   // being required to contain all of the components that the table
   // transitively refers to.
-  ROMTable(uintptr_t base, uint32_t span_size) : base_(base), span_size_(span_size) {}
+  RomTable(uintptr_t base, uint32_t span_size) : base_(base), span_size_(span_size) {}
 
   // Walks the underlying tree of components with no dynamic allocation,
   // calling `callback` on the address of each component found.
@@ -120,14 +121,14 @@ class ROMTable {
   template <typename IoProvider, typename ComponentCallback>
   fitx::result<std::string_view> WalkFrom(IoProvider io, ComponentCallback&& callback,
                                           uint32_t offset) {
-    const ComponentIDRegister::Class classid =
-        ComponentIDRegister::GetAt(offset).ReadFrom(&io).classid();
+    const ComponentIdRegister::Class classid =
+        ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
     const auto archid = static_cast<uint16_t>(arch_reg.archid());
     if (IsTable(classid, architect, archid)) {
       const auto format =
-          static_cast<uint8_t>(Class0x9DeviceIDRegister::GetAt(offset).ReadFrom(&io).format());
+          static_cast<uint8_t>(Class0x9RomDeviceIdRegister::GetAt(offset).ReadFrom(&io).format());
 
       fitx::result<std::string_view, uint32_t> upper_bound = EntryIndexUpperBound(classid, format);
       if (upper_bound.is_error()) {
@@ -170,28 +171,28 @@ class ROMTable {
     return fitx::ok();
   }
 
-  bool IsTable(ComponentIDRegister::Class classid, uint16_t architect, uint16_t archid) const;
+  bool IsTable(ComponentIdRegister::Class classid, uint16_t architect, uint16_t archid) const;
 
-  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ComponentIDRegister::Class classid,
+  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ComponentIdRegister::Class classid,
                                                                 uint8_t format) const;
 
   template <typename IoProvider>
   fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
                                                             uint32_t N,
-                                                            ComponentIDRegister::Class classid,
+                                                            ComponentIdRegister::Class classid,
                                                             uint8_t format) {
-    if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
-      auto entry = Class0x1Entry::GetAt(offset, N).ReadFrom(&io);
+    if (classid == ComponentIdRegister::Class::k0x1RomTable) {
+      auto entry = Class0x1RomEntry::GetAt(offset, N).ReadFrom(&io);
       return fitx::ok(EntryContents{
           .value = entry.reg_value(),
           .offset = static_cast<uint32_t>(entry.offset()),
           .present = static_cast<bool>(entry.present()),
       });
-    } else if (classid == ComponentIDRegister::Class::kCoreSight) {
+    } else if (classid == ComponentIdRegister::Class::kCoreSight) {
       // [CS] D7.5.17: only a value of 0b11 for present() signifies presence.
       switch (format) {
         case kDevidFormatNarrow: {
-          auto entry = Class0x9NarrowEntry::GetAt(offset, N).ReadFrom(&io);
+          auto entry = Class0x9RomNarrowEntry::GetAt(offset, N).ReadFrom(&io);
           return fitx::ok(EntryContents{
               .value = entry.reg_value(),
               .offset = static_cast<uint32_t>(entry.offset()),
@@ -199,7 +200,7 @@ class ROMTable {
           });
         }
         case kDevidFormatWide: {
-          auto entry = Class0x9WideEntry::GetAt(offset, N).ReadFrom(&io);
+          auto entry = Class0x9RomWideEntry::GetAt(offset, N).ReadFrom(&io);
           uint64_t u32_offset = entry.offset() & 0xffffffff;
           if (entry.offset() != u32_offset) {
             return fitx::error(

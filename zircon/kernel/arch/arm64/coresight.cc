@@ -15,7 +15,7 @@
 
 namespace {
 
-using coresight::ComponentIDRegister;
+using coresight::ComponentIdRegister;
 using coresight::DeviceAffinityRegister;
 using coresight::DeviceArchRegister;
 using coresight::DeviceTypeRegister;
@@ -30,18 +30,18 @@ void DumpComponentInfo(uintptr_t component) {
   paddr_t paddr = vaddr_to_paddr(reinterpret_cast<void*>(component));
   printf("address: %#" PRIxPTR "\n", paddr);
 
-  const ComponentIDRegister::Class classid = ComponentIDRegister::Get().ReadFrom(&mmio).classid();
-  const uint16_t partid = coresight::GetPartID(mmio);
+  const ComponentIdRegister::Class classid = ComponentIdRegister::Get().ReadFrom(&mmio).classid();
+  const uint16_t partid = coresight::GetPartId(mmio);
 
   // Morally a CoreSight component, if not one technically, ARM puts them in ROM tables.
-  if (classid == ComponentIDRegister::Class::kNonStandard &&
+  if (classid == ComponentIdRegister::Class::kNonStandard &&
       partid == coresight::arm::partid::kTimestampGenerator) {
     printf("type: N/A\n");
     printf("affinity: cluster\n");
     printf("architect: ARM\n");
     printf("architecture: Timestamp Generator\n");
     return;
-  } else if (classid != ComponentIDRegister::Class::kCoreSight) {
+  } else if (classid != ComponentIdRegister::Class::kCoreSight) {
     std::string_view classid_str = coresight::ToString(classid);
     printf("unexpected component found; (class, part number) = (%#x (%.*s), %#x)\n",
            static_cast<uint8_t>(classid), static_cast<int>(classid_str.size()), classid_str.data(),
@@ -83,50 +83,50 @@ void DumpComponentInfo(uintptr_t component) {
 
   printf("architecture: ");
   switch (archid) {
-    case coresight::arm::archid::kCTI:
+    case coresight::arm::archid::kCti:
       printf("Cross-Trigger Matrix (CTI)\n");
       return;
-    case coresight::arm::archid::kETMv3:
+    case coresight::arm::archid::kEtm3:
       printf("Embedded Trace Monitor (ETM) v3.%u\n", revision);
       return;
-    case coresight::arm::archid::kETMv4:
+    case coresight::arm::archid::kEtm4:
       printf("Embedded Trace Monitor (ETM) v4.%u\n", revision);
       return;
-    case coresight::arm::archid::kPMUv2:
+    case coresight::arm::archid::kPmu2:
       printf("Performance Monitor Unit (PMU) v2.%u\n", revision);
       return;
-    case coresight::arm::archid::kPMUv3:
+    case coresight::arm::archid::kPmu3:
       printf("Performance Monitor Unit (PMU) v3.%u\n", revision);
       return;
-    case coresight::arm::archid::kROMTable:
+    case coresight::arm::archid::kRomTable:
       printf("0x9 ROM Table\n");
       return;
-    case coresight::arm::archid::kV8Dot0A:
+    case coresight::arm::archid::kCoreDebugInterface8_0A:
       printf("ARM v8.0-A Core Debug Interface\n");
       return;
-    case coresight::arm::archid::kV8Dot1A:
+    case coresight::arm::archid::kCoreDebugInterface8_1A:
       printf("ARM v8.1-A Core Debug Interface\n");
       return;
-    case coresight::arm::archid::kV8Dot2A:
+    case coresight::arm::archid::kCoreDebugInterface8_2A:
       printf("ARM v8.2-A Core Debug Interface\n");
       return;
   };
 
   // Sometimes no architecture ID is populated; fall back to part ID.
   switch (partid) {
-    case coresight::arm::partid::kETB:
+    case coresight::arm::partid::kEtb:
       printf("Embedded Trace Buffer (ETB)\n");
       return;
-    case coresight::arm::partid::kCTI400:
+    case coresight::arm::partid::kCti400:
       printf("Cross-Trigger Matrix (CTI) (SoC400 generation)\n");
       return;
-    case coresight::arm::partid::kCTI600:
+    case coresight::arm::partid::kCti600:
       printf("Cross-Trigger Matrix (CTI) (SoC600 generation)\n");
       return;
-    case coresight::arm::partid::kTMC:
+    case coresight::arm::partid::kTmc:
       printf("Trace Memory Controller (TMC) (SoC400 generation)\n");
       return;
-    case coresight::arm::partid::kTPIU:
+    case coresight::arm::partid::kTpiu:
       printf("Trace Port Interface Unit (TPIU)\n");
       return;
     case coresight::arm::partid::kTraceFunnel:
@@ -139,9 +139,9 @@ void DumpComponentInfo(uintptr_t component) {
   printf("unknown: (archid, part number) = (%#x, %#x)\n", archid, partid);
 }
 
-int WalkROMTable(uintptr_t addr, uint32_t view_size) {
+int WalkRomTable(uintptr_t addr, uint32_t view_size) {
   hwreg::RegisterMmio mmio(reinterpret_cast<void*>(addr));
-  coresight::ROMTable table(addr, view_size);
+  coresight::RomTable table(addr, view_size);
   auto result = table.Walk(mmio, [](uintptr_t component) {
     printf("\n----------------------------------------\n");
     DumpComponentInfo(component);
@@ -187,7 +187,7 @@ int cmd_coresight(int argc, const cmd_args* argv, uint32_t flags) {
       return 1;
     }
     printf("virtual address: %p\n", virt);
-    return WalkROMTable(reinterpret_cast<uintptr_t>(virt), kViewSize);
+    return WalkRomTable(reinterpret_cast<uintptr_t>(virt), kViewSize);
   } else {
     printf("unrecognized command: %s\n", argv[1].str);
     usage();

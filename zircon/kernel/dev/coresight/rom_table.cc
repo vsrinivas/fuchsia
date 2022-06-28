@@ -10,22 +10,22 @@
 
 namespace coresight {
 
-bool ROMTable::IsTable(ComponentIDRegister::Class classid, uint16_t architect,
+bool RomTable::IsTable(ComponentIdRegister::Class classid, uint16_t architect,
                        uint16_t archid) const {
-  if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
+  if (classid == ComponentIdRegister::Class::k0x1RomTable) {
     return true;
-  } else if (classid == ComponentIDRegister::Class::kCoreSight && architect == arm::kArchitect &&
-             archid == arm::archid::kROMTable) {
+  } else if (classid == ComponentIdRegister::Class::kCoreSight && architect == arm::kArchitect &&
+             archid == arm::archid::kRomTable) {
     return true;
   }
   return false;
 }
 
-fitx::result<std::string_view, uint32_t> ROMTable::EntryIndexUpperBound(
-    ComponentIDRegister::Class classid, uint8_t format) const {
-  if (classid == ComponentIDRegister::Class::k0x1ROMTable) {
+fitx::result<std::string_view, uint32_t> RomTable::EntryIndexUpperBound(
+    ComponentIdRegister::Class classid, uint8_t format) const {
+  if (classid == ComponentIdRegister::Class::k0x1RomTable) {
     return fitx::ok(k0x1EntryUpperBound);
-  } else if (classid == ComponentIDRegister::Class::kCoreSight) {
+  } else if (classid == ComponentIdRegister::Class::kCoreSight) {
     switch (format) {
       case 0x0:
         return fitx::ok(k0x9NarrowEntryUpperBound);
