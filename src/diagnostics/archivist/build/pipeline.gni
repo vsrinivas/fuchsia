@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
+import("//build/python/python_action.gni")
 
 # Define a filtered ArchiveAccessor pipeline.
 #
@@ -15,6 +17,20 @@ import("//build/config.gni")
 #   inspect
 #     Type: list of files
 #     Required: inspect selector configurations for the pipeline
+#
+#   with_tests
+#     Type: boolean
+#     Optional: whether or not to generate tests for this pipeline.
+#
+#   test_expect_disabled
+#     Type: boolean
+#     Optional: defaults to false. Whether or not the test should assert that the pipeline is
+#         disabled.
+#
+#   test_environments
+#     Type: List<Environment>
+#     Optional: environments in which the test will be executed.
+#
 # TODO(fxbug.dev/60611) update public pipeline docs with this template
 template("archive_pipeline") {
   assert(defined(invoker.inspect), "Must define inspect selectors")
@@ -23,9 +39,59 @@ template("archive_pipeline") {
   if (defined(invoker.name)) {
     name = invoker.name
   }
+  with_tests = true
+  if (defined(invoker.with_tests)) {
+    with_tests = invoker.with_tests
+  }
 
   resource(invoker.target_name) {
     sources = invoker.inspect
     outputs = [ "config/archivist/${name}/{{source_file_part}}" ]
+  }
+
+  if (with_tests) {
+    path_to_test_cml = "${target_out_dir}/${invoker.target_name}_test.cml"
+    generate_test_cml_action = "${invoker.target_name}_generate_test_cml_action"
+
+    python_action(generate_test_cml_action) {
+      binary_label =
+          "//src/diagnostics/archivist/build/scripts:generate_pipeline_test_cml"
+      outputs = [ path_to_test_cml ]
+
+      args = [
+        "--name",
+        name,
+        "--out",
+        rebase_path(path_to_test_cml, root_build_dir),
+      ]
+      if (defined(invoker.test_expect_disabled) &&
+          invoker.test_expect_disabled) {
+        args += [ "--expect-disabled" ]
+      }
+      foreach(path, invoker.inspect) {
+        args += [
+          "--file",
+          path,
+        ]
+      }
+    }
+
+    component_action = "${invoker.target_name}_pipeline_test_component"
+    fuchsia_component(component_action) {
+      testonly = true
+      component_name = "${invoker.target_name}_pipeline_test"
+      manifest = path_to_test_cml
+      manifest_deps = [ ":${generate_test_cml_action}" ]
+    }
+
+    fuchsia_test_package("${invoker.target_name}_pipeline_test") {
+      test_components = [ ":${component_action}" ]
+
+      if (defined(invoker.test_environments)) {
+        test_specs = {
+          environments = invoker.test_environments
+        }
+      }
+    }
   }
 }
