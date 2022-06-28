@@ -8,7 +8,11 @@ import("//src/proc/tests/starnix_test_package.gni")
 
 group("gvisor") {
   testonly = true
-  deps = [ ":starnix_gvisor_tests" ]
+  deps = [
+    # The benchmarks aren't currently enabled by default in CQ.
+    #":starnix_gvisor_benchmarks",
+    ":starnix_gvisor_tests",
+  ]
 }
 
 # Gvisor tests should depend on this.
@@ -132,8 +136,40 @@ gvisor_tests = [
   "xattr_test",
 ]
 
+gvisor_benchmarks = [
+  "clock_getres_benchmark",
+  "clock_gettime_benchmark",
+  "death_benchmark",
+  "dup_benchmark",
+  "epoll_benchmark",
+  "fork_benchmark",
+  "futex_benchmark",
+  "getdents_benchmark",
+  "getpid_benchmark",
+  "gettid_benchmark",
+  "mapping_benchmark",
+  "open_benchmark",
+  "open_read_close_benchmark",
+  "pipe_benchmark",
+  "randread_benchmark",
+  "read_benchmark",
+  "sched_yield_benchmark",
+  "send_recv_benchmark",
+  "seqwrite_benchmark",
+  "signal_benchmark",
+  "sleep_benchmark",
+  "stat_benchmark",
+  "unlink_benchmark",
+  "write_benchmark",
+]
+
 foreach(test_name, gvisor_tests) {
   gvisor_test_component(test_name) {
+  }
+}
+
+foreach(benchmark_name, gvisor_benchmarks) {
+  gvisor_test_component(benchmark_name) {
   }
 }
 
@@ -149,5 +185,13 @@ stardroid_test_package("starnix_gvisor_tests") {
 
   foreach(test_name, gvisor_tests) {
     test_components += [ ":${test_name}" ]
+  }
+}
+
+stardroid_test_package("starnix_gvisor_benchmarks") {
+  test_components = []
+
+  foreach(benchmark_name, gvisor_benchmarks) {
+    test_components += [ ":${benchmark_name}" ]
   }
 }
