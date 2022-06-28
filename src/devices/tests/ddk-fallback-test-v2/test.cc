@@ -16,7 +16,8 @@ TEST(DdkFirmwaretest, DriverWasLoaded) {
   ASSERT_TRUE(dev);
 
   fbl::unique_fd out;
-  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(dev, "sys/test/ddk-fallback-test", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile(dev, "sys/test/ddk-fallback-test-device-0", &out));
 }
 
 int main(int argc, char **argv) {

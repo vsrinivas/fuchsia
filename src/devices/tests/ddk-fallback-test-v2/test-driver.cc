@@ -9,6 +9,8 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <sstream>
+
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
@@ -24,10 +26,19 @@ class TestFallbackDriver : public DeviceType {
  public:
   explicit TestFallbackDriver(zx_device_t* parent) : DeviceType(parent) {}
 
-  zx_status_t Bind() { return DdkAdd("ddk-fallback-test"); }
+  zx_status_t Bind() {
+    // Generate a unique child device name, in case the fallback driver is bound
+    // multiple times.
+    std::string name = std::string("ddk-fallback-test-device-").append(std::to_string(counter_));
+    return DdkAdd(name.c_str());
+  }
 
   // Device protocol implementation.
   void DdkRelease() { delete this; }
+
+ private:
+  // A counter to generate unique child device names
+  inline static int counter_ = 0;
 };
 
 zx_status_t TestFallbackBind(void* ctx, zx_device_t* device) {
