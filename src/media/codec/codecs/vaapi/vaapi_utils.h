@@ -19,12 +19,15 @@ class VADisplayWrapper {
   static bool InitializeSingleton(uint64_t vendor_id);
   static bool InitializeSingletonForTesting();
 
+  static bool DestroySingleton();
+
   static VADisplayWrapper* GetSingleton();
 
   VADisplay display() { return display_; }
 
  private:
   bool Initialize();
+  bool Destroy();
   magma_device_t magma_device_{};
   VADisplay display_{};
 };

@@ -51,8 +51,10 @@ bool VADisplayWrapper::InitializeSingleton(uint64_t required_vendor_id) {
   if (!new_display_wrapper->magma_device_)
     return false;
 
-  if (!new_display_wrapper->Initialize())
+  if (!new_display_wrapper->Initialize()) {
+    magma_device_release(new_display_wrapper->magma_device_);
     return false;
+  }
   display_wrapper = std::move(new_display_wrapper);
   return true;
 }
@@ -64,6 +66,17 @@ bool VADisplayWrapper::InitializeSingletonForTesting() {
     return false;
   display_wrapper = std::move(new_display_wrapper);
   return true;
+}
+
+// static
+bool VADisplayWrapper::DestroySingleton() {
+  if (display_wrapper->Destroy()) {
+    magma_device_release(display_wrapper->magma_device_);
+    display_wrapper.reset();
+    return true;
+  }
+
+  return false;
 }
 
 bool VADisplayWrapper::Initialize() {
@@ -78,6 +91,12 @@ bool VADisplayWrapper::Initialize() {
     return false;
   }
   return true;
+}
+
+bool VADisplayWrapper::Destroy() {
+  VAStatus va_status = vaTerminate(display_);
+
+  return (va_status == VA_STATUS_SUCCESS);
 }
 
 // static
