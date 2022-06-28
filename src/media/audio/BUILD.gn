@@ -9,7 +9,7 @@ group("audio") {
   deps = [
     ":tests",
     ":tools",
-    "audio_core/v2:audio_core",
+    "audio_core",
     "drivers",
     "examples",
     "lib",

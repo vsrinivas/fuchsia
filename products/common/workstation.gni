@@ -133,7 +133,7 @@ product_bootfs_labels -= [ "//bundles/drivers:usb-peripheral-stack" ]
 # Shards for media.
 core_realm_shards += [
   "//src/media/codec:codec_factory_shard",
-  "//src/media/audio/audio_core/v2:core_shard",
+  "//src/media/audio/audio_core:core_shard",
 ]
 
 # Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.

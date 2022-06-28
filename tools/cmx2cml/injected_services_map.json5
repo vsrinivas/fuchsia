@@ -28,6 +28,7 @@
         "fuchsia.lowpan.thread.DatasetConnector": "#meta/lowpanservice.cm",
         "fuchsia.lowpan.thread.MeshcopConnector": "#meta/lowpanservice.cm",
         "fuchsia.media.AudioCore": "#meta/audio_core.cm",
+        "fuchsia.media.Audio": "#meta/audio_core.cm",
         "fuchsia.mediacodec.CodecFactory": "#meta/codec_factory.cm",
         "fuchsia.memorypressure.Provider": "#meta/memory_monitor.cm",
         "fuchsia.net.http.Loader": "#meta/http-client.cm",
@@ -56,7 +57,7 @@
         },
         "#meta/audio_core.cm": {
             name: "audio_core",
-            gn_target: "//src/media/audio/audio_core/v2:audio_core_audio_core_component",
+            gn_target: "//src/media/audio/audio_core:audio_core_audio_core_component",
         },
         "#meta/build-info.cm": {
             name: "build_info",

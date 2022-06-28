@@ -4,7 +4,8 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//src/media/audio/audio_core_package.gni")
+import("//src/media/audio/audio_core_package_v2.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 action_foreach("json_schema_headers") {
@@ -31,6 +32,14 @@ metrics_registry("media_metrics_registry") {
   # third_party/cobalt_config/projects.yaml
   project_id = 3142410971
   generate_cc = true
+}
+
+audio_core_package("audio_core") {
+  package_deps = [ "//src/media/audio/effects/passthrough:audio_effects" ]
+}
+
+core_shard("core_shard") {
+  shard_file = "meta/audio_core.core_shard.cml"
 }
 
 source_set("audio_core_lib") {
@@ -374,9 +383,6 @@ group("tests") {
     ":audio_core_unittests",
     "mixer:tests",
     "test",
-
-    # include this explicitly, in case product includes a custom audio_core package by other name
-    "//src/media/audio/audio_core/v2:audio_core",
   ]
 }
 
