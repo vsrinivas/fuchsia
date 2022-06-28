@@ -515,4 +515,20 @@ zx_status_t DestroyPartitionWithDevfs(int devfs_root_fd, const uint8_t* uniqueGU
   return DestroyPartitionImpl(*std::move(fd_or));
 }
 
+__EXPORT
+zx_status_t FvmActivate(int fvm_fd, fuchsia_hardware_block_partition::wire::Guid deactivate,
+                        fuchsia_hardware_block_partition::wire::Guid activate) {
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> client(
+      caller.borrow_channel());
+  auto response = fidl::WireCall(client)->Activate(deactivate, activate);
+  if (response.status() != ZX_OK) {
+    return response.status();
+  }
+  if (response.value().status != ZX_OK) {
+    return response.value().status;
+  }
+  return ZX_OK;
+}
+
 }  // namespace fs_management

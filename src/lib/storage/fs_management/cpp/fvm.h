@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_FVM_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_FVM_H_
 
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/status.h>
 #include <stdint.h>
@@ -78,6 +79,12 @@ zx::status<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
 zx_status_t DestroyPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUID);
 zx_status_t DestroyPartitionWithDevfs(int devfs_root_fd, const uint8_t* uniqueGUID,
                                       const uint8_t* typeGUID);
+
+// Marks one partition as active and optionally another as inactive in one atomic operation.
+// If both partition GUID are the same, the partition will be activated and
+// no partition will be marked inactive.
+zx_status_t FvmActivate(int fvm_fd, fuchsia_hardware_block_partition::wire::Guid deactivate,
+                        fuchsia_hardware_block_partition::wire::Guid activate);
 
 }  // namespace fs_management
 
