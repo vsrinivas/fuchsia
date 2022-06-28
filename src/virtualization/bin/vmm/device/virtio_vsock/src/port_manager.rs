@@ -222,7 +222,11 @@ impl PortManager {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async::TestExecutor};
+    use {
+        super::*,
+        fidl_fuchsia_virtualization::{DEFAULT_GUEST_CID, HOST_CID},
+        fuchsia_async::TestExecutor,
+    };
 
     #[fuchsia::test]
     async fn listen_on_ports() {
@@ -264,7 +268,9 @@ mod tests {
         let mut port_manager = PortManager::new();
 
         assert!(port_manager.add_listener(12345).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(12345, 54321)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 12345, DEFAULT_GUEST_CID, 54321))
+            .is_ok());
         port_manager.remove_listener(12345);
 
         // Port is still active as there's an active connection.
@@ -275,8 +281,15 @@ mod tests {
     async fn clean_connection_shutdown_does_not_quarantine() {
         let mut port_manager = PortManager::new();
 
-        assert!(port_manager.add_connection(VsockConnectionKey::new(12345, 54321)).is_ok());
-        port_manager.remove_connection(VsockConnectionKey::new(12345, 54321));
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 12345, DEFAULT_GUEST_CID, 54321))
+            .is_ok());
+        port_manager.remove_connection(VsockConnectionKey::new(
+            HOST_CID,
+            12345,
+            DEFAULT_GUEST_CID,
+            54321,
+        ));
 
         assert!(!port_manager.active_ports.contains_key(&12345));
         assert!(port_manager.quarantined_connections.is_empty());
@@ -288,13 +301,21 @@ mod tests {
 
         // All three of these are fine -- ports can be multiplexed but the connection pair must be
         // unique.
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 3)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(3, 1)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 3))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 3, DEFAULT_GUEST_CID, 1))
+            .is_ok());
 
         // This connection is a duplicate, and is thus rejected.
         assert_eq!(
-            port_manager.add_connection(VsockConnectionKey::new(1, 2)).unwrap_err(),
+            port_manager
+                .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+                .unwrap_err(),
             zx::Status::ALREADY_EXISTS
         );
     }
@@ -305,12 +326,21 @@ mod tests {
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
         let mut port_manager = PortManager::new();
 
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
-        port_manager.remove_connection_unclean(VsockConnectionKey::new(1, 2));
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        port_manager.remove_connection_unclean(VsockConnectionKey::new(
+            HOST_CID,
+            1,
+            DEFAULT_GUEST_CID,
+            2,
+        ));
 
         // Still in quarantine.
         assert_eq!(
-            port_manager.add_connection(VsockConnectionKey::new(1, 2)).unwrap_err(),
+            port_manager
+                .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+                .unwrap_err(),
             zx::Status::ALREADY_EXISTS
         );
     }
@@ -321,14 +351,21 @@ mod tests {
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
         let mut port_manager = PortManager::new();
 
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
         assert!(port_manager.add_listener(1).is_ok());
 
         // Both connection and listener are on the same port.
         assert_eq!(port_manager.active_ports.len(), 1);
         assert_eq!(port_manager.active_ports.get(&1).unwrap().guest_ports.len(), 1);
 
-        port_manager.remove_connection_unclean(VsockConnectionKey::new(1, 2));
+        port_manager.remove_connection_unclean(VsockConnectionKey::new(
+            HOST_CID,
+            1,
+            DEFAULT_GUEST_CID,
+            2,
+        ));
 
         // One nano after quarantine ends.
         executor.set_fake_time(fuchsia_async::Time::after(
@@ -348,8 +385,15 @@ mod tests {
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
         let mut port_manager = PortManager::new();
 
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
-        port_manager.remove_connection_unclean(VsockConnectionKey::new(1, 2));
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        port_manager.remove_connection_unclean(VsockConnectionKey::new(
+            HOST_CID,
+            1,
+            DEFAULT_GUEST_CID,
+            2,
+        ));
 
         // One nano after quarantine ends.
         executor.set_fake_time(fuchsia_async::Time::after(
@@ -357,7 +401,9 @@ mod tests {
         ));
 
         // Can re-use the now unquarantined connection.
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
     }
 
     #[fuchsia::test]
@@ -366,19 +412,30 @@ mod tests {
 
         let port = port_manager.find_unused_ephemeral_port().unwrap();
         assert_eq!(port, FIRST_EPHEMERAL_PORT);
-        assert!(port_manager.add_connection(VsockConnectionKey::new(port, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, port, DEFAULT_GUEST_CID, 2))
+            .is_ok());
 
         let port = port_manager.find_unused_ephemeral_port().unwrap();
         assert_eq!(port, FIRST_EPHEMERAL_PORT + 1);
-        assert!(port_manager.add_connection(VsockConnectionKey::new(port, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, port, DEFAULT_GUEST_CID, 2))
+            .is_ok());
 
-        port_manager.remove_connection(VsockConnectionKey::new(FIRST_EPHEMERAL_PORT, 2));
+        port_manager.remove_connection(VsockConnectionKey::new(
+            HOST_CID,
+            FIRST_EPHEMERAL_PORT,
+            DEFAULT_GUEST_CID,
+            2,
+        ));
 
         // Even though the first ephemeral port is now free, the port manager hints based on the
         // last used ephemeral port.
         let port = port_manager.find_unused_ephemeral_port().unwrap();
         assert_eq!(port, FIRST_EPHEMERAL_PORT + 2);
-        assert!(port_manager.add_connection(VsockConnectionKey::new(port, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, port, DEFAULT_GUEST_CID, 2))
+            .is_ok());
     }
 
     #[fuchsia::test]
@@ -386,12 +443,24 @@ mod tests {
         let mut port_manager = PortManager::new();
 
         // Use host ports 0 to 5, inclusive.
-        assert!(port_manager.add_connection(VsockConnectionKey::new(0, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(1, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(2, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(3, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(4, 2)).is_ok());
-        assert!(port_manager.add_connection(VsockConnectionKey::new(5, 2)).is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 0, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 2, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 3, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 4, DEFAULT_GUEST_CID, 2))
+            .is_ok());
+        assert!(port_manager
+            .add_connection(VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 2))
+            .is_ok());
 
         assert_eq!(
             port_manager.find_unused_port_in_range(0, 5, 0).unwrap_err(),

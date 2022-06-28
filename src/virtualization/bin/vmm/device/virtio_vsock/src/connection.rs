@@ -89,23 +89,27 @@ impl ConnectionCredit {
     }
 }
 
-// A connection key uniquely identifies a connection based on the hash of the source and
-// destination port.
+// 5.10.6.2 Addressing
+//
+// Flows are identified by a (source, destination) address tuple. An address consists of a
+// (cid, port number) tuple. This virtio-vsock device only supports a single guest per device,
+// and only guest <-> host communication, so host_cid and guest_cid are effectively static.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct VsockConnectionKey {
+    pub host_cid: u32,
     pub host_port: u32,
+    pub guest_cid: u32,
     pub guest_port: u32,
 }
 
 impl VsockConnectionKey {
-    pub fn new(host_port: u32, guest_port: u32) -> Self {
-        VsockConnectionKey { host_port, guest_port }
+    pub fn new(host_cid: u32, host_port: u32, guest_cid: u32, guest_port: u32) -> Self {
+        VsockConnectionKey { host_cid, host_port, guest_cid, guest_port }
     }
 }
 
 pub struct VsockConnection {
     key: VsockConnectionKey,
-    guest_cid: u32,
 
     // The current connection state. This carries state specific data for the connection.
     state: RwLock<VsockConnectionState>,
@@ -123,16 +127,13 @@ impl VsockConnection {
         key: VsockConnectionKey,
         listener_response: QueryResponseFut<Result<zx::Socket, i32>>,
         control_packets: UnboundedSender<VirtioVsockHeader>,
-        guest_cid: u32,
     ) -> Self {
         VsockConnection::new(
             key,
-            guest_cid,
             VsockConnectionState::GuestInitiated(GuestInitiated::new(
                 listener_response,
                 control_packets,
                 key,
-                guest_cid,
             )),
         )
     }
@@ -144,24 +145,20 @@ impl VsockConnection {
         key: VsockConnectionKey,
         responder: HostVsockEndpointConnect2Responder,
         control_packets: UnboundedSender<VirtioVsockHeader>,
-        guest_cid: u32,
     ) -> Self {
         VsockConnection::new(
             key,
-            guest_cid,
             VsockConnectionState::ClientInitiated(ClientInitiated::new(
                 responder,
                 control_packets,
                 key,
-                guest_cid,
             )),
         )
     }
 
-    fn new(key: VsockConnectionKey, guest_cid: u32, state: VsockConnectionState) -> Self {
+    fn new(key: VsockConnectionKey, state: VsockConnectionState) -> Self {
         VsockConnection {
             key,
-            guest_cid,
             state: RwLock::new(state),
             rx_abort: Cell::new(None),
             state_action_abort: Cell::new(None),
@@ -223,11 +220,7 @@ impl VsockConnection {
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) {
         *self.cancel_pending_tasks_and_get_mutable_state().await =
-            VsockConnectionState::ShutdownForced(ShutdownForced::new(
-                self.key,
-                self.guest_cid,
-                control_packets,
-            ));
+            VsockConnectionState::ShutdownForced(ShutdownForced::new(self.key, control_packets));
     }
 
     pub async fn handle_state_action(&self) -> StateAction {
@@ -271,7 +264,9 @@ mod tests {
         super::*,
         crate::wire::{LE16, LE32},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_virtualization::{HostVsockAcceptorMarker, HostVsockEndpointMarker},
+        fidl_fuchsia_virtualization::{
+            HostVsockAcceptorMarker, HostVsockEndpointMarker, DEFAULT_GUEST_CID, HOST_CID,
+        },
         futures::{channel::mpsc, TryStreamExt},
         std::{convert::TryInto, io::Read, task::Poll},
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
@@ -319,10 +314,9 @@ mod tests {
                 .into_connect2()
                 .expect("received unexpected message on stream");
             let connection = VsockConnection::new_client_initiated(
-                VsockConnectionKey::new(1, guest_port),
+                VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, guest_port),
                 responder,
                 control_tx,
-                fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
             );
             drop(connection)
         })
@@ -406,10 +400,9 @@ mod tests {
 
         let response_fut = proxy.accept(1, 2, 3);
         let connection = VsockConnection::new_guest_initiated(
-            VsockConnectionKey::new(3, 2),
+            VsockConnectionKey::new(HOST_CID, 3, DEFAULT_GUEST_CID, 2),
             response_fut,
             control_tx,
-            fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
         );
 
         // State transition relies on client acceptor response.
@@ -485,10 +478,9 @@ mod tests {
         };
 
         let connection = VsockConnection::new_client_initiated(
-            VsockConnectionKey::new(1, guest_port),
+            VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, guest_port),
             responder,
             control_tx,
-            fidl_fuchsia_virtualization::DEFAULT_GUEST_CID,
         );
 
         // A client initiated connection sends a request to the guest which must be responded to.

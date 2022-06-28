@@ -14,7 +14,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_virtualization::{
         HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder,
-        HostVsockEndpointListenResponder,
+        HostVsockEndpointListenResponder, DEFAULT_GUEST_CID, HOST_CID,
     },
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
@@ -120,7 +120,15 @@ impl VsockDevice {
             }
         };
 
-        let key = VsockConnectionKey::new(header.dst_port.get(), header.src_port.get());
+        // 5.10.6 Device Operation
+        //
+        // The upper 32 bits of src_cid and dst_cid are reserved and zeroed.
+        let key = VsockConnectionKey::new(
+            header.dst_cid.get() as u32,
+            header.dst_port.get(),
+            header.src_cid.get() as u32,
+            header.src_port.get(),
+        );
 
         let result = if let Err(err) = self.validate_incoming_header(&header) {
             Err(anyhow!("Received invalid header {:?} with error {}", header, err))
@@ -314,7 +322,12 @@ impl VsockDevice {
                 return responder.send(&mut Err(err.into_raw()));
             }
 
-            let key = VsockConnectionKey::new(host_port.unwrap(), guest_port);
+            let key = VsockConnectionKey::new(
+                HOST_CID,
+                host_port.unwrap(),
+                DEFAULT_GUEST_CID,
+                guest_port,
+            );
             if let Err(_) = self.register_connection_ports(key) {
                 panic!(
                     "Client initiated connections should never be duplicates \
@@ -327,7 +340,6 @@ impl VsockDevice {
                 key,
                 responder,
                 self.control_packet_tx.clone(),
-                self.guest_cid(),
             ));
             self.connections.borrow_mut().insert(key, connection.clone());
 
@@ -366,7 +378,6 @@ impl VsockDevice {
                 key,
                 response,
                 self.control_packet_tx.clone(),
-                self.guest_cid(),
             ));
             self.connections.borrow_mut().insert(key, connection.clone());
 
@@ -454,11 +465,11 @@ impl VsockDevice {
             ));
         }
 
-        if header.dst_cid.get() != fidl_fuchsia_virtualization::HOST_CID.into() {
+        if header.dst_cid.get() != HOST_CID.into() {
             return Err(anyhow!(
                 "dst_cid {} does not match host cid {}",
                 header.dst_cid.get(),
-                fidl_fuchsia_virtualization::HOST_CID
+                HOST_CID
             ));
         }
 
@@ -494,11 +505,7 @@ impl VsockDevice {
     // Send a reset packet for a given connection key. Only used if there's no matching connection,
     // as the connection will send a reset itself when it's forced disconnected.
     fn send_reset_packet(&self, key: VsockConnectionKey) {
-        VsockConnectionState::send_reset_packet(
-            key,
-            self.guest_cid(),
-            self.control_packet_tx.clone(),
-        );
+        VsockConnectionState::send_reset_packet(key, self.control_packet_tx.clone());
     }
 
     fn is_reserved_guest_cid(guest_cid: u32) -> bool {
@@ -567,8 +574,8 @@ mod tests {
         op: OpType,
     ) -> VirtioVsockHeader {
         VirtioVsockHeader {
-            src_cid: LE64::new(fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into()),
-            dst_cid: LE64::new(fidl_fuchsia_virtualization::HOST_CID.into()),
+            src_cid: LE64::new(DEFAULT_GUEST_CID.into()),
+            dst_cid: LE64::new(HOST_CID.into()),
             src_port: LE32::new(src_port),
             dst_port: LE32::new(host_port),
             len: LE32::new(len),
@@ -583,10 +590,8 @@ mod tests {
     #[fuchsia::test]
     async fn check_reserved_cids() {
         // The host CID should be reserved, while the default guest CID should not be.
-        assert!(VsockDevice::is_reserved_guest_cid(fidl_fuchsia_virtualization::HOST_CID));
-        assert!(!VsockDevice::is_reserved_guest_cid(
-            fidl_fuchsia_virtualization::DEFAULT_GUEST_CID
-        ));
+        assert!(VsockDevice::is_reserved_guest_cid(HOST_CID));
+        assert!(!VsockDevice::is_reserved_guest_cid(DEFAULT_GUEST_CID));
     }
 
     #[fuchsia::test]
@@ -710,8 +715,8 @@ mod tests {
 
         let header = VirtioVsockHeader::read_from(slice).unwrap();
 
-        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
-        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.src_cid.get(), HOST_CID.into());
+        assert_eq!(header.dst_cid.get(), DEFAULT_GUEST_CID.into());
         assert_eq!(header.dst_port.get(), guest_port);
         assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Request);
@@ -755,8 +760,8 @@ mod tests {
 
         let header = VirtioVsockHeader::read_from(slice).unwrap();
 
-        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
-        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.src_cid.get(), HOST_CID.into());
+        assert_eq!(header.dst_cid.get(), DEFAULT_GUEST_CID.into());
         assert_eq!(header.src_port.get(), host_port);
         assert_eq!(header.dst_port.get(), guest_port);
         assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
@@ -797,8 +802,12 @@ mod tests {
         };
 
         // Attempt and fail to connect on a port without a listener.
-        let connect_fut =
-            device.guest_initiated_connect(VsockConnectionKey::new(invalid_host_port, guest_port));
+        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(
+            HOST_CID,
+            invalid_host_port,
+            DEFAULT_GUEST_CID,
+            guest_port,
+        ));
         futures::pin_mut!(connect_fut);
         if let Poll::Ready(val) = executor.run_until_stalled(&mut connect_fut) {
             assert!(val.is_err());
@@ -816,15 +825,22 @@ mod tests {
         assert!(device.connections.borrow().is_empty());
 
         // Successfully connect on a port with a listener.
-        let connect_fut =
-            device.guest_initiated_connect(VsockConnectionKey::new(host_port, guest_port));
+        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(
+            HOST_CID,
+            host_port,
+            DEFAULT_GUEST_CID,
+            guest_port,
+        ));
         futures::pin_mut!(connect_fut);
         assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
 
         // Device reported this new connection.
         let reported_key =
             new_connections.try_next().unwrap().expect("expected a new connection key");
-        assert_eq!(reported_key, VsockConnectionKey::new(host_port, guest_port));
+        assert_eq!(
+            reported_key,
+            VsockConnectionKey::new(HOST_CID, host_port, DEFAULT_GUEST_CID, guest_port)
+        );
 
         // Respond to the guest's connection request from the client's acceptor.
         let (_client_socket, device_socket) =
@@ -835,7 +851,7 @@ mod tests {
                 .unwrap()
                 .into_accept()
                 .expect("failed to parse message as an Accept call");
-            assert_eq!(src_cid, fidl_fuchsia_virtualization::DEFAULT_GUEST_CID);
+            assert_eq!(src_cid, DEFAULT_GUEST_CID);
             assert_eq!(src_port, guest_port);
             assert_eq!(port, host_port);
             responder.send(&mut Ok(device_socket)).expect("failed to send response to device");
@@ -872,9 +888,9 @@ mod tests {
         let header = VirtioVsockHeader::read_from(slice).expect("failed to read header from slice");
 
         assert_eq!(header.src_port.get(), host_port);
-        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
+        assert_eq!(header.src_cid.get(), HOST_CID.into());
         assert_eq!(header.dst_port.get(), guest_port);
-        assert_eq!(header.dst_cid.get(), fidl_fuchsia_virtualization::DEFAULT_GUEST_CID.into());
+        assert_eq!(header.dst_cid.get(), DEFAULT_GUEST_CID.into());
         assert_eq!(header.len.get(), 0);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Response);
     }

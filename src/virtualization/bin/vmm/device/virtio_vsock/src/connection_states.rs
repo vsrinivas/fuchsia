@@ -82,7 +82,6 @@ pub struct GuestInitiated {
     listener_response: RefCell<Option<QueryResponseFut<Result<zx::Socket, i32>>>>,
 
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
@@ -91,12 +90,10 @@ impl GuestInitiated {
         listener_response: QueryResponseFut<Result<zx::Socket, i32>>,
         control_packets: UnboundedSender<VirtioVsockHeader>,
         key: VsockConnectionKey,
-        guest_cid: u32,
     ) -> Self {
         GuestInitiated {
             listener_response: RefCell::new(Some(listener_response)),
             key,
-            guest_cid,
             control_packets,
         }
     }
@@ -106,13 +103,12 @@ impl GuestInitiated {
         // transitions are to a clean or forced shutdown.
         match op {
             OpType::Shutdown => VsockConnectionState::GuestInitiatedShutdown(
-                GuestInitiatedShutdown::new(self.key, self.guest_cid, self.control_packets.clone()),
+                GuestInitiatedShutdown::new(self.key, self.control_packets.clone()),
             ),
             op => {
                 syslog::fx_log_err!("Unsupported GuestInitiated operation: {:?}", op);
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ))
             }
@@ -134,8 +130,7 @@ impl GuestInitiated {
 
         match get_socket() {
             Ok(socket) => {
-                let mut packet =
-                    VsockConnectionState::get_header_with_defaults(self.key, self.guest_cid);
+                let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
                 packet.op = LE16::new(OpType::Response.into());
                 self.control_packets
                     .clone()
@@ -145,7 +140,6 @@ impl GuestInitiated {
                 StateAction::UpdateState(VsockConnectionState::ReadWrite(ReadWrite::new(
                     socket,
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 )))
             }
@@ -153,7 +147,6 @@ impl GuestInitiated {
                 syslog::fx_log_err!("Failed to transition from GuestInitiated with error: {}", err);
                 StateAction::UpdateState(VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 )))
             }
@@ -167,7 +160,7 @@ pub struct ClientInitiated {
     responder: Option<HostVsockEndpointConnect2Responder>,
 
     key: VsockConnectionKey,
-    guest_cid: u32,
+
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
@@ -176,13 +169,12 @@ impl ClientInitiated {
         responder: HostVsockEndpointConnect2Responder,
         control_packets: UnboundedSender<VirtioVsockHeader>,
         key: VsockConnectionKey,
-        guest_cid: u32,
     ) -> Self {
         ClientInitiated {
             sent_request_to_guest: Cell::new(false),
             responder: Some(responder),
             key,
-            guest_cid,
+
             control_packets,
         }
     }
@@ -211,27 +203,24 @@ impl ClientInitiated {
                     Ok(socket) => VsockConnectionState::ReadWrite(ReadWrite::new(
                         socket,
                         self.key,
-                        self.guest_cid,
                         self.control_packets.clone(),
                     )),
                     Err(err) => {
                         syslog::fx_log_err!("Failed to transition out of ClientInitiated: {}", err);
                         VsockConnectionState::ShutdownForced(ShutdownForced::new(
                             self.key,
-                            self.guest_cid,
                             self.control_packets.clone(),
                         ))
                     }
                 }
             }
             OpType::Shutdown => VsockConnectionState::GuestInitiatedShutdown(
-                GuestInitiatedShutdown::new(self.key, self.guest_cid, self.control_packets.clone()),
+                GuestInitiatedShutdown::new(self.key, self.control_packets.clone()),
             ),
             op => {
                 syslog::fx_log_err!("Unsupported ClientInitiated operation: {:?}", op);
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ))
             }
@@ -240,8 +229,7 @@ impl ClientInitiated {
 
     async fn do_state_action(&self) -> StateAction {
         if !self.sent_request_to_guest.get() {
-            let mut packet =
-                VsockConnectionState::get_header_with_defaults(self.key, self.guest_cid);
+            let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
             packet.op = LE16::new(OpType::Request.into());
             self.control_packets
                 .clone()
@@ -292,7 +280,6 @@ pub struct ReadWrite {
     tx_shutdown_leeway: RefCell<fasync::Time>,
 
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
@@ -300,7 +287,6 @@ impl ReadWrite {
     fn new(
         socket: fasync::Socket,
         key: VsockConnectionKey,
-        guest_cid: u32,
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
         ReadWrite {
@@ -309,7 +295,6 @@ impl ReadWrite {
             conn_flags: RefCell::new(VirtioVsockFlags::default()),
             tx_shutdown_leeway: RefCell::new(fasync::Time::now()),
             key,
-            guest_cid,
             control_packets,
         }
     }
@@ -326,7 +311,7 @@ impl ReadWrite {
     }
 
     fn send_credit_update(&self) -> Result<(), Error> {
-        let mut packet = VsockConnectionState::get_header_with_defaults(self.key, self.guest_cid);
+        let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
         match self.write_credit(&mut packet) {
             Ok(()) => {
                 packet.op = LE16::new(OpType::CreditUpdate.into());
@@ -341,7 +326,7 @@ impl ReadWrite {
     }
 
     fn send_shutdown_packet(&self) {
-        let mut packet = VsockConnectionState::get_header_with_defaults(self.key, self.guest_cid);
+        let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
         packet.op = LE16::new(OpType::Shutdown.into());
         packet.flags = LE32::new(self.conn_flags.borrow().bits());
 
@@ -363,7 +348,6 @@ impl ReadWrite {
                 );
                 return VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ));
             }
@@ -383,7 +367,6 @@ impl ReadWrite {
                     // initiated shutdown.
                     VsockConnectionState::GuestInitiatedShutdown(GuestInitiatedShutdown::new(
                         self.key,
-                        self.guest_cid,
                         self.control_packets.clone(),
                     ))
                 } else {
@@ -394,7 +377,6 @@ impl ReadWrite {
                 syslog::fx_log_err!("Unsupported ReadWrite operation: {:?}", op);
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ))
             }
@@ -404,11 +386,7 @@ impl ReadWrite {
     async fn do_state_action(&self) -> StateAction {
         if self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_BOTH) {
             return StateAction::UpdateState(VsockConnectionState::ClientInitiatedShutdown(
-                ClientInitiatedShutdown::new(
-                    self.key,
-                    self.guest_cid,
-                    self.control_packets.clone(),
-                ),
+                ClientInitiatedShutdown::new(self.key, self.control_packets.clone()),
             ));
         }
 
@@ -435,7 +413,7 @@ impl ReadWrite {
             if let Err(err) = result {
                 syslog::fx_log_err!("{}", err);
                 return StateAction::UpdateState(VsockConnectionState::ShutdownForced(
-                    ShutdownForced::new(self.key, self.guest_cid, self.control_packets.clone()),
+                    ShutdownForced::new(self.key, self.control_packets.clone()),
                 ));
             }
         } else {
@@ -567,17 +545,12 @@ impl ReadWrite {
 #[derive(Debug)]
 pub struct GuestInitiatedShutdown {
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
 impl GuestInitiatedShutdown {
-    fn new(
-        key: VsockConnectionKey,
-        guest_cid: u32,
-        control_packets: UnboundedSender<VirtioVsockHeader>,
-    ) -> Self {
-        GuestInitiatedShutdown { key, guest_cid, control_packets }
+    fn new(key: VsockConnectionKey, control_packets: UnboundedSender<VirtioVsockHeader>) -> Self {
+        GuestInitiatedShutdown { key, control_packets }
     }
 
     fn next(self, op: OpType) -> VsockConnectionState {
@@ -589,7 +562,6 @@ impl GuestInitiatedShutdown {
                 syslog::fx_log_err!("Unsupported GuestInitiatedShutdown operation: {:?}", op);
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ))
             }
@@ -597,14 +569,9 @@ impl GuestInitiatedShutdown {
     }
 
     async fn do_state_action(&self) -> StateAction {
-        VsockConnectionState::send_reset_packet(
-            self.key,
-            self.guest_cid,
-            self.control_packets.clone(),
-        );
+        VsockConnectionState::send_reset_packet(self.key, self.control_packets.clone());
         StateAction::UpdateState(VsockConnectionState::ShutdownClean(ShutdownClean::new(
             self.key,
-            self.guest_cid,
             self.control_packets.clone(),
         )))
     }
@@ -617,20 +584,15 @@ pub struct ClientInitiatedShutdown {
     timeout: fasync::Time,
 
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
 impl ClientInitiatedShutdown {
-    fn new(
-        key: VsockConnectionKey,
-        guest_cid: u32,
-        control_packets: UnboundedSender<VirtioVsockHeader>,
-    ) -> Self {
+    fn new(key: VsockConnectionKey, control_packets: UnboundedSender<VirtioVsockHeader>) -> Self {
         ClientInitiatedShutdown {
             timeout: fasync::Time::after(zx::Duration::from_seconds(5)),
             key,
-            guest_cid,
+
             control_packets,
         }
     }
@@ -644,13 +606,11 @@ impl ClientInitiatedShutdown {
                 syslog::fx_log_err!("Guest sent shutdown while being asked to shutdown");
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
-                    self.guest_cid,
                     self.control_packets.clone(),
                 ))
             }
             OpType::Reset => VsockConnectionState::ShutdownClean(ShutdownClean::new(
                 self.key,
-                self.guest_cid,
                 self.control_packets.clone(),
             )),
             _ => {
@@ -679,7 +639,6 @@ impl ClientInitiatedShutdown {
         syslog::fx_log_err!("Guest didn't send a clean disconnect within 5s");
         StateAction::UpdateState(VsockConnectionState::ShutdownForced(ShutdownForced::new(
             self.key,
-            self.guest_cid,
             self.control_packets.clone(),
         )))
     }
@@ -688,17 +647,12 @@ impl ClientInitiatedShutdown {
 #[derive(Debug)]
 pub struct ShutdownClean {
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
 impl ShutdownClean {
-    fn new(
-        key: VsockConnectionKey,
-        guest_cid: u32,
-        control_packets: UnboundedSender<VirtioVsockHeader>,
-    ) -> Self {
-        ShutdownClean { key, guest_cid, control_packets }
+    fn new(key: VsockConnectionKey, control_packets: UnboundedSender<VirtioVsockHeader>) -> Self {
+        ShutdownClean { key, control_packets }
     }
 
     fn next(self, op: OpType) -> VsockConnectionState {
@@ -709,7 +663,6 @@ impl ShutdownClean {
         );
         VsockConnectionState::ShutdownForced(ShutdownForced::new(
             self.key,
-            self.guest_cid,
             self.control_packets.clone(),
         ))
     }
@@ -722,17 +675,16 @@ impl ShutdownClean {
 #[derive(Debug)]
 pub struct ShutdownForced {
     key: VsockConnectionKey,
-    guest_cid: u32,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
 impl ShutdownForced {
     pub fn new(
         key: VsockConnectionKey,
-        guest_cid: u32,
+
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
-        ShutdownForced { key, guest_cid, control_packets }
+        ShutdownForced { key, control_packets }
     }
 
     fn next(self, op: OpType) -> VsockConnectionState {
@@ -741,11 +693,7 @@ impl ShutdownForced {
     }
 
     async fn do_state_action(&self) -> StateAction {
-        VsockConnectionState::send_reset_packet(
-            self.key,
-            self.guest_cid,
-            self.control_packets.clone(),
-        );
+        VsockConnectionState::send_reset_packet(self.key, self.control_packets.clone());
         StateAction::ForcedShutdown
     }
 }
@@ -834,10 +782,9 @@ impl VsockConnectionState {
     // Helper function for sending a common reset packet for a given connection key.
     pub fn send_reset_packet(
         key: VsockConnectionKey,
-        guest_cid: u32,
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) {
-        let mut packet = VsockConnectionState::get_header_with_defaults(key, guest_cid);
+        let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(key);
         packet.op = LE16::new(OpType::Reset.into());
 
         control_packets
@@ -845,10 +792,10 @@ impl VsockConnectionState {
             .expect("Control packet tx end should never be closed");
     }
 
-    fn get_header_with_defaults(key: VsockConnectionKey, guest_cid: u32) -> VirtioVsockHeader {
+    fn get_header_to_guest_with_defaults(key: VsockConnectionKey) -> VirtioVsockHeader {
         VirtioVsockHeader {
-            src_cid: LE64::new(fidl_fuchsia_virtualization::HOST_CID.into()),
-            dst_cid: LE64::new(guest_cid.into()),
+            src_cid: LE64::new(key.host_cid.into()),
+            dst_cid: LE64::new(key.guest_cid.into()),
             src_port: LE32::new(key.host_port),
             dst_port: LE32::new(key.guest_port),
             vsock_type: LE16::new(VsockType::Stream.into()),
@@ -862,7 +809,9 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_virtualization::{HostVsockAcceptorMarker, HostVsockEndpointMarker},
+        fidl_fuchsia_virtualization::{
+            HostVsockAcceptorMarker, HostVsockEndpointMarker, DEFAULT_GUEST_CID, HOST_CID,
+        },
         fuchsia_async::TestExecutor,
         futures::{channel::mpsc, TryStreamExt},
         std::{io::Read, task::Poll},
@@ -899,12 +848,10 @@ mod tests {
     async fn send_reset_packet() {
         let host_port = 123;
         let guest_port = 456;
-        let guest_cid = 25;
 
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         VsockConnectionState::send_reset_packet(
-            VsockConnectionKey::new(host_port, guest_port),
-            guest_cid,
+            VsockConnectionKey::new(HOST_CID, host_port, DEFAULT_GUEST_CID, guest_port),
             control_tx,
         );
         let header = control_rx
@@ -912,8 +859,8 @@ mod tests {
             .expect("expected control packet")
             .expect("control stream should not close");
 
-        assert_eq!(header.src_cid.get(), fidl_fuchsia_virtualization::HOST_CID.into());
-        assert_eq!(header.dst_cid.get(), guest_cid.into());
+        assert_eq!(header.src_cid.get(), HOST_CID.into());
+        assert_eq!(header.dst_cid.get(), DEFAULT_GUEST_CID.into());
         assert_eq!(header.src_port.get(), host_port);
         assert_eq!(header.dst_port.get(), guest_port);
         assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
@@ -922,15 +869,14 @@ mod tests {
 
     #[test]
     fn guest_initiated_client_returned_failure() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
 
-        let response_fut = proxy.accept(guest_cid, key.guest_port, key.host_port);
-        let state = GuestInitiated::new(response_fut, control_tx, key, guest_cid);
+        let response_fut = proxy.accept(DEFAULT_GUEST_CID, key.guest_port, key.host_port);
+        let state = GuestInitiated::new(response_fut, control_tx, key);
 
         let fut = state.do_state_action();
         futures::pin_mut!(fut);
@@ -957,15 +903,14 @@ mod tests {
 
     #[test]
     fn guest_initiated_client_returned_socket() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
 
-        let response_fut = proxy.accept(guest_cid, key.guest_port, key.host_port);
-        let state = GuestInitiated::new(response_fut, control_tx, key, guest_cid);
+        let response_fut = proxy.accept(DEFAULT_GUEST_CID, key.guest_port, key.host_port);
+        let state = GuestInitiated::new(response_fut, control_tx, key);
 
         let fut = state.do_state_action();
         futures::pin_mut!(fut);
@@ -993,8 +938,7 @@ mod tests {
 
     #[test]
     fn client_initiated_guest_responded_before_request() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
@@ -1013,7 +957,7 @@ mod tests {
 
         // Guest responded before the client actually made a request. This implies that the
         // two are out of sync.
-        let state = ClientInitiated::new(responder, control_tx, key, guest_cid);
+        let state = ClientInitiated::new(responder, control_tx, key);
         match state.next(OpType::Response) {
             VsockConnectionState::ShutdownForced(_state) => (),
             _ => panic!("Expected transition to ShutdownForced state"),
@@ -1032,8 +976,7 @@ mod tests {
 
     #[test]
     fn client_initiated_guest_acceptance() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
@@ -1050,7 +993,7 @@ mod tests {
             panic!("Expected future to be ready")
         };
 
-        let state = ClientInitiated::new(responder, control_tx, key, guest_cid);
+        let state = ClientInitiated::new(responder, control_tx, key);
 
         // Send a request to the guest. If the guest replies before a request is sent, the device
         // assumes that we are out of sync and drops the connection.
@@ -1081,8 +1024,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn read_write_guest_half_close_remote_socket() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         let (client_socket, device_socket) =
@@ -1092,7 +1034,7 @@ mod tests {
 
         assert_eq!(client_socket.write(b"success!").expect("failed to write to socket"), 8);
 
-        let state = ReadWrite::new(socket, key, guest_cid, control_tx);
+        let state = ReadWrite::new(socket, key, control_tx);
         match state.next(OpType::Shutdown, VirtioVsockFlags::SHUTDOWN_RECIEVE) {
             VsockConnectionState::ReadWrite(_state) => {
                 // Socket is half closed so unable to transmit data.
@@ -1113,8 +1055,7 @@ mod tests {
             TestExecutor::new_with_fake_time().expect("failed to create test executor");
         executor.set_fake_time(fuchsia_async::Time::now());
 
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         let (client_socket, device_socket) =
@@ -1122,7 +1063,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, guest_cid, control_tx);
+        let state = ReadWrite::new(socket, key, control_tx);
 
         // Write some data to the buffer so that dropping the socket doesn't immediately transition
         // to a shutdown state. The device will try and send this data to the guest first.
@@ -1192,8 +1133,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn read_write_handle_credit_request() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         let (client_socket, device_socket) =
@@ -1201,7 +1141,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, guest_cid, control_tx);
+        let state = ReadWrite::new(socket, key, control_tx);
 
         let mem = IdentityDriverMem::new();
         let mut queue_state = TestQueue::new(32, &mem);
@@ -1263,8 +1203,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn read_write_unsolicited_credit_update() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         let (_client_socket, device_socket) =
@@ -1274,7 +1213,7 @@ mod tests {
 
         // The read-write state knows that the device thinks there's no client credit while there
         // actually is, so immediately sends an unsolicited credit update.
-        let state = ReadWrite::new(socket, key, guest_cid, control_tx);
+        let state = ReadWrite::new(socket, key, control_tx);
         assert_eq!(
             StateAction::ContinueAwaiting,
             state.do_state_action().now_or_never().expect("task should have completed")
@@ -1292,11 +1231,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn guest_initiated_shutdown_device_sends_immediate_reset_packet() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
-        let state = GuestInitiatedShutdown::new(key, guest_cid, control_tx);
+        let state = GuestInitiatedShutdown::new(key, control_tx);
         if let StateAction::UpdateState(new_state) =
             state.do_state_action().now_or_never().expect("task should have completed")
         {
@@ -1323,11 +1261,10 @@ mod tests {
             TestExecutor::new_with_fake_time().expect("failed to create test executor");
         executor.set_fake_time(fuchsia_async::Time::now());
 
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
-        let state = ClientInitiatedShutdown::new(key, guest_cid, control_tx);
+        let state = ClientInitiatedShutdown::new(key, control_tx);
         let state_action_fut = state.do_state_action();
         futures::pin_mut!(state_action_fut);
 
@@ -1357,13 +1294,12 @@ mod tests {
 
     #[fuchsia::test]
     async fn client_initiated_shutdown_guest_sends_reset_for_clean_shutdown() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         // A client initiated shutdown is the only time a Reset packet doesn't send the state
         // into a forced shutdown.
-        let state = ClientInitiatedShutdown::new(key, guest_cid, control_tx);
+        let state = ClientInitiatedShutdown::new(key, control_tx);
         let new_state = state.next(OpType::Reset);
 
         let result =
@@ -1373,11 +1309,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn shutdown_clean_incorrectly_receives_additional_packets() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
-        let state = ShutdownClean::new(key, guest_cid, control_tx);
+        let state = ShutdownClean::new(key, control_tx);
 
         // Was in a clean shutdown state.
         let result = state.do_state_action().now_or_never().expect("task should have completed");
@@ -1394,11 +1329,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn shutdown_forced_sends_reset_packet() {
-        let key = VsockConnectionKey::new(5, 10);
-        let guest_cid = 12345;
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
-        let state = ShutdownForced::new(key, guest_cid, control_tx);
+        let state = ShutdownForced::new(key, control_tx);
         let result = state.do_state_action().now_or_never().expect("task should have completed");
 
         assert_eq!(result, StateAction::ForcedShutdown);
