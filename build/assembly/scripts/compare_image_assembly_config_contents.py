@@ -18,7 +18,9 @@ FileHash = str
 T = TypeVar('T')
 
 # packages and bootfs filenames which we knowingly mutate in the product assembly process
-MISMATCH_PACKAGE_EXCEPTIONS = ["session_manager", "config-data"]
+MISMATCH_PACKAGE_EXCEPTIONS = [
+    "session_manager", "password_authenticator", "config-data"
+]
 MISMATCH_FILE_EXCEPTIONS = ["meta/console.cvf"]
 
 

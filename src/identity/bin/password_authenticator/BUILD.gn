@@ -78,14 +78,6 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_structured_config_values("config") {
-  cm_label = ":manifest"
-  values = {
-    allow_scrypt = true
-    allow_pinweaver = false
-  }
-}
-
 fuchsia_structured_config_rust_lib("password_authenticator_config") {
   cm_label = ":manifest"
 }
@@ -93,9 +85,16 @@ fuchsia_structured_config_rust_lib("password_authenticator_config") {
 fuchsia_package("password_authenticator") {
   deps = [
     ":component",
-    ":config",
     "//src/storage/bin/minfs",
   ]
+}
+
+fuchsia_structured_config_values("integration_test_config") {
+  cm_label = ":manifest"
+  values = {
+    allow_scrypt = true
+    allow_pinweaver = false
+  }
 }
 
 fuchsia_unittest_package("password-authenticator-tests") {

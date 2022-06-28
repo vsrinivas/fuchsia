@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::ensure;
-use assembly_config_schema::product_config::{BuildType, ProductAssemblyConfig};
+use assembly_config_schema::product_config::{BuildType, FeatureControl, ProductAssemblyConfig};
 use fidl_fuchsia_logger::MAX_TAGS;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -88,6 +88,19 @@ pub fn define_repackaging(
         .package("session_manager")
         .component("meta/session_manager.cm")
         .field("session_url", config.product.session_url.to_owned());
+
+    // Configure enabling pinweaver.
+    patches
+        .package("password_authenticator")
+        .component("meta/password-authenticator.cm")
+        .field(
+            "allow_pinweaver",
+            config.platform.identity.password_pinweaver != FeatureControl::Disabled,
+        )
+        .field(
+            "allow_scrypt",
+            config.platform.identity.password_pinweaver != FeatureControl::Required,
+        );
 
     Ok(patches.inner)
 }

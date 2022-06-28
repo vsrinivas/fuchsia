@@ -30,6 +30,10 @@ pub struct PlatformConfig {
     /// Appended to the list of tags defined for the platform.
     #[serde(default)]
     pub additional_serial_log_tags: Vec<String>,
+
+    /// Platform configuration options for the identity area.
+    #[serde(default)]
+    pub identity: PlatformIdentityConfig,
 }
 
 /// The platform BuildTypes.
@@ -48,6 +52,35 @@ pub enum BuildType {
 
     #[serde(rename = "user")]
     User,
+}
+
+/// Platform configuration options for the identity area.
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
+pub struct PlatformIdentityConfig {
+    /// Whether the pinweaver protocol should be enabled in `password_authenticator` on supported
+    /// boards. Pinweaver will always be disabled if the board does not support the protocol.
+    #[serde(default)]
+    pub password_pinweaver: FeatureControl,
+}
+
+/// Options for features that may either be forced on, forced off, or allowed
+/// to be either on or off. Features default to disabled.
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub enum FeatureControl {
+    #[serde(rename = "disabled")]
+    Disabled,
+
+    #[serde(rename = "allowed")]
+    Allowed,
+
+    #[serde(rename = "required")]
+    Required,
+}
+
+impl Default for FeatureControl {
+    fn default() -> Self {
+        FeatureControl::Disabled
+    }
 }
 
 /// The Product-provided configuration details.
@@ -205,7 +238,10 @@ mod tests {
         let json5 = r#"
             {
               platform: {
-                build_type: "eng"
+                build_type: "eng",
+                identity : {
+                    "password_pinweaver": "allowed",
+                }
               },
               product: {
                   packages: {
@@ -237,6 +273,7 @@ mod tests {
                 config_data: BTreeMap::default()
             }]
         );
+        assert_eq!(config.platform.identity.password_pinweaver, FeatureControl::Allowed);
     }
 
     #[test]
