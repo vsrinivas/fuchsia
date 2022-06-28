@@ -66,6 +66,7 @@
 //src/devices/bin/driver_host:unit-test-pass-driver
 //src/devices/block/drivers/ahci:ahci-driver
 //src/devices/block/drivers/aml-sdmmc:aml-sdmmc-driver
+//src/devices/block/drivers/as370-sdhci:as370-sdhci-driver
 //src/devices/block/drivers/block-verity:block-verity-driver
 //src/devices/block/drivers/bootpart:bootpart-driver
 //src/devices/block/drivers/core:core-driver

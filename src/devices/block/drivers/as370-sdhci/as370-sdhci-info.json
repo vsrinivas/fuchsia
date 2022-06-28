@@ -1,0 +1,10 @@
+{
+    "short_description": "AS370 SDMMC block driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Block",
+        "Storage"
+    ]
+}

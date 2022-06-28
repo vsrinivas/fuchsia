@@ -3,11 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 
-bind_rules("as370-sdhci-bind") {
+driver_bind_rules("as370-sdhci-bind") {
   rules = "as370-sdhci.bind"
-  output = "as370-sdhci-bind.h"
+  header_output = "as370-sdhci-bind.h"
+  bind_output = "as370-sdhci.bindbc"
   tests = "as370-sdhci-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
@@ -15,12 +16,12 @@ bind_rules("as370-sdhci-bind") {
   ]
 }
 
-driver_module("as370-sdhci") {
+fuchsia_driver("as370-sdhci-driver") {
+  output_name = "as370-sdhci"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-sdhci.cc" ]
   deps = [
     ":as370-sdhci-bind",
@@ -35,11 +36,18 @@ driver_module("as370-sdhci") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
   ]
+}
+
+fuchsia_driver_component("as370-sdhci") {
+  component_name = "as370-sdhci"
+  deps = [ ":as370-sdhci-driver" ]
+  info = "as370-sdhci-info.json"
+  colocate = true
 }
 
 group("tests") {
