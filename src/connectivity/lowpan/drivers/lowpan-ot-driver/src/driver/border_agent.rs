@@ -201,11 +201,14 @@ fn publish_border_agent_service(
     .map_ok(|_| ())
 }
 
+async fn get_product_info() -> Result<fidl_fuchsia_hwinfo::ProductInfo, anyhow::Error> {
+    Ok(connect_to_protocol::<fidl_fuchsia_hwinfo::ProductMarker>()?.get_info().await?)
+}
+
 impl<OT: ot::InstanceInterface, NI, BI> OtDriver<OT, NI, BI> {
     pub async fn update_border_agent_service(&self) {
-        let (vendor, product) = match connect_to_protocol::<fidl_fuchsia_hwinfo::ProductMarker>() {
-            Ok(product_info) => {
-                let info = product_info.get_info().await.unwrap();
+        let (vendor, product) = match get_product_info().await {
+            Ok(info) => {
                 let vendor = info.manufacturer.unwrap_or_else(|| "Unknown".to_string());
                 let model = info.model.unwrap_or_else(|| "Fuchsia".to_string());
                 (vendor, model)
