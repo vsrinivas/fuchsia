@@ -15,6 +15,7 @@ group("tests") {
   deps = [
     "boot:tests",
     "custom:tests",
+    "protocol:tests",
   ]
 }
 
