@@ -299,7 +299,45 @@ class TestConnection {
     magma_release_buffer(connection_, buffer);
   }
 
-  void BufferMap(int count) {
+  void BufferMap() {
+    ASSERT_TRUE(connection_);
+
+    uint64_t size = page_size();
+    uint64_t actual_size;
+    magma_buffer_t buffer = 0;
+
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer));
+    EXPECT_NE(buffer, 0u);
+
+    constexpr uint64_t kGpuAddress = 0x1000;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, buffer, 0, size / page_size(),
+                                                    kGpuAddress, MAGMA_GPU_MAP_FLAG_READ));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
+
+    {
+      uint64_t vendor_id;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, &vendor_id));
+      // Unmap not implemented on Intel
+      if (vendor_id != 0x8086) {
+        magma_unmap_buffer_gpu(connection_, buffer, kGpuAddress);
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
+      }
+    }
+
+    // Invalid page offset, remote error
+    constexpr uint64_t kInvalidPageOffset = 1024;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, buffer, kInvalidPageOffset, 0,
+                                                    size / page_size(), MAGMA_GPU_MAP_FLAG_READ));
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection_));
+
+    magma_release_buffer(connection_, buffer);
+  }
+
+  void BufferMapDuplicates(int count) {
+    if (is_virtmagma())
+      // TODO(fxbug.dev/13278); only images can be exported
+      GTEST_SKIP();
+
     ASSERT_TRUE(connection_);
 
     bool is_intel_or_vsi = false;
@@ -1259,7 +1297,7 @@ TEST_F(Magma, ReadNotificationChannel) {
 
 TEST_F(Magma, BufferMap) {
   TestConnection test;
-  test.BufferMap(1);
+  test.BufferMap();
 }
 
 TEST_F(Magma, BufferMapInvalid) {
@@ -1267,9 +1305,9 @@ TEST_F(Magma, BufferMapInvalid) {
   test.BufferMapInvalid();
 }
 
-TEST_F(Magma, BufferMapMany) {
+TEST_F(Magma, BufferMapDuplicates) {
   TestConnection test;
-  test.BufferMap(31);  // MSDs are limited by the kernel BTI pin limit
+  test.BufferMapDuplicates(31);  // MSDs are limited by the kernel BTI pin limit
 }
 
 TEST_F(Magma, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
