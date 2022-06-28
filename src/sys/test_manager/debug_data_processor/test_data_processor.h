@@ -16,16 +16,11 @@
 class TestDataProcessor : public AbstractDataProcessor {
  public:
   using UrlDataMap = std::map<std::string, std::vector<DataSinkDump>>;
-  explicit TestDataProcessor(std::shared_ptr<UrlDataMap> map) : map_(std::move(map)) {
-    zx::event::create(0, &idle_signal_event_);
-    // Since we don't actually process anything, it's okay to leave this always idle.
-    // This works so long as there's only one thread calling ProcessData and checking for
-    // idle.
-    idle_signal_event_.signal(0, IDLE_SIGNAL);
-  }
+  explicit TestDataProcessor(std::shared_ptr<UrlDataMap> map, zx_handle_t idle_signal)
+      : map_(std::move(map)), data_flushed_event_(idle_signal) {}
 
   /// Create a test data processor for testing the idle signal.
-  TestDataProcessor(zx_handle_t idle_signal) : idle_signal_event_(idle_signal) {
+  explicit TestDataProcessor(zx_handle_t idle_signal) : data_flushed_event_(idle_signal) {
     map_ = std::make_shared<UrlDataMap>();
   }
 
@@ -37,10 +32,15 @@ class TestDataProcessor : public AbstractDataProcessor {
     map_->at(test_url).push_back(std::move(data_sink));
   }
 
-  zx::unowned_event GetIdleEvent() override { return idle_signal_event_.borrow(); }
+  void FinishProcessing() override {
+    // here we deliberately do not signal the flushed event so that tests can
+    // control it
+  }
+
+  zx::unowned_event GetDataFlushedEvent() override { return data_flushed_event_.borrow(); }
 
   std::shared_ptr<UrlDataMap> map_;
-  zx::event idle_signal_event_;
+  zx::event data_flushed_event_;
 };
 
 #endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_TEST_DATA_PROCESSOR_H_

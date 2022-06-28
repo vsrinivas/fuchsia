@@ -53,8 +53,9 @@ void DataProcessorFidl::AddDebugVmos(::std::vector<::fuchsia::test::debug::Debug
 }
 
 void DataProcessorFidl::Finish(FinishCallback callback) {
-  wait_for_completion_.set_object(data_processor_->GetIdleEvent()->get());
-  wait_for_completion_.set_trigger(IDLE_SIGNAL);
+  data_processor_->FinishProcessing();
+  wait_for_completion_.set_object(data_processor_->GetDataFlushedEvent()->get());
+  wait_for_completion_.set_trigger(DATA_FLUSHED_SIGNAL);
   wait_for_completion_.Begin(
       dispatcher_, [&, this, callback = std::move(callback)](
                        async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,

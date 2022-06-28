@@ -31,12 +31,17 @@ using DataProcessorFidlTest = gtest::RealLoopFixture;
 
 TEST_F(DataProcessorFidlTest, ProcessAndFinish) {
   auto shared_map = std::make_shared<TestDataProcessor::UrlDataMap>();
+  zx::event event;
+  zx::event::create(0, &event);
+  zx::unowned_event unowned_event = event.borrow();
 
   bool on_done_called = false;
   ftest_debug::DebugDataProcessorPtr data_processor_fidl_proxy;
   DataProcessorFidl processor_fidl(
       data_processor_fidl_proxy.NewRequest(), [&]() { on_done_called = true; },
-      [&](fbl::unique_fd) { return std::make_unique<TestDataProcessor>(shared_map); },
+      [&](fbl::unique_fd) {
+        return std::make_unique<TestDataProcessor>(shared_map, event.release());
+      },
       dispatcher());
 
   int fd = open("/tmp", O_DIRECTORY | O_RDWR);
@@ -70,12 +75,18 @@ TEST_F(DataProcessorFidlTest, ProcessAndFinish) {
   bool finish_called = false;
   data_processor_fidl_proxy->Finish([&]() { finish_called = true; });
 
+  // finish shouldn't be called until we signal on the event we gave to the data processor.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(on_done_called);
+  ASSERT_FALSE(finish_called);
+
+  unowned_event->signal(0, DATA_FLUSHED_SIGNAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(on_done_called);
   ASSERT_TRUE(finish_called);
 }
 
-TEST_F(DataProcessorFidlTest, AwaitIdleOnFinish) {
+TEST_F(DataProcessorFidlTest, AwaitFlushedOnFinish) {
   zx::event event;
   zx::event::create(0, &event);
   zx::unowned_event unowned_event = event.borrow();
@@ -107,7 +118,7 @@ TEST_F(DataProcessorFidlTest, AwaitIdleOnFinish) {
   RunLoopUntilIdle();
   ASSERT_FALSE(finish_called);
 
-  unowned_event->signal(0, IDLE_SIGNAL);
+  unowned_event->signal(0, DATA_FLUSHED_SIGNAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(finish_called);
 }
@@ -140,7 +151,7 @@ TEST_F(DataProcessorFidlTest, AwaitIdleOnFinishNoVmos) {
   RunLoopUntilIdle();
   ASSERT_FALSE(finish_called);
 
-  unowned_event->signal(0, IDLE_SIGNAL);
+  unowned_event->signal(0, DATA_FLUSHED_SIGNAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(finish_called);
 }

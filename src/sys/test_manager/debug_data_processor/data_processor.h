@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/debugdata/datasink.h>
 #include <lib/zx/event.h>
 
 #include <map>
@@ -43,9 +44,9 @@ using SinkVMOMap = std::unordered_map<std::string, std::vector<zx::vmo>>;
 // key = test_url
 using TestSinkMap = std::map<std::string, SinkVMOMap>;
 
-// Signal indicating more data is ready to be processed.
-const uint32_t PENDING_DATA_SIGNAL = ZX_USER_SIGNAL_1;
-static_assert(IDLE_SIGNAL != PENDING_DATA_SIGNAL);
+// Signal indicating more data has been added or marked complete.
+const uint32_t STATE_DIRTY_SIGNAL = ZX_USER_SIGNAL_1;
+static_assert(STATE_DIRTY_SIGNAL != DATA_FLUSHED_SIGNAL);
 
 class DataProcessor : public AbstractDataProcessor {
  public:
@@ -56,7 +57,9 @@ class DataProcessor : public AbstractDataProcessor {
   /// Process data on internal dispacther.
   void ProcessData(std::string test_url, DataSinkDump data_sink) override;
 
-  zx::unowned_event GetIdleEvent() override;
+  void FinishProcessing() override;
+
+  zx::unowned_event GetDataFlushedEvent() override;
 
   /// Loads current summary.json if available, merges it with the passed map and writes the map back
   /// to summary.json.
@@ -97,23 +100,37 @@ class DataProcessor : public AbstractDataProcessor {
   /// Container for information shared across threads.
   class DataProcessorInner {
    public:
-    explicit DataProcessorInner(fbl::unique_fd dir_fd);
+    explicit DataProcessorInner();
 
     TestSinkMap TakeMapContents();
     void AddData(std::string test_url, DataSinkDump data_sink_dump);
-    void SignalIdleIfEmpty();
+    void FinishProcessing();
+    bool DataFinished();
+    void SignalFlushed();
     zx::unowned_event GetEvent();
-    fbl::unique_fd& GetFd();
 
    private:
     std::mutex mutex_;
     TestSinkMap data_sink_map_ FXL_GUARDED_BY(mutex_);
+    bool done_adding_data_ FXL_GUARDED_BY(mutex_);
     zx::event idle_signal_event_;
-    fbl::unique_fd dir_fd_;
+  };
+
+  /// State only accessed by the processing thread.
+  struct ProcessorState {
+    fbl::unique_fd dir_fd;
+    debugdata::DataSink data_sink;
+    // TODO(satsukiu): test success isn't read from summary.json anymore, we should
+    // stop tracking it.
+    std::unordered_map<std::string, bool> tests_success;
+
+    explicit ProcessorState(fbl::unique_fd arg_dir_fd)
+        : dir_fd(std::move(arg_dir_fd)), data_sink(dir_fd) {}
   };
 
   /// Process data present in `data_sink_map_`.
-  static void ProcessDataInner(std::shared_ptr<DataProcessorInner> inner);
+  static void ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
+                               std::shared_ptr<ProcessorState> state);
 
   std::shared_ptr<DataProcessorInner> inner_;
   async_dispatcher_t* dispatcher_;

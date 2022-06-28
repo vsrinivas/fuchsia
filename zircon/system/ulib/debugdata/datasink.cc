@@ -281,15 +281,19 @@ std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const 
 }  // namespace
 
 void DataSink::ProcessSingleDebugData(const std::string& data_sink, zx::vmo debug_data,
+                                      std::optional<std::string> tag,
                                       DataSinkCallback& error_callback,
                                       DataSinkCallback& warning_callback) {
   if (data_sink == kProfileSink) {
-    ProcessProfile(debug_data, error_callback, warning_callback);
+    ProcessProfile(debug_data, std::move(tag), error_callback, warning_callback);
   } else {
     auto dump_file = ProcessDataSinkDump(data_sink, debug_data, data_sink_dir_fd_, error_callback,
                                          warning_callback);
     if (dump_file) {
-      dump_files_[data_sink].emplace(*dump_file);
+      auto& tag_vec = dump_files_[data_sink][*dump_file];
+      if (tag) {
+        tag_vec.push_back(std::move(*tag));
+      }
     }
   }
 }
@@ -308,8 +312,7 @@ DataSinkFileMap DataSink::FlushToDirectory(DataSinkCallback& error_callback,
     return {};
   }
 
-  for (auto& [name, buffer_and_size] : merged_profiles_) {
-    auto& [buffer, buffer_size] = buffer_and_size;
+  for (auto& [name, profile] : merged_profiles_) {
     fbl::unique_fd fd{openat(sink_dir_fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666)};
     if (!fd) {
       error_callback(fxl::StringPrintf("FAILURE: Cannot open data-sink file \"%s\": %s\n",
@@ -330,30 +333,31 @@ DataSinkFileMap DataSink::FlushToDirectory(DataSinkCallback& error_callback,
                                          name.c_str(), strerror(ec.value())));
         return {};
       }
-      if (buffer_size != file_size) {
+      if (profile.size != file_size) {
         error_callback(
             fxl::StringPrintf("FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
-                              name.c_str(), buffer_size, file_size));
+                              name.c_str(), profile.size, file_size));
       }
-      ZX_ASSERT(buffer_size == file_size);
+      ZX_ASSERT(profile.size == file_size);
 
       // Ensure that profiles are structuraly compatible.
-      if (!ProfilesCompatible(buffer.get(), file_buffer.get(), buffer_size)) {
+      if (!ProfilesCompatible(profile.buffer.get(), file_buffer.get(), file_size)) {
         warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data: %s\n",
                                            "source profile file is not compatible"));
         continue;
       }
-      MergeProfiles(buffer.get(), file_buffer.get(), file_size);
+      MergeProfiles(profile.buffer.get(), file_buffer.get(), file_size);
     }
 
-    if (std::error_code ec = WriteFile(fd, buffer.get(), buffer_size); ec) {
+    if (std::error_code ec = WriteFile(fd, profile.buffer.get(), profile.size); ec) {
       error_callback(fxl::StringPrintf("FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(),
                                        strerror(ec.value())));
       return {};
     }
-    dump_files_[kProfileSink].emplace(DumpFile{name, JoinPath(kProfileSink, name).c_str()});
+    dump_files_[kProfileSink].emplace(DumpFile{name, JoinPath(kProfileSink, name).c_str()},
+                                      profile.tags);
   }
-  std::unordered_map<std::string, std::unordered_set<DumpFile, HashDumpFile, EqDumpFile>> result;
+  DataSinkFileMap result;
   std::swap(result, dump_files_);
   return result;
 }
@@ -363,7 +367,8 @@ DataSinkFileMap DataSink::FlushToDirectory(DataSinkCallback& error_callback,
 // profile. First it groups all VMOs by name which uniquely identifies each
 // binary. Then it merges together all VMOs for the same binary. This ensures that at the
 // end, we have exactly one profile for each binary in total.
-void DataSink::ProcessProfile(const zx::vmo& vmo, DataSinkCallback& error_callback,
+void DataSink::ProcessProfile(const zx::vmo& vmo, std::optional<std::string> tag,
+                              DataSinkCallback& error_callback,
                               DataSinkCallback& warning_callback) {
   // Group data by profile name. The name is a hash computed from profile metadata and
   // should be unique across all binaries (modulo hash collisions).
@@ -398,48 +403,42 @@ void DataSink::ProcessProfile(const zx::vmo& vmo, DataSinkCallback& error_callba
     return;
   }
 
-  auto existing_buffer_and_size = merged_profiles_.find(name);
-  if (existing_buffer_and_size == merged_profiles_.end()) {
+  auto existing_merged = merged_profiles_.find(name);
+  if (existing_merged == merged_profiles_.end()) {
     // new profile name, create a new buffer
-    std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(vmo_size);
-    memcpy(buffer.get(), mapper.start(), vmo_size);
+    auto it_pair = merged_profiles_.emplace(std::move(name), vmo_size);
+    auto& merged_profile = it_pair.first->second;
 
-    merged_profiles_.emplace(name, std::make_pair(std::move(buffer), vmo_size));
+    memcpy(merged_profile.buffer.get(), mapper.start(), vmo_size);
+    if (tag) {
+      merged_profile.tags.push_back(std::move(*tag));
+    }
   } else {
+    auto& merged_profile = existing_merged->second;
     // profile name exists, merge with existing
-    auto& [buffer, buffer_size] = existing_buffer_and_size->second;
-
-    if (buffer_size != vmo_size) {
+    if (merged_profile.size != vmo_size) {
       error_callback(
           fxl::StringPrintf("FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
-                            name.c_str(), buffer_size, vmo_size));
+                            name.c_str(), merged_profile.size, vmo_size));
     }
-    ZX_ASSERT(buffer_size == vmo_size);
+    ZX_ASSERT(merged_profile.size == vmo_size);
 
     // Ensure that profiles are structuraly compatible.
-    if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
-                            buffer_size)) {
+    if (!ProfilesCompatible(merged_profile.buffer.get(),
+                            reinterpret_cast<const uint8_t*>(mapper.start()),
+                            merged_profile.size)) {
       warning_callback(fxl::StringPrintf("WARNING: Unable to merge profile data: %s\n",
                                          "source profile file is not compatible"));
       return;
     }
 
-    MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
-  }
-}
-
-DataSinkFileMap ProcessDebugData(const fbl::unique_fd& data_sink_dir_fd,
-                                 std::unordered_map<std::string, std::vector<zx::vmo>> debug_data,
-                                 DataSinkCallback error_callback,
-                                 DataSinkCallback warning_callback) {
-  DataSink data_sink(data_sink_dir_fd);
-  for (auto& [data_sink_name, vmos] : debug_data) {
-    for (auto& vmo : vmos) {
-      data_sink.ProcessSingleDebugData(data_sink_name, std::move(vmo), error_callback,
-                                       warning_callback);
+    if (tag) {
+      merged_profile.tags.push_back(std::move(*tag));
     }
+
+    MergeProfiles(merged_profile.buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
+                  merged_profile.size);
   }
-  return data_sink.FlushToDirectory(error_callback, warning_callback);
 }
 
 }  // namespace debugdata

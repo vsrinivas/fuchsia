@@ -222,7 +222,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     debug_data_sink.emplace(data_sink_dir_fd);
     debug_data_publisher.emplace(
         loop.dispatcher(), std::move(root_dir_fd), [&](std::string data_sink, zx::vmo vmo) {
-          debug_data_sink->ProcessSingleDebugData(data_sink, std::move(vmo),
+          debug_data_sink->ProcessSingleDebugData(data_sink, std::move(vmo), {},
                                                   on_data_collection_error_callback,
                                                   on_data_collection_warning_callback);
         });
@@ -394,7 +394,10 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     auto written_files = debug_data_sink->FlushToDirectory(on_data_collection_error_callback,
                                                            on_data_collection_warning_callback);
     for (auto& [data_sink, files] : written_files) {
-      std::vector<debugdata::DumpFile> vec_files(files.begin(), files.end());
+      std::vector<debugdata::DumpFile> vec_files;
+      for (auto& [dump_file, tags] : files) {
+        vec_files.push_back(dump_file);
+      }
       result->data_sinks.emplace(data_sink, std::move(vec_files));
     }
   }

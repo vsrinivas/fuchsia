@@ -27,26 +27,29 @@ const std::string kSummaryFile = "summary.json";
 DataProcessor::DataProcessor(fbl::unique_fd dir_fd, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {
   FX_CHECK(dispatcher_ != nullptr);
-  inner_ = std::make_shared<DataProcessorInner>(std::move(dir_fd));
+  inner_ = std::make_shared<DataProcessorInner>();
   std::weak_ptr<DataProcessorInner> weak_inner = inner_;
   auto idle_event = inner_->GetEvent();
 
-  processor_wait_ = std::make_shared<async::Wait>(
-      idle_event->get(), PENDING_DATA_SIGNAL, 0,
-      [weak_inner = std::move(weak_inner)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                           zx_status_t status, const zx_packet_signal_t* signal) {
-        // Terminate if the wait was cancelled.
-        if (status != ZX_OK) {
-          return;
-        }
-        auto owned = weak_inner.lock();
-        // Terminate if the processor no longer exists.
-        if (!owned) {
-          return;
-        }
-        ProcessDataInner(owned);
-        wait->Begin(dispatcher);
-      });
+  auto state = std::make_shared<ProcessorState>(std::move(dir_fd));
+
+  processor_wait_ =
+      std::make_shared<async::Wait>(idle_event->get(), STATE_DIRTY_SIGNAL, 0,
+                                    [weak_inner = std::move(weak_inner), state = std::move(state)](
+                                        async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                        zx_status_t status, const zx_packet_signal_t* signal) {
+                                      // Terminate if the wait was cancelled.
+                                      if (status != ZX_OK) {
+                                        return;
+                                      }
+                                      auto owned = weak_inner.lock();
+                                      // Terminate if the processor no longer exists.
+                                      if (!owned) {
+                                        return;
+                                      }
+                                      ProcessDataInner(owned, state);
+                                      wait->Begin(dispatcher);
+                                    });
 
   // async::Wait is not threadsafe, so to ensure only the processor thread accesses it,
   // we post a task to the processor thread, which in turn beings the wait.
@@ -68,20 +71,21 @@ void DataProcessor::ProcessData(std::string test_url, DataSinkDump data_sink_dum
   inner_->AddData(std::move(test_url), std::move(data_sink_dump));
 }
 
-zx::unowned_event DataProcessor::GetIdleEvent() { return inner_->GetEvent(); }
+void DataProcessor::FinishProcessing() { inner_->FinishProcessing(); }
 
-DataProcessor::DataProcessorInner::DataProcessorInner(fbl::unique_fd dir_fd)
-    : dir_fd_(std::move(dir_fd)) {
+zx::unowned_event DataProcessor::GetDataFlushedEvent() { return inner_->GetEvent(); }
+
+DataProcessor::DataProcessorInner::DataProcessorInner() : done_adding_data_(false) {
   FX_CHECK(zx::event::create(0, &idle_signal_event_) == ZX_OK);
-  idle_signal_event_.signal(PENDING_DATA_SIGNAL, IDLE_SIGNAL);
+  idle_signal_event_.signal(STATE_DIRTY_SIGNAL | DATA_FLUSHED_SIGNAL, 0);
 }
 
 TestSinkMap DataProcessor::DataProcessorInner::TakeMapContents() {
   mutex_.lock();
   auto result = std::move(data_sink_map_);
   data_sink_map_ = TestSinkMap();
-  // Once we take data, we're not idle anymore and there's no pending data.
-  idle_signal_event_.signal(IDLE_SIGNAL | PENDING_DATA_SIGNAL, 0);
+  // Clear dirty bit once we take data.
+  idle_signal_event_.signal(STATE_DIRTY_SIGNAL, 0);
   mutex_.unlock();
   return result;
 }
@@ -90,54 +94,79 @@ void DataProcessor::DataProcessorInner::AddData(std::string test_url, DataSinkDu
   mutex_.lock();
   auto& map = data_sink_map_[std::move(test_url)];
   map[std::move(data_sink_dump.data_sink)].push_back(std::move(data_sink_dump.vmo));
-  // Now we've inserted data, the processor is no longer idle and we set pending_data.
-  idle_signal_event_.signal(IDLE_SIGNAL, PENDING_DATA_SIGNAL);
+  idle_signal_event_.signal(0, STATE_DIRTY_SIGNAL);
   mutex_.unlock();
 }
 
-void DataProcessor::DataProcessorInner::SignalIdleIfEmpty() {
+void DataProcessor::DataProcessorInner::FinishProcessing() {
+  ZX_ASSERT(!DataFinished());
   mutex_.lock();
-  bool pending_work = !data_sink_map_.empty();
-  uint32_t signal_flags = pending_work ? 0 : IDLE_SIGNAL;
-  idle_signal_event_.signal(IDLE_SIGNAL, signal_flags);
+  done_adding_data_ = true;
+  idle_signal_event_.signal(0, STATE_DIRTY_SIGNAL);
   mutex_.unlock();
+}
+
+bool DataProcessor::DataProcessorInner::DataFinished() {
+  mutex_.lock();
+  bool complete = data_sink_map_.empty() && done_adding_data_;
+  mutex_.unlock();
+  return complete;
+}
+
+void DataProcessor::DataProcessorInner::SignalFlushed() {
+  idle_signal_event_.signal(0, DATA_FLUSHED_SIGNAL);
 }
 
 zx::unowned_event DataProcessor::DataProcessorInner::GetEvent() {
   return idle_signal_event_.borrow();
 }
 
-fbl::unique_fd& DataProcessor::DataProcessorInner::GetFd() { return dir_fd_; }
-
-void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner) {
+void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
+                                     std::shared_ptr<ProcessorState> state) {
   auto data_sink_map = inner->TakeMapContents();
-  if (data_sink_map.empty()) {
-    inner->SignalIdleIfEmpty();
-    return;
-  }
-  TestDebugDataMap debug_data_map;
   for (auto& [test_url, sink_vmo_map] : data_sink_map) {
-    auto url = test_url;
     bool got_error = false;
-    auto sinks_map = debugdata::ProcessDebugData(
-        inner->GetFd(), std::move(sink_vmo_map),
-        [&](const std::string& error) {
-          FX_LOGS(ERROR) << "ProcessDebugData: " << error;
-          got_error = true;
-        },
-        [&](const std::string& warning) { FX_LOGS(WARNING) << "ProcessDebugData: " << warning; });
-    auto& debug_data_entry = debug_data_map[std::move(url)];
-    debug_data_entry.data_processing_passed = !got_error;
-
-    for (auto& [sink_name, dump_files] : sinks_map) {
-      auto& file_map = debug_data_entry.data_sink_map[sink_name];
-      for (auto& e : dump_files) {
-        file_map[std::move(e.file)] = std::move(e.name);
+    debugdata::DataSinkCallback error_log_fn = [&](const std::string& error) {
+      FX_LOGS(ERROR) << "ProcessDebugData: " << error;
+      got_error = true;
+    };
+    debugdata::DataSinkCallback warn_log_fn = [&](const std::string& warning) {
+      FX_LOGS(WARNING) << "ProcessDebugData: " << warning;
+    };
+    for (auto& [data_sink_name, vmos] : sink_vmo_map) {
+      for (auto& vmo : vmos) {
+        state->data_sink.ProcessSingleDebugData(data_sink_name, std::move(vmo), test_url,
+                                                error_log_fn, warn_log_fn);
       }
     }
+    state->tests_success.try_emplace(test_url, true);
+    state->tests_success[test_url] = state->tests_success[test_url] && !got_error;
   }
-  WriteSummaryFile(inner->GetFd(), std::move(debug_data_map));
-  inner->SignalIdleIfEmpty();
+
+  if (inner->DataFinished()) {
+    debugdata::DataSinkCallback error_log_fn = [&](const std::string& error) {
+      FX_LOGS(ERROR) << "FlushDebugData: " << error;
+    };
+    debugdata::DataSinkCallback warn_log_fn = [&](const std::string& warning) {
+      FX_LOGS(WARNING) << "FlushDebugData: " << warning;
+    };
+    auto sinks_map = state->data_sink.FlushToDirectory(error_log_fn, warn_log_fn);
+
+    TestDebugDataMap debug_data_map;
+    for (auto& [sink_name, dump_file_tag_map] : sinks_map) {
+      for (auto& [dump_file, urls] : dump_file_tag_map) {
+        for (auto url : urls) {
+          debug_data_map[url].data_sink_map[sink_name][dump_file.file] = dump_file.name;
+        }
+      }
+    }
+    for (auto& [url, success] : state->tests_success) {
+      debug_data_map[url].data_processing_passed = success;
+    }
+
+    WriteSummaryFile(state->dir_fd, debug_data_map);
+    inner->SignalFlushed();
+  }
 }
 
 namespace {

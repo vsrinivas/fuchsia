@@ -260,9 +260,6 @@ TEST_F(ProcessDataTest, ProcessData) {
   expected_map["test_url1"] = std::move(sink_data_map);
   RunLoopUntilIdle();
 
-  AssertStorage(expected_map, GetTempDirFd());
-  ASSERT_FALSE(testing::Test::HasFailure());
-
   sink_data_map = std::map<std::string, std::string>();
   for (int i = 0; i < 5; i++) {
     zx::vmo vmo;
@@ -276,28 +273,28 @@ TEST_F(ProcessDataTest, ProcessData) {
   }
 
   expected_map["test_url2"] = std::move(sink_data_map);
-  RunLoopUntilIdle();
 
-  // Idle signal should be asserted after loop is idle.
+  // Flushed signal should be asserted after loop is idle.
+  processor()->FinishProcessing();
+  RunLoopUntilIdle();
   zx_signals_t asserted_signals;
-  processor()->GetIdleEvent()->wait_one(IDLE_SIGNAL, zx::time(0), &asserted_signals);
-  ASSERT_EQ(asserted_signals & IDLE_SIGNAL, IDLE_SIGNAL);
+  processor()->GetDataFlushedEvent()->wait_one(DATA_FLUSHED_SIGNAL, zx::time(0), &asserted_signals);
+  ASSERT_EQ(asserted_signals & DATA_FLUSHED_SIGNAL, DATA_FLUSHED_SIGNAL);
 
   AssertStorage(expected_map, GetTempDirFd());
   ASSERT_FALSE(testing::Test::HasFailure());
 }
 
-TEST_F(ProcessDataTest, AssertIdleSignalIfNoData) {
-  TestDebugDataMap map;
+TEST_F(ProcessDataTest, AssertDataFlushedIfNoData) {
+  processor()->FinishProcessing();
   RunLoopUntilIdle();
 
-  // Idle signal should be asserted since the processor isn't doing anything.
+  // Flushed signal should be asserted since the processor isn't doing anything.
   zx_signals_t asserted_signals;
-  processor()->GetIdleEvent()->wait_one(IDLE_SIGNAL, zx::time(0), &asserted_signals);
-  ASSERT_EQ(asserted_signals & IDLE_SIGNAL, IDLE_SIGNAL);
+  processor()->GetDataFlushedEvent()->wait_one(DATA_FLUSHED_SIGNAL, zx::time(0), &asserted_signals);
+  ASSERT_EQ(asserted_signals & DATA_FLUSHED_SIGNAL, DATA_FLUSHED_SIGNAL);
 
   std::vector<std::string> directory_contents;
-  ASSERT_TRUE(files::ReadDirContentsAt(GetTempDirFd().get(), ".", &directory_contents));
-  ASSERT_EQ(directory_contents.size(), 1u);
-  ASSERT_EQ(directory_contents[0], ".");
+  std::map<std::string, std::map<std::string, std::string>> expected_map;
+  AssertStorage(expected_map, GetTempDirFd());
 }

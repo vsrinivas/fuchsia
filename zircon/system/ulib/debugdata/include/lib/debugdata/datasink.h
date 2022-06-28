@@ -14,7 +14,6 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -49,8 +48,11 @@ struct EqDumpFile {
   bool operator()(const DumpFile& left, const DumpFile& right) const { return left == right; }
 };
 
-using DataSinkFileMap =
-    std::unordered_map<std::string, std::unordered_set<DumpFile, HashDumpFile, EqDumpFile>>;
+// Mapping from a DumpFile to tags associated with it.
+using DumpFileTagMap =
+    std::unordered_map<DumpFile, std::vector<std::string>, HashDumpFile, EqDumpFile>;
+// Mapping from a data_sink to DumpFiles.
+using DataSinkFileMap = std::unordered_map<std::string, DumpFileTagMap>;
 
 // DataSink merges debug data contained in VMOs and dumps the data to the provided directory.
 //
@@ -62,9 +64,11 @@ class DataSink {
   explicit DataSink(const fbl::unique_fd& data_sink_dir_fd) : data_sink_dir_fd_(data_sink_dir_fd) {}
 
   // Processes debug data from a single VMO. This function will execute callbacks with error or
-  // warnings.
+  // warnings. The optional |tag| argument may be used to track the sources from which a merged
+  // profile is created.
   void ProcessSingleDebugData(const std::string& data_sink, zx::vmo debug_data,
-                              DataSinkCallback& error_callback, DataSinkCallback& warning_callback);
+                              std::optional<std::string> tag, DataSinkCallback& error_callback,
+                              DataSinkCallback& warning_callback);
   // Flush any data not yet written to disk. Must be called prior to cleaning up `DataSink`.
   // Returns a mapping from data sink name to files written since the last call to
   // `FlushToDirectory`.
@@ -72,23 +76,28 @@ class DataSink {
                                    DataSinkCallback& warning_callback);
 
  private:
-  void ProcessProfile(const zx::vmo& data, DataSinkCallback& error_callback,
-                      DataSinkCallback& warning_callback);
+  void ProcessProfile(const zx::vmo& data, std::optional<std::string> tag,
+                      DataSinkCallback& error_callback, DataSinkCallback& warning_callback);
+
+  // Container holding a merged profile and metadata.
+  class MergedProfile {
+   public:
+    std::unique_ptr<uint8_t[]> buffer;
+    uint64_t size;
+    // Tags indicating the sources from which a merged profile is created.
+    std::vector<std::string> tags;
+
+    explicit MergedProfile(uint64_t size) : size(size) {
+      buffer = std::make_unique<uint8_t[]>(size);
+    }
+  };
 
   const fbl::unique_fd& data_sink_dir_fd_;
   // Buffers grouped by profile name.
-  std::unordered_map<std::string, std::pair<std::unique_ptr<uint8_t[]>, uint64_t>> merged_profiles_;
+  std::unordered_map<std::string, MergedProfile> merged_profiles_;
   // Mapping from data sink to dump files.
   DataSinkFileMap dump_files_;
 };
-
-/// Processes debug data and returns all files written to `data_sink_dir_fd` and mapped by
-/// data_sink. This function will process all data sinks and execute callbacks with error or
-/// warnings.
-DataSinkFileMap ProcessDebugData(const fbl::unique_fd& data_sink_dir_fd,
-                                 std::unordered_map<std::string, std::vector<zx::vmo>> debug_data,
-                                 DataSinkCallback error_callback,
-                                 DataSinkCallback warning_callback);
 
 }  // namespace debugdata
 

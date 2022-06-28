@@ -39,14 +39,14 @@ TEST(DataSinkTest, ProcessData) {
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
   ASSERT_OK(vmo.set_prop_content_size(sizeof(kTestData)));
 
-  data_sink.ProcessSingleDebugData(kTestSink, std::move(vmo), on_data_collection_error_callback,
+  data_sink.ProcessSingleDebugData(kTestSink, std::move(vmo), {}, on_data_collection_error_callback,
                                    on_data_collection_warning_callback);
 
   zx::vmo profile_vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &profile_vmo));
   ASSERT_OK(profile_vmo.set_property(ZX_PROP_NAME, kTestProfile, sizeof(kTestProfile)));
   ASSERT_OK(profile_vmo.write(kTestData, 0, sizeof(kTestData)));
-  data_sink.ProcessSingleDebugData(kProfileSink, std::move(profile_vmo),
+  data_sink.ProcessSingleDebugData(kProfileSink, std::move(profile_vmo), {},
                                    on_data_collection_error_callback,
                                    on_data_collection_warning_callback);
 
@@ -56,11 +56,11 @@ TEST(DataSinkTest, ProcessData) {
   ASSERT_EQ(written_files[kProfileSink].size(), 1);
   debugdata::DumpFile expected_profile_file = {kTestProfile,
                                                std::string("llvm-profile/") + kTestProfile};
-  ASSERT_EQ(*written_files[kProfileSink].begin(), expected_profile_file);
+  ASSERT_EQ(written_files[kProfileSink].begin()->first, expected_profile_file);
   ASSERT_EQ(written_files[kTestSink].size(), 1);
   char test_sink_location[256];
   sprintf(test_sink_location, "%s/%s", tmp_location.c_str(),
-          written_files[kTestSink].begin()->file.c_str());
+          written_files[kTestSink].begin()->first.file.c_str());
   fbl::unique_fd test_sink_fd(open(test_sink_location, O_RDWR));
   std::vector<uint8_t> test_sink_content;
   std::vector<uint8_t> expected(std::begin(kTestData), std::end(kTestData));
