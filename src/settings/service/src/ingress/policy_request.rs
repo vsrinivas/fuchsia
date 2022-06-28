@@ -27,7 +27,6 @@ use crate::policy::Request;
 use crate::policy::{Payload, PolicyType};
 use crate::service::{message, Address};
 use crate::trace;
-use crate::trace::TracingNonce;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 
@@ -67,8 +66,8 @@ where
     R: From<Response> + Send + Sync + 'static,
     T: Responder<R> + Send + Sync + 'static,
 {
-    async fn execute(self: Box<Self>, messenger: message::Messenger, nonce: TracingNonce) {
-        trace!(nonce, "Independent policy Work execute");
+    async fn execute(self: Box<Self>, messenger: message::Messenger, id: fuchsia_trace::Id) {
+        trace!(id, "Independent policy Work execute");
         // Send request through MessageHub.
         let mut response_listener = messenger
             .message(
@@ -165,7 +164,7 @@ mod tests {
         let work_messenger_signature = work_messenger.get_signature();
 
         // Execute work asynchronously.
-        let work_task_handle = fasync::Task::spawn(work.execute(work_messenger, 0));
+        let work_task_handle = fasync::Task::spawn(work.execute(work_messenger, 0.into()));
 
         // Ensure the request is sent from the right sender.
         let (received_request, client) =
@@ -204,7 +203,7 @@ mod tests {
                     .await
                     .expect("messenger should be created")
                     .0,
-                0,
+                0.into(),
             ),
         );
 

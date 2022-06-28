@@ -183,12 +183,12 @@ where
         {
             let hanging_get_handler_clone = hanging_get_handler.clone();
             fasync::Task::spawn(async move {
-                let nonce = fuchsia_trace::generate_nonce();
-                trace!(nonce, "hanging_get_handler");
+                let id = fuchsia_trace::Id::new();
+                trace!(id, "hanging_get_handler");
                 while let Some(command) = on_command_receiver.next().await {
                     match command {
                         ListenCommand::Change(setting_info) => {
-                            trace!(nonce, "change");
+                            trace!(id, "change");
                             let mut handler_lock = hanging_get_handler_clone.lock().await;
                             handler_lock.on_change(setting_info).await;
                         }
@@ -271,8 +271,8 @@ where
             self.listen_exit_tx = Some(exit_tx);
 
             fasync::Task::spawn(async move {
-                let nonce = fuchsia_trace::generate_nonce();
-                trace!(nonce, "watch change fn");
+                let id = fuchsia_trace::Id::new();
+                trace!(id, "watch change fn");
                 let receptor_fuse = receptor.fuse();
                 futures::pin_mut!(receptor_fuse);
 
@@ -280,7 +280,7 @@ where
                     futures::select! {
                         update = receptor_fuse.select_next_some() => {
                             trace!(
-                                nonce,
+                                id,
                                 "change",
                                 "payload" => format!("{:?}", update).as_str()
                             );

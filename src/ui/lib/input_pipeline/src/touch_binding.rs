@@ -307,7 +307,7 @@ impl TouchBinding {
         input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
         fuchsia_trace::duration!("input", "touch-binding-process-report");
-        fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0));
+        fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0).into());
 
         // Input devices can have multiple types so ensure `report` is a TouchInputReport.
         let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
@@ -354,7 +354,7 @@ impl TouchBinding {
 
         let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
-        let trace_id = fuchsia_trace::generate_nonce();
+        let trace_id = fuchsia_trace::Id::new();
         fuchsia_trace::flow_begin!("input", "report-to-event", trace_id);
         send_event(
             hashmap! {
@@ -441,7 +441,7 @@ fn send_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: zx::Time,
     input_event_sender: &mut Sender<input_device::InputEvent>,
-    trace_id: u64,
+    trace_id: fuchsia_trace::Id,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Touch(TouchEvent {

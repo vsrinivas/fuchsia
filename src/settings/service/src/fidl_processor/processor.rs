@@ -77,8 +77,8 @@ where
     // Process the stream. Note that we pass in the processor here as it cannot
     // be used again afterwards.
     pub(crate) async fn process(mut self) {
-        let nonce = fuchsia_trace::generate_nonce();
-        trace!(nonce, "fidl processor");
+        let id = fuchsia_trace::Id::new();
+        trace!(id, "fidl processor");
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         loop {
             // Note that we create a fuse outside the select! to prevent it from
@@ -88,7 +88,7 @@ where
 
             futures::select! {
                 request = fused_stream => {
-                    trace!(nonce, "request");
+                    trace!(id, "request");
                     if let Ok(Some(mut req)) = request {
                         for processing_unit in &self.processing_units {
                             // If the processing unit consumes the request (an empty

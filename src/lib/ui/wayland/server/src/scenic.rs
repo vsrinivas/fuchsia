@@ -80,9 +80,9 @@ impl Flatland {
         self.id_generator.next_content_id()
     }
 
-    pub fn alloc_trace_id(&mut self) -> u64 {
+    pub fn alloc_trace_id(&mut self) -> ftrace::Id {
         let id = self.next_trace_id;
         self.next_trace_id += 1;
-        id
+        id.into()
     }
 }

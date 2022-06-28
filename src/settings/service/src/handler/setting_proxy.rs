@@ -18,11 +18,11 @@ use crate::handler::setting_handler::{
 use crate::inspect::listener_logger::ListenerInspectLogger;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
-use crate::trace::TracingNonce;
 use crate::{clock, event, service, trace, trace_guard};
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use fuchsia_trace as ftrace;
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
@@ -266,9 +266,9 @@ impl SettingProxy {
 
         // Main task loop for receiving and processing incoming messages.
         fasync::Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
+            let id = ftrace::Id::new();
             trace!(
-                nonce,
+                id,
 
                 "setting_proxy",
                 "setting_type" => format!("{:?}", setting_type).as_str()
@@ -284,22 +284,22 @@ impl SettingProxy {
                     // communication from the setting controller.
                     event = receptor_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
 
                             "service event"
                         );
-                        proxy.process_service_event(nonce, event).await;
+                        proxy.process_service_event(id, event).await;
                     }
 
                     // Handles messages for enqueueing requests and processing
                     // results on the main event loop for proxy.
                     request = proxy_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
 
                             "proxy request"
                         );
-                        proxy.process_proxy_request(nonce, request).await;
+                        proxy.process_proxy_request(id, request).await;
                     }
                 }
             }
@@ -310,19 +310,19 @@ impl SettingProxy {
 
     async fn process_service_event(
         &mut self,
-        nonce: TracingNonce,
+        id: ftrace::Id,
         event: service::message::MessageEvent,
     ) {
         if let MessageEvent::Message(payload, client) = event {
             match payload {
                 service::Payload::Setting(Payload::Request(request)) => {
-                    trace!(nonce, "process_service_request");
+                    trace!(id, "process_service_request");
                     self.process_service_request(request, client).await;
                 }
                 service::Payload::Controller(setting_handler::Payload::Event(event)) => {
                     // Messages received after the client signature
                     // has been changed will be ignored.
-                    let guard = trace_guard!(nonce, "get author");
+                    let guard = trace_guard!(id, "get author");
                     if Some(client.get_author()) != self.client_signature {
                         return;
                     }
@@ -330,11 +330,11 @@ impl SettingProxy {
 
                     match event {
                         Event::Changed(setting_info) => {
-                            trace!(nonce, "change notification");
+                            trace!(id, "change notification");
                             self.notify(setting_info);
                         }
                         Event::Exited(result) => {
-                            trace!(nonce, "process exit");
+                            trace!(id, "process exit");
                             self.process_exit(result);
                         }
                     }
@@ -346,42 +346,42 @@ impl SettingProxy {
         }
     }
 
-    async fn process_proxy_request(&mut self, nonce: TracingNonce, request: ProxyRequest) {
+    async fn process_proxy_request(&mut self, id: ftrace::Id, request: ProxyRequest) {
         match request {
             ProxyRequest::Add(request) => {
-                trace!(nonce, "add request");
+                trace!(id, "add request");
                 self.add_request(request);
             }
             ProxyRequest::Execute(recreate_handler) => {
-                trace!(nonce, "execute");
-                self.execute_next_request(nonce, recreate_handler).await;
+                trace!(id, "execute");
+                self.execute_next_request(id, recreate_handler).await;
             }
             ProxyRequest::RemoveActive => {
-                trace!(nonce, "remove active");
+                trace!(id, "remove active");
                 self.remove_active_request();
             }
             ProxyRequest::TeardownTimeout => {
-                trace!(nonce, "teardown timeout");
+                trace!(id, "teardown timeout");
                 self.start_teardown_timeout().await;
             }
             ProxyRequest::Teardown => {
-                trace!(nonce, "teardown");
+                trace!(id, "teardown");
                 self.teardown_if_needed().await;
             }
             ProxyRequest::Retry => {
-                trace!(nonce, "retry");
+                trace!(id, "retry");
                 self.retry();
             }
             ProxyRequest::HandleResult(result) => {
-                trace!(nonce, "handle result");
+                trace!(id, "handle result");
                 self.handle_result(result);
             }
             ProxyRequest::Listen(event) => {
-                trace!(nonce, "handle listen");
+                trace!(id, "handle listen");
                 self.handle_listen(event).await;
             }
             ProxyRequest::EndListen(request_info) => {
-                trace!(nonce, "handle end listen");
+                trace!(id, "handle end listen");
                 self.listener_logger.lock().await.remove_listener(self.setting_type);
                 self.handle_end_listen(request_info).await;
             }
@@ -645,7 +645,7 @@ impl SettingProxy {
     /// If the queue is empty, nothing happens.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    async fn execute_next_request(&mut self, nonce: TracingNonce, recreate_handler: bool) {
+    async fn execute_next_request(&mut self, id: ftrace::Id, recreate_handler: bool) {
         if self.active_request.is_none() {
             // Add the request to the queue of requests to process.
             self.active_request = Some(ActiveRequest {
@@ -744,7 +744,7 @@ impl SettingProxy {
         let proxy_request_sender_clone = self.proxy_request_sender.clone();
 
         fasync::Task::spawn(async move {
-            trace!(nonce, "response");
+            trace!(id, "response");
             while let Some(message_event) = receptor.next().await {
                 let handler_result = match message_event {
                     MessageEvent::Message(

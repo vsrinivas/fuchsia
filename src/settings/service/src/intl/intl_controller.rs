@@ -12,6 +12,7 @@ use crate::handler::setting_handler::{
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
+use fuchsia_trace as ftrace;
 use rust_icu_uenum as uenum;
 use rust_icu_uloc as uloc;
 use std::collections::HashSet;
@@ -61,7 +62,7 @@ impl controller::Handle for IntlController {
             Request::SetIntlInfo(info) => Some(self.set(info).await),
             Request::Get => Some(
                 self.client
-                    .read_setting_info::<IntlInfo>(fuchsia_trace::generate_nonce())
+                    .read_setting_info::<IntlInfo>(ftrace::Id::new())
                     .await
                     .into_handler_result(),
             ),
@@ -91,9 +92,9 @@ impl IntlController {
     async fn set(&self, info: IntlInfo) -> SettingHandlerResult {
         self.validate_intl_info(info.clone())?;
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let current = self.client.read_setting::<IntlInfo>(nonce).await;
-        self.client.write_setting(current.merge(info).into(), nonce).await.into_handler_result()
+        let id = ftrace::Id::new();
+        let current = self.client.read_setting::<IntlInfo>(id).await;
+        self.client.write_setting(current.merge(info).into(), id).await.into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.

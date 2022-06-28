@@ -45,7 +45,7 @@ async fn test_read() {
         .message(
             service::Payload::Storage(Payload::Request(StorageRequest::Read(
                 SettingType::Unknown.into(),
-                0,
+                0.into(),
             ))),
             Audience::Address(Address::Storage),
         )
@@ -80,7 +80,7 @@ async fn test_write() {
         .message(
             service::Payload::Storage(Payload::Request(StorageRequest::Write(
                 SettingInfo::Unknown(UnknownInfo(CHANGED_VALUE)).into(),
-                0,
+                0.into(),
             ))),
             Audience::Address(Address::Storage),
         )

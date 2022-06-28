@@ -56,10 +56,10 @@ impl CameraWatcherAgent {
 
         let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            let guard = trace_guard!(nonce, "camera watcher agent");
+            let id = fuchsia_trace::Id::new();
+            let guard = trace_guard!(id, "camera watcher agent");
             while let Ok((payload, client)) = receptor.next_of::<Payload>().await {
-                trace!(nonce, "payload");
+                trace!(id, "payload");
                 if let Payload::Invocation(invocation) = payload {
                     client
                         .reply(Payload::Complete(agent.handle(invocation).await).into())
@@ -94,16 +94,16 @@ impl CameraWatcherAgent {
                     sw_muted: false,
                 };
                 fasync::Task::spawn(async move {
-                    let nonce = fuchsia_trace::generate_nonce();
+                    let id = fuchsia_trace::Id::new();
                     // Here we don't care about hw_muted state because the input service would pick
                     // up mute changes directly from the switch. We care about sw changes because
                     // other clients of the camera3 service could change the sw mute state but not
                     // notify the settings service.
-                    trace!(nonce, "camera_watcher_agent_handler");
+                    trace!(id, "camera_watcher_agent_handler");
                     while let Ok((sw_muted, _hw_muted)) =
                         camera_device_client.watch_mute_state().await
                     {
-                        trace!(nonce, "event");
+                        trace!(id, "event");
                         event_handler.handle_event(sw_muted);
                     }
                 })

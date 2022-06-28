@@ -21,6 +21,7 @@ use crate::input::MediaButtons;
 
 use async_trait::async_trait;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use fuchsia_trace as ftrace;
 use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -163,8 +164,7 @@ impl InputControllerInner {
     // after a migration from a previous InputInfoSources version
     // or on pave.
     async fn get_stored_info(&self) -> InputInfo {
-        let mut input_info =
-            self.client.read_setting::<InputInfo>(fuchsia_trace::generate_nonce()).await;
+        let mut input_info = self.client.read_setting::<InputInfo>(ftrace::Id::new()).await;
         if input_info.input_device_state.is_empty() {
             input_info.input_device_state = self.input_device_config.clone().into();
         }
@@ -204,8 +204,8 @@ impl InputControllerInner {
             DeviceStateSource::SOFTWARE,
             if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
         );
-        let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
+        let id = ftrace::Id::new();
+        self.client.write_setting(input_info.into(), id).await.into_handler_result()
     }
 
     /// Sets the hardware mic/cam state from the muted states in `media_buttons`.
@@ -265,8 +265,8 @@ impl InputControllerInner {
         }
 
         // Store the newly set value.
-        let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
+        let id = ftrace::Id::new();
+        self.client.write_setting(input_info.into(), id).await.into_handler_result()
     }
 
     /// Sets state for the given input devices.
@@ -301,8 +301,8 @@ impl InputControllerInner {
         }
 
         // Store the newly set value.
-        let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
+        let id = ftrace::Id::new();
+        self.client.write_setting(input_info.into(), id).await.into_handler_result()
     }
 
     /// Pulls the current software state of the camera from the device state.

@@ -128,11 +128,8 @@ impl SchedulingLib for UnsquashableScheduler {
         // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let _guard = self.wait_guard.try_borrow_mut().expect("Only one wait at a time allowed");
         // Async tracing for the waiting period.
-        let _trace_guard = trace::async_enter!(
-            trace::generate_nonce(),
-            "gfx",
-            "UnsquashableScheduler::WaitForPresent"
-        );
+        let _trace_guard =
+            trace::async_enter!(trace::Id::new(), "gfx", "UnsquashableScheduler::WaitForPresent");
 
         // Wait until we're ready to draw.
         SchedulingFuture { sched: &self.data }.await;

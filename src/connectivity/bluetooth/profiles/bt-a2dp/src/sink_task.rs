@@ -285,7 +285,7 @@ async fn media_stream_task(
                 packet_count += 1;
                 // link incoming and outgoing flows together with shared duration event
                 trace::duration!("bt-a2dp", "Profile packet received");
-                trace::flow_end!("bluetooth", "ProfilePacket", packet_count);
+                trace::flow_end!("bluetooth", "ProfilePacket", packet_count.into());
 
                 if player.is_none() {
                     info!("Starting audio player..");

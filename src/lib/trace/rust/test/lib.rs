@@ -57,9 +57,9 @@ pub extern "C" fn rs_test_blob_macro() {
 
 #[no_mangle]
 pub extern "C" fn rs_test_flow_begin_step_end_macros() {
-    trace::flow_begin!("+enabled", "name", 123, "x" => 5);
-    trace::flow_step!("+enabled", "step", 123, "z" => 42);
-    trace::flow_end!("+enabled", "name", 123, "y" => "foo");
+    trace::flow_begin!("+enabled", "name", 123.into(), "x" => 5);
+    trace::flow_step!("+enabled", "step", 123.into(), "z" => 42);
+    trace::flow_end!("+enabled", "name", 123.into(), "y" => "foo");
 }
 
 #[no_mangle]
@@ -79,7 +79,8 @@ pub extern "C" fn rs_test_arglimit() {
         "12" => 12,
         "13" => 13,
         "14" => 14,
-        "15" => 15);
+        "15" => 15
+    );
 }
 
 #[no_mangle]
@@ -87,10 +88,9 @@ pub extern "C" fn rs_test_async_event_with_scope() {
     // N.B. The ordering here is intentional. The async_enter! macro emits a trace event when the
     // scoped object is instantiated and when it is dropped. From an output perspective, that means
     // we are looking to see that the instant event occurs sandwiched between the two.
-    let _guard = trace::async_enter!(1u64, "+enabled", "name", "x" => 5, "y" => 10);
+    let _guard = trace::async_enter!(1.into(), "+enabled", "name", "x" => 5, "y" => 10);
     trace::instant!("+enabled", "name", trace::Scope::Process, "arg" => 10);
 }
-
 
 #[no_mangle]
 pub extern "C" fn rs_test_alert() {

@@ -346,7 +346,7 @@ impl Common {
     // Sends the request and waits for the response.
     async fn send(&self, mut request: BlockFifoRequest) -> Result<(), Error> {
         let _guard = trace::async_enter!(
-            trace::generate_nonce(),
+            trace::Id::new(),
             "storage",
             "BlockOp",
             "op" => op_code_str(request.op_code)
@@ -367,7 +367,7 @@ impl Common {
             );
             request.request_id = request_id;
             request.trace_flow_id = generate_trace_flow_id(request_id);
-            trace::flow_begin!("storage", "BlockOp", trace_flow_id);
+            trace::flow_begin!("storage", "BlockOp", trace_flow_id.into());
             state.queue.push_back(request);
             if let Some(waker) = state.poller_waker.clone() {
                 state.poll_send_requests(&mut Context::from_waker(&waker));
@@ -376,7 +376,7 @@ impl Common {
         };
         ResponseFuture::new(self.fifo_state.clone(), request_id).await?;
         trace::duration!("storage", "BlockOp::end");
-        trace::flow_end!("storage", "BlockOp", trace_flow_id);
+        trace::flow_end!("storage", "BlockOp", trace_flow_id.into());
         Ok(())
     }
 }

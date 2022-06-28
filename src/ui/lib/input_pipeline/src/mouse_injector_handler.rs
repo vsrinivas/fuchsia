@@ -549,7 +549,7 @@ impl MouseInjectorHandler {
                         let events = &mut vec![pointerinjector::Event {
                             timestamp: Some(fuchsia_async::Time::now().into_nanos()),
                             data: Some(pointerinjector::Data::Viewport(new_viewport.clone())),
-                            trace_flow_id: Some(fuchsia_trace::generate_nonce()),
+                            trace_flow_id: Some(fuchsia_trace::Id::new().into()),
                             ..pointerinjector::Event::EMPTY
                         }]
                         .into_iter();

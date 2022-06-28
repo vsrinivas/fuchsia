@@ -153,7 +153,7 @@ impl AudioConsumerSink {
         let buffer_index = self.copy_to_buffer(frame).ok_or(format_err!("No free buffers"))?;
 
         self.tx_count += 1;
-        trace::flow_begin!("stream-sink", "SendPacket", self.tx_count);
+        trace::flow_begin!("stream-sink", "SendPacket", self.tx_count.into());
 
         let mut packet = StreamPacket {
             pts: NO_TIMESTAMP,

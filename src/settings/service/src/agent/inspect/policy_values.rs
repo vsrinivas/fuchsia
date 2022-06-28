@@ -108,8 +108,8 @@ impl PolicyValuesInspectAgent {
 
         fasync::Task::spawn(async move {
             let _ = &context;
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "policy_values_inspect_agent");
+            let id = fuchsia_trace::Id::new();
+            trace!(id, "policy_values_inspect_agent");
             // Request initial values from all policy handlers.
             let initial_get_receptor = agent
                 .messenger_client
@@ -130,7 +130,7 @@ impl PolicyValuesInspectAgent {
                 futures::select! {
                     initial_get_message = initial_get_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "initial get"
                         );
                         // Received a reply to our initial broadcast to all policy handlers asking
@@ -140,7 +140,7 @@ impl PolicyValuesInspectAgent {
 
                     intercepted_message = broker_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "intercepted"
                         );
                         // Intercepted a policy request.
@@ -149,7 +149,7 @@ impl PolicyValuesInspectAgent {
 
                     agent_message = agent_event.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "invocation"
                         );
                         if let MessageEvent::Message(

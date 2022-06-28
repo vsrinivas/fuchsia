@@ -27,9 +27,9 @@ use crate::message::base::Audience;
 use crate::message::receptor::Receptor;
 use crate::service::{message, Address, Payload as ServicePayload, Role};
 use crate::trace;
-use crate::trace::TracingNonce;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_warn;
+use fuchsia_trace as ftrace;
 use futures::channel::oneshot;
 use futures::FutureExt;
 use std::collections::HashMap;
@@ -219,9 +219,9 @@ impl<
         mut self: Box<Self>,
         messenger: message::Messenger,
         store_handle: data::StoreHandle,
-        nonce: TracingNonce,
+        id: ftrace::Id,
     ) -> Result<(), WorkError> {
-        trace!(nonce, "Sequential Work execute");
+        trace!(id, "Sequential Work execute");
         // Lock store for Job signature group.
         let mut store = store_handle.lock().await;
 
@@ -244,7 +244,7 @@ impl<
 
         // If a value was returned from the get call and considered updated (no existing or
         // different), return new value immediately.
-        trace!(nonce, "Get first response");
+        trace!(id, "Get first response");
         let next_payload = self.get_next(&mut get_receptor).await?;
         if let Some(response) = self.process_response(next_payload, &mut store) {
             self.responder.respond(response.map(R::from).map_err(E::from));
@@ -253,7 +253,7 @@ impl<
 
         // Otherwise, loop a watch until an updated value is available
         loop {
-            trace!(nonce, "Get looped response");
+            trace!(id, "Get looped response");
             let next_payload = self.get_next(&mut listen_receptor).await?;
             if let Some(response) = self.process_response(next_payload, &mut store) {
                 self.responder.respond(response.map(R::from).map_err(E::from));
@@ -377,7 +377,7 @@ mod tests {
 
         let work_messenger_signature = work_messenger.get_signature();
         fasync::Task::spawn(async move {
-            let _ = work.execute(work_messenger, store_handle, 0).await;
+            let _ = work.execute(work_messenger, store_handle, 0.into()).await;
         })
         .detach();
 
@@ -458,7 +458,8 @@ mod tests {
 
         // Execute work on async task.
         fasync::Task::spawn(async move {
-            let _ = work.execute(work_messenger, Arc::new(Mutex::new(HashMap::new())), 0).await;
+            let _ =
+                work.execute(work_messenger, Arc::new(Mutex::new(HashMap::new())), 0.into()).await;
         })
         .detach();
 

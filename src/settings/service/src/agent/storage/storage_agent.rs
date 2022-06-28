@@ -9,6 +9,7 @@ use std::borrow::Borrow;
 use std::sync::Arc;
 
 use fuchsia_async as fasync;
+use fuchsia_trace as ftrace;
 use futures::future::BoxFuture;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
@@ -42,7 +43,6 @@ use crate::setup::types::SetupInfo;
 use crate::storage::{
     Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType, UpdateState,
 };
-use crate::trace::TracingNonce;
 use crate::Role;
 use crate::{trace, trace_guard};
 
@@ -98,16 +98,16 @@ where
         let unordered = FuturesUnordered::new();
         unordered.push(context.receptor.into_future());
         fasync::Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "storage_agent");
-            storage_agent.handle_messages(nonce, unordered).await
+            let id = ftrace::Id::new();
+            trace!(id, "storage_agent");
+            storage_agent.handle_messages(id, unordered).await
         })
         .detach();
     }
 
     async fn handle_messages(
         &mut self,
-        nonce: TracingNonce,
+        id: ftrace::Id,
         mut unordered: FuturesUnordered<
             StreamFuture<Receptor<service::Payload, service::Address, Role>>,
         >,
@@ -126,7 +126,7 @@ where
                     service::Payload::Agent(agent::Payload::Invocation(invocation)),
                     client,
                 ) => {
-                    trace!(nonce, "agent event");
+                    trace!(id, "agent event");
                     // Only initialize the message receptor once during Initialization.
                     if let Lifespan::Initialization = invocation.lifespan {
                         let receptor = self
@@ -148,7 +148,7 @@ where
                     service::Payload::Storage(Payload::Request(storage_request)),
                     responder,
                 ) => {
-                    trace!(nonce, "storage event");
+                    trace!(id, "storage event");
                     storage_management.handle_request(storage_request, responder).await;
                 }
                 _ => {} // Other messages are ignored
@@ -201,19 +201,19 @@ impl<T> StorageManagement<T>
 where
     T: DeviceStorageFactory,
 {
-    async fn read<S>(&self, nonce: TracingNonce, responder: service::message::MessageClient)
+    async fn read<S>(&self, id: ftrace::Id, responder: service::message::MessageClient)
     where
         S: DeviceStorageConvertible + Into<StorageInfo>,
     {
-        let guard = trace_guard!(nonce, "get store");
+        let guard = trace_guard!(id, "get store");
         let store = self.storage_factory.get_store().await;
         drop(guard);
 
-        let guard = trace_guard!(nonce, "get data");
+        let guard = trace_guard!(id, "get data");
         let storable: S = store.get::<S::Storable>().await.into();
         drop(guard);
 
-        let guard = trace_guard!(nonce, "reply");
+        let guard = trace_guard!(id, "reply");
         // Ignore the receptor result.
         let _ = responder
             .reply(Payload::Response(StorageResponse::Read(storable.into())).into())
@@ -253,74 +253,65 @@ where
         responder: service::message::MessageClient,
     ) {
         match storage_request {
-            StorageRequest::Read(StorageType::SettingType(setting_type), nonce) => {
+            StorageRequest::Read(StorageType::SettingType(setting_type), id) => {
                 match setting_type {
                     #[cfg(test)]
-                    SettingType::Unknown => self.read::<UnknownInfo>(nonce, responder).await,
+                    SettingType::Unknown => self.read::<UnknownInfo>(id, responder).await,
                     SettingType::Accessibility => {
-                        self.read::<AccessibilityInfo>(nonce, responder).await
+                        self.read::<AccessibilityInfo>(id, responder).await
                     }
                     SettingType::Audio => {
-                        trace!(nonce, "audio storage read");
-                        self.read::<AudioInfo>(nonce, responder).await
+                        trace!(id, "audio storage read");
+                        self.read::<AudioInfo>(id, responder).await
                     }
-                    SettingType::Display => self.read::<DisplayInfo>(nonce, responder).await,
-                    SettingType::DoNotDisturb => {
-                        self.read::<DoNotDisturbInfo>(nonce, responder).await
-                    }
-                    SettingType::FactoryReset => {
-                        self.read::<FactoryResetInfo>(nonce, responder).await
-                    }
-                    SettingType::Input => self.read::<InputInfoSources>(nonce, responder).await,
-                    SettingType::Intl => self.read::<IntlInfo>(nonce, responder).await,
-                    SettingType::Keyboard => self.read::<KeyboardInfo>(nonce, responder).await,
-                    SettingType::Light => self.read::<LightInfo>(nonce, responder).await,
+                    SettingType::Display => self.read::<DisplayInfo>(id, responder).await,
+                    SettingType::DoNotDisturb => self.read::<DoNotDisturbInfo>(id, responder).await,
+                    SettingType::FactoryReset => self.read::<FactoryResetInfo>(id, responder).await,
+                    SettingType::Input => self.read::<InputInfoSources>(id, responder).await,
+                    SettingType::Intl => self.read::<IntlInfo>(id, responder).await,
+                    SettingType::Keyboard => self.read::<KeyboardInfo>(id, responder).await,
+                    SettingType::Light => self.read::<LightInfo>(id, responder).await,
                     SettingType::LightSensor => {
                         panic!("SettingType::LightSensor does not support storage")
                     }
-                    SettingType::NightMode => self.read::<NightModeInfo>(nonce, responder).await,
-                    SettingType::Privacy => self.read::<PrivacyInfo>(nonce, responder).await,
-                    SettingType::Setup => self.read::<SetupInfo>(nonce, responder).await,
+                    SettingType::NightMode => self.read::<NightModeInfo>(id, responder).await,
+                    SettingType::Privacy => self.read::<PrivacyInfo>(id, responder).await,
+                    SettingType::Setup => self.read::<SetupInfo>(id, responder).await,
                 }
             }
-            StorageRequest::Read(StorageType::PolicyType(policy_type), nonce) => {
-                match policy_type {
-                    #[cfg(test)]
-                    PolicyType::Unknown => self.read::<policy::UnknownInfo>(nonce, responder).await,
-                    PolicyType::Audio => self.read::<audio_policy::State>(nonce, responder).await,
+            StorageRequest::Read(StorageType::PolicyType(policy_type), id) => match policy_type {
+                #[cfg(test)]
+                PolicyType::Unknown => self.read::<policy::UnknownInfo>(id, responder).await,
+                PolicyType::Audio => self.read::<audio_policy::State>(id, responder).await,
+            },
+            StorageRequest::Write(StorageInfo::SettingInfo(setting_info), id) => match setting_info
+            {
+                #[cfg(test)]
+                SettingInfo::Unknown(info) => self.write(info, responder).await,
+                SettingInfo::Accessibility(info) => self.write(info, responder).await,
+                SettingInfo::Audio(info) => {
+                    trace!(id, "audio storage write");
+                    self.write(info, responder).await
                 }
-            }
-            StorageRequest::Write(StorageInfo::SettingInfo(setting_info), nonce) => {
-                match setting_info {
-                    #[cfg(test)]
-                    SettingInfo::Unknown(info) => self.write(info, responder).await,
-                    SettingInfo::Accessibility(info) => self.write(info, responder).await,
-                    SettingInfo::Audio(info) => {
-                        trace!(nonce, "audio storage write");
-                        self.write(info, responder).await
-                    }
-                    SettingInfo::Brightness(info) => self.write(info, responder).await,
-                    SettingInfo::DoNotDisturb(info) => self.write(info, responder).await,
-                    SettingInfo::FactoryReset(info) => self.write(info, responder).await,
-                    SettingInfo::Input(info) => self.write(info, responder).await,
-                    SettingInfo::Intl(info) => self.write(info, responder).await,
-                    SettingInfo::Keyboard(info) => self.write(info, responder).await,
-                    SettingInfo::Light(info) => self.write(info, responder).await,
-                    SettingInfo::LightSensor(_) => {
-                        panic!("SettingInfo::LightSensor does not support storage")
-                    }
-                    SettingInfo::NightMode(info) => self.write(info, responder).await,
-                    SettingInfo::Privacy(info) => self.write(info, responder).await,
-                    SettingInfo::Setup(info) => self.write(info, responder).await,
+                SettingInfo::Brightness(info) => self.write(info, responder).await,
+                SettingInfo::DoNotDisturb(info) => self.write(info, responder).await,
+                SettingInfo::FactoryReset(info) => self.write(info, responder).await,
+                SettingInfo::Input(info) => self.write(info, responder).await,
+                SettingInfo::Intl(info) => self.write(info, responder).await,
+                SettingInfo::Keyboard(info) => self.write(info, responder).await,
+                SettingInfo::Light(info) => self.write(info, responder).await,
+                SettingInfo::LightSensor(_) => {
+                    panic!("SettingInfo::LightSensor does not support storage")
                 }
-            }
-            StorageRequest::Write(StorageInfo::PolicyInfo(policy_info), _nonce) => {
-                match policy_info {
-                    #[cfg(test)]
-                    PolicyInfo::Unknown(info) => self.write(info, responder).await,
-                    PolicyInfo::Audio(info) => self.write(info, responder).await,
-                }
-            }
+                SettingInfo::NightMode(info) => self.write(info, responder).await,
+                SettingInfo::Privacy(info) => self.write(info, responder).await,
+                SettingInfo::Setup(info) => self.write(info, responder).await,
+            },
+            StorageRequest::Write(StorageInfo::PolicyInfo(policy_info), _id) => match policy_info {
+                #[cfg(test)]
+                PolicyInfo::Unknown(info) => self.write(info, responder).await,
+                PolicyInfo::Audio(info) => self.write(info, responder).await,
+            },
         }
     }
 }
@@ -370,7 +361,7 @@ mod tests {
             .message(
                 service::Payload::Storage(Payload::Request(StorageRequest::Read(
                     SettingType::Unknown.into(),
-                    0,
+                    0.into(),
                 ))),
                 Audience::Messenger(receptor.get_signature()),
             )
@@ -387,12 +378,12 @@ mod tests {
         match setting {
             Setting::Type(setting_type) => {
                 storage_manager
-                    .handle_request(StorageRequest::Read(setting_type.into(), 0), responder)
+                    .handle_request(StorageRequest::Read(setting_type.into(), 0.into()), responder)
                     .await;
             }
             Setting::Info(setting_info) => {
                 storage_manager
-                    .handle_request(StorageRequest::Write(setting_info.into(), 0), responder)
+                    .handle_request(StorageRequest::Write(setting_info.into(), 0.into()), responder)
                     .await;
             }
         }

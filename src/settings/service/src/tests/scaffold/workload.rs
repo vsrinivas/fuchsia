@@ -5,16 +5,16 @@
 use crate::job::{self, data};
 use crate::service::message::{Audience, Messenger, Signature};
 use crate::service::test::Payload;
-use crate::trace::TracingNonce;
 use async_trait::async_trait;
+use fuchsia_trace as ftrace;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
 pub(crate) mod channel {
     use crate::job;
     use crate::service::message::Messenger;
-    use crate::trace::TracingNonce;
     use async_trait::async_trait;
+    use fuchsia_trace as ftrace;
     use futures::channel::mpsc::UnboundedSender;
 
     #[derive(Debug)]
@@ -34,7 +34,7 @@ pub(crate) mod channel {
 
     #[async_trait]
     impl job::work::Independent for Workload {
-        async fn execute(self: Box<Self>, _messenger: Messenger, _nonce: TracingNonce) {
+        async fn execute(self: Box<Self>, _messenger: Messenger, _id: ftrace::Id) {
             self.state_sender.unbounded_send(State::Execute).expect("should succeed");
         }
     }
@@ -51,7 +51,7 @@ impl StubWorkload {
 
 #[async_trait]
 impl job::work::Independent for StubWorkload {
-    async fn execute(self: Box<Self>, _messenger: Messenger, _nonce: TracingNonce) {}
+    async fn execute(self: Box<Self>, _messenger: Messenger, _id: ftrace::Id) {}
 }
 
 #[async_trait]
@@ -60,7 +60,7 @@ impl job::work::Sequential for StubWorkload {
         self: Box<Self>,
         _messenger: Messenger,
         _store: job::data::StoreHandle,
-        _nonce: TracingNonce,
+        _id: ftrace::Id,
     ) -> Result<(), job::work::Error> {
         Ok(())
     }
@@ -83,7 +83,7 @@ impl Workload {
 
 #[async_trait]
 impl job::work::Independent for Workload {
-    async fn execute(self: Box<Self>, messenger: Messenger, _nonce: TracingNonce) {
+    async fn execute(self: Box<Self>, messenger: Messenger, _id: ftrace::Id) {
         messenger.message(self.payload.into(), Audience::Messenger(self.target)).send().ack();
     }
 }
@@ -94,7 +94,7 @@ impl job::work::Sequential for Workload {
         self: Box<Self>,
         messenger: Messenger,
         _store: data::StoreHandle,
-        _nonce: TracingNonce,
+        _id: ftrace::Id,
     ) -> Result<(), job::work::Error> {
         messenger
             .message(self.payload.clone().into(), Audience::Messenger(self.target))
@@ -127,7 +127,7 @@ impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync
         self: Box<Self>,
         messenger: Messenger,
         store: data::StoreHandle,
-        _nonce: TracingNonce,
+        _id: ftrace::Id,
     ) -> Result<(), job::work::Error> {
         (self.callback)(messenger, store).await;
         Ok(())

@@ -375,12 +375,15 @@ async fn set_and_verify_stream(
 ) {
     let request_transform = env
         .handler
-        .handle_setting_request(SettingRequest::SetVolume(vec![request_stream.into()], 0))
+        .handle_setting_request(SettingRequest::SetVolume(vec![request_stream.into()], 0.into()))
         .await;
 
     assert_eq!(
         request_transform,
-        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream.into()], 0)))
+        Some(RequestTransform::Request(SettingRequest::SetVolume(
+            vec![expected_stream.into()],
+            0.into()
+        )))
     );
 }
 

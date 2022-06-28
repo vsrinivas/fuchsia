@@ -47,6 +47,6 @@ macro_rules! async_enter {
     ($name:expr $(, $key:expr => $val:expr)*) => {
         #[cfg(feature = "tracing")]
         let _async_enter_guard = ::fuchsia_trace::async_enter!(
-            ::fuchsia_trace::generate_nonce(), "fxfs", $name $(, $key => $val)*);
+            ::fuchsia_trace::Id::new(), "fxfs", $name $(, $key => $val)*);
     }
 }

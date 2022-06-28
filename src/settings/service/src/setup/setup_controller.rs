@@ -83,12 +83,12 @@ impl controller::Handle for SetupController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetConfigurationInterfaces(params) => {
-                let nonce = fuchsia_trace::generate_nonce();
-                let mut info = self.client.read_setting::<SetupInfo>(nonce).await;
+                let id = fuchsia_trace::Id::new();
+                let mut info = self.client.read_setting::<SetupInfo>(id).await;
                 info.configuration_interfaces = params.config_interfaces_flags;
 
                 let write_setting_result =
-                    self.client.write_setting(info.into(), nonce).await.into_handler_result();
+                    self.client.write_setting(info.into(), id).await.into_handler_result();
 
                 // If the write succeeded, reboot if necessary.
                 if write_setting_result.is_ok() && params.should_reboot {
@@ -103,7 +103,7 @@ impl controller::Handle for SetupController {
             }
             Request::Get => Some(
                 self.client
-                    .read_setting_info::<SetupInfo>(fuchsia_trace::generate_nonce())
+                    .read_setting_info::<SetupInfo>(fuchsia_trace::Id::new())
                     .await
                     .into_handler_result(),
             ),

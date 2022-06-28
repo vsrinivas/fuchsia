@@ -101,8 +101,8 @@ impl PolicyProxy {
         let mut proxy = Self { policy_handler };
 
         Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "policy proxy");
+            let id = fuchsia_trace::Id::new();
+            trace!(id, "policy proxy");
             let service_policy_fuse = service_policy_receptor.fuse();
             let message_fuse = service_proxy_receptor.fuse();
             futures::pin_mut!(message_fuse, service_policy_fuse);
@@ -111,7 +111,7 @@ impl PolicyProxy {
                     // Handle policy messages.
                     service_policy_event = service_policy_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
 
                             "service policy event"
                         );
@@ -127,7 +127,7 @@ impl PolicyProxy {
                     // Handle intercepted messages from the service MessageHub
                     message = message_fuse.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
 
                             "message event"
                         );

@@ -8,13 +8,13 @@ use crate::base::SettingType;
 use crate::event::{Event, Publisher};
 use crate::handler::setting_handler::ControllerError;
 use crate::service_context::ExternalServiceProxy;
-use crate::trace::TracingNonce;
 use crate::{call, trace, trace_guard};
 use fidl::{self, endpoints::create_proxy};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
 use fidl_fuchsia_media_audio::VolumeControlProxy;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
+use fuchsia_trace as ftrace;
 use futures::channel::mpsc::UnboundedSender;
 use futures::stream::StreamExt;
 use futures::TryStreamExt;
@@ -60,7 +60,7 @@ impl Drop for StreamVolumeControl {
 // TODO(fxbug.dev/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
     pub(crate) async fn create(
-        nonce: TracingNonce,
+        id: ftrace::Id,
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
         stream: AudioStream,
         early_exit_action: Option<ExitAction>,
@@ -70,7 +70,7 @@ impl StreamVolumeControl {
         // and from set request has the validation.
         assert!(stream.has_finite_volume_level());
 
-        trace!(nonce, "StreamVolumeControl ctor");
+        trace!(id, "StreamVolumeControl ctor");
         let mut control = StreamVolumeControl {
             stored_stream: stream,
             proxy: None,
@@ -80,13 +80,13 @@ impl StreamVolumeControl {
             early_exit_action,
         };
 
-        control.bind_volume_control(nonce).await?;
+        control.bind_volume_control(id).await?;
         Ok(control)
     }
 
     pub(crate) async fn set_volume(
         &mut self,
-        nonce: TracingNonce,
+        id: ftrace::Id,
         stream: AudioStream,
     ) -> Result<(), ControllerError> {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
@@ -96,7 +96,7 @@ impl StreamVolumeControl {
 
         // Try to create and bind a new VolumeControl.
         if self.proxy.is_none() {
-            self.bind_volume_control(nonce).await?;
+            self.bind_volume_control(id).await?;
         }
 
         // Round volume level from user input.
@@ -132,8 +132,8 @@ impl StreamVolumeControl {
         Ok(())
     }
 
-    async fn bind_volume_control(&mut self, nonce: TracingNonce) -> Result<(), ControllerError> {
-        trace!(nonce, "bind volume control");
+    async fn bind_volume_control(&mut self, id: ftrace::Id) -> Result<(), ControllerError> {
+        trace!(id, "bind volume control");
         if self.proxy.is_some() {
             return Ok(());
         }
@@ -146,7 +146,7 @@ impl StreamVolumeControl {
         let stream_type = self.stored_stream.stream_type;
         let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
-        let guard = trace_guard!(nonce, "bind usage volume control");
+        let guard = trace_guard!(id, "bind usage volume control");
         if call!(self.audio_service => bind_usage_volume_control(&mut usage, server_end)).is_err() {
             return Err(ControllerError::ExternalFailure(
                 SettingType::Audio,
@@ -156,7 +156,7 @@ impl StreamVolumeControl {
         }
         drop(guard);
 
-        let guard = trace_guard!(nonce, "set values");
+        let guard = trace_guard!(id, "set values");
         // Once the volume control is bound, apply the persisted audio settings to it.
         if vol_control_proxy.set_volume(self.stored_stream.user_volume_level).is_err() {
             return Err(ControllerError::ExternalFailure(
@@ -183,7 +183,7 @@ impl StreamVolumeControl {
             );
         }
 
-        trace!(nonce, "setup listener");
+        trace!(id, "setup listener");
 
         // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a
         // notification when we receive an update.
@@ -192,23 +192,19 @@ impl StreamVolumeControl {
         let mut volume_events = vol_control_proxy.take_event_stream();
         let early_exit_action = self.early_exit_action.clone();
         fasync::Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "bind volume handler");
+            let id = ftrace::Id::new();
+            trace!(id, "bind volume handler");
             loop {
                 futures::select! {
                     _ = exit_rx.next() => {
-                        trace!(nonce, "exit");
+                        trace!(id, "exit");
                         if let Some(publisher) = publisher_clone {
                             publisher.send_event(Event::Closed(PUBLISHER_EVENT_NAME));
                         }
                         return;
                     }
                     volume_event = volume_events.try_next() => {
-                        trace!(
-                            nonce,
-
-                            "volume_event"
-                        );
+                        trace!(id, "volume_event");
                         if volume_event.is_err() ||
                             volume_event.expect("should not be error").is_none()
                         {

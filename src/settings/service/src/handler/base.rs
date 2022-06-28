@@ -18,9 +18,9 @@ use crate::payload_convert;
 use crate::service::message::{Delegate, Messenger, Receptor, Signature};
 use crate::service_context::ServiceContext;
 use crate::setup::types::SetConfigurationInterfacesParams;
-use crate::trace::TracingNonce;
 
 use async_trait::async_trait;
+use fuchsia_trace as ftrace;
 use futures::future::BoxFuture;
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -96,7 +96,7 @@ generate_inspect! {
         ScheduleClearAccounts,
 
         // Audio requests.
-        SetVolume(Vec<SetAudioStream>, TracingNonce),
+        SetVolume(Vec<SetAudioStream>, ftrace::Id),
 
         // Display requests.
         SetDisplayInfo(SetDisplayInfo),

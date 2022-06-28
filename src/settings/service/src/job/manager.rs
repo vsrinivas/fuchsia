@@ -20,9 +20,9 @@ use crate::job::{execution, PinStream};
 use crate::message::base::MessengerType;
 use crate::service::{self, message};
 use crate::trace;
-use crate::trace::TracingNonce;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use fuchsia_trace as ftrace;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::{FutureExt, StreamExt};
 use std::collections::HashMap;
@@ -96,8 +96,8 @@ impl Manager {
         // 2) Accepting and processing new jobs from sources
         // 3) Executing jobs and handling the their results
         fasync::Task::spawn(async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "job_manager");
+            let id = ftrace::Id::new();
+            trace!(id, "job_manager");
             let source_fuse = receptor.fuse();
             let execution_fuse = execution_completion_receiver.fuse();
 
@@ -105,19 +105,19 @@ impl Manager {
             loop {
                 futures::select! {
                     source_event = source_fuse.select_next_some() => {
-                        trace!(nonce, "process_source_event");
+                        trace!(id, "process_source_event");
                         manager.process_source_event(source_event).await;
                     },
                     (source_id, job_info, details) = execution_fuse.select_next_some() => {
-                        trace!(nonce, "process_completed_execution");
-                        manager.process_completed_execution(source_id, job_info, details, nonce).await;
+                        trace!(id, "process_completed_execution");
+                        manager.process_completed_execution(source_id, job_info, details, id).await;
                     },
                     (job_info, stream) = manager.job_futures.select_next_some() => {
-                        trace!(nonce, "process_job");
+                        trace!(id, "process_job");
                         // Since the manager owns job_futures, we should never reach the end of
                         // the stream.
                         let (source_id, job) = job_info.expect("job should be present");
-                        manager.process_job(source_id, job, stream, nonce).await;
+                        manager.process_job(source_id, job, stream, id).await;
                     }
                 }
             }
@@ -134,7 +134,7 @@ impl Manager {
         source_id: source::Id,
         job_info: job::Info,
         _execution_details: execution::Details,
-        nonce: TracingNonce,
+        id: ftrace::Id,
     ) {
         // Fetch the source and inform it that its child Job has completed.
         let source_handler = &mut self.sources.get_mut(&source_id).expect("should find source");
@@ -142,12 +142,12 @@ impl Manager {
         self.remove_source_if_necessary(source_id);
 
         // Continue processing available jobs.
-        self.process_next_job(nonce).await;
+        self.process_next_job(id).await;
     }
 
     // Executes the next job if conditions to run another job are met. If so, the manager consults
     // available sources for a candidate job and then executes the first one found.
-    async fn process_next_job(&mut self, nonce: TracingNonce) {
+    async fn process_next_job(&mut self, id: ftrace::Id) {
         // Iterate through sources and see if any source has a pending job
         for (source_id, source_handler) in &mut self.sources {
             let source_id = *source_id;
@@ -164,7 +164,7 @@ impl Manager {
                             panic!("Failed to send message. error: {:?}", error);
                         };
                     },
-                    nonce,
+                    id,
                 )
                 .await;
         }
@@ -201,7 +201,7 @@ impl Manager {
         source: source::Id,
         job: Option<Result<Job, Error>>,
         source_stream: PinStream<JobStreamItem>,
-        nonce: TracingNonce,
+        id: ftrace::Id,
     ) {
         match job {
             Some(Ok(job)) => {
@@ -274,7 +274,7 @@ impl Manager {
         }
 
         self.job_futures.push(source_stream.into_future());
-        self.process_next_job(nonce).await;
+        self.process_next_job(id).await;
     }
 
     fn complete_source(&mut self, source_id: source::Id) {
@@ -599,7 +599,7 @@ mod tests {
             self: Box<Self>,
             _: message::Messenger,
             _: job::data::StoreHandle,
-            _nonce: TracingNonce,
+            _id: ftrace::Id,
         ) -> Result<(), job::work::Error> {
             self.execute_tx.send(()).expect("Should be able to signal start of execution");
             let _ = self.rx.await;

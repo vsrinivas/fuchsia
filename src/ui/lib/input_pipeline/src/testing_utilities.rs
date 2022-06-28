@@ -559,7 +559,7 @@ pub fn create_touch_pointer_sample_event(
     pointerinjector::Event {
         timestamp: Some(event_time.into_nanos()),
         data: Some(data),
-        trace_flow_id: Some(fuchsia_trace::generate_nonce()),
+        trace_flow_id: Some(fuchsia_trace::Id::new().into()),
         ..pointerinjector::Event::EMPTY
     }
 }

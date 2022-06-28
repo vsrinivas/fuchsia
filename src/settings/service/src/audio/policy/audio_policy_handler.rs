@@ -81,11 +81,11 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::response::Error as PolicyError;
 use crate::policy::{self as policy_base, PolicyInfo, PolicyType};
-use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
+use fuchsia_trace as ftrace;
 use std::collections::hash_map::Entry;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
@@ -144,21 +144,21 @@ impl PolicyHandler for AudioPolicyHandler {
         &mut self,
         request: policy_base::Request,
     ) -> policy_base::response::Response {
-        let nonce = fuchsia_trace::generate_nonce();
+        let id = ftrace::Id::new();
         match request {
             policy_base::Request::Get => Ok(policy_base::response::Payload::PolicyInfo(
                 PolicyInfo::Audio(self.state.clone()),
             )),
             policy_base::Request::Restore => {
-                self.restore_policy_state(self.client_proxy.read_policy::<State>(nonce).await);
+                self.restore_policy_state(self.client_proxy.read_policy::<State>(id).await);
                 Ok(policy_base::response::Payload::Restore)
             }
             policy_base::Request::Audio(audio_request) => match audio_request {
                 PolicyRequest::AddPolicy(target, transform) => {
-                    self.add_policy_transform(target, transform, nonce).await
+                    self.add_policy_transform(target, transform, id).await
                 }
                 PolicyRequest::RemovePolicy(policy_id) => {
-                    self.remove_policy_transform(policy_id, nonce).await
+                    self.remove_policy_transform(policy_id, id).await
                 }
             },
         }
@@ -169,8 +169,8 @@ impl PolicyHandler for AudioPolicyHandler {
         request: SettingRequest,
     ) -> Option<RequestTransform> {
         match request {
-            SettingRequest::SetVolume(mut streams, nonce) => {
-                trace!(nonce, "policy handler set");
+            SettingRequest::SetVolume(mut streams, id) => {
+                trace!(id, "policy handler set");
                 // When anyone attempts to set the volume level, scale it according to the policy
                 // limits and pass it along to the setting proxy.
                 for stream in streams.iter_mut() {
@@ -184,7 +184,7 @@ impl PolicyHandler for AudioPolicyHandler {
                     }
                 }
 
-                Some(RequestTransform::Request(SettingRequest::SetVolume(streams, nonce)))
+                Some(RequestTransform::Request(SettingRequest::SetVolume(streams, id)))
             }
             SettingRequest::Get => {
                 // When the audio settings are read, scale the internal values to their external
@@ -357,7 +357,7 @@ impl AudioPolicyHandler {
         &mut self,
         target: PropertyTarget,
         transform: Transform,
-        nonce: TracingNonce,
+        id: ftrace::Id,
     ) -> policy_base::response::Response {
         // Request the latest audio info.
         let audio_info =
@@ -382,7 +382,7 @@ impl AudioPolicyHandler {
         })?;
 
         // Persist the policy state. Ignore update state result.
-        let _ = self.client_proxy.write_policy(self.state.clone().into(), nonce).await?;
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), id).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -394,7 +394,7 @@ impl AudioPolicyHandler {
     async fn remove_policy_transform(
         &mut self,
         policy_id: PolicyId,
-        nonce: TracingNonce,
+        id: ftrace::Id,
     ) -> policy_base::response::Response {
         // Find the target this policy ID is on.
         let target = self.state.find_policy_target(policy_id).ok_or_else(|| {
@@ -427,7 +427,7 @@ impl AudioPolicyHandler {
         }
 
         // Persist the policy state. Ignore update state result.
-        let _ = self.client_proxy.write_policy(self.state.clone().into(), nonce).await?;
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), id).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -471,12 +471,12 @@ impl AudioPolicyHandler {
         if transformed != original {
             // When the internal volume level should change, send a Set request to the audio
             // controller.
-            let nonce = fuchsia_trace::generate_nonce();
+            let id = ftrace::Id::new();
             let transformed = SetAudioStream::from(transformed);
-            let guard = trace_guard!(nonce, "policy volume");
+            let guard = trace_guard!(id, "policy volume");
             let mut receptor = self.client_proxy.send_setting_request(
                 SettingType::Audio,
-                SettingRequest::SetVolume(vec![transformed], nonce),
+                SettingRequest::SetVolume(vec![transformed], id),
             );
             fuchsia_async::Task::spawn(async move {
                 use futures::StreamExt;

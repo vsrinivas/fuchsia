@@ -41,10 +41,29 @@ pub fn category_enabled(category: &'static CStr) -> bool {
     unsafe { sys::trace_is_category_enabled(category.as_ptr()) }
 }
 
-/// Generate a u64 nonce for use as an identifier for flows and async spans.
-pub fn generate_nonce() -> u64 {
-    // Trivial no-argument function that cannot race.
-    unsafe { sys::trace_generate_nonce() }
+/// An identifier for flows and async spans.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Id(u64);
+
+impl Id {
+    /// Creates a new `Id`. `Id`s created by separate calls to `new` in the same process are
+    /// guaranteed to be distinct.
+    pub fn new() -> Self {
+        // Trivial no-argument function that cannot race.
+        Self(unsafe { sys::trace_generate_nonce() })
+    }
+}
+
+impl From<u64> for Id {
+    fn from(u: u64) -> Self {
+        Self(u)
+    }
+}
+
+impl From<Id> for u64 {
+    fn from(id: Id) -> Self {
+        id.0
+    }
 }
 
 /// `Arg` holds an argument to a tracing function, which can be one of many types.
@@ -468,18 +487,19 @@ duration_event!(
 
 /// AsyncScope maintains state around the context of async events generated via the
 /// async_enter! macro.
-#[must_use = "AsyncScope must be dropped for event parity"]
+#[must_use = "emits an end event when dropped, so if dropped immediately creates an essentially \
+              zero length duration that should just be an instant instead"]
 pub struct AsyncScope {
     // AsyncScope::end uses std::mem::forget to bypass AsyncScope's Drop impl, so if any fields
     // with Drop impls are added, AsyncScope::end should be updated.
-    id: u64,
+    id: Id,
     category: &'static CStr,
     name: &'static CStr,
 }
 impl AsyncScope {
     /// Starts a new async event scope, generating a begin event now, and ended when the
     /// object is dropped.
-    pub fn begin(id: u64, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) -> Self {
+    pub fn begin(id: Id, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) -> Self {
         async_begin(id, category, name, args);
         Self { id, category, name }
     }
@@ -512,7 +532,7 @@ impl Drop for AsyncScope {
 /// 0 to 15 arguments can be associated with the event, each of which is used to annotate the
 /// duration with additional information.
 pub fn async_enter(
-    id: u64,
+    id: Id,
     category: &'static CStr,
     name: &'static CStr,
     args: &[Arg<'_>],
@@ -529,7 +549,7 @@ pub fn async_enter(
 ///
 /// ```rust
 /// {
-///     let id = generate_nonce();
+///     let id = Id::new();
 ///     let _guard = async_enter!(id, "foo", "bar", "x" => 5, "y" => 10);
 ///     ...
 ///     ...
@@ -541,7 +561,7 @@ pub fn async_enter(
 ///
 /// ```rust
 /// {
-///     let id = generate_nonce();
+///     let id = Id::new();
 ///     let _guard = AsyncScope::begin(id, cstr!("foo"), cstr!("bar"), &[ArgValue::of("x", 5),
 ///         ArgValue::of("y", 10)]);
 ///     ...
@@ -565,7 +585,7 @@ macro_rules! async_enter {
 ///
 /// ```rust
 /// {
-///     let id = generate_nonce();
+///     let id = Id::new();
 ///     async_instant!(id, "foo", "bar", "x" => 5, "y" => 10);
 /// }
 /// ```
@@ -574,7 +594,7 @@ macro_rules! async_enter {
 ///
 /// ```rust
 /// {
-///     let id = generate_nonce();
+///     let id = Id::new();
 ///     async_instant(
 ///         id, cstr!("foo"), cstr!("bar"),
 ///         &[ArgValue::of("x", 5), ArgValue::of("y", 10)]
@@ -591,7 +611,7 @@ macro_rules! async_instant {
 macro_rules! async_proto {
     ($( #[$docs:meta] )* $name:ident, $sys_method:path $(,)*) => {
         $( #[$docs] )*
-        pub fn $name(id: u64, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) {
+        pub fn $name(id: Id, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {
@@ -607,7 +627,7 @@ macro_rules! async_proto {
                         &helper.thread_ref,
                         category_ref.as_ptr(),
                         &helper.name_ref,
-                        id,
+                        id.into(),
                         args.as_ptr() as *const sys::trace_arg_t,
                         args.len(),
                     );
@@ -770,7 +790,7 @@ macro_rules! flow_end {
 macro_rules! flow_event {
     ($( #[$docs:meta] )* $name:ident, $sys_method:path$(,)*) => {
         $( #[$docs] )*
-        pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: u64, args: &[Arg<'_>]) {
+        pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: Id, args: &[Arg<'_>]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {
@@ -786,7 +806,7 @@ macro_rules! flow_event {
                         &helper.thread_ref,
                         category_ref.as_ptr(),
                         &helper.name_ref,
-                        flow_id,
+                        flow_id.into(),
                         args.as_ptr() as *const sys::trace_arg_t,
                         args.len(),
                     );
@@ -1329,7 +1349,7 @@ mod sys {
 
 #[cfg(test)]
 mod test {
-    use crate::{generate_nonce, trim_to_last_char_boundary};
+    use super::{trim_to_last_char_boundary, Id};
 
     #[test]
     fn trim_to_last_char_boundary_trims_to_last_character_boundary() {
@@ -1349,7 +1369,7 @@ mod test {
     // values. How those values are distinct is not particularly meaningful; the current
     // implementation yields sequential values, but that's not a behavior to rely on.
     #[test]
-    fn test_generate_nonce() {
-        assert_ne!(generate_nonce(), generate_nonce());
+    fn test_id_new() {
+        assert_ne!(Id::new(), Id::new());
     }
 }

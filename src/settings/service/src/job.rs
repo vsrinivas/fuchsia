@@ -97,8 +97,8 @@ pub mod data {
 pub mod work {
     use super::{data, Signature};
     use crate::service::message;
-    use crate::trace::TracingNonce;
     use async_trait::async_trait;
+    use fuchsia_trace as ftrace;
 
     pub enum Load {
         /// [Sequential] loads are run in order after [Loads](Load) from [Jobs](crate::job::Job)
@@ -126,19 +126,19 @@ pub mod work {
             self,
             messenger: message::Messenger,
             store: Option<data::StoreHandle>,
-            nonce: TracingNonce,
+            id: ftrace::Id,
         ) -> Result<(), Error> {
             match self {
                 Load::Sequential(load, _) => {
                     load.execute(
                         messenger,
                         store.expect("all sequential loads should have store"),
-                        nonce,
+                        id,
                     )
                     .await
                 }
                 Load::Independent(load) => {
-                    load.execute(messenger, nonce).await;
+                    load.execute(messenger, id).await;
                     Ok(())
                 }
             }
@@ -165,7 +165,7 @@ pub mod work {
             self: Box<Self>,
             messenger: message::Messenger,
             store: data::StoreHandle,
-            nonce: TracingNonce,
+            id: ftrace::Id,
         ) -> Result<(), Error>;
     }
 
@@ -173,7 +173,7 @@ pub mod work {
     pub trait Independent {
         /// Called when a [work::Load](super::work::Load) should run. All workload specific logic should
         /// be encompassed in this method.
-        async fn execute(self: Box<Self>, messenger: message::Messenger, nonce: TracingNonce);
+        async fn execute(self: Box<Self>, messenger: message::Messenger, id: ftrace::Id);
     }
 }
 
@@ -346,15 +346,15 @@ impl Info {
             .map(|signature| stores.entry(*signature).or_insert_with(Default::default).clone());
 
         async move {
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "job execution");
+            let id = fuchsia_trace::Id::new();
+            trace!(id, "job execution");
             let start = now();
             let mut state = State::Executing;
             std::mem::swap(&mut state, &mut self.state);
 
             if let State::Ready(job) = state {
                 self.state = if let Err(work::Error::Canceled) =
-                    job.workload.execute(messenger, store, nonce).await
+                    job.workload.execute(messenger, store, id).await
                 {
                     State::Canceled
                 } else {
@@ -539,8 +539,10 @@ mod tests {
             receptor.get_signature(),
         )));
 
-        let _ =
-            job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new()))), 0).await;
+        let _ = job
+            .workload
+            .execute(messenger, Some(Arc::new(Mutex::new(HashMap::new()))), 0.into())
+            .await;
 
         // Confirm received value matches the value sent from workload.
         assert_matches!(

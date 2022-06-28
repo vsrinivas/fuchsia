@@ -111,8 +111,8 @@ impl SettingTypeUsageInspectAgent {
         fasync::Task::spawn({
             async move {
             let _ = &context;
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "usage_counts_inspect_agent");
+            let id = fuchsia_trace::Id::new();
+            trace!(id, "usage_counts_inspect_agent");
             let event = message_rx.fuse();
             let agent_event = context.receptor.fuse();
             futures::pin_mut!(agent_event, event);
@@ -121,14 +121,14 @@ impl SettingTypeUsageInspectAgent {
                 futures::select! {
                     message_event = event.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "message_event"
                         );
                         agent.process_message_event(message_event);
                     },
                     agent_message = agent_event.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "agent_event"
                         );
                         if let MessageEvent::Message(

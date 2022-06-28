@@ -46,16 +46,16 @@ impl controller::Handle for PrivacyController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetUserDataSharingConsent(user_data_sharing_consent) => {
-                let nonce = fuchsia_trace::generate_nonce();
-                let mut current = self.client.read_setting::<PrivacyInfo>(nonce).await;
+                let id = fuchsia_trace::Id::new();
+                let mut current = self.client.read_setting::<PrivacyInfo>(id).await;
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;
-                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
+                Some(self.client.write_setting(current.into(), id).await.into_handler_result())
             }
             Request::Get => Some(
                 self.client
-                    .read_setting_info::<PrivacyInfo>(fuchsia_trace::generate_nonce())
+                    .read_setting_info::<PrivacyInfo>(fuchsia_trace::Id::new())
                     .await
                     .into_handler_result(),
             ),

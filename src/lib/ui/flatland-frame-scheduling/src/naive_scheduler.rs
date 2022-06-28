@@ -49,7 +49,7 @@ impl SchedulingLib for NaiveScheduler {
     async fn wait_to_update(&self) -> PresentParameters {
         // Async tracing for the waiting period
         let _trace_guard =
-            trace::async_enter!(trace::generate_nonce(), "gfx", "NaiveScheduler::WaitForPresent");
+            trace::async_enter!(trace::Id::new(), "gfx", "NaiveScheduler::WaitForPresent");
 
         // Loops until ready, yielding for 500 microseconds each loop.
         while !self.next_frame_begin.get() {

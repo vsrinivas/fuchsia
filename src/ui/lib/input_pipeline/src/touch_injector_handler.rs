@@ -74,7 +74,7 @@ impl UnhandledInputHandler for TouchInjectorHandler {
                 event_time,
                 trace_id,
             } => {
-                fuchsia_trace::flow_end!("input", "report-to-event", trace_id.unwrap_or(0));
+                fuchsia_trace::flow_end!("input", "report-to-event", trace_id.unwrap_or(0.into()));
                 // Create a new injector if this is the first time seeing device_id.
                 if let Err(e) = self.ensure_injector_registered(&touch_device_descriptor).await {
                     fx_log_err!("{}", e);
@@ -315,11 +315,11 @@ impl TouchInjectorHandler {
         };
         let data = pointerinjector::Data::PointerSample(pointer_sample);
 
-        let trace_flow_id = fuchsia_trace::generate_nonce();
+        let trace_flow_id = fuchsia_trace::Id::new();
         let event = pointerinjector::Event {
             timestamp: Some(event_time.into_nanos()),
             data: Some(data),
-            trace_flow_id: Some(trace_flow_id),
+            trace_flow_id: Some(trace_flow_id.into()),
             ..pointerinjector::Event::EMPTY
         };
 
@@ -385,7 +385,7 @@ impl TouchInjectorHandler {
                         let events = &mut vec![pointerinjector::Event {
                             timestamp: Some(fuchsia_async::Time::now().into_nanos()),
                             data: Some(pointerinjector::Data::Viewport(new_viewport.clone())),
-                            trace_flow_id: Some(fuchsia_trace::generate_nonce()),
+                            trace_flow_id: Some(fuchsia_trace::Id::new().into()),
                             ..pointerinjector::Event::EMPTY
                         }]
                         .into_iter();

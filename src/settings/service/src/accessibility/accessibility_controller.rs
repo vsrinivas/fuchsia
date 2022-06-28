@@ -54,13 +54,13 @@ impl controller::Handle for AccessibilityController {
         match request {
             Request::Get => Some(
                 self.client
-                    .read_setting_info::<AccessibilityInfo>(fuchsia_trace::generate_nonce())
+                    .read_setting_info::<AccessibilityInfo>(fuchsia_trace::Id::new())
                     .await
                     .into_handler_result(),
             ),
             Request::SetAccessibilityInfo(info) => {
-                let nonce = fuchsia_trace::generate_nonce();
-                let original_info = self.client.read_setting::<AccessibilityInfo>(nonce).await;
+                let id = fuchsia_trace::Id::new();
+                let original_info = self.client.read_setting::<AccessibilityInfo>(id).await;
                 assert!(original_info.is_finite());
                 // Validate accessibility info contains valid float numbers.
                 if !info.is_finite() {
@@ -70,8 +70,7 @@ impl controller::Handle for AccessibilityController {
                         format!("{:?}", info).into(),
                     )));
                 }
-                let result =
-                    self.client.write_setting(original_info.merge(info).into(), nonce).await;
+                let result = self.client.write_setting(original_info.merge(info).into(), id).await;
                 Some(result.into_handler_result())
             }
             _ => None,

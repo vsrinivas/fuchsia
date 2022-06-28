@@ -112,7 +112,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn blanket_impl_passes_unhandled_events_to_wrapped_handler() {
-        const TRACE_ID: Option<u64> = Some(1234);
+        let expected_trace_id: Option<fuchsia_trace::Id> = Some(1234.into());
         let (event_sender, mut event_receiver) = mpsc::unbounded();
         let handler = std::rc::Rc::new(FakeUnhandledInputHandler {
             event_sender,
@@ -125,7 +125,7 @@ mod tests {
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
                 handled: Handled::No,
-                trace_id: TRACE_ID,
+                trace_id: expected_trace_id,
             })
             .await;
         assert_eq!(
@@ -134,7 +134,7 @@ mod tests {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
-                trace_id: TRACE_ID,
+                trace_id: expected_trace_id,
             })
         )
     }

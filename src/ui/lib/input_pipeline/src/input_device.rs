@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
     std::path::PathBuf,
 };
@@ -42,7 +42,7 @@ pub struct InputEvent {
     /// The handled state of the event.
     pub handled: Handled,
 
-    pub trace_id: Option<u64>,
+    pub trace_id: Option<ftrace::Id>,
 }
 
 /// An [`UnhandledInputEvent`] is like an [`InputEvent`], except that the data represents an
@@ -62,7 +62,7 @@ pub struct UnhandledInputEvent {
     /// The time in nanoseconds when the event was first recorded.
     pub event_time: zx::Time,
 
-    pub trace_id: Option<u64>,
+    pub trace_id: Option<ftrace::Id>,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.
@@ -685,21 +685,21 @@ mod tests {
     #[fuchsia::test]
     fn unhandled_to_generic_conversion_preserves_fields() {
         const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
-        const TRACE_ID: Option<u64> = Some(1234);
+        let expected_trace_id: Option<ftrace::Id> = Some(1234.into());
         assert_matches!(
             InputEvent::from(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
-                trace_id: TRACE_ID,
+                trace_id: expected_trace_id,
             }),
             InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
                 handled: _,
-                trace_id: TRACE_ID,
-            }
+                trace_id
+            } if trace_id == expected_trace_id
         );
     }
 
@@ -720,21 +720,21 @@ mod tests {
     #[fuchsia::test]
     fn generic_to_unhandled_conversion_preserves_fields_for_unhandled_events() {
         const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
-        const TRACE_ID: Option<u64> = Some(1234);
+        let expected_trace_id: Option<ftrace::Id> = Some(1234.into());
         assert_matches!(
             UnhandledInputEvent::try_from(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
                 handled: Handled::No,
-                trace_id: TRACE_ID,
+                trace_id: expected_trace_id,
             }),
             Ok(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
-                trace_id: TRACE_ID,
-            })
+                trace_id
+            }) if trace_id == expected_trace_id
         )
     }
 

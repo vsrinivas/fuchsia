@@ -46,16 +46,16 @@ impl controller::Handle for NightModeController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetNightModeInfo(night_mode_info) => {
-                let nonce = fuchsia_trace::generate_nonce();
-                let mut current = self.client.read_setting::<NightModeInfo>(nonce).await;
+                let id = fuchsia_trace::Id::new();
+                let mut current = self.client.read_setting::<NightModeInfo>(id).await;
 
                 // Save the value locally.
                 current.night_mode_enabled = night_mode_info.night_mode_enabled;
-                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
+                Some(self.client.write_setting(current.into(), id).await.into_handler_result())
             }
             Request::Get => Some(
                 self.client
-                    .read_setting_info::<NightModeInfo>(fuchsia_trace::generate_nonce())
+                    .read_setting_info::<NightModeInfo>(fuchsia_trace::Id::new())
                     .await
                     .into_handler_result(),
             ),

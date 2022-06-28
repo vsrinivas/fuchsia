@@ -104,7 +104,7 @@ impl controller::Handle for LightController {
                 let _ = self.restore().await;
                 Some(
                     self.client
-                        .read_setting_info::<LightInfo>(fuchsia_trace::generate_nonce())
+                        .read_setting_info::<LightInfo>(fuchsia_trace::Id::new())
                         .await
                         .into_handler_result(),
                 )
@@ -136,8 +136,8 @@ impl LightController {
     }
 
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
-        let nonce = fuchsia_trace::generate_nonce();
-        let mut current = self.client.read_setting::<LightInfo>(nonce).await;
+        let id = fuchsia_trace::Id::new();
+        let mut current = self.client.read_setting::<LightInfo>(id).await;
 
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
@@ -182,7 +182,7 @@ impl LightController {
         // After the main validations, write the state to the hardware.
         self.write_light_group_to_hardware(group, &state).await?;
 
-        self.client.write_setting(current.into(), nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), id).await.into_handler_result()
     }
 
     /// Writes the given list of light states for a light group to the actual hardware.
@@ -241,8 +241,8 @@ impl LightController {
     }
 
     async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
-        let nonce = fuchsia_trace::generate_nonce();
-        let mut current = self.client.read_setting::<LightInfo>(nonce).await;
+        let id = fuchsia_trace::Id::new();
+        let mut current = self.client.read_setting::<LightInfo>(id).await;
         for light in current
             .light_groups
             .values_mut()
@@ -253,7 +253,7 @@ impl LightController {
             light.enabled = mic_mute;
         }
 
-        self.client.write_setting(current.into(), nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), id).await.into_handler_result()
     }
 
     async fn restore(&self) -> SettingHandlerResult {
@@ -273,8 +273,8 @@ impl LightController {
         &self,
         config: LightHardwareConfiguration,
     ) -> SettingHandlerResult {
-        let nonce = fuchsia_trace::generate_nonce();
-        let current = self.client.read_setting::<LightInfo>(nonce).await;
+        let id = fuchsia_trace::Id::new();
+        let current = self.client.read_setting::<LightInfo>(id).await;
         let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
         for group_config in config.light_groups {
             let mut light_state: Vec<LightState> = Vec::new();
@@ -308,10 +308,7 @@ impl LightController {
             );
         }
 
-        self.client
-            .write_setting(LightInfo { light_groups }.into(), nonce)
-            .await
-            .into_handler_result()
+        self.client.write_setting(LightInfo { light_groups }.into(), id).await.into_handler_result()
     }
 
     /// Restores the light information when no hardware configuration is specified by reading from
@@ -328,8 +325,8 @@ impl LightController {
                 )
             })?;
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let mut current = self.client.read_setting::<LightInfo>(nonce).await;
+        let id = fuchsia_trace::Id::new();
+        let mut current = self.client.read_setting::<LightInfo>(id).await;
         for i in 0..num_lights {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
@@ -345,7 +342,7 @@ impl LightController {
             let _ = current.light_groups.insert(name, group);
         }
 
-        self.client.write_setting(current.into(), nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), id).await.into_handler_result()
     }
 
     /// Converts an Info object from the fuchsia.hardware.Light API into a LightGroup, the internal

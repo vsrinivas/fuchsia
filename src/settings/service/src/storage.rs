@@ -7,7 +7,7 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::policy::{PolicyInfo, PolicyType};
-use crate::trace::TracingNonce;
+use fuchsia_trace as ftrace;
 
 /// `Payload` wraps the request and response payloads.
 #[derive(Clone, PartialEq, Debug)]
@@ -20,9 +20,9 @@ pub enum Payload {
 #[derive(Clone, PartialEq, Debug)]
 pub enum StorageRequest {
     /// A read requests for the corresponding [`StorageInfo`] of this `StorageType`.
-    Read(StorageType, TracingNonce),
+    Read(StorageType, ftrace::Id),
     /// A write requests for this [`StorageInfo`].
-    Write(StorageInfo, TracingNonce),
+    Write(StorageInfo, ftrace::Id),
 }
 
 #[derive(Clone, PartialEq, Debug)]

@@ -13,7 +13,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon as zx;
 
 use fidl_fuchsia_media::AudioRenderUsage;
-use fuchsia_trace::AsyncScope;
+use fuchsia_trace as ftrace;
 
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream};
 use crate::base::{SettingInfo, SettingType};
@@ -21,14 +21,13 @@ use crate::handler::base::Request;
 use crate::ingress::{request, watch, Scoped};
 use crate::job::source::{Error as JobError, ErrorResponder};
 use crate::job::Job;
-use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
 
 /// Custom responder that wraps the real FIDL responder plus a tracing guard. The guard is stored
 /// here so that it's active until a response is sent and this responder is dropped.
 struct AudioSetTraceResponder {
     responder: AudioSetResponder,
-    _guard: AsyncScope,
+    _guard: ftrace::AsyncScope,
 }
 
 impl request::Responder<Scoped<AudioSetResult>> for AudioSetTraceResponder {
@@ -73,10 +72,10 @@ impl TryFrom<AudioRequest> for Job {
         #[allow(unreachable_patterns)]
         match item {
             AudioRequest::Set { settings, responder } => {
-                let nonce = fuchsia_trace::generate_nonce();
-                let guard = trace_guard!(nonce, "audio fidl handler set");
+                let id = ftrace::Id::new();
+                let guard = trace_guard!(id, "audio fidl handler set");
                 let responder = AudioSetTraceResponder { responder, _guard: guard };
-                match to_request(settings, nonce) {
+                match to_request(settings, id) {
                     Ok(request) => {
                         Ok(request::Work::new(SettingType::Audio, request, responder).into())
                     }
@@ -197,8 +196,8 @@ enum Error {
     NoSource(usize),
 }
 
-fn to_request(settings: AudioSettings, nonce: TracingNonce) -> Result<Request, Error> {
-    trace!(nonce, "to_request");
+fn to_request(settings: AudioSettings, id: ftrace::Id) -> Result<Request, Error> {
+    trace!(id, "to_request");
     settings
         .streams
         .map(|streams| {
@@ -224,7 +223,7 @@ fn to_request(settings: AudioSettings, nonce: TracingNonce) -> Result<Request, E
                     }
                 })
                 .collect::<Result<Vec<_>, _>>()
-                .map(|streams| Request::SetVolume(streams, nonce))
+                .map(|streams| Request::SetVolume(streams, id))
         })
         .unwrap_or(Err(Error::NoStreams))
 }
@@ -243,8 +242,8 @@ mod tests {
     // Verifies that an entirely empty settings request results in an appropriate error.
     #[test]
     fn test_request_from_settings_empty() {
-        let nonce = fuchsia_trace::generate_nonce();
-        let request = to_request(AudioSettings::EMPTY, nonce);
+        let id = ftrace::Id::new();
+        let request = to_request(AudioSettings::EMPTY, id);
 
         assert_eq!(request, Err(Error::NoStreams));
     }
@@ -257,8 +256,8 @@ mod tests {
 
         let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let request = to_request(audio_settings, nonce);
+        let id = ftrace::Id::new();
+        let request = to_request(audio_settings, id);
 
         assert_eq!(request, Err(Error::NoUserVolume(0)));
     }
@@ -271,8 +270,8 @@ mod tests {
 
         let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let request = to_request(audio_settings, nonce);
+        let id = ftrace::Id::new();
+        let request = to_request(audio_settings, id);
 
         assert_eq!(request, Err(Error::NoStreamType(0)));
     }
@@ -285,8 +284,8 @@ mod tests {
 
         let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let request = to_request(audio_settings, nonce);
+        let id = ftrace::Id::new();
+        let request = to_request(audio_settings, id);
 
         assert_eq!(request, Err(Error::NoSource(0)));
     }
@@ -300,8 +299,8 @@ mod tests {
 
         let audio_settings = AudioSettings { streams: Some(vec![stream]), ..AudioSettings::EMPTY };
 
-        let nonce = fuchsia_trace::generate_nonce();
-        let request = to_request(audio_settings, nonce);
+        let id = ftrace::Id::new();
+        let request = to_request(audio_settings, id);
 
         assert_eq!(request, Err(Error::MissingVolumeAndMuted(0)));
     }

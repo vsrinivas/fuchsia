@@ -201,8 +201,8 @@ impl SettingProxyInspectAgent {
         fasync::Task::spawn({
             async move {
             let _ = &context;
-            let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "setting_proxy_inspect_agent");
+            let id = fuchsia_trace::Id::new();
+            trace!(id, "setting_proxy_inspect_agent");
             let event = message_rx.fuse();
             let agent_event = context.receptor.fuse();
             futures::pin_mut!(agent_event, event);
@@ -214,7 +214,7 @@ impl SettingProxyInspectAgent {
                 futures::select! {
                     message_event = event.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "message_event"
                         );
                         if let Some((link_info, mut reply_receptor)) =
@@ -238,7 +238,7 @@ impl SettingProxyInspectAgent {
                     },
                     agent_message = agent_event.select_next_some() => {
                         trace!(
-                            nonce,
+                            id,
                             "agent_event"
                         );
                         if let MessageEvent::Message(

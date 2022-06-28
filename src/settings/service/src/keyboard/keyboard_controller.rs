@@ -49,9 +49,9 @@ impl controller::Handle for KeyboardController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetKeyboardInfo(keyboard_info) => {
-                let nonce = fuchsia_trace::generate_nonce();
-                trace!(nonce, "set keyboard");
-                let mut current = self.client.read_setting::<KeyboardInfo>(nonce).await;
+                let id = fuchsia_trace::Id::new();
+                trace!(id, "set keyboard");
+                let mut current = self.client.read_setting::<KeyboardInfo>(id).await;
                 if !keyboard_info.is_valid() {
                     return Some(Err(ControllerError::InvalidArgument(
                         SettingType::Keyboard,
@@ -62,7 +62,7 @@ impl controller::Handle for KeyboardController {
                 // Save the value locally.
                 current.keymap = keyboard_info.keymap.or(current.keymap);
                 current.autorepeat =
-                    keyboard_info.autorepeat.or(current.autorepeat).map_or(None, |value| {
+                    keyboard_info.autorepeat.or(current.autorepeat).and_then(|value| {
                         if value.delay == 0 && value.period == 0 {
                             // Clean up Autorepeat when delay and period are set to zero.
                             None
@@ -70,17 +70,12 @@ impl controller::Handle for KeyboardController {
                             Some(value)
                         }
                     });
-                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
+                Some(self.client.write_setting(current.into(), id).await.into_handler_result())
             }
             Request::Get => {
-                let nonce = fuchsia_trace::generate_nonce();
-                trace!(nonce, "get keyboard");
-                Some(
-                    self.client
-                        .read_setting_info::<KeyboardInfo>(nonce)
-                        .await
-                        .into_handler_result(),
-                )
+                let id = fuchsia_trace::Id::new();
+                trace!(id, "get keyboard");
+                Some(self.client.read_setting_info::<KeyboardInfo>(id).await.into_handler_result())
             }
             _ => None,
         }
