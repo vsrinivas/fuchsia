@@ -5,8 +5,8 @@
     include: [
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/sys/test_manager/system-test.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
+        "sys/testing/system-test.shard.cml",
     ],
     program: {
         binary: "bin/kstress",

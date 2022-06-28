@@ -581,7 +581,7 @@ non-hermetic "system" realm as shown below.
         "//src/sys/test_runners/rust/default.shard.cml",
 
         // This includes the facet which marks the test type as "system".
-        {{ '<strong>' }}"//src/sys/test_manager/system-test.shard.cml",{{ '</strong>' }}
+        {{ '<strong>' }}"sys/testing/system-test.shard.cml",{{ '</strong>' }}
     ],
     program: {
         binary: "bin/my_component_test",

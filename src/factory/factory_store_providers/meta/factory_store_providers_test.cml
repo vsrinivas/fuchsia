@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 {
     include: [
-        // In order to use config-data, we need to mark the test non-hermetic
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+
+        // In order to use config-data, we need to mark the test non-hermetic
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

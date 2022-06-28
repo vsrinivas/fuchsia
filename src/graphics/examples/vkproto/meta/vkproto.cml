@@ -4,7 +4,7 @@
 {
     include: [
         "//src/lib/vulkan/gapii-pkg/application.shard.cml",
-        "//src/sys/test_manager/system-test.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
     ],

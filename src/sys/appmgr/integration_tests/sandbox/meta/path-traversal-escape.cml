@@ -4,8 +4,8 @@
 {
     include: [
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
     ],
     program: {
         binary: "test/path_traversal_escape",
