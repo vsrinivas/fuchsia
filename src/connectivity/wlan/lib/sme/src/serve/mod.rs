@@ -199,10 +199,7 @@ where
 fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
     match req {
         MlmeRequest::Scan(mut req) => proxy.start_scan(&mut req),
-        MlmeRequest::Join(mut req) => proxy.join_req(&mut req),
-        MlmeRequest::Authenticate(mut req) => proxy.authenticate_req(&mut req),
         MlmeRequest::AuthResponse(mut resp) => proxy.authenticate_resp(&mut resp),
-        MlmeRequest::Associate(mut req) => proxy.associate_req(&mut req),
         MlmeRequest::AssocResponse(mut resp) => proxy.associate_resp(&mut resp),
         MlmeRequest::Connect(mut req) => proxy.connect_req(&mut req),
         MlmeRequest::Reconnect(mut req) => proxy.reconnect_req(&mut req),

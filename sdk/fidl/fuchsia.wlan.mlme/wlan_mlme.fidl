@@ -143,65 +143,12 @@ type ReconnectRequest = struct {
     peer_sta_address ieee80211.MacAddr;
 };
 
-// MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
-
-type JoinRequest = struct {
-    selected_bss internal.BssDescription;
-    join_failure_timeout uint32;
-    nav_sync_delay uint32;
-    op_rates bytes:internal.MAX_ASSOC_BASIC_RATES;
-};
-
-// MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
-
-type JoinResultCode = strict enum {
-    SUCCESS = 0;
-    JOIN_FAILURE_TIMEOUT = 1;
-    //LAST = JOIN_FAILURE_TIMEOUT;
-};
-
-type JoinConfirm = struct {
-    result_code ieee80211.StatusCode;
-};
-
-// MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
-
 type AuthenticationTypes = strict enum {
     OPEN_SYSTEM = 1;
     SHARED_KEY = 2;
     FAST_BSS_TRANSITION = 3;
     SAE = 4;
     //LAST = SAE;
-};
-
-type AuthenticateRequest = struct {
-    peer_sta_address ieee80211.MacAddr;
-    auth_type AuthenticationTypes;
-    auth_failure_timeout uint32;
-
-    // If populated, use this password to perform SAE in the driver/firmware.
-    sae_password vector<uint8>:optional;
-
-    // etc
-};
-
-// MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
-
-type AuthenticateResultCode = strict enum {
-    SUCCESS = 0;
-    REFUSED = 1;
-    ANTI_CLOGGING_TOKEN_REQUIRED = 2;
-    FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
-    AUTHENTICATION_REJECTED = 4;
-    AUTH_FAILURE_TIMEOUT = 5;
-};
-
-type AuthenticateConfirm = struct {
-    peer_sta_address ieee80211.MacAddr;
-    auth_type AuthenticationTypes;
-    result_code ieee80211.StatusCode;
-
-    // etc
 };
 
 // MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
@@ -214,6 +161,15 @@ type AuthenticateIndication = struct {
 };
 
 // MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
+
+type AuthenticateResultCode = strict enum {
+    SUCCESS = 0;
+    REFUSED = 1;
+    ANTI_CLOGGING_TOKEN_REQUIRED = 2;
+    FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
+    AUTHENTICATION_REJECTED = 4;
+    AUTH_FAILURE_TIMEOUT = 5;
+};
 
 type AuthenticateResponse = struct {
     peer_sta_address ieee80211.MacAddr;
@@ -247,53 +203,6 @@ type DeauthenticateIndication = struct {
     // VendorSpecificInfo
 };
 
-// MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
-
-type AssociateRequest = struct {
-    peer_sta_address ieee80211.MacAddr;
-    capability_info internal.CapabilityInfo;
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
-    qos_capable bool;
-    qos_info QosInfo;
-    ht_cap box<ieee80211.HtCapabilities>;
-    vht_cap box<ieee80211.VhtCapabilities>;
-    rsne bytes:optional;
-    // Serialized list of vendor IEs to be appended after all other associate request IEs.
-    vendor_ies bytes:optional;
-
-    // etc
-};
-
-// MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
-
-type AssociateResultCode = strict enum {
-    SUCCESS = 0;
-    REFUSED_REASON_UNSPECIFIED = 1;
-    REFUSED_NOT_AUTHENTICATED = 2;
-    REFUSED_CAPABILITIES_MISMATCH = 3;
-    REFUSED_EXTERNAL_REASON = 4;
-    REFUSED_AP_OUT_OF_MEMORY = 5;
-    REFUSED_BASIC_RATES_MISMATCH = 6;
-    REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED = 7;
-    REFUSED_TEMPORARILY = 8;
-};
-
-type AssociateConfirm = struct {
-    result_code ieee80211.StatusCode;
-    // CapabilityInformation
-    association_id uint16;
-
-    // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
-    // remove these fields.
-    capability_info internal.CapabilityInfo;
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
-    wmm_param box<WmmParameter>;
-    ht_cap box<ieee80211.HtCapabilities>;
-    vht_cap box<ieee80211.VhtCapabilities>;
-
-    // etc
-};
-
 // MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
 
 type AssociateIndication = struct {
@@ -309,6 +218,18 @@ type AssociateIndication = struct {
 };
 
 // MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
+
+type AssociateResultCode = strict enum {
+    SUCCESS = 0;
+    REFUSED_REASON_UNSPECIFIED = 1;
+    REFUSED_NOT_AUTHENTICATED = 2;
+    REFUSED_CAPABILITIES_MISMATCH = 3;
+    REFUSED_EXTERNAL_REASON = 4;
+    REFUSED_AP_OUT_OF_MEMORY = 5;
+    REFUSED_BASIC_RATES_MISMATCH = 6;
+    REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED = 7;
+    REFUSED_TEMPORARILY = 8;
+};
 
 type AssociateResponse = struct {
     peer_sta_address ieee80211.MacAddr;
@@ -578,19 +499,6 @@ protocol MLME {
     ReconnectReq(struct {
         req ReconnectRequest;
     });
-    JoinReq(struct {
-        req JoinRequest;
-    });
-    -> JoinConf(struct {
-        resp JoinConfirm;
-    });
-
-    AuthenticateReq(struct {
-        req AuthenticateRequest;
-    });
-    -> AuthenticateConf(struct {
-        resp AuthenticateConfirm;
-    });
 
     -> AuthenticateInd(struct {
         ind AuthenticateIndication;
@@ -608,13 +516,6 @@ protocol MLME {
 
     -> DeauthenticateInd(struct {
         ind DeauthenticateIndication;
-    });
-
-    AssociateReq(struct {
-        req AssociateRequest;
-    });
-    -> AssociateConf(struct {
-        resp AssociateConfirm;
     });
 
     -> AssociateInd(struct {

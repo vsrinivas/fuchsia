@@ -203,10 +203,7 @@ class DataFrameTest : public SimTest {
   wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
   // Event handlers
-  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
-  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
   void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
-  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
   void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
   void OnEapolConf(const wlan_fullmac_eapol_confirm_t* resp);
@@ -309,12 +306,6 @@ void DataFrameTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   // Do a re-association right after deauth.
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(200));
-}
-
-void DataFrameTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
-  assoc_context_.connect_resp_count++;
-  EXPECT_EQ(resp->result_code, assoc_context_.expected_results.front());
-  assoc_context_.expected_results.pop_front();
 }
 
 void DataFrameTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {

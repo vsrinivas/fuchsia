@@ -179,11 +179,8 @@ wlan_fullmac_impl_protocol_ops_t EmptyProtoOps() {
       .start_scan = [](void* ctx, const wlan_fullmac_scan_req_t* req) {},
       .connect_req = [](void* ctx, const wlan_fullmac_connect_req_t* req) {},
       .reconnect_req = [](void* ctx, const wlan_fullmac_reconnect_req_t* req) {},
-      .join_req = [](void* ctx, const wlan_fullmac_join_req_t* req) {},
-      .auth_req = [](void* ctx, const wlan_fullmac_auth_req_t* req) {},
       .auth_resp = [](void* ctx, const wlan_fullmac_auth_resp_t* req) {},
       .deauth_req = [](void* ctx, const wlan_fullmac_deauth_req_t* req) {},
-      .assoc_req = [](void* ctx, const wlan_fullmac_assoc_req_t* req) {},
       .assoc_resp = [](void* ctx, const wlan_fullmac_assoc_resp_t* req) {},
       .disassoc_req = [](void* ctx, const wlan_fullmac_disassoc_req_t* req) {},
       .reset_req = [](void* ctx, const wlan_fullmac_reset_req_t* req) {},
@@ -399,8 +396,8 @@ TEST(SmeChannel, FailedBind) {
   ASSERT_EQ(0u, parent->descendant_count());
 }
 
-struct AssocReqTestContext {
-  AssocReqTestContext() {
+struct ConnectReqTestContext {
+  ConnectReqTestContext() {
     auto [new_sme, new_mlme] = make_channel();
     mlme = std::move(new_mlme);
     sme = std::move(new_sme);
@@ -408,20 +405,20 @@ struct AssocReqTestContext {
 
   zx::channel mlme = {};
   zx::channel sme = {};
-  std::optional<wlan_fullmac_assoc_req_t> assoc_req = {};
+  std::optional<wlan_fullmac_connect_req_t> connect_req = {};
   wlan_fullmac_impl_ifc_protocol_t ifc = {};
-  volatile std::atomic<bool> assoc_received = false;
-  volatile std::atomic<bool> assoc_confirmed = false;
-  volatile std::atomic<bool> ignore_assoc = false;
+  volatile std::atomic<bool> connect_received = false;
+  volatile std::atomic<bool> connect_confirmed = false;
+  volatile std::atomic<bool> ignore_connect = false;
 };
 
 TEST(AssocReqHandling, MultipleAssocReq) {
-#define ASSOC_DEV(c) static_cast<AssocReqTestContext*>(c)
+#define ASSOC_DEV(c) static_cast<ConnectReqTestContext*>(c)
   static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
       // MLME operations
-      .assoc_conf =
-          [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
-            ASSOC_DEV(cookie)->assoc_confirmed = true;
+      .connect_conf =
+          [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
+            ASSOC_DEV(cookie)->connect_confirmed = true;
           },
   };
 
@@ -429,27 +426,26 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   proto_ops.start = [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc,
                        zx_handle_t* out_mlme_channel) -> zx_status_t {
     *out_mlme_channel = ASSOC_DEV(ctx)->sme.release();
-    // Substitute with our own ops to capture assoc conf
+    // Substitute with our own ops to capture connect conf
     ASSOC_DEV(ctx)->ifc.ops = &wlan_fullmac_impl_ifc_ops;
     ASSOC_DEV(ctx)->ifc.ctx = ctx;
     return ZX_OK;
   };
 
-  proto_ops.assoc_req = [](void* ctx, const wlan_fullmac_assoc_req_t* req) {
-    if (ASSOC_DEV(ctx)->ignore_assoc == false) {
-      ASSOC_DEV(ctx)->assoc_req = {{
-          .rsne_len = req->rsne_len,
-          .vendor_ie_len = req->vendor_ie_len,
+  proto_ops.connect_req = [](void* ctx, const wlan_fullmac_connect_req_t* req) {
+    if (!ASSOC_DEV(ctx)->ignore_connect) {
+      ASSOC_DEV(ctx)->connect_req = {{
+          .security_ie_count = req->security_ie_count,
       }};
-      wlan_fullmac_assoc_confirm_t conf;
+      wlan_fullmac_connect_confirm_t conf;
 
       conf.result_code = 0;
       conf.association_id = 1;
-      wlan_fullmac_impl_ifc_assoc_conf(&ASSOC_DEV(ctx)->ifc, &conf);
+      wlan_fullmac_impl_ifc_connect_conf(&ASSOC_DEV(ctx)->ifc, &conf);
     }
-    ASSOC_DEV(ctx)->assoc_received = true;
+    ASSOC_DEV(ctx)->connect_received = true;
   };
-  AssocReqTestContext ctx;
+  ConnectReqTestContext ctx;
   wlan_fullmac_impl_protocol_t proto = {
       .ops = &proto_ops,
       .ctx = &ctx,
@@ -461,32 +457,26 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   auto status = device->Bind();
   ASSERT_EQ(status, ZX_OK);
 
-  // Send assoc request to device, ignore this one.
-  ctx.ignore_assoc = true;
+  // Send connect request to device, ignore this one.
+  ctx.ignore_connect = true;
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
-  mlme_proxy.AssociateReq(wlan_mlme::AssociateRequest{
-      .rsne = {},
-      .vendor_ies = {},
-  });
+  mlme_proxy.ConnectReq(wlan_fullmac_test::CreateConnectReq());
 
-  // Wait for assoc req message to propagate through the system. Since there is
+  // Wait for connect req message to propagate through the system. Since there is
   // no response expected, wait for a minimal amount of time.
-  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_received; }));
-  ASSERT_TRUE(!ctx.assoc_req.has_value());
-  ASSERT_EQ(ctx.assoc_confirmed, false);
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.connect_received; }));
+  ASSERT_TRUE(!ctx.connect_req.has_value());
+  ASSERT_EQ(ctx.connect_confirmed, false);
 
-  // Send assoc request to device and send the conf
-  ctx.ignore_assoc = false;
-  ctx.assoc_req = {};
-  ctx.assoc_received = false;
-  ctx.assoc_confirmed = false;
-  mlme_proxy.AssociateReq(wlan_mlme::AssociateRequest{
-      .rsne = {},
-      .vendor_ies = {},
-  });
-  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_received; }));
-  ASSERT_TRUE(ctx.assoc_req.has_value());
-  ASSERT_EQ(ctx.assoc_confirmed, true);
+  // Send connect request to device and send the conf
+  ctx.ignore_connect = false;
+  ctx.connect_req = {};
+  ctx.connect_received = false;
+  ctx.connect_confirmed = false;
+  mlme_proxy.ConnectReq(wlan_fullmac_test::CreateConnectReq());
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.connect_received; }));
+  ASSERT_TRUE(ctx.connect_req.has_value());
+  ASSERT_EQ(ctx.connect_confirmed, true);
 
   device->Unbind();
 }
@@ -1062,25 +1052,14 @@ TEST_F(EthernetTestFixture, GetIfaceHistogramStatsReqDoesNotDeadlockWithEthRecv)
   ASSERT_TRUE(eth_recv_called_);
 }
 
-TEST_F(EthernetTestFixture, JoinReqDoesNotDeadlockWithEthRecv) {
-  proto_ops_.join_req = [](void* ctx, const wlan_fullmac_join_req_t* req) {
+TEST_F(EthernetTestFixture, ConnectReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.connect_req = [](void* ctx, const wlan_fullmac_connect_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
   InitDeviceWithRole(WLAN_MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
-  device_->JoinReq(wlan_fullmac_test::CreateJoinReq());
-  ASSERT_TRUE(eth_recv_called_);
-}
-
-TEST_F(EthernetTestFixture, AuthReqDoesNotDeadlockWithEthRecv) {
-  proto_ops_.auth_req = [](void* ctx, const wlan_fullmac_auth_req_t* req) {
-    ETH_DEV(ctx)->CallDataRecv();
-  };
-  InitDeviceWithRole(WLAN_MAC_ROLE_CLIENT);
-  device_->EthStart(&eth_proto_);
-
-  device_->AuthenticateReq(wlan_fullmac_test::CreateAuthenticateReq());
+  device_->ConnectReq(wlan_fullmac_test::CreateConnectReq());
   ASSERT_TRUE(eth_recv_called_);
 }
 

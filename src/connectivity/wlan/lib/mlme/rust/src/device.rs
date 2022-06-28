@@ -1160,19 +1160,14 @@ mod tests {
         super::*,
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
         banjo_fuchsia_wlan_ieee80211::*,
-        banjo_fuchsia_wlan_internal as banjo_internal,
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
+        banjo_fuchsia_wlan_internal as banjo_internal, fuchsia_async as fasync,
         ieee80211::{Bssid, Ssid},
         std::convert::TryFrom,
         wlan_common::{assert_variant, capabilities::StaCapabilities, mac},
     };
 
-    fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
-        fidl_mlme::AuthenticateConfirm {
-            peer_sta_address: [1; 6],
-            auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
-            result_code: fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
-        }
+    fn make_deauth_confirm_msg() -> fidl_mlme::DeauthenticateConfirm {
+        fidl_mlme::DeauthenticateConfirm { peer_sta_address: [1; 6] }
     }
 
     #[test]
@@ -1181,14 +1176,14 @@ mod tests {
         let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         dev.mlme_control_handle()
-            .send_authenticate_conf(&mut make_auth_confirm_msg())
+            .send_deauthenticate_conf(&mut make_deauth_confirm_msg())
             .expect("error sending MLME message");
 
         // Read message from channel.
         let msg = fake_device
-            .next_mlme_msg::<fidl_mlme::AuthenticateConfirm>()
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
             .expect("error reading message from channel");
-        assert_eq!(msg, make_auth_confirm_msg());
+        assert_eq!(msg, make_deauth_confirm_msg());
     }
 
     #[test]
@@ -1199,7 +1194,8 @@ mod tests {
 
         drop(fake_device.mlme_proxy_channel);
 
-        let result = dev.mlme_control_handle().send_authenticate_conf(&mut make_auth_confirm_msg());
+        let result =
+            dev.mlme_control_handle().send_deauthenticate_conf(&mut make_deauth_confirm_msg());
         assert!(result.unwrap_err().is_closed());
     }
 

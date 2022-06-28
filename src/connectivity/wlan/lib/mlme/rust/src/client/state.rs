@@ -3089,7 +3089,7 @@ mod tests {
 
         // No need to notify SME since it already deauthenticated
         m.fake_device
-            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
             .expect_err("should not see more MLME messages");
         assert!(m.fake_device.bss_cfg.is_none());
     }

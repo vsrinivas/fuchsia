@@ -51,31 +51,11 @@ type WlanFullmacScanReq = struct {
 const WLAN_VIE_MAX_LEN uint32 = 510;
 const WLAN_MAX_OP_RATES uint32 = 12;
 
-type WlanFullmacJoinReq = struct {
-    selected_bss fuchsia.wlan.internal.BssDescription;
-    // Timeout specified in beacon intervals.
-    join_failure_timeout uint32;
-    nav_sync_delay uint32;
-    num_op_rates uint64;
-    op_rates array<uint8, WLAN_MAX_OP_RATES>;
-};
-
 type WlanAuthType = strict enum : uint8 {
     OPEN_SYSTEM = 1;
     SHARED_KEY = 2;
     FAST_BSS_TRANSITION = 3;
     SAE = 4;
-};
-
-type WlanFullmacAuthReq = struct {
-    peer_sta_address ieee80211.MacAddr;
-    auth_type WlanAuthType;
-    // Timeout specified in beacon intervals.
-    auth_failure_timeout uint32;
-
-    // Used to pass an SAE password when SAE_DRIVER_AUTH is in use.
-    @mutable
-    sae_password vector<uint8>:MAX;
 };
 
 type WlanFullmacAuthInd = struct {
@@ -86,14 +66,6 @@ type WlanFullmacAuthInd = struct {
 type WlanFullmacDeauthReq = struct {
     peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
-};
-
-type WlanFullmacAssocReq = struct {
-    peer_sta_address ieee80211.MacAddr;
-    rsne_len uint64;
-    rsne array<uint8, ieee80211.WLAN_IE_BODY_MAX_LEN>;
-    vendor_ie_len uint64;
-    vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
 
 type WlanFullmacAssocInd = struct {
@@ -274,16 +246,6 @@ type WlanFullmacConnectConfirm = struct {
     association_ies vector<uint8>:MAX;
 };
 
-type WlanJoinResult = strict enum : uint8 {
-    SUCCESS = 0;
-    FAILURE_TIMEOUT = 1;
-    INTERNAL_ERROR = 2;
-};
-
-type WlanFullmacJoinConfirm = struct {
-    result_code ieee80211.StatusCode;
-};
-
 type WlanAuthResult = strict enum : uint8 {
     SUCCESS = 0;
     REFUSED = 1;
@@ -291,12 +253,6 @@ type WlanAuthResult = strict enum : uint8 {
     FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
     REJECTED = 4;
     FAILURE_TIMEOUT = 5;
-};
-
-type WlanFullmacAuthConfirm = struct {
-    peer_sta_address ieee80211.MacAddr;
-    auth_type WlanAuthType;
-    result_code ieee80211.StatusCode;
 };
 
 type WlanFullmacAuthResp = struct {
@@ -326,13 +282,6 @@ type WlanAssocResult = strict enum : uint8 {
     REFUSED_BASIC_RATES_MISMATCH = 6;
     REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED = 7;
     REFUSED_TEMPORARILY = 8;
-};
-
-type WlanFullmacAssocConfirm = struct {
-    result_code ieee80211.StatusCode;
-    association_id uint16;
-    wmm_param_present bool;
-    wmm_param array<uint8, WLAN_WMM_PARAM_LEN>;
 };
 
 type WlanFullmacAssocResp = struct {
@@ -715,13 +664,6 @@ protocol WlanFullmacImplIfc {
     ConnectConf(struct {
         resp WlanFullmacConnectConfirm;
     }) -> ();
-    // TODO(fxbug.dev/88275): Remove Join/Auth/Assoc when Connect is supported.
-    JoinConf(struct {
-        resp WlanFullmacJoinConfirm;
-    }) -> ();
-    AuthConf(struct {
-        resp WlanFullmacAuthConfirm;
-    }) -> ();
     AuthInd(struct {
         resp WlanFullmacAuthInd;
     }) -> ();
@@ -730,9 +672,6 @@ protocol WlanFullmacImplIfc {
     }) -> ();
     DeauthInd(struct {
         ind WlanFullmacDeauthIndication;
-    }) -> ();
-    AssocConf(struct {
-        resp WlanFullmacAssocConfirm;
     }) -> ();
     AssocInd(struct {
         resp WlanFullmacAssocInd;
@@ -828,21 +767,11 @@ protocol WlanFullmacImpl {
     ReconnectReq(struct {
         req WlanFullmacReconnectReq;
     }) -> ();
-    // TODO(fxbug.dev/88275): Remove Join/Auth/Assoc when Connect is supported.
-    JoinReq(struct {
-        req WlanFullmacJoinReq;
-    }) -> ();
-    AuthReq(struct {
-        req WlanFullmacAuthReq;
-    }) -> ();
     AuthResp(struct {
         resp WlanFullmacAuthResp;
     }) -> ();
     DeauthReq(struct {
         req WlanFullmacDeauthReq;
-    }) -> ();
-    AssocReq(struct {
-        req WlanFullmacAssocReq;
     }) -> ();
     AssocResp(struct {
         resp WlanFullmacAssocResp;

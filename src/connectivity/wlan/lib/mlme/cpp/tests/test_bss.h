@@ -155,13 +155,10 @@ FV TypeCheckWlanFrame(Packet* pkt) {
 ::fuchsia::wlan::mlme::StartRequest CreateStartRequest(bool protected_ap);
 ::fuchsia::wlan::mlme::StopRequest CreateStopRequest();
 ::fuchsia::wlan::mlme::ConnectRequest CreateConnectRequest(bool rsn, wlan_channel_t channel);
-::fuchsia::wlan::mlme::JoinRequest CreateJoinRequest(bool rsn);
-::fuchsia::wlan::mlme::AuthenticateRequest CreateAuthRequest();
 ::fuchsia::wlan::mlme::AuthenticateResponse CreateAuthResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCode result_code);
 ::fuchsia::wlan::mlme::DeauthenticateRequest CreateDeauthRequest(
     common::MacAddr, ::fuchsia::wlan::ieee80211::ReasonCode reason_code);
-::fuchsia::wlan::mlme::AssociateRequest CreateAssocRequest(bool rsn);
 ::fuchsia::wlan::mlme::AssociateResponse CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCode result_code,
     uint16_t aid);

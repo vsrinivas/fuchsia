@@ -157,17 +157,6 @@ struct ClientTest : public ::testing::Test {
     device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
   }
 
-  void AssertAuthConfirm(MlmeMsg<wlan_mlme::AuthenticateConfirm> msg,
-                         wlan_ieee80211::StatusCode result_code) {
-    EXPECT_EQ(msg.body()->result_code, result_code);
-  }
-
-  void AssertAssocConfirm(MlmeMsg<wlan_mlme::AssociateConfirm> msg, uint16_t aid,
-                          wlan_ieee80211::StatusCode result_code) {
-    EXPECT_EQ(msg.body()->association_id, aid);
-    EXPECT_EQ(msg.body()->result_code, result_code);
-  }
-
   void AssertConnectConfirm(MlmeMsg<wlan_mlme::ConnectConfirm> msg, const uint8_t peer_addr[6],
                             uint16_t aid, wlan_ieee80211::StatusCode result_code) {
     EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_addr, 6), 0);
@@ -378,9 +367,6 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   Join();
   Authenticate();
 
-  // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-  device.sme_->AssociateReq(CreateAssocRequest(false));
-  client.RunUntilStalled();
   // Respond with a Association Response frame and verify a ASSOCIATE.confirm
   // message was sent.
   auto ap_assoc_ctx = wlan::test_utils::FakeDdkAssocCtx();

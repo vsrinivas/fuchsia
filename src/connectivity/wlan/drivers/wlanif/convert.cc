@@ -360,20 +360,6 @@ wlan_mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type) {
   }
 }
 
-wlan_mlme::JoinResultCode ConvertJoinResultCode(uint8_t code) {
-  switch (code) {
-    case WLAN_JOIN_RESULT_SUCCESS:
-      return wlan_mlme::JoinResultCode::SUCCESS;
-    case WLAN_JOIN_RESULT_FAILURE_TIMEOUT:
-      __FALLTHROUGH;
-    case WLAN_JOIN_RESULT_INTERNAL_ERROR:
-      return wlan_mlme::JoinResultCode::JOIN_FAILURE_TIMEOUT;
-    default:
-      lerror("bad join result code: %u\n", code);
-      ZX_ASSERT(0);
-  }
-}
-
 wlan_mlme::AuthenticateResultCode ConvertAuthResultCode(uint8_t code) {
   switch (code) {
     case WLAN_AUTH_RESULT_SUCCESS:

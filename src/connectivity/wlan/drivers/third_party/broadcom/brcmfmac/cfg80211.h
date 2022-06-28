@@ -548,13 +548,6 @@ void brcmf_cfg80211_rx(struct brcmf_pub* drvr, wlan::drivers::components::FrameC
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
 
-// Helper functions to share association logic between two APIs.
-// TODO(fxbug.dev/88275): Remove once we're fully using ConnectReq.
-wlan_join_result_t brcmf_if_join_req_impl(net_device* ndev, const bss_description_t& sme_bss);
-wlan_auth_result_t brcmf_if_auth_req_impl(net_device* ndev, const uint8_t peer_sta_address[6],
-                                          const wlan_auth_type_t auth_type);
-status_code_t brcmf_if_init_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req);
-
 // Protocol ops implementations.
 
 zx_status_t brcmf_if_start(net_device* ndev, const wlan_fullmac_impl_ifc_protocol_t* ifc,
@@ -568,11 +561,8 @@ void brcmf_if_query_spectrum_management_support(net_device* ndev,
 void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req);
 void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* req);
 void brcmf_if_reconnect_req(net_device* ndev, const wlan_fullmac_reconnect_req_t* req);
-void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req);
-void brcmf_if_auth_req(net_device* ndev, const wlan_fullmac_auth_req_t* req);
 void brcmf_if_auth_resp(net_device* ndev, const wlan_fullmac_auth_resp_t* ind);
 void brcmf_if_deauth_req(net_device* ndev, const wlan_fullmac_deauth_req_t* req);
-void brcmf_if_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req);
 void brcmf_if_assoc_resp(net_device* ndev, const wlan_fullmac_assoc_resp_t* ind);
 void brcmf_if_disassoc_req(net_device* ndev, const wlan_fullmac_disassoc_req_t* req);
 void brcmf_if_reset_req(net_device* ndev, const wlan_fullmac_reset_req_t* req);
@@ -604,9 +594,5 @@ void brcmf_if_wmm_status_req(net_device* ndev);
 // is 0 length. In either case, it returns an empty vector.
 std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len);
 
-// If the WMM parameter IE (used for QoS) is available from the association result, set its
-// body into the Confirm message.
-void set_conf_wmm_param(const brcmf_cfg80211_info* cfg, bool* wmm_param_present,
-                        uint8_t wmm_param[18]);
 void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

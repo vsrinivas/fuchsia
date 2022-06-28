@@ -1280,7 +1280,7 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
         // No join request should be sent to MLME
-        assert_no_join(&mut mlme_stream);
+        assert_no_connect(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1343,7 +1343,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
-        assert_no_join(&mut mlme_stream);
+        assert_no_connect(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1370,7 +1370,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
-        assert_no_join(&mut mlme_stream);
+        assert_no_connect(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1693,11 +1693,13 @@ mod tests {
         });
     }
 
-    fn assert_no_join(mlme_stream: &mut mpsc::UnboundedReceiver<MlmeRequest>) {
+    fn assert_no_connect(mlme_stream: &mut mpsc::UnboundedReceiver<MlmeRequest>) {
         loop {
             match mlme_stream.try_next() {
                 Ok(event) => match event {
-                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request sent to MLME"),
+                    Some(MlmeRequest::Connect(..)) => {
+                        panic!("unexpected connect request sent to MLME")
+                    }
                     None => break,
                     _ => (),
                 },

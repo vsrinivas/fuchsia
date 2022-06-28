@@ -15,8 +15,7 @@
 namespace wlan_fullmac_test {
 
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
-static constexpr uint32_t kJoinTimeout = 200;  // Beacon Periods
-static constexpr uint32_t kAuthTimeout = 200;  // Beacon Periods
+static constexpr uint32_t kConnectFailureTimeout = 600;  // Beacon Periods
 static constexpr uint16_t kBeaconPeriodTu = 100;
 static constexpr uint16_t kDtimPeriodTu = 2;
 static constexpr wlan_channel_t kBssChannel = {
@@ -84,10 +83,8 @@ static constexpr uint8_t kRates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12,
     wlan_channel_t channel = kBssChannel);
 ::fuchsia::wlan::mlme::StartRequest CreateStartReq();
 ::fuchsia::wlan::mlme::StopRequest CreateStopReq();
-::fuchsia::wlan::mlme::JoinRequest CreateJoinReq();
-::fuchsia::wlan::mlme::AuthenticateRequest CreateAuthenticateReq();
+::fuchsia::wlan::mlme::ConnectRequest CreateConnectReq();
 ::fuchsia::wlan::mlme::DeauthenticateRequest CreateDeauthenticateReq();
-::fuchsia::wlan::mlme::AssociateRequest CreateAssociateReq();
 ::fuchsia::wlan::mlme::DisassociateRequest CreateDisassociateReq();
 
 }  // namespace wlan_fullmac_test

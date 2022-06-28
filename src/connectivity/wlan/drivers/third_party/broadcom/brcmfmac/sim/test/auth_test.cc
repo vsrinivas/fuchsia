@@ -670,7 +670,7 @@ TEST_F(AuthTest, WPA1Test) {
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
-  // Make sure that OnAssocConf is called, so the check inside is called.
+  // Make sure that OnConnectConf is called, so the check inside is called.
   EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
 }
 
@@ -703,7 +703,7 @@ TEST_F(AuthTest, WPA2Test) {
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
-  // Make sure that OnAssocConf is called, so the check inside is called.
+  // Make sure that OnConnectConf is called, so the check inside is called.
   EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
 }
 
@@ -716,7 +716,7 @@ TEST_F(AuthTest, WPA2FailTest) {
   env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
-  // Make sure that OnAssocConf is called, so the check inside is called.
+  // Make sure that OnConnectConf is called, so the check inside is called.
   EXPECT_NE(connect_status_, STATUS_CODE_SUCCESS);
 }
 
@@ -770,7 +770,7 @@ TEST_F(AuthTest, WPA3Test) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
 
   VerifyAuthFrames();
-  // Make sure that OnAssocConf is called, so the check inside is called.
+  // Make sure that OnConnectConf is called, so the check inside is called.
   EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
   EXPECT_EQ(sae_auth_state_, DONE);
 }

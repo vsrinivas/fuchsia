@@ -42,7 +42,6 @@ void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
 ::fuchsia::wlan::common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);
 ::fuchsia::wlan::mlme::ScanResultCode ConvertScanResultCode(uint8_t code);
-::fuchsia::wlan::mlme::JoinResultCode ConvertJoinResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::AuthenticateResultCode ConvertAuthResultCode(uint8_t code);
 uint8_t ConvertAuthResultCode(::fuchsia::wlan::mlme::AuthenticateResultCode result_code);
 ::fuchsia::wlan::mlme::AssociateResultCode ConvertAssocResultCode(uint8_t code);

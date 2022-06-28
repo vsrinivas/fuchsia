@@ -60,11 +60,8 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void StartScan(::fuchsia::wlan::mlme::ScanRequest req) override;
   void ConnectReq(::fuchsia::wlan::mlme::ConnectRequest req) override;
   void ReconnectReq(::fuchsia::wlan::mlme::ReconnectRequest req) override;
-  void JoinReq(::fuchsia::wlan::mlme::JoinRequest req) override;
-  void AuthenticateReq(::fuchsia::wlan::mlme::AuthenticateRequest req) override;
   void AuthenticateResp(::fuchsia::wlan::mlme::AuthenticateResponse resp) override;
   void DeauthenticateReq(::fuchsia::wlan::mlme::DeauthenticateRequest req) override;
-  void AssociateReq(::fuchsia::wlan::mlme::AssociateRequest req) override;
   void AssociateResp(::fuchsia::wlan::mlme::AssociateResponse resp) override;
   void DisassociateReq(::fuchsia::wlan::mlme::DisassociateRequest req) override;
   void ResetReq(::fuchsia::wlan::mlme::ResetRequest req) override;
@@ -105,12 +102,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void OnScanResult(const wlan_fullmac_scan_result_t* result);
   void OnScanEnd(const wlan_fullmac_scan_end_t* result);
   void ConnectConf(const wlan_fullmac_connect_confirm_t* resp);
-  void JoinConf(const wlan_fullmac_join_confirm_t* resp);
-  void AuthenticateConf(const wlan_fullmac_auth_confirm_t* resp);
   void AuthenticateInd(const wlan_fullmac_auth_ind_t* ind);
   void DeauthenticateConf(const wlan_fullmac_deauth_confirm_t* resp);
   void DeauthenticateInd(const wlan_fullmac_deauth_indication_t* ind);
-  void AssociateConf(const wlan_fullmac_assoc_confirm_t* resp);
   void AssociateInd(const wlan_fullmac_assoc_ind_t* ind);
   void DisassociateConf(const wlan_fullmac_disassoc_confirm_t* resp);
   void DisassociateInd(const wlan_fullmac_disassoc_indication_t* ind);

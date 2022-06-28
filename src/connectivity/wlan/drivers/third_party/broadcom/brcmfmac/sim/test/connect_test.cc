@@ -224,9 +224,6 @@ class ConnectTest : public SimTest {
 
   // Event handlers
   void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
-  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
-  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
-  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
   void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
   void OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp);
   void OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp);

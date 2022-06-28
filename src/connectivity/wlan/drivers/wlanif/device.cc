@@ -59,14 +59,6 @@ static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
         [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
           DEV(cookie)->ConnectConf(resp);
         },
-    .join_conf = [](void* cookie,
-                    const wlan_fullmac_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
-    .auth_conf =
-        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
-          DEV(cookie)->AuthenticateConf(resp);
-        },
-    .auth_ind = [](void* cookie,
-                   const wlan_fullmac_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
     .deauth_conf =
         [](void* cookie, const wlan_fullmac_deauth_confirm_t* resp) {
           DEV(cookie)->DeauthenticateConf(resp);
@@ -74,10 +66,6 @@ static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
     .deauth_ind =
         [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           DEV(cookie)->DeauthenticateInd(ind);
-        },
-    .assoc_conf =
-        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
-          DEV(cookie)->AssociateConf(resp);
         },
     .assoc_ind = [](void* cookie,
                     const wlan_fullmac_assoc_ind_t* ind) { DEV(cookie)->AssociateInd(ind); },
@@ -189,11 +177,8 @@ zx_status_t Device::Bind() {
   VERIFY_PROTO_OP(start_scan);
   VERIFY_PROTO_OP(connect_req);
   VERIFY_PROTO_OP(reconnect_req);
-  VERIFY_PROTO_OP(join_req);
-  VERIFY_PROTO_OP(auth_req);
   VERIFY_PROTO_OP(auth_resp);
   VERIFY_PROTO_OP(deauth_req);
-  VERIFY_PROTO_OP(assoc_req);
   VERIFY_PROTO_OP(assoc_resp);
   VERIFY_PROTO_OP(disassoc_req);
   VERIFY_PROTO_OP(reset_req);
@@ -395,56 +380,6 @@ void Device::ReconnectReq(wlan_mlme::ReconnectRequest req) {
   wlan_fullmac_impl_reconnect_req(&wlan_fullmac_impl_, &impl_req);
 }
 
-void Device::JoinReq(wlan_mlme::JoinRequest req) {
-  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
-
-  wlan_fullmac_join_req_t impl_req = {};
-
-  // selected_bss
-  ConvertBssDescription(&impl_req.selected_bss, req.selected_bss);
-
-  // join_failure_timeout
-  impl_req.join_failure_timeout = req.join_failure_timeout;
-
-  // nav_sync_delay
-  impl_req.nav_sync_delay = req.nav_sync_delay;
-
-  // op_rates
-  if (req.op_rates.size() > WLAN_MAX_OP_RATES) {
-    lwarn("truncating operational rates set from %zu to %d members\n", req.op_rates.size(),
-          WLAN_MAX_OP_RATES);
-    impl_req.num_op_rates = WLAN_MAX_OP_RATES;
-  } else {
-    impl_req.num_op_rates = req.op_rates.size();
-  }
-  std::memcpy(impl_req.op_rates, req.op_rates.data(), impl_req.num_op_rates);
-
-  wlan_fullmac_impl_join_req(&wlan_fullmac_impl_, &impl_req);
-}
-
-void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
-  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
-
-  wlan_fullmac_auth_req_t impl_req = {};
-
-  // peer_sta_address
-  std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
-
-  // auth_type
-  impl_req.auth_type = ConvertAuthType(req.auth_type);
-
-  // auth_failure_timeout
-  impl_req.auth_failure_timeout = req.auth_failure_timeout;
-
-  // sae_password
-  if (req.sae_password) {
-    impl_req.sae_password_count = req.sae_password->size();
-    impl_req.sae_password_list = &(*req.sae_password)[0];
-  }
-
-  wlan_fullmac_impl_auth_req(&wlan_fullmac_impl_, &impl_req);
-}
-
 void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
   wlan_fullmac_auth_resp_t impl_resp = {};
 
@@ -469,32 +404,6 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
   impl_req.reason_code = wlan::common::ConvertReasonCode(req.reason_code);
 
   wlan_fullmac_impl_deauth_req(&wlan_fullmac_impl_, &impl_req);
-}
-
-void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
-  wlan_fullmac_assoc_req_t impl_req = {};
-
-  // peer_sta_address
-  std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    protected_bss_ = req.rsne.has_value() || req.vendor_ies.has_value();
-
-    // rsne
-    if (protected_bss_) {
-      if (req.rsne.has_value()) {
-        CopyRSNE(req.rsne.value(), impl_req.rsne, &impl_req.rsne_len);
-      }
-      if (req.vendor_ies.has_value()) {
-        CopyVendorSpecificIE(req.vendor_ies.value(), impl_req.vendor_ie, &impl_req.vendor_ie_len);
-      }
-    } else {
-      impl_req.rsne_len = 0;
-      impl_req.vendor_ie_len = 0;
-    }
-  }
-
-  wlan_fullmac_impl_assoc_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
@@ -969,46 +878,6 @@ void Device::ConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
   binding_->events().ConnectConf(std::move(fidl_resp));
 }
 
-void Device::JoinConf(const wlan_fullmac_join_confirm_t* resp) {
-  std::lock_guard<std::mutex> lock(lock_);
-
-  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
-
-  if (binding_ == nullptr) {
-    return;
-  }
-
-  wlan_mlme::JoinConfirm fidl_resp;
-
-  // result_code
-  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
-
-  binding_->events().JoinConf(std::move(fidl_resp));
-}
-
-void Device::AuthenticateConf(const wlan_fullmac_auth_confirm_t* resp) {
-  std::lock_guard<std::mutex> lock(lock_);
-
-  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
-
-  if (binding_ == nullptr) {
-    return;
-  }
-
-  wlan_mlme::AuthenticateConfirm fidl_resp;
-
-  // peer_sta_address
-  std::memcpy(fidl_resp.peer_sta_address.data(), resp->peer_sta_address, ETH_ALEN);
-
-  // auth_type
-  fidl_resp.auth_type = ConvertAuthType(resp->auth_type);
-
-  // result_code
-  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
-
-  binding_->events().AuthenticateConf(std::move(fidl_resp));
-}
-
 void Device::AuthenticateInd(const wlan_fullmac_auth_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
@@ -1069,38 +938,6 @@ void Device::DeauthenticateInd(const wlan_fullmac_deauth_indication_t* ind) {
   fidl_ind.locally_initiated = ind->locally_initiated;
 
   binding_->events().DeauthenticateInd(std::move(fidl_ind));
-}
-
-void Device::AssociateConf(const wlan_fullmac_assoc_confirm_t* resp) {
-  std::lock_guard<std::mutex> lock(lock_);
-
-  // For unprotected network, set data state to online immediately. For protected network, do
-  // nothing. Later on upper layer would send message to open controlled port.
-  if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && !protected_bss_) {
-    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, true);
-  }
-
-  if (binding_ == nullptr) {
-    return;
-  }
-
-  wlan_mlme::AssociateConfirm fidl_resp;
-
-  // result_code
-  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
-
-  // association_id
-  fidl_resp.association_id = resp->association_id;
-
-  if (resp->wmm_param_present) {
-    // Sanity check that the param length in banjo and FIDL are the same
-    static_assert(WLAN_WMM_PARAM_LEN == wlan_mlme::WMM_PARAM_LEN);
-    auto wmm_param = std::make_unique<wlan_mlme::WmmParameter>();
-    memcpy(wmm_param->bytes.data(), resp->wmm_param, WLAN_WMM_PARAM_LEN);
-    fidl_resp.wmm_param = std::move(wmm_param);
-  }
-
-  binding_->events().AssociateConf(std::move(fidl_resp));
 }
 
 void Device::AssociateInd(const wlan_fullmac_assoc_ind_t* ind) {

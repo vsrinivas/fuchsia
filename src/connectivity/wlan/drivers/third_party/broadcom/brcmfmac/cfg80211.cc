@@ -1706,39 +1706,6 @@ static inline bool brcmf_tlv_ie_has_msft_type(const uint8_t* ie, uint8_t oui_typ
           ie[TLV_BODY_OFF + TLV_OUI_LEN] == oui_type);
 }
 
-void set_conf_wmm_param(const brcmf_cfg80211_info* cfg, bool* wmm_param_present,
-                        uint8_t wmm_param[18]) {
-  *wmm_param_present = false;
-
-  uint8_t* assoc_resp_ie = cfg->conn_info.resp_ie;
-  size_t assoc_resp_ie_len =
-      (size_t)cfg->conn_info.resp_ie_len >= 0 ? cfg->conn_info.resp_ie_len : 0;
-  size_t offset = 0;
-  while (offset < assoc_resp_ie_len) {
-    uint8_t type = assoc_resp_ie[offset];
-    uint8_t len = assoc_resp_ie[offset + TLV_LEN_OFF];
-
-    if (type == WLAN_IE_TYPE_VENDOR_SPECIFIC) {
-      uint8_t wmm_param_hdr[] = {
-          0x00, 0x50, 0xf2,  // MSFT OUI
-          0x02,              // WMM OUI type
-          0x01, 0x01,        // WMM param subtype & version
-      };
-      if (len >= sizeof(wmm_param_hdr) &&
-          !memcmp(assoc_resp_ie + offset + TLV_HDR_LEN, wmm_param_hdr, sizeof(wmm_param_hdr))) {
-        if (len - sizeof(wmm_param_hdr) == WLAN_WMM_PARAM_LEN &&
-            offset + TLV_HDR_LEN + len <= assoc_resp_ie_len) {
-          memcpy(wmm_param, &assoc_resp_ie[offset + TLV_HDR_LEN + sizeof(wmm_param_hdr)],
-                 WLAN_WMM_PARAM_LEN);
-          *wmm_param_present = true;
-          break;
-        }
-      }
-    }
-    offset += len + TLV_HDR_LEN;
-  }
-}
-
 void brcmf_return_assoc_result(struct net_device* ndev, status_code_t status_code) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
@@ -3539,14 +3506,6 @@ void brcmf_if_reconnect_req(net_device* ndev, const wlan_fullmac_reconnect_req_t
   brcmf_cfg80211_connect(ndev, &ifp->connect_req);
 }
 
-void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req) {
-  BRCMF_WARN("join req is deprecated and no longer implemented");
-}
-
-void brcmf_if_auth_req(net_device* ndev, const wlan_fullmac_auth_req_t* req) {
-  BRCMF_WARN("auth req is deprecated and no longer implemented");
-}
-
 // In AP mode, receive a response from wlan_fullmac confirming that a client was successfully
 // authenticated.
 void brcmf_if_auth_resp(net_device* ndev, const wlan_fullmac_auth_resp_t* ind) {
@@ -3626,10 +3585,6 @@ void brcmf_if_deauth_req(net_device* ndev, const wlan_fullmac_deauth_req_t* req)
 
   // Workaround for fxbug.dev/28829: allow time for disconnect to complete
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-}
-
-void brcmf_if_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req) {
-  BRCMF_WARN("assoc req is deprecated and no longer implemented");
 }
 
 void brcmf_if_assoc_resp(net_device* ndev, const wlan_fullmac_assoc_resp_t* ind) {

@@ -148,24 +148,6 @@ wlan_mlme::ConnectRequest CreateConnectRequest(bool rsne, wlan_channel_t channel
   return req;
 }
 
-wlan_mlme::JoinRequest CreateJoinRequest(bool rsn) {
-  wlan_mlme::JoinRequest req;
-  req.join_failure_timeout = kJoinTimeout;
-  req.nav_sync_delay = 20;
-  req.op_rates = {12, 24, 48};
-  req.selected_bss = CreateBssDescription(rsn);
-  return req;
-}
-
-wlan_mlme::AuthenticateRequest CreateAuthRequest() {
-  common::MacAddr bssid(kBssid1);
-  wlan_mlme::AuthenticateRequest req;
-  std::memcpy(req.peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
-  req.auth_failure_timeout = kAuthTimeout;
-  req.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
-  return req;
-}
-
 wlan_mlme::DeauthenticateRequest CreateDeauthRequest(common::MacAddr peer_addr,
                                                      wlan_ieee80211::ReasonCode reason_code) {
   wlan_mlme::DeauthenticateRequest req;
@@ -180,19 +162,6 @@ wlan_mlme::AuthenticateResponse CreateAuthResponse(common::MacAddr client_addr,
   std::memcpy(resp.peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp.result_code = result_code;
   return resp;
-}
-
-wlan_mlme::AssociateRequest CreateAssocRequest(bool rsne) {
-  common::MacAddr bssid(kBssid1);
-  wlan_mlme::AssociateRequest req;
-  std::memcpy(req.peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
-  req.rates = {std::cbegin(kRates), std::cend(kRates)};
-  if (rsne) {
-    req.rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
-  } else {
-    req.rsne.reset();
-  }
-  return req;
 }
 
 wlan_mlme::AssociateResponse CreateAssocResponse(common::MacAddr client_addr,

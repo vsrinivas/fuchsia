@@ -48,46 +48,6 @@ TEST(Cfg80211, FindSsidInIes_Empty) {
   ASSERT_THAT(ssid, SizeIs(0));
 }
 
-TEST(Cfg80211, SetConfWmmParam) {
-  uint8_t ie[] = {
-      0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,  // Supported rates
-      // WMM param
-      0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02, 0x01, 0x01,  // WMM header
-      0x80,                                            // Qos Info - U-ASPD enabled
-      0x00,                                            // reserved
-      0x03, 0xa4, 0x00, 0x00,                          // Best effort AC params
-      0x27, 0xa4, 0x00, 0x00,                          // Background AC params
-      0x42, 0x43, 0x5e, 0x00,                          // Video AC params
-      0x62, 0x32, 0x2f, 0x00,                          // Voice AC params
-
-      0xbb, 0xff,  // random trailing bytes
-  };
-  uint8_t expected_wmm_param[] = {0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
-                                  0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00};
-  brcmf_cfg80211_info cfg;
-  cfg.conn_info.resp_ie = ie;
-  cfg.conn_info.resp_ie_len = sizeof(ie);
-
-  wlan_fullmac_assoc_confirm_t confirm;
-  set_conf_wmm_param(&cfg, &confirm.wmm_param_present, confirm.wmm_param);
-  EXPECT_TRUE(confirm.wmm_param_present);
-  EXPECT_EQ(memcmp(confirm.wmm_param, expected_wmm_param, sizeof(expected_wmm_param)), 0);
-  EXPECT_EQ(sizeof(expected_wmm_param), WLAN_WMM_PARAM_LEN);
-}
-
-TEST(Cfg80211, SetConfWmmParam_WmmParamNotPresent) {
-  uint8_t ie[] = {
-      0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,  // Supported rates
-  };
-  brcmf_cfg80211_info cfg;
-  cfg.conn_info.resp_ie = ie;
-  cfg.conn_info.resp_ie_len = sizeof(ie);
-
-  wlan_fullmac_assoc_confirm_t confirm;
-  set_conf_wmm_param(&cfg, &confirm.wmm_param_present, confirm.wmm_param);
-  EXPECT_FALSE(confirm.wmm_param_present);
-}
-
 TEST(Cfg80211, ChannelSwitchTest) {
   // The second and third arguments aren't required or used, so this is intended to test
   // a NULL first parameter.

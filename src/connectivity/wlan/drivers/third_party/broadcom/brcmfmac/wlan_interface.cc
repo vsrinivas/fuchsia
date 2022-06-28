@@ -75,14 +75,6 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, const wlan_fullmac_reconnect_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->ReconnectReq(req);
         },
-    .join_req =
-        [](void* ctx, const wlan_fullmac_join_req_t* req) {
-          return static_cast<WlanInterface*>(ctx)->JoinReq(req);
-        },
-    .auth_req =
-        [](void* ctx, const wlan_fullmac_auth_req_t* req) {
-          return static_cast<WlanInterface*>(ctx)->AuthReq(req);
-        },
     .auth_resp =
         [](void* ctx, const wlan_fullmac_auth_resp_t* resp) {
           return static_cast<WlanInterface*>(ctx)->AuthResp(resp);
@@ -90,10 +82,6 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
     .deauth_req =
         [](void* ctx, const wlan_fullmac_deauth_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->DeauthReq(req);
-        },
-    .assoc_req =
-        [](void* ctx, const wlan_fullmac_assoc_req_t* req) {
-          return static_cast<WlanInterface*>(ctx)->AssocReq(req);
         },
     .assoc_resp =
         [](void* ctx, const wlan_fullmac_assoc_resp_t* resp) {
@@ -350,20 +338,6 @@ void WlanInterface::ReconnectReq(const wlan_fullmac_reconnect_req_t* req) {
   }
 }
 
-void WlanInterface::JoinReq(const wlan_fullmac_join_req_t* req) {
-  std::shared_lock<std::shared_mutex> guard(lock_);
-  if (wdev_ != nullptr) {
-    brcmf_if_join_req(wdev_->netdev, req);
-  }
-}
-
-void WlanInterface::AuthReq(const wlan_fullmac_auth_req_t* req) {
-  std::shared_lock<std::shared_mutex> guard(lock_);
-  if (wdev_ != nullptr) {
-    brcmf_if_auth_req(wdev_->netdev, req);
-  }
-}
-
 void WlanInterface::AuthResp(const wlan_fullmac_auth_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
@@ -375,13 +349,6 @@ void WlanInterface::DeauthReq(const wlan_fullmac_deauth_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_deauth_req(wdev_->netdev, req);
-  }
-}
-
-void WlanInterface::AssocReq(const wlan_fullmac_assoc_req_t* req) {
-  std::shared_lock<std::shared_mutex> guard(lock_);
-  if (wdev_ != nullptr) {
-    brcmf_if_assoc_req(wdev_->netdev, req);
   }
 }
 

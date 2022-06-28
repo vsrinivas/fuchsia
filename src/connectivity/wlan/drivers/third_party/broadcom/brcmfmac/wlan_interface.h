@@ -66,11 +66,8 @@ class WlanInterface : public wlan::drivers::components::NetworkPort,
   void StartScan(const wlan_fullmac_scan_req_t* req);
   void ConnectReq(const wlan_fullmac_connect_req_t* req);
   void ReconnectReq(const wlan_fullmac_reconnect_req_t* req);
-  void JoinReq(const wlan_fullmac_join_req_t* req);
-  void AuthReq(const wlan_fullmac_auth_req_t* req);
   void AuthResp(const wlan_fullmac_auth_resp_t* resp);
   void DeauthReq(const wlan_fullmac_deauth_req_t* req);
-  void AssocReq(const wlan_fullmac_assoc_req_t* req);
   void AssocResp(const wlan_fullmac_assoc_resp_t* resp);
   void DisassocReq(const wlan_fullmac_disassoc_req_t* req);
   void ResetReq(const wlan_fullmac_reset_req_t* req);

@@ -35,10 +35,7 @@ impl Config {
 #[derive(Debug)]
 pub enum MlmeRequest {
     Scan(fidl_mlme::ScanRequest),
-    Join(fidl_mlme::JoinRequest),
-    Authenticate(fidl_mlme::AuthenticateRequest),
     AuthResponse(fidl_mlme::AuthenticateResponse),
-    Associate(fidl_mlme::AssociateRequest),
     AssocResponse(fidl_mlme::AssociateResponse),
     Connect(fidl_mlme::ConnectRequest),
     Reconnect(fidl_mlme::ReconnectRequest),
@@ -91,12 +88,9 @@ fn mlme_event_name(event: &MlmeEvent) -> &str {
         MlmeEvent::OnScanResult { .. } => "OnScanResult",
         MlmeEvent::OnScanEnd { .. } => "OnScanEnd",
         MlmeEvent::ConnectConf { .. } => "ConnectConf",
-        MlmeEvent::JoinConf { .. } => "JoinConf",
-        MlmeEvent::AuthenticateConf { .. } => "AuthenticateConf",
         MlmeEvent::AuthenticateInd { .. } => "AuthenticateInd",
         MlmeEvent::DeauthenticateConf { .. } => "DeauthenticateConf",
         MlmeEvent::DeauthenticateInd { .. } => "DeauthenticateInd",
-        MlmeEvent::AssociateConf { .. } => "AssociateConf",
         MlmeEvent::AssociateInd { .. } => "AssociateInd",
         MlmeEvent::DisassociateConf { .. } => "DisassociateConf",
         MlmeEvent::DisassociateInd { .. } => "DisassociateInd",
