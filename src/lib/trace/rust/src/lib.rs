@@ -558,6 +558,36 @@ macro_rules! async_enter {
     }
 }
 
+/// Convenience macro for the `async_instant` function, which can be used to emit an async instant
+/// event.
+///
+/// Example:
+///
+/// ```rust
+/// {
+///     let id = generate_nonce();
+///     async_instant!(id, "foo", "bar", "x" => 5, "y" => 10);
+/// }
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// {
+///     let id = generate_nonce();
+///     async_instant(
+///         id, cstr!("foo"), cstr!("bar"),
+///         &[ArgValue::of("x", 5), ArgValue::of("y", 10)]
+///     );
+/// }
+/// ```
+#[macro_export]
+macro_rules! async_instant {
+    ($id:expr, $category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
+        $crate::async_instant($id, $crate::cstr!($category), $crate::cstr!($name), &[$($crate::ArgValue::of($key, $val)),*]);
+    }
+}
+
 macro_rules! async_proto {
     ($( #[$docs:meta] )* $name:ident, $sys_method:path $(,)*) => {
         $( #[$docs] )*
@@ -602,6 +632,22 @@ async_proto!(
     /// events are combined together in the trace; it is not necessary to repeat them.
     async_begin,
     sys::trace_context_write_async_begin_event_record,
+);
+
+async_proto!(
+    /// Writes an async instant event with the specified id.
+    ///
+    /// Asynchronous events describe work that is happening asynchronously and that
+    /// may span multiple threads.  Asynchronous events do not nest.  The id serves
+    /// to correlate the progress of distinct asynchronous operations that share
+    /// the same category and name within the same process.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the asynchronous operation with additional information.  The
+    /// arguments provided to matching async begin, async instant, and async end
+    /// events are combined together in the trace; it is not necessary to repeat them.
+    async_instant,
+    sys::trace_context_write_async_instant_event_record,
 );
 
 async_proto!(
