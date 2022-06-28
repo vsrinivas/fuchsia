@@ -314,11 +314,11 @@ the Fuchsia tree as well.
 If you're not sure where to start, you can use the `fd` utility to perform fuzzy
 searches for directories, then navigate to the location of a search result.
 
-Run the following command to run an `fd` search for `component_manager`:
+Run the following command to run an `fd` search for `session_manager`:
 
 
 ```posix-terminal
-fd component_manager
+fd session_manager
 ```
 
 <aside class="key-point">
@@ -329,11 +329,11 @@ set up your environment</a>.
 </aside>
 
 The utility prints a few possible options for you to choose from. Select option
-2 to navigate to `src/sys/component_manager`:
+2 to navigate to `src/session/bin/session_manager`:
 
 ```none {:.devsite-disable-click-to-copy}
-[1] src/session/bin/component_manager
-[2] src/sys/component_manager
+[1] src/session/bin/session_manager
+[2] src/session/tests/session_manager
 
 ```
 

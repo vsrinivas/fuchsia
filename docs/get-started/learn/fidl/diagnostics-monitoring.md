@@ -315,6 +315,14 @@ format. Can you locate the same echo server data returned using
 <code>ffx inspect</code>?</p>
 </aside>
 
+### Destroy the instance
+
+Clean up the `echo-realm` instance using the following command:
+
+```posix-terminal
+ffx component destroy /core/ffx-laboratory:echo-realm
+```
+
 ## What's next?
 
 Congratulations! You've successfully built a Fuchsia IPC interface using FIDL,

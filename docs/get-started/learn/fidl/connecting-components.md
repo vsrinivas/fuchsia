@@ -595,3 +595,11 @@ ffx component show echo_server
  Outgoing Capabilities: diagnostics
                         fidl.examples.routing.echo.Echo
 ```
+
+### Destroy the instance
+
+Clean up the `echo-realm` instance using the following command:
+
+```posix-terminal
+ffx component destroy /core/ffx-laboratory:echo-realm
+```

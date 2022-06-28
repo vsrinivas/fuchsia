@@ -178,7 +178,7 @@ on the length of the list.
 Add the following to your `BUILD.bazel` file to include the new component in the
 build configuration:
 
-`BUILD.bazel`:
+`echo/BUILD.bazel`:
 
 ```bazel
 load(
