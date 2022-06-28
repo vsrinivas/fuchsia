@@ -850,11 +850,19 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                                         addrs.push(net_ext::IpAddress(IpAddr::V6(*addr)).into())
                                     }
                                     rdata => {
-                                        error!(
-                                            "Lookup(_, {:?}) yielded unexpected record type: {}",
-                                            options,
-                                            rdata.to_record_type()
-                                        )
+                                        let record_type = rdata.to_record_type();
+                                        match record_type {
+                                            // CNAME records are known to be present with other
+                                            // query types; avoid logging in that case.
+                                            RecordType::CNAME => (),
+                                            record_type => {
+                                                error!(
+                                                    "Lookup(_, {:?}) yielded unexpected record type: {}",
+                                                    options,
+                                                    record_type
+                                                )
+                                            }
+                                        }
                                     }
                                 }),
                             };
