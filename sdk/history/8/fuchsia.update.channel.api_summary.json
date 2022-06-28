@@ -1,0 +1,15 @@
+[
+    {
+        "declaration": "() -> (string:128 channel)",
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channel/Provider.GetCurrent"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update.channel/Provider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.update.channel"
+    }
+]

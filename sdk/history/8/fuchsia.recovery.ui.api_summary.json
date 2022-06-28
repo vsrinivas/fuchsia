@@ -1,0 +1,64 @@
+[
+    {
+        "declaration": "() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)",
+        "kind": "protocol/member",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdown.Watch"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdown"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdownState"
+    },
+    {
+        "declaration": "(fuchsia.recovery.ui/Status status,float32 percent_complete) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.recovery.ui/ProgressRenderer.Render"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.recovery.ui/ProgressRenderer"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.recovery.ui/Status.ACTIVE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.recovery.ui/Status.CANCELLED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.recovery.ui/Status.COMPLETE",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.recovery.ui/Status.ERROR",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.recovery.ui/Status.PAUSED",
+        "value": "2"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.recovery.ui/Status",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.recovery.ui"
+    }
+]
