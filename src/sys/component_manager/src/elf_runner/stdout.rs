@@ -6,16 +6,16 @@ use {
     super::config::StreamSink,
     anyhow::{anyhow, Error},
     async_trait::async_trait,
-    cm_logger::{fmt::FmtArgsLogger, scoped::ScopedLogger},
+    cm_logger::scoped::ScopedLogger,
     fidl::prelude::*,
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::AsyncReadExt,
-    log::Level,
     runner::component::ComponentNamespace,
     std::{boxed::Box, num::NonZeroUsize, sync::Arc},
+    tracing::{warn, Subscriber},
     zx::HandleBased,
 };
 
@@ -49,21 +49,20 @@ pub async fn bind_streams_to_syslog(
     let mut logger: Option<Arc<ScopedLogger>> = None;
 
     for (fd, level, sink) in
-        [(STDOUT_FD, Level::Info, stdout_sink), (STDERR_FD, Level::Warn, stderr_sink)].iter()
+        [(STDOUT_FD, OutputLevel::Info, stdout_sink), (STDERR_FD, OutputLevel::Warn, stderr_sink)]
     {
         match sink {
             StreamSink::Log => {
                 let logger_clone = match logger.as_ref() {
                     Some(logger) => logger.clone(),
                     None => {
-                        let new_logger: Arc<ScopedLogger> =
-                            Arc::new(create_namespace_logger(ns).await?);
+                        let new_logger = Arc::new(create_namespace_logger(ns).await?);
                         logger = Some(new_logger.clone());
                         new_logger
                     }
                 };
 
-                let (task, handle) = forward_fd_to_syslog(logger_clone, *fd, *level)?;
+                let (task, handle) = forward_fd_to_syslog(logger_clone, fd, level)?;
 
                 tasks.push(task);
                 handles.push(handle);
@@ -82,19 +81,19 @@ async fn create_namespace_logger(ns: &ComponentNamespace) -> Result<ScopedLogger
         .find(|(path, _)| path == SVC_DIRECTORY_NAME)
         .ok_or(anyhow!("Didn't find {} directory in component's namespace!", SVC_DIRECTORY_NAME))?;
 
-    ScopedLogger::from_directory(&dir, SYSLOG_PROTOCOL_NAME.to_owned()).await
+    ScopedLogger::from_directory(&dir, SYSLOG_PROTOCOL_NAME)
 }
 
 fn forward_fd_to_syslog(
     logger: Arc<ScopedLogger>,
     fd: i32,
-    level: Level,
+    level: OutputLevel,
 ) -> Result<(fasync::Task<()>, fproc::HandleInfo), Error> {
     let (rx, hnd) = new_socket_bound_to_fd(fd)?;
     let mut writer = SyslogWriter::new(logger, level);
     let task = fasync::Task::spawn(async move {
         if let Err(err) = drain_lines(rx, &mut writer).await {
-            log::warn!("Draining output stream, fd {}, failed: {}", fd, err);
+            warn!("Draining output stream, fd {}, failed: {}", fd, err);
         }
     });
 
@@ -170,12 +169,17 @@ trait LogWriter: Send {
 }
 
 struct SyslogWriter {
-    logger: Arc<ScopedLogger>,
-    level: Level,
+    logger: Arc<dyn Subscriber + Send + Sync>,
+    level: OutputLevel,
+}
+
+enum OutputLevel {
+    Info,
+    Warn,
 }
 
 impl SyslogWriter {
-    pub fn new(logger: Arc<ScopedLogger>, level: Level) -> Self {
+    fn new(logger: Arc<dyn Subscriber + Send + Sync>, level: OutputLevel) -> Self {
         Self { logger, level }
     }
 }
@@ -184,7 +188,10 @@ impl SyslogWriter {
 impl LogWriter for SyslogWriter {
     async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let msg = String::from_utf8_lossy(&bytes);
-        self.logger.log(self.level, format_args!("{}", msg));
+        tracing::subscriber::with_default(self.logger.clone(), || match self.level {
+            OutputLevel::Info => log::info!("{}", msg),
+            OutputLevel::Warn => log::warn!("{}", msg),
+        });
         Ok(())
     }
 }
@@ -204,7 +211,6 @@ mod tests {
         fidl_fuchsia_logger::LogSinkRequest,
         fuchsia_zircon as zx,
         futures::{channel::mpsc, try_join, FutureExt, SinkExt, StreamExt},
-        log::Level,
         rand::{
             distributions::{Alphanumeric, DistString as _},
             thread_rng,
@@ -363,7 +369,7 @@ mod tests {
         let ns = ComponentNamespace::try_from(ns_entries)
             .context("Failed to create ComponentNamespace")?;
         let logger = create_namespace_logger(&ns).await.context("Failed to create ScopedLogger")?;
-        let mut writer = SyslogWriter::new(Arc::new(logger), Level::Info);
+        let mut writer = SyslogWriter::new(Arc::new(logger), OutputLevel::Info);
         writer.write(message).await.context("Failed to write message")?;
 
         Ok(())
@@ -378,15 +384,15 @@ mod tests {
                 let message_logged_copy = Arc::clone(&message_logged);
                 async move {
                     match r.next().await.expect("stream error").expect("fidl error") {
-                        LogSinkRequest::Connect { socket, .. } => {
+                        LogSinkRequest::Connect { .. } => {
+                            panic!("Unexpected call to `Connect`");
+                        }
+                        LogSinkRequest::ConnectStructured { socket, .. } => {
                             *message_logged_copy.lock().unwrap() =
                                 get_message_logged_to_socket(socket);
                         }
-                        LogSinkRequest::ConnectStructured { .. } => {
-                            panic!("Unexpected call to `ConnectStructured`");
-                        }
-                        LogSinkRequest::WaitForInterestChange { responder: _ } => {
-                            panic!("Unexpected call to `WaitForInterestChange`")
+                        LogSinkRequest::WaitForInterestChange { .. } => {
+                            // we expect this request to come but asserting on it is flakey
                         }
                     }
                 }

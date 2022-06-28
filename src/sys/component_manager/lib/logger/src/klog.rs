@@ -4,94 +4,105 @@
 
 use {
     fuchsia_zircon::{self as zx, AsHandleRef, ObjectType},
-    lazy_static::lazy_static,
-    std::fmt,
-    std::{panic, sync::Once},
+    std::fmt::{Debug, Write},
+    tracing::{field::Field, Event, Level, Subscriber},
+    tracing_log::LogTracer,
+    tracing_subscriber::{field::Visit, layer::Context, prelude::*, Layer, Registry},
 };
 
-const MAX_LOG_LEVEL: log::Level = log::Level::Info;
-
-lazy_static! {
-    pub static ref LOGGER: KernelLogger = KernelLogger::new();
-}
-
-/// KernelLogger is a logger implementation for the log crate. It attempts to use the kernel
-/// debuglog facility and automatically falls back to stderr if that fails.
+/// KernelLogger is a subscriber implementation for the tracing crate.
 pub struct KernelLogger {
     debuglog: zx::DebugLog,
 }
 
 impl KernelLogger {
+    /// Make a new `KernelLogger` by cloning our stdout and extracting the debuglog handle from it.
     fn new() -> KernelLogger {
         let debuglog = fdio::clone_fd(std::io::stdout()).expect("get handle from stdout");
-
         assert_eq!(debuglog.basic_info().unwrap().object_type, ObjectType::LOG);
         KernelLogger { debuglog: debuglog.into() }
     }
 
-    /// Initialize the global logger to use KernelLogger.
+    /// Initialize the global subscriber to use KernelLogger and installs a forwarder for
+    /// messages from the `log` crate.
     ///
-    /// Also registers a panic hook that prints the panic payload to the logger before running the
+    /// Registers a panic hook that prints the panic payload to the logger before running the
     /// default panic hook.
-    ///
-    /// This function is idempotent, and will not re-initialize the global logger on subsequent
-    /// calls.
     pub fn init() {
-        static INIT: Once = Once::new();
-        INIT.call_once(|| {
-            log::set_logger(&*LOGGER).expect("Failed to set KernelLogger as global logger");
-            log::set_max_level(MAX_LOG_LEVEL.to_level_filter());
-            Self::install_panic_hook();
-        });
-    }
+        let subscriber = Registry::default().with(Self::new());
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("init() should only be called once");
+        LogTracer::init().expect("must be able to install log forwarder");
 
-    /// Register a panic hook that prints the panic payload to the logger before running the
-    /// default panic hook.
-    pub fn install_panic_hook() {
-        let default_hook = panic::take_hook();
-        panic::set_hook(Box::new(move |panic_info| {
-            // Handle common cases of &'static str or String payload.
-            let msg = match panic_info.payload().downcast_ref::<&'static str>() {
-                Some(s) => *s,
-                None => match panic_info.payload().downcast_ref::<String>() {
-                    Some(s) => &s[..],
-                    None => "<Unknown panic payload type>",
-                },
-            };
-            LOGGER.log_helper("PANIC", &format_args!("{}", msg));
-
-            default_hook(panic_info);
+        let previous_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            tracing::error!("PANIC {}", info);
+            previous_hook(info);
         }));
     }
+}
 
-    fn log_helper(&self, level: &str, args: &fmt::Arguments<'_>) {
-        let mut msg = format!("[component_manager] {}: {}", level, args);
+impl<S: Subscriber> Layer<S> for KernelLogger {
+    fn on_event(&self, event: &Event<'_>, _cx: Context<'_, S>) {
+        // tracing levels run the opposite direction of fuchsia severity
+        let level = event.metadata().level();
+        if *level <= Level::INFO {
+            let mut visitor = StringVisitor(format!("[component_manager] {}:", level));
+            event.record(&mut visitor);
+            let mut msg = visitor.0;
 
-        while msg.len() > 0 {
-            // TODO(fxbug.dev/32998): zx_debuglog_write also accepts options and the possible options include
-            // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
-            // along log level yet.
-            if let Err(s) = self.debuglog.write(msg.as_bytes()) {
-                eprintln!("failed to write log ({}): {}", s, msg);
+            while msg.len() > 0 {
+                // TODO(fxbug.dev/32998): zx_debuglog_write also accepts options and the possible options include
+                // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
+                // along log level yet.
+                if let Err(s) = self.debuglog.write(msg.as_bytes()) {
+                    eprintln!("failed to write log ({}): {}", s, msg);
+                }
+                let num_to_drain = std::cmp::min(msg.len(), zx::sys::ZX_LOG_RECORD_DATA_MAX);
+                msg.drain(..num_to_drain);
             }
-            let num_to_drain = std::cmp::min(msg.len(), zx::sys::ZX_LOG_RECORD_DATA_MAX);
-            msg.drain(..num_to_drain);
         }
     }
 }
 
-impl log::Log for KernelLogger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        metadata.level() <= MAX_LOG_LEVEL
-    }
+struct StringVisitor(String);
 
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            self.log_helper(&record.level().to_string(), record.args());
+impl StringVisitor {
+    fn record_field(&mut self, field: &Field, value: std::fmt::Arguments<'_>) {
+        match field.name() {
+            "log.target" | "log.module_path" | "log.file" | "log.line" => {
+                // don't write these fields to the klog
+                return;
+            }
+            "message" => self.0.push(' '),
+            name => {
+                write!(self.0, " {name}=").expect("writing into strings does not fail");
+            }
         }
+        write!(self.0, "{}", value).expect("writing into strings does not fail");
+    }
+}
+
+impl Visit for StringVisitor {
+    fn record_debug(&mut self, field: &Field, value: &dyn Debug) {
+        self.record_field(field, format_args!("{value:?}"));
     }
 
-    fn flush(&self) {}
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.record_field(field, format_args!("{value}"));
+    }
+
+    fn record_i64(&mut self, field: &Field, value: i64) {
+        self.record_field(field, format_args!("{value}"));
+    }
+
+    fn record_u64(&mut self, field: &Field, value: u64) {
+        self.record_field(field, format_args!("{value}"));
+    }
+
+    fn record_bool(&mut self, field: &Field, value: bool) {
+        self.record_field(field, format_args!("{value}"));
+    }
 }
 
 #[cfg(test)]
@@ -102,9 +113,9 @@ mod tests {
         fidl_fuchsia_boot as fboot,
         fuchsia_component::client::connect_channel_to_protocol,
         fuchsia_zircon::{AsHandleRef, HandleBased},
-        log::*,
         rand::Rng,
         std::panic,
+        tracing::{error, info, warn},
     };
 
     fn get_root_resource() -> zx::Resource {
@@ -125,7 +136,7 @@ mod tests {
             match debuglog.read() {
                 Ok(record) => {
                     let log = &record.data[..record.datalen as usize];
-                    if log == sent_msg.as_bytes() {
+                    if String::from_utf8_lossy(log).starts_with(&sent_msg) {
                         // We found our log!
                         return;
                     }
@@ -204,7 +215,7 @@ mod tests {
             // and the message will not include "panic_test".
             old_hook(info);
             expect_message_in_debuglog(format!(
-                "[component_manager] PANIC: panic_test {}",
+                "[component_manager] PANIC: panicked at 'panic_test {}'",
                 logged_value
             ));
         }));

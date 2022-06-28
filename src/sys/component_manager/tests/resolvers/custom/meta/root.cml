@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "syslog/client.shard.cml" ],
     children: [
         {
             name: "resolver",
-            url: "fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/resolver.cm",
+            url: "#meta/resolver.cm",
         },
         {
             name: "integration_test",
-            url: "fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/integration_test.cm",
+            url: "#meta/integration_test.cm",
         },
         {
             name: "trigger",

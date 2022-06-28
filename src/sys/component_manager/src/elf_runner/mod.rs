@@ -1495,10 +1495,7 @@ mod tests {
             expect_channel_closed(&mut event_stream, zx::Status::OK).await;
         };
 
-        // TODO(fxbug.dev/69634): Instead of checking for connection count,
-        // we should assert that a message printed to stdout is logged. To
-        // do so, we can use the archvist_lib to unpack the socket payload.
-        // Until then, integration tests shall cover this validation.
+        // Just check for connection count, other integration tests cover decoding the actual logs.
         let connection_count = 1u8;
         let request_count = Arc::new(Mutex::new(0u8));
         let request_count_copy = request_count.clone();
@@ -1508,16 +1505,19 @@ mod tests {
                 MockServiceRequest::LogSink(mut r) => {
                     let req_count = request_count_copy.clone();
                     async move {
-                        match r.next().await.expect("stream error").expect("fidl error") {
-                            LogSinkRequest::Connect { .. } => {
-                                let mut count = req_count.lock().expect("locking failed");
-                                *count += 1;
-                            }
-                            LogSinkRequest::ConnectStructured { .. } => {
-                                panic!("Unexpected call to `ConnectStructured`");
-                            }
-                            LogSinkRequest::WaitForInterestChange { responder: _ } => {
-                                panic!("Unexpected call to `WaitForInterestChange`")
+                        while let Some(Ok(req)) = r.next().await {
+                            match req {
+                                LogSinkRequest::Connect { .. } => {
+                                    panic!("Unexpected call to `Connect`");
+                                }
+                                LogSinkRequest::ConnectStructured { .. } => {
+                                    let mut count = req_count.lock().expect("locking failed");
+                                    *count += 1;
+                                }
+                                LogSinkRequest::WaitForInterestChange { .. } => {
+                                    // this is expected but asserting it was received is flakey because
+                                    // it's sent at some point after the scoped logger is created
+                                }
                             }
                         }
                     }

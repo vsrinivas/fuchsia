@@ -4,7 +4,7 @@
 {
     include: [
         "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
     ],
 
     // Information about the program to run.

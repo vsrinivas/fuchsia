@@ -421,21 +421,22 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let source = match self.provider.route_instance(&self.component).await {
                 Ok(source) => source,
                 Err(err) => {
-                    server_end.close_with_epitaph(err.as_zx_status())
+                    server_end
+                        .close_with_epitaph(err.as_zx_status())
                         .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
                     target
-                        .log(
-                            log::Level::Warn,
-                            format!(
-                                "failed to route component instance `{}` from intermediate component {}: {}",
-                                &self.component, &self.intermediate_component, err
-                            ),
-                        )
+                        .with_logger_as_default(|| {
+                            log::warn!(
+                                "Failed to route {} from {}: {}",
+                                self.component,
+                                self.intermediate_component,
+                                err,
+                            );
+                        })
                         .await;
                     return;
                 }
             };
-
 
             let mut relative_path = PathBuf::from(&self.instance);
 
@@ -454,17 +455,19 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             })
             .await
             {
-                server_end.close_with_epitaph(err.as_zx_status())
-                .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
+                server_end
+                    .close_with_epitaph(err.as_zx_status())
+                    .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
 
                 target
-                    .log(
-                        log::Level::Error,
-                        format!(
-                            "failed to open instance `{}` from intermediate component {}: {}",
-                            &self.instance, &self.intermediate_component, err
-                        ),
-                    )
+                    .with_logger_as_default(|| {
+                        error!(
+                            instance=%self.instance,
+                            source=%self.intermediate_component,
+                            error=%err,
+                            "Failed to open instance from intermediate component",
+                        );
+                    })
                     .await;
             }
         });

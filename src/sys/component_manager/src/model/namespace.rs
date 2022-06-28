@@ -6,7 +6,7 @@ use {
     crate::{
         constants::PKG_PATH,
         model::{
-            component::{ComponentInstance, Package, Runtime, StartReason, WeakComponentInstance},
+            component::{ComponentInstance, Package, StartReason, WeakComponentInstance},
             error::ModelError,
             routing::{
                 self, route_and_open_capability, OpenDirectoryOptions, OpenEventStreamOptions,
@@ -18,10 +18,7 @@ use {
         capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
         rights::Rights, route_to_storage_decl, verify_instance_in_component_id_index, RouteRequest,
     },
-    cm_logger::{
-        fmt::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
-        scoped::ScopedLogger,
-    },
+    cm_logger::scoped::ScopedLogger,
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     fidl::{
         endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -33,6 +30,7 @@ use {
     futures::future::BoxFuture,
     log::*,
     std::{collections::HashMap, sync::Arc},
+    tracing::Subscriber,
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
@@ -45,7 +43,7 @@ type Directory = Arc<pfs::Simple>;
 pub struct IncomingNamespace {
     pub package_dir: Option<fio::DirectoryProxy>,
     dir_waiters: Vec<fasync::Task<()>>,
-    logger: Option<ScopedLogger>,
+    logger: Option<Arc<ScopedLogger>>,
 }
 
 impl IncomingNamespace {
@@ -56,21 +54,8 @@ impl IncomingNamespace {
 
     /// Returns a Logger whose output is attributed to this component's
     /// namespace.
-    pub fn get_attributed_logger(&self) -> Option<&ScopedLogger> {
-        self.logger.as_ref()
-    }
-
-    /// Get a logger, an attributed logger is returned if available, otherwise
-    /// a default logger whose output belongs to component manager is returned.
-    pub fn get_logger(&self) -> &dyn FmtArgsLogger {
-        if let Some(attr_logger) = self.logger.as_ref() {
-            attr_logger
-        } else {
-            // MODEL_LOGGER is a lazy_static, which obscures the type, Deref to
-            // see through to the type, a reference to which implements
-            // FmtArgsLogger
-            &*MODEL_LOGGER
-        }
+    pub fn get_attributed_logger(&self) -> Option<Arc<dyn Subscriber + Send + Sync>> {
+        self.logger.as_ref().map(|l| l.clone() as Arc<dyn Subscriber + Send + Sync>)
     }
 
     /// In addition to populating a Vec<fcrunner::ComponentNamespaceEntry>, `populate` will start
@@ -153,7 +138,7 @@ impl IncomingNamespace {
         if let Some(log_decl) = &log_sink_decl {
             let (ns_, logger) = self.get_logger_from_ns(ns, log_decl).await;
             ns = ns_;
-            self.logger = logger;
+            self.logger = logger.map(Arc::new);
         }
 
         Ok(ns)
@@ -175,7 +160,7 @@ impl IncomingNamespace {
         // logger connection can be stored when found.
         let mut new_ns = vec![];
         let mut log_ns_dir: Option<(fcrunner::ComponentNamespaceEntry, String)> = None;
-        let mut logger = Option::<ScopedLogger>::None;
+        let mut logger = None;
         // Find namespace directory specified in the log_sink_decl
         for ns_dir in ns {
             if let Some(path) = &ns_dir.path.clone() {
@@ -196,7 +181,7 @@ impl IncomingNamespace {
         if let Some((mut entry, remaining_path)) = log_ns_dir {
             if let Some(dir) = entry.directory {
                 let _str = log_sink_decl.target_path.to_string();
-                let (restored_dir, logger_) = get_logger_from_dir(dir, remaining_path).await;
+                let (restored_dir, logger_) = get_logger_from_dir(dir, &remaining_path).await;
                 entry.directory = restored_dir;
                 logger = logger_;
             }
@@ -523,14 +508,14 @@ impl IncomingNamespace {
 
 /// Given a Directory, connect to the LogSink protocol at the default
 /// location.
-pub async fn get_logger_from_dir(
+async fn get_logger_from_dir(
     dir: ClientEnd<fio::DirectoryMarker>,
-    at_path: String,
+    at_path: &str,
 ) -> (Option<ClientEnd<fio::DirectoryMarker>>, Option<ScopedLogger>) {
-    let mut logger = Option::<ScopedLogger>::None;
+    let mut logger = None;
     match dir.into_proxy() {
         Ok(dir_proxy) => {
-            match ScopedLogger::from_directory(&dir_proxy, at_path).await {
+            match ScopedLogger::from_directory(&dir_proxy, at_path) {
                 Ok(ns_logger) => {
                     logger = Some(ns_logger);
                 }
@@ -572,7 +557,7 @@ fn make_dir_with_not_found_logging(
     new_dir.clone().set_not_found_handler(Box::new(move |path| {
         // Clone the component pointer and pass the copy into the logger.
         let component_for_logger = component_for_logger.clone();
-        let requested_path = format!("{}/{}", &root_path, path);
+        let requested_path = format!("{}/{}", root_path, path);
 
         // Spawn a task which logs the error. It would be nicer to not
         // spawn a task, but locking the component is async and this
@@ -580,19 +565,16 @@ fn make_dir_with_not_found_logging(
         fasync::Task::spawn(async move {
             match component_for_logger.upgrade() {
                 Ok(target) => {
-                    let execution = target.lock_execution().await;
-                    let logger = match &execution.runtime {
-                        Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
-                        _ => &*MODEL_LOGGER,
-                    };
-                    logger.log(
-                        Level::Warn,
-                        format_args!(
-                            "No capability available at path {} for component {}, \
+                    target
+                        .with_logger_as_default(|| {
+                            log::warn!(
+                                "No capability available at path {} for component {}, \
                                 verify the component has the proper `use` declaration.",
-                            requested_path, target.abs_moniker
-                        ),
-                    );
+                                requested_path,
+                                target.abs_moniker
+                            );
+                        })
+                        .await;
                 }
                 Err(_) => {}
             }
@@ -617,7 +599,10 @@ pub mod test {
         futures::StreamExt,
         std::{
             convert::TryFrom,
-            sync::{Arc, Mutex},
+            sync::{
+                atomic::{AtomicU8, Ordering},
+                Arc,
+            },
         },
     };
 
@@ -863,33 +848,33 @@ pub mod test {
 
         if let Some(dir) = root_dir {
             // Serve the directory and when the LogSink service is requested
-            // provide a closure that counts number of calls to the Connect
-            // method. Serving stops when the spawned task drops the
-            // IncomingNamespace, which holds the other side of the VFS
-            // directory handle.
-            let request_count = Arc::new(Mutex::new(0u8));
-            let request_count_copy = request_count.clone();
-            dir.for_each_concurrent(10usize, move |request: MockServiceRequest| match request {
+            // provide a closure that counts number of calls to the ConnectStructured and
+            // WaitForInterestChange methods. Serving stops when the spawned task drops the
+            // IncomingNamespace, which holds the other side of the VFS directory handle.
+            let connect_count = Arc::new(AtomicU8::new(0));
+            dir.for_each_concurrent(10usize, |request: MockServiceRequest| match request {
                 MockServiceRequest::LogSink(mut r) => {
-                    let req_count = request_count_copy.clone();
+                    let connect_count2 = connect_count.clone();
                     async move {
-                        match r.next().await.expect("stream error").expect("fidl error") {
-                            LogSinkRequest::Connect { .. } => {
-                                let mut count = req_count.lock().expect("locking failed");
-                                *count += 1;
-                            }
-                            LogSinkRequest::ConnectStructured { .. } => {
-                                panic!("Unexpected call to `ConnectStructured`");
-                            }
-                            LogSinkRequest::WaitForInterestChange { responder: _ } => {
-                                panic!("Unexpected call to `WaitForInterestChange`")
+                        while let Some(Ok(req)) = r.next().await {
+                            match req {
+                                LogSinkRequest::Connect { .. } => {
+                                    panic!("Unexpected call to `Connect`");
+                                }
+                                LogSinkRequest::ConnectStructured { .. } => {
+                                    connect_count2.fetch_add(1, Ordering::SeqCst);
+                                }
+                                LogSinkRequest::WaitForInterestChange { .. } => {
+                                    // ideally we'd also assert this was received but it's racy
+                                    // since the request is sent by the above detached task
+                                }
                             }
                         }
                     }
                 }
             })
             .await;
-            assert_eq!(*request_count.lock().expect("lock failed"), connection_count);
+            assert_eq!(connect_count.load(Ordering::SeqCst), connection_count);
         }
     }
 }

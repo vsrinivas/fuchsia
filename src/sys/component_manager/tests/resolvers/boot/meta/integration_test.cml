@@ -5,14 +5,19 @@
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/integration_test_bin",
     },
     offer: [
         {
-            // The component manager launched by RealmBuilder requires this to launch processes.
-            protocol: "fuchsia.process.Launcher",
+            protocol: [
+                "fuchsia.logger.LogSink",
+
+                // The component manager launched by RealmBuilder requires this to launch processes.
+                "fuchsia.process.Launcher",
+            ],
             from: "parent",
             to: [ "#realm_builder" ],
         },

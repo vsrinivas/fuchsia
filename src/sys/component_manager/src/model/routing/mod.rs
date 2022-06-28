@@ -25,10 +25,8 @@ use {
         },
     },
     ::routing::{
-        capability_source::ComponentCapability,
-        component_instance::ComponentInstanceInterface,
-        error::{AvailabilityRoutingError},
-        route_capability, route_storage_and_backing_directory,
+        capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+        error::AvailabilityRoutingError, route_capability, route_storage_and_backing_directory,
     },
     cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
     cm_rust::{ExposeDecl, UseDecl, UseStorageDecl},
@@ -36,7 +34,7 @@ use {
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::*,
+    log::Level,
     std::sync::Arc,
 };
 
@@ -368,17 +366,27 @@ pub async fn report_routing_failure(
         _ => Level::Warn,
     };
     target
-        .log(
-            log_level,
-            format!(
-                "Failed to route {} `{}` to target component `{}`: {}\n{}",
-                cap.type_name(),
-                cap.source_id(),
-                &target.abs_moniker,
-                &err_str,
-                ROUTE_ERROR_HELP
-            ),
-        )
+        .with_logger_as_default(|| {
+            if log_level == Level::Debug {
+                log::debug!(
+                    "Failed to route {} `{}` with target component `{}`: {}\n{}",
+                    cap.type_name(),
+                    cap.source_id(),
+                    &target.abs_moniker,
+                    &err_str,
+                    ROUTE_ERROR_HELP
+                );
+            } else {
+                log::warn!(
+                    "Failed to route {} `{}` with target component `{}`: {}\n{}",
+                    cap.type_name(),
+                    cap.source_id(),
+                    &target.abs_moniker,
+                    &err_str,
+                    ROUTE_ERROR_HELP
+                );
+            }
+        })
         .await
 }
 

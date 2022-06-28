@@ -20,7 +20,6 @@ use {
             RouteRequest, RoutingError,
         },
     },
-    ::cm_logger::fmt::LOGGER as MODEL_LOGGER,
     ::routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
@@ -1129,16 +1128,19 @@ impl ComponentInstance {
             .unwrap_or(None)
     }
 
-    /// Logs to the `fuchsia.logger.LogSink` capability in the component's incoming namespace,
-    /// or to component manager's logger if the component is not running or has not requested
-    /// `fuchsia.logger.LogSink`.
-    pub async fn log(&self, level: log::Level, message: String) {
+    /// Run the provided closure with this component's logger (if any) as the default. If the
+    /// component does not have a logger, fall back to the global default.
+    pub async fn with_logger_as_default<T>(&self, op: impl FnOnce() -> T) -> T {
         let execution = self.lock_execution().await;
-        let logger = match &execution.runtime {
-            Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
-            _ => &*MODEL_LOGGER,
-        };
-        logger.log(level, format_args!("{}", &message))
+        if let Some(Runtime { namespace: Some(ns), .. }) = &execution.runtime {
+            if let Some(logger) = ns.get_attributed_logger() {
+                tracing::subscriber::with_default(logger, op)
+            } else {
+                op()
+            }
+        } else {
+            op()
+        }
     }
 
     /// Scoped this server_end to the component instance's Runtime. For the duration

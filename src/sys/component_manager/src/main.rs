@@ -16,7 +16,6 @@ use {
     },
     fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},
-    fuchsia_syslog as syslog,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
     std::path::PathBuf,
@@ -50,24 +49,24 @@ fn main() {
     drop(ldsvc);
 
     let (runtime_config, bootfs_svc, boot_defaults) = build_runtime_config();
+    let mut executor =
+        fasync::SendExecutor::new(runtime_config.num_threads).expect("error creating executor");
 
     match runtime_config.log_destination {
         finternal::LogDestination::Syslog => {
-            syslog::init().expect("failed to init syslog");
+            diagnostics_log::init!();
         }
         finternal::LogDestination::Klog => {
             klog::KernelLogger::init();
         }
-    }
+    };
 
     info!("Component manager is starting up...");
     if boot_defaults {
         info!("Component manager was started with boot defaults");
     }
 
-    let num_threads = runtime_config.num_threads;
-
-    let fut = async move {
+    let run_root_fut = async move {
         let mut builtin_environment = match build_environment(runtime_config, bootfs_svc).await {
             Ok(environment) => environment,
             Err(error) => {
@@ -82,8 +81,7 @@ fn main() {
         }
     };
 
-    let mut executor = fasync::SendExecutor::new(num_threads).expect("error creating executor");
-    executor.run(fut);
+    executor.run(run_root_fut);
 }
 
 /// Loads component_manager's config.

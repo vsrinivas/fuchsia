@@ -24,7 +24,7 @@ use {
         RunnerDecl, ValuesData,
     },
     cm_types::Url,
-    diagnostics_message::{LoggerMessage, MonikerWithUrl},
+    diagnostics_message::MonikerWithUrl,
     fidl::{endpoints, prelude::*},
     fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
@@ -36,7 +36,6 @@ use {
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
     moniker::{AbsoluteMoniker, ChildMoniker},
     std::collections::HashSet,
-    std::convert::TryFrom,
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
@@ -551,14 +550,14 @@ pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
     let mut buffer: [u8; 1024] = [0; 1024];
     match socket.read(&mut buffer) {
         Ok(read_len) => {
-            let msg = diagnostics_message::from_logger(
+            let msg = diagnostics_message::from_structured(
                 MonikerWithUrl {
                     moniker: "test-pkg/test-component.cmx".to_string(),
                     url: "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm".to_string(),
                 },
-                LoggerMessage::try_from(&buffer[..read_len])
-                    .expect("Couldn't decode message from buffer."),
-            );
+                &buffer[..read_len],
+            )
+            .expect("must be able to decode a valid message from buffer");
 
             msg.msg().map(String::from)
         }
