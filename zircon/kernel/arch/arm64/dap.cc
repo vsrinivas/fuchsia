@@ -17,12 +17,15 @@
 #include <zircon/time.h>
 
 #include <arch/arm64/mp.h>
+#include <dev/coresight/rom_table.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <hwreg/mmio.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <ktl/iterator.h>
 #include <lk/init.h>
+#include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
 #include <ktl/enforce.h>
@@ -31,10 +34,20 @@
 
 namespace {
 
+using coresight::ComponentIdRegister;
+using coresight::DeviceAffinityRegister;
+using coresight::DeviceArchRegister;
+
+// This struct describes the aperture in which a ROM table resides.
+//
+// An aperture is logically part of a CPU cluster. Prior to booting the cluster the table may appear
+// invalid (reads return zero) so it's important to not read an aperture until its cluster has
+// booted. The aperture's |mask| field is the set of CPUs that belong to the cluster of the given
+// aperture. When walking the ROM tables in an aperture be sure to only do so on CPUs in the |mask|.
 struct dap_aperture {
   paddr_t base;
   size_t size;
-  uint cpu_base;
+  cpu_mask_t mask;
   void *virt;
 };
 
@@ -48,6 +61,7 @@ struct debug_port {
 fbl::Array<dap_aperture> dap_apertures;
 fbl::Array<debug_port> daps;
 
+// Called on the boot CPU.
 void arm_dap_init(uint level) {
   LTRACE_ENTRY;
 
@@ -83,19 +97,19 @@ void arm_dap_init(uint level) {
     // TODO: read this from ZBI as well
     // clang-format off
     static dap_aperture t931g_aperture[] = {
-      { .base = 0xf580'0000,  // A53_BASE
+      { .base = 0xf580'0000,    // A53_BASE
         .size = 0x80'0000,
-        .cpu_base = 0,
+        .mask = cpu_num_to_mask(0) | cpu_num_to_mask(1),
       },
-      { .base = 0xf500'0000,  // A73_BASE
+      { .base = 0xf500'0000,    // A73_BASE
         .size = 0x80'0000,
-        .cpu_base = 2,
+        .mask = cpu_num_to_mask(2) | cpu_num_to_mask(3) | cpu_num_to_mask(4) | cpu_num_to_mask(5),
       }
     };
     static dap_aperture s905_aperture[] = {
-      { .base = 0xf580'0000,  // A53_BASE
+      { .base = 0xf580'0000,    // A53_BASE
         .size = 0x80'0000,
-        .cpu_base = 0,
+        .mask = CPU_MASK_ALL,
       },
     };
     // clang-format on
@@ -130,7 +144,7 @@ void arm_dap_init(uint level) {
 
   // map the dap base into the kernel
   for (auto &da : dap_apertures) {
-    LTRACEF("mapping aperture: base %#lx size %#zx cpu base %u\n", da.base, da.size, da.cpu_base);
+    LTRACEF("mapping aperture: base %#lx size %#zx mask %#x\n", da.base, da.size, da.mask);
 
     zx_status_t err = VmAspace::kernel_aspace()->AllocPhysical(
         "arm dap",
@@ -152,196 +166,101 @@ void arm_dap_init(uint level) {
 
 LK_INIT_HOOK(arm_dap, arm_dap_init, LK_INIT_LEVEL_ARCH)
 
-// identify if this is a component according to coresight spec, and return the class id
-bool is_component(volatile void *_regs, uint32_t *class_out) {
-  volatile uint32_t *regs = static_cast<volatile uint32_t *>(_regs);
-
-  uint32_t cidr[4];
-  cidr[0] = regs[0xff0 / 4];
-  cidr[1] = regs[0xff4 / 4];
-  cidr[2] = regs[0xff8 / 4];
-  cidr[3] = regs[0xffc / 4];
-
-  LTRACEF("cidr %#x %#x %#x %#x\n", cidr[0], cidr[1], cidr[2], cidr[3]);
-
-  // does it have a coresight component signature
-  if (BITS(cidr[0], 7, 0) != 0xd || BITS(cidr[1], 3, 0) != 0x0 ||  // type 1 rom table
-      BITS(cidr[2], 7, 0) != 0x5 || BITS(cidr[3], 7, 0) != 0xb1) {
-    return false;
-  }
-
-  // read the class nibble
-  *class_out = BITS_SHIFT(cidr[1], 7, 4);
-  return true;
-}
-
-zx_status_t parse_coresight_debug_component(volatile void *_regs, bool dump = false) {
-  volatile uint32_t *regs = static_cast<volatile uint32_t *>(_regs);
-
-  // are we a coresight component?
-  uint32_t class_id;
-  if (!is_component(regs, &class_id)) {
-    if (dump) {
-      printf("not a coresight component\n");
-    }
-
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  if (class_id != 0x9) {
-    // not a coresight class
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // read common coresight debug regs
-  uint32_t devtype = regs[0xfcc / 4];
-  uint32_t major = BITS(devtype, 3, 0);
-  uint32_t minor = BITS_SHIFT(devtype, 7, 4);
-  uint64_t devaff = regs[0xfac / 4];
-  devaff = (devaff << 32) | regs[0xfa8 / 4];
-
-  if (dump) {
-    printf("coresight debug devtype %#x: major %#x minor %#x\n", devtype, major, minor);
-    printf("devaff %#lx, cpu num %u\n", devaff, arm64_mpidr_to_cpu_num(devaff));
-  }
-
-  // is this dap for me?
-  uint64_t mpidr = __arm_rsr64("mpidr_el1");
-  if (mpidr != devaff) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  auto curr_cpu = arch_curr_cpu_num();
-
-#define MAJOR_MINOR(x, y) (((y) << 4 | (x) << 0))
-  switch (BITS(devtype, 7, 0)) {
-    case MAJOR_MINOR(3, 1):  // trace source, ETM
-      // TODO: add CTI
-      break;
-    case MAJOR_MINOR(4, 1): {  // trigger matrix, CTI
-      // TODO: add CTI
-      if (dump) {
-        printf("CTI for me: cpu %u base %p\n", curr_cpu, regs);
-      }
-      if (!dump) {
-        debug_port *da = &daps[curr_cpu];
-        da->cpu_num = curr_cpu;
-        da->cti = regs;
-        if (da->cti && da->dap) {
-          da->initialized = true;
-        }
-      }
-      break;
-    }
-    case MAJOR_MINOR(5, 1): {  // DAP per processor core
-      // TODO: add dap
-      if (dump) {
-        printf("DAP for me: cpu %u base %p\n", curr_cpu, regs);
-      }
-      if (!dump) {
-        debug_port *da = &daps[curr_cpu];
-        da->cpu_num = curr_cpu;
-        da->dap = regs;
-        if (da->cti && da->dap) {
-          da->initialized = true;
-        }
-      }
-      break;
-    }
-    case MAJOR_MINOR(6, 1):  // performance monitor, PMU
-      // TODO: add dap
-      break;
-    default:;
-  }
-#undef MAJOR_MINOR
-
-  return ZX_OK;
-}
-
-zx_status_t parse_rom_table(volatile void *_rom, bool dump = false) {
-  // start parsing the rom table
-  volatile uint32_t *rom = static_cast<volatile uint32_t *>(_rom);
-
-  if (dump) {
-    printf("parsing rom table at %p\n", rom);
-  }
-
-  // is this a rom table?
-  uint32_t table_class_id;
-  if (!is_component(rom, &table_class_id)) {
-    if (dump) {
-      printf("not a coresight component\n");
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  if (table_class_id != 1) {
-    // not a type 1 rom table
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // walk through the rom table until the last possible index or a terminal entry
-  for (uint index = 0; index < 0xfd0 / 4; index++) {
-    if (rom[index] == 0) {
-      // terminal entry
-      break;
-    }
-    if (dump) {
-      printf("entry %u: %#x\n", index, rom[index]);
-    }
-
-    if (BITS(rom[index], 1, 0) != 0x3) {
-      // not present or not 32bit
-      continue;
-    }
-
-    // recurse, seeing if this is a component
-    size_t offset = rom[index] & 0xffff'f000;  // mask off bits 11:0
-    volatile void *component_virt = (volatile uint8_t *)_rom + offset;
-    uint32_t class_id;
-    if (!is_component(component_virt, &class_id)) {
-      continue;
-    }
-
-    if (dump) {
-      printf("found component at offset %#zx, class %#x\n", offset, class_id);
-    }
-
-    // see if we want to recurse
-    switch (class_id) {
-      case 0x1:  // another type 1 table, recurse
-        parse_rom_table(component_virt, dump);
-        break;
-      case 0x9:  // Coresight Debug component
-        parse_coresight_debug_component(component_virt, dump);
-        break;
-      default:
-        if (dump) {
-          printf("unhandled component class %#x\n", class_id);
-        }
-    }
-  }
-
-  return ZX_OK;
-}
-
 // per cpu walk the dap rom tables, looking for debug components associated with this cpu
 void arm_dap_init_percpu(uint level) {
   LTRACE_ENTRY;
 
-  LTRACEF("mdrar %#lx\n", __arm_rsr64("mdrar_el1"));
-  LTRACEF("dbgauthstatus %#lx\n", __arm_rsr64("dbgauthstatus_el1"));
+  const cpu_num_t curr_cpu_num = arch_curr_cpu_num();
 
-  if (dap_apertures) {
-    for (auto &da : dap_apertures) {
-      if (!da.virt) {
-        continue;
+  LTRACEF("cpu-%u mdrar %#lx\n", curr_cpu_num, __arm_rsr64("mdrar_el1"));
+  LTRACEF("cpu-%u dbgauthstatus %#lx\n", curr_cpu_num, __arm_rsr64("dbgauthstatus_el1"));
+
+  if (!dap_apertures) {
+    LTRACEF("cpu-%u no apertures\n", curr_cpu_num);
+    return;
+  }
+
+  const uint64_t curr_cpu_mpidr = __arm_rsr64("mpidr_el1");
+  debug_port &dp = daps[curr_cpu_num];
+
+  for (dap_aperture &da : dap_apertures) {
+    if (!da.virt) {
+      LTRACEF("cpu-%u not mapped, skipping aperture paddr %#lx\n", curr_cpu_num, da.base);
+      continue;
+    }
+
+    // Is the aperture associated with this CPU?
+    if ((cpu_num_to_mask(curr_cpu_num) & da.mask) == 0) {
+      // Nope, skip it.
+      LTRACEF("cpu-%u not in mask, skipping aperture paddr %#lx\n", curr_cpu_num, da.base);
+      continue;
+    }
+
+    LTRACEF("cpu-%u walking ROM table at paddr %#lx, vaddr %p\n", curr_cpu_num, da.base, da.virt);
+
+    // Walk the ROM table to find the debug interface for this CPU.
+    hwreg::RegisterMmio mmio(reinterpret_cast<void *>(da.virt));
+    const auto vaddr = reinterpret_cast<uintptr_t>(da.virt);
+    coresight::RomTable table(vaddr, static_cast<uint32_t>(da.size));
+    fitx::result<ktl::string_view> result = table.Walk(mmio, [&dp, curr_cpu_mpidr,
+                                                              curr_cpu_num](uintptr_t component) {
+      hwreg::RegisterMmio mmio(reinterpret_cast<void *>(component));
+      const ComponentIdRegister::Class classid =
+          ComponentIdRegister::Get().ReadFrom(&mmio).classid();
+
+      // We're only interested in ARM-architected CoreSight components.
+      const DeviceArchRegister arch_reg = DeviceArchRegister::Get().ReadFrom(&mmio);
+      const uint16_t architect = arch_reg.architect() ? static_cast<uint16_t>(arch_reg.architect())
+                                                      : coresight::GetDesigner(mmio);
+      if (architect != coresight::arm::kArchitect) {
+        LTRACEF("cpu-%u ignoring component with architect %#x\n", curr_cpu_num, architect);
+        return;
+      }
+      if (classid != ComponentIdRegister::Class::kCoreSight) {
+        const ktl::string_view classid_sv = coresight::ToString(classid);
+        LTRACEF("cpu-%u ignoring component with classid %.*s\n", curr_cpu_num,
+                static_cast<int>(classid_sv.size()), classid_sv.data());
+        return;
       }
 
-      // start parsing the rom table
-      volatile uint32_t *rom = static_cast<volatile uint32_t *>(da.virt);
+      // We're only interested in components for *this* CPU.
+      const uint64_t component_affinity = DeviceAffinityRegister::Get().ReadFrom(&mmio).reg_value();
+      if (component_affinity != curr_cpu_mpidr) {
+        LTRACEF("cpu-%u ignoring component with affinity %#lx\n", curr_cpu_num, component_affinity);
+        return;
+      }
 
-      parse_rom_table(rom);
+      // We're only interested in Core Debug Interface and ARM Cross-Trigger Matrix components.
+      const auto archid = static_cast<uint16_t>(arch_reg.archid());
+      switch (archid) {
+        case coresight::arm::archid::kCti:
+          dp.cpu_num = curr_cpu_num;
+          dp.cti = reinterpret_cast<volatile uint32_t *>(component);
+          break;
+        case coresight::arm::archid::kCoreDebugInterface8_0A:
+        case coresight::arm::archid::kCoreDebugInterface8_1A:
+        case coresight::arm::archid::kCoreDebugInterface8_2A:
+          dp.cpu_num = curr_cpu_num;
+          dp.dap = reinterpret_cast<volatile uint32_t *>(component);
+          break;
+
+        default:
+          LTRACEF("ignoring component with archid %#x\n", archid);
+          break;
+      };
+      if (dp.cti && dp.dap) {
+        dp.initialized = true;
+      }
+    });
+    if (result.is_error()) {
+      printf("DAP: error during ROM table walk (base %#lx) on cpu-%u: %.*s\n", da.base,
+             curr_cpu_num, static_cast<int>(result.error_value().size()),
+             result.error_value().data());
     }
+  }
+
+  if (!dp.initialized) {
+    printf("DAP: failed to find components for cpu-%u\n", curr_cpu_num);
   }
 }
 
@@ -612,20 +531,6 @@ void dump() {
   }
 }
 
-void dump_rom_table() {
-  if (!dap_apertures) {
-    printf("DAP not detected\n");
-    return;
-  }
-
-  for (auto &da : dap_apertures) {
-    // start parsing the rom table
-    volatile uint32_t *rom = static_cast<volatile uint32_t *>(da.virt);
-
-    parse_rom_table(rom, true);
-  }
-}
-
 int cmd_dap(int argc, const cmd_args *argv, uint32_t flags) {
   if (argc < 2) {
   notenoughargs:
@@ -633,15 +538,12 @@ int cmd_dap(int argc, const cmd_args *argv, uint32_t flags) {
   usage:
     printf("usage:\n");
     printf("%s dump\n", argv[0].str);
-    printf("%s dump_rom_table\n", argv[0].str);
     printf("%s cpu_debug <n>\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
 
   if (!strcmp(argv[1].str, "dump")) {
     dump();
-  } else if (!strcmp(argv[1].str, "dump_rom_table")) {
-    dump_rom_table();
   } else if (!strcmp(argv[1].str, "cpu_debug")) {
     if (argc < 3) {
       goto notenoughargs;
