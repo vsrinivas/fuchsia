@@ -30,6 +30,7 @@ class TestFallbackDriver : public DeviceType {
     // Generate a unique child device name, in case the fallback driver is bound
     // multiple times.
     std::string name = std::string("ddk-fallback-test-device-").append(std::to_string(counter_));
+    counter_++;
     return DdkAdd(name.c_str());
   }
 
