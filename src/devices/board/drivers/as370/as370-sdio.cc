@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/as370/as370-gpio.h>
 #include <soc/as370/as370-hw.h>

@@ -83,6 +83,7 @@
 //src/devices/block/drivers/virtio:virtio_scsi-driver
 //src/devices/block/drivers/zxcrypt:zxcrypt-driver
 //src/devices/board/drivers/acpi-arm64:acpi-arm64-driver
+//src/devices/board/drivers/as370:as370-driver
 //src/devices/board/drivers/astro:astro-driver
 //src/devices/board/drivers/av400:av400-driver
 //src/devices/board/drivers/integration-test:integration-test-driver

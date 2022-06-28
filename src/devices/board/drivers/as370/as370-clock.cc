@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <soc/as370/as370-clk.h>
 #include <soc/as370/as370-gpio.h>
@@ -50,9 +50,9 @@ zx_status_t As370::ClockInit() {
   dev.vid = PDEV_VID_SYNAPTICS;
   dev.did = PDEV_DID_AS370_CLOCK;
   dev.mmio_list = clock_mmios;
-  dev.mmio_count = countof(clock_mmios);
+  dev.mmio_count = std::size(clock_mmios);
   dev.metadata_list = clock_metadata;
-  dev.metadata_count = countof(clock_metadata);
+  dev.metadata_count = std::size(clock_metadata);
 
   auto status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
@@ -11,7 +12,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
@@ -98,13 +98,13 @@ static const pbus_dev_t dwc2_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_USB_DWC2;
   dev.mmio_list = dwc2_mmios;
-  dev.mmio_count = countof(dwc2_mmios);
+  dev.mmio_count = std::size(dwc2_mmios);
   dev.irq_list = dwc2_irqs;
-  dev.irq_count = countof(dwc2_irqs);
+  dev.irq_count = std::size(dwc2_irqs);
   dev.bti_list = usb_btis;
-  dev.bti_count = countof(usb_btis);
+  dev.bti_count = std::size(usb_btis);
   dev.metadata_list = usb_metadata;
-  dev.metadata_count = countof(usb_metadata);
+  dev.metadata_count = std::size(usb_metadata);
   return dev;
 }();
 
@@ -121,14 +121,14 @@ constexpr pbus_mmio_t usb_phy_mmios[] = {
 
 static const pbus_dev_t usb_phy_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "aml-usb-phy-v2";
+  dev.name = "as370-usb-phy-v2";
   dev.vid = PDEV_VID_SYNAPTICS;
   dev.pid = PDEV_PID_SYNAPTICS_AS370;
   dev.did = PDEV_DID_AS370_USB_PHY;
   dev.mmio_list = usb_phy_mmios;
-  dev.mmio_count = countof(usb_phy_mmios);
+  dev.mmio_count = std::size(usb_phy_mmios);
   dev.bti_list = usb_btis;
-  dev.bti_count = countof(usb_btis);
+  dev.bti_count = std::size(usb_btis);
   return dev;
 }();
 
@@ -139,10 +139,10 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
 static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(dwc2_phy_match), dwc2_phy_match},
+    {std::size(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_fragment_t dwc2_fragments[] = {
-    {"dwc2-phy", countof(dwc2_phy_fragment), dwc2_phy_fragment},
+    {"dwc2-phy", std::size(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
 zx_status_t As370::UsbInit() {
@@ -173,7 +173,7 @@ zx_status_t As370::UsbInit() {
   usb_metadata[0].data_buffer = reinterpret_cast<const uint8_t*>(config);
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    countof(dwc2_fragments), 1);
+                                    std::size(dwc2_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);

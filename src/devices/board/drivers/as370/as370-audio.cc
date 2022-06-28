@@ -6,10 +6,10 @@
 #include <fuchsia/hardware/shareddma/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
 #include <soc/as370/as370-clk.h>
@@ -19,6 +19,9 @@
 
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-bind.h"
+
+// TODO(fxbug.dev/94099): get this building again
+#if 0
 
 namespace board_as370 {
 
@@ -55,24 +58,24 @@ static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 17),
 };
 static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
-    {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
+    {std::size(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
 static const device_fragment_part_t ref_out_clk0_fragment[] = {
-    {countof(ref_out_clk0_match), ref_out_clk0_match},
+    {std::size(ref_out_clk0_match), ref_out_clk0_match},
 };
 
 static const device_fragment_t codec_fragments[] = {
-    {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
 };
 static const device_fragment_t controller_fragments[] = {
-    {"dma", countof(dma_fragment), dma_fragment},
-    {"codec", countof(ref_out_codec_fragment), ref_out_codec_fragment},
-    {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
+    {"dma", std::size(dma_fragment), dma_fragment},
+    {"codec", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
+    {"clock", std::size(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 static const device_fragment_t in_fragments[] = {
-    {"dma", countof(dma_fragment), dma_fragment},
-    {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
+    {"dma", std::size(dma_fragment), dma_fragment},
+    {"clock", std::size(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 
 zx_status_t As370::AudioInit() {
@@ -97,7 +100,7 @@ zx_status_t As370::AudioInit() {
   controller_out.pid = PDEV_PID_SYNAPTICS_AS370;
   controller_out.did = PDEV_DID_AS370_AUDIO_OUT;
   controller_out.mmio_list = mmios_out;
-  controller_out.mmio_count = countof(mmios_out);
+  controller_out.mmio_count = std::size(mmios_out);
 
   static constexpr pbus_mmio_t mmios_in[] = {
       {
@@ -120,7 +123,7 @@ zx_status_t As370::AudioInit() {
   dev_in.pid = PDEV_PID_SYNAPTICS_AS370;
   dev_in.did = PDEV_DID_AS370_AUDIO_IN;
   dev_in.mmio_list = mmios_in;
-  dev_in.mmio_count = countof(mmios_in);
+  dev_in.mmio_count = std::size(mmios_in);
 
   static constexpr pbus_mmio_t mmios_dhub[] = {
       {
@@ -148,11 +151,11 @@ zx_status_t As370::AudioInit() {
   dhub.pid = PDEV_PID_SYNAPTICS_AS370;
   dhub.did = PDEV_DID_AS370_DHUB;
   dhub.mmio_list = mmios_dhub;
-  dhub.mmio_count = countof(mmios_dhub);
+  dhub.mmio_count = std::size(mmios_dhub);
   dhub.irq_list = irqs_dhub;
-  dhub.irq_count = countof(irqs_dhub);
+  dhub.irq_count = std::size(irqs_dhub);
   dhub.bti_list = btis_dhub;
-  dhub.bti_count = countof(btis_dhub);
+  dhub.bti_count = std::size(btis_dhub);
 
   // Output pin assignments.
   gpio_impl_.SetAltFunction(17, 0);  // AMP_EN, mode 0 to set as GPIO.
@@ -176,10 +179,9 @@ zx_status_t As370::AudioInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = codec_fragments,
-      .fragments_count = countof(codec_fragments),
-      .coresident_device_index = UINT32_MAX,
+      .fragments_count = std::size(codec_fragments),
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
@@ -196,7 +198,7 @@ zx_status_t As370::AudioInit() {
   constexpr uint32_t controller_coresident_device_index = 1;
   status =
       pbus_.CompositeDeviceAdd(&controller_out, reinterpret_cast<uint64_t>(controller_fragments),
-                               countof(controller_fragments), controller_coresident_device_index);
+                               std::size(controller_fragments), controller_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
     return status;
@@ -208,7 +210,7 @@ zx_status_t As370::AudioInit() {
   // we can have these drivers in different devhosts.
   constexpr uint32_t in_coresident_device_index = 1;
   status = pbus_.CompositeDeviceAdd(&dev_in, reinterpret_cast<uint64_t>(in_fragments),
-                                    countof(in_fragments), in_coresident_device_index);
+                                    std::size(in_fragments), in_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;
@@ -217,3 +219,10 @@ zx_status_t As370::AudioInit() {
 }
 
 }  // namespace board_as370
+#else
+
+namespace board_as370 {
+zx_status_t As370::AudioInit() { return ZX_OK; }
+}  // namespace board_as370
+
+#endif

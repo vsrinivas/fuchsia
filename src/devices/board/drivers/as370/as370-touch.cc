@@ -5,10 +5,10 @@
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/touch-buttons.h>
 #include <fbl/algorithm.h>
 
@@ -73,7 +73,6 @@ zx_status_t As370::TouchInit() {
       .props_count = countof(props),
       .fragments = controller_fragments,
       .fragments_count = countof(controller_fragments),
-      .coresident_device_index = UINT32_MAX,
       .metadata_list = as370_touch_metadata,
       .metadata_count = countof(as370_touch_metadata),
   };

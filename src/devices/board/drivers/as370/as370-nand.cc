@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-nand.h>
@@ -92,11 +92,11 @@ zx_status_t As370::NandInit() {
   nand_dev.pid = PDEV_PID_GENERIC;
   nand_dev.did = PDEV_DID_CADENCE_HPNFC;
   nand_dev.mmio_list = nand_mmios;
-  nand_dev.mmio_count = countof(nand_mmios);
+  nand_dev.mmio_count = std::size(nand_mmios);
   nand_dev.irq_list = nand_irqs;
-  nand_dev.irq_count = countof(nand_irqs);
+  nand_dev.irq_count = std::size(nand_irqs);
   nand_dev.metadata_list = nand_metadata;
-  nand_dev.metadata_count = countof(nand_metadata);
+  nand_dev.metadata_count = std::size(nand_metadata);
 
   zx_status_t status = pbus_.DeviceAdd(&nand_dev);
   if (status != ZX_OK) {

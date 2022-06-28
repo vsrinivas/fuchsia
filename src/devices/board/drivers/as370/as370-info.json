@@ -1,0 +1,9 @@
+{
+    "short_description": "AS370 board driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}

@@ -8,15 +8,16 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
-#include <ddk/metadata/i2c.h>
 #include <soc/as370/as370-i2c.h>
 
 #include "as370.h"
+#include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace board_as370 {
+using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 zx_status_t As370::I2cInit() {
   zx_status_t status;
@@ -35,7 +36,7 @@ zx_status_t As370::I2cInit() {
     return ZX_ERR_INTERNAL;
   }
 
-  for (uint32_t i = 0; i < countof(i2c_gpios); i++) {
+  for (uint32_t i = 0; i < std::size(i2c_gpios); i++) {
     status = gpio.SetAltFunction(i2c_gpios[i], 1);  // 1 == SDA/SCL pinmux setting.
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: GPIO SetAltFunction failed %d", __FUNCTION__, status);
@@ -66,6 +67,7 @@ zx_status_t As370::I2cInit() {
   };
 
   // I2C channels for as370 synaptics
+  // TODO(fxbug.dev/94099): Convert to FIDLized form
   constexpr i2c_channel_t synaptics_i2c_channels[] = {
       // For audio out
       {
@@ -143,16 +145,16 @@ zx_status_t As370::I2cInit() {
   i2c_dev.pid = PDEV_PID_GENERIC;
   i2c_dev.did = PDEV_DID_DW_I2C;
   i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = countof(i2c_mmios);
+  i2c_dev.mmio_count = std::size(i2c_mmios);
   i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = countof(i2c_irqs);
+  i2c_dev.irq_count = std::size(i2c_irqs);
 
   if (board_info_.vid == PDEV_VID_SYNAPTICS && board_info_.pid == PDEV_PID_SYNAPTICS_AS370) {
     i2c_dev.metadata_list = synaptics_i2c_metadata;
-    i2c_dev.metadata_count = countof(synaptics_i2c_metadata);
+    i2c_dev.metadata_count = std::size(synaptics_i2c_metadata);
   } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
     i2c_dev.metadata_list = visalia_i2c_metadata;
-    i2c_dev.metadata_count = countof(visalia_i2c_metadata);
+    i2c_dev.metadata_count = std::size(visalia_i2c_metadata);
   } else {
     return ZX_ERR_NOT_SUPPORTED;
   }

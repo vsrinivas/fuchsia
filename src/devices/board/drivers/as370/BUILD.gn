@@ -3,11 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 
-bind_rules("as370-bind") {
+driver_bind_rules("as370-bind") {
   rules = "as370.bind"
-  output = "as370-bind.h"
+  header_output = "as370-bind.h"
+  bind_output = "as370.bc"
   tests = "as370-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",
@@ -16,14 +17,12 @@ bind_rules("as370-bind") {
   ]
 }
 
-driver_module("as370") {
+fuchsia_driver("as370-driver") {
+  output_name = "as370"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "as370-audio.cc",
     "as370-clock.cc",
@@ -40,6 +39,7 @@ driver_module("as370") {
   ]
   deps = [
     ":as370-bind",
+    ":as370-bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
@@ -53,14 +53,26 @@ driver_module("as370") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 
   # TODO(fxbug.dev/47406): restore some form of data dependency on as370 and visalia
   # boot shims.
+}
+
+fuchsia_driver_component("as370") {
+  component_name = "as370"
+  deps = [ ":as370-driver" ]
+  info = "as370-info.json"
+  colocate = true
+  root_resource = true
 }
 
 group("tests") {

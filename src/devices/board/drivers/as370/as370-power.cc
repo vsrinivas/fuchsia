@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/power.h>
 #include <soc/as370/as370-power.h>
 
@@ -18,13 +18,12 @@ namespace board_as370 {
 
 namespace {
 
-
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(power_impl_driver_match), power_impl_driver_match},
+    {std::size(power_impl_driver_match), power_impl_driver_match},
 };
 
 zx_device_prop_t power_domain_kBuckSoC_props[] = {
@@ -32,7 +31,7 @@ zx_device_prop_t power_domain_kBuckSoC_props[] = {
 };
 
 constexpr device_fragment_t power_domain_kBuckSoC_fragments[] = {
-    {"power", countof(power_impl_fragment), power_impl_fragment},
+    {"power", std::size(power_impl_fragment), power_impl_fragment},
 };
 
 static const power_domain_t power_domain_kBuckSoC[] = {
@@ -49,12 +48,11 @@ static const device_metadata_t power_domain_kBuckSoC_metadata[] = {
 
 const composite_device_desc_t power_domain_kBuckSoC_desc = {
     .props = power_domain_kBuckSoC_props,
-    .props_count = countof(power_domain_kBuckSoC_props),
+    .props_count = std::size(power_domain_kBuckSoC_props),
     .fragments = power_domain_kBuckSoC_fragments,
-    .fragments_count = countof(power_domain_kBuckSoC_fragments),
-    .coresident_device_index = 0,
+    .fragments_count = std::size(power_domain_kBuckSoC_fragments),
     .metadata_list = power_domain_kBuckSoC_metadata,
-    .metadata_count = countof(power_domain_kBuckSoC_metadata),
+    .metadata_count = std::size(power_domain_kBuckSoC_metadata),
 };
 
 static const zx_bind_inst_t i2c_match[] = {
@@ -64,11 +62,11 @@ static const zx_bind_inst_t i2c_match[] = {
 };
 
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
+    {std::size(i2c_match), i2c_match},
 };
 
 static const device_fragment_t fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"i2c", std::size(i2c_fragment), i2c_fragment},
 };
 
 constexpr zx_device_prop_t props[] = {
@@ -78,10 +76,9 @@ constexpr zx_device_prop_t props[] = {
 
 const composite_device_desc_t comp_desc = {
     .props = props,
-    .props_count = countof(props),
+    .props_count = std::size(props),
     .fragments = fragments,
-    .fragments_count = countof(fragments),
-    .coresident_device_index = UINT32_MAX,
+    .fragments_count = std::size(fragments),
     .metadata_list = nullptr,
     .metadata_count = 0,
 };

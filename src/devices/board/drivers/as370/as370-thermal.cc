@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/thermal/llcpp/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/as370/as370-clk.h>
 #include <soc/as370/as370-power.h>
 #include <soc/as370/as370-thermal.h>
@@ -70,7 +70,6 @@ zx_status_t As370::ThermalInit() {
       },
   };
 
-
   static constexpr zx_bind_inst_t cpu_clock_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::kClkCpu),
@@ -97,12 +96,12 @@ zx_status_t As370::ThermalInit() {
   thermal_dev.vid = PDEV_VID_SYNAPTICS;
   thermal_dev.did = PDEV_DID_AS370_THERMAL;
   thermal_dev.mmio_list = thermal_mmios;
-  thermal_dev.mmio_count = countof(thermal_mmios);
+  thermal_dev.mmio_count = std::size(thermal_mmios);
   thermal_dev.metadata_list = thermal_metadata;
-  thermal_dev.metadata_count = countof(thermal_metadata);
+  thermal_dev.metadata_count = std::size(thermal_metadata);
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), UINT32_MAX);
+                                                std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;

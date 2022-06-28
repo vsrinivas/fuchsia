@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 
 #include "as370.h"
@@ -61,11 +61,11 @@ zx_status_t As370::LightInit() {
   };
 
   static const device_fragment_part_t i2c_fragment[] = {
-      {countof(i2c_match), i2c_match},
+      {std::size(i2c_match), i2c_match},
   };
 
   static const device_fragment_t fragments[] = {
-      {"i2c", countof(i2c_fragment), i2c_fragment},
+      {"i2c", std::size(i2c_fragment), i2c_fragment},
   };
 
   pbus_dev_t light_dev = {};
@@ -77,7 +77,7 @@ zx_status_t As370::LightInit() {
   light_dev.metadata_count = countof(light_metadata);
 
   status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), UINT32_MAX);
+                                    std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
