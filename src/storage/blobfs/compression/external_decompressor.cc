@@ -13,10 +13,17 @@
 
 namespace blobfs {
 
-zx_status_t DecompressorCreatorConnectorImpl::ConnectToDecompressorCreator(
-    zx::channel remote_channel) {
-  return fdio_service_connect("/svc/fuchsia.blobfs.internal.DecompressorCreator",
-                              remote_channel.release());
+DecompressorCreatorConnector& DecompressorCreatorConnector::DefaultServiceConnector() {
+  class ServiceConnector final : public DecompressorCreatorConnector {
+   public:
+    // DecompressorCreatorConnector interface.
+    zx_status_t ConnectToDecompressorCreator(zx::channel remote_channel) final {
+      return fdio_service_connect("/svc/fuchsia.blobfs.internal.DecompressorCreator",
+                                  remote_channel.release());
+    }
+  };
+  static ServiceConnector singleton{};
+  return singleton;
 }
 
 zx::status<std::unique_ptr<ExternalDecompressorClient>> ExternalDecompressorClient::Create(
@@ -214,26 +221,15 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-ExternalDecompressor::ExternalDecompressor(ExternalDecompressorClient* client,
-                                           CompressionAlgorithm algorithm)
-    : client_(client), algorithm_(algorithm) {}
-
-zx_status_t ExternalDecompressor::Decompress(size_t uncompressed_size, size_t max_compressed_size) {
-  return client_->SendMessage(
-      {{0, uncompressed_size},
-       {0, max_compressed_size},
-       ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(algorithm_)});
-}
-
 ExternalSeekableDecompressor::ExternalSeekableDecompressor(ExternalDecompressorClient* client,
-                                                           SeekableDecompressor* decompressor)
-    : client_(client), decompressor_(decompressor) {}
+                                                           CompressionAlgorithm algorithm)
+    : client_(client), algorithm_(algorithm) {}
 
 zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t compressed_offset,
                                                           size_t compressed_size,
                                                           size_t uncompressed_size) {
-  auto algorithm_or = ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
-      decompressor_->algorithm());
+  auto algorithm_or =
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(algorithm_);
   if (!algorithm_or.is_ok()) {
     return algorithm_or.status_value();
   }

@@ -180,19 +180,25 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
 }
 
 zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
-    size_t offset, size_t len, size_t max_decompressed_len) {
+    size_t offset, size_t len, size_t max_decompressed_len) const {
+  return MappingForDecompressedRange(*seek_table_, offset, len, max_decompressed_len);
+}
+
+zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
+    const chunked_compression::SeekTable& seek_table, size_t offset, size_t len,
+    size_t max_decompressed_len) {
   if (max_decompressed_len == 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  std::optional<unsigned> first_idx = seek_table_->EntryForDecompressedOffset(offset);
-  std::optional<unsigned> last_idx = seek_table_->EntryForDecompressedOffset(offset + len - 1);
+  std::optional<unsigned> first_idx = seek_table.EntryForDecompressedOffset(offset);
+  std::optional<unsigned> last_idx = seek_table.EntryForDecompressedOffset(offset + len - 1);
   if (!first_idx || !last_idx) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  const chunked_compression::SeekTableEntry& first_entry = seek_table_->Entries()[*first_idx];
-  const chunked_compression::SeekTableEntry& last_entry = seek_table_->Entries()[*last_idx];
+  const chunked_compression::SeekTableEntry& first_entry = seek_table.Entries()[*first_idx];
+  const chunked_compression::SeekTableEntry& last_entry = seek_table.Entries()[*last_idx];
   size_t compressed_end = last_entry.compressed_offset + last_entry.compressed_size;
   size_t decompressed_end = last_entry.decompressed_offset + last_entry.decompressed_size;
   if (compressed_end < first_entry.compressed_offset ||
@@ -227,8 +233,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
 
   // Start at the entry that contains the offset (max_decompressed_end - 1) and work backwards until
   // we hit the required size constraint.
-  std::optional<unsigned> max_idx =
-      seek_table_->EntryForDecompressedOffset(max_decompressed_end - 1);
+  std::optional<unsigned> max_idx = seek_table.EntryForDecompressedOffset(max_decompressed_end - 1);
   if (!max_idx) {
     // This again cannot happen for similar reasons as the overflow check above.
     FX_LOGS(ERROR) << "Seek table may be corrupted when finding compression offset";
@@ -236,7 +241,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
   }
   unsigned idx = *max_idx;
   while (idx >= first_idx) {
-    const chunked_compression::SeekTableEntry& max_entry = seek_table_->Entries()[idx];
+    const chunked_compression::SeekTableEntry& max_entry = seek_table.Entries()[idx];
     compressed_end = max_entry.compressed_offset + max_entry.compressed_size;
     decompressed_end = max_entry.decompressed_offset + max_entry.decompressed_size;
     if (decompressed_end <= max_decompressed_end) {

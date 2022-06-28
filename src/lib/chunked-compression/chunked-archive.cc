@@ -47,8 +47,8 @@ size_t SeekTable::DecompressedSize() const {
   return sz;
 }
 
-std::optional<unsigned> SeekTable::EntryForCompressedOffset(size_t offset) const {
-  for (unsigned i = 0; i < entries_.size(); ++i) {
+std::optional<size_t> SeekTable::EntryForCompressedOffset(size_t offset) const {
+  for (size_t i = 0; i < entries_.size(); ++i) {
     const SeekTableEntry& entry = entries_[i];
     if (entry.compressed_offset <= offset &&
         offset < entry.compressed_offset + entry.compressed_size) {
@@ -58,8 +58,8 @@ std::optional<unsigned> SeekTable::EntryForCompressedOffset(size_t offset) const
   return std::nullopt;
 }
 
-std::optional<unsigned> SeekTable::EntryForDecompressedOffset(size_t offset) const {
-  for (unsigned i = 0; i < entries_.size(); ++i) {
+std::optional<size_t> SeekTable::EntryForDecompressedOffset(size_t offset) const {
+  for (size_t i = 0; i < entries_.size(); ++i) {
     const SeekTableEntry& entry = entries_[i];
     if (entry.decompressed_offset <= offset &&
         offset < entry.decompressed_offset + entry.decompressed_size) {
@@ -180,7 +180,7 @@ Status HeaderReader::ParseSeekTable(const uint8_t* data, size_t len, size_t file
   const SeekTableEntry* entries =
       reinterpret_cast<const SeekTableEntry*>(data + kChunkArchiveSeekTableOffset);
   fbl::Array<SeekTableEntry> table(new SeekTableEntry[num_chunks], num_chunks);
-  for (unsigned i = 0; i < num_chunks; ++i) {
+  for (size_t i = 0; i < num_chunks; ++i) {
     table[i] = entries[i];
   }
 
@@ -194,7 +194,7 @@ Status HeaderReader::ParseSeekTable(const uint8_t* data, size_t len, size_t file
 
 Status HeaderReader::CheckSeekTable(const fbl::Array<SeekTableEntry>& table, size_t header_end,
                                     size_t file_length) {
-  for (unsigned i = 0; i < table.size(); ++i) {
+  for (size_t i = 0; i < table.size(); ++i) {
     const SeekTableEntry* prev = i > 0 ? &table[i - 1] : nullptr;
     Status status;
     if ((status = CheckSeekTableEntry(table[i], prev, header_end, file_length)) != kStatusOk) {

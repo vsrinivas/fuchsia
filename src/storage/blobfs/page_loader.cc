@@ -435,7 +435,7 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSuppli
                                  nullptr, 0);
       });
       ExternalSeekableDecompressor decompressor(decompressor_client_.get(),
-                                                info.decompressor.get());
+                                                info.decompressor->algorithm());
       decompress_status = decompressor.DecompressRange(
           offset_of_compressed_data, mapping.compressed_length, mapping.decompressed_length);
       if (decompress_status == ZX_OK) {

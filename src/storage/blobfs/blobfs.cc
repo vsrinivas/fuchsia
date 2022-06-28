@@ -147,19 +147,21 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     fvm_required = true;
   }
   const Superblock* superblock = reinterpret_cast<Superblock*>(block);
-  // Construct the Blobfs object, without intensive validation, since it
-  // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(new Blobfs(
-      dispatcher, std::move(device), vfs, superblock, options.writability,
-      options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy));
-  fs->block_info_ = block_info;
 
   DecompressorCreatorConnector* decompression_connector = nullptr;
   if (options.sandbox_decompression) {
     decompression_connector = options.decompression_connector
                                   ? options.decompression_connector
-                                  : &(fs->default_decompression_connector_);
+                                  : &DecompressorCreatorConnector::DefaultServiceConnector();
   }
+
+  // Construct the Blobfs object, without intensive validation, since it
+  // may require upgrades / journal replays to become valid.
+  auto fs = std::unique_ptr<Blobfs>(
+      new Blobfs(dispatcher, std::move(device), vfs, superblock, options.writability,
+                 options.compression_settings, std::move(vmex_resource),
+                 options.pager_backed_cache_policy, decompression_connector));
+  fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
   FX_CHECK(options.paging_threads > 0);
@@ -180,8 +182,9 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     worker_resources.push_back(std::make_unique<PageLoader::WorkerResources>(
         std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value()));
   }
-  auto page_loader_or = PageLoader::Create(std::move(worker_resources), kDecompressionBufferSize,
-                                           fs_ptr->GetMetrics().get(), decompression_connector);
+  auto page_loader_or =
+      PageLoader::Create(std::move(worker_resources), kDecompressionBufferSize,
+                         fs_ptr->GetMetrics().get(), fs->decompression_connector());
   if (page_loader_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
     return page_loader_or.take_error();
@@ -301,7 +304,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return zx::error(status);
   }
   zx::status<std::unique_ptr<BlobLoader>> loader_or = BlobLoader::Create(
-      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), decompression_connector);
+      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), fs->decompression_connector());
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
     return loader_or.take_error();
@@ -837,7 +840,8 @@ bool Blobfs::StreamingWritesEnabled() {
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                fs::PagedVfs* vfs, const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
-               std::optional<CachePolicy> pager_backed_cache_policy)
+               std::optional<CachePolicy> pager_backed_cache_policy,
+               DecompressorCreatorConnector* decompression_connector)
     : vfs_(vfs),
       info_(*info),
       dispatcher_(dispatcher),
@@ -847,7 +851,8 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       vmex_resource_(std::move(vmex_resource)),
       inspect_tree_(),
       metrics_(CreateBlobfsMetrics(inspect_tree_.inspector())),
-      pager_backed_cache_policy_(pager_backed_cache_policy) {
+      pager_backed_cache_policy_(pager_backed_cache_policy),
+      decompression_connector_(decompression_connector) {
   ZX_ASSERT(vfs_);
 
   // It's easy to forget to initialize the PagedVfs in tests which will cause mysterious failures

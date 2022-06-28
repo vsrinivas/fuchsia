@@ -224,6 +224,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Discards the blob's data after performing verification.
   [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
+  DecompressorCreatorConnector* decompression_connector() { return decompression_connector_; }
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -236,7 +238,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, fs::PagedVfs* vfs,
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
-         std::optional<CachePolicy> pager_backed_cache_policy);
+         std::optional<CachePolicy> pager_backed_cache_policy,
+         DecompressorCreatorConnector* decompression_connector);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -298,8 +301,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
                                 FragmentationMetrics& fragmentation_metrics,
                                 FragmentationStats* out_stats);
 
-  DecompressorCreatorConnectorImpl default_decompression_connector_;
-
   // Possibly-null reference to the Vfs associated with this object. See vfs() getter.
   fs::PagedVfs* vfs_ = nullptr;
 
@@ -339,6 +340,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   std::unique_ptr<BlobLoader> loader_;
   std::shared_mutex fsck_at_end_of_transaction_mutex_;
+
+  DecompressorCreatorConnector* decompression_connector_;
 };
 
 }  // namespace blobfs

@@ -29,15 +29,9 @@ class DecompressorCreatorConnector {
 
   // Passes the `remote_channel` to some DecompressorCreator handler.
   virtual zx_status_t ConnectToDecompressorCreator(zx::channel remote_channel) = 0;
-};
 
-// The base interface that just calls `fdio_service_connect()` to the expected service path.
-class DecompressorCreatorConnectorImpl final : public DecompressorCreatorConnector {
- public:
-  DecompressorCreatorConnectorImpl() = default;
-
-  // DecompressorCreatorConnector interface.
-  zx_status_t ConnectToDecompressorCreator(zx::channel remote_channel) final;
+  // Default (singleton) implementation that calls `fdio_service_connect()`. Thread-safe.
+  static DecompressorCreatorConnector& DefaultServiceConnector();
 };
 
 // A client class for managing the connection to the decompressor sandbox, sending messages, and
@@ -101,32 +95,12 @@ class ExternalDecompressorClient {
   zx::fifo fifo_;
 };
 
-// A class for decompressing entire files for which there is an implementation of the Decompressor
-// interface for the `algorithm`. Uses the given `client` for communication to the external
-// decompressor process.
-class ExternalDecompressor {
- public:
-  ExternalDecompressor(ExternalDecompressorClient* client, CompressionAlgorithm algorithm);
-  DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalDecompressor);
-
-  // Performs decompression for an entire archive using the provided client.
-  zx_status_t Decompress(size_t uncompressed_size, size_t max_compressed_size);
-
- private:
-  // Client used for communication with the decompressor.
-  ExternalDecompressorClient* client_;
-
-  // The algorithm to be used for this file.
-  CompressionAlgorithm algorithm_;
-};
-
 // A class for decompressing parts of files for which there is an implementation of the
 // SeekableDecompressor interface for the `algorithm`. Uses the given `client` for communication to
 // the external decompressor process.
 class ExternalSeekableDecompressor {
  public:
-  ExternalSeekableDecompressor(ExternalDecompressorClient* client,
-                               SeekableDecompressor* decompressor);
+  ExternalSeekableDecompressor(ExternalDecompressorClient* client, CompressionAlgorithm algorithm);
   DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalSeekableDecompressor);
 
   // Decompresses one region by sending a request to the provided client. The range specified must
@@ -139,9 +113,8 @@ class ExternalSeekableDecompressor {
   // Client used for communication with the decompressor.
   ExternalDecompressorClient* client_;
 
-  // The SeekableDecompressor that would otherwise be used to decompress locally, which has the
-  // CompressionMapping information.
-  SeekableDecompressor* decompressor_;
+  // The algorithm to be used for this file.
+  CompressionAlgorithm algorithm_;
 };
 
 }  // namespace blobfs

@@ -177,8 +177,8 @@ class SeekTable {
   // Returns the index into |SeekTable()| where the entry is stored, or std::nullopt if the
   // offset is not covered. (Note that there can be gaps in the *compressed* frames, but the
   // decompressed frames are contiguous).
-  std::optional<unsigned> EntryForCompressedOffset(size_t offset) const;
-  std::optional<unsigned> EntryForDecompressedOffset(size_t offset) const;
+  std::optional<size_t> EntryForCompressedOffset(size_t offset) const;
+  std::optional<size_t> EntryForDecompressedOffset(size_t offset) const;
 
   // Allow HeaderReader to initialize these objects with a validated parsed seek table
   friend class HeaderReader;
@@ -268,7 +268,7 @@ class HeaderWriter {
   uint8_t* dst_ = nullptr;
   size_t dst_length_;
   SeekTableEntry* entries_ = nullptr;
-  unsigned current_frame_ = 0;
+  size_t current_frame_ = 0;
   ChunkCountType num_frames_;
 };
 
