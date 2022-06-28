@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <future>
+#include <ios>
 #include <latch>
 #include <utility>
 
@@ -37,6 +38,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
@@ -339,42 +341,68 @@ int main(int argv, char** argc) {
 
     // TODO(https://fxbug.dev/68742): Replace the use of threads with async clients when it is
     // possible to extract the channel from the client.
-    auto [thread, inserted] = threads.emplace(
-        path, [&root, client_end = std::move(endpoints->client), dispatcher, path]() mutable {
-          EventHandler handler(
-              [&](fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) {
-                if (event->s != ZX_OK) {
-                  FX_PLOGS(ERROR, event->s) << "failed to open '" << path << "'";
-                  return;
+    auto [thread,
+          inserted] = threads.emplace(path, [&root, client_end = std::move(endpoints->client),
+                                             dispatcher, path]() mutable {
+      EventHandler handler(
+          [&](fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) {
+            if (event->s != ZX_OK) {
+              FX_PLOGS(ERROR, event->s) << "failed to open '" << path << "'";
+              return;
+            }
+            // Must run on the dispatcher thread to avoid racing with VFS dispatch.
+            std::latch mounted(1);
+            async::PostTask(dispatcher, [&mounted, &root, path,
+                                         client_end = std::move(client_end)]() mutable {
+              const std::vector components = fxl::SplitString(path, "/", fxl::kKeepWhitespace,
+                                                              fxl::SplitResult::kSplitWantNonEmpty);
+              fbl::RefPtr<fs::Vnode> current = root;
+              for (size_t i = 0; i < components.size(); i++) {
+                const std::string_view& component = components[i];
+                const std::string_view fragment = [&]() {
+                  const ssize_t fragment_len = std::distance(path.begin(), component.end());
+                  if (fragment_len < 0) {
+                    const void* path_ptr = path.data();
+                    const void* component_ptr = component.data();
+                    FX_LOGS(FATAL) << "expected overlapping memory:"
+                                   << " path@" << path_ptr << "=" << path << " component@"
+                                   << component_ptr << "=" << component;
+                  }
+                  return std::string_view{path.data(), static_cast<size_t>(fragment_len)};
+                }();
+                fbl::RefPtr<fs::Vnode> next;
+                if (i == components.size() - 1) {
+                  next = fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end));
+                } else {
+                  switch (zx_status_t status = current->Lookup(component, &current); status) {
+                    case ZX_OK:
+                      continue;
+                    case ZX_ERR_NOT_FOUND:
+                      next = fbl::MakeRefCounted<fs::PseudoDir>();
+                      break;
+                    default:
+                      FX_PLOGS(FATAL, status) << "Lookup(" << fragment << ")";
+                  }
                 }
-                // Must run on the dispatcher thread to avoid racing with VFS dispatch.
-                std::latch mounted(1);
-                async::PostTask(dispatcher, [&mounted, &root, path,
-                                             client_end = std::move(client_end)]() mutable {
-                  // Drop the leading slash.
-                  std::string_view relative_path = path;
-                  if (relative_path.front() == '/') {
-                    relative_path = relative_path.substr(1);
-                  }
-                  if (zx_status_t status = root->AddEntry(
-                          relative_path, fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end)));
-                      status != ZX_OK) {
-                    FX_PLOGS(ERROR, status) << "failed to add entry for '" << path << "'";
-                  } else {
-                    FX_LOGS(INFO) << "mounted '" << path << "'";
-                  }
-                  mounted.count_down();
-                });
-                mounted.wait();
-              },
-              [&](fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) {
-                FX_PLOGS(FATAL, ZX_ERR_NOT_SUPPORTED) << "unexpected OnConnectionInfo";
-              });
-          if (fidl::Status status = handler.HandleOneEvent(client_end); !status.ok()) {
-            FX_PLOGS(ERROR, status.status())
-                << "failed to receive OnOpen event for '" << path << "'";
-          }
-        });
+                if (zx_status_t status =
+                        fbl::RefPtr<fs::PseudoDir>::Downcast(current)->AddEntry(component, next);
+                    status != ZX_OK) {
+                  FX_PLOGS(FATAL, status) << "failed to add entry for '" << fragment << "'";
+                }
+                current = next;
+              }
+              FX_LOGS(INFO) << "mounted '" << path << "'";
+              mounted.count_down();
+            });
+            mounted.wait();
+          },
+          [&](fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) {
+            FX_PLOGS(FATAL, ZX_ERR_NOT_SUPPORTED) << "unexpected OnConnectionInfo";
+          });
+      if (fidl::Status status = handler.HandleOneEvent(client_end); !status.ok()) {
+        FX_PLOGS(ERROR, status.status()) << "failed to receive OnOpen event for '" << path << "'";
+      }
+    });
     if (!inserted) {
       FX_LOGS(FATAL) << "duplicate namespace entry: " << path;
     }

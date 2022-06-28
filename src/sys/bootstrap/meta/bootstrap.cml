@@ -199,10 +199,13 @@
         },
         {
             protocol: [
-                "fuchsia.virtualization.DebianGuestManager",
-                "fuchsia.virtualization.LinuxManager",
+                // Allow networking from programs running in the console.
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
 
                 // Allow launching / managing guests from the console.
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",
             ],
@@ -581,6 +584,7 @@
             directory: [
                 "bin",
                 "pkgfs",
+                "root-ssl-certificates",
                 "system",
             ],
             from: "#pkg-cache",

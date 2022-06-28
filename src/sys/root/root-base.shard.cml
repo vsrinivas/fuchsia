@@ -78,6 +78,15 @@
         },
         {
             protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#core",
+            to: "#bootstrap",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
                 "fuchsia.sys2.EventSource",
                 "fuchsia.time.Maintenance",
             ],

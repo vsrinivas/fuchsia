@@ -1052,6 +1052,13 @@
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
         },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+        },
     ],
     environments: [
         {
