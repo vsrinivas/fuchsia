@@ -12,10 +12,7 @@ group("tests") {
 
 test("syn-audio-in-test-bin") {
   if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
+    configs += [ "//build/config:all_source" ]
   }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -37,19 +34,16 @@ test("syn-audio-in-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
 test("audio-dsp-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -64,13 +58,13 @@ test("audio-dsp-test-bin") {
   deps = [
     "//sdk/lib/fdio",
     "//src/devices/lib/as370",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -10,7 +10,7 @@
 #include <memory>
 #include <utility>
 
-//#define TESTING_CAPTURE_PDM
+// #define TESTING_CAPTURE_PDM
 
 // TODO(andresoportus) generalize and place in signal processing library.
 class CicFilter {

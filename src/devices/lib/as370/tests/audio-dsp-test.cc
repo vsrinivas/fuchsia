@@ -25,7 +25,7 @@ TEST(CicFilterTest, OnesFilled) {
                 n_output_channels, output_channel, multiplication_shift);
   // Expected values converge to the maximum 16 bits signed integer possible.
   uint16_t expected[] = {0x09f0, 0x7fff, 0x7ff7, 0x7fef, 0x7fe7, 0x7fdf, 0x7fd7, 0x7fcf};
-  ASSERT_EQ(out.size(), countof(expected) * sizeof(uint16_t));
+  ASSERT_EQ(out.size(), std::size(expected) * sizeof(uint16_t));
   EXPECT_BYTES_EQ(out.begin(), expected, out.size());
 }
 
@@ -45,7 +45,7 @@ TEST(CicFilterTest, MultipleChannels) {
                 n_output_channels, output_channel, multiplication_shift);
   // Expected values for filtering in output slot 1.
   uint16_t expected[] = {0x0000, 0x09f0, 0x0000, 0x7fff, 0x0000, 0x7ff7, 0x0000, 0x7fef};
-  ASSERT_EQ(out.size(), countof(expected) * sizeof(uint16_t));
+  ASSERT_EQ(out.size(), std::size(expected) * sizeof(uint16_t));
   EXPECT_BYTES_EQ(out.begin(), expected, out.size());
 }
 
@@ -65,7 +65,7 @@ TEST(CicFilterTest, ManyZerosAndOnesEqual) {
                 n_output_channels, output_channel, multiplication_shift);
   // Expected values converge to zero, we check the last half.
   uint16_t expected[out.size() / 2] = {0};
-  EXPECT_BYTES_EQ(out.end() - countof(expected), expected, countof(expected));
+  EXPECT_BYTES_EQ(out.end() - std::size(expected), expected, std::size(expected));
 }
 
 TEST(CicFilterTest, DirectCurrentRemoval) {
@@ -87,7 +87,7 @@ TEST(CicFilterTest, DirectCurrentRemoval) {
   }
   // Expected values converge to zero.
   uint16_t expected[out.size()] = {0};
-  EXPECT_BYTES_EQ(out.end() - countof(expected), expected, countof(expected));
+  EXPECT_BYTES_EQ(out.end() - std::size(expected), expected, std::size(expected));
 }
 
 }  // namespace audio
