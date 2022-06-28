@@ -7,6 +7,7 @@ group("drivers") {
   deps = [
     "drivers/aml-meson-power",
     "drivers/aml-pwm-regulator:aml-pwm-regulator",
+    "drivers/as370-power",
     "drivers/fusb302:fusb302",
     "drivers/nelson-brownout-protection:nelson-brownout-protection",
     "drivers/power",

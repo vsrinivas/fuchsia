@@ -23,13 +23,17 @@ struct As370PowerDomainParams {
   bool enabled = false;
 };
 
-As370PowerDomainParams kAs370PowerDomainParams[kAs370NumPowerDomains] = {
-    [kBuckSoC] =
-        {
-            .type = BUCK,
-            .enabled = true,
-        },
-};
+constexpr As370PowerDomainParams kAs370PowerDomainParams[kAs370NumPowerDomains]{[]() {
+  As370PowerDomainParams params[kAs370NumPowerDomains]{};
+
+  params[kBuckSoC] = {
+      .type = BUCK,
+      .enabled = true,
+  };
+
+  return *params;
+}()};
+
 }  // namespace
 
 namespace power {

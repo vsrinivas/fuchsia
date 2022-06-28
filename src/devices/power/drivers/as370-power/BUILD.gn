@@ -4,12 +4,13 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
-bind_rules("as370_power-bind") {
+driver_bind_rules("as370_power-bind") {
   rules = "as370_power.bind"
-  output = "as370_power-bind.h"
+  header_output = "as370_power-bind.h"
+  bind_output = "as370_power.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
@@ -19,12 +20,12 @@ group("tests") {
   deps = [ ":as370-power-test" ]
 }
 
-driver_module("as370-power") {
+fuchsia_driver("as370-power-driver") {
+  output_name = "as370-power"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-power.cc" ]
   deps = [
     ":as370_power-bind",
@@ -37,16 +38,21 @@ driver_module("as370-power") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
   ]
 }
 
+fuchsia_driver_component("as370-power") {
+  component_name = "as370-power"
+  deps = [ ":as370-power-driver" ]
+  info = "as370-power-info.json"
+}
+
 test("as370-power-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "as370-power-test"
   sources = [
     "as370-power-test.cc",
@@ -65,12 +71,12 @@ test("as370-power-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -166,6 +166,7 @@
 //src/devices/nand/drivers/skip-block:skip-block-driver
 //src/devices/power/drivers/aml-meson-power:aml-meson-power-driver
 //src/devices/power/drivers/aml-pwm-regulator:aml-pwm-regulator-driver
+//src/devices/power/drivers/as370-power:as370-power-driver
 //src/devices/power/drivers/fusb302:fusb302-driver
 //src/devices/power/drivers/nelson-brownout-protection:nelson-brownout-protection-driver
 //src/devices/power/drivers/power:power-driver
