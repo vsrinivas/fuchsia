@@ -160,8 +160,6 @@ group("cmx_allowlist") {
     "//src/connectivity/openthread/tests/test-components:ot-stack-ncp-ver-query_manifest_compile",
     "//src/connectivity/openthread/tests/test-components:ot-stack-soft-reset-mock-component_manifest_compile",
     "//src/connectivity/openthread/tests/test-components:ot-stack-soft-reset_manifest_compile",
-    "//src/connectivity/openthread/third_party/openthread/platform/tests:threadstack-bootstrap-unittests_component_manifest_compile",
-    "//src/connectivity/openthread/third_party/openthread/platform/tests:threadstack-unittests_component_manifest_compile",
     "//src/connectivity/overnet/lib/serial_link:overnet-serial-link-tests_component_manifest_compile",
     "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-at_manifest_compile",
     "//src/connectivity/telephony/lib/tel-devmgr:tel-devmgr-qmi_manifest_compile",

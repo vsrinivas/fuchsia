@@ -15,10 +15,10 @@ group("tests") {
 }
 
 fuchsia_unittest_package("threadstack-unittests") {
-  manifest = "meta/threadstack-unittests.cmx"
+  manifest = "meta/threadstack-unittests.cml"
   deps = [
     ":unittests-bin",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/netstack:component",
   ]
 }
 
@@ -29,10 +29,10 @@ fuchsia_unittest_package("threadstack-unittests") {
 # We need to create separate testcase as we don't want to affect
 # max_severity for other tests.
 fuchsia_unittest_package("threadstack-bootstrap-unittests") {
-  manifest = "meta/threadstack-bootstrap-unittests.cmx"
+  manifest = "meta/threadstack-bootstrap-unittests.cml"
   deps = [
     ":bootstrap-unittests-bin",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/netstack:component",
   ]
 
   test_specs = {
