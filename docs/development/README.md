@@ -55,6 +55,7 @@ operating system.
 
  - [Fuchsia tracing system](/docs/concepts/kernel/tracing-system.md)
  - [Tracing guides](/docs/development/tracing/README.md)
+ - [Tracing for input events](/docs/development/ui-input/tracing.md)
 
 ## Internationalization
 

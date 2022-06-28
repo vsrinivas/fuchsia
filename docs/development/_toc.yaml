@@ -76,6 +76,9 @@ toc:
 - title: "Settings"
   section:
   - include: /docs/development/settings/_toc.yaml
+- title: "UI-Input"
+  section:
+  - include: /docs/development/ui-input/_toc.yaml
 - heading: "Test and debug"
 - title: "Test"
   section:
