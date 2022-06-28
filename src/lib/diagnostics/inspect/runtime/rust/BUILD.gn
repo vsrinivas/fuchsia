@@ -74,13 +74,6 @@ fuchsia_component("inspect_test_component") {
   manifest = "meta/inspect_test_component.cml"
 }
 
-fuchsia_component("inspect_test_component_v1") {
-  component_name = "inspect_test_component"
-  testonly = true
-  deps = [ ":inspect_test_component_bin" ]
-  manifest = "meta/inspect_test_component.cmx"
-}
-
 group("tests") {
   testonly = true
   deps = [ ":inspect-runtime-tests" ]

@@ -4,127 +4,170 @@
 
 // @dart = 2.9
 
-import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as diagnostics;
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
+import 'package:fuchsia_component_test/realm_builder.dart';
+import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
+import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as fdiagnostics;
 import 'package:fuchsia_inspect/reader.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:pedantic/pedantic.dart';
 import 'package:test/test.dart';
 
 const serverName = 'dart-inspect-wrapper-test';
 
-const testComponentName = 'inspect_test_component.cmx';
-const testComponentUrl =
-    'fuchsia-pkg://fuchsia.com/dart-archive-reader-test#meta/$testComponentName';
+const testComponentName = 'inspect_test_component';
+const testComponentUrl = '#meta/$testComponentName.cm';
+const testComponentBinder = "fuchsia.component.TestComponentBinder";
+
+class TestTopology {
+  RealmInstance instance;
+
+  TestTopology._create(RealmInstance instance) {
+    this.instance = instance;
+  }
+
+  void startTestComponent({int id = 0}) {
+    final proxy = fcomponent.BinderProxy();
+    this.instance.root.connectToNamedProtocolAtExposedDir(
+        '${testComponentBinder}${id}', proxy.ctrl.request().passChannel());
+  }
+
+  String testComponentMoniker({int id = 0}) {
+    return 'realm_builder\\:${this.instance.root.childName}/${testComponentName}-${id}';
+  }
+
+  static Future<TestTopology> create({int testComponents = 1}) async {
+    final builder = await RealmBuilder.create();
+    for (int i = 0; i < testComponents; i++) {
+      final testComponent = await builder.addChild(
+          '${testComponentName}-${i}', testComponentUrl, ChildOptions());
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability("fuchsia.logger.LogSink"))
+        ..from(Ref.parent())
+        ..to(Ref.child(testComponent)));
+      await builder.addRoute(
+        Route()
+          ..capability(ProtocolCapability(
+            fcomponent.Binder.$serviceName,
+            as: '${testComponentBinder}${i}',
+          ))
+          ..from(Ref.child(testComponent))
+          ..to(Ref.parent()),
+      );
+    }
+    return TestTopology._create(await builder.build());
+  }
+
+  void dispose() {
+    this.instance.root.close();
+  }
+}
 
 void main() async {
   test('no_selector', () async {
-    const testComponentMoniker = testComponentName;
-    final testComponentController = await _launchTestComponent();
+    final testTopology = await TestTopology.create();
+    testTopology.startTestComponent();
 
     final reader = ArchiveReader.forInspect();
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) =>
             snapshot.length >= 2 &&
-            _monikerList(snapshot).contains(testComponentMoniker));
+            _monikerList(snapshot)
+                .contains(testTopology.testComponentMoniker()));
 
     expect(snapshot.length, greaterThanOrEqualTo(2));
-    expect(_monikerList(snapshot), contains(testComponentMoniker));
-
-    await endTest(testComponentController);
+    expect(
+        _monikerList(snapshot), contains(testTopology.testComponentMoniker()));
+    testTopology.dispose();
   });
 
   test('component_selector', () async {
-    const testComponentMoniker = testComponentName;
-    final testComponentController = await _launchTestComponent();
+    final testTopology = await TestTopology.create();
+    testTopology.startTestComponent();
 
-    final reader = ArchiveReader.forInspect(
-        selectors: [Selector.fromRawSelector('$testComponentMoniker:root')]);
+    final reader = ArchiveReader.forInspect(selectors: [
+      Selector.fromRawSelector('${testTopology.testComponentMoniker()}:root')
+    ]);
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) => snapshot.isNotEmpty);
 
     expect(snapshot, hasLength(1));
-    expect(snapshot[0].metadata.componentUrl, testComponentUrl);
-    expect(snapshot[0].moniker, testComponentMoniker);
+    expect(snapshot[0].moniker, testTopology.testComponentMoniker());
     expect(snapshot[0].payload['root']['int'], 3);
     expect(snapshot[0].payload['root']['lazy-node']['a'], 'test');
 
-    await endTest(testComponentController);
+    testTopology.dispose();
   });
 
   test('hierarchy_selector', () async {
-    const testComponentMoniker = testComponentName;
-    final testComponentController = await _launchTestComponent();
+    final testTopology = await TestTopology.create();
+    testTopology.startTestComponent();
 
     final reader = ArchiveReader.forInspect(selectors: [
-      Selector.fromRawSelector('$testComponentMoniker:root/lazy-node')
+      Selector.fromRawSelector(
+          '${testTopology.testComponentMoniker()}:root/lazy-node')
     ]);
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) => snapshot is List && snapshot.isNotEmpty);
 
     expect(snapshot, hasLength(1));
-    expect(snapshot[0].metadata.componentUrl, testComponentUrl);
-    expect(snapshot[0].moniker, testComponentMoniker);
+    expect(snapshot[0].moniker, testTopology.testComponentMoniker());
     expect(snapshot[0].payload['root']['int'], isNull);
     expect(snapshot[0].payload['root']['lazy-node']['a'], 'test');
 
-    await endTest(testComponentController);
+    testTopology.dispose();
   });
 
   test('property_selector', () async {
-    const testComponentMoniker = 'inspect_test_component.cmx';
-    final testComponentController = await _launchTestComponent();
+    final testTopology = await TestTopology.create();
+    testTopology.startTestComponent();
 
     final reader = ArchiveReader.forInspect(selectors: [
-      Selector.fromRawSelector('$testComponentMoniker:root:int')
+      Selector.fromRawSelector(
+          '${testTopology.testComponentMoniker()}:root:int')
     ]);
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) => snapshot is List && snapshot.isNotEmpty);
 
     expect(snapshot, hasLength(1));
-    expect(snapshot[0].metadata.componentUrl, testComponentUrl);
-    expect(snapshot[0].moniker, testComponentMoniker);
+    expect(snapshot[0].moniker, testTopology.testComponentMoniker());
     expect(snapshot[0].payload['root']['int'], 3);
     expect(snapshot[0].payload['root']['lazy-node'], isNull);
 
-    await endTest(testComponentController);
+    testTopology.dispose();
   });
 
   test('multiple_selectors', () async {
-    const testComponentMoniker = testComponentName;
-    final testComponentController = await _launchTestComponent();
+    final testTopology = await TestTopology.create();
+    testTopology.startTestComponent();
 
     final reader = ArchiveReader.forInspect(selectors: [
-      Selector.fromRawSelector('$testComponentMoniker:root:int'),
-      Selector.fromRawSelector('$testComponentMoniker:root/lazy-node')
+      Selector.fromRawSelector(
+          '${testTopology.testComponentMoniker()}:root:int'),
+      Selector.fromRawSelector(
+          '${testTopology.testComponentMoniker()}:root/lazy-node')
     ]);
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) => snapshot is List && snapshot.isNotEmpty);
 
     expect(snapshot, hasLength(1));
-    expect(snapshot[0].metadata.componentUrl, testComponentUrl);
-    expect(snapshot[0].moniker, testComponentMoniker);
+    expect(snapshot[0].moniker, testTopology.testComponentMoniker());
     expect(snapshot[0].payload['root']['int'], 3);
     expect(snapshot[0].payload['root']['lazy-node']['a'], 'test');
 
-    await endTest(testComponentController);
+    testTopology.dispose();
   });
 
   test('multiple_batches', () async {
-    final testComponentMonikers = <String>{};
-    final testComponentControllers = <Future<ComponentController>>{};
-    const environmentPrefix = 'multiple_batches_test_';
-    for (var i = 0; i < diagnostics.maximumEntriesPerBatch + 1; i++) {
-      final environmentName = '$environmentPrefix$i';
-      testComponentMonikers.add('$environmentName/$testComponentName');
-      final launchEnvironment = _createChildEnvironment(environmentName);
-      unawaited(launchEnvironment.then((value) => testComponentControllers
-          .add(_launchTestComponent(launchEnvironment: value))));
+    var testComponentMonikers = <String>{};
+    final testTopology = await TestTopology.create(
+        testComponents: fdiagnostics.maximumEntriesPerBatch + 1);
+    for (var i = 0; i < fdiagnostics.maximumEntriesPerBatch + 1; i++) {
+      testTopology.startTestComponent(id: i);
+      testComponentMonikers.add(testTopology.testComponentMoniker(id: i));
     }
 
     final reader = ArchiveReader.forInspect();
@@ -139,66 +182,10 @@ void main() async {
     expect(snapshot.length, greaterThanOrEqualTo(2));
     expect(_monikerList(snapshot), containsAll(testComponentMonikers));
 
-    for (final testComponentController in testComponentControllers) {
-      await endTest(await testComponentController);
-    }
+    testTopology.dispose();
   }, timeout: Timeout(Duration(seconds: 90)));
-}
-
-/// Creates a child environment with the given [name].
-Future<EnvironmentProxy> _createChildEnvironment(String name) async {
-  final environmentProxy = EnvironmentProxy();
-  final incoming = Incoming.fromSvcPath()..connectToService(environmentProxy);
-
-  final childEnvironment = EnvironmentProxy();
-  final childEnvironmentController = EnvironmentControllerProxy();
-
-  await environmentProxy.createNestedEnvironment(
-    childEnvironment.ctrl.request(),
-    childEnvironmentController.ctrl.request(),
-    name,
-    null,
-    EnvironmentOptions(
-      inheritParentServices: true,
-      useParentRunners: true,
-      deleteStorageOnDeath: true,
-      killOnOom: true,
-    ),
-  );
-
-  await incoming.close();
-
-  return childEnvironment;
-}
-
-Future<ComponentControllerProxy> _launchTestComponent(
-    {EnvironmentProxy launchEnvironment}) async {
-  EnvironmentProxy environment;
-  if (launchEnvironment != null) {
-    environment = launchEnvironment;
-  } else {
-    final environmentProxy = EnvironmentProxy();
-    final incoming = Incoming.fromSvcPath()..connectToService(environmentProxy);
-    await incoming.close();
-    environment = environmentProxy;
-  }
-  final launcher = LauncherProxy();
-  await environment.getLauncher(launcher.ctrl.request());
-
-  final launchInfo = LaunchInfo(url: testComponentUrl);
-
-  final componentController = ComponentControllerProxy();
-
-  await launcher.createComponent(
-      launchInfo, componentController.ctrl.request());
-  return componentController;
 }
 
 /// Returns a [List] of all component monikers in the given inspect [json].
 List<String> _monikerList(List<DiagnosticsData> diagnosticsDataList) =>
     diagnosticsDataList.map((e) => e.moniker).toList();
-
-Future<void> endTest(ComponentControllerProxy componentControllerProxy) async {
-  await componentControllerProxy.kill();
-  await for (var _ in componentControllerProxy.onTerminated) {}
-}

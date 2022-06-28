@@ -80,13 +80,13 @@ dart_test("fuchsia_inspect_package_unittests") {
 
 dart_test_component("dart-archive-reader-test-component") {
   component_name = "dart-archive-reader-test"
-  manifest = "meta/dart-archive-reader-test.cmx"
+  manifest = "meta/dart-archive-reader-test.cml"
   sources = [ "reader/reader_test.dart" ]
   deps = [
     ":fuchsia_inspect",
-    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
   ]
@@ -98,17 +98,13 @@ dart_test_component("dart-archive-reader-test-component") {
 fuchsia_test_package("dart-archive-reader-test") {
   package_name = "dart-archive-reader-test"
   test_components = [ ":dart-archive-reader-test-component" ]
-  deps =
-      [ "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component_v1" ]
+  deps = [ "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia_inspect_package_unittests($host_toolchain)" ]
-
-  # TODO(fxbug.dev/83139): Test is consistently failing on coverage bot.
-  # Please fix the test and remove the condition below.
-  if (!is_coverage) {
-    deps += [ ":dart-archive-reader-test" ]
-  }
+  deps = [
+    ":dart-archive-reader-test",
+    ":fuchsia_inspect_package_unittests($host_toolchain)",
+  ]
 }
