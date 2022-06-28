@@ -674,9 +674,7 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
     enumerator.resume();
 
     if (result != ZX_OK) {
-      // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
-      // For now, translate to ZX_ERR_NOT_FOUND.
-      return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
+      return result;
     }
     expected += size;
   }
