@@ -15,17 +15,13 @@
             name: "vmm",
             url: "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cm",
         },
-        {
-            name: "host_vsock",
-            url: "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm",
-        },
     ],
     capabilities: [
         {
-            protocol: [ "fuchsia.virtualization.GuestConfigProvider" ],
-        },
-        {
-            protocol: [ "fuchsia.virtualization.GuestManager" ],
+            protocol: [
+                "fuchsia.virtualization.GuestConfigProvider",
+                "fuchsia.virtualization.GuestManager",
+            ],
         },
     ],
     use: [
@@ -39,12 +35,9 @@
             protocol: [
                 "fuchsia.virtualization.BalloonController",
                 "fuchsia.virtualization.Guest",
+                "fuchsia.virtualization.GuestVsockEndpoint",
             ],
             from: "#vmm",
-        },
-        {
-            protocol: "fuchsia.virtualization.HostVsockEndpoint",
-            from: "#host_vsock",
         },
     ],
     offer: [
@@ -88,16 +81,6 @@
             from: "self",
             to: "#vmm",
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: "#host_vsock",
-        },
-        {
-            protocol: "fuchsia.virtualization.GuestVsockEndpoint",
-            from: "#vmm",
-            to: "#host_vsock",
         },
     ],
 }

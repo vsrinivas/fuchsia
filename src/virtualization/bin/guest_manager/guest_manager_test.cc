@@ -9,17 +9,45 @@
 #include <test/placeholders/cpp/fidl.h>
 
 #include "fuchsia/virtualization/cpp/fidl.h"
+#include "fuchsia/virtualization/cpp/fidl_test_base.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 
+class FakeGuestVsockEndpoint
+    : public fuchsia::virtualization::testing::GuestVsockEndpoint_TestBase {
+ public:
+  void SetContextId(
+      uint32_t cid,
+      ::fidl::InterfaceHandle<::fuchsia::virtualization::HostVsockConnector> connector,
+      ::fidl::InterfaceRequest<::fuchsia::virtualization::GuestVsockAcceptor> acceptor) override {
+    cid_ = cid;
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    ASSERT_TRUE(false) << "Method not supported by FakeManager: " << name;
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::virtualization::GuestVsockEndpoint> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+  uint32_t cid_ = 0;
+  fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint> bindings_;
+};
+
 class GuestManagerTest : public gtest::TestLoopFixture {
  public:
+  void SetUp() override {
+    TestLoopFixture::SetUp();
+    provider_.service_directory_provider()->AddService(fake_guest_vsock_endpoint_.GetHandler());
+  }
   sys::testing::ComponentContextProvider provider_;
+  FakeGuestVsockEndpoint fake_guest_vsock_endpoint_;
 };
 
 TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
-  GuestManager manager(provider_.context(), "/pkg/", "invalid_path.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "invalid_path.cfg");
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
@@ -30,7 +58,8 @@ TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
 }
 
 TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
-  GuestManager manager(provider_.context(), "/pkg/", "data/configs/bad_schema_invalid_field.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/",
+                       "data/configs/bad_schema_invalid_field.cfg");
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
@@ -41,7 +70,7 @@ TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
 }
 
 TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
-  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   user_guest_config.mutable_cmdline_add()->emplace_back("extra_cmd_line_arg=0");
   user_guest_config.mutable_block_devices()->push_back({
@@ -83,7 +112,7 @@ TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
 
 TEST_F(GuestManagerTest, DoubleLaunchFail) {
   bool launch_callback_called = false;
-  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
   manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
@@ -105,7 +134,7 @@ TEST_F(GuestManagerTest, DoubleLaunchFail) {
 
 TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   bool get_callback_called = false;
-  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   manager.GetGuestInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::NOT_STARTED);
@@ -133,7 +162,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
 
 TEST_F(GuestManagerTest, ConnectToGuest) {
   bool connect_callback_called = false;
-  GuestManager manager(provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   fuchsia::virtualization::GuestPtr guest;
   manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
@@ -161,4 +190,32 @@ TEST_F(GuestManagerTest, ConnectToGuest) {
   });
   ASSERT_TRUE(connect_callback_called);
 }
+
+TEST_F(GuestManagerTest, LaunchAndUseVsock) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_cmdline_add()->emplace_back("extra_cmd_line_arg=0");
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  ASSERT_EQ(fake_guest_vsock_endpoint_.cid_, 0u);
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(), [&](auto res) {
+    ASSERT_FALSE(res.is_err());
+    launch_callback_called = true;
+  });
+  ASSERT_TRUE(launch_callback_called);
+  fuchsia::virtualization::HostVsockEndpoint_Connect2_Result res;
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(fake_guest_vsock_endpoint_.cid_, fuchsia::virtualization::DEFAULT_GUEST_CID);
+
+  bool get_callback_called = false;
+  manager.Get([&get_callback_called](fuchsia::virtualization::GuestConfig config) {
+    ASSERT_EQ("test cmdline extra_cmd_line_arg=0", config.cmdline());
+
+    get_callback_called = true;
+  });
+  ASSERT_TRUE(get_callback_called);
+}
+
 }  // namespace

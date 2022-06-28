@@ -51,7 +51,6 @@ legacy_base_package_labels += [
   "//src/ui/wayland/bin/bridge",
   "//src/virtualization/bin/vmm",
   "//src/virtualization/bin/guest_manager:termina_guest_manager",
-  "//src/virtualization/bin/host_vsock",
   "//src/virtualization/bin/linux_runner",
   "//src/virtualization/packages/termina_guest",
   "//src/virtualization/bin/guest",

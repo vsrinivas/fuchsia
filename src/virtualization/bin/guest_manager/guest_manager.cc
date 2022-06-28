@@ -11,13 +11,22 @@
 #include "lib/fpromise/result.h"
 #include "src/lib/files/file.h"
 
-GuestManager::GuestManager(sys::ComponentContext* context, std::string config_pkg_dir_path,
-                           std::string config_path)
+GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+                           std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
       config_pkg_dir_path_(std::move(config_pkg_dir_path)),
-      config_path_(std::move(config_path)) {
+      config_path_(std::move(config_path)),
+      host_vsock_endpoint_(dispatcher, fit::bind_member(this, &GuestManager::GetAcceptor)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
+}
+
+fuchsia::virtualization::GuestVsockAcceptor* GuestManager::GetAcceptor(uint32_t cid) {
+  GuestVsockEndpoint* res = nullptr;
+  if (cid == fuchsia::virtualization::DEFAULT_GUEST_CID) {
+    res = local_guest_endpoint_.get();
+  }
+  return res;
 }
 
 // |fuchsia::virtualization::GuestManager|
@@ -75,6 +84,13 @@ void GuestManager::LaunchGuest(
   // bring up all virtio devices and query guest_config via the
   // fuchsia::virtualization::GuestConfigProvider::Get
   context_->svc()->Connect(std::move(controller));
+
+  // Setup guest endpoint.
+  fuchsia::virtualization::GuestVsockEndpointPtr vm_guest_endpoint;
+  context_->svc()->Connect(vm_guest_endpoint.NewRequest());
+  local_guest_endpoint_ =
+      std::make_unique<GuestVsockEndpoint>(fuchsia::virtualization::DEFAULT_GUEST_CID,
+                                           std::move(vm_guest_endpoint), &host_vsock_endpoint_);
   callback(fpromise::ok());
 }
 
@@ -97,7 +113,7 @@ void GuestManager::ConnectToBalloon(
 
 void GuestManager::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  context_->svc()->Connect(std::move(endpoint));
+  host_vsock_endpoint_.AddBinding(std::move(endpoint));
 }
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {

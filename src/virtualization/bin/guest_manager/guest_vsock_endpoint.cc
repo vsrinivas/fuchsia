@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
+#include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
 
 GuestVsockEndpoint::GuestVsockEndpoint(
     uint32_t cid, fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint,
