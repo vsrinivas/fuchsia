@@ -129,7 +129,6 @@ group("core_base_packages") {
     "//src/hwinfo:fake_legacy_hwinfo",
     "//src/identity/bin/account_handler:account_handler",
     "//src/identity/bin/account_manager:account_manager",
-    "//src/identity/bin/dev_auth_provider:dev_auth_provider",
     "//src/identity/bin/dev_authenticator:dev_authenticator",
     "//src/intl/intl_services:pkg",
     "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr",

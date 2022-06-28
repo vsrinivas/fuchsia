@@ -18,7 +18,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
-    "//src/identity/lib/token_manager",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -60,8 +59,4 @@ fuchsia_package_with_single_component("account_manager") {
   # fxbug.dev/83213 retain the v1 component while out of tree components still
   # need it
   manifest = "meta/account_manager.cmx"
-}
-
-group("account_manager_auth_providers") {
-  public_deps = [ "../google_auth_provider" ]
 }

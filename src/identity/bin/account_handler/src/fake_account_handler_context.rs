@@ -6,7 +6,7 @@
 
 use {
     crate::fake_authenticator::FakeAuthenticator,
-    fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+    fidl::endpoints::create_proxy_and_stream,
     fidl_fuchsia_identity_account::Error as ApiError,
     fidl_fuchsia_identity_internal::{
         AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
@@ -52,15 +52,6 @@ impl FakeAccountHandlerContext {
     /// Asynchronously handles a single `AccountHandlerContextRequest`.
     async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerContextRequest::GetOauth { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-            AccountHandlerContextRequest::GetOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-            AccountHandlerContextRequest::GetOauthOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
             AccountHandlerContextRequest::GetStorageUnlockAuthMechanism {
                 auth_mechanism_id,
                 storage_unlock_mechanism,
@@ -118,17 +109,6 @@ mod tests {
         static ref TEST_ENROLLMENT_DATA: Vec<u8> = vec![13, 37];
         static ref AUTH_MECHANISM_ID_OK: &'static str = "auth-mech-id-1";
         static ref AUTH_MECHANISM_ID_BAD: &'static str = "auth-mech-id-2";
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn get_oauth() {
-        let fake_context = Arc::new(FakeAccountHandlerContext::new());
-        let proxy = spawn_context_channel(fake_context.clone());
-        let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
-        assert_eq!(
-            proxy.get_oauth("dummy_auth_provider", ap_server_end).await.unwrap(),
-            Err(ApiError::Internal)
-        );
     }
 
     #[fuchsia_async::run_until_stalled(test)]

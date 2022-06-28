@@ -5,9 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("account") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   name = "fuchsia.identity.internal"
 
   sources = [ "account_handler.fidl" ]
@@ -16,6 +13,5 @@ fidl("account") {
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.identity.authentication",
-    "//sdk/fidl/fuchsia.identity.external",
   ]
 }

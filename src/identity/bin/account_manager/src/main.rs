@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 //! AccountManager manages the overall state of system accounts and personae on
-//! a Fuchsia device, installation of the AuthProviders that are used to obtain
-//! authentication tokens for these accounts, and access to TokenManagers for
-//! these accounts.
+//! a Fuchsia device.
 //!
 //! The AccountManager is the most powerful interface in the authentication
 //! system and is intended only for use by the most trusted parts of the system.
@@ -27,18 +25,14 @@ use {
         account_handler_connection::AccountHandlerConnectionImpl, account_manager::AccountManager,
     },
     anyhow::{Context as _, Error},
-    fidl_fuchsia_auth::AuthProviderConfig,
     fuchsia_async as fasync,
-    fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
+    fuchsia_component::server::ServiceFs,
     fuchsia_inspect::Inspector,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::{error, info},
     std::{path::PathBuf, sync::Arc},
 };
-
-/// This command line flag (prefixed with `--`) results in a set of hermetic auth providers.
-const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
 
 /// This command line flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
 const DEV_AUTH_MECHANISMS_FLAG: &str = "dev-auth-mechanisms";
@@ -59,36 +53,11 @@ lazy_static! {
         concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
                 "#meta/dev_authenticator_always_fail_authentication.cmx").to_string(),
     ];
-
-    /// (Temporary) Configuration for a fixed set of auth providers used until file-based
-    /// configuration is available.
-    static ref DEFAULT_AUTH_PROVIDERS_CONFIG: Vec<AuthProviderConfig> = {
-        vec![AuthProviderConfig {
-            auth_provider_type: "google".to_string(),
-            url: fuchsia_single_component_package_url!("google_auth_provider").to_string(),
-            params: None
-        }]
-    };
-
-    /// Configuration for a set of fake auth providers used for testing.
-    static ref DEV_AUTH_PROVIDERS_CONFIG: Vec<AuthProviderConfig> = {
-        vec![AuthProviderConfig {
-            auth_provider_type: "dev_auth_provider".to_string(),
-            url: fuchsia_single_component_package_url!("dev_auth_provider")
-            .to_string(),
-            params: None
-        }]
-    };
 }
 
 fn main() -> Result<(), Error> {
     // Parse CLI args
     let mut opts = getopts::Options::new();
-    opts.optflag(
-        "",
-        DEV_AUTH_PROVIDERS_FLAG,
-        "use dev auth providers instead of the default set, for tests",
-    );
     opts.optflag(
         "",
         DEV_AUTH_MECHANISMS_FLAG,
@@ -97,11 +66,6 @@ fn main() -> Result<(), Error> {
 
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
-    let auth_provider_config: &Vec<_> = if options.opt_present(DEV_AUTH_PROVIDERS_FLAG) {
-        &DEV_AUTH_PROVIDERS_CONFIG
-    } else {
-        &DEFAULT_AUTH_PROVIDERS_CONFIG
-    };
     let auth_mechanism_ids: &Vec<_> = if options.opt_present(DEV_AUTH_MECHANISMS_FLAG) {
         &DEV_AUTHENTICATION_MECHANISM_IDS
     } else {
@@ -120,7 +84,6 @@ fn main() -> Result<(), Error> {
     let account_manager = Arc::new(
         AccountManager::<AccountHandlerConnectionImpl>::new(
             PathBuf::from(DATA_DIR),
-            &auth_provider_config,
             &auth_mechanism_ids,
             &inspector,
         )

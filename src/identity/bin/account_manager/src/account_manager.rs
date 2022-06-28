@@ -10,35 +10,25 @@ use {
         account_handler_connection::AccountHandlerConnection,
         account_handler_context::AccountHandlerContext,
         account_map::AccountMap,
-        inspect,
     },
     account_common::{AccountId, AccountManagerError, FidlAccountId},
     anyhow::Error,
-    fidl_fuchsia_auth::AuthProviderConfig,
     fidl_fuchsia_identity_account::{
         AccountManagerGetAccountRequest, AccountManagerProvisionNewAccountRequest,
         AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
         AccountManagerRequestStream, Error as ApiError, Lifetime,
     },
-    fuchsia_inspect::{Inspector, Property},
+    fuchsia_inspect::Inspector,
     futures::{lock::Mutex, prelude::*},
-    lazy_static::lazy_static,
     log::{info, warn},
     std::{convert::TryFrom, path::PathBuf, sync::Arc},
 };
 
-lazy_static! {
-    /// The Auth scopes used for authorization during service provider-based account provisioning.
-    /// An empty vector means that the auth provider should use its default scopes.
-    static ref APP_SCOPES: Vec<String> = Vec::default();
-}
-
 /// The core component of the account system for Fuchsia.
 ///
-/// The AccountManager maintains the set of Fuchsia accounts that are provisioned on the device,
-/// launches and configures AuthenticationProvider components to perform authentication via
-/// service providers, and launches and delegates to AccountHandler component instances to
-/// determine the detailed state and authentication for each account.
+/// The AccountManager maintains the set of Fuchsia accounts that are provisioned on the device and
+/// launches and delegates to AccountHandler component instances to determine the detailed state and
+/// authentication for each account.
 ///
 /// `AHC` An AccountHandlerConnection used to spawn new AccountHandler components.
 pub struct AccountManager<AHC: AccountHandlerConnection> {
@@ -48,37 +38,22 @@ pub struct AccountManager<AHC: AccountHandlerConnection> {
 
     /// Contains the client ends of all AccountListeners which are subscribed to account events.
     event_emitter: AccountEventEmitter,
-
-    /// Helper for outputting auth_provider information via fuchsia_inspect. Must be retained
-    /// to avoid dropping the static properties it contains.
-    _auth_providers_inspect: inspect::AuthProviders,
 }
 
 impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
-    /// Constructs a new AccountManager, loading existing set of accounts from `data_dir`, and an
-    /// auth provider configuration. The directory must exist at construction.
+    /// Constructs a new AccountManager and loads an existing set of accounts from `data_dir`.
     pub fn new(
         data_dir: PathBuf,
-        auth_provider_config: &[AuthProviderConfig],
         auth_mechanism_ids: &[String],
         inspector: &Inspector,
     ) -> Result<AccountManager<AHC>, Error> {
-        let context =
-            Arc::new(AccountHandlerContext::new(auth_provider_config, auth_mechanism_ids));
+        let context = Arc::new(AccountHandlerContext::new(auth_mechanism_ids));
         let account_map = AccountMap::load(data_dir, Arc::clone(&context), inspector.root())?;
 
         // Initialize the structs used to output state through the inspect system.
-        let auth_providers_inspect = inspect::AuthProviders::new(inspector.root());
-        let auth_provider_types: Vec<String> =
-            auth_provider_config.iter().map(|apc| apc.auth_provider_type.clone()).collect();
-        auth_providers_inspect.types.set(&auth_provider_types.join(","));
         let event_emitter = AccountEventEmitter::new(inspector.root());
 
-        Ok(Self {
-            account_map: Mutex::new(account_map),
-            event_emitter,
-            _auth_providers_inspect: auth_providers_inspect,
-        })
+        Ok(Self { account_map: Mutex::new(account_map), event_emitter })
     }
 
     /// Asynchronously handles the supplied stream of `AccountManagerRequest` messages.
@@ -308,16 +283,9 @@ mod tests {
     type TestAccountManager = AccountManager<AccountHandlerConnectionImpl>;
 
     lazy_static! {
-        /// Configuration for a set of fake auth providers used for testing.
-        /// This can be populated later if needed.
-        static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = vec![];
-
         static ref AUTH_MECHANISM_IDS: Vec<String> = vec![];
-
-        static ref TEST_GRANULARITY: AuthChangeGranularity = AuthChangeGranularity {
-            summary_changes: Some(true),
-            ..AuthChangeGranularity::EMPTY
-        };
+        static ref TEST_GRANULARITY: AuthChangeGranularity =
+            AuthChangeGranularity { summary_changes: Some(true), ..AuthChangeGranularity::EMPTY };
     }
 
     fn request_stream_test<TestFn, Fut>(account_manager: TestAccountManager, test_fn: TestFn)
@@ -368,13 +336,7 @@ mod tests {
         data_dir: &Path,
         inspector: &Inspector,
     ) -> AccountManager<AccountHandlerConnectionImpl> {
-        AccountManager::new(
-            data_dir.to_path_buf(),
-            &AUTH_PROVIDER_CONFIG,
-            &AUTH_MECHANISM_IDS,
-            inspector,
-        )
-        .unwrap()
+        AccountManager::new(data_dir.to_path_buf(), &AUTH_MECHANISM_IDS, inspector).unwrap()
     }
 
     /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
@@ -387,13 +349,7 @@ mod tests {
         let inspector = Inspector::new();
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
-            AccountManager::new(
-                data_dir.path().into(),
-                &AUTH_PROVIDER_CONFIG,
-                &AUTH_MECHANISM_IDS,
-                &inspector,
-            )
-            .unwrap(),
+            AccountManager::new(data_dir.path().into(), &AUTH_MECHANISM_IDS, &inspector).unwrap(),
             |proxy, _| async move {
                 assert_eq!(proxy.get_account_ids().await?.len(), 0);
                 Ok(())

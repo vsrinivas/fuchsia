@@ -38,7 +38,6 @@ lazy_static! {
 
     /// Arguments passed to account manager started in test environment.
     static ref ACCOUNT_MANAGER_ARGS: Vec<String> = vec![
-        "--dev-auth-providers".to_string(),
         "--dev-auth-mechanisms".to_string(),
     ];
 

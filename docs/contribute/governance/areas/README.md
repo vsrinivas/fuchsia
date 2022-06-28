@@ -166,13 +166,12 @@ Examples:
 {% endif %} <!-- HCI -->
 
 {% if area.name == "Identity" %}
-The set of APIs used to manage user accounts, authentication, and identity information for service providers.
+The set of APIs used to manage user accounts, authentication, and identity information.
 
 Examples:
 
 * [fuchsia.identity.account](/sdk/fidl/fuchsia.identity.account/)
-* [fuchsia.identity.tokens](/sdk/fidl/fuchsia.identity.tokens/)
-* [fuchsia.auth](/sdk/fidl/fuchsia.auth/)
+* [fuchsia.identity.authentication](/sdk/fidl/fuchsia.identity.authentication/)
 {% endif %} <!-- Identity -->
 
 {% if area.name == "Kernel" %}

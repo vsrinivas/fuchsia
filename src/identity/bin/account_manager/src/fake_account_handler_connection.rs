@@ -37,7 +37,7 @@ lazy_static! {
     pub static ref UNKNOWN_ERROR_ACCOUNT_ID: AccountId = AccountId::new(30000);
 
     static ref EMPTY_ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
-            Arc::new(AccountHandlerContext::new(&[], &[]));
+            Arc::new(AccountHandlerContext::new(&[]));
 }
 
 /// Fake implementation of AccountHandlerConnection which provides a rudimentary
