@@ -1,0 +1,9 @@
+{
+    "short_description": "Synaptics USB PHY driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [],
+    "areas": [
+        "USB"
+    ]
+}
