@@ -38,6 +38,12 @@ type Build interface {
 	// GetBootserver returns the path to the bootserver used for paving.
 	GetBootserver(ctx context.Context) (string, error)
 
+	// GetFfx returns the path to the ffx used for flashing.
+	GetFfx(ctx context.Context) (string, error)
+
+	// GetFlashManifest returns the path to the flash manifest used for flashing.
+	GetFlashManifest(ctx context.Context) (string, error)
+
 	// GetPackageRepository returns a Repository for this build.
 	GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error)
 
@@ -75,6 +81,22 @@ func (b *ArtifactsBuild) GetBootserver(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return buildPaver.BootserverPath, nil
+}
+
+func (b *ArtifactsBuild) GetFfx(ctx context.Context) (string, error) {
+	buildFlasher, err := b.getFlasher(ctx)
+	if err != nil {
+		return "", err
+	}
+	return buildFlasher.FfxToolPath, nil
+}
+
+func (b *ArtifactsBuild) GetFlashManifest(ctx context.Context) (string, error) {
+	buildFlasher, err := b.getFlasher(ctx)
+	if err != nil {
+		return "", err
+	}
+	return buildFlasher.FlashManifest, nil
 }
 
 type blob struct {
@@ -335,6 +357,14 @@ func (b *FuchsiaDirBuild) GetBootserver(ctx context.Context) (string, error) {
 	return filepath.Join(b.dir, "host_x64/bootserver_new"), nil
 }
 
+func (b *FuchsiaDirBuild) GetFfx(ctx context.Context) (string, error) {
+	return filepath.Join(b.dir, "host_x64/ffx"), nil
+}
+
+func (b *FuchsiaDirBuild) GetFlashManifest(ctx context.Context) (string, error) {
+	return filepath.Join(b.dir, "flash.json"), nil
+}
+
 func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
 	blobFS := packages.NewDirBlobStore(filepath.Join(b.dir, "amber-files", "repository", "blobs"))
 	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"), blobFS)
@@ -405,6 +435,14 @@ func (b *OmahaBuild) GetBootserver(ctx context.Context) (string, error) {
 	return b.build.GetBootserver(ctx)
 }
 
+func (b *OmahaBuild) GetFfx(ctx context.Context) (string, error) {
+	return b.build.GetFfx(ctx)
+}
+
+func (b *OmahaBuild) GetFlashManifest(ctx context.Context) (string, error) {
+	return b.build.GetFlashManifest(ctx)
+}
+
 // GetPackageRepository returns a Repository for this build.
 func (b *OmahaBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
 	return b.build.GetPackageRepository(ctx, blobFetchMode)
@@ -469,7 +507,72 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 
 // GetFlasher downloads and returns a paver for the build.
 func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
-	return b.build.GetFlasher(ctx)
+	paverDir, err := b.GetPaverDir(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Create a ZBI with the omaha_url argument.
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a ZBI with the omaha_url argument.
+	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
+	imageArguments := map[string]string{
+		"omaha_url": b.omahaUrl,
+	}
+
+	if err := b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {
+		return nil, fmt.Errorf("Failed to create ZBI: %w", err)
+	}
+
+	// Create a vbmeta that includes the ZBI we just created.
+	propFiles := map[string]string{
+		"zbi": destZbiPath,
+	}
+
+	destVbmetaPath := filepath.Join(paverDir, "zircon-a-omaha-test.vbmeta")
+
+	srcVbmetaPath, err := b.GetVbmetaPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find zircon-a vbmeta: %w", err)
+	}
+
+	err = b.avbtool.MakeVBMetaImage(ctx, destVbmetaPath, srcVbmetaPath, propFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create vbmeta: %w", err)
+	}
+
+	ffxToolPath, err := b.GetFfx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	flashManifest, err := b.GetFlashManifest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := ioutil.ReadFile(flashManifest)
+	if err != nil {
+		return nil, err
+	}
+	updatedContent := strings.Replace(string(content), "fuchsia.vbmeta", "zircon-a-omaha-test.vbmeta", -1)
+
+	updatedFlashManifest := filepath.Join(paverDir, "flash_new.json")
+	f, err := os.Create(updatedFlashManifest)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(updatedContent)
+	if err != nil {
+		return nil, err
+	}
+
+	return flasher.NewBuildFlasher(ffxToolPath, updatedFlashManifest, flasher.SSHPublicKey(b.GetSshPublicKey()))
 }
 
 func (b *OmahaBuild) GetSshPublicKey() ssh.PublicKey {
