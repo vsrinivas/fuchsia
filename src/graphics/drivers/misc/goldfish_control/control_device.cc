@@ -123,11 +123,19 @@ zx_status_t Control::Init() {
   }
   address_space_ = fidl::BindSyncClient(std::move(address_space_endpoints->client));
 
-  status = ddk::GoldfishSyncProtocolClient::CreateFromDevice(parent(), "goldfish-sync", &sync_);
+  auto sync_endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncDevice>();
+  if (sync_endpoints.is_error()) {
+    zxlogf(ERROR, "%s: failed to create FIDL endpoints: %s", kTag, sync_endpoints.status_string());
+    return sync_endpoints.status_value();
+  }
+
+  status = DdkConnectFragmentFidlProtocol("goldfish-sync", std::move(sync_endpoints->server));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: goldfish sync fragment is invalid", kTag);
+    zxlogf(ERROR, "%s: failed to connect to FIDL goldfish-sync fragment: %s", kTag,
+           zx_status_get_string(status));
     return status;
   }
+  sync_ = fidl::BindSyncClient(std::move(sync_endpoints->client));
 
   return ZX_OK;
 }
@@ -265,10 +273,10 @@ zx_status_t Control::InitSyncDeviceLocked() {
     return endpoints.status_value();
   }
 
-  zx_status_t status = sync_.CreateTimeline(endpoints->server.TakeChannel());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SyncDevice::CreateTimeline failed: %d", kTag, status);
-    return status;
+  auto result = sync_->CreateTimeline(std::move(endpoints->server));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: SyncDevice::CreateTimeline failed: %s", kTag, result.status_string());
+    return result.status();
   }
 
   sync_timeline_ =

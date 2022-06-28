@@ -311,17 +311,12 @@ class FakeAddressSpaceChild
   zx::channel request_;
 };
 
-class FakeSync : public ddk::GoldfishSyncProtocol<FakeSync, ddk::base_protocol> {
+class FakeSync : public fidl::WireServer<fuchsia_hardware_goldfish::SyncDevice> {
  public:
-  FakeSync() : proto_({&goldfish_sync_protocol_ops_, this}) {}
-
-  const goldfish_sync_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t GoldfishSyncCreateTimeline(zx::channel request) { return ZX_OK; }
-
- private:
-  goldfish_sync_protocol_t proto_;
-  zx::channel request_;
+  void CreateTimeline(CreateTimelineRequestView request,
+                      CreateTimelineCompleter::Sync& completer) override {
+    completer.Reply();
+  }
 };
 
 class ControlDeviceTest : public testing::Test {
@@ -329,7 +324,8 @@ class ControlDeviceTest : public testing::Test {
   ControlDeviceTest()
       : loop_(&kAsyncLoopConfigNeverAttachToThread),
         pipe_server_loop_(&kAsyncLoopConfigNeverAttachToThread),
-        address_space_server_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+        address_space_server_loop_(&kAsyncLoopConfigNeverAttachToThread),
+        sync_server_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
     fake_parent_ = MockDevice::FakeRootParent();
@@ -353,11 +349,19 @@ class ControlDeviceTest : public testing::Test {
           return ZX_OK;
         },
         "goldfish-address-space");
-    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_SYNC, sync_.proto()->ops, sync_.proto()->ctx,
-                              "goldfish-sync");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::SyncDevice>,
+        [this](zx::channel channel) {
+          fidl::BindServer(
+              sync_server_loop_.dispatcher(),
+              fidl::ServerEnd<fuchsia_hardware_goldfish::SyncDevice>(std::move(channel)), &sync_);
+          return ZX_OK;
+        },
+        "goldfish-sync");
 
     pipe_server_loop_.StartThread("goldfish-pipe-fidl-server");
     address_space_server_loop_.StartThread("goldfish-address-space-fidl-server");
+    sync_server_loop_.StartThread("goldfish-sync-fidl-server");
 
     auto dut = std::make_unique<Control>(fake_parent_.get());
     ASSERT_OK(dut->Bind());
@@ -401,6 +405,7 @@ class ControlDeviceTest : public testing::Test {
   async::Loop loop_;
   async::Loop pipe_server_loop_;
   async::Loop address_space_server_loop_;
+  async::Loop sync_server_loop_;
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish::ControlDevice>>
       control_fidl_server_ = std::nullopt;
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_ = {};

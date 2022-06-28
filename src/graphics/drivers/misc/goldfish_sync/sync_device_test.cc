@@ -5,7 +5,6 @@
 #include "src/graphics/drivers/misc/goldfish_sync/sync_device.h"
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
@@ -66,8 +65,8 @@ struct __attribute__((__packed__)) Registers {
 // simulate the real device.
 class TestDevice : public SyncDevice {
  public:
-  explicit TestDevice(zx_device_t* parent, acpi::Client acpi)
-      : SyncDevice(parent, /* can_read_multiple_commands= */ false, std::move(acpi)) {}
+  explicit TestDevice(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
+      : SyncDevice(parent, /* can_read_multiple_commands= */ false, std::move(acpi), dispatcher) {}
   ~TestDevice() = default;
 
   using SyncDevice::RunHostCommand;
@@ -132,7 +131,8 @@ class SyncDeviceTest : public zxtest::Test {
       return nullptr;
     }
 
-    auto dut = std::make_unique<TestDevice>(fake_parent_.get(), std::move(acpi_client.value()));
+    auto dut = std::make_unique<TestDevice>(fake_parent_.get(), std::move(acpi_client.value()),
+                                            async_loop_.dispatcher());
     auto status = dut->Bind();
     EXPECT_OK(status);
     if (status != ZX_OK) {
@@ -245,7 +245,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
 
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   ASSERT_TRUE(endpoints.is_ok());
-  ASSERT_OK(dut->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
+  ASSERT_OK(dut->CreateTimeline(std::move(endpoints->server)));
 
   auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 
@@ -550,7 +550,7 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   ASSERT_TRUE(endpoints.is_ok());
-  ASSERT_OK(dut->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
+  ASSERT_OK(dut->CreateTimeline(std::move(endpoints->server)));
 
   auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 

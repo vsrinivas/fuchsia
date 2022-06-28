@@ -46,9 +46,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_ETH_BOARD:
       proto->ops = &eth_board_protocol_ops_;
       return ZX_OK;
-    case ZX_PROTOCOL_GOLDFISH_SYNC:
-      proto->ops = &goldfish_sync_protocol_ops_;
-      return ZX_OK;
     case ZX_PROTOCOL_GPIO:
       proto->ops = &gpio_protocol_ops_;
       return ZX_OK;
@@ -325,17 +322,6 @@ zx_status_t FragmentProxy::EthBoardResetPhy() {
   req.op = EthBoardOp::RESET_PHY;
 
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-}
-
-zx_status_t FragmentProxy::GoldfishSyncCreateTimeline(zx::channel request) {
-  GoldfishSyncProxyRequest req = {};
-  GoldfishSyncProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_SYNC;
-  req.op = GoldfishSyncOp::CREATE_TIMELINE;
-
-  zx_handle_t channel = request.release();
-  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
-             nullptr);
 }
 
 zx_status_t FragmentProxy::GpioConfigIn(uint32_t flags) {

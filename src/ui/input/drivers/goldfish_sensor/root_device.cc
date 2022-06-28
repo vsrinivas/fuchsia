@@ -104,11 +104,11 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
     auto* sensor_mask_str = reinterpret_cast<const char*>(result.value().data());
     int size_read = sscanf(sensor_mask_str, "%d", &sensor_mask);
     if (size_read != 1) {
-      zxlogf(ERROR, "Invalid list-sensors mask: %s", sensor_mask_str);
+      zxlogf(ERROR, "%s: invalid list-sensors mask: %s", kTag, sensor_mask_str);
       return ZX_ERR_INVALID_ARGS;
     }
   } else {
-    zxlogf(ERROR, "Cannot list sensors!");
+    zxlogf(ERROR, "%s: cannot list sensors!", kTag);
     return ZX_ERR_INTERNAL;
   }
 
@@ -121,9 +121,9 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
         char msg[256];
         snprintf(msg, sizeof(msg), "set:%s:1", kv.second.name.c_str());
         auto_reader_->WriteWithHeader(msg, /* blocking= */ true);
-        zxlogf(INFO, "Created device: %s", kv.second.name.c_str());
+        zxlogf(INFO, "%s: created device: %s", kTag, kv.second.name.c_str());
       } else {
-        zxlogf(ERROR, "Cannot create device: %s", kv.second.name.c_str());
+        zxlogf(ERROR, "%s: cannot create device: %s", kTag, kv.second.name.c_str());
         return create_result.error();
       }
     }

@@ -17,7 +17,6 @@ driver_bind_rules("goldfish_control_composite-bind") {
 common_deps = [
   ":goldfish_control_composite-bind",
   "//sdk/banjo/fuchsia.hardware.goldfish.control:fuchsia.hardware.goldfish.control_banjo_cpp",
-  "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
   "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",

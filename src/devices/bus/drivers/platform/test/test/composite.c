@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/clock/c/banjo.h>
-#include <fuchsia/hardware/goldfish/sync/c/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
@@ -58,7 +57,6 @@ enum Fragments_2 {
 
 enum Fragments_GoldfishControl {
   FRAGMENT_PDEV_GOLDFISH_CTRL, /* Should be 1st fragment */
-  FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL,
   FRAGMENT_COUNT_GOLDFISH_CTRL,
 };
 
@@ -83,24 +81,6 @@ static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = test_release,
 };
-
-static zx_status_t test_goldfish_sync(goldfish_sync_protocol_t* sync) {
-  zx_status_t status;
-
-  zx_handle_t timeline_client, timeline_server;
-  if ((status = zx_channel_create(0u, &timeline_client, &timeline_server)) != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_channel_create failed: %d", DRIVER_NAME, status);
-    return status;
-  }
-
-  // Test |GoldfishSync.CreateTimeline|.
-  if ((status = goldfish_sync_create_timeline(sync, timeline_server)) != ZX_OK) {
-    zxlogf(ERROR, "%s: goldfish_sync_create_timeline failed: %d", DRIVER_NAME, status);
-    return status;
-  }
-
-  return ZX_OK;
-}
 
 static zx_status_t test_gpio(gpio_protocol_t* gpio) {
   zx_status_t status;
@@ -458,7 +438,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   spi_protocol_t spi;
   pwm_protocol_t pwm;
   vreg_protocol_t vreg;
-  goldfish_sync_protocol_t goldfish_sync;
   pci_protocol_t pci;
   power_sensor_protocol_t power_sensor;
 
@@ -646,22 +625,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %d)", DRIVER_NAME, count,
              FRAGMENT_COUNT_GOLDFISH_CTRL);
       return ZX_ERR_BAD_STATE;
-    }
-
-    if (strncmp(fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].name, "goldfish-sync", 32)) {
-      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME,
-             fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].name);
-      return ZX_ERR_INTERNAL;
-    }
-    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].device,
-                                 ZX_PROTOCOL_GOLDFISH_SYNC, &goldfish_sync);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GOLDFISH_SYNC", DRIVER_NAME);
-      return status;
-    }
-    if ((status = test_goldfish_sync(&goldfish_sync)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_goldfish_sync failed: %d", DRIVER_NAME, status);
-      return status;
     }
   }
 

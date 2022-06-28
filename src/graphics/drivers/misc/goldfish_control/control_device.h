@@ -9,7 +9,6 @@
 #include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fpromise/result.h>
@@ -135,7 +134,7 @@ class Control : public ControlType,
   fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_;
   ddk::GoldfishControlProtocolClient control_;
   fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceDevice> address_space_;
-  ddk::GoldfishSyncProtocolClient sync_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncDevice> sync_;
   int32_t id_ = 0;
   zx::bti bti_ TA_GUARDED(lock_);
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);

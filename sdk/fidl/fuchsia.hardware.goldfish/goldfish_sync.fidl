@@ -13,6 +13,7 @@ using zx;
 /// A sync device could maintain multiple "Timelines", each of which can wait on
 /// multiple commands (i.e. "guest->host" commands) and signal specific Fuchsia
 /// events once a command finishes executing on device.
+@discoverable
 protocol SyncDevice {
     /// Create a new sync timeline.
     ///

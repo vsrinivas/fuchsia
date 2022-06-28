@@ -55,6 +55,7 @@ driver_bind_rules("goldfish_control_2_bind") {
     "//src/devices/bind/fuchsia.google.platform",
     "//src/devices/bind/fuchsia.hardware.goldfish.addressspace",
     "//src/devices/bind/fuchsia.hardware.goldfish.pipe",
+    "//src/devices/bind/fuchsia.hardware.goldfish.sync",
   ]
 }
 

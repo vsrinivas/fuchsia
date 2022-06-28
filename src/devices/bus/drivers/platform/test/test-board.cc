@@ -33,11 +33,6 @@ void TestBoard::DdkRelease() { delete this; }
 int TestBoard::Thread() {
   zx_status_t status;
 
-  status = GoldfishSyncInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GoldfishSyncInit failed: %d", __func__, status);
-  }
-
   status = GpioInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
@@ -129,9 +124,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   device_fragment_part_t power_fragment[] = {
       {std::size(power_match), power_match},
   };
-  const zx_bind_inst_t goldfish_sync_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_SYNC),
-  };
   const zx_bind_inst_t gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, 3),
@@ -167,9 +159,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   };
   const zx_bind_inst_t power_sensor_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_SENSOR),
-  };
-  device_fragment_part_t goldfish_sync_fragment[] = {
-      {std::size(goldfish_sync_match), goldfish_sync_match},
   };
   device_fragment_part_t gpio_fragment[] = {
       {std::size(gpio_match), gpio_match},
@@ -217,11 +206,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       .metadata_value = 12345,
   };
 
-  struct composite_test_metadata metadata_goldfish_control = {
-      .composite_device_id = PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE,
-      .metadata_value = 12345,
-  };
-
   const pbus_metadata_t test_metadata_1[] = {{
       .type = DEVICE_METADATA_PRIVATE,
       .data_buffer = reinterpret_cast<uint8_t*>(&metadata_1),
@@ -231,12 +215,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const pbus_metadata_t test_metadata_2[] = {{
       .type = DEVICE_METADATA_PRIVATE,
       .data_buffer = reinterpret_cast<uint8_t*>(&metadata_2),
-      .data_size = sizeof(composite_test_metadata),
-  }};
-
-  const pbus_metadata_t test_metadata_goldfish_control[] = {{
-      .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_goldfish_control),
       .data_size = sizeof(composite_test_metadata),
   }};
 
@@ -275,26 +253,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
 
   status = pbus_composite_device_add(&pbus, &pdev2, reinterpret_cast<uint64_t>(composite2),
                                      std::size(composite2), nullptr);
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
-  }
-
-  device_fragment_t goldfish_composite[] = {
-      {"goldfish-sync", std::size(goldfish_sync_fragment), goldfish_sync_fragment},
-  };
-
-  pbus_dev_t pdev_goldfish_composite = {};
-  pdev_goldfish_composite.name = "composite-dev-goldfish-control";
-  pdev_goldfish_composite.vid = PDEV_VID_TEST;
-  pdev_goldfish_composite.pid = PDEV_PID_PBUS_TEST;
-  pdev_goldfish_composite.did = PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE;
-  pdev_goldfish_composite.metadata_list = test_metadata_goldfish_control;
-  pdev_goldfish_composite.metadata_count = std::size(test_metadata_goldfish_control);
-
-  status = pbus_composite_device_add(&pbus, &pdev_goldfish_composite,
-                                     reinterpret_cast<uint64_t>(goldfish_composite),
-                                     std::size(goldfish_composite), nullptr);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);

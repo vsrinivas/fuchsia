@@ -8,6 +8,7 @@ using fuchsia.goldfish;
 using fuchsia.google.platform;
 using fuchsia.hardware.goldfish.pipe;
 using fuchsia.hardware.goldfish.addressspace;
+using fuchsia.hardware.goldfish.sync;
 
 primary node "goldfish-pipe" {
     fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.goldfish.pipe.BIND_FIDL_PROTOCOL.PIPE;
@@ -21,6 +22,6 @@ node "goldfish-address-space" {
 }
 
 node "goldfish-sync" {
-    fuchsia.BIND_PROTOCOL == fuchsia.goldfish.BIND_PROTOCOL.SYNC;
+    fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.goldfish.sync.BIND_FIDL_PROTOCOL.SYNC;
 }
 

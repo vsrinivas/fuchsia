@@ -45,7 +45,6 @@ fuchsia_driver("test-board-driver") {
   sources = [
     "test-board.cc",
     "test-clock.cc",
-    "test-goldfish.cc",
     "test-gpio.cc",
     "test-i2c.cc",
     "test-pci.cc",
@@ -144,39 +143,6 @@ fuchsia_driver("test-power-driver") {
 fuchsia_driver_component("test-power") {
   component_name = "test-power"
   deps = [ ":test-power-driver" ]
-  info = "test-driver-info.json"
-  colocate = true
-}
-
-driver_bind_rules("test-goldfish-sync-bind") {
-  rules = "test/test-goldfish-sync.bind"
-  header_output = "test-goldfish-sync-bind.h"
-  deps = [
-    "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/fuchsia.test.platform",
-  ]
-}
-
-fuchsia_driver("test-goldfish-sync-driver") {
-  output_name = "test-goldfish-sync"
-  configs += [ "//build/config:all_source" ]
-  sources = [ "test/goldfish_sync.cc" ]
-  deps = [
-    ":test-goldfish-sync-bind",
-    "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-fuchsia_driver_component("test-goldfish-sync") {
-  component_name = "test-goldfish-sync"
-  deps = [ ":test-goldfish-sync-driver" ]
   info = "test-driver-info.json"
   colocate = true
 }
@@ -403,7 +369,6 @@ fuchsia_driver("test-composite-driver") {
   deps = [
     ":test-composite-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
@@ -497,7 +462,6 @@ fuchsia_unittest_package("platform-bus-test") {
     ":test-child-2.proxy",
     ":test-clock",
     ":test-composite",
-    ":test-goldfish-sync",
     ":test-gpio",
     ":test-i2c",
     ":test-pci",

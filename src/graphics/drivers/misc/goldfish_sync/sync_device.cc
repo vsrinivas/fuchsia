@@ -4,6 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_sync/sync_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish/cpp/markers.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -11,6 +12,9 @@
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -43,8 +47,11 @@ zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
   if (client.is_error()) {
     return client.status_value();
   }
+
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
   auto sync_device = std::make_unique<goldfish::sync::SyncDevice>(
-      device, /* can_read_multiple_commands= */ true, std::move(client.value()));
+      device, /* can_read_multiple_commands= */ true, std::move(client.value()), dispatcher);
 
   zx_status_t status = sync_device->Bind();
   if (status == ZX_OK) {
@@ -54,11 +61,13 @@ zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client)
+SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client,
+                       async_dispatcher_t* dispatcher)
     : SyncDeviceType(parent),
       can_read_multiple_commands_(can_read_multiple_commands),
       acpi_fidl_(std::move(client)),
-      loop_(&kAsyncLoopConfigNeverAttachToThread) {
+      loop_(&kAsyncLoopConfigNeverAttachToThread),
+      dispatcher_(dispatcher) {
   loop_.StartThread("goldfish-sync-loop-thread");
 }
 
@@ -76,7 +85,7 @@ zx_status_t SyncDevice::Bind() {
   auto bti_result = acpi_fidl_.borrow()->GetBti(0);
   if (!bti_result.ok() || bti_result->is_error()) {
     zx_status_t status = bti_result.ok() ? bti_result->error_value() : bti_result.status();
-    zxlogf(ERROR, "GetBti failed: %d %d", status, bti_result.ok());
+    zxlogf(ERROR, "GetBti failed: %s", zx_status_get_string(status));
     return status;
   }
   bti_ = std::move(bti_result->value()->bti);
@@ -84,7 +93,7 @@ zx_status_t SyncDevice::Bind() {
   auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
   if (!mmio_result.ok() || mmio_result->is_error()) {
     zx_status_t status = mmio_result.ok() ? mmio_result->error_value() : mmio_result.status();
-    zxlogf(ERROR, "GetMmio failed: %d", status);
+    zxlogf(ERROR, "GetMmio failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -94,7 +103,7 @@ zx_status_t SyncDevice::Bind() {
     zx_status_t status = fdf::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "mmiobuffer create failed: %d", status);
+      zxlogf(ERROR, "mmiobuffer create failed: %s", zx_status_get_string(status));
       return status;
     }
   }
@@ -121,7 +130,7 @@ zx_status_t SyncDevice::Bind() {
   static_assert(sizeof(CommandBuffers) <= PAGE_SIZE, "cmds size");
   zx_status_t status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "io_buffer_init failed: %d", status);
+    zxlogf(ERROR, "io_buffer_init failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -146,28 +155,50 @@ zx_status_t SyncDevice::Bind() {
 
   mmio_->Write32(0, SYNC_REG_INIT);
 
-  return DdkAdd(ddk::DeviceAddArgs("goldfish-sync").set_proto_id(ZX_PROTOCOL_GOLDFISH_SYNC));
+  outgoing_.emplace(loop_.dispatcher());
+  outgoing_->svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::SyncDevice>,
+      fbl::MakeRefCounted<fs::Service>(
+          [device = this](fidl::ServerEnd<fuchsia_hardware_goldfish::SyncDevice> request) mutable {
+            fidl::BindServer(device->dispatcher_, std::move(request), device);
+            return ZX_OK;
+          }));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  status = outgoing_->Serve(std::move(endpoints->server));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to service the outgoing directory: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::SyncDevice>,
+  };
+
+  return DdkAdd(ddk::DeviceAddArgs("goldfish-sync")
+                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                    .set_fidl_protocol_offers(offers)
+                    .set_outgoing_dir(endpoints->client.TakeChannel())
+                    .set_proto_id(ZX_PROTOCOL_GOLDFISH_SYNC));
 }
 
 void SyncDevice::DdkRelease() { delete this; }
 
-zx_status_t SyncDevice::GoldfishSyncCreateTimeline(zx::channel request) {
+zx_status_t SyncDevice::CreateTimeline(
+    fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline> request) {
   fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
   timelines_.push_back(timeline);
-  zx_status_t status =
-      timeline->Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline>(std::move(request)));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "CreateTimeline: Cannot bind timeline, status = %d", status);
-    timeline->RemoveFromContainer();
-  }
-  return status;
+  timeline->Bind(std::move(request));
+  return ZX_OK;
 }
 
 void SyncDevice::CreateTimeline(CreateTimelineRequestView request,
                                 CreateTimelineCompleter::Sync& completer) {
-  fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
-  timelines_.push_back(timeline);
-  timeline->Bind(std::move(request->timeline_req));
+  CreateTimeline(std::move(request->timeline_req));
   completer.Reply();
 }
 
@@ -288,7 +319,7 @@ int SyncDevice::IrqHandler() {
       // ZX_ERR_CANCELED means the ACPI irq is cancelled, and the interrupt
       // thread should exit normally.
       if (status != ZX_ERR_CANCELED) {
-        zxlogf(ERROR, "irq.wait() got %d", status);
+        zxlogf(ERROR, "irq.wait() got %s", zx_status_get_string(status));
       }
       break;
     }
@@ -322,9 +353,9 @@ zx_status_t SyncTimeline::Bind(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTi
 void SyncTimeline::OnClose(fidl::UnbindInfo info, zx::channel channel) {
   if (!info.is_user_initiated()) {
     if (info.is_peer_closed()) {
-      zxlogf(INFO, "Client closed SyncTimeline connection");
+      zxlogf(INFO, "client closed SyncTimeline connection");
     } else {
-      zxlogf(ERROR, "Channel internal error: %s", info.FormatDescription().c_str());
+      zxlogf(ERROR, "channel internal error: %s", info.FormatDescription().c_str());
     }
   }
 
@@ -383,7 +414,8 @@ void SyncTimeline::CreateFence(zx::eventpair event, std::optional<uint64_t> seqn
                                                           const zx_packet_signal_t* signal) {
           if (signal == nullptr || (signal->observed & ZX_EVENTPAIR_PEER_CLOSED)) {
             if (status != ZX_OK && status != ZX_ERR_CANCELED) {
-              zxlogf(ERROR, "CreateFence: Unexpected Wait status: %d", status);
+              zxlogf(ERROR, "CreateFence: Unexpected Wait status: %s",
+                     zx_status_get_string(status));
             }
             // Since |fence| holds the async Wait (and its lambda captures),
             // when |fence| is deleted, there will be no references to

@@ -6,12 +6,12 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_SYNC_SYNC_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/eventpair.h>
@@ -43,12 +43,12 @@ using SyncDeviceType =
 
 class SyncTimeline;
 
-class SyncDevice : public SyncDeviceType,
-                   public ddk::GoldfishSyncProtocol<SyncDevice, ddk::base_protocol> {
+class SyncDevice : public SyncDeviceType {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client);
+  SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client,
+             async_dispatcher_t* dispatcher);
   ~SyncDevice();
 
   zx_status_t Bind();
@@ -56,8 +56,7 @@ class SyncDevice : public SyncDeviceType,
   // Device protocol implementation.
   void DdkRelease();
 
-  // |ddk.protocol.goldfish.sync|
-  zx_status_t GoldfishSyncCreateTimeline(zx::channel request);
+  zx_status_t CreateTimeline(fidl::ServerEnd<fuchsia_hardware_goldfish::SyncTimeline> request);
 
   // |fidl::WireServer<fuchsia_hardware_goldfish::Sync>|
   void CreateTimeline(CreateTimelineRequestView request,
@@ -114,6 +113,8 @@ class SyncDevice : public SyncDeviceType,
   std::optional<fdf::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
 
   async::Loop loop_;
+  std::optional<svc::Outgoing> outgoing_;
+  async_dispatcher_t* dispatcher_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(SyncDevice);
 };

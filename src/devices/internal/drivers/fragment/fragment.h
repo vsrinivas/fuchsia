@@ -14,7 +14,6 @@
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <fuchsia/hardware/ge2d/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
@@ -76,7 +75,6 @@ class Fragment : public FragmentBase {
         canvas_client_(parent, ZX_PROTOCOL_AMLOGIC_CANVAS),
         clock_client_(parent, ZX_PROTOCOL_CLOCK),
         eth_board_client_(parent, ZX_PROTOCOL_ETH_BOARD),
-        goldfish_sync_client_(parent, ZX_PROTOCOL_GOLDFISH_SYNC),
         gpio_client_(parent, ZX_PROTOCOL_GPIO),
         hdmi_client_(parent, ZX_PROTOCOL_HDMI),
         i2c_client_(parent, ZX_PROTOCOL_I2C),
@@ -136,10 +134,6 @@ class Fragment : public FragmentBase {
                           uint32_t* out_resp_size, zx::handle* req_handles,
                           uint32_t req_handle_count, zx::handle* resp_handles,
                           uint32_t* resp_handle_count);
-  zx_status_t RpcGoldfishSync(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count);
   zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -200,7 +194,6 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::AmlogicCanvasProtocolClient, amlogic_canvas_protocol_t> canvas_client_;
   ProtocolClient<ddk::ClockProtocolClient, clock_protocol_t> clock_client_;
   ProtocolClient<ddk::EthBoardProtocolClient, eth_board_protocol_t> eth_board_client_;
-  ProtocolClient<ddk::GoldfishSyncProtocolClient, goldfish_sync_protocol_t> goldfish_sync_client_;
   ProtocolClient<ddk::GpioProtocolClient, gpio_protocol_t> gpio_client_;
   ProtocolClient<ddk::HdmiProtocolClient, hdmi_protocol_t> hdmi_client_;
   ProtocolClient<ddk::I2cProtocolClient, i2c_protocol_t> i2c_client_;
