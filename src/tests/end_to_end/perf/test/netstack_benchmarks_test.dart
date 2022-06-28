@@ -38,4 +38,13 @@ void main() {
         commandArgs:
             '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
   }, timeout: Timeout.none);
+
+  test('udp_serde_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponentV2(
+        packageName: 'udp-serde-benchmarks',
+        componentName: 'udp-serde-benchmarks.cm',
+        commandArgs:
+            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+  }, timeout: Timeout.none);
 }

@@ -234,11 +234,23 @@ shared_library("udp_serde") {
   deps = [ "//src/lib/fxl" ]
 }
 
+source_set("udp_serde_test_util") {
+  testonly = true
+
+  sources = [
+    "udp_serde_test_util.cc",
+    "udp_serde_test_util.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp" ]
+}
+
 test("udp_serde_test") {
   sources = [ "udp_serde_test.cc" ]
 
   deps = [
     ":udp_serde",
+    ":udp_serde_test_util",
     "//sdk/lib/fidl/llcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
