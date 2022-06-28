@@ -29,6 +29,5 @@ executable("bin") {
 }
 
 fuchsia_shell_package("virtual_audio_util") {
-  manifest = "meta/virtual_audio.cmx"
   deps = [ ":bin" ]
 }
