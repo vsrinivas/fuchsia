@@ -8,7 +8,7 @@
 #ifndef SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 #define SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -77,7 +77,7 @@ class SystemMetricsDaemon {
   // be null because InitializeLogger() will not be invoked. Instead,
   // pass a non-null |logger| which may be a local mock that does not use FIDL.
   SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-                      fuchsia::cobalt::Logger_Sync* logger,
+                      fuchsia::metrics::MetricEventLogger_Sync* logger,
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener,
@@ -174,9 +174,9 @@ class SystemMetricsDaemon {
 
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
-  fuchsia::cobalt::LoggerFactorySyncPtr factory_;
-  fuchsia::cobalt::LoggerSyncPtr logger_fidl_proxy_;
-  fuchsia::cobalt::Logger_Sync* logger_;
+  fuchsia::metrics::MetricEventLoggerFactorySyncPtr factory_;
+  fuchsia::metrics::MetricEventLoggerSyncPtr logger_fidl_proxy_;
+  fuchsia::metrics::MetricEventLogger_Sync* logger_;
   std::chrono::steady_clock::time_point start_time_;
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;

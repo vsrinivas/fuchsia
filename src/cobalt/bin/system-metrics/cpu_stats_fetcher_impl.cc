@@ -5,7 +5,6 @@
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 
 #include <fcntl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>

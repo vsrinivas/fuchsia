@@ -13,9 +13,9 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.kernel.Stats",
                 "fuchsia.logger.LogSink",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",

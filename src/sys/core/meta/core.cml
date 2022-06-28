@@ -870,7 +870,6 @@
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
-                "#cobalt_system_metrics",
                 "#pkg-resolver",
                 "#sampler",
 
@@ -884,6 +883,7 @@
             protocol: "fuchsia.metrics.MetricEventLoggerFactory",
             from: "#cobalt",
             to: [
+                "#cobalt_system_metrics",
                 "#feedback",
                 "#log-stats",
                 "#sampler",
