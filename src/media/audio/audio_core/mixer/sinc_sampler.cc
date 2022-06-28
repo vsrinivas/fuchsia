@@ -10,14 +10,15 @@
 #include <limits>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/mixer/position_manager.h"
 #include "src/media/audio/lib/processing/channel_strip.h"
 #include "src/media/audio/lib/processing/filter.h"
+#include "src/media/audio/lib/processing/position_manager.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
 
 using ::media_audio::ChannelStrip;
+using ::media_audio::PositionManager;
 using ::media_audio::SincFilter;
 
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
@@ -163,8 +164,8 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
 
   // If we don't have enough source or dest to mix even one frame, get out. Before leaving, if we've
   // reached the end of the source buffer, then cache the last few source frames for the next mix.
-  if (!position_.FrameCanBeMixed()) {
-    if (position_.SourceIsConsumed()) {
+  if (!position_.CanFrameBeMixed()) {
+    if (position_.IsSourceConsumed()) {
       const auto frames_needed = source_frames - next_source_idx_to_copy;
       if (frac_source_offset > 0) {
         working_data_.ShiftBy(Ceiling(frac_source_offset));
@@ -197,7 +198,7 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
     PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
                                  &working_data_, next_cache_idx_to_fill);
 
-    while (position_.FrameCanBeMixed()) {
+    while (position_.CanFrameBeMixed()) {
       next_source_idx_to_copy += frames_needed;
 
       int64_t frac_cache_offset = frac_source_offset - frac_source_offset_to_cache;
@@ -210,7 +211,7 @@ inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
                        next_source_idx_to_copy, "cache_center_idx", cache_center_idx);
       }
 
-      while (position_.FrameCanBeMixed() &&
+      while (position_.CanFrameBeMixed() &&
              frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength) {
         auto dest_frame = position_.CurrentDestFrame();
         if constexpr (GainType == media_audio::GainType::kRamping) {
@@ -265,7 +266,9 @@ void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
   // including the center in its count (as PositionManager and Filter::Length do). Any distinction
   // between filter length/filter width would go away. We would use pos_filter_width() here.
   PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), frac_filter_length_, info);
+                                  source_offset_ptr->raw_value(), frac_filter_length_,
+                                  info->step_size.raw_value(), info->rate_modulo(),
+                                  info->denominator(), info->source_pos_modulo);
 
   if (info->gain.IsUnity()) {
     return accumulate ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames,

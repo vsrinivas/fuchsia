@@ -45,6 +45,8 @@ source_set("sampler") {
     "gain.h",
     "point_sampler.cc",
     "point_sampler.h",
+    "position_manager.cc",
+    "position_manager.h",
     "sampler.h",
   ]
 
@@ -124,6 +126,7 @@ executable("unittest-bin") {
     "gain_control_unittest.cc",
     "gain_unittest.cc",
     "point_sampler_unittest.cc",
+    "position_manager_unittest.cc",
     "sampler_unittest.cc",
   ]
 
@@ -135,6 +138,7 @@ executable("unittest-bin") {
     "//src/media/audio/lib/format2",
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
+    "//zircon/system/ulib/trace",
   ]
 }
 

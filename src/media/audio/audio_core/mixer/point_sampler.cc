@@ -11,11 +11,11 @@
 #include <utility>
 
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
-#include "src/media/audio/audio_core/mixer/position_manager.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/processing/point_sampler.h"
+#include "src/media/audio/lib/processing/position_manager.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
@@ -23,6 +23,7 @@ namespace media::audio::mixer {
 namespace {
 
 using ::media_audio::Fixed;
+using ::media_audio::PositionManager;
 using ::media_audio::Sampler;
 
 fuchsia_mediastreams::wire::AudioSampleFormat ToNewSampleFormat(
@@ -71,9 +72,10 @@ void PointSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offse
   TRACE_DURATION("audio", "PointSampler::Mix");
 
   auto info = &bookkeeping();
-  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(),
-                                  point_sampler_->pos_filter_length().raw_value(), info);
+  PositionManager::CheckPositions(
+      dest_frames, dest_offset_ptr, source_frames, source_offset_ptr->raw_value(),
+      point_sampler_->pos_filter_length().raw_value(), info->step_size.raw_value(),
+      info->rate_modulo(), info->denominator(), info->source_pos_modulo);
 
   Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
   Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};

@@ -23,8 +23,6 @@ source_set("mixer") {
     "output_producer.h",
     "point_sampler.cc",
     "point_sampler.h",
-    "position_manager.cc",
-    "position_manager.h",
     "sinc_sampler.cc",
     "sinc_sampler.h",
   ]
@@ -88,7 +86,6 @@ executable("mixer_unittest_bin") {
     "no_op_unittest.cc",
     "output_producer_unittest.cc",
     "point_sampler_unittest.cc",
-    "position_manager_unittest.cc",
     "sinc_sampler_unittest.cc",
     "source_info_unittest.cc",
   ]
