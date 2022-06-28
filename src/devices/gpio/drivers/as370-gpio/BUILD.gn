@@ -4,22 +4,23 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
-bind_rules("as370-gpio-bind") {
+driver_bind_rules("as370-gpio-bind") {
   rules = "as370-gpio.bind"
-  output = "as370-gpio-bind.h"
+  header_output = "as370-gpio-bind.h"
+  bind_output = "as370-gpio.bindbc"
   tests = "as370-gpio-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
-driver_module("as370-gpio") {
+fuchsia_driver("as370-gpio-driver") {
+  output_name = "as370-gpio"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-gpio.cc" ]
   deps = [
     ":as370-gpio-bind",
@@ -31,14 +32,20 @@ driver_module("as370-gpio") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
   ]
 }
 
+fuchsia_driver_component("as370-gpio") {
+  component_name = "as370-gpio"
+  deps = [ ":as370-gpio-driver" ]
+  info = "as370-gpio-info.json"
+  colocate = true
+}
+
 test("as370-gpio-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "as370-gpio-test"
   configs += [ "//build/config:all_source" ]
   sources = [
@@ -57,11 +64,11 @@ test("as370-gpio-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

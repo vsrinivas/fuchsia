@@ -6,10 +6,10 @@
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -344,6 +344,10 @@ zx_status_t As370Gpio::GpioImplSetAltFunction(uint32_t index, uint64_t function)
 
 zx_status_t As370Gpio::GpioImplSetDriveStrength(uint32_t index, uint64_t ua,
                                                 uint64_t* out_actual_ua) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t As370Gpio::GpioImplGetDriveStrength(uint32_t index, uint64_t* out_value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

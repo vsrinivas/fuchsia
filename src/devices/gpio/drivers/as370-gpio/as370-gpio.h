@@ -43,6 +43,7 @@ class As370Gpio : public ddk::Device<As370Gpio, ddk::Unbindable>,
   zx_status_t GpioImplGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
   zx_status_t GpioImplReleaseInterrupt(uint32_t index);
   zx_status_t GpioImplSetPolarity(uint32_t index, gpio_polarity_t polarity);
+  zx_status_t GpioImplGetDriveStrength(uint32_t index, uint64_t* out_value);
 
   zx_status_t Init();
   void Shutdown();
