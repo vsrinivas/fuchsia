@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    "include": [
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
-        "//src/sys/test_manager/system-test.shard.cml",
-        "//src/sys/test_runners/gtest/default.shard.cml"
     ],
-    "program": {
-        "binary": "bin/flatland_display_compositor_pixeltests"
+    program: {
+        binary: "bin/flatland_display_compositor_pixeltests",
     },
     children: [
         {

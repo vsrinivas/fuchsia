@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/sys/test_manager/system-test.shard.cml",
         "inspect/client.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

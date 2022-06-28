@@ -11,8 +11,8 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework.
 {
     include: [
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
 

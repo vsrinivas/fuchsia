@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 {
     include: [
-        // The Dart runner depends on fuchsia.posix.socket.Provider,
-        // which is a system-test capability.
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+
+        // The Dart runner depends on fuchsia.posix.socket.Provider,
+        // which is a system-test capability.
+        "sys/testing/system-test.shard.cml",
     ],
     use: [
         { protocol: "fuchsia.sys2.EventSource" },

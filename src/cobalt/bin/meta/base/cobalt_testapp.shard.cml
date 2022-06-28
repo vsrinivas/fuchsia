@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 {
     include: [
-        // Depends on config_data which is a system capability.
-        "//src/sys/test_manager/system-test.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
+
+        // Depends on config_data which is a system capability.
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

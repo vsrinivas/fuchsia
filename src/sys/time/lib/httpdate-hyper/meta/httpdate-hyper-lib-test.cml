@@ -4,11 +4,11 @@
 {
     include: [
         "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
-
-        // This test depends on root ssl certificate which is a system capability.
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
+
+        // This test depends on root ssl certificate which is a system capability.
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
