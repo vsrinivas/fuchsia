@@ -243,9 +243,14 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // Sets this aspace as being latency sensitive. This cannot be undone.
   void MarkAsLatencySensitive();
 
+  // Returns whether this aspace is a guest physical address space.
+  // TODO(fxbug.dev/103417): Rationalize usage of `is_user` and `is_guest_phys`.
+  bool is_guest_phys() const { return type_ == Type::GuestPhys; }
+
   // Encodes the idea that we can always unmap from user aspaces.
   ArchVmAspace::EnlargeOperation EnlargeArchUnmap() const {
-    return is_user() ? ArchVmAspace::EnlargeOperation::Yes : ArchVmAspace::EnlargeOperation::No;
+    return is_user() || is_guest_phys() ? ArchVmAspace::EnlargeOperation::Yes
+                                        : ArchVmAspace::EnlargeOperation::No;
   }
 
   // internal page fault routine, friended to be only called by vmm_page_fault_handler

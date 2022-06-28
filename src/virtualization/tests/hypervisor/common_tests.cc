@@ -271,4 +271,14 @@ TEST(Guest, VcpuDeleteFromOtherThread) {
   t.join();
 }
 
+TEST(Guest, VmarProtect) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
+
+  ASSERT_EQ(ZX_OK, test.vmar.protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, 0,
+                                     PAGE_SIZE));
+
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
+}
+
 }  // namespace
