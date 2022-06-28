@@ -17,7 +17,7 @@ use {
 
 /// Reading from the v1/CMX hub is flaky while components are being added/removed.
 /// Attempt to get CMX instances several times before calling it a failure.
-const CMX_HUB_RETRY_ATTEMPTS: u64 = 3;
+const CMX_HUB_RETRY_ATTEMPTS: u64 = 10;
 
 #[derive(PartialEq, Debug)]
 pub enum InstanceState {
