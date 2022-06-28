@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, Error};
-use argh::FromArgs;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
@@ -12,27 +11,68 @@ use std::env::{split_paths, var_os};
 use std::ffi::{CStr, CString};
 use std::path::{Component, PathBuf};
 
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(
-    name = "chroot",
-    description = "Runs a binary after changing the root to the component's namespace/exposed/out directory",
-    note = "This binary's behavior is determined by the name it was launched as.
-    
-`chns` sets the `/ns` directory as the root for the binary
-`chexp` sets the `/exposed` directory as the root for the binary
-`chout` sets the `/out` directory as the root for the binary
+enum ChrootMode {
+    Namespace,
+    Out,
+    Exposed,
+}
 
-This binary is built to work with dash-launcher."
-)]
+struct ChrootParams {
+    /// exposed/out/namespace
+    pub mode: ChrootMode,
 
-pub struct ChrootParams {
-    #[argh(positional)]
     /// path/name of binary
     pub bin_path: PathBuf,
 
-    #[argh(positional)]
     /// arguments to be passed to binary
     pub argv: Vec<String>,
+}
+
+impl ChrootParams {
+    fn from_env() -> Self {
+        let mut args = std::env::args();
+
+        let self_bin_path = args.next().unwrap();
+        let self_bin_path = PathBuf::from(self_bin_path);
+        let mode = if self_bin_path.ends_with("chns") {
+            ChrootMode::Namespace
+        } else if self_bin_path.ends_with("chout") {
+            ChrootMode::Out
+        } else {
+            ChrootMode::Exposed
+        };
+
+        let bin_path = if let Some(arg) = args.next() {
+            arg
+        } else {
+            Self::exit_help(self_bin_path, mode);
+        };
+        let bin_path = PathBuf::from(bin_path);
+
+        let argv: Vec<String> = args.collect();
+
+        Self { mode, bin_path, argv }
+    }
+
+    pub fn exit_help(self_bin_path: PathBuf, mode: ChrootMode) -> ! {
+        let dir = match mode {
+            ChrootMode::Exposed => "exposed",
+            ChrootMode::Namespace => "namespace",
+            ChrootMode::Out => "outgoing",
+        };
+
+        eprintln!(
+            "{} <binary> <arguments>
+
+Runs a binary after changing the root to the component's {} directory
+
+This binary is built to work with dash-launcher.",
+            self_bin_path.display(),
+            dir
+        );
+
+        std::process::exit(1);
+    }
 }
 
 fn resolve_binary_path(bin_path: PathBuf) -> Result<PathBuf, Error> {
@@ -61,8 +101,7 @@ fn resolve_binary_path(bin_path: PathBuf) -> Result<PathBuf, Error> {
 
 #[fuchsia::main(logging = false)]
 async fn main() -> Result<(), Error> {
-    let params: ChrootParams = argh::from_env();
-    let self_bin_path = std::env::args().next().unwrap();
+    let params = ChrootParams::from_env();
 
     // Get a path to the binary (use the PATH variable if needed)
     let bin_path = resolve_binary_path(params.bin_path)?;
@@ -80,14 +119,11 @@ async fn main() -> Result<(), Error> {
     let argv: Vec<CString> = argv.into_iter().map(|a| CString::new(a).unwrap()).collect();
     let argv_ref: Vec<&CStr> = argv.iter().map(|s| s.as_c_str()).collect();
 
-    // Create the namespace for the binary based on our name
-    let (local_path, new_path) = if self_bin_path.ends_with("chns") {
-        ("/ns", "/")
-    } else if self_bin_path.ends_with("chout") {
-        ("/out", "/")
-    } else {
-        // The /exposed directory puts protocols at the top-level.
-        ("/exposed", "/svc")
+    // Create the namespace for the binary based on the mode
+    let (local_path, new_path) = match params.mode {
+        ChrootMode::Namespace => ("/ns", "/"),
+        ChrootMode::Exposed => ("/exposed", "/svc"),
+        ChrootMode::Out => ("/out", "/"),
     };
 
     let local_dir = fuchsia_fs::open_directory_in_namespace(
