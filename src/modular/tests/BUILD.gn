@@ -50,7 +50,7 @@ executable("agent_services_test") {
 }
 
 fuchsia_unittest_component("agent-services-test") {
-  manifest = "meta/agent_services_test.cmx"
+  manifest = "meta/agent_services_test.cml"
   deps = [ ":agent_services_test" ]
 }
 
@@ -70,7 +70,7 @@ executable("agent_restart_test") {
 }
 
 fuchsia_unittest_component("agent-restart-test") {
-  manifest = "meta/agent_restart_test.cmx"
+  manifest = "meta/agent_restart_test.cml"
   deps = [ ":agent_restart_test" ]
 }
 
@@ -90,7 +90,7 @@ executable("agent_session_restart_test") {
 }
 
 fuchsia_unittest_component("agent-session-restart-test") {
-  manifest = "meta/agent_session_restart_test.cmx"
+  manifest = "meta/agent_session_restart_test.cml"
   deps = [ ":agent_session_restart_test" ]
 }
 
@@ -135,7 +135,7 @@ executable("session_shell_test") {
 }
 
 fuchsia_unittest_component("session-shell-test") {
-  manifest = "meta/session_shell_test.cmx"
+  manifest = "meta/session_shell_test.cml"
   deps = [ ":session_shell_test" ]
 }
 
@@ -230,7 +230,7 @@ executable("intents_test") {
 }
 
 fuchsia_unittest_component("intents-test") {
-  manifest = "meta/intents_test.cmx"
+  manifest = "meta/intents_test.cml"
   deps = [ ":intents_test" ]
 }
 
@@ -253,7 +253,7 @@ executable("module_context_test") {
 }
 
 fuchsia_unittest_component("module-context-test") {
-  manifest = "meta/module_context_test.cmx"
+  manifest = "meta/module_context_test.cml"
   deps = [ ":module_context_test" ]
 }
 
@@ -303,7 +303,7 @@ executable("story_shell_factory_test") {
 }
 
 fuchsia_unittest_component("story-shell-factory-test") {
-  manifest = "meta/story_shell_factory_test.cmx"
+  manifest = "meta/story_shell_factory_test.cml"
   deps = [ ":story_shell_factory_test" ]
 }
 
@@ -327,7 +327,7 @@ executable("story_shell_test") {
 }
 
 fuchsia_unittest_component("story-shell-test") {
-  manifest = "meta/story_shell_test.cmx"
+  manifest = "meta/story_shell_test.cml"
   deps = [ ":story_shell_test" ]
 }
 
@@ -346,7 +346,7 @@ executable("component_context_test") {
 }
 
 fuchsia_unittest_component("component-context-test") {
-  manifest = "meta/component_context_test.cmx"
+  manifest = "meta/component_context_test.cml"
   deps = [ ":component_context_test" ]
 }
 
@@ -370,7 +370,7 @@ executable("element_manager_test") {
 }
 
 fuchsia_unittest_component("element-manager-test") {
-  manifest = "meta/element_manager_test.cmx"
+  manifest = "meta/element_manager_test.cml"
   deps = [ ":element_manager_test" ]
 }
 
@@ -391,7 +391,7 @@ executable("stories_share_session_runners_test") {
 }
 
 fuchsia_unittest_component("stories-share-session-runners-test") {
-  manifest = "meta/stories_share_session_runners_test.cmx"
+  manifest = "meta/stories_share_session_runners_test.cml"
   deps = [ ":stories_share_session_runners_test" ]
 }
 
@@ -429,7 +429,7 @@ executable("annotations_test") {
 }
 
 fuchsia_unittest_component("annotations-test") {
-  manifest = "meta/annotations_test.cmx"
+  manifest = "meta/annotations_test.cml"
   deps = [ ":annotations_test" ]
 }
 

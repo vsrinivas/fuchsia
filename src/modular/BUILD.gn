@@ -40,7 +40,7 @@ group("tests") {
 
 fuchsia_unittest_package("modular_lib_tests") {
   deps = [ "//src/modular/lib:modular_lib_unittests" ]
-  manifest = "meta/modular_lib_unittests.cmx"
+  manifest = "meta/modular_lib_unittests.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

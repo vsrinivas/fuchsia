@@ -312,7 +312,7 @@ executable("basemgr_non_hermetic_test") {
 }
 
 fuchsia_unittest_component("basemgr-non-hermetic-test") {
-  manifest = "meta/basemgr_non_hermetic_test.cmx"
+  manifest = "meta/basemgr_non_hermetic_test.cml"
   deps = [ ":basemgr_non_hermetic_test" ]
 }
 
