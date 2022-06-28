@@ -13282,6 +13282,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Draw", "from", "the", "kernel", "'", "s", "CPRNG", "."
       ],
       "requirements": [
+        "None", "."
       ],
       "arguments": [
         {
@@ -13310,6 +13311,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Add", "entropy", "to", "the", "kernel", "CPRNG", "."
       ],
       "requirements": [
+        "None", "."
       ],
       "arguments": [
         {

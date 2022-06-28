@@ -12,12 +12,14 @@ protocol cprng {
     });
 
     /// Draw from the kernel's CPRNG.
+    /// Rights: None.
     @vdsocall
     cprng_draw() -> (struct {
         buffer vector_void;
     });
 
     /// Add entropy to the kernel CPRNG.
+    /// Rights: None.
     cprng_add_entropy(struct {
         buffer vector_void;
     }) -> (struct {
