@@ -7,7 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zxio/zxio.h>
 
 #include <thread>
@@ -53,13 +54,13 @@ class AgisTest : public testing::Test {
 
     context->svc()->Connect(component_registry_.NewRequest(loop_->dispatcher()));
     component_registry_.set_error_handler([this](zx_status_t status) {
-      FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler ComponentRegistry");
+      FX_SLOG(ERROR, "AgisTest::ErrHandler ComponentRegistry");
       loop_->Quit();
     });
 
     context->svc()->Connect(observer_.NewRequest(loop_->dispatcher()));
     observer_.set_error_handler([this](zx_status_t status) {
-      FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler Observer");
+      FX_SLOG(ERROR, "AgisTest::ErrHandler Observer");
       loop_->Quit();
     });
 
@@ -111,8 +112,8 @@ class AgisTest : public testing::Test {
       fuchsia::gpu::agis::Observer_Vtcs_Response response(std::move(result.response()));
       std::vector<fuchsia::gpu::agis::Vtc> vtcs(response.ResultValue_());
       for (auto &vtc : vtcs) {
-        FX_LOGF(INFO, "agis-test", "AgisTest::Vtc \"%lu\" \"%s\"", vtc.process_koid(),
-                vtc.process_name().c_str());
+        FX_SLOG(INFO, "AgisTest::Vtc", KV("process_koid", vtc.process_koid()),
+                KV("process_name", vtc.process_name().c_str()));
       }
       num_vtcs_ = vtcs.size();
       outstanding--;
@@ -254,8 +255,7 @@ TEST(AgisDisconnect, Main) {
     fuchsia::gpu::agis::ComponentRegistryPtr component_registry;
     context->svc()->Connect(component_registry.NewRequest(loop->dispatcher()));
     component_registry.set_error_handler([&loop](zx_status_t status) {
-      FX_LOGF(ERROR, "agis-test", "Register Disconnect ComponentRegistry ErrHandler - status %d",
-              status);
+      FX_SLOG(ERROR, "Register Disconnect ComponentRegistry ErrHandler", KV("status", status));
       if (loop) {
         loop->Quit();
       }
@@ -272,7 +272,7 @@ TEST(AgisDisconnect, Main) {
     fuchsia::gpu::agis::ObserverPtr observer;
     context->svc()->Connect(observer.NewRequest(loop->dispatcher()));
     observer.set_error_handler([&loop](zx_status_t status) {
-      FX_LOGF(ERROR, "agis-test", "Register Disconnect Observer ErrHandler - status %d", status);
+      FX_SLOG(ERROR, "Register Disconnect Observer ErrHandler", KV("status", status));
       if (loop) {
         loop->Quit();
       }
@@ -301,7 +301,7 @@ TEST(AgisDisconnect, Main) {
   fuchsia::gpu::agis::ObserverPtr observer;
   context->svc()->Connect(observer.NewRequest(loop->dispatcher()));
   observer.set_error_handler([&loop](zx_status_t status) {
-    FX_LOGF(ERROR, "agis-test", "Verify Disconnect Observer ErrHandler - status %d", status);
+    FX_SLOG(ERROR, "Verify Disconnect Observer ErrHandler ", KV("status", status));
     if (loop) {
       loop->Quit();
     }
@@ -335,5 +335,6 @@ TEST(AgisDisconnect, Main) {
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
+  syslog::SetTags({"agis-test"});
   return RUN_ALL_TESTS();
 }

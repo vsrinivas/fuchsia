@@ -147,6 +147,7 @@ test("fdio-gtest") {
     deps += [
       "//sdk/lib/fdio",
       "//src/lib/testing/predicates",
+      "//zircon/system/ulib/zx",
     ]
   }
 }
@@ -159,6 +160,7 @@ executable("accept-child") {
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
+    "//zircon/system/ulib/zx",
   ]
 }
 

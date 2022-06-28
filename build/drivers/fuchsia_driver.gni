@@ -96,7 +96,6 @@ template("fuchsia_driver") {
       dep = get_label_info(dep, "label_no_toolchain")
       has_syslog_backend =
           has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
-          dep == "//sdk/lib/syslog/cpp:backend_legacy" ||
           dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat"
     }
 

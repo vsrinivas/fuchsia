@@ -34,7 +34,7 @@ fuchsia_driver("fuchsia_driver") {
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_llcpp",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
     "//src/connectivity/bluetooth/core/bt-host/fidl:helpers",
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//src/connectivity/bluetooth/core/bt-host/testing:fake_controller",

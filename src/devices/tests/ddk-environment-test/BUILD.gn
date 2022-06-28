@@ -29,7 +29,7 @@ fuchsia_driver("ddk-environment-test-driver") {
     ":fuchsia.device.environment.test_llcpp",
     ":test-environment-bind",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

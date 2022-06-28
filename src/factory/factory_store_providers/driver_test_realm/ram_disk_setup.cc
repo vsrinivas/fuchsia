@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/global.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <src/lib/files/file.h>
@@ -22,7 +22,7 @@ constexpr char kExt4FilePath[] = "/pkg/data/factory_ext4.img";
 zx::status<storage::RamDisk> MakeRamdisk() {
   fsl::SizedVmo result;
   if (!fsl::VmoFromFilename(kExt4FilePath, &result)) {
-    FX_LOGS(ERROR) << "Failed to read file " << kExt4FilePath;
+    FX_SLOG(ERROR, "Failed to read file", KV("path", kExt4FilePath));
     return zx::make_status(ZX_ERR_INTERNAL).take_error();
   }
 
@@ -32,19 +32,20 @@ zx::status<storage::RamDisk> MakeRamdisk() {
 
   auto ram_disk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kRamdiskBlockSize);
   if (!ram_disk_or.is_ok()) {
-    FX_LOGS(ERROR) << "Ramdisk failed to be created ";
+    FX_SLOG(ERROR, "Ramdisk failed to be created");
   } else {
-    FX_LOGS(INFO) << "Ramdisk created at " << ram_disk_or.value().path();
+    FX_SLOG(INFO, "Ramdisk created", KV("path", ram_disk_or.value().path().c_str()));
   }
 
   return ram_disk_or;
 }
 
 int main() {
+  syslog::SetTags({"factory_driver_test_realm"});
+
   auto client_end = service::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
-    FX_LOGF(ERROR, "factory_driver_test_realm", "Failed to connect to Realm FIDL: %d",
-            client_end.error_value());
+    FX_SLOG(ERROR, "Failed to connect to Realm FIDL", KV("error", client_end.error_value()));
     return 1;
   }
   auto client = fidl::BindSyncClient(std::move(*client_end));
@@ -54,13 +55,11 @@ int main() {
                                        .root_driver("fuchsia-boot:///#driver/platform-bus.so")
                                        .Build());
   if (wire_result.status() != ZX_OK) {
-    FX_LOGF(ERROR, "factory_driver_test_realm", "Failed to call to Realm:Start: %d",
-            wire_result.status());
+    FX_SLOG(ERROR, "Failed to call to Realm:Start", KV("status", wire_result.status()));
     return 1;
   }
   if (wire_result->is_error()) {
-    FX_LOGF(ERROR, "factory_driver_test_realm", "Realm:Start failed: %d",
-            wire_result->error_value());
+    FX_SLOG(ERROR, "Realm:Start failed", KV("error", wire_result->error_value()));
     return 1;
   }
 
@@ -68,7 +67,7 @@ int main() {
   zx_status_t status =
       device_watcher::RecursiveWaitForFile("/dev/sys/platform/00:00:2d/ramctl", &out);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "factory_driver_test_realm", "Failed to wait for ramctl: %d", status);
+    FX_SLOG(ERROR, "Failed to wait for ramctl", KV("status", status));
   }
 
   auto result = MakeRamdisk();

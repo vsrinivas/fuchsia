@@ -11,7 +11,7 @@ executable("test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.gpu.agis",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/zxio",
     "//sdk/lib/zxio:create_with_type",
     "//third_party/googletest:gtest",
@@ -34,7 +34,7 @@ executable("agis-bin") {
     "//sdk/fidl/fuchsia.gpu.agis",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog",
+    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl:fbl",

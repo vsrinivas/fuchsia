@@ -27,7 +27,7 @@ fuchsia_driver("fuchsia_driver") {
   deps = [
     ":fvm_bind",
     ":shared",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
     "//src/devices/lib/driver",
   ]
 }

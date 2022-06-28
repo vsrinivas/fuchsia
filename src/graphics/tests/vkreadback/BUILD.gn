@@ -24,6 +24,7 @@ source_set("helper") {
   public_deps = [
     "//src/lib/vulkan",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/zx",
   ]
 }
 

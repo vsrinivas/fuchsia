@@ -26,7 +26,7 @@ common_deps = [
   "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
   "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
   "//sdk/lib/input_report_reader:input_report_reader_sdk",
-  "//sdk/lib/syslog/cpp:backend_legacy",
+  "//sdk/lib/syslog/cpp:backend",
   "//src/devices/lib/driver",
   "//src/devices/lib/goldfish/pipe_io",
   "//src/lib/ddk",

@@ -130,7 +130,6 @@ executable("metadata_unittest_exe") {
   deps = [
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:metadata",
