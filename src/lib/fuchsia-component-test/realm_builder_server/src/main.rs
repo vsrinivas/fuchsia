@@ -1061,7 +1061,7 @@ impl RealmNode2 {
             match registry
                 .validate_and_register(
                     &decl,
-                    name,
+                    name.clone(),
                     Some(Clone::clone(&package_dir)),
                     config_value_replacements,
                 )
@@ -1069,7 +1069,7 @@ impl RealmNode2 {
             {
                 Ok(url) => Ok(url),
                 Err(e) => Err(RealmBuilderError::InvalidComponentDeclWithName(
-                    walked_path.join("/"),
+                    name,
                     to_tabulated_string(e),
                 )),
             }
