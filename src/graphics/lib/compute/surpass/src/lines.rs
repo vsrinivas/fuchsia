@@ -6,7 +6,9 @@ use std::{cell::Cell, num::NonZeroU64};
 
 use rayon::prelude::*;
 
-use crate::{extend::ExtendTuple10, AffineTransform, Layer, Path, PIXEL_WIDTH};
+use crate::{
+    extend::ExtendTuple10, extend::ExtendTuple3, AffineTransform, Layer, Path, PIXEL_WIDTH,
+};
 
 const MIN_LEN: usize = 1_024;
 
@@ -243,12 +245,12 @@ impl LinesBuilder {
             let dx_recip = dx.recip();
             let dy_recip = dy.recip();
 
-            let t_offset_x = if dx.abs() != 0.0 {
+            let t_offset_x = if dx != 0.0 {
                 ((p0x.ceil() - p0x) * dx_recip).max((p0x.floor() - p0x) * dx_recip)
             } else {
                 0.0
             };
-            let t_offset_y = if dy.abs() != 0.0 {
+            let t_offset_y = if dy != 0.0 {
                 ((p0y.ceil() - p0y) * dy_recip).max((p0y.floor() - p0y) * dy_recip)
             } else {
                 0.0
@@ -294,6 +296,95 @@ impl LinesBuilder {
 
         self.lines
     }
+
+    pub fn build_for_gpu<F>(mut self, layers: F) -> Lines
+    where
+        F: Fn(GeomId) -> Option<Layer> + Send + Sync,
+    {
+        fn transform_point(point: (f32, f32), transform: &AffineTransform) -> (f32, f32) {
+            (
+                transform.ux.mul_add(point.0, transform.vx.mul_add(point.1, transform.tx)),
+                transform.uy.mul_add(point.0, transform.vy.mul_add(point.1, transform.ty)),
+            )
+        }
+
+        if !self.lines.ids.is_empty() {
+            let point = match self.lines.ids[0].map(|id| layers(id)).flatten() {
+                None | Some(Layer { is_enabled: false, .. }) | Some(Layer { order: None, .. }) => {
+                    Default::default()
+                }
+                Some(Layer { affine_transform: None, .. }) => [self.lines.x[0], self.lines.y[0]],
+                Some(Layer { affine_transform: Some(transform), .. }) => {
+                    let (x, y) = transform_point((self.lines.x[0], self.lines.y[0]), &transform.0);
+                    [x, y]
+                }
+            };
+            self.lines.points.push(point);
+        }
+
+        let ps_layers = self.lines.x.par_windows(2).with_min_len(MIN_LEN).zip_eq(
+            self.lines
+                .y
+                .par_windows(2)
+                .with_min_len(MIN_LEN)
+                .zip_eq(self.lines.ids.par_windows(2).with_min_len(MIN_LEN)),
+        );
+        let par_iter = ps_layers.map(|(xs, (ys, ids))| {
+            const NONE: u32 = u32::MAX;
+            let p0x = xs[0];
+            let p0y = ys[0];
+            let (p1x, p1y) = match ids[0].or(ids[1]).map(|id| layers(id)).flatten() {
+                None | Some(Layer { is_enabled: false, .. }) | Some(Layer { order: None, .. }) => {
+                    (0.0, 0.0)
+                }
+                Some(Layer { affine_transform: None, .. }) => (xs[1], ys[1]),
+                Some(Layer { affine_transform: Some(transform), .. }) => {
+                    transform_point((xs[1], ys[1]), &transform.0)
+                }
+            };
+
+            let layer = match ids[0].map(|id| layers(id)).flatten() {
+                Some(layer) => layer,
+                // Points at then end of line chain have to be transformed for the compute shader.
+                None => return (0, [p1x, p1y], NONE),
+            };
+
+            if let Layer { is_enabled: false, .. } = layer {
+                return (0, [p1x, p1y], NONE);
+            }
+
+            let order = match layer.order {
+                Some(order) => order.as_u32(),
+                None => return (0, [p1x, p1y], NONE),
+            };
+
+            let transform = layer.affine_transform.as_ref().map(|transform| &transform.0);
+
+            let (p0x, p0y) = if let Some(transform) = transform {
+                transform_point((p0x, p0y), transform)
+            } else {
+                (p0x, p0y)
+            };
+
+            if p0y == p1y {
+                return (0, [p1x, p1y], NONE);
+            }
+            let length = integers_between(p0x, p1x) + integers_between(p0y, p1y) + 1;
+
+            (length, [p1x, p1y], order)
+        });
+
+        ExtendTuple3::new((
+            &mut self.lines.lengths,
+            &mut self.lines.points,
+            &mut self.lines.orders,
+        ))
+        .par_extend(par_iter);
+
+        prefix_sum(&mut self.lines.lengths);
+
+        self.lines
+    }
 }
 
 #[derive(Debug, Default)]
@@ -311,6 +402,7 @@ pub struct Lines {
     pub b: Vec<f32>,
     pub c: Vec<f32>,
     pub d: Vec<f32>,
+    pub points: Vec<[f32; 2]>,
     pub lengths: Vec<u32>,
 }
 
@@ -334,7 +426,16 @@ impl Lines {
         self.c.clear();
         self.d.clear();
         self.lengths.clear();
+        self.points.clear();
 
         LinesBuilder { lines: self, ..Default::default() }
+    }
+
+    pub fn segments_count(&self) -> usize {
+        self.lengths.last().copied().unwrap_or_default() as usize
+    }
+
+    pub fn lines_count(&self) -> usize {
+        self.x.len() - 1
     }
 }

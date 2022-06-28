@@ -7,6 +7,7 @@ edition = "2018"
 crossbeam-utils = "0.8.4"
 rayon = "1.2.1"
 rustc-hash = "1.0.1"
+bytemuck = { version = "1.4", features = ["derive"] }
 
 [features]
 bench = []

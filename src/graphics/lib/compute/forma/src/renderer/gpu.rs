@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
-
-use renderer::{Renderer, Timings, TILE_HEIGHT, TILE_WIDTH};
+use renderer::{Renderer, Timings};
 use rustc_hash::FxHashMap;
 use surpass::{
     painter::{Color, Fill, Func, GradientType, Props},
-    rasterizer::Rasterizer,
     Order,
 };
 
@@ -141,7 +138,6 @@ impl StyleMap {
 
 #[derive(Debug)]
 pub struct GpuRenderer {
-    pub(crate) rasterizer: Rasterizer<TILE_WIDTH, TILE_HEIGHT>,
     pub(crate) style_map: StyleMap,
     pub(crate) renderer: Renderer,
 }
@@ -153,7 +149,6 @@ impl GpuRenderer {
         has_timestamp_query: bool,
     ) -> Self {
         Self {
-            rasterizer: Rasterizer::default(),
             style_map: StyleMap::default(),
             renderer: Renderer::new(device, swap_chain_format, has_timestamp_query),
         }
@@ -197,37 +192,30 @@ impl GpuRenderer {
         composition.shared_state.borrow_mut().props_interner.compact();
 
         let layers = &composition.layers;
-        let rasterizer = &mut self.rasterizer;
         let shared_state = &mut *composition.shared_state.borrow_mut();
         let lines_builder = &mut shared_state.lines_builder;
         let geom_id_to_order = &shared_state.geom_id_to_order;
         let builder = lines_builder.take().expect("lines_builder should not be None");
-
-        *lines_builder = {
-            let lines = builder.build(|id| {
-                geom_id_to_order
-                    .get(&id)
-                    .copied()
-                    .flatten()
-                    .and_then(|order| layers.get(&order))
-                    .map(|layer| layer.inner.clone())
-            });
-
-            rasterizer.rasterize(&lines);
-
-            Some(lines.unwrap())
-        };
+        let lines = builder.build_for_gpu(|id| {
+            geom_id_to_order
+                .get(&id)
+                .copied()
+                .flatten()
+                .and_then(|order| layers.get(&order))
+                .map(|layer| layer.inner.clone())
+        });
 
         self.style_map.populate(layers);
 
-        self.renderer
+        let timings = self
+            .renderer
             .render(
                 device,
                 queue,
                 texture,
                 width,
                 height,
-                unsafe { mem::transmute(rasterizer.segments()) },
+                &lines,
                 self.style_map.style_offsets(),
                 self.style_map.styles(),
                 renderer::Color {
@@ -237,6 +225,10 @@ impl GpuRenderer {
                     a: clear_color.a,
                 },
             )
-            .unwrap()
+            .unwrap();
+
+        *lines_builder = Some(lines.unwrap());
+
+        timings
     }
 }
