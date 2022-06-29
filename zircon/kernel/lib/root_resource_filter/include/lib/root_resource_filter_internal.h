@@ -72,7 +72,7 @@ class RootResourceFilter {
   bool IsRegionAllowed(uintptr_t base, size_t size, zx_rsrc_kind_t kind) const;
 
  private:
-  // By default, RegionAllocators are thread safe (protected by a fbl::Mutex),
+  // By default, RegionAllocators are thread safe (protected by a Mutex),
   // so aside from making sure that the scheduler is up and running, we have no
   // additional locking requirements here.
   RegionAllocator mmio_deny_;

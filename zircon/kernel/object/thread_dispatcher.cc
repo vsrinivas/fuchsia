@@ -316,7 +316,7 @@ void ThreadDispatcher::ExitingCurrent() {
 
   // Set ourselves in the DYING state before calling the Debugger.
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    Guard<Mutex> guard{get_lock()};
     SetStateLocked(ThreadState::Lifecycle::DYING);
   }
 

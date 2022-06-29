@@ -119,7 +119,7 @@ void ExceptionDispatcher::on_zero_handles() {
 uint32_t ExceptionDispatcher::GetDisposition() const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return disposition_;
 }
 
@@ -133,14 +133,14 @@ void ExceptionDispatcher::SetDisposition(uint32_t disposition) {
 bool ExceptionDispatcher::IsSecondChance() const {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   return second_chance_;
 }
 
 void ExceptionDispatcher::SetWhetherSecondChance(bool second_chance) {
   canary_.Assert();
 
-  Guard<fbl::Mutex> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
   second_chance_ = second_chance;
 }
 
