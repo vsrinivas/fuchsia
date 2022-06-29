@@ -15,11 +15,12 @@ use core::fmt::Display;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
-use syn::visit_mut::{self, VisitMut};
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, AttrStyle, Attribute, Block, Error, Expr, ExprMatch,
-    FnArg, GenericParam, Ident, Item, ItemFn, Pat, PatType, Path, Signature, Stmt, TypeImplTrait,
-    TypeParamBound,
+    punctuated::Punctuated,
+    spanned::Spanned,
+    visit_mut::{self, VisitMut},
+    AttrStyle, Attribute, Block, Error, Expr, ExprMatch, ExprPath, FnArg, GenericParam, Ident,
+    Item, ItemFn, Pat, PatType, Path, Signature, Stmt, TypeImplTrait, TypeParamBound, TypePath,
 };
 
 #[proc_macro_attribute]
@@ -140,66 +141,156 @@ fn ip_test_inner(
 
     let item = parse_macro_input!(input as syn::ItemFn);
     let syn::ItemFn { attrs, vis, sig, block } = item;
-    if let Err(e) = (|| {
-        if let Some(gen) = sig.generics.params.first() {
-            match gen {
-                GenericParam::Type(tp) => {
-                    if !tp.bounds.iter().any(|b| match b {
-                        TypeParamBound::Trait(t) => t.path.is_ident(trait_name),
-                        _ => false,
-                    }) {
-                        return Err(Error::new(
-                            tp.bounds.span(),
-                            format!("{} entry must have an {} type bound", attr_name, trait_name),
-                        ));
-                    }
-                }
-                _ => {
-                    return Err(Error::new(
-                        sig.generics.span(),
-                        format!("{} entry must ONLY have a single type parameter", attr_name),
-                    ))
-                }
-            }
-        } else {
-            return Err(Error::new(
-                sig.fn_token.span,
-                format!("{} entry must have exactly one type parameter", attr_name),
-            ));
+    let (type_ident, trait_path) = {
+        if let Some(variadic) = &sig.variadic {
+            return Error::new(
+                variadic.dots.spans[0],
+                format!("{} entry may not be variadic", attr_name),
+            )
+            .to_compile_error()
+            .into();
         }
 
-        if !sig.inputs.is_empty() {
-            return Err(Error::new(
-                sig.inputs.span(),
-                format!("{} entry takes no arguments", attr_name),
-            ));
+        let trait_info = sig.generics.params.iter().find_map(|gen| match gen {
+            GenericParam::Type(tp) => tp
+                .bounds
+                .iter()
+                .find_map(|b| match b {
+                    TypeParamBound::Trait(t) => t.path.is_ident(trait_name).then(|| t.path.clone()),
+                    _ => None,
+                })
+                .map(|trait_path| (&tp.ident, trait_path)),
+            _ => None,
+        });
+
+        match trait_info {
+            Some((type_ident, trait_path)) => (type_ident, trait_path),
+            None => {
+                return Error::new(
+                    sig.generics.span(),
+                    format!("some generic parameter must have a {} type bound", trait_name),
+                )
+                .to_compile_error()
+                .into()
+            }
         }
-        if let Some(dot3) = &sig.variadic {
-            return Err(Error::new(
-                dot3.dots.spans[0],
-                format!("{} entry may not be variadic", attr_name),
-            ));
-        }
-        Ok(())
-    })() {
-        return e.to_compile_error().into();
-    }
+    };
+
+    let generics = sig
+        .generics
+        .params
+        .iter()
+        .filter(|gen| match gen {
+            GenericParam::Type(tp) => &tp.ident != type_ident,
+            _ => true,
+        })
+        .map(GenericParam::to_token_stream)
+        .collect::<Vec<_>>();
 
     // we need to check the attributes given to the function, test attributes
     // like `should_panic` need to go to the concrete test definitions instead.
-    let (test_attrs, attrs) =
-        attrs.into_iter().partition::<Vec<_>, _>(|attr| attr.path.is_ident("should_panic"));
+    let (mut test_attrs, attrs) = attrs.into_iter().partition::<Vec<_>, _>(|attr| {
+        attr.path.is_ident("should_panic") || attr.path.is_ident("test_case")
+    });
+    if !test_attrs.iter().any(|a| a.path.is_ident("test_case")) {
+        test_attrs.push(Attribute {
+            path: syn::parse_quote!(test),
+            bracket_token: Default::default(),
+            pound_token: Default::default(),
+            style: syn::AttrStyle::Outer,
+            tokens: Default::default(),
+        });
+    }
     // borrow here because `test_attrs` is used twice in `quote_spanned!` below.
     let test_attrs = &test_attrs;
 
     let span = sig.ident.span();
     let output = &sig.output;
     let ident = &sig.ident;
+
+    let arg_idents;
+    {
+        let mut errors = Vec::new();
+        arg_idents = make_arg_idents(sig.inputs.iter(), &mut errors);
+        if !errors.is_empty() {
+            return Error::new(sig.inputs.span(), quote!(#(#errors)*)).to_compile_error().into();
+        }
+    }
+
     let v4_test = Ident::new(&format!("{}_v4", ident), Span::call_site());
     let v6_test = Ident::new(&format!("{}_v6", ident), Span::call_site());
 
     let ipv4_type_ident = Ident::new(ipv4_type_name, Span::call_site());
     let ipv6_type_ident = Ident::new(ipv6_type_name, Span::call_site());
+
+    struct IpSpecializations {
+        test_attrs: Vec<Attribute>,
+        inputs: Vec<FnArg>,
+        generic_params: Vec<Ident>,
+    }
+
+    let specialize = |ip_type_ident: Ident| {
+        let test_attrs = test_attrs
+            .iter()
+            .cloned()
+            .map(|mut attr| {
+                if let Ok(mut punctuated) =
+                    attr.parse_args_with(Punctuated::<Expr, syn::token::Comma>::parse_terminated)
+                {
+                    let mut visit = TraitToConcreteVisit {
+                        concrete: ip_type_ident.clone().into(),
+                        trait_path: trait_path.clone(),
+                        type_ident: type_ident.clone(),
+                    };
+
+                    for expr in punctuated.iter_mut() {
+                        visit.visit_expr_mut(expr);
+                    }
+                    attr.tokens = quote!((#punctuated));
+                }
+                attr
+            })
+            .collect();
+
+        let mut input_visitor = RenameVisit::new(type_ident.clone(), ip_type_ident.clone());
+        let inputs = sig
+            .inputs
+            .iter()
+            .cloned()
+            .map(|mut a| {
+                input_visitor.visit_fn_arg_mut(&mut a);
+                a
+            })
+            .collect();
+
+        let generic_params = sig
+            .generics
+            .params
+            .iter()
+            .filter_map(|a| match a {
+                GenericParam::Type(tp) => {
+                    Some(if &tp.ident == type_ident { &ip_type_ident } else { &tp.ident })
+                }
+                GenericParam::Lifetime(_) => None,
+                GenericParam::Const(c) => Some(&c.ident),
+            })
+            .cloned()
+            .collect();
+
+        IpSpecializations { test_attrs, inputs, generic_params }
+    };
+
+    let IpSpecializations {
+        test_attrs: ipv4_test_attrs,
+        inputs: ipv4_inputs,
+        generic_params: ipv4_generic_params,
+    } = specialize(ipv4_type_ident);
+
+    let IpSpecializations {
+        test_attrs: ipv6_test_attrs,
+        inputs: ipv6_inputs,
+        generic_params: ipv6_generic_params,
+    } = specialize(ipv6_type_ident);
 
     let output = quote_spanned! { span =>
         #(#attrs)*
@@ -209,16 +300,14 @@ fn ip_test_inner(
         // this restriction.
         #vis #sig #block
 
-        #[test]
-        #(#test_attrs)*
-        fn #v4_test () #output {
-           #ident::<#ipv4_type_ident>()
+        #(#ipv4_test_attrs)*
+        fn #v4_test<#(#generics),*> (#(#ipv4_inputs),*) #output {
+           #ident::<#(#ipv4_generic_params),*>(#(#arg_idents),*)
         }
 
-        #[test]
-        #(#test_attrs)*
-        fn #v6_test () #output {
-           #ident::<#ipv6_type_ident>()
+        #(#ipv6_test_attrs)*
+        fn #v6_test<#(#generics),*> (#(#ipv6_inputs),*) #output {
+           #ident::<#(#ipv6_generic_params),*>(#(#arg_idents),*)
         }
     };
     output.into()
@@ -553,28 +642,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
         .collect();
 
     // Get a list of the argument names.
-    let arg_idents = original
-        .sig
-        .inputs
-        .iter()
-        .map(|arg| match arg {
-            FnArg::Receiver(_) => Ident::new("self", Span::call_site()),
-            FnArg::Typed(PatType { pat, .. }) => match pat.as_ref() {
-                Pat::Ident(pat) => {
-                    if pat.subpat.is_some() {
-                        push_error(&mut errors, arg, "unexpected attribute argument");
-                        parse_quote!(dummy)
-                    } else {
-                        pat.ident.clone()
-                    }
-                }
-                _ => {
-                    push_error(&mut errors, arg, "patterns in function arguments not supported");
-                    parse_quote!(dummy)
-                }
-            },
-        })
-        .collect();
+    let arg_idents = make_arg_idents(original.sig.inputs.iter(), &mut errors);
 
     Input {
         original,
@@ -586,6 +654,31 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
         ipv6_block,
         errors,
     }
+}
+
+fn make_arg_idents<'a>(
+    input: impl Iterator<Item = &'a FnArg>,
+    errors: &mut Vec<TokenStream2>,
+) -> Vec<Ident> {
+    input
+        .map(|arg| match arg {
+            FnArg::Receiver(_) => Ident::new("self", Span::call_site()),
+            FnArg::Typed(PatType { pat, .. }) => match pat.as_ref() {
+                Pat::Ident(pat) => {
+                    if pat.subpat.is_some() {
+                        push_error(errors, arg, "unexpected attribute argument");
+                        parse_quote!(pushed_error)
+                    } else {
+                        pat.ident.clone()
+                    }
+                }
+                _ => {
+                    push_error(errors, arg, "patterns in function arguments not supported");
+                    parse_quote!(pushed_error)
+                }
+            },
+        })
+        .collect()
 }
 
 // Rewrite the types in the function declaration according the following rules:
@@ -668,7 +761,7 @@ fn rewrite_types(
         // Remove the type with the `cfg.trait_ident` bound.
         sig.generics.params = remove_from_punctuated(sig.generics.params.clone(), idx);
 
-        let mut rename = RenameVisit::new(type_ident.clone());
+        let mut rename = RenameVisit::new(type_ident.clone(), Ident::new("Self", sig.span()));
         // For `cfg.type_ident` `I`, rewrite bounds like `A: Foo<I>` to `A:
         // Foo<Self>`.
         rename.visit_generics_mut(&mut sig.generics);
@@ -701,26 +794,30 @@ fn rewrite_types(
     }
 }
 
-// A VisitMut that renames named types to Self. The match criteria is that the
-// first path element must be equal to our target ident. In other words, given a
-// type name I, we want to replace I::Addr with Self::Addr, but we don't want to
-// touch J::I, since the I in that context isn't the I we care about.
+// A VisitMut that renames named types. The match criteria is that the first
+// path element must be equal to our target ident. In other words, given a
+// `from` type name I and Self as `to`, we want to replace I::Addr with
+// Self::Addr, but we don't want to touch J::I, since the I in that context
+// isn't the I we care about.
 //
 // We also use this to descend into the body. This is because the body can also
 // contain references to the type parameters.
-struct RenameVisit(Ident);
+struct RenameVisit {
+    from: Ident,
+    to: Ident,
+}
 
 impl RenameVisit {
-    fn new(ident: Ident) -> RenameVisit {
-        RenameVisit(ident)
+    fn new(from: Ident, to: Ident) -> RenameVisit {
+        RenameVisit { from, to }
     }
 }
 
 impl VisitMut for RenameVisit {
     fn visit_path_mut(&mut self, i: &mut Path) {
-        let segment = i.segments.iter_mut().next().expect("unexpected path with no elements");
-        if i.leading_colon.is_none() && segment.ident == self.0 && segment.arguments.is_empty() {
-            *segment = parse_quote!(Self);
+        let Self { from, to } = self;
+        if i.is_ident(from) {
+            *i = to.clone().into();
         }
 
         // descend into the individual path segments; we need to do this since
@@ -740,6 +837,31 @@ impl VisitMut for RenameVisit {
     fn visit_item_struct_mut(&mut self, _i: &mut syn::ItemStruct) {}
     fn visit_item_enum_mut(&mut self, _i: &mut syn::ItemEnum) {}
     fn visit_item_union_mut(&mut self, _i: &mut syn::ItemUnion) {}
+}
+
+/// A VisitMut that replaces accesses of an associated type or constant with
+/// type a different type qualified with a trait name. Given a `type_ident` of
+/// `I`, `concrete` of `Ipv4` and `trait_path` of `Ip`, `I::Addr` would be
+/// replaced with `<Ipv4 as Ip>::Addr`.
+struct TraitToConcreteVisit {
+    type_ident: Ident,
+    concrete: Path,
+    trait_path: Path,
+}
+
+impl VisitMut for TraitToConcreteVisit {
+    fn visit_expr_path_mut(&mut self, i: &mut ExprPath) {
+        let Self { type_ident, concrete, trait_path } = self;
+        let mut path = i.path.segments.clone().into_iter();
+        let path_first = path.next();
+        if i.qself == None && path_first == Some(parse_quote!(#type_ident)) {
+            let TypePath { path, qself } = parse_quote!(<#concrete as #trait_path>::#(#path)::*);
+            i.path = path;
+            i.qself = qself;
+        }
+
+        visit_mut::visit_expr_path_mut(self, i);
+    }
 }
 
 // A VisitMut that searches for instances of "impl trait". These are unsupported

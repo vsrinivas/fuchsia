@@ -713,4 +713,18 @@ mod tests {
     fn test_should_panic<I: Ip>() {
         assert_eq!(0, simple_specialized_for_ip::<I>());
     }
+
+    mod test_case {
+        use ::test_case::test_case;
+
+        use super::*;
+
+        #[ip_test]
+        #[test_case(true, "bool")]
+        #[test_case(1usize, "usize")]
+        #[test_case(I::VERSION, "usize")]
+        fn test_with_test_case<I: Ip, A: core::fmt::Debug>(_arg: A, name: &str) {
+            assert!(std::any::type_name::<A>().contains(name))
+        }
+    }
 }

@@ -15,6 +15,7 @@ rustc_test("specialize-ip-macro_test") {
   deps = [
     "//src/connectivity/lib/net-types",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [ "src/lib.rs" ]

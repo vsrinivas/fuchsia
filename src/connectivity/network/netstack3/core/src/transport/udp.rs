@@ -2364,6 +2364,7 @@ mod tests {
         ListenerAddr { ip: ListenerIpAddr { identifier: LOCAL_PORT, addr: None }, device }.into()
     }
 
+    #[ip_test]
     #[test_case(conn_addr(Some(DummyDeviceId)), [
             conn_addr(None), local_listener(Some(DummyDeviceId)), local_listener(None),
             wildcard_listener(Some(DummyDeviceId)), wildcard_listener(None)
@@ -2376,9 +2377,9 @@ mod tests {
     #[test_case(conn_addr(None), [local_listener(None), wildcard_listener(None)]; "conn no device")]
     #[test_case(local_listener(None), [wildcard_listener(None)]; "local listener no device")]
     #[test_case(wildcard_listener(None), []; "wildcard listener no device")]
-    fn test_udp_addr_vec_iter_shadows_conn<D: IpDeviceId, const N: usize>(
-        addr: AddrVec<Udp<Ipv4, D, ()>>,
-        expected_shadows: [AddrVec<Udp<Ipv4, D, ()>>; N],
+    fn test_udp_addr_vec_iter_shadows_conn<I: Ip, D: IpDeviceId, const N: usize>(
+        addr: AddrVec<Udp<I, D, ()>>,
+        expected_shadows: [AddrVec<Udp<I, D, ()>>; N],
     ) {
         assert_eq!(addr.iter_shadows().collect::<HashSet<_>>(), HashSet::from(expected_shadows));
     }
