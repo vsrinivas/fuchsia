@@ -11,10 +11,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
         {
             storage: "tmp",
