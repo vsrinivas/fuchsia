@@ -6,8 +6,8 @@
         "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/sys/component/realm_builder.shard.cml",
+        "//sdk/lib/sys/testing/system-test.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "sys/testing/system-test.shard.cml",
     ],
     use: [
         {

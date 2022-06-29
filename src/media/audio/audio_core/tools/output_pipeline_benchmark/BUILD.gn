@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("pipeline_benchmark.gni")
+import("pipeline_benchmark_v2.gni")
 
 group("tools") {
   testonly = true
@@ -10,8 +10,8 @@ group("tools") {
 }
 
 # Included to ensure we have a rule that builds this executable.
-# Run with the following command:
-# fx shell run fuchsia-pkg://fuchsia.com/audio-pipeline-benchmark-empty-pipeline#meta/audio-pipeline-benchmark-empty-pipeline.cmx
+# Run with the following command on the device:
+# $ run-test-suite fuchsia-pkg://fuchsia.com/audio-pipeline-benchmark-empty-pipeline#meta/audio-pipeline-benchmark-empty-pipeline.cm
 audio_pipeline_benchmark("audio-pipeline-benchmark-empty-pipeline") {
   config_files = [ "testdata_empty_pipeline/audio_core_config.json" ]
 }

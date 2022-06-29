@@ -2,17 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    // This needs to be a system-test so that config-data is available.
+    // See config-data use in ../pipeline_benchmark_v2.gni
     include: [
+        "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+        "//sdk/lib/sys/testing/system-test.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
     ],
-    program: {
-        binary: "bin/audio_mixer_profiler",
-    },
     use: [
         {
             storage: "custom_artifacts",
             path: "/custom_artifacts",
+        },
+        {
+            protocol: "fuchsia.scheduler.ProfileProvider",
+            from: "parent",
+            availability: "optional",
         },
     ],
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 
 #include <vector>
 
@@ -27,6 +27,7 @@ struct Options {
   zx::duration mix_period;
   std::optional<std::string> perftest_json;
   bool enable_pprof = false;
+  bool enable_deadline_profile = false;
   bool hide_legend = false;
 };
 
@@ -86,6 +87,10 @@ void Usage(const char* prog_name) {
   printf("  --enable-pprof=<bool>\n");
   printf("    Save a pprof-compatible log to /tmp/%s.pprof (default: false).\n", prog_name);
   printf("\n");
+  printf("  --enable-deadline-profile=<bool>\n");
+  printf(
+      "    If true, try to apply a deadline profile to the benchmark thread. (default: false).\n");
+  printf("\n");
   printf("  --hide-legend\n");
   printf("    Don't display a verbose explanation of scenario types and other details.\n");
   printf("\n");
@@ -136,6 +141,16 @@ Options ParseCommandLine(int argc, char** argv) {
     }
   }
 
+  if (command_line.HasOption("enable-deadline-profile")) {
+    std::string str;
+    command_line.GetOptionValue("enable-deadline-profile", &str);
+    if (str == "" || str == "true") {
+      opts.enable_deadline_profile = true;
+    } else {
+      opts.enable_deadline_profile = false;
+    }
+  }
+
   if (command_line.HasOption("perftest-json")) {
     std::string json;
     command_line.GetOptionValue("perftest-json", &json);
@@ -150,7 +165,7 @@ Options ParseCommandLine(int argc, char** argv) {
 void RegisterDeadlineProfile(sys::ComponentContext& context,
                              const MixProfileConfig& mix_profile_config,
                              const std::string& prog_name) {
-  fuchsia::media::ProfileProviderSyncPtr profile_provider;
+  fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
   if (auto status = context.svc()->Connect(profile_provider.NewRequest()); status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "could not connect to profile provider";
   }
@@ -160,20 +175,20 @@ void RegisterDeadlineProfile(sys::ComponentContext& context,
     FX_PLOGS(FATAL, status) << "could not dup thread handle";
   }
 
-  int64_t want_period = mix_profile_config.period.get();
-  float want_capacity = static_cast<float>(mix_profile_config.capacity.get()) /
-                        static_cast<float>(mix_profile_config.period.get());
-  int64_t got_period;
-  int64_t got_capacity;
-  auto status = profile_provider->RegisterHandlerWithCapacity(
-      std::move(thread), prog_name, want_period, want_capacity, &got_period, &got_capacity);
-  if (status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "could not register deadline profile";
+  zx::profile profile;
+  zx_status_t profile_status;
+  zx_status_t fidl_status = profile_provider->GetDeadlineProfile(
+      mix_profile_config.capacity.get(), mix_profile_config.deadline.get(),
+      mix_profile_config.period.get(), "audio_core_output_pipeline_benchmark", &profile_status,
+      &profile);
+  if (fidl_status != ZX_OK) {
+    FX_PLOGS(FATAL, fidl_status) << "could not call GetDeadlineProfile";
   }
-  if (got_period == 0 || got_capacity == 0) {
-    FX_PLOGS(FATAL, status) << "deadline profile not applied: period=" << got_period
-                            << " capacity=" << got_capacity << "; requested period=" << want_period
-                            << " capacity=" << want_capacity;
+  if (profile_status != ZX_OK) {
+    FX_PLOGS(FATAL, profile_status)
+        << "GetDeadlineProfile request (capacity=" << mix_profile_config.capacity.get()
+        << " deadline=" << mix_profile_config.deadline.get()
+        << " period=" << mix_profile_config.period.get() << ") rejected";
   }
 }
 
@@ -193,8 +208,9 @@ int main(int argc, char** argv) {
   media::audio::PinExecutableMemory::Singleton();
   OutputPipelineBenchmark benchmark(*context);
 
-  // Assign a deadline profile to this thread.
-  RegisterDeadlineProfile(*context, benchmark.process_config().mix_profile_config(), prog_name);
+  if (opts.enable_deadline_profile) {
+    RegisterDeadlineProfile(*context, benchmark.process_config().mix_profile_config(), prog_name);
+  }
 
   benchmark.Run(OutputPipelineBenchmark::Scenario::FromString("BMISCU/VC"), 1, zx::msec(10),
                 nullptr, false);

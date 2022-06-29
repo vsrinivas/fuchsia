@@ -19,8 +19,9 @@ import("//build/config.gni")
 #       Path to config files, which must include an audio_core_config.json file.
 #       Type: string
 #
-#     extra_cmx (optional)
-#       A list of extra manifest files to merge into the manifest.
+#     manifest_shards (optional)
+#       A list of extra manifest files to merge into the benchmark's manifest.
+#       Type: list of paths
 #
 #      deps (optional)
 #        Usual GN meaning.
@@ -28,45 +29,46 @@ import("//build/config.gni")
 template("audio_pipeline_benchmark") {
   assert(defined(invoker.config_files))
 
-  bin_name = target_name
+  package_name = target_name
 
   # Create the manifest file.
-  generated_file("${bin_name}-cmx-base") {
+  generated_file("${package_name}-manifest-base") {
     contents = "{"
-    contents += "  \"include\": [ \"syslog/client.shard.cmx\" ],"
-    contents += "  \"program\": { \"binary\": \"bin/${bin_name}\" },"
-    contents += "  \"sandbox\": {"
-    contents += "    \"features\": [ \"config-data\" ],"
-    contents += "    \"services\": ["
-    contents += "      \"fuchsia.audio.effects.ProcessorCreator\","
-    contents += "      \"fuchsia.media.ProfileProvider\""
-    contents += "    ]"
-    contents += "  }"
+    contents += "  program: { \"binary\": \"bin/${package_name}\" },"
+    contents += "  use: ["
+    contents += "      {"
+    contents += "          directory: \"config-data\","
+    contents += "          rights: [ \"r*\" ],"
+    contents += "          path: \"/config/data\","
+    contents += "          subdir: \"${package_name}\","
+    contents += "      },"
+    contents += "  ],"
     contents += "}"
-    outputs = [ "${target_gen_dir}/${bin_name}.cmx" ]
+    outputs = [ "${target_gen_dir}/${package_name}.base.cml" ]
     output_conversion = "string"
     testonly = true
   }
 
-  base_manifest_file = get_target_outputs(":${bin_name}-cmx-base")
+  base_manifest_file = get_target_outputs(":${package_name}-manifest-base")
   base_manifest_file = base_manifest_file[0]
 
-  if (defined(invoker.extra_cmx)) {
-    cmc_merge("${bin_name}-cmx-merged") {
-      deps = [ ":${bin_name}-cmx-base" ]
-      sources = [ base_manifest_file ]
-      sources += invoker.extra_cmx
-      output_name = "${bin_name}.merged.cmx"
-      testonly = true
+  cmc_merge("${package_name}-manifest-merged") {
+    testonly = true
+    output_name = "${package_name}.merged.cml"
+    sources = [
+      "//src/media/audio/audio_core/tools/output_pipeline_benchmark/meta/pipeline_benchmark.cml",
+      base_manifest_file,
+    ]
+    if (defined(invoker.manifest_shards)) {
+      sources += invoker.manifest_shards
     }
-    manifest_file = get_target_outputs(":${bin_name}-cmx-merged")
-    manifest_file = manifest_file[0]
-  } else {
-    manifest_file = base_manifest_file
+    deps = [ ":${package_name}-manifest-base" ]
   }
+  manifest_file = get_target_outputs(":${package_name}-manifest-merged")
+  manifest_file = manifest_file[0]
 
-  executable("${bin_name}-bin") {
-    output_name = bin_name
+  executable("${package_name}-bin") {
+    output_name = package_name
     testonly = true
 
     sources = [
@@ -90,27 +92,23 @@ template("audio_pipeline_benchmark") {
     ]
   }
 
-  config_data("${bin_name}-config") {
-    for_pkg = bin_name
+  config_data("${package_name}-config") {
+    for_pkg = package_name
     sources = invoker.config_files
     outputs = [ "{{source_file_part}}" ]
     testonly = true
   }
 
-  fuchsia_package_with_single_component(bin_name) {
-    forward_variables_from(invoker, [ "deps" ])
+  fuchsia_package_with_single_component(package_name) {
     testonly = true
     manifest = manifest_file
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [
-      ":${bin_name}-bin",
-      ":${bin_name}-config",
+    manifest_deps = [ ":${package_name}-manifest-merged" ]
+    deps = [
+      ":${package_name}-bin",
+      ":${package_name}-config",
     ]
-    manifest_deps = [ ":${bin_name}-cmx-base" ]
-    if (defined(invoker.extra_cmx)) {
-      manifest_deps += [ ":${bin_name}-cmx-merged" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
   }
 }
