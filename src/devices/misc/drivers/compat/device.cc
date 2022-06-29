@@ -204,9 +204,14 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
   // If we saw a BIND_PROTOCOL property, don't add our own.
   if (!has_protocol) {
+    uint32_t proto_id = zx_args->proto_id;
+    // If we do not have a protocol id, set it to MISC to match DFv1 behavior.
+    if (proto_id == 0) {
+      proto_id = ZX_PROTOCOL_MISC;
+    }
     device->properties_.emplace_back(arena_)
         .set_key(arena_, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
-        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(zx_args->proto_id));
+        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(proto_id));
   }
   device->device_flags_ = zx_args->flags;
 

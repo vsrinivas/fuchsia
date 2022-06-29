@@ -24,7 +24,7 @@ fn get_no_protocol_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
     Some([
         fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
-            value: Some(fdf::NodePropertyValue::IntValue(0)),
+            value: Some(fdf::NodePropertyValue::IntValue(28)), // ZX_PROTOCOL_MISC
             unknown_data: None,
             ..fdf::NodeProperty::EMPTY
         },
