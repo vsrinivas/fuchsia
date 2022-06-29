@@ -213,7 +213,10 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     fn close(&mut self) -> ot::Result {
         debug!("otPlatUdp:{:?}: Closing", self.as_ot_ptr());
 
-        assert!(self.get_handle().is_some(), "Closing UDP socket that wasn't open");
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Tried to close already closed socket", self.as_ot_ptr());
+            return Err(ot::Error::Already);
+        }
 
         self.drop_async_udp_socket();
 
@@ -221,6 +224,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn bind(&mut self) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot bind, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         let mut sockaddr: std::net::SocketAddrV6 = self.sock_name().into();
 
         // SAFETY: Must only be called from the same thread that OpenThread is running on.
@@ -248,6 +256,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn bind_to_netif(&mut self, net_if_id: ot::NetifIdentifier) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot bind_to_netif, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         debug!("otPlatUdp:{:?}: Bind to netif={:?}", self.as_ot_ptr(), net_if_id);
 
         self.set_netif_id(net_if_id);
@@ -256,6 +269,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn connect(&mut self) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot connect, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         debug!("otPlatUdp:{:?}: Connect to {:?}", self.as_ot_ptr(), self.peer_name());
 
         // TODO(fxbug.dev/93438): Investigate implications of leaving this unimplemented.
@@ -266,6 +284,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     }
 
     fn send(&mut self, message: &ot::Message<'_>, info: &'_ ot::message::Info) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot send, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         let data = message.to_vec();
 
         debug!(
@@ -359,6 +382,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         netif: ot::NetifIdentifier,
         addr: &ot::Ip6Address,
     ) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot join_mcast_group, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         debug!(
             "otPlatUdp:{:?}: JoinMulticastGroup {:?} on netif {:?}",
             self.as_ot_ptr(),
@@ -387,6 +415,11 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         netif: ot::NetifIdentifier,
         addr: &ot::Ip6Address,
     ) -> ot::Result {
+        if self.get_handle().is_none() {
+            warn!("otPlatUdp:{:?}: Cannot leave_mcast_group, socket is closed.", self.as_ot_ptr());
+            return Err(ot::Error::InvalidState);
+        }
+
         debug!(
             "otPlatUdp:{:?}: LeaveMulticastGroup {:?} on netif {:?}",
             self.as_ot_ptr(),
