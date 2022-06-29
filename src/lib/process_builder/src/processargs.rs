@@ -112,11 +112,20 @@ pub struct StartupHandle {
     pub info: HandleInfo,
 }
 
+/// Contents of a bootstrap message, following the processargs protocol. Used as
+/// an input to [Message::build()].
 #[derive(Default)]
 pub struct MessageContents {
+    /// Arguments for a bootstrap message.
     pub args: Vec<CString>,
+
+    /// Environment variables for a bootstrap message.
     pub environment_vars: Vec<CString>,
+
+    /// Namespace paths for a bootstrap message.
     pub namespace_paths: Vec<CString>,
+
+    /// Handles for a bootstrap message.
     pub handles: Vec<StartupHandle>,
 }
 

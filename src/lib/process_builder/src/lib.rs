@@ -65,7 +65,7 @@
 
 pub use self::elf_load::ElfLoadError;
 pub use self::elf_parse::ElfParseError;
-pub use self::processargs::{ProcessargsError, StartupHandle};
+pub use self::processargs::{Message, MessageContents, ProcessargsError, StartupHandle};
 
 pub mod elf_load;
 pub mod elf_parse;
@@ -690,7 +690,7 @@ impl ProcessBuilder {
 /// This also allows the caller to specify an number of "extra handles" to factor into the size
 /// calculation. This allows the size to be calculated before all the real handles have been added
 /// to the contents, for example if the size is needed to create those handles.
-fn calculate_initial_linker_stack_size(
+pub fn calculate_initial_linker_stack_size(
     msg_contents: &mut processargs::MessageContents,
     extra_handles: usize,
 ) -> Result<usize, ProcessBuilderError> {
@@ -786,9 +786,13 @@ impl CommonMessageHandles {
     }
 }
 
-// Copied from //zircon/system/ulib/elf-psabi/include/lib/elf-psabi/sp.h, must be kept in sync with
-// that.
-fn compute_initial_stack_pointer(base: usize, size: usize) -> usize {
+/// Given the base and size of the stack block, compute the appropriate initial
+/// SP value for an initial thread according to the C calling convention for the
+/// machine.
+///
+/// Copied from, and must be kept in sync with:
+/// //zircon/system/ulib/elf-psabi/include/lib/elf-psabi/sp.h
+pub fn compute_initial_stack_pointer(base: usize, size: usize) -> usize {
     // Assume stack grows down.
     let mut sp = base.checked_add(size).expect("Overflow in stack pointer calculation");
 
@@ -815,7 +819,7 @@ fn compute_initial_stack_pointer(base: usize, size: usize) -> usize {
 
 /// Load the dynamic linker/loader specified in the PT_INTERP header via the fuchsia.ldsvc.Loader
 /// handle.
-async fn get_dynamic_linker<'a>(
+pub async fn get_dynamic_linker<'a>(
     ldsvc: &'a fldsvc::LoaderProxy,
     executable: &'a zx::Vmo,
     interp_hdr: &'a elf_parse::Elf64ProgramHeader,
