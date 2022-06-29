@@ -256,11 +256,18 @@ void As370Power::DdkRelease() { delete this; }
 
 void As370Power::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
-zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c) {
+zx_status_t As370Power::InitializePowerDomains(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c) {
   for (size_t i = 0; i < kAs370NumPowerDomains; i++) {
     auto& domain_params = kAs370PowerDomainParams[i];
     if (domain_params.type == BUCK) {
-      power_domains_[i] = std::make_unique<As370BuckRegulator>(domain_params.enabled, i2c);
+      if (i2c.is_valid()) {
+        power_domains_[i] =
+            std::make_unique<As370BuckRegulator>(domain_params.enabled, std::move(i2c));
+        i2c.reset();
+      } else {
+        zxlogf(ERROR, "No I2C channels remaining");
+        return ZX_ERR_INTERNAL;
+      }
     } else {
       zxlogf(ERROR, "Invalid power domain type :%d", domain_params.type);
       return ZX_ERR_INTERNAL;
@@ -269,19 +276,25 @@ zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c
   return ZX_OK;
 }
 
-zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
+zx_status_t As370Power::InitializeProtocols(fidl::ClientEnd<fuchsia_hardware_i2c::Device>* i2c) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "Failed to create I2C endpoints");
+    return endpoints.error_value();
+  }
+
   // Get I2C protocol.
-  *i2c = ddk::I2cProtocolClient(parent(), "i2c");
-  if (!i2c->is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found", __func__);
-    return ZX_ERR_NO_RESOURCES;
+  zx_status_t status = DdkConnectFragmentFidlProtocol("i2c", std::move(endpoints->server));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get FIDL I2C fragment");
+    return status;
   }
 
   return ZX_OK;
 }
 
 zx_status_t As370Power::Init() {
-  ddk::I2cProtocolClient i2c;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c;
 
   zx_status_t status = InitializeProtocols(&i2c);
   if (status != ZX_OK) {
@@ -289,7 +302,7 @@ zx_status_t As370Power::Init() {
     return status;
   }
 
-  status = InitializePowerDomains(i2c);
+  status = InitializePowerDomains(std::move(i2c));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize power domains");
     return status;

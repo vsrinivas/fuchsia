@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_AS370_POWER_AS370_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_AS370_POWER_AS370_POWER_H_
 
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -51,8 +51,8 @@ class As370Regulator {
 
 class As370BuckRegulator : public As370Regulator {
  public:
-  As370BuckRegulator(const uint32_t enabled, const ddk::I2cProtocolClient& i2c)
-      : As370Regulator(BuckRegulatorRegister::kDefaultVoltage, enabled), i2c_(i2c) {}
+  As370BuckRegulator(const uint32_t enabled, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c)
+      : As370Regulator(BuckRegulatorRegister::kDefaultVoltage, enabled), i2c_(std::move(i2c)) {}
 
   zx_status_t Enable() override;
   zx_status_t Disable() override;
@@ -68,7 +68,7 @@ class As370BuckRegulator : public As370Regulator {
  private:
   zx_status_t GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage, uint8_t* selector);
 
-  ddk::I2cProtocolClient i2c_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
 };
 
 class As370Power;
@@ -104,12 +104,12 @@ class As370Power : public As370PowerType,
   zx_status_t Init();
 
  protected:
-  virtual zx_status_t InitializeProtocols(
-      ddk::I2cProtocolClient* i2c);  // virtual method overloaded in unit test
+  // virtual method overloaded in unit test
+  virtual zx_status_t InitializeProtocols(fidl::ClientEnd<fuchsia_hardware_i2c::Device>* i2c);
 
  private:
   zx_status_t Bind();
-  zx_status_t InitializePowerDomains(const ddk::I2cProtocolClient& i2c);
+  zx_status_t InitializePowerDomains(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c);
   std::array<std::unique_ptr<As370Regulator>, kAs370NumPowerDomains> power_domains_;
 };
 

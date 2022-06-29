@@ -4,6 +4,7 @@
 
 #include "as370-power.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <soc/as370/as370-power.h>
@@ -13,16 +14,25 @@ namespace power {
 
 class As370PowerTest : public As370Power {
  public:
-  As370PowerTest() : As370Power(nullptr) {}
+  As370PowerTest() : As370Power(nullptr), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
-  zx_status_t InitializeProtocols(ddk::I2cProtocolClient* i2c) override {
-    *i2c = ddk::I2cProtocolClient(mock_i2c.GetProto());
-    return ZX_OK;
+  zx_status_t InitializeProtocols(fidl::ClientEnd<fuchsia_hardware_i2c::Device>* i2c) override {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+    *i2c = std::move(endpoints->client);
+
+    return loop_.StartThread();
   }
 
   void Verify() { mock_i2c.VerifyAndClear(); }
 
   mock_i2c::MockI2c mock_i2c;
+
+ private:
+  async::Loop loop_;
 };
 
 TEST(As370PowerTest, InitTest) {
