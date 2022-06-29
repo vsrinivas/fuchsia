@@ -78,7 +78,8 @@ const ::fidl::internal::MethodEntry* {{ .WireServerDispatcher.NoLeading }}::entr
 void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
     {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
+  &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
 }
 
 {{- EnsureNamespace "" }}
@@ -106,6 +107,9 @@ struct {{ .NaturalServerDispatcher }} final {
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  {{- if .HandlesOneWayUnknownInteractions }}
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
+  {{- end }}
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -142,11 +146,29 @@ constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}
 const ::fidl::internal::MethodEntry* {{ .NaturalServerDispatcher.NoLeading }}::entries_end_ =
     &entries_[{{- len .ClientMethods -}}];
 
+{{- if .HandlesOneWayUnknownInteractions }}
+const ::fidl::internal::UnknownInteractionHandlerEntry {{ .NaturalServerDispatcher.NoLeading }}::unknown_interaction_handler_entry_ = {
+  .openness = {{ .OpennessValue }},
+  .dispatch = [](void* interface, uint64_t method_ordinal,
+      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+    ::fidl::UnknownMethodCompleter::Sync completer(txn);
+    static_cast<{{ .NaturalServer }}*>(interface)->handle_unknown_method(
+        {{ .UnknownMethodMetadata }} {
+          .method_ordinal = method_ordinal,
+          {{ if .HandlesTwoWayUnknownInteractions }}
+          .unknown_interaction_type = unknown_interaction_type,
+          {{ end }}
+      }, completer);
+  },
+  .send_reply = {{ .UnknownInteractionReplySender }},
+};
+{{ end }}
+
 {{ EnsureNamespace "" }}
 void {{ .NaturalServerDispatcher.NoLeading }}::Dispatch(
     {{- .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, {{ .UnknownInteractionHandlerEntry }});
 }
 
 {{- EnsureNamespace "" }}

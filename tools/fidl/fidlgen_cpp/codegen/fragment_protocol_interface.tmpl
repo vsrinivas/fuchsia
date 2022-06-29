@@ -71,7 +71,10 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 {{- end }}
 
 template<>
-class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher {
+class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher
+{{- if .HandlesOneWayUnknownInteractions -}}
+, public {{ .UnknownMethodHandler }}
+{{- end }} {
   public:
   {{ .NaturalServer.Self }}() = default;
   virtual ~{{ .NaturalServer.Self }}() = default;

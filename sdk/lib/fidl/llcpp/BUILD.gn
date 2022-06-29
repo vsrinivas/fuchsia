@@ -71,6 +71,7 @@ sdk_source_set("llcpp") {
       "include/lib/fidl/llcpp/status.h",
       "include/lib/fidl/llcpp/sync_call.h",
       "include/lib/fidl/llcpp/transaction.h",
+      "include/lib/fidl/llcpp/unknown_interactions.h",
       "include/lib/fidl/llcpp/wire_coding_common.h",
       "include/lib/fidl/llcpp/wire_messaging.h",
       "include/lib/fidl/llcpp/wire_messaging_declarations.h",
@@ -126,6 +127,7 @@ sdk_source_set("llcpp") {
       "server.cc",
       "thenable.cc",
       "transaction.cc",
+      "unknown_interactions.cc",
     ]
   }
   if (is_fuchsia) {

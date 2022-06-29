@@ -3,6 +3,7 @@
 #pragma once
 
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/unknown_interactions.h>
 
 namespace test_transitivedependenciescompose {
 
@@ -11,6 +12,8 @@ class Top final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
   class GetFoo final {
     GetFoo() = delete;
 

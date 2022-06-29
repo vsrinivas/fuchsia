@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/unknown_interaction_handler.h>
 
 namespace fidl {
 
@@ -546,7 +547,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>&& response);
+  void Reply();
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -562,7 +563,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 };
 
 template <>
-class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -618,6 +619,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__
 
@@ -1373,7 +1375,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 };
 
 template <>
-class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
  public:
   Server() = default;
   virtual ~Server() = default;
@@ -1419,5 +1421,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__

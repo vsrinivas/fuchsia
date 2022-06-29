@@ -32,3 +32,9 @@ open protocol UnknownInteractionsDriverProtocol {
     flexible FlexibleTwoWay() -> (struct {});
     flexible FlexibleTwoWayErr() -> (struct {}) error int32;
 };
+
+@transport("Driver")
+ajar protocol UnknownInteractionsAjarDriverProtocol {};
+
+@transport("Driver")
+closed protocol UnknownInteractionsClosedDriverProtocol {};

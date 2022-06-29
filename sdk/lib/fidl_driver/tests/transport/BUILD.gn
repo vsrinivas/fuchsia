@@ -8,7 +8,7 @@ import("//build/test.gni")
 
 group("transport") {
   testonly = true
-  deps = [ ":fidl_driver_transport_tests" ]
+  deps = [ ":fidl_drivers_transport_tests" ]
 }
 
 fidl("test.transport") {
@@ -20,46 +20,71 @@ fidl("test.transport") {
   contains_drivers = true
 }
 
-test("fidl_driver_transport_tests_bin") {
-  output_name = "fidl_driver_transport_tests"
-  sources = [
-    "api_test.cc",
-    "assert_peer_closed_helper.cc",
+source_set("fidl_driver_transport_testing_lib") {
+  public = [
     "assert_peer_closed_helper.h",
-    "client_test.cc",
-    "death_test_helper.cc",
     "death_test_helper.h",
-    "natural_async_driver_transport_end_test.cc",
-    "natural_async_fdf_channel_test.cc",
-    "natural_async_two_way_test.cc",
-    "natural_async_zircon_handle_test.cc",
-    "natural_one_way_test.cc",
-    "natural_unknown_interactions_driver_test.cc",
     "scoped_fake_driver.h",
     "server_on_unbound_helper.h",
-    "server_test.cc",
-    "wire_async_driver_transport_end_test.cc",
-    "wire_async_two_way_empty_test.cc",
-    "wire_async_two_way_test.cc",
-    "wire_async_zircon_handle_test.cc",
-    "wire_one_way_test.cc",
-    "wire_sync_fdf_channel_test.cc",
-    "wire_sync_two_way_test.cc",
-    "wire_sync_zircon_handle_test.cc",
+  ]
+  sources = [
+    "assert_peer_closed_helper.cc",
+    "death_test_helper.cc",
   ]
   deps = [
-    ":test.transport_driver",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/fidl_driver",
-    "//sdk/lib/fidl_driver:fidl_driver_natural",
-    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_driver",
-    "//src/devices/bin/driver_runtime:driver_runtime_impl",
-    "//zircon/system/ulib/async:async-cpp",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }
 
-fuchsia_unittest_package("fidl_driver_transport_tests") {
-  deps = [ ":fidl_driver_transport_tests_bin" ]
+test_names = [
+  "api_test",
+  "client_test",
+  "natural_async_driver_transport_end_test",
+  "natural_async_fdf_channel_test",
+  "natural_async_two_way_test",
+  "natural_async_zircon_handle_test",
+  "natural_one_way_test",
+  "natural_unknown_interactions_driver_test",
+  "server_test",
+  "wire_async_driver_transport_end_test",
+  "wire_async_two_way_empty_test",
+  "wire_async_two_way_test",
+  "wire_async_zircon_handle_test",
+  "wire_one_way_test",
+  "wire_sync_fdf_channel_test",
+  "wire_sync_two_way_test",
+  "wire_sync_zircon_handle_test",
+]
+
+foreach(test_name, test_names) {
+  test("fidl_driver_" + test_name + "_bin") {
+    sources = [ test_name + ".cc" ]
+    deps = [
+      ":fidl_driver_transport_testing_lib",
+      ":test.transport_driver",
+      "//sdk/lib/driver_runtime:driver_runtime_internal",
+      "//sdk/lib/fidl_driver",
+      "//sdk/lib/fidl_driver:fidl_driver_natural",
+      "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_driver",
+      "//src/devices/bin/driver_runtime:driver_runtime_impl",
+      "//zircon/system/ulib/async:async-cpp",
+      "//zircon/system/ulib/sync:sync-cpp",
+      "//zircon/system/ulib/zxtest",
+    ]
+  }
+
+  fuchsia_unittest_component("fidl_driver_" + test_name) {
+    deps = [ ":fidl_driver_" + test_name + "_bin" ]
+  }
+}
+
+fuchsia_test_package("fidl_drivers_transport_tests") {
+  test_components = []
+  foreach(test_name, test_names) {
+    test_components += [ ":fidl_driver_" + test_name ]
+  }
 }

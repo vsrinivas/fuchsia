@@ -103,7 +103,8 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 
 void fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProtocol>::Dispatch(::fdf::WireServer<::test_driverhandle::HandlesInProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
+                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
 }
 void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -143,7 +144,8 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 
 void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
+                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
 }
 void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

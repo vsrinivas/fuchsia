@@ -12,6 +12,8 @@
 {{- UseUnified -}}
 {{- SetTransport "Driver" -}}
 
+#include <lib/fidl_driver/cpp/unknown_interactions.h>
+
 #include <{{ .Library | Filename "driver/NaturalMessagingHeader" }}>
 
 {{- range .Decls }}

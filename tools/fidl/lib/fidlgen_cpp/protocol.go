@@ -120,6 +120,11 @@ var (
 	NaturalServerDispatcher = internalNs.member("NaturalServerDispatcher")
 	NaturalCompleter        = internalNs.member("NaturalCompleter")
 	NaturalCompleterBase    = internalNs.member("NaturalCompleterBase")
+
+	// Unknown interaction handler declared in
+	// /src/lib/fidl/cpp/include/lib/fidl/cpp/unknown_interaction_handler.h
+	UnknownMethodHandler  = fidlNs.member("UnknownMethodHandler")
+	UnknownMethodMetadata = fidlNs.member("UnknownMethodMetadata")
 )
 
 type unifiedMessagingDetails struct {
@@ -133,6 +138,8 @@ type unifiedMessagingDetails struct {
 	NaturalEventSender           name
 	NaturalServerDispatcher      name
 	NaturalServer                name
+	UnknownMethodHandler         name
+	UnknownMethodMetadata        name
 }
 
 func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol) unifiedMessagingDetails {
@@ -148,6 +155,8 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalEventSender:           NaturalEventSender.template(p),
 		NaturalServerDispatcher:      NaturalServerDispatcher.template(p),
 		NaturalServer:                NaturalServer.template(p),
+		UnknownMethodHandler:         UnknownMethodHandler.template(p),
+		UnknownMethodMetadata:        UnknownMethodMetadata.template(p),
 	}
 }
 
@@ -321,6 +330,7 @@ type protocolInner struct {
 	SyncEventAllocationV1 allocation
 	SyncEventAllocationV2 allocation
 	Methods               []Method
+	Openness              fidlgen.Openness
 	FuzzingName           string
 	DeprecatedTestBase    nameVariants
 	TestBase              nameVariants
@@ -366,6 +376,57 @@ func (p Protocol) HLCPPType() string {
 
 func (p Protocol) WireType() string {
 	return p.Wire.String()
+}
+
+// HandlesOneWayUnknownInteractions returns true if this protocol must handle at
+// least one-way unknown interactions. Since it is not possible to make a
+// protocol that handles two-way unknown interactions without also handling
+// one-way unknown interactions, this is always true if
+// HandlesTwoWayUnknownInteractions is true.
+func (p Protocol) HandlesOneWayUnknownInteractions() bool {
+	return p.Openness == fidlgen.Open || p.Openness == fidlgen.Ajar
+}
+
+// HandlesTwoWayUnknownInteractions returns true if this protocol must handle
+// two-way unknown interactions. If this is true, then
+// HandlesOneWayUnknownInteractions must also be true.
+func (p Protocol) HandlesTwoWayUnknownInteractions() bool {
+	return p.Openness == fidlgen.Open
+}
+
+// OpennessValue returns the ::fidl::internal::Openness to use for this protocol.
+func (p Protocol) OpennessValue() string {
+	switch p.Openness {
+	case fidlgen.Open:
+		return "::fidl::internal::Openness::kOpen"
+	case fidlgen.Ajar:
+		return "::fidl::internal::Openness::kAjar"
+	case fidlgen.Closed, "":
+		return "::fidl::internal::Openness::kClosed"
+	default:
+		panic(fmt.Errorf("unknown openness: %s", p.Openness))
+	}
+}
+
+// UnknownInteractionHandlerEntry returns code that produces a pointer to the
+// unknown interaction handler entry for this protocol. For open and ajar
+// protocols, the handler entry is defined in the protocol dispatcher. For
+// closed protocols, this is a shared constant.
+func (p Protocol) UnknownInteractionHandlerEntry() string {
+	if p.HandlesOneWayUnknownInteractions() {
+		return fmt.Sprintf("&%s::unknown_interaction_handler_entry_", p.NaturalServerDispatcher)
+	}
+	return "&::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry"
+}
+
+// UnknownInteractionReplySender returns a string which refers to the function
+// to use to send the UnknownInteraction reply. This is used to fill the
+// send_reply field of UnknownInteractionHandlerEntry.
+func (p Protocol) UnknownInteractionReplySender() string {
+	if p.Transport.Name == "Driver" {
+		return "::fidl::internal::SendDriverUnknownInteractionReply"
+	}
+	return "::fidl::internal::SendChannelUnknownInteractionReply"
 }
 
 func newProtocol(inner protocolInner) Protocol {
@@ -647,6 +708,33 @@ func (m Method) NaturalRequestArg(argName string) string {
 // variant used for application errors.
 func (m Method) HasApplicationError() bool {
 	return m.Result != nil && m.Result.HasError
+}
+
+// Returns true if the method has a response that requires the server to provide
+// arguments to the response completer in order to reply.
+//
+// This is true if there is a response payload and either the payload does not
+// use a result type (so the response is just the payload) or the result type
+// either uses error syntax (so the response args are a fitx::result, regardless
+// of whether the success value is populated) or the result has a non-empty
+// success value.
+//
+// This if false for methods which don't have a response payload (strict methods
+// with no content) or for methods where the result type doesn't have anything
+// the server needs to supply (flexible methods without error syntax and with an
+// empty struct as the success value).
+func (m Method) HasResponseArgs() bool {
+	if m.HasResponsePayload {
+		if m.Result == nil {
+			// If no result type, the payload is the arguments.
+			return true
+		}
+		// Result types require arguments if either error syntax is used or the
+		// success variant is non-empty.
+		return m.Result.HasError || len(m.Result.ValueParameters) > 0
+	}
+	// No payload, no arguments required.
+	return false
 }
 
 func (m Method) NaturalResultBase() string {
@@ -1106,6 +1194,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			maxEventSizeV2, maxEventNumHandlesV2, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
 		Methods:     methods,
+		Openness:    p.Openness,
 		FuzzingName: fuzzingName,
 		TestBase:    testBaseNames,
 	})

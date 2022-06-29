@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/llcpp/server.h>
 
 namespace fidl {
 
 namespace internal {
+
+const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry{
+    .openness = ::fidl::internal::Openness::kClosed,
+    .dispatch = nullptr,
+    .send_reply = nullptr,
+};
 
 ::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
                                    fidl::internal::MessageStorageViewBase* storage_view,
@@ -36,13 +43,29 @@ namespace internal {
 
 void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
-              const MethodEntry* begin, const MethodEntry* end) {
+              const MethodEntry* begin, const MethodEntry* end,
+              const UnknownInteractionHandlerEntry* unknown_interaction_handler) {
   ::fidl::DispatchResult result = TryDispatch(impl, msg, storage_view, txn, begin, end);
   switch (result) {
-    case ::fidl::DispatchResult::kNotFound:
+    case ::fidl::DispatchResult::kNotFound: {
+      auto* hdr = msg.header();
+      ::fidl::UnknownInteractionType unknown_interaction_type =
+          ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+      if (::fidl::IsFlexibleInteraction(hdr) &&
+          ::fidl::internal::CanHandleInteraction(unknown_interaction_handler->openness,
+                                                 unknown_interaction_type)) {
+        if (unknown_interaction_type == ::fidl::UnknownInteractionType::kTwoWay) {
+          auto reply = ::fidl::internal::UnknownInteractionReply::MakeReplyFor(
+              hdr->ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+          (unknown_interaction_handler->send_reply)(reply, txn);
+        }
+        std::move(msg).CloseHandles();
+        unknown_interaction_handler->dispatch(impl, hdr->ordinal, unknown_interaction_type, txn);
+        break;
+      }
       std::move(msg).CloseHandles();
       txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
-      break;
+    } break;
     case ::fidl::DispatchResult::kFound:
       break;
   }

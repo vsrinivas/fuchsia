@@ -165,7 +165,9 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
   {
     auto msg = fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_BAD_HANDLE));
     MockTransaction txn;
-    fidl::internal::Dispatch(nullptr, msg, nullptr, &txn, nullptr, nullptr);
+    fidl::internal::Dispatch(
+        nullptr, msg, nullptr, &txn, nullptr, nullptr,
+        &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
     EXPECT_TRUE(txn.errored());
   }
 }

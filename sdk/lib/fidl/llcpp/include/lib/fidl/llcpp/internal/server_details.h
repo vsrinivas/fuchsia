@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/unknown_interactions.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 namespace fidl {
@@ -69,6 +70,23 @@ struct MethodEntry {
                              ::fidl::Transaction* txn);
 };
 
+// Defines a method entry for handling unknown interactions.
+struct UnknownInteractionHandlerEntry {
+  // Which kinds of unknown interactions can be handled by this handler.
+  ::fidl::internal::Openness openness;
+
+  // Function which handles unknown interactions.
+  void (*dispatch)(void* interface, uint64_t method_ordinal,
+                   ::fidl::UnknownInteractionType unknown_interaction_type,
+                   ::fidl::Transaction* txn);
+
+  // Function which sends replies to two-way unknown interactions for this
+  // protocol's transport.
+  void (*send_reply)(::fidl::internal::UnknownInteractionReply reply, ::fidl::Transaction* txn);
+
+  static const UnknownInteractionHandlerEntry kClosedProtocolHandlerEntry;
+};
+
 // The compiler generates an array of MethodEntry for each protocol.
 // The TryDispatch method for each protocol calls this function using the generated entries, which
 // searches through the array using the method ordinal to find the corresponding dispatch function.
@@ -77,11 +95,16 @@ struct MethodEntry {
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end);
 
-// Similar to |TryDispatch|, but closes all the handles in |msg| and notifies
-// |txn| of an error in case of an unknown FIDL method.
+// Similar to |TryDispatch|, but handles cases where the method is unknown.  For
+// unknown interactions which cannot be handled (closed protocols, flexible
+// two-way methods on ajar protocols, and strict methods) closes all the handles
+// in |msg| and notifies |txn| of an error. For flexible methods which can be
+// handled, replies (if the method is two-way), closes all the handles in |msg|
+// and then passes off to the unknown interaction handler.
 void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
-              const MethodEntry* begin, const MethodEntry* end);
+              const MethodEntry* begin, const MethodEntry* end,
+              const UnknownInteractionHandlerEntry* unknown_interaction_handler);
 
 // The common bits in a weak event sender, i.e. an event sender that allows the
 // transport to be destroyed from underneath it.

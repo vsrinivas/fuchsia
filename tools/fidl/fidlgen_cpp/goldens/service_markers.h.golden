@@ -3,6 +3,7 @@
 #pragma once
 
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/unknown_interactions.h>
 
 namespace test_service {
 
@@ -11,6 +12,8 @@ class SecondProtocol final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
   class MethodOnSecond final {
     MethodOnSecond() = delete;
 
@@ -26,6 +29,8 @@ class FirstProtocol final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
   class MethodOnFirst final {
     MethodOnFirst() = delete;
 

@@ -24,6 +24,10 @@ inline void InitTxnHeader(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64
                        static_cast<std::underlying_type_t<MessageDynamicFlags>>(dynamic_flags));
 }
 
+// Returns true if the transaction header is for a flexible interaction.
+inline bool IsFlexibleInteraction(const fidl_message_header_t* hdr) {
+  return (hdr->dynamic_flags & FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_FLEXIBLE_METHOD) != 0;
+}
 }  // namespace fidl
 
 #endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CPP_TRANSACTION_HEADER_H_

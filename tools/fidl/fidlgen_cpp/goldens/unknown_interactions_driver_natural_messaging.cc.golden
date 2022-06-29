@@ -1,4 +1,5 @@
 #include <fidl/test.unknowninteractions/cpp/driver/natural_messaging.h>
+#include <lib/fidl_driver/cpp/unknown_interactions.h>
 namespace test_unknowninteractions {
 [[maybe_unused]] constexpr inline uint64_t kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal = 6982839851953080288lu;
 
@@ -251,7 +252,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_arena_msg, std::move(_context));
 }
 
-void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::Reply() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_DynamicFlags};
 
@@ -264,8 +265,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 
   ::fidl::internal::OutgoingTransportContext _context =
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>::IntoDomainObject(std::move(response)));
+  _encoder.EncodeBody(::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::WithResponse({})}});
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -387,10 +387,26 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::entries_end_ =
     &entries_[6];
+const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::unknown_interaction_handler_entry_ = {
+    .openness = ::fidl::internal::Openness::kOpen,
+    .dispatch = [](void* interface, uint64_t method_ordinal,
+                   ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodCompleter::Sync completer(txn);
+      static_cast<::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->handle_unknown_method(
+          ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsDriverProtocol>{
+              .method_ordinal = method_ordinal,
+
+              .unknown_interaction_type = unknown_interaction_type,
+
+          },
+          completer);
+    },
+    .send_reply = ::fidl::internal::SendDriverUnknownInteractionReply,
+};
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::unknown_interaction_handler_entry_);
 }
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -602,7 +618,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
 }
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -851,10 +867,24 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::entries_end_ =
     &entries_[4];
+const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::unknown_interaction_handler_entry_ = {
+    .openness = ::fidl::internal::Openness::kAjar,
+    .dispatch = [](void* interface, uint64_t method_ordinal,
+                   ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodCompleter::Sync completer(txn);
+      static_cast<::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->handle_unknown_method(
+          ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>{
+              .method_ordinal = method_ordinal,
+
+          },
+          completer);
+    },
+    .send_reply = ::fidl::internal::SendDriverUnknownInteractionReply,
+};
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::unknown_interaction_handler_entry_);
 }
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/unknown_interactions.h>
 
 namespace test_unknowninteractions {
 
@@ -11,6 +12,8 @@ class UnknownInteractionsProtocol final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -98,6 +101,8 @@ class UnknownInteractionsDriverProtocol final {
 
  public:
   using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -153,6 +158,8 @@ class UnknownInteractionsClosedProtocol final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -200,6 +207,8 @@ class UnknownInteractionsClosedDriverProtocol final {
 
  public:
   using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -231,6 +240,8 @@ class UnknownInteractionsAjarProtocol final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kAjar;
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -302,6 +313,8 @@ class UnknownInteractionsAjarDriverProtocol final {
 
  public:
   using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kAjar;
   class StrictOneWay final {
     StrictOneWay() = delete;
 

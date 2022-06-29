@@ -1,4 +1,5 @@
 #include <fidl/test.driveroneway/cpp/driver/natural_messaging.h>
+#include <lib/fidl_driver/cpp/unknown_interactions.h>
 namespace test_driveroneway {
 [[maybe_unused]] constexpr inline uint64_t kOneWay_Send_Ordinal = 7942965975761529343lu;
 
@@ -59,7 +60,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay>::Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl, ::fidl::IncomingMessage&& msg,
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
 }
 void fdf::Server<::test_driveroneway::OneWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

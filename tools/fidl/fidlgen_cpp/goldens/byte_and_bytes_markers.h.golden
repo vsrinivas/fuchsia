@@ -3,3 +3,4 @@
 #pragma once
 
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/unknown_interactions.h>

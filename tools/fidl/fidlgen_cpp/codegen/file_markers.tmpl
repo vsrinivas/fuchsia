@@ -16,6 +16,7 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
   #pragma once
 
   #include <lib/fidl/llcpp/internal/transport.h>
+  #include <lib/fidl/llcpp/unknown_interactions.h>
 
   {{ range .Protocols }}
   {{- if .Transport }}
@@ -26,6 +27,8 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
       {{ .Name }}() = delete;
      public:
       using Transport = {{ .Transport.Type }};
+
+      static constexpr ::fidl::internal::Openness kOpenness = {{ .OpennessValue }};
 
       {{- range .Methods }}
         {{- .Docs }}
