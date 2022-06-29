@@ -100,6 +100,8 @@ class RomTable {
   }
 
  private:
+  using ClassId = ComponentIdRegister::Class;
+
   // [CS] D6.2.1, D7.2.1
   // The largest possible ROM table entry index, for various types.
   static constexpr uint32_t k0x1EntryUpperBound = 960u;
@@ -121,8 +123,7 @@ class RomTable {
   template <typename IoProvider, typename ComponentCallback>
   fitx::result<std::string_view> WalkFrom(IoProvider io, ComponentCallback&& callback,
                                           uint32_t offset) {
-    const ComponentIdRegister::Class classid =
-        ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
+    const ClassId classid = ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
     const auto archid = static_cast<uint16_t>(arch_reg.archid());
@@ -143,8 +144,9 @@ class RomTable {
         }
         EntryContents contents = read_entry_result.value();
         if (contents.value == 0) {
-          break;  // Terminal entry if identically zero.
-        } else if (!contents.present) {
+          break;  // Signals that the walk is over if identically zero.
+        }
+        if (!contents.present) {
           continue;
         }
         // [CS] D5.4
@@ -171,54 +173,53 @@ class RomTable {
     return fitx::ok();
   }
 
-  bool IsTable(ComponentIdRegister::Class classid, uint16_t architect, uint16_t archid) const;
+  bool IsTable(ClassId classid, uint16_t architect, uint16_t archid) const;
 
-  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ComponentIdRegister::Class classid,
+  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ClassId classid,
                                                                 uint8_t format) const;
 
   template <typename IoProvider>
   fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
-                                                            uint32_t N,
-                                                            ComponentIdRegister::Class classid,
+                                                            uint32_t N, ClassId classid,
                                                             uint8_t format) {
-    if (classid == ComponentIdRegister::Class::k0x1RomTable) {
+    if (classid == ClassId::k0x1RomTable) {
       auto entry = Class0x1RomEntry::GetAt(offset, N).ReadFrom(&io);
       return fitx::ok(EntryContents{
           .value = entry.reg_value(),
           .offset = static_cast<uint32_t>(entry.offset()),
           .present = static_cast<bool>(entry.present()),
       });
-    } else if (classid == ComponentIdRegister::Class::kCoreSight) {
-      // [CS] D7.5.17: only a value of 0b11 for present() signifies presence.
-      switch (format) {
-        case kDevidFormatNarrow: {
-          auto entry = Class0x9RomNarrowEntry::GetAt(offset, N).ReadFrom(&io);
-          return fitx::ok(EntryContents{
-              .value = entry.reg_value(),
-              .offset = static_cast<uint32_t>(entry.offset()),
-              .present = static_cast<bool>(entry.present() & 0b11),
-          });
+    }
+
+    // If not a class 0x1 table, then a class 0x9.
+    ZX_DEBUG_ASSERT(classid == ClassId::kCoreSight);
+
+    switch (format) {
+      case kDevidFormatNarrow: {
+        auto entry = Class0x9RomNarrowEntry::GetAt(offset, N).ReadFrom(&io);
+        return fitx::ok(EntryContents{
+            .value = entry.reg_value(),
+            .offset = static_cast<uint32_t>(entry.offset()),
+            // [CS] D7.5.17: only a value of 0b11 for present() signifies presence.
+            .present = static_cast<bool>(entry.present() & 0b11),
+        });
+      }
+      case kDevidFormatWide: {
+        auto entry = Class0x9RomWideEntry::GetAt(offset, N).ReadFrom(&io);
+        uint64_t u32_offset = entry.offset() & 0xffffffff;
+        if (entry.offset() != u32_offset) {
+          return fitx::error(
+              "a simplifying assumption is made that a ROM table entry's offset only contains 32 "
+              "bits of information. If this is no longer true, please file a bug.");
         }
-        case kDevidFormatWide: {
-          auto entry = Class0x9RomWideEntry::GetAt(offset, N).ReadFrom(&io);
-          uint64_t u32_offset = entry.offset() & 0xffffffff;
-          if (entry.offset() != u32_offset) {
-            return fitx::error(
-                "a simplifying assumption is made that a ROM table entry's offset only contains 32 "
-                "bits of information. If this is no longer true, please file a bug.");
-          }
-          return fitx::ok(EntryContents{
-              .value = entry.reg_value(),
-              .offset = static_cast<uint32_t>(u32_offset),
-              .present = static_cast<bool>(entry.present() & 0b11),
-          });
-        }
-        default:
-          printf("bad format value: %#x", format);
-          return fitx::error("bad format value");
+        return fitx::ok(EntryContents{
+            .value = entry.reg_value(),
+            .offset = static_cast<uint32_t>(u32_offset),
+            .present = static_cast<bool>(entry.present() & 0b11),
+        });
       }
     }
-    return fitx::error("not a ROM table");
+    return fitx::error("bad format value");
   }
 
   uintptr_t base_;

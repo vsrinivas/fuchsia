@@ -41,7 +41,8 @@ void DumpComponentInfo(uintptr_t component) {
     printf("architect: ARM\n");
     printf("architecture: Timestamp Generator\n");
     return;
-  } else if (classid != ComponentIdRegister::Class::kCoreSight) {
+  }
+  if (classid != ComponentIdRegister::Class::kCoreSight) {
     std::string_view classid_str = coresight::ToString(classid);
     printf("unexpected component found; (class, part number) = (%#x (%.*s), %#x)\n",
            static_cast<uint8_t>(classid), static_cast<int>(classid_str.size()), classid_str.data(),
@@ -72,15 +73,14 @@ void DumpComponentInfo(uintptr_t component) {
   const auto architect = arch_reg.architect() ? static_cast<uint16_t>(arch_reg.architect())
                                               : coresight::GetDesigner(mmio);
 
-  if (architect == coresight::arm::kArchitect) {
-    printf("architect: ARM\n");
-  } else {
+  if (architect != coresight::arm::kArchitect) {
     printf("architect: unknown (%#x)\n", architect);
     printf("archid: %#x\n", archid);
     printf("part number: %#x\n", partid);
     return;  // Not much more we can say.
   }
 
+  printf("architect: ARM\n");
   printf("architecture: ");
   switch (archid) {
     case coresight::arm::archid::kCti:
@@ -162,9 +162,14 @@ int cmd_coresight(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
     usage();
     return 1;
-  } else if (!strcmp(argv[1].str, "help")) {
+  }
+
+  if (!strcmp(argv[1].str, "help")) {
     usage();
-  } else if (!strcmp(argv[1].str, "walk")) {
+    return 0;
+  }
+
+  if (!strcmp(argv[1].str, "walk")) {
     if (argc < 3) {
       printf("too few arguments\n");
       usage();
@@ -188,12 +193,11 @@ int cmd_coresight(int argc, const cmd_args* argv, uint32_t flags) {
     }
     printf("virtual address: %p\n", virt);
     return WalkRomTable(reinterpret_cast<uintptr_t>(virt), kViewSize);
-  } else {
-    printf("unrecognized command: %s\n", argv[1].str);
-    usage();
-    return 1;
   }
-  return 0;
+
+  printf("unrecognized command: %s\n", argv[1].str);
+  usage();
+  return 1;
 }
 
 STATIC_COMMAND_START
