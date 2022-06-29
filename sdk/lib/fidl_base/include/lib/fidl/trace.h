@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_TRACE_H_
-#define LIB_FIDL_TRACE_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TRACE_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TRACE_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -146,4 +146,4 @@ static inline void fidl_trace_impl(const fidl_trace_t trace_info) {
 
 __END_CDECLS
 
-#endif  // LIB_FIDL_TRACE_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TRACE_H_

@@ -17,9 +17,9 @@ test("runtests-utils") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
+    "//sdk/lib/fidl_base",
     "//third_party/re2",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/runtests-utils",
     "//zircon/system/ulib/zxtest",
   ]

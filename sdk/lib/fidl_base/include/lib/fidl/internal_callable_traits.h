@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
-#define LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
 
 #include <tuple>
 #include <type_traits>
@@ -81,4 +81,4 @@ constexpr bool SameArguments = SameInterfaceImpl<FuncA, FuncB>::args_equal;
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_CALLABLE_TRAITS_H_

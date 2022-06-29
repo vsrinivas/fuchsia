@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_INTERNAL_H_
-#define LIB_FIDL_INTERNAL_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_H_
 
 #include <assert.h>
 #include <lib/fidl/coding.h>
@@ -648,4 +648,4 @@ static_assert(sizeof(struct FidlXUnionField) == 8, "");
 
 static_assert(sizeof(struct FidlStructElement) == 16, "");
 
-#endif  // LIB_FIDL_INTERNAL_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_INTERNAL_H_

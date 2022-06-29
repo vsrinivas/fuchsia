@@ -24,12 +24,12 @@ static_library("lib") {
     ":fidl",
     ":zx",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl_base",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl_codec",
     "//src/lib/line_input",
     "//third_party/quickjs:qjs-lib",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/zx",
   ]
 

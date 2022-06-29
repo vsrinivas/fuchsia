@@ -22,7 +22,7 @@ source_set("cpp_base") {
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/zxc",
   ]
-  deps = [ "//zircon/system/ulib/fidl:fidl_base" ]
+  deps = [ "//sdk/lib/fidl_base" ]
   public_configs = [ ":cpp_base.headers" ]
 }
 
@@ -51,8 +51,8 @@ source_set("cpp") {
     "internal/natural_message_encoder.cc",
   ]
   public_deps = [
+    "//sdk/lib/fidl_base",
     "//src/lib/fidl/cpp:cpp_base",
-    "//zircon/system/ulib/fidl:fidl_base",
   ]
 }
 

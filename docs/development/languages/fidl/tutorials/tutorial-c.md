@@ -298,9 +298,9 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outging_msg_t* msg,
 ```
 
 Declared in
-[lib/fidl/coding.h](/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
+[lib/fidl/coding.h](///sdk/lib/fidl_base/include/lib/fidl/coding.h),
 defined in
-[encoding.cc](/zircon/system/ulib/fidl/encoding.cc).
+[encoding.cc](///sdk/lib/fidl_base/encoding.cc).
 
 Encodes and validates exactly **num_bytes** of the object in **bytes** in-place
 by performing a depth-first traversal of the encoding data from **type**
@@ -369,9 +369,9 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
 ```
 
 Declared in
-[lib/fidl/coding.h](/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
+[lib/fidl/coding.h](///sdk/lib/fidl_base/include/lib/fidl/coding.h),
 defined in
-[decoding_and_validating.cc](/zircon/system/ulib/fidl/decoding_and_validating.cc).
+[decoding_and_validating.cc](///sdk/lib/fidl_base/decoding_and_validating.cc).
 
 Decodes and validates the object in **bytes** in-place by performing a
 depth-first traversal of the encoding data from **type** to fix up internal

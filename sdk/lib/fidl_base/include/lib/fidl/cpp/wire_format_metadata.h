@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_
-#define LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_
 
 #include <zircon/fidl.h>
 
@@ -78,4 +78,4 @@ class WireFormatMetadata {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_

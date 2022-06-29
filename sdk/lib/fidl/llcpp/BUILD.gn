@@ -145,7 +145,7 @@ sdk_source_set("llcpp") {
     "//zircon/system/ulib/zxc",
 
     # <lib/fidl/llcpp/message.h> has #include <lib/fidl/cpp/transaction_header.h>
-    "//zircon/system/ulib/fidl:fidl_base",
+    "//sdk/lib/fidl_base",
   ]
 
   if (is_fuchsia) {
@@ -158,11 +158,11 @@ sdk_source_set("llcpp") {
 
       # <lib/fidl/llcpp/traits.h> has #include <lib/zx/object.h>.
       "//zircon/system/ulib/zx",
-    ]
-  }
 
-  if (is_fuchsia) {
-    deps = [ "//zircon/system/ulib/fidl" ]
+      # <lib/fidl/cpp/wire/internal/transport_channel.h> has
+      # #include <lib/fidl/epitaph.h>
+      "//zircon/system/ulib/fidl",
+    ]
   }
 
   # TODO(fxbug.dev/101752): GN check fails without this condition.

@@ -152,7 +152,7 @@ itself has no knowledge of FIDL. For example, most support libraries contain a
 on channels. The generated code can then be restricted to serialization,
 deserialization, and dispatch.
 
- * [C](/zircon/system/ulib/fidl)
+ * [C](/sdk/lib/fidl_base)
  * [C++](/sdk/lib/fidl/cpp/)
  * [Rust](/src/lib/fidl/rust/fidl)
  * [Dart](https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fidl/)

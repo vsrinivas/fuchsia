@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_TXN_HEADER_H_
-#define LIB_FIDL_TXN_HEADER_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TXN_HEADER_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TXN_HEADER_H_
 
 #include <zircon/fidl.h>
 
@@ -18,4 +18,4 @@ zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr);
 
 __END_CDECLS
 
-#endif  // LIB_FIDL_TXN_HEADER_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_TXN_HEADER_H_

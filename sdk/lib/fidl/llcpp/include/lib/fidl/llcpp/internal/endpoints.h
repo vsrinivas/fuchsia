@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_INCLUDE_LIB_FIDL_LLCPP_INTERNAL_ENDPOINTS_H_
 #define LIB_FIDL_LLCPP_INCLUDE_LIB_FIDL_LLCPP_INTERNAL_ENDPOINTS_H_
 
-#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/traits.h>

@@ -14,6 +14,7 @@ if (is_host) {
     sources = [ "main.cc" ]
     deps = [
       ":lib",
+      "//sdk/lib/fidl_base",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
@@ -23,7 +24,6 @@ if (is_host) {
       "//third_party/rapidjson",
       "//tools/fidlcat/lib:host_lib",
       "//zircon/system/ulib/cmdline",
-      "//zircon/system/ulib/fidl:fidl_base",
     ]
   }
 

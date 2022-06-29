@@ -1,0 +1,75 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/args.gni")
+
+config("fidl-tracing-config") {
+  defines = [ "FIDL_TRACE_LEVEL=$fidl_trace_level" ]
+}
+
+# Base library used by both Fuchsia and host
+#
+# "fidl_base" is used in low-level contexts such as early system
+# boot, hence cannot depend on the C++ standard library, and must only introduce
+# minimal symbols into dependent targets. As such, these libraries need to be
+# static libraries rather than source sets, as we need the Unix librarian
+# algorithm to apply so that only object files corresponding to the used
+# functions will be linked to the final binary.
+sdk_source_set("fidl_base") {
+  category = "partner"
+  api = "//sdk/lib/fidl_base/fidl_base.api"
+  sdk_name = "fidl_base"
+
+  # TODO(fxbug.dev/90775): We should represent the library as a
+  # `sdk_static_library` when supported.
+  build_as_static = true
+
+  public = [
+    "include/lib/fidl/coding.h",
+    "include/lib/fidl/cpp/transaction_header.h",
+    "include/lib/fidl/cpp/wire_format_metadata.h",
+    "include/lib/fidl/internal.h",
+    "include/lib/fidl/internal_callable_traits.h",
+    "include/lib/fidl/trace.h",
+    "include/lib/fidl/txn_header.h",
+    "include/lib/fidl/visitor.h",
+    "include/lib/fidl/walker.h",
+  ]
+
+  sources = [
+    "decoding_and_validating.cc",
+    "encoding.cc",
+    "formatting.cc",
+    "handle_close_many.cc",
+    "internal.c",
+    "txn_header.c",
+    "validate_string.cc",
+    "wire_format_metadata.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/stdcompat",
+  ]
+
+  public_deps = [ "//src/zircon/lib/zircon" ]
+
+  # TODO(fxbug.dev/101752): GN check fails without this condition.
+  if (zircon_toolchain != false) {
+    public_deps += [ "//zircon/system/public" ]
+  }
+
+  public_configs = [ ":fidl_base.headers" ]
+
+  all_dependent_configs = [ ":fidl-tracing-config" ]
+
+  if (is_fuchsia) {
+    configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  }
+}
+
+config("fidl_base.headers") {
+  include_dirs = [ "include" ]
+}

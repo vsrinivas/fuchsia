@@ -30,11 +30,11 @@ test("provider-test") {
   deps = [
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl_base",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl",
-    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",

@@ -28,7 +28,7 @@ with tests in [//tools/fidl/fidlc/tests][fidlc-compiler-tests].
 
 Target | Codegen | Runtime Libraries | Tests
 -------|---------|-------------------|-------
-C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/c]
+C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/sdk/lib/fidl_base] | [/src/lib/fidl/c]
 Coding Tables | [/tools/fidl/fidlc/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
 HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
 LLCPP | [/tools/fidl/fidlgen_cpp] | [/sdk/lib/fidl/llcpp] | [/src/lib/fidl/llcpp]
@@ -478,9 +478,9 @@ useful for debugging issues that prevent boot of the device.
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| c runtime test, coding tables      | `fx test fidl_c_tests`    | //zircon/system/ulib/fidl                                                |
-| walker, misc             | `fx test fidl-walker-tests`         |  //zircon/system/ulib/fidl
-| walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //zircon/system/ulib/fidl
+| c runtime test, coding tables      | `fx test fidl_c_tests`    | //sdk/lib/fidl_base                                                |
+| walker, misc             | `fx test fidl-walker-tests`         |  //sdk/lib/fidl_base
+| walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //sdk/lib/fidl_base
 | hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_unit_test_package fidl_hlcpp_conformance_test_package`         | //sdk/lib/fidl                                                             |
 | llcpp bindings tests     | `fx test //src/lib/fidl/llcpp`      | //sdk/lib/fidl/llcpp
 | unified C++ bindings tests | `fx test //src/lib/fidl/cpp`      | //src/lib/fidl/cpp
@@ -496,7 +496,7 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 
 | Name                     | Test Command                                    | Coverage
 |--------------------------|-------------------------------------------------|---------------------------
-| walker, misc             | `fx test --host fidl-walker-host-tests`         | //zircon/system/ulib/fidl
+| walker, misc             | `fx test --host fidl-walker-host-tests`         | //sdk/lib/fidl_base
 | hlcpp unittests          | `fx test --host fidl_hlcpp_unit_tests`          | //sdk/lib/fidl
 | hlcpp conformance tests  | `fx test --host fidl_hlcpp_conformance_tests`   | //sdk/lib/fidl
 | llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_tests`   | //sdk/lib/fidl/llcpp
@@ -734,7 +734,7 @@ fidl fmt --library my_library.fidl -i
 [/sdk/lib/fidl/cpp]: /sdk/lib/fidl/cpp
 [/sdk/lib/fidl/llcpp]: /sdk/lib/fidl/llcpp
 [/src/lib/fidl/rust]: /src/lib/fidl/rust
-[/zircon/system/ulib/fidl]: /zircon/system/ulib/fidl
+[/sdk/lib/fidl_base]: /sdk/lib/fidl_base
 [/third_party/go/src/syscall/zx/fidl]: /third_party/go/src/syscall/zx/fidl
 [/sdk/dart/fidl]: /sdk/dart/fidl
 [/src/lib/fidl/c]: /src/lib/fidl/c

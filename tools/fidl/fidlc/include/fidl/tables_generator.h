@@ -20,7 +20,7 @@ namespace fidl {
 
 // |TablesGenerator| generates metadata about FIDL types useful for encoding or
 // decoding. The definition of these metadata structures is located in
-// //zircon/system/ulib/fidl/include/lib/fidl/internal.h
+// ////sdk/lib/fidl_base/include/lib/fidl/internal.h
 //
 // Methods or functions named "Emit..." are the actual interface to
 // the tables output.

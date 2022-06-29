@@ -11,6 +11,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/async/wait.h>
+#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>

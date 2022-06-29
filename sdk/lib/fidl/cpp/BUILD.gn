@@ -126,10 +126,10 @@ sdk_source_set("cpp_base") {
   public_configs = [ "//sdk/config" ]
 
   public_deps = [
+    "//sdk/lib/fidl_base",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
-    "//zircon/system/ulib/fidl:fidl_base",
   ]
 
   if (is_fuchsia) {

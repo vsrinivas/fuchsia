@@ -424,7 +424,7 @@ content that does not appear directly in any of the input `SourceFile`s, like fo
 anonymous [`Name`](#name)s.
 
 <!-- xrefs -->
-[internal]: /zircon/system/ulib/fidl/include/lib/fidl/internal.h
+[internal]: ///sdk/lib/fidl_base/include/lib/fidl/internal.h
 [layout-attr]: /docs/reference/fidl/language/attributes.md#layout_layout
 [fidlgen_dart]: /tools/fidl/fidlgen_dart
 [fidlgen_go]: /tools/fidl/fidlgen_go

@@ -55,9 +55,9 @@ static_library("fidl_codec") {
   deps = [
     ":value_proto",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fidl_base",
     "//third_party/rapidjson",
     "//zircon/system/public",
-    "//zircon/system/ulib/fidl:fidl_base",
   ]
 }
 

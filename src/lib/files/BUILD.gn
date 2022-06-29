@@ -25,9 +25,9 @@ source_set("files") {
   ]
 
   deps = [
+    "//sdk/lib/fidl_base",
     "//sdk/lib/fit",
     "//src/lib/fxl:memory",
-    "//zircon/system/ulib/fidl:fidl_base",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CODING_H_
-#define LIB_FIDL_CODING_H_
+#ifndef LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CODING_H_
+#define LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CODING_H_
 
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
@@ -146,4 +146,4 @@ struct CodingConfig {
 
 #endif
 
-#endif  // LIB_FIDL_CODING_H_
+#endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CODING_H_
