@@ -92,6 +92,7 @@ driver_bind_rules("luis-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -575,7 +576,10 @@ driver_bind_rules("luis-0p8-ee-buck-bind") {
   header_output = "luis-0p8-ee-buck-bind.h"
   bind_output = "luis-0p8-ee-buck-bind.bc"
   tests = "bind-tests/luis-0p8-ee-buck-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("luis-cpu-a-buck-bind") {
@@ -583,7 +587,10 @@ driver_bind_rules("luis-cpu-a-buck-bind") {
   header_output = "luis-cpu-a-buck-bind.h"
   bind_output = "luis-cpu-a-buck-bind.bc"
   tests = "bind-tests/luis-cpu-a-buck-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 template("sherlock_driver") {
