@@ -668,8 +668,10 @@ async fn daemon_restart<W: Write>(
             val
         }
         Ok(Err(e)) => {
-            let node = ledger
-                .add_node(&format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e), LedgerMode::Automatic)?;
+            let node = ledger.add_node(
+                &format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e),
+                LedgerMode::Automatic,
+            )?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -737,6 +739,16 @@ async fn doctor_daemon_restart<W: Write>(
         _ => (),
     };
     return Ok(());
+}
+
+fn make_ssh_fix_suggestion(ssh_log: &String) -> Option<&'static str> {
+    if ssh_log.contains("Connection refused") {
+        Some("SSH connection was refused. You may need to (re-)establish a tunnel connection.")
+    } else if ssh_log.contains("Permission denied") {
+        Some("SSH connection could not authenticate. You may need to re-provision (pave or flash) your target to ensure SSH keys are appropriately setup.")
+    } else {
+        None
+    }
 }
 
 async fn doctor_summary<W: Write>(
@@ -809,8 +821,10 @@ async fn doctor_summary<W: Write>(
             val
         }
         Ok(Err(e)) => {
-            let node = ledger
-                .add_node(&format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e), LedgerMode::Automatic)?;
+            let node = ledger.add_node(
+                &format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e),
+                LedgerMode::Automatic,
+            )?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -1056,6 +1070,10 @@ async fn doctor_summary<W: Write>(
                             LedgerMode::Verbose,
                         )?;
                         ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                        if let Some(suggestion) = make_ssh_fix_suggestion(&logs) {
+                            let node = ledger.add_node(suggestion, LedgerMode::Automatic)?;
+                            ledger.set_outcome(node, LedgerOutcome::Info)?;
+                        }
                         ledger.close(target_node)?;
                         continue;
                     }
@@ -1672,7 +1690,7 @@ mod test {
 
     fn setup_responsive_daemon_server_with_targets(
         has_nodename: bool,
-        is_ssh_error: bool,
+        ssh_error: Option<&'static str>,
         waiter: Shared<Receiver<()>>,
     ) -> DaemonProxy {
         spawn_local_stream_handler(move |req| {
@@ -1706,7 +1724,7 @@ mod test {
                                         target_state: Some(TargetState::Unknown),
                                         ..TargetInfo::EMPTY
                                     }]
-                                } else if is_ssh_error {
+                                } else if ssh_error.is_some() {
                                     vec![TargetInfo {
                                         nodename: Some(SSH_ERR_NODENAME.to_string()),
                                         addresses: Some(vec![]),
@@ -1764,7 +1782,8 @@ mod test {
                                         }
                                     }
                                     TargetRequest::GetSshLogs { responder } => {
-                                        responder.send("some ssh issue").unwrap();
+                                        // This shouldn't even be requested if there is no ssh error
+                                        responder.send(ssh_error.unwrap()).unwrap();
                                     }
                                     r => panic!("unexpected request: {:?}", r),
                                 });
@@ -2274,9 +2293,37 @@ mod test {
         tx.send(()).unwrap();
     }
 
+    struct RcsTestArgs {
+        ledger_mode: LedgerViewMode,
+        ssh_error: Option<&'static str>,
+        with_reason: bool,
+    }
+
+    impl Default for RcsTestArgs {
+        fn default() -> Self {
+            RcsTestArgs { ledger_mode: LedgerViewMode::Normal, ssh_error: None, with_reason: false }
+        }
+    }
+
+    impl RcsTestArgs {
+        fn verbose(mut self) -> Self {
+            self.ledger_mode = LedgerViewMode::Verbose;
+            self
+        }
+
+        fn with_ssh_error(mut self, e: &'static str) -> Self {
+            self.ssh_error = Some(e);
+            self
+        }
+
+        fn with_reason(mut self) -> Self {
+            self.with_reason = true;
+            self
+        }
+    }
+
     async fn test_finds_target_connects_to_rcs_setup(
-        mode: LedgerViewMode,
-        is_ssh_error: bool,
+        modes: RcsTestArgs,
     ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
 
@@ -2284,12 +2331,21 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, is_ssh_error, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(
+                true,
+                modes.ssh_error,
+                rx.shared(),
+            ))],
             vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
-        let ledger_view = Box::new(FakeLedgerView::new());
-        let mut ledger = DoctorLedger::<MockWriter>::new(MockWriter::new(), ledger_view, mode);
+        let ledger_view = Box::new(if modes.with_reason {
+            FakeLedgerView::new_with_error_reason()
+        } else {
+            FakeLedgerView::new()
+        });
+        let mut ledger =
+            DoctorLedger::<MockWriter>::new(MockWriter::new(), ledger_view, modes.ledger_mode);
 
         doctor(
             &mut handler,
@@ -2312,7 +2368,10 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_with_ssh_error_verbose() {
-        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose, true).await;
+        let ledger = test_finds_target_connects_to_rcs_setup(
+            RcsTestArgs::default().verbose().with_ssh_error("some ssh error"),
+        )
+        .await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
@@ -2352,8 +2411,35 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_ssh_connection_refused_recommends_tunnel() {
+        let ledger = test_finds_target_connects_to_rcs_setup(
+            RcsTestArgs::default().with_ssh_error("Connection refused").with_reason(),
+        )
+        .await;
+        let output = ledger.writer.get_data();
+        assert!(output.contains(
+            "[i] SSH connection was refused. You may need to (re-)establish a tunnel connection.\n"
+        ));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ssh_permission_denied_recommends_repave() {
+        let ledger = test_finds_target_connects_to_rcs_setup(
+            RcsTestArgs::default()
+                .with_ssh_error("Permission denied (publickey,keyboard-interactive)")
+                .with_reason(),
+        )
+        .await;
+        let output = ledger.writer.get_data();
+        assert!(output.contains(
+            "[i] SSH connection could not authenticate. You may need to re-provision (pave or flash) your target to ensure SSH keys are appropriately setup.\n"
+        ));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_verbose() {
-        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose, false).await;
+        let ledger =
+            test_finds_target_connects_to_rcs_setup(RcsTestArgs::default().verbose()).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
@@ -2399,7 +2485,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_normal() {
-        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Normal, false).await;
+        let ledger = test_finds_target_connects_to_rcs_setup(RcsTestArgs::default()).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
@@ -2426,7 +2512,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, false, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, None, rx.shared()))],
             vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
@@ -2499,7 +2585,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, false, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, None, rx.shared()))],
             vec![Ok(vec![1])],
         );
 
@@ -2837,7 +2923,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(false, false, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(false, None, rx.shared()))],
             vec![Ok(vec![1])],
         );
 
