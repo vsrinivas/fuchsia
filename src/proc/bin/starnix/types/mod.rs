@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod auth;
 mod device_type;
 mod file_mode;
 mod ioctl;
@@ -21,6 +22,7 @@ pub mod uapi;
 
 pub(crate) use union::*;
 
+pub use auth::*;
 pub use device_type::*;
 pub use errno::*;
 pub use file_mode::*;

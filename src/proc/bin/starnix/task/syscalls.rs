@@ -644,17 +644,103 @@ pub fn sys_futex(
     Ok(())
 }
 
+fn cap_header_version(
+    current_task: &CurrentTask,
+    user_header: UserRef<__user_cap_header_struct>,
+) -> Result<u32, Errno> {
+    let header = current_task.mm.read_object(user_header)?;
+    if header.pid != 0 && header.pid != current_task.id {
+        not_implemented!(current_task, "Cap header version only implemented for current task.");
+        return error!(EINVAL);
+    }
+    Ok(header.version)
+}
+
 pub fn sys_capget(
     current_task: &CurrentTask,
-    _user_header: UserRef<__user_cap_header_struct>,
+    user_header: UserRef<__user_cap_header_struct>,
     user_data: UserRef<__user_cap_data_struct>,
 ) -> Result<(), Errno> {
-    // TODO: Implement capget. This is hardcoded to allow chroot tests to run.
-    not_implemented!(current_task, "Stubbed capget only provides CAP_SYS_CHROOT");
-    let effective = 1 << CAP_SYS_CHROOT;
-    let data = __user_cap_data_struct { effective: effective, permitted: 0, inheritable: 0 };
-    current_task.mm.write_object(user_data, &data)?;
+    if user_data.is_null() {
+        current_task.mm.write_object(
+            user_header,
+            &__user_cap_header_struct { version: _LINUX_CAPABILITY_VERSION_3, pid: 0 },
+        )?;
+        return Ok(());
+    }
 
+    let (permitted, effective, inheritable) = {
+        let creds = &current_task.read().creds;
+        (creds.cap_permitted, creds.cap_effective, creds.cap_inheritable)
+    };
+    match cap_header_version(current_task, user_header)? {
+        _LINUX_CAPABILITY_VERSION_3 => {
+            // Return 64 bit capabilities as two sets of 32 bit capabilities, little endian
+            let (permitted, effective, inheritable) =
+                (permitted.as_abi_v3(), effective.as_abi_v3(), inheritable.as_abi_v3());
+            let data: [__user_cap_data_struct; 2] = [
+                __user_cap_data_struct {
+                    effective: effective.0,
+                    inheritable: inheritable.0,
+                    permitted: permitted.0,
+                },
+                __user_cap_data_struct {
+                    effective: effective.1,
+                    inheritable: inheritable.1,
+                    permitted: permitted.1,
+                },
+            ];
+            current_task.mm.write_objects(user_data, &data)?;
+        }
+        _ => return error!(EINVAL),
+    }
+    Ok(())
+}
+
+pub fn sys_capset(
+    current_task: &CurrentTask,
+    user_header: UserRef<__user_cap_header_struct>,
+    user_data: UserRef<__user_cap_data_struct>,
+) -> Result<(), Errno> {
+    let (new_permitted, new_effective, new_inheritable) =
+        match cap_header_version(current_task, user_header)? {
+            _LINUX_CAPABILITY_VERSION_3 => {
+                let mut data: [__user_cap_data_struct; 2] = Default::default();
+                current_task.mm.read_objects(user_data, &mut data)?;
+                (
+                    Capabilities::from_abi_v3((data[0].permitted, data[1].permitted)),
+                    Capabilities::from_abi_v3((data[0].effective, data[1].effective)),
+                    Capabilities::from_abi_v3((data[0].inheritable, data[1].inheritable)),
+                )
+            }
+            _ => return error!(EINVAL),
+        };
+
+    // Permission checks. Copied out of TLPI section 39.7.
+    {
+        let creds = &current_task.read().creds;
+        strace!(current_task, "Capabilities({{permitted={:?} from {:?}, effective={:?} from {:?}, inheritable={:?} from {:?}}}, bounding={:?})", new_permitted, creds.cap_permitted, new_effective, creds.cap_effective, new_inheritable, creds.cap_inheritable, creds.cap_bounding);
+        if !creds.has_capability(CAP_SETPCAP)
+            && !creds.cap_inheritable.union(creds.cap_permitted).contains(new_inheritable)
+        {
+            return error!(EPERM);
+        }
+
+        if !creds.cap_inheritable.union(creds.cap_bounding).contains(new_inheritable) {
+            return error!(EPERM);
+        }
+        if !creds.cap_permitted.contains(new_permitted) {
+            return error!(EPERM);
+        }
+        if !new_permitted.contains(new_effective) {
+            return error!(EPERM);
+        }
+    }
+
+    let creds = &mut current_task.write().creds;
+    creds.cap_permitted = new_permitted;
+    creds.cap_effective = new_effective;
+    creds.cap_inheritable = new_inheritable;
     Ok(())
 }
 
@@ -873,13 +959,15 @@ mod tests {
     fn test_setuid() {
         let (_kernel, current_task) = create_kernel_and_task();
         // Test for root.
-        current_task.write().creds = Credentials::system();
+        current_task.write().creds = Credentials::root();
         sys_setuid(&current_task, 42).expect("setuid");
         let creds = current_task.read().creds.clone();
         assert_eq!(creds.euid, 42);
         assert_eq!(creds.uid, 42);
         assert_eq!(creds.saved_uid, 42);
 
+        // Remove the CAP_SETUID capability to avoid overwriting permission checks.
+        current_task.write().creds.cap_effective.remove(CAP_SETUID);
         // Test for non root, which task now is.
         assert_eq!(sys_setuid(&current_task, 0), Err(EPERM));
         assert_eq!(sys_setuid(&current_task, 43), Err(EPERM));

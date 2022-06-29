@@ -4,7 +4,7 @@
 
 use crate::types::*;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Credentials {
     pub uid: uid_t,
     pub gid: gid_t,
@@ -13,6 +13,44 @@ pub struct Credentials {
     pub saved_uid: uid_t,
     pub saved_gid: gid_t,
     pub groups: Vec<gid_t>,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
+    /// > This is a limiting superset for the effective capabilities that the thread may assume. It
+    /// > is also a limiting superset for the capabilities that may be added to the inheritable set
+    /// > by a thread that does not have the CAP_SETPCAP capability in its effective set.
+    ///
+    /// > If a thread drops a capability from its permitted set, it can never reacquire that
+    /// > capability (unless it execve(2)s either a set-user-ID-root program, or a program whose
+    /// > associated file capabilities grant that capability).
+    pub cap_permitted: Capabilities,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
+    /// > This is the set of capabilities used by the kernel to perform permission checks for the
+    /// > thread.
+    pub cap_effective: Capabilities,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
+    /// > This is a set of capabilities preserved across an execve(2).  Inheritable capabilities
+    /// > remain inheritable when executing any program, and inheritable capabilities are added to
+    /// > the permitted set when executing a program that has the corresponding bits set in the file
+    /// > inheritable set.
+    ///
+    /// > Because inheritable capabilities are not generally preserved across execve(2) when running
+    /// > as a non-root user, applications that wish to run helper programs with elevated
+    /// > capabilities should consider using ambient capabilities, described below.
+    pub cap_inheritable: Capabilities,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
+    /// > The capability bounding set is a mechanism that can be used to limit the capabilities that
+    /// > are gained during execve(2).
+    ///
+    /// > Since Linux 2.6.25, this is a per-thread capability set. In older kernels, the capability
+    /// > bounding set was a system wide attribute shared by all threads on the system.
+    pub cap_bounding: Capabilities,
 }
 
 fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
@@ -25,6 +63,30 @@ fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
 }
 
 impl Credentials {
+    /// Creates a set of credentials with all possible permissions and capabilities.
+    pub fn root() -> Self {
+        Self::with_ids(0, 0)
+    }
+
+    /// Creates a set of credentials with the given uid and gid. If the uid is 0, the credentials
+    /// will grant superuser access.
+    pub fn with_ids(uid: uid_t, gid: gid_t) -> Credentials {
+        let caps = if uid == 0 { Capabilities::all() } else { Capabilities::empty() };
+        Credentials {
+            uid,
+            gid,
+            euid: uid,
+            egid: gid,
+            saved_uid: uid,
+            saved_gid: gid,
+            groups: vec![],
+            cap_permitted: caps,
+            cap_effective: caps,
+            cap_inheritable: caps,
+            cap_bounding: Capabilities::all(),
+        }
+    }
+
     // Creates a new set of credentials from the start of an
     // /etc/passwd line.
     pub fn from_passwd(passwd_line: &str) -> Result<Credentials, Errno> {
@@ -36,20 +98,7 @@ impl Credentials {
         }
         let uid: uid_t = parse_id_number(fields.next())?;
         let gid: gid_t = parse_id_number(fields.next())?;
-        Ok(Credentials {
-            uid: uid,
-            gid: gid,
-            euid: uid,
-            egid: gid,
-            saved_uid: uid,
-            saved_gid: gid,
-            groups: vec![],
-        })
-    }
-
-    /// Creates a set of credentials with all possible permissions, suitable for system tasks.
-    pub fn system() -> Credentials {
-        Credentials::default()
+        Ok(Self::with_ids(uid, gid))
     }
 
     /// Compares the user ID of `self` to that of `other`.
@@ -77,12 +126,8 @@ impl Credentials {
     }
 
     /// Returns whether or not the task has the given `capability`.
-    ///
-    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
-    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
-    pub fn has_capability(&self, _capability: u32) -> bool {
-        // TODO(qsr): For now, implements root has all capability.
-        self.is_superuser()
+    pub fn has_capability(&self, capability: Capabilities) -> bool {
+        self.cap_effective.contains(capability)
     }
 }
 

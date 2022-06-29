@@ -234,7 +234,7 @@ impl Task {
             FdTable::new(),
             mm,
             root_fs,
-            Credentials::default(),
+            Credentials::root(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
             Arc::clone(&kernel.default_abstract_vsock_namespace),
             None,
@@ -835,16 +835,25 @@ impl CurrentTask {
     /// process crashing. This function is for that second half; any error returned from this
     /// function will be considered unrecoverable.
     fn finish_exec(&mut self, path: CString, resolved_elf: ResolvedElf) -> Result<(), Errno> {
-        self.write().argv = resolved_elf.argv.clone();
         self.mm
             .exec(resolved_elf.file.name.clone())
             .map_err(|status| from_status_like_fdio!(status))?;
+        self.write().argv = resolved_elf.argv.clone();
         let start_info = load_executable(self, resolved_elf, &path)?;
         self.registers = start_info.to_registers().into();
         self.dt_debug_address = start_info.dt_debug_address;
 
+        {
+            let mut state = self.write();
+            state.signals.alt_stack = None;
+
+            // TODO(tbodt): Check whether capability xattrs are set on the file, and grant/limit
+            // capabilities accordingly.
+            state.creds.cap_permitted = state.creds.cap_inheritable;
+            state.creds.cap_effective = state.creds.cap_permitted;
+        }
+
         self.thread_group.signal_actions.reset_for_exec();
-        self.write().signals.alt_stack = None;
 
         // TODO: The termination signal is reset to SIGCHLD.
 

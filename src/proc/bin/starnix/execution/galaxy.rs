@@ -118,7 +118,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     execute_task(init_task, |result| {
         tracing::info!("Finished running init process: {:?}", result);
     });
-    let system_task = create_task(&kernel, &fs_context, "kthreadd", Credentials::system())?;
+    let system_task = create_task(&kernel, &fs_context, "kthread", Credentials::root())?;
     if let Some(startup_file_path) = startup_file_path {
         wait_for_init_file(&startup_file_path, &system_task).await?;
     };

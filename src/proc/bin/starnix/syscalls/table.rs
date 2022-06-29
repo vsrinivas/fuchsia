@@ -58,6 +58,7 @@ pub fn dispatch_syscall(
         bind[3],
         brk[1],
         capget[2],
+        capset[2],
         chdir[1],
         chmod[2],
         chroot[1],
