@@ -29,6 +29,11 @@ impl OperationalDataset {
             && self.get_channel().is_some()
     }
 
+    /// Clears all of the fields in this dataset.
+    pub fn clear(&mut self) {
+        *self = Self::empty();
+    }
+
     // TODO: Not clear what the OpenThread API is to accomplish this.
     // pub fn to_tlvs(&self) -> OperationalDatasetTlvs {
     //     todo!()
