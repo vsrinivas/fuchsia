@@ -29,8 +29,6 @@ group("cmx_allowlist") {
   #
   # To add items to the allowlist, please send a change to one of the OWNERS of
   # this file to add an element to the visibility list below.
-  # Please allowlist entire directories rather than individual targets as it
-  # requires less allowlist churn over time.
   #
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build/components/cmx:cmx_allowlist | sed 's|\(.*:.*\)|"\1",|' | sort | uniq
