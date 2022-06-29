@@ -41,7 +41,7 @@ macro_rules! invoke_for_handle_types {
         $x! {Vmar, "VMAR", VMAR, 15, FuchsiaOnly}
         $x! {Fifo, "FIFO", FIFO, 16, FuchsiaOnly}
         $x! {Guest, "Guest", GUEST, 17, FuchsiaOnly}
-        $x! {Vcpu, "VCPU", VCPU, 18, Stub}
+        $x! {Vcpu, "VCPU", VCPU, 18, FuchsiaOnly}
         $x! {Timer, "Timer", TIMER, 19, FuchsiaOnly}
         $x! {Iommu, "IOMMU", IOMMU, 20, Stub}
         $x! {Bti, "BTI", BTI, 21, Stub}
