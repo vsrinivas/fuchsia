@@ -7,12 +7,16 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{auto_persist, inspect_log},
-    futures::{channel::mpsc, future::Future},
+    futures::{channel::mpsc, future::Future, select, FutureExt, StreamExt},
     log::info,
     parking_lot::Mutex,
     std::{collections::HashMap, sync::Arc},
+    wlan_common::sink::UnboundedSink,
     wlan_inspect,
-    wlan_sme::serve::{create_sme, SmeServer},
+    wlan_sme::{
+        self,
+        serve::{create_sme, SmeServer},
+    },
 };
 
 use crate::{inspect, ServiceCfg};
@@ -93,9 +97,10 @@ pub fn create_and_serve_sme(
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-    let (sme, sme_fut) = create_sme(
+    let (mlme_event_sender, mlme_event_receiver) = mpsc::unbounded();
+    let (sme, mlme_req_stream, sme_fut) = create_sme(
         cfg.into(),
-        mlme_proxy.clone(),
+        mlme_event_receiver,
         &device_info,
         mac_sublayer_support,
         security_support,
@@ -105,6 +110,11 @@ pub fn create_and_serve_sme(
         persistence_req_sender,
         shutdown_receiver,
         generic_sme,
+    );
+    let forward_mlme_msgs_fut = forward_mlme_msgs(
+        mlme_proxy.clone(),
+        mlme_req_stream,
+        UnboundedSink::new(mlme_event_sender),
     );
 
     info!("new iface #{} with role '{:?}'", id, device_info.role);
@@ -129,7 +139,10 @@ pub fn create_and_serve_sme(
     );
 
     Ok(async move {
-        let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
+        let result = select! {
+            result = sme_fut.fuse() => result.map_err(|e| format_err!("error while serving SME: {}", e)),
+            result = forward_mlme_msgs_fut.fuse() => result,
+        };
         inspect_log!(
             inspect_tree.device_events.lock().get_mut(),
             msg: format!("iface removed: #{}", id)
@@ -147,6 +160,59 @@ pub fn create_and_serve_sme(
 
         result
     })
+}
+
+async fn forward_mlme_msgs(
+    mlme_proxy: fidl_mlme::MlmeProxy,
+    mut mlme_req_stream: wlan_sme::MlmeStream,
+    mlme_event_sink: UnboundedSink<fidl_mlme::MlmeEvent>,
+) -> Result<(), anyhow::Error> {
+    let mut mlme_event_stream = mlme_proxy.take_event_stream();
+    loop {
+        select! {
+            mlme_event = mlme_event_stream.next().fuse() => match mlme_event {
+                Some(Ok(event)) => mlme_event_sink.send(event),
+                Some(Err(ref e)) if e.is_closed() => return Ok(()),
+                None => return Ok(()),
+                Some(Err(e)) => return Err(format_err!("Error reading an event from MLME channel: {}", e)),
+            },
+            mlme_req = mlme_req_stream.next().fuse() => match mlme_req {
+                Some(req) => match forward_mlme_request(req, &mlme_proxy) {
+                    Ok(()) => {},
+                    Err(ref e) if e.is_closed() => return Ok(()),
+                    Err(e) => return Err(format_err!("Error forwarding a request from SME to MLME: {}", e)),
+                },
+                None => return Err(format_err!("Stream of requests from SME to MLME has ended unexpectedly")),
+            },
+        }
+    }
+}
+
+fn forward_mlme_request(
+    req: wlan_sme::MlmeRequest,
+    proxy: &fidl_mlme::MlmeProxy,
+) -> Result<(), fidl::Error> {
+    use wlan_sme::MlmeRequest;
+    match req {
+        MlmeRequest::Scan(mut req) => proxy.start_scan(&mut req),
+        MlmeRequest::AuthResponse(mut resp) => proxy.authenticate_resp(&mut resp),
+        MlmeRequest::AssocResponse(mut resp) => proxy.associate_resp(&mut resp),
+        MlmeRequest::Connect(mut req) => proxy.connect_req(&mut req),
+        MlmeRequest::Reconnect(mut req) => proxy.reconnect_req(&mut req),
+        MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
+        MlmeRequest::Eapol(mut req) => proxy.eapol_req(&mut req),
+        MlmeRequest::SetKeys(mut req) => proxy.set_keys_req(&mut req),
+        MlmeRequest::SetCtrlPort(mut req) => proxy.set_controlled_port(&mut req),
+        MlmeRequest::Start(mut req) => proxy.start_req(&mut req),
+        MlmeRequest::Stop(mut req) => proxy.stop_req(&mut req),
+        MlmeRequest::SendMpOpenAction(mut req) => proxy.send_mp_open_action(&mut req),
+        MlmeRequest::SendMpConfirmAction(mut req) => proxy.send_mp_confirm_action(&mut req),
+        MlmeRequest::MeshPeeringEstablished(mut req) => proxy.mesh_peering_established(&mut req),
+        MlmeRequest::SaeHandshakeResp(mut resp) => proxy.sae_handshake_resp(&mut resp),
+        MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
+        MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
+        MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
+    }
 }
 
 #[cfg(test)]

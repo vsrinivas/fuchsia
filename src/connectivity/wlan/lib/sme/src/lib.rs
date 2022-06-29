@@ -62,6 +62,7 @@ pub trait Station {
 }
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
+pub type MlmeEventStream = mpsc::UnboundedReceiver<MlmeEvent>;
 pub type MlmeSink = UnboundedSink<MlmeRequest>;
 
 mod responder {

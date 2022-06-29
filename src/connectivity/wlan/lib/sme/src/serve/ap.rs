@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ap as ap_sme;
+use crate::{ap as ap_sme, MlmeEventStream, MlmeStream};
 use anyhow::format_err;
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::mpsc;
 use futures::prelude::*;
@@ -21,25 +21,26 @@ use wlan_common::RadioConfig;
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;
 
-pub async fn serve(
-    proxy: MlmeProxy,
+pub fn serve(
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-) -> Result<(), anyhow::Error> {
+) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let (sme, mlme_stream, time_stream) = Sme::new(device_info, mac_sublayer_support);
-    let sme = Arc::new(Mutex::new(sme));
-    let mlme_sme =
-        super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);
-    let sme_fidl = serve_fidl(&sme, new_fidl_clients);
-    pin_mut!(mlme_sme);
-    pin_mut!(sme_fidl);
-    select! {
-        mlme_sme = mlme_sme.fuse() => mlme_sme?,
-        sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
-    }
-    Ok(())
+    let fut = async move {
+        let sme = Arc::new(Mutex::new(sme));
+        let mlme_sme = super::serve_mlme_sme(event_stream, Arc::clone(&sme), time_stream);
+        let sme_fidl = serve_fidl(&sme, new_fidl_clients);
+        pin_mut!(mlme_sme);
+        pin_mut!(sme_fidl);
+        select! {
+            mlme_sme = mlme_sme.fuse() => mlme_sme?,
+            sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
+        }
+        Ok(())
+    };
+    (mlme_stream, fut)
 }
 
 async fn serve_fidl(

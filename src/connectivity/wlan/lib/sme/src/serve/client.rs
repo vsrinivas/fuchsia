@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::client::{
-    self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
+use crate::{
+    client::{
+        self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
+    },
+    MlmeEventStream, MlmeStream,
 };
 use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_zircon as zx;
@@ -26,9 +29,8 @@ use wlan_inspect;
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme;
 
-pub async fn serve(
+pub fn serve(
     cfg: crate::Config,
-    proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
     security_support: fidl_common::SecuritySupport,
@@ -38,7 +40,7 @@ pub async fn serve(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
-) -> Result<(), anyhow::Error> {
+) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let wpa3_supported = security_support.mfp.supported
         && (security_support.sae.driver_handler_supported
             || security_support.sae.sme_handler_supported);
@@ -53,16 +55,19 @@ pub async fn serve(
         security_support,
         spectrum_management_support,
     );
-    let sme = Arc::new(Mutex::new(sme));
-    let mlme_sme =
-        super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);
-    let sme_fidl = serve_fidl(sme, new_fidl_clients);
-    pin_mut!(mlme_sme);
-    pin_mut!(sme_fidl);
-    Ok(select! {
-        mlme_sme = mlme_sme.fuse() => mlme_sme?,
-        sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
-    })
+    let fut = async move {
+        let sme = Arc::new(Mutex::new(sme));
+        let mlme_sme = super::serve_mlme_sme(event_stream, Arc::clone(&sme), time_stream);
+        let sme_fidl = serve_fidl(sme, new_fidl_clients);
+        pin_mut!(mlme_sme);
+        pin_mut!(sme_fidl);
+        select! {
+            mlme_sme = mlme_sme.fuse() => mlme_sme?,
+            sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
+        }
+        Ok(())
+    };
+    (mlme_stream, fut)
 }
 
 async fn serve_fidl(

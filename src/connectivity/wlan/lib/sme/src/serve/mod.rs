@@ -7,11 +7,10 @@ pub mod client;
 pub mod mesh;
 
 use {
-    crate::{MlmeRequest, MlmeStream, Station},
+    crate::{MlmeEventStream, MlmeStream, Station},
     anyhow::format_err,
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::auto_persist,
     fuchsia_zircon as zx,
@@ -101,7 +100,7 @@ async fn serve_generic_sme(
 
 pub fn create_sme(
     cfg: crate::Config,
-    mlme_proxy: fidl_mlme::MlmeProxy,
+    mlme_event_stream: MlmeEventStream,
     device_info: &fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
     security_support: fidl_common::SecuritySupport,
@@ -111,37 +110,35 @@ pub fn create_sme(
     persistence_req_sender: auto_persist::PersistenceReqSender,
     mut shutdown_receiver: mpsc::Receiver<()>,
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
-) -> (SmeServer, impl Future<Output = Result<(), anyhow::Error>>) {
+) -> (SmeServer, MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let device_info = device_info.clone();
-    let event_stream = mlme_proxy.take_event_stream();
-    let (server, sme_fut) = match device_info.role {
+    let (server, mlme_req_stream, sme_fut) = match device_info.role {
         fidl_common::WlanMacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = client::serve(
+            let (mlme_req_stream, fut) = client::serve(
                 cfg,
-                mlme_proxy,
                 device_info,
                 mac_sublayer_support,
                 security_support,
                 spectrum_management_support,
-                event_stream,
+                mlme_event_stream,
                 receiver,
                 iface_tree_holder,
                 hasher,
                 persistence_req_sender,
             );
-            (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
+            (SmeServer::Client(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
         }
         fidl_common::WlanMacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut =
-                ap::serve(mlme_proxy, device_info, mac_sublayer_support, event_stream, receiver);
-            (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
+            let (mlme_req_stream, fut) =
+                ap::serve(device_info, mac_sublayer_support, mlme_event_stream, receiver);
+            (SmeServer::Ap(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
         }
         fidl_common::WlanMacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = mesh::serve(mlme_proxy, device_info, event_stream, receiver);
-            (SmeServer::Mesh(sender), FutureObj::new(Box::new(fut)))
+            let (mlme_req_stream, fut) = mesh::serve(device_info, mlme_event_stream, receiver);
+            (SmeServer::Mesh(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
         }
     };
     let generic_sme_fut = serve_generic_sme(generic_sme, server.clone());
@@ -152,15 +149,13 @@ pub fn create_sme(
             _ = shutdown_receiver.select_next_some() => Ok(()),
         }
     };
-    (server, sme_fut_with_shutdown)
+    (server, mlme_req_stream, sme_fut_with_shutdown)
 }
 
 // The returned future successfully terminates when MLME closes the channel
 async fn serve_mlme_sme<STA, TS>(
-    proxy: MlmeProxy,
     mut event_stream: MlmeEventStream,
     station: Arc<Mutex<STA>>,
-    mut mlme_stream: MlmeStream,
     time_stream: TS,
 ) -> Result<(), anyhow::Error>
 where
@@ -175,18 +170,8 @@ where
             // bailing immediately, so we don't need to track if we've seen a
             // `None` or not and can `fuse` directly in the `select` call.
             mlme_event = event_stream.next().fuse() => match mlme_event {
-                Some(Ok(mlme_event)) => station.lock().unwrap().on_mlme_event(mlme_event),
-                Some(Err(ref e)) if e.is_closed() => return Ok(()),
+                Some(mlme_event) => station.lock().unwrap().on_mlme_event(mlme_event),
                 None => return Ok(()),
-                Some(Err(e)) => return Err(format_err!("Error reading an event from MLME channel: {}", e)),
-            },
-            mlme_req = mlme_stream.next().fuse() => match mlme_req {
-                Some(req) => match forward_mlme_request(req, &proxy) {
-                    Ok(()) => {},
-                    Err(ref e) if e.is_closed() => return Ok(()),
-                    Err(e) => return Err(format_err!("Error forwarding a request from SME to MLME: {}", e)),
-                },
-                None => return Err(format_err!("Stream of requests from SME to MLME has ended unexpectedly")),
             },
             timeout = timeout_stream.next() => match timeout {
                 Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
@@ -196,36 +181,12 @@ where
     }
 }
 
-fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
-    match req {
-        MlmeRequest::Scan(mut req) => proxy.start_scan(&mut req),
-        MlmeRequest::AuthResponse(mut resp) => proxy.authenticate_resp(&mut resp),
-        MlmeRequest::AssocResponse(mut resp) => proxy.associate_resp(&mut resp),
-        MlmeRequest::Connect(mut req) => proxy.connect_req(&mut req),
-        MlmeRequest::Reconnect(mut req) => proxy.reconnect_req(&mut req),
-        MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
-        MlmeRequest::Eapol(mut req) => proxy.eapol_req(&mut req),
-        MlmeRequest::SetKeys(mut req) => proxy.set_keys_req(&mut req),
-        MlmeRequest::SetCtrlPort(mut req) => proxy.set_controlled_port(&mut req),
-        MlmeRequest::Start(mut req) => proxy.start_req(&mut req),
-        MlmeRequest::Stop(mut req) => proxy.stop_req(&mut req),
-        MlmeRequest::SendMpOpenAction(mut req) => proxy.send_mp_open_action(&mut req),
-        MlmeRequest::SendMpConfirmAction(mut req) => proxy.send_mp_confirm_action(&mut req),
-        MlmeRequest::MeshPeeringEstablished(mut req) => proxy.mesh_peering_established(&mut req),
-        MlmeRequest::SaeHandshakeResp(mut resp) => proxy.sae_handshake_resp(&mut resp),
-        MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
-        MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
-        MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::test_utils,
         fidl::endpoints::create_proxy,
-        fidl_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_inspect::Inspector,
         futures::task::Poll,
@@ -246,8 +207,7 @@ mod tests {
     #[test]
     fn sme_shutdown() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (mlme_proxy, _mlme_server) =
-            create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (_mlme_event_sender, mlme_event_stream) = mpsc::unbounded();
         let inspector = Inspector::new();
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, _persistence_stream) =
@@ -255,9 +215,9 @@ mod tests {
         let (mut shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         let (_generic_sme_proxy, generic_sme_server) =
             create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
-        let (_sme_server, serve_fut) = create_sme(
+        let (_sme_server, _mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
-            mlme_proxy,
+            mlme_event_stream,
             &test_utils::fake_device_info([0; 6]),
             fake_mac_sublayer_support(),
             fake_security_support(),
@@ -281,8 +241,7 @@ mod tests {
     #[test]
     fn sme_close_endpoints() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (mlme_proxy, _mlme_server) =
-            create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (_mlme_event_sender, mlme_event_stream) = mpsc::unbounded();
         let inspector = Inspector::new();
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, _persistence_stream) =
@@ -290,9 +249,9 @@ mod tests {
         let (_shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         let (generic_sme_proxy, generic_sme_server) =
             create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
-        let (mut sme_server, serve_fut) = create_sme(
+        let (mut sme_server, _mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
-            mlme_proxy,
+            mlme_event_stream,
             &test_utils::fake_device_info([0; 6]),
             fake_mac_sublayer_support(),
             fake_security_support(),
@@ -330,7 +289,8 @@ mod tests {
         _inspector: Inspector,
         _shutdown_sender: mpsc::Sender<()>,
         _persistence_stream: mpsc::Receiver<String>,
-        _mlme_server: fidl::endpoints::ServerEnd<fidl_mlme::MlmeMarker>,
+        _mlme_req_stream: MlmeStream,
+        _mlme_event_sender: mpsc::UnboundedSender<fidl_mlme::MlmeEvent>,
         // Executor goes last to avoid test shutdown failures.
         exec: fasync::TestExecutor,
     }
@@ -340,8 +300,7 @@ mod tests {
     ) -> (GenericSmeTestHelper, Pin<Box<impl Future<Output = Result<(), anyhow::Error>>>>) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let inspector = Inspector::new();
-        let (mlme_proxy, mlme_server) =
-            create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (mlme_event_sender, mlme_event_stream) = mpsc::unbounded();
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, persistence_stream) =
             test_utils::create_inspect_persistence_channel();
@@ -349,9 +308,9 @@ mod tests {
         let (generic_sme_proxy, generic_sme_server) =
             create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
         let device_info = fidl_mlme::DeviceInfo { role, ..test_utils::fake_device_info([0; 6]) };
-        let (_sme_server, serve_fut) = create_sme(
+        let (_sme_server, mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
-            mlme_proxy,
+            mlme_event_stream,
             &device_info,
             fake_mac_sublayer_support(),
             fake_security_support(),
@@ -371,7 +330,8 @@ mod tests {
                 _inspector: inspector,
                 _shutdown_sender: shutdown_sender,
                 _persistence_stream: persistence_stream,
-                _mlme_server: mlme_server,
+                _mlme_req_stream: mlme_req_stream,
+                _mlme_event_sender: mlme_event_sender,
                 exec,
             },
             serve_fut,
