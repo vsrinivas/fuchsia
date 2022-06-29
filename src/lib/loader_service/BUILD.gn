@@ -22,9 +22,9 @@ source_set("loader_service") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 

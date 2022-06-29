@@ -22,9 +22,9 @@ fuchsia_driver("fuchsia_driver") {
     ":bt_hci_passthrough_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
+    "//sdk/lib/fidl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 

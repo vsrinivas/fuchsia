@@ -39,6 +39,7 @@ source_set("test_sources") {
     ":fidl.test.coding.fuchsia_llcpp",
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/fit",
     "//zircon/system/ulib/async",
@@ -47,7 +48,6 @@ source_set("test_sources") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
@@ -99,8 +99,8 @@ if (is_fuchsia) {
     testonly = true
     sources = [ "fidl_coded_types.cc" ]
     public_deps = [
+      "//sdk/lib/fidl",
       "//sdk/lib/fit",
-      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxtest",
     ]

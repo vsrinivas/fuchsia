@@ -10,6 +10,7 @@ executable("bin") {
   sources = [ "validator_puppet.cc" ]
 
   deps = [
+    "//sdk/lib/fidl",
     "//sdk/lib/fit-promise",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/stdcompat",
@@ -18,7 +19,6 @@ executable("bin") {
     "//src/diagnostics/validator/inspect/fidl:validate",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

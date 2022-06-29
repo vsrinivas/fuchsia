@@ -22,10 +22,10 @@ test("service-proxy-dir") {
   deps = [
     ":fidl.test.echo_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fidl",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/runtests-utils",
     "//zircon/system/ulib/zx",

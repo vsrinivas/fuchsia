@@ -12,6 +12,7 @@ executable("puppet") {
   deps = [
     "../../fidl:validate",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
+    "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//sdk/lib/syslog/cpp:cpp",
@@ -20,7 +21,6 @@ executable("puppet") {
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
   ]
 }
 

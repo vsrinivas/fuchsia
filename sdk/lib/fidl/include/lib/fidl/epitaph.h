@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_EPITAPH_H_
-#define LIB_FIDL_EPITAPH_H_
+#ifndef LIB_FIDL_INCLUDE_LIB_FIDL_EPITAPH_H_
+#define LIB_FIDL_INCLUDE_LIB_FIDL_EPITAPH_H_
 
 #include <zircon/types.h>
 
@@ -20,4 +20,4 @@ zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error);
 
 __END_CDECLS
 
-#endif  // LIB_FIDL_EPITAPH_H_
+#endif  // LIB_FIDL_INCLUDE_LIB_FIDL_EPITAPH_H_

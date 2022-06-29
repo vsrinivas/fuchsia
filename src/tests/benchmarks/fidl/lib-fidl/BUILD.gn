@@ -15,8 +15,8 @@ executable("bin") {
     "main.cc",
   ]
   deps = [
+    "//sdk/lib/fidl",
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/perftest",
     benchmark_suite_fidl_target,
   ]

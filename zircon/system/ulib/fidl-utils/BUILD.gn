@@ -9,13 +9,13 @@ zx_library("fidl-utils") {
   sdk_headers = [ "lib/fidl-utils/bind.h" ]
   sources = []
   deps = [
-    "//zircon/system/ulib/fidl",
+    "//sdk/lib/fidl",
     "//zircon/system/ulib/fidl-async",
   ]
   public_deps = [
+    "//sdk/lib/fidl",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/zx",
   ]

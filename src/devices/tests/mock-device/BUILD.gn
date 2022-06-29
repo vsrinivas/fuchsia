@@ -25,12 +25,12 @@ fuchsia_driver("mock-device-driver") {
     ":mock-device-bind",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]

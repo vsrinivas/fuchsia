@@ -121,12 +121,12 @@ source_set("test_harness_impl_unittest") {
     ":test_harness_impl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
-    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

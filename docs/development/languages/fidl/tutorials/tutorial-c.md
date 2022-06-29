@@ -435,9 +435,9 @@ zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error);
 ```
 
 Declared in
-[lib/fidl/epitaph.h](/zircon/system/ulib/fidl/include/lib/fidl/epitaph.h),
+[lib/fidl/epitaph.h](/sdk/lib/fidl/include/lib/fidl/epitaph.h),
 defined in
-[epitaph.c](/zircon/system/ulib/fidl/epitaph.c).
+[epitaph.c](/sdk/lib/fidl/epitaph.c).
 
 This function sends an epitaph with the given error number down the given
 channel.  An epitaph is a special message, with ordinal 0xFFFFFFFF, which

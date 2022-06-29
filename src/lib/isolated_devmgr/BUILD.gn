@@ -199,11 +199,11 @@ fuchsia_driver("crash-device-driver") {
   sources = [ "crash_device.cc" ]
   deps = [
     ":crash-device-bind",
+    "//sdk/lib/fidl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fzl",
   ]
 }

@@ -11,12 +11,12 @@ executable("bin") {
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/component/llcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/svc",
   ]
 }

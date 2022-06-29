@@ -17,11 +17,11 @@ test("component_cpp_unittests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
-    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -46,12 +46,12 @@ test("component_cpp_testing_unittests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
-    "//zircon/system/ulib/fidl",
   ]
 }
 
@@ -70,6 +70,7 @@ test("component_cpp_testing_tests_bin") {
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
@@ -77,7 +78,6 @@ test("component_cpp_testing_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
-    "//zircon/system/ulib/fidl",
   ]
 }
 

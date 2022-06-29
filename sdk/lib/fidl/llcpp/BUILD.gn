@@ -161,7 +161,7 @@ sdk_source_set("llcpp") {
 
       # <lib/fidl/cpp/wire/internal/transport_channel.h> has
       # #include <lib/fidl/epitaph.h>
-      "//zircon/system/ulib/fidl",
+      "//sdk/lib/fidl",
     ]
   }
 

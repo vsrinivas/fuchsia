@@ -22,9 +22,9 @@ source_set("launcher") {
   sources = [ "fdio.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -123,6 +123,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/fit",
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
@@ -138,7 +139,6 @@ source_set("block-watcher") {
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",

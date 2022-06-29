@@ -39,7 +39,6 @@ fuchsia_driver("as370-power-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",

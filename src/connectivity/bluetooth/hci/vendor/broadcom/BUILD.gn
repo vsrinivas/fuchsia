@@ -36,11 +36,11 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.bt.vendor:fuchsia.hardware.bt.vendor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
+    "//sdk/lib/fidl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/sync",
   ]
 

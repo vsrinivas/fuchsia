@@ -519,8 +519,8 @@ template("fuchsia_structured_config_cpp_elf_lib") {
     sources = [ cpp_elf_cc_source_file ]
     deps = [
       ":${fidl_library_target}_llcpp",
+      "//sdk/lib/fidl",
       "//sdk/lib/sys/cpp",
-      "//zircon/system/ulib/fidl",
     ]
 
     public_deps = [
@@ -709,8 +709,8 @@ template("fuchsia_structured_config_cpp_driver_lib") {
     deps = [
       ":${fidl_library_target}_llcpp",
       "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+      "//sdk/lib/fidl",
       "//sdk/lib/sys/cpp",
-      "//zircon/system/ulib/fidl",
     ]
 
     public_deps = [

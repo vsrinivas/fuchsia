@@ -21,11 +21,11 @@ source_set("test_libs") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//sdk/lib/zxio",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/drivers/lib/audio-utils",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -343,9 +343,9 @@ template("fidl_cpp_family") {
   if (is_fuchsia) {
     hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
     llcpp_public_deps = [
+      "//sdk/lib/fidl",
       "//sdk/lib/fidl/llcpp",
       "//sdk/lib/fit",
-      "//zircon/system/ulib/fidl",
     ]
   } else {
     # On host.

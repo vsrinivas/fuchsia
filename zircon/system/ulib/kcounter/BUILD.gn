@@ -14,10 +14,10 @@ zx_library("kcounter") {
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//src/lib/storage/vfs/cpp",
     "//zircon/kernel/lib/counters",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",

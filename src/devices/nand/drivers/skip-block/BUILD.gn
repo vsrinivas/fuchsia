@@ -38,7 +38,7 @@ source_set("common") {
   deps = [
     ":skip-block-bind",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-    "//zircon/system/ulib/fidl",
+    "//sdk/lib/fidl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",

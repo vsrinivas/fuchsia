@@ -17,11 +17,11 @@ executable("llcpp_echo_service_server_bin") {
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/fidl",
     "//sdk/lib/sys/component/llcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl",
   ]
 }
 

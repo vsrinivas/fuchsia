@@ -55,10 +55,10 @@ test("fidl_llcpp_builder_tests_bin") {
   output_name = "fidl_llcpp_builder_tests"
   sources = [ "vector_view_test.cc" ]
   deps = [
+    "//sdk/lib/fidl",
     "//sdk/lib/fidl/llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fidl",
   ]
 
   if (is_fuchsia) {

@@ -19,9 +19,9 @@ executable("clkctl") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/zx",
   ]

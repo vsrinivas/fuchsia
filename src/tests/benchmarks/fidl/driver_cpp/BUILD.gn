@@ -20,12 +20,12 @@ foreach(suite, benchmark_suites) {
     deps = [
       "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
       "//sdk/lib/driver_runtime:driver_runtime_internal",
+      "//sdk/lib/fidl",
       "//sdk/lib/fidl_driver",
       "//sdk/lib/fidl_driver:fidl_driver_natural",
       "//src/devices/bin/driver_runtime:driver_runtime_impl",
       "//src/lib/fidl/cpp",
       "//zircon/system/ulib/async:async-cpp",
-      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/perftest",
       "//zircon/system/ulib/sync:sync-cpp",
     ]

@@ -37,7 +37,6 @@ fuchsia_driver("aml-light-driver") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
@@ -72,7 +71,6 @@ test("aml-light-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/sync",

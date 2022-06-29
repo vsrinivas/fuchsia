@@ -19,10 +19,10 @@ zx_library("driver-unit-test") {
     "//sdk/fidl/fuchsia.driver.test.logger:fuchsia.driver.test.logger_cpp",
   ]
   deps = [
+    "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -23,6 +23,7 @@ test("memfs-inotify-test") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp:inotify_test_base",
     "//src/storage/memfs",
@@ -31,7 +32,6 @@ test("memfs-inotify-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

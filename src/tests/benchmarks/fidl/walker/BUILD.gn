@@ -19,10 +19,10 @@ foreach(suite, benchmark_suites) {
     fidl = suite.fidl_target
     deps = [
       "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
+      "//sdk/lib/fidl",
       "//sdk/lib/fidl/cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
-      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/perftest",
     ]
     extra_args = [
@@ -40,8 +40,8 @@ executable("bin") {
     "walker_benchmark_util.cc",
   ]
   deps = [
+           "//sdk/lib/fidl",
            "//src/zircon/lib/zircon",
-           "//zircon/system/ulib/fidl",
            "//zircon/system/ulib/perftest",
            "//zircon/system/ulib/zx",
          ] + gidl_deps
