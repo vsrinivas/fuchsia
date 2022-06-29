@@ -9,7 +9,7 @@
         "sys/testing/system-test.shard.cml",
     ],
     program: {
-        binary: "bin/web_semantics_tests_bin",
+        binary: "bin/web-semantics-test-bin",
     },
     offer: [
         {

@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/ui/base_view/embedded_view_utils.h"
-#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture_v2.h"
+#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 #include "src/ui/testing/views/embedder_view.h"
 
 namespace accessibility_test {

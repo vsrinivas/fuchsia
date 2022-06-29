@@ -11,12 +11,63 @@ group("unit") {
   public_deps = [ ":semantics_tests" ]
 }
 
-source_set("semantics_integration_test_fixture_v2") {
+group("integration") {
+  testonly = true
+  public_deps = [
+    ":flutter-semantics-test",
+    ":web-semantics-test",
+    "//src/chromium:web_engine",
+    "//src/flutter",
+    "//src/fonts:downstream_test_deps",
+  ]
+}
+
+executable("semantics_tests") {
+  output_name = "semantics_tests"
+  testonly = true
+  sources = [
+    "a11y_semantics_event_manager_test.cc",
+    "semantic_tree_parser.cc",
+    "semantic_tree_parser.h",
+    "semantic_tree_parser_test.cc",
+    "semantic_tree_service_unittest.cc",
+    "tree_unittest.cc",
+  ]
+  public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
+  deps = [
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//sdk/lib/vfs/cpp",
+    "//src/lib/files",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/bin/a11y_manager/tests/util",
+    "//src/ui/a11y/lib/screen_reader/util",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//third_party/glm",
+    "//third_party/googletest:gmock",
+    "//third_party/rapidjson",
+  ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+source_set("semantics_integration_test_fixture") {
   testonly = true
 
   sources = [
-    "semantics_integration_test_fixture_v2.cc",
-    "semantics_integration_test_fixture_v2.h",
+    "semantics_integration_test_fixture.cc",
+    "semantics_integration_test_fixture.h",
   ]
 
   deps = [
@@ -64,132 +115,13 @@ source_set("semantics_integration_test_fixture_v2") {
   ]
 }
 
-group("integration") {
-  testonly = true
-  public_deps = [
-    ":semantics-integration-tests",
-    "//src/chromium:web_engine",
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/flutter",
-    "//src/fonts:downstream_test_deps",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/ui:runtime_with_root_presenter",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-  ]
-}
-
-executable("semantics_tests") {
-  output_name = "semantics_tests"
-  testonly = true
-  sources = [
-    "a11y_semantics_event_manager_test.cc",
-    "semantic_tree_parser.cc",
-    "semantic_tree_parser.h",
-    "semantic_tree_parser_test.cc",
-    "semantic_tree_service_unittest.cc",
-    "tree_unittest.cc",
-  ]
-  public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
-  deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/ui/scenic/cpp",
-    "//sdk/lib/vfs/cpp",
-    "//src/lib/files",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/json_parser",
-    "//src/lib/testing/loop_fixture",
-    "//src/ui/a11y/bin/a11y_manager/tests/util",
-    "//src/ui/a11y/lib/screen_reader/util",
-    "//src/ui/a11y/lib/semantics",
-    "//src/ui/a11y/lib/semantics/tests/mocks",
-    "//third_party/glm",
-    "//third_party/googletest:gmock",
-    "//third_party/rapidjson",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-fuchsia_component("flutter_semantics_tests") {
-  testonly = true
-  deps = [
-    ":flutter_semantics_tests_bin",
-    "//src/ui/a11y/bin/demo:component",
-  ]
-  manifest = "meta/flutter-semantics-tests-v2.cml"
-}
-
-fuchsia_component("web_semantics_tests") {
-  testonly = true
-  deps = [ ":web_semantics_tests_bin" ]
-  manifest = "meta/web-semantics-tests-v2.cml"
-}
-
-resource("offscreen_node") {
-  sources = [ "testdata/offscreen_node.html" ]
-  outputs = [ "data/offscreen_node.html" ]
-}
-
-resource("dynamic_button") {
-  sources = [ "testdata/dynamic_button.html" ]
-  outputs = [ "data/dynamic_button.html" ]
-}
-
-resource("static") {
-  sources = [ "testdata/static.html" ]
-  outputs = [ "data/static.html" ]
-}
-
-fuchsia_test_package("semantics-integration-tests") {
-  test_components = [
-    ":flutter_semantics_tests",
-    ":web_semantics_tests",
-  ]
-
-  deps = [
-    ":dynamic_button",
-    ":offscreen_node",
-    ":static",
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/connectivity/network/netstack:component-legacy",
-    "//src/developer/build_info/testing:fake-build-info-component",
-    "//src/developer/memory/monitor:component",
-    "//src/fonts/fake:fake-fonts-cm",
-    "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
-    "//src/ui/a11y/lib/semantics/tests/web_client:component",
-    "//src/ui/a11y/lib/semantics/tests/web_client:web_client_default_config",
-    "//src/ui/bin/text:text_manager_comp_v2",
-  ]
-
-  test_specs = {
-    environments = [
-      {
-        dimensions = {
-          device_type = "AEMU"
-        }
-      },
-    ]
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-executable("flutter_semantics_tests_bin") {
+executable("flutter-semantics-test-bin") {
   testonly = true
 
   sources = [ "flutter_semantics_tests.cc" ]
 
   deps = [
-    ":semantics_integration_test_fixture_v2",
+    ":semantics_integration_test_fixture",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -204,17 +136,45 @@ executable("flutter_semantics_tests_bin") {
   ]
 }
 
-executable("web_semantics_tests_bin") {
+fuchsia_component("flutter-semantics-test-component") {
+  testonly = true
+  manifest = "meta/flutter-semantics-test.cml"
+  deps = [ ":flutter-semantics-test-bin" ]
+}
+
+fuchsia_test_package("flutter-semantics-test") {
+  test_components = [ ":flutter-semantics-test-component" ]
+  deps = [ "//src/ui/a11y/bin/demo:component" ]
+  test_specs = {
+    log_settings = {
+      # Do not fail the test if a message with level ERROR is logged.  Several
+      # components will log ERROR if they miss a non-essential FIDL API in the
+      # sandbox, which would make the test fail if it weren't for this.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
+executable("web-semantics-test-bin") {
   testonly = true
 
   sources = [ "web_semantics_tests.cc" ]
   deps = [
-    ":semantics_integration_test_fixture_v2",
+    ":semantics_integration_test_fixture",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.memorypressure",
@@ -242,4 +202,39 @@ executable("web_semantics_tests_bin") {
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_component("web-semantics-test-component") {
+  testonly = true
+  manifest = "meta/web-semantics-test.cml"
+  deps = [ ":web-semantics-test-bin" ]
+}
+
+fuchsia_test_package("web-semantics-test") {
+  test_components = [ ":web-semantics-test-component" ]
+  deps = [
+    "//src/connectivity/network/netstack:component-legacy",
+    "//src/developer/build_info/testing:fake-build-info-component",
+    "//src/developer/memory/monitor:component",
+    "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
+    "//src/ui/a11y/lib/semantics/tests/web_client:component",
+    "//src/ui/a11y/lib/semantics/tests/web_client:web_client_default_config",
+    "//src/ui/bin/text:text_manager_comp_v2",
+  ]
+  test_specs = {
+    log_settings = {
+      # Do not fail the test if a message with level ERROR is logged.  Several
+      # components will log ERROR if they miss a non-essential FIDL API in the
+      # sandbox, which would make the test fail if it weren't for this.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
 }

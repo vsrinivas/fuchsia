@@ -10,8 +10,8 @@ fx set workstation.<board> --with //src/ui/a11y/bundles:tests
 And run the tests using
 ```
 # Run the integration tests
-ffx test run fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/flutter_semantics_tests.cm
-ffx test run fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/web_semantics_tests.cm
+ffx test run fuchsia-pkg://fuchsia.com/flutter-semantics-test#meta/flutter-semantics-test-component.cm
+ffx test run fuchsia-pkg://fuchsia.com/web-semantics-test#meta/web-semantics-test-component.cm
 # Run the unit tests
 ffx test run fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/semantics_tests.cm
 ```
@@ -25,8 +25,7 @@ semantic data sent by the runner under test and to trigger semantic actions in r
 
 ### Web semantic integration tests
 
-These tests launch a web\_runner and load html pages from the test package.  These test pages are
-sourced from the [testdata](/src/ui/a11y/lib/semantics/tests/testdata) directory.
+These tests launch a web\_runner and load html declared in web_semantics_tests.cc.
 
 ### Flutter semantic integration tests
 

@@ -40,7 +40,7 @@
 #include "src/chromium/web_runner_tests/test_server.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
-#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture_v2.h"
+#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/ui/testing/views/embedder_view.h"
 

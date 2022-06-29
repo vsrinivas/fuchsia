@@ -9,7 +9,7 @@
         "sys/testing/system-test.shard.cml",
     ],
     program: {
-        binary: "bin/flutter_semantics_tests_bin",
+        binary: "bin/flutter-semantics-test-bin",
     },
     offer: [
         {
