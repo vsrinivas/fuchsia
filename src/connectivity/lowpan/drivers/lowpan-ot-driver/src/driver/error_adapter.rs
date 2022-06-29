@@ -46,6 +46,12 @@ impl From<ErrorAdapter<ot::WrongSize>> for ZxStatus {
     }
 }
 
+impl From<ErrorAdapter<futures::channel::oneshot::Canceled>> for ZxStatus {
+    fn from(_: ErrorAdapter<futures::channel::oneshot::Canceled>) -> ZxStatus {
+        ZxStatus::CANCELED
+    }
+}
+
 pub trait ErrorExt {
     fn get_zx_status(&self) -> Option<ZxStatus>;
     fn get_netstack_error(&self) -> Option<fidl_fuchsia_net_stack::Error>;

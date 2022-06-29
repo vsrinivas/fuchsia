@@ -735,30 +735,69 @@ where
         })
     }
 
-    async fn attach_all_nodes_to(&self, dataset: &[u8]) -> ZxResult<i64> {
-        let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset)
+    async fn attach_all_nodes_to(&self, dataset_raw: &[u8]) -> ZxResult<i64> {
+        const DELAY_TIMER_MS: u32 = 300 * 1000;
+
+        let dataset_tlvs = ot::OperationalDatasetTlvs::try_from_slice(dataset_raw)
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
 
-        let driver_state = self.driver_state.lock();
+        let mut dataset =
+            dataset_tlvs.try_to_dataset().map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
 
-        if !driver_state.is_active() {
-            return Err(ZxStatus::BAD_STATE);
+        if !dataset.is_complete() {
+            warn!("attach_all_nodes_to: Given dataset not complete: {:?}", dataset);
+            return Err(ZxStatus::INVALID_ARGS);
         }
 
-        if driver_state.is_ready() {
+        if dataset.get_pending_timestamp().is_some() {
+            warn!("attach_all_nodes_to: Dataset contains pending timestamp: {:?}", dataset);
+            return Err(ZxStatus::INVALID_ARGS);
+        }
+
+        if dataset.get_delay().is_some() {
+            warn!("attach_all_nodes_to: Dataset contains delay timer: {:?}", dataset);
+            return Err(ZxStatus::INVALID_ARGS);
+        }
+
+        let future = {
+            let driver_state = self.driver_state.lock();
+
+            if !driver_state.is_active() {
+                return Err(ZxStatus::BAD_STATE);
+            }
+
+            if !driver_state.is_ready() {
+                // If we aren't ready then we can just set
+                // the active TLVs and be done with it.
+                return driver_state
+                    .ot_instance
+                    .dataset_set_active_tlvs(&dataset_tlvs)
+                    .map_err(|e| {
+                        warn!("attach_all_nodes_to: Error: {:?}", e);
+                        ZxStatus::from(ErrorAdapter(e))
+                    })
+                    .map(|()| 0i64);
+            }
+
+            dataset.clear();
+            dataset.set_pending_timestamp(Some(ot::Timestamp::now()));
+            dataset.set_delay(Some(DELAY_TIMER_MS));
+
             // Transition all devices over to the new dataset.
-            warn!("attach_all_nodes_to: Migrating all devices is not yet supported");
-            Err(ZxStatus::NOT_SUPPORTED)
-        } else {
-            driver_state
-                .ot_instance
-                .dataset_set_active_tlvs(&dataset)
-                .map_err(|e| {
-                    warn!("attach_all_nodes_to: Error: {:?}", e);
-                    ZxStatus::from(ErrorAdapter(e))
-                })
-                .map(|()| 0i64)
-        }
+            driver_state.ot_instance.dataset_send_mgmt_pending_set_async(dataset, dataset_raw)
+        };
+
+        future
+            .map(|result| match result {
+                Ok(Ok(())) => Ok(i64::from(DELAY_TIMER_MS)),
+                Ok(Err(e)) => Err(ZxStatus::from(ErrorAdapter(e))),
+                Err(e) => Err(ZxStatus::from(ErrorAdapter(e))),
+            })
+            .on_timeout(fasync::Time::after(DEFAULT_TIMEOUT), || {
+                error!("Timeout");
+                Err(ZxStatus::TIMED_OUT)
+            })
+            .await
     }
 
     async fn meshcop_update_txt_entries(&self, txt_entries: Vec<(String, Vec<u8>)>) -> ZxResult {
