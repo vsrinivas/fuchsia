@@ -167,7 +167,7 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferImage(allocation::Globa
   renderer_->ReleaseBufferImage(image_id);
 }
 
-std::optional<uint32_t> ScreenCaptureBufferCollectionImporter::GetBufferCollectionBufferCount(
+std::optional<BufferCount> ScreenCaptureBufferCollectionImporter::GetBufferCollectionBufferCount(
     allocation::GlobalBufferCollectionId collection_id) {
   // If the collection info has not been retrieved before, wait for the buffers to be allocated and
   // populate the map/delete the reference to the |collection_id| from |collection_id_sync_ptrs_|.

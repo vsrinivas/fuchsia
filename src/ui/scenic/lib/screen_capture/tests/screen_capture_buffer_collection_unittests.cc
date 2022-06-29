@@ -10,6 +10,7 @@
 
 #include "../screen_capture.h"
 #include "../screen_capture_buffer_collection_importer.h"
+#include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
@@ -38,7 +39,9 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
     zx_status_t status;
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
     // Create Sysmem tokens.
+
     auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
+
     // Import into ScreenCaptureBufferCollectionImporter.
     bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
                                                     std::move(dup_token));
@@ -80,7 +83,9 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
   zx_status_t status;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
   // Create Sysmem tokens.
+
   auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
+
   // Import into ScreenCaptureBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
