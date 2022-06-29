@@ -283,6 +283,19 @@ pub struct ReadWrite {
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
+enum SocketState {
+    // The socket is either ready for RX or TX, depending on what was queried.
+    Ready,
+
+    // The client closed its socket, but there are bytes remaining on the device socket that
+    // have yet to be sent to the guest.
+    ClosedWithBytesOutstanding,
+
+    // The socket is closed with no bytes pending to be sent to the guest. The connection
+    // can safely transition from the read write state.
+    Closed,
+}
+
 impl ReadWrite {
     fn new(
         socket: fasync::Socket,
@@ -383,6 +396,26 @@ impl ReadWrite {
         }
     }
 
+    async fn send_credit_update_when_credit_available(&self) -> Result<SocketState, Error> {
+        // By default async sockets cache signals until a read or write failure, but the
+        // device requires an accurate signal before sending the guest a credit update.
+        self.socket.borrow().reacquire_write_signal()?;
+        match poll_fn(move |cx| self.socket.borrow().poll_write_task(cx)).await {
+            Ok(closed) => {
+                if closed {
+                    self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
+                    self.send_shutdown_packet();
+                    Ok(SocketState::Closed)
+                } else {
+                    self.send_credit_update()
+                        .map(|()| SocketState::Ready)
+                        .map_err(|err| anyhow!("failed to send credit update: {}", err))
+                }
+            }
+            Err(err) => Err(anyhow!("failed to poll write task: {}", err)),
+        }
+    }
+
     async fn do_state_action(&self) -> StateAction {
         if self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_BOTH) {
             return StateAction::UpdateState(VsockConnectionState::ClientInitiatedShutdown(
@@ -396,21 +429,7 @@ impl ReadWrite {
         if self.credit.borrow().guest_believes_no_tx_buffer_available()
             && !self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_SEND)
         {
-            let result = match poll_fn(move |cx| self.socket.borrow().poll_write_task(cx)).await {
-                Ok(closed) => {
-                    if closed {
-                        self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
-                        self.send_shutdown_packet();
-                        Ok(())
-                    } else {
-                        self.send_credit_update()
-                            .map_err(|err| anyhow!("failed to send credit update: {}", err))
-                    }
-                }
-                Err(err) => Err(anyhow!("failed to poll write task: {}", err)),
-            };
-
-            if let Err(err) = result {
+            if let Err(err) = self.send_credit_update_when_credit_available().await {
                 syslog::fx_log_err!("{}", err);
                 return StateAction::UpdateState(VsockConnectionState::ShutdownForced(
                     ShutdownForced::new(self.key, self.control_packets.clone()),
@@ -425,16 +444,13 @@ impl ReadWrite {
         StateAction::ContinueAwaiting
     }
 
-    // Returns true when the connection wants the next available RX chain. Returns false if the
-    // device should stop waiting on this connection, such as if the connection is transitioning to
-    // a closed state.
-    async fn wants_rx_chain(&self) -> bool {
-        if self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_RECIEVE) {
-            return false;
+    async fn get_rx_socket_state(&self) -> SocketState {
+        if let Err(_) = self.socket.borrow().reacquire_read_signal() {
+            return SocketState::Closed;
         }
 
         match poll_fn(move |cx| self.socket.borrow().poll_read_task(cx)).await {
-            Ok(closed) if !closed => true,
+            Ok(closed) if !closed => SocketState::Ready,
             _ => {
                 match self.socket.borrow().as_ref().outstanding_read_bytes() {
                     Ok(size) if size > 0 => {
@@ -447,19 +463,39 @@ impl ReadWrite {
                             self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
                             self.send_shutdown_packet();
                         }
-
-                        // Connection still needs RX.
-                        true
+                        SocketState::ClosedWithBytesOutstanding
                     }
-                    _ => {
-                        // The socket is closed with no bytes remaining.
-                        self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_BOTH, true);
-                        self.send_shutdown_packet();
-
-                        // Client has closed the socket and the RX buffer has been drained.
-                        false
-                    }
+                    _ => SocketState::Closed,
                 }
+            }
+        }
+    }
+
+    // Returns true when the connection wants the next available RX chain. Returns false if the
+    // device should stop waiting on this connection, such as if the connection is transitioning to
+    // a closed state.
+    async fn wants_rx_chain(&self) -> bool {
+        if self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_RECIEVE) {
+            return false;
+        }
+
+        // Optimization when data is available on a fully open socket, preventing the device from
+        // needing to reacquire a read signal from the kernel. This is the steady state when a
+        // connection is bottlenecked on the guest refilling the RX queue.
+        if self.socket.borrow().as_ref().outstanding_read_bytes().unwrap_or(0) > 0
+            && !self.socket.borrow().is_closed()
+        {
+            return true;
+        }
+
+        match self.get_rx_socket_state().await {
+            SocketState::Ready | SocketState::ClosedWithBytesOutstanding => true,
+            SocketState::Closed => {
+                // This connection will transmit no more bytes, either due to error or a closed
+                // and drained peer.
+                self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_BOTH, true);
+                self.send_shutdown_packet();
+                false
             }
         }
     }
@@ -1022,6 +1058,105 @@ mod tests {
         };
     }
 
+    #[test]
+    fn require_fresh_read_signal_in_read_write_state() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // Nothing sent via the client socket, so the state has no need for an RX chain.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        assert!(executor.run_until_stalled(&mut want_rx_chain_fut).is_pending());
+
+        let bytes = vec![0u8; 5];
+        assert_eq!(
+            client_socket.write(&bytes).expect("failed to write to client socket"),
+            bytes.len()
+        );
+
+        // There are 5 bytes pending on the device socket, so now it wants a chain.
+        assert!(!executor.run_until_stalled(&mut want_rx_chain_fut).is_pending());
+    }
+
+    #[test]
+    fn require_fresh_write_signal_in_read_write_state() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // The read-write state knows that the guest thinks there's no credit, so immediately
+        // sends an unsolicited credit update.
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        assert!(!executor.run_until_stalled(&mut state_action_fut).is_pending());
+
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::CreditUpdate);
+
+        // Using the credit update, create a buffer that will exhaust the TX socket buffer.
+        let max_tx_bytes = header.buf_alloc.get();
+        let data = vec![0u8; max_tx_bytes.try_into().unwrap()];
+
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().readable(&data, &mem).build())
+            .expect("failed to publish readable chain");
+        state
+            .handle_tx_chain(
+                OpType::ReadWrite,
+                VirtioVsockHeader { len: LE32::new(max_tx_bytes), ..VirtioVsockHeader::default() },
+                ReadableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                ),
+            )
+            .expect("failed to write chain to socket");
+
+        // The state will signal when credit is available with a credit update. As we require
+        // socket signals to be fresh instead of cached (the default behaviour), this will pend
+        // until the client reads from the socket.
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+
+        let mut read_buf = vec![0u8; 5];
+        assert_eq!(
+            client_socket.read(&mut read_buf).expect("failed to read bytes"),
+            read_buf.len()
+        );
+
+        // The device socket is now writable, so the state sends an unsolicited credit update
+        // to the guest.
+        assert!(!executor.run_until_stalled(&mut state_action_fut).is_pending());
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::CreditUpdate);
+        assert_eq!(header.fwd_cnt.get(), read_buf.len() as u32);
+    }
+
     #[fuchsia::test]
     async fn read_write_guest_half_close_remote_socket() {
         let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
@@ -1201,8 +1336,9 @@ mod tests {
         assert_eq!(header.fwd_cnt.get(), 3);
     }
 
-    #[fuchsia::test]
-    async fn read_write_unsolicited_credit_update() {
+    #[test]
+    fn read_write_unsolicited_credit_update() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
         let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
         let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
@@ -1214,10 +1350,14 @@ mod tests {
         // The read-write state knows that the device thinks there's no client credit while there
         // actually is, so immediately sends an unsolicited credit update.
         let state = ReadWrite::new(socket, key, control_tx);
-        assert_eq!(
-            StateAction::ContinueAwaiting,
-            state.do_state_action().now_or_never().expect("task should have completed")
-        );
+
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        if let Poll::Ready(action) = executor.run_until_stalled(&mut state_action_fut) {
+            assert_eq!(StateAction::ContinueAwaiting, action)
+        } else {
+            panic!("Expected future to be ready")
+        };
 
         let header = control_rx
             .try_next()
@@ -1226,6 +1366,8 @@ mod tests {
 
         assert_eq!(header.src_port.get(), key.host_port);
         assert_eq!(header.dst_port.get(), key.guest_port);
+        assert_ne!(header.buf_alloc.get(), 0);
+        assert_eq!(header.fwd_cnt.get(), 0);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::CreditUpdate);
     }
 
