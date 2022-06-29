@@ -4,15 +4,15 @@
 
 use {
     component_events::{
-        events::{self, Event},
+        events::{self, Event, EventSource},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{self, EventSequence},
     },
-    fuchsia_async as fasync,
-    test_utils_lib::opaque_test::OpaqueTestBuilder,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 /// Verifies that when a component has a LogSink in its namespace that the
 /// component manager tries to connect to this and that if that component
 /// tries to use a capability it isn't offered we see the expect log content
@@ -23,96 +23,101 @@ use {
 /// topology. If `reader` sees the log it expects from the Archivist component
 /// it exits cleanly, otherwise it crashes.
 async fn verify_routing_failure_messages() {
-    let test_env = OpaqueTestBuilder::new(
-        "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/e2e-root.cm",
-    )
-    .component_manager_url(
-        "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/component-manager.cmx",
-    )
-    .config("/pkg/data/cm_config")
-    .build()
-    .await
-    .expect("failed to construct OpaqueTest");
-
-    let mut event_source = test_env
-        .connect_to_event_source()
+    let builder = RealmBuilder::new().await.unwrap();
+    let root =
+        builder.add_child("root", "#meta/e2e-root.cm", ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .from(Ref::parent())
+                .to(&root),
+        )
         .await
-        .expect("could not connect to event source for opaque test");
+        .unwrap();
+
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let mut event_source = EventSource::from_proxy(proxy);
 
     let expected = EventSequence::new()
         .all_of(
             vec![
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
-                    .moniker("./routing-tests/child")
+                    .moniker("./root/routing-tests/child")
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
+                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
                     )
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
+                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
                     ).stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
+                        "./root/routing-tests/offers-to-children-unavailable/child-open-unrequested",
                     )
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
-                    .moniker("./reader")
+                    .moniker("./root/reader")
                     .stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.diagnostics.ArchiveAccessor")
-                    .moniker("./reader"),
+                    .moniker("./root/reader"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./reader"),
+                    .moniker("./root/reader"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./reader"),
+                    .moniker("./root/reader"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./routing-tests/child"),
+                    .moniker("./root/routing-tests/child"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
+                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
+                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
                     .moniker(
-                        "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
+                        "./root/routing-tests/offers-to-children-unavailable/child-open-unrequested",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./archivist"),
+                    .moniker("./root/archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./archivist"),
+                    .moniker("./root/archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.sys2.EventSource")
-                    .moniker("./archivist"),
+                    .moniker("./root/archivist"),
             ],
             sequence::Ordering::Unordered,
         )
@@ -120,6 +125,6 @@ async fn verify_routing_failure_messages() {
         .await
         .unwrap();
 
-    test_env.start_component_tree().await.unwrap();
+    instance.start_component_tree().await.unwrap();
     expected.await.unwrap();
 }

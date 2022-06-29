@@ -5,16 +5,16 @@
     children: [
         {
             name: "routing-tests",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/routing-tests.cm",
+            url: "#meta/routing-tests.cm",
             startup: "eager",
         },
         {
             name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/archivist-for-embedding.cm",
+            url: "#meta/archivist-for-embedding.cm",
         },
         {
             name: "reader",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/reader.cm",
+            url: "#meta/reader.cm",
             startup: "eager",
         },
     ],

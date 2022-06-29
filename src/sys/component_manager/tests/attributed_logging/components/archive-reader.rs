@@ -29,8 +29,8 @@ async fn main() {
             "Failed to route",
             "fidl.test.components.Trigger",
             "target component \
-            `/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent`",
-            "`/routing-tests/offers-to-children-unavailable` tried to offer \
+            `/root/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent`",
+            "`/root/routing-tests/offers-to-children-unavailable` tried to offer \
             `fidl.test.components.Trigger` from its parent",
             "but the parent does not offer",
         ]],
@@ -40,8 +40,8 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
-            "target component `/routing-tests/child`",
-            "`/routing-tests/child` tried to use `fidl.test.components.Trigger` from its parent",
+            "target component `/root/routing-tests/child`",
+            "`/root/routing-tests/child` tried to use `fidl.test.components.Trigger` from its parent",
             "but the parent does not offer",
         ]],
     );
@@ -51,8 +51,8 @@ async fn main() {
             "Failed to route",
             "`fidl.test.components.Trigger`",
             "target component \
-            `/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling`",
-            "`/routing-tests/offers-to-children-unavailable` tried to offer",
+            `/root/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling`",
+            "`/root/routing-tests/offers-to-children-unavailable` tried to offer",
             "from its child `#child-that-doesnt-expose`",
             "`#child-that-doesnt-expose` does not expose `fidl.test.components.Trigger`",
         ]],
@@ -62,7 +62,7 @@ async fn main() {
         vec![vec![
             "No capability available",
             "fidl.test.components.Trigger",
-            "/routing-tests/offers-to-children-unavailable/child-open-unrequested",
+            "/root/routing-tests/offers-to-children-unavailable/child-open-unrequested",
             "`use` declaration",
         ]],
     );

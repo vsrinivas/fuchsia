@@ -32,8 +32,9 @@ rustc_test("e2e-bin") {
   source_root = "e2e-test.rs"
   name = "attributed-logging-e2e-test"
   deps = [
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
@@ -42,7 +43,7 @@ rustc_test("e2e-bin") {
 
 fuchsia_component("e2e-test") {
   testonly = true
-  manifest = "meta/e2e-test.cmx"
+  manifest = "meta/e2e-test.cml"
   deps = [ ":e2e-bin" ]
 }
 
@@ -52,32 +53,12 @@ fuchsia_component("e2e-root-component") {
   component_name = "e2e-root"
 }
 
-component_config("component-manager-debug-config") {
-  sources = [ "//src/sys/component_manager/configs/debug_config.json5" ]
-}
-
-resource("cm-config") {
-  sources = [ "$target_gen_dir/component-manager-debug-config" ]
-  outputs = [ "data/cm_config" ]
-  deps = [ ":component-manager-debug-config" ]
-}
-
-fuchsia_component("component-manager") {
-  deps = [
-    ":cm-config",
-    "//src/sys/component_manager:bin",
-  ]
-  manifest =
-      rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-}
-
 fuchsia_test_package("attributed-logging-test") {
   test_components = [
     ":integration-test",
     ":e2e-test",
   ]
   deps = [
-    ":component-manager",
     ":e2e-root-component",
     "components:all-components",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
