@@ -166,8 +166,9 @@ fuchsia_test_component("virtual_console_tests_component") {
     ":boot_animation_test",
     ":font_test",
     ":lib_test",
+    "//src/bringup/bin/ptysvc:component",
   ]
-  manifest = "meta/virtual-console-tests.cmx"
+  manifest = "meta/virtual-console-tests.cml"
 }
 
 fuchsia_test_package("virtual_console_tests") {
