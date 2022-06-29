@@ -769,8 +769,8 @@ void VmAspace::MarkAsLatencySensitive() {
     return;
   }
   up->get_name(name);
-  if (strncmp(name, "audio_core.cmx", ZX_MAX_NAME_LEN) != 0 &&
-      strncmp(name, "waves_host.cmx", ZX_MAX_NAME_LEN) != 0) {
+  if (strncmp(name, "audio_core.cm", ZX_MAX_NAME_LEN) != 0 &&
+      strncmp(name, "waves_host.cm", ZX_MAX_NAME_LEN) != 0) {
     return;
   }
 
