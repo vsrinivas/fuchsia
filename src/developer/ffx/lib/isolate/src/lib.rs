@@ -6,12 +6,14 @@ use anyhow::{Context as _, Result};
 use fuchsia_async;
 use serde::Serialize;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::process::Child;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Stdio;
+use std::time::SystemTime;
 use tempfile::TempDir;
 
 // TODO(raggi): extract this too, it's a very large dependency to bring in to this lib
@@ -75,11 +77,21 @@ impl Isolate {
         let user_config_dir = xdg_config_home.join("Fuchsia/ffx/config");
         std::fs::create_dir_all(&user_config_dir)?;
 
+        let mut mdns_discovery = true;
+        let mut target_addr = None;
+        if let Ok(addr) = std::env::var("FUCHSIA_DEVICE_ADDR") {
+            // When run in infra, disable mdns discovery.
+            // TODO(fxbug.dev/44710): Remove when we have proper network isolation.
+            target_addr = Option::Some(Cow::Owned(addr.to_string() + &":0".to_string()));
+            mdns_discovery = false;
+        }
         std::fs::write(
             user_config_dir.join("config.json"),
             serde_json::to_string(&UserConfig::for_test(
                 log_dir.to_string_lossy(),
                 ascendd_path.to_string_lossy(),
+                target_addr,
+                mdns_discovery,
             ))?,
         )?;
 
@@ -173,6 +185,8 @@ struct UserConfig<'a> {
     log: UserConfigLog<'a>,
     overnet: UserConfigOvernet<'a>,
     test: UserConfigTest,
+    targets: UserConfigTargets<'a>,
+    discovery: UserConfigDiscovery,
 }
 
 #[derive(Serialize)]
@@ -192,12 +206,38 @@ struct UserConfigTest {
     is_isolated: bool,
 }
 
+#[derive(Serialize)]
+struct UserConfigTargets<'a> {
+    manual: HashMap<Cow<'a, str>, Option<SystemTime>>,
+}
+
+#[derive(Serialize)]
+struct UserConfigDiscovery {
+    mdns: UserConfigMdns,
+}
+
+#[derive(Serialize)]
+struct UserConfigMdns {
+    enabled: bool,
+}
+
 impl<'a> UserConfig<'a> {
-    fn for_test(dir: Cow<'a, str>, socket: Cow<'a, str>) -> Self {
+    fn for_test(
+        dir: Cow<'a, str>,
+        socket: Cow<'a, str>,
+        target: Option<Cow<'a, str>>,
+        discovery: bool,
+    ) -> Self {
+        let mut manual_targets = HashMap::new();
+        if !target.is_none() {
+            manual_targets.insert(target.unwrap(), None);
+        }
         Self {
             log: UserConfigLog { enabled: true, dir },
             overnet: UserConfigOvernet { socket },
             test: UserConfigTest { is_isolated: true },
+            targets: UserConfigTargets { manual: manual_targets },
+            discovery: UserConfigDiscovery { mdns: UserConfigMdns { enabled: discovery } },
         }
     }
 }
