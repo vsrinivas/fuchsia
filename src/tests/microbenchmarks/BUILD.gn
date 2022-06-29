@@ -169,7 +169,7 @@ fidl("fuchsia.zircon.benchmarks") {
 fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
   package_name = "fuchsia_microbenchmarks"
 
-  manifest = "meta/fuchsia_microbenchmarks.cmx"
+  manifest = "meta/fuchsia_microbenchmarks.cml"
 
   deps = [
     ":bin",
@@ -188,7 +188,7 @@ fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
 fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   testonly = true
 
-  manifest = "meta/fuchsia_microbenchmarks.cmx"
+  manifest = "meta/fuchsia_microbenchmarks.cml"
 
   deps = [
     ":bin",

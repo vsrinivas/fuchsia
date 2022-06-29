@@ -50,10 +50,6 @@ void runShardTests(List<String> args, List<void Function()> tests) {
 }
 
 class PerfTestHelper {
-  // Pathname to which components run via runTestComponentV1() should
-  // write their results.
-  static const String componentV1OutputPath = '/tmp/results.fuchsiaperf.json';
-
   // Pathname to which components run via runTestComponentV2() should
   // write their results.
   static const String componentV2OutputPath =
@@ -138,43 +134,6 @@ class PerfTestHelper {
       final result = await sl4fDriver.ssh.run('rm -f $resultsFile');
       expect(result.exitCode, equals(0));
     }
-  }
-
-  // Runs a component and publishes the performance test results that
-  // it produces, which the component should write to the file
-  // componentV1OutputPath.  This uses Components V1.
-  Future<void> runTestComponentV1(
-      {@required String packageName,
-      @required String componentName,
-      @required String commandArgs,
-      int processRuns = 1}) async {
-    final List<File> localResultsFiles = [];
-    for (var process = 0; process < processRuns; ++process) {
-      // Make a name for the realm that is very likely to be unique.
-      // This allows us to clean up the output directory tree.
-      final timestamp = DateTime.now().microsecondsSinceEpoch;
-      final String realmName = 'perftest_$timestamp';
-
-      const resultsFile = 'results.fuchsiaperf.json';
-      final String targetOutputPath = '/tmp/r/sys/r/$realmName/'
-          'fuchsia.com:$packageName:0#meta:$componentName/$resultsFile';
-      final String command = 'run-test-component --realm-label=$realmName'
-          ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
-          ' -- $commandArgs';
-
-      final result = await sl4fDriver.ssh.run(command);
-      expect(result.exitCode, equals(0));
-      try {
-        localResultsFiles.add(await storage.dumpFile(targetOutputPath,
-            'results_${packageName}_process$process', 'fuchsiaperf_full.json'));
-      } finally {
-        // Clean up: remove the output tree.
-        final result =
-            await sl4fDriver.ssh.run('rm -r /tmp/r/sys/r/$realmName');
-        expect(result.exitCode, equals(0));
-      }
-    }
-    await processResultsSummarized(localResultsFiles);
   }
 
   // Runs a component and publishes the performance test results that
