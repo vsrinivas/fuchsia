@@ -207,13 +207,10 @@ impl Started {
 
         let outgoing_capabilities = if hub_dir.exists("out").await? {
             let out_dir = hub_dir.open_dir_readable("out")?;
-            Some(
-                get_capabilities(out_dir)
-                    .on_timeout(DIR_TIMEOUT, || {
-                        Err(format_err!("timeout occurred opening `out` dir"))
-                    })
-                    .await?,
-            )
+            get_capabilities(out_dir)
+                .on_timeout(DIR_TIMEOUT, || Err(format_err!("timeout occurred opening `out` dir")))
+                .await
+                .ok()
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.
