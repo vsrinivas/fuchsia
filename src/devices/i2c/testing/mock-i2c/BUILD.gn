@@ -8,4 +8,5 @@ zx_library("mock-i2c") {
   sdk = "source"
   sdk_headers = [ "lib/mock-i2c/mock-i2c.h" ]
   sources = []
+  public_deps = [ "//sdk/lib/fit" ]
 }
