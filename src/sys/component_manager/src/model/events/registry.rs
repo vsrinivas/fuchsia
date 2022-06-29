@@ -340,7 +340,7 @@ impl EventRegistry {
         let decl = {
             let state = component.lock_state().await;
             match *state {
-                InstanceState::New | InstanceState::Discovered => {
+                InstanceState::New | InstanceState::Unresolved => {
                     panic!("route_events: not resolved");
                 }
                 InstanceState::Resolved(ref s) => s.decl().clone(),

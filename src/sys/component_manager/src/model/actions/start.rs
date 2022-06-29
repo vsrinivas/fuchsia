@@ -222,7 +222,7 @@ pub fn should_return_early(
     abs_moniker: &AbsoluteMoniker,
 ) -> Option<Result<fsys::StartResult, ModelError>> {
     match component {
-        InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
+        InstanceState::New | InstanceState::Unresolved | InstanceState::Resolved(_) => {}
         InstanceState::Destroyed => {
             return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
         }
@@ -512,7 +512,7 @@ mod tests {
 
         // Checks based on InstanceState:
         assert!(should_return_early(&InstanceState::New, &es, &m).is_none());
-        assert!(should_return_early(&InstanceState::Discovered, &es, &m).is_none());
+        assert!(should_return_early(&InstanceState::Unresolved, &es, &m).is_none());
         assert_matches!(
             should_return_early(&InstanceState::Destroyed, &es, &m),
             Some(Err(ModelError::ComponentInstanceError {

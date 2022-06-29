@@ -39,7 +39,7 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
         let state = component.lock_state().await;
         match *state {
             InstanceState::New => false,
-            InstanceState::Discovered => true,
+            InstanceState::Unresolved => true,
             InstanceState::Resolved(_) => true,
             InstanceState::Destroyed => {
                 return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
@@ -62,14 +62,14 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
             InstanceState::Destroyed => {
                 // Nothing to do.
             }
-            InstanceState::Discovered | InstanceState::Resolved(_) => {
+            InstanceState::Unresolved | InstanceState::Resolved(_) => {
                 panic!(
                     "Component was marked {:?} during Discover action, which shouldn't be possible",
                     *state
                 );
             }
             InstanceState::New => {
-                state.set(InstanceState::Discovered);
+                state.set(InstanceState::Unresolved);
             }
         }
     }

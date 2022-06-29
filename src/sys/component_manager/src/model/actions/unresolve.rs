@@ -61,7 +61,7 @@ async fn check_state(component: &Arc<ComponentInstance>) -> Result<bool, ModelEr
         return emit_unresolve_failed_event(component, "component was running".to_string()).await;
     }
     match *component.lock_state().await {
-        InstanceState::Discovered => return Ok(true),
+        InstanceState::Unresolved => return Ok(true),
         InstanceState::Resolved(_) => return Ok(false),
         _ => {}
     }
@@ -112,7 +112,7 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
         let mut state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(_) => {
-                state.set(InstanceState::Discovered);
+                state.set(InstanceState::Unresolved);
                 true
             }
             _ => false,
@@ -165,7 +165,7 @@ pub mod tests {
     ///     \
     ///      c
     ///
-    /// Also tests UnresolveAction on InstanceState::Discovered.
+    /// Also tests UnresolveAction on InstanceState::Unresolved.
     #[fuchsia::test]
     async fn unresolve_action_recursive_test() {
         let components = vec![

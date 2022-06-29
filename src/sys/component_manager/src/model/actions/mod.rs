@@ -475,7 +475,7 @@ pub(crate) mod test_utils {
                 None => false,
             },
             InstanceState::Destroyed => false,
-            InstanceState::New | InstanceState::Discovered => {
+            InstanceState::New | InstanceState::Unresolved => {
                 panic!("not resolved")
             }
         }
@@ -496,13 +496,13 @@ pub(crate) mod test_utils {
 
     pub async fn is_discovered(component: &ComponentInstance) -> bool {
         let state = component.lock_state().await;
-        matches!(*state, InstanceState::Discovered)
+        matches!(*state, InstanceState::Unresolved)
     }
 
     pub async fn is_unresolved(component: &ComponentInstance) -> bool {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
         execution.runtime.is_none()
-            && matches!(*state, InstanceState::New | InstanceState::Discovered)
+            && matches!(*state, InstanceState::New | InstanceState::Unresolved)
     }
 }

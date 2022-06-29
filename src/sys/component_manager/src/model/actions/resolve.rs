@@ -56,7 +56,7 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                 InstanceState::New => {
                     panic!("Component should be at least discovered")
                 }
-                InstanceState::Discovered => true,
+                InstanceState::Unresolved => true,
                 InstanceState::Resolved(_) => false,
                 InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
@@ -87,7 +87,7 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                     InstanceState::Destroyed => {
                         return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
                     }
-                    InstanceState::New | InstanceState::Discovered => {}
+                    InstanceState::New | InstanceState::Unresolved => {}
                 }
                 state.set(InstanceState::Resolved(
                     ResolvedInstanceState::new(
@@ -154,7 +154,7 @@ pub mod tests {
     ///   \
     ///    b
     ///
-    /// Also tests UnresolveAction on InstanceState::Discovered.
+    /// Also tests UnresolveAction on InstanceState::Unresolved.
     #[fuchsia::test]
     async fn resolve_action_test() {
         let components = vec![

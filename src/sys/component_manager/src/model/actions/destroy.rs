@@ -73,7 +73,7 @@ async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError
                 }
                 nfs
             }
-            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {
+            InstanceState::New | InstanceState::Unresolved | InstanceState::Destroyed => {
                 // Component was never resolved. No explicit cleanup is required for children.
                 vec![]
             }

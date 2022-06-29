@@ -240,7 +240,7 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
                 Box::pin(shutdown_job.execute()).await?;
                 return Ok(());
             }
-            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {}
+            InstanceState::New | InstanceState::Unresolved | InstanceState::Destroyed => {}
         }
     }
     // Control flow arrives here if the component isn't resolved.

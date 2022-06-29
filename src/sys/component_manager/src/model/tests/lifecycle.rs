@@ -160,7 +160,7 @@ async fn bind_parent_then_child() {
     assert!(actual_children.is_empty());
     assert_matches!(
         *echo_component.lock_state().await,
-        InstanceState::New | InstanceState::Discovered
+        InstanceState::New | InstanceState::Unresolved
     );
     // Start echo.
     let m: AbsoluteMoniker = vec!["echo"].into();

@@ -466,7 +466,7 @@ impl ComponentInstance {
                         self.abs_moniker.clone(),
                     ));
                 }
-                InstanceState::New | InstanceState::Discovered => {}
+                InstanceState::New | InstanceState::Unresolved => {}
             }
             // Drop the lock before doing the work to resolve the state.
         }
@@ -1086,7 +1086,7 @@ impl ComponentInstance {
                 InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                 }
-                InstanceState::New | InstanceState::Discovered => {
+                InstanceState::New | InstanceState::Unresolved => {
                     panic!("start: not resolved")
                 }
             }
@@ -1321,7 +1321,7 @@ pub enum InstanceState {
     /// The instance was just created.
     New,
     /// A Discovered event has been dispatched for the instance, but it has not been resolved yet.
-    Discovered,
+    Unresolved,
     /// The instance has been resolved.
     Resolved(ResolvedInstanceState),
     /// The instance has been destroyed. It has no content and no further actions may be registered
@@ -1338,13 +1338,13 @@ impl InstanceState {
         match (&self, &next) {
             (Self::New, Self::New)
             | (Self::New, Self::Resolved(_))
-            | (Self::Discovered, Self::Discovered)
-            | (Self::Discovered, Self::New)
+            | (Self::Unresolved, Self::Unresolved)
+            | (Self::Unresolved, Self::New)
             | (Self::Resolved(_), Self::Resolved(_))
             | (Self::Resolved(_), Self::New)
             | (Self::Destroyed, Self::Destroyed)
             | (Self::Destroyed, Self::New)
-            | (Self::Destroyed, Self::Discovered)
+            | (Self::Destroyed, Self::Unresolved)
             | (Self::Destroyed, Self::Resolved(_)) => {
                 panic!("Invalid instance state transition from {:?} to {:?}", self, next);
             }
@@ -1359,7 +1359,7 @@ impl fmt::Debug for InstanceState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             Self::New => "New",
-            Self::Discovered => "Discovered",
+            Self::Unresolved => "Discovered",
             Self::Resolved(_) => "Resolved",
             Self::Destroyed => "Destroyed",
         };
@@ -3115,8 +3115,8 @@ pub mod tests {
     async fn instance_state_transitions_test() {
         // New --> Discovered.
         let mut is = InstanceState::New;
-        is.set(InstanceState::Discovered);
-        assert_matches!(is, InstanceState::Discovered);
+        is.set(InstanceState::Unresolved);
+        assert_matches!(is, InstanceState::Unresolved);
 
         // New --> Destroyed.
         let mut is = InstanceState::New;
@@ -3124,19 +3124,19 @@ pub mod tests {
         assert_matches!(is, InstanceState::Destroyed);
 
         // Discovered --> Resolved.
-        let mut is = InstanceState::Discovered;
+        let mut is = InstanceState::Unresolved;
         is.set(new_resolved().await);
         assert_matches!(is, InstanceState::Resolved(_));
 
         // Discovered --> Destroyed.
-        let mut is = InstanceState::Discovered;
+        let mut is = InstanceState::Unresolved;
         is.set(InstanceState::Destroyed);
         assert_matches!(is, InstanceState::Destroyed);
 
         // Resolved --> Discovered.
         let mut is = new_resolved().await;
-        is.set(InstanceState::Discovered);
-        assert_matches!(is, InstanceState::Discovered);
+        is.set(InstanceState::Unresolved);
+        assert_matches!(is, InstanceState::Unresolved);
 
         // Resolved --> Destroyed.
         let mut is = new_resolved().await;
@@ -3175,14 +3175,14 @@ pub mod tests {
         // Destroyed !-> {Destroyed, Resolved, Discovered, New}..
         p2p(InstanceState::Destroyed, InstanceState::Destroyed),
         p2r(InstanceState::Destroyed, new_resolved().await),
-        p2d(InstanceState::Destroyed, InstanceState::Discovered),
+        p2d(InstanceState::Destroyed, InstanceState::Unresolved),
         p2n(InstanceState::Destroyed, InstanceState::New),
         // Resolved !-> {Resolved, New}.
         r2r(new_resolved().await, new_resolved().await),
         r2n(new_resolved().await, InstanceState::New),
         // Discovered !-> {Discovered, New}.
-        d2d(InstanceState::Discovered, InstanceState::Discovered),
-        d2n(InstanceState::Discovered, InstanceState::New),
+        d2d(InstanceState::Unresolved, InstanceState::Unresolved),
+        d2n(InstanceState::Unresolved, InstanceState::New),
         // New !-> {Resolved, New}.
         n2r(InstanceState::New, new_resolved().await),
         n2n(InstanceState::New, InstanceState::New),
