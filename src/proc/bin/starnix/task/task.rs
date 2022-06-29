@@ -85,9 +85,6 @@ impl ExitStatus {
 }
 
 pub struct TaskMutableState {
-    /// The command of this task.
-    pub command: CString,
-
     /// The arguments with which this task was started.
     pub argv: Vec<CString>,
 
@@ -134,6 +131,12 @@ pub struct Task {
 
     /// The mutable state of the Task.
     mutable_state: RwLock<TaskMutableState>,
+
+    /// The command of this task.
+    ///
+    /// This is guarded by its own lock because it is use to display the task description, and
+    /// other locks may be taken at the time. No other lock may be held while this lock is taken.
+    command: RwLock<CString>,
 }
 
 impl Task {
@@ -145,7 +148,7 @@ impl Task {
     /// passed as parameters.
     fn new(
         id: pid_t,
-        comm: CString,
+        command: CString,
         argv: Vec<CString>,
         thread_group: Arc<ThreadGroup>,
         thread: zx::Thread,
@@ -157,7 +160,7 @@ impl Task {
         abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
-        CurrentTask::new(Task {
+        let result = CurrentTask::new(Task {
             id,
             thread_group,
             thread,
@@ -167,15 +170,21 @@ impl Task {
             abstract_socket_namespace,
             abstract_vsock_namespace,
             exit_signal,
+            command: RwLock::new(command),
             mutable_state: RwLock::new(TaskMutableState {
-                command: comm,
                 argv: argv,
                 creds: creds,
                 clear_child_tid: UserRef::default(),
                 signals: Default::default(),
                 exit_status: None,
             }),
-        })
+        });
+        #[cfg(any(test, debug_assertions))]
+        {
+            let _l1 = result.read();
+            let _l2 = result.command.read();
+        }
+        result
     }
 
     /// Access mutable state with a read lock.
@@ -276,12 +285,16 @@ impl Task {
         }
 
         if clone_thread != clone_vm {
-            not_implemented!("CLONE_VM without CLONE_THREAD is not implemented");
+            not_implemented!(self, "CLONE_VM without CLONE_THREAD is not implemented");
             return error!(ENOSYS);
         }
 
         if flags & !IMPLEMENTED_FLAGS != 0 {
-            not_implemented!("clone does not implement flags: 0x{:x}", flags & !IMPLEMENTED_FLAGS);
+            not_implemented!(
+                self,
+                "clone does not implement flags: 0x{:x}",
+                flags & !IMPLEMENTED_FLAGS
+            );
             return error!(ENOSYS);
         }
 
@@ -302,13 +315,13 @@ impl Task {
         let state = self.read();
 
         let pid = pids.allocate_pid();
-        let comm = state.command.clone();
+        let command = self.command();
         let argv = state.argv.clone();
         let creds = state.creds.clone();
         let (thread, thread_group, mm) = if clone_thread {
             // Drop both locks when leaving this block
-            let (state, _thread_group_state) = (state, thread_group_state);
-            create_zircon_thread(self, &state)?
+            let (_state, _thread_group_state) = (state, thread_group_state);
+            create_zircon_thread(self)?
         } else {
             // Drop the lock on this task before entering `create_zircon_process`, because it will
             // take a lock on the new thread group, and locks on thread groups have a higher
@@ -326,13 +339,13 @@ impl Task {
                 pid,
                 process_group,
                 signal_actions,
-                &comm,
+                &command,
             )?
         };
 
         let child = Self::new(
             pid,
-            comm,
+            command,
             argv,
             thread_group,
             thread,
@@ -490,6 +503,21 @@ impl Task {
         } else {
             false
         }
+    }
+
+    pub fn command(&self) -> CString {
+        self.command.read().clone()
+    }
+
+    pub fn set_command_name(&self, name: CString) {
+        // Truncate to 16 bytes, including null byte.
+        let bytes = name.to_bytes();
+        *self.command.write() = if bytes.len() > 15 {
+            // SAFETY: Substring of a CString will contain no null bytes.
+            CString::new(&bytes[..15]).unwrap()
+        } else {
+            name
+        };
     }
 }
 
@@ -850,22 +878,11 @@ impl CurrentTask {
         self.set_command_name(basename);
         Ok(())
     }
-
-    pub fn set_command_name(&self, name: CString) {
-        // Truncate to 16 bytes, including null byte.
-        let bytes = name.to_bytes();
-        self.write().command = if bytes.len() > 15 {
-            // SAFETY: Substring of a CString will contain no null bytes.
-            CString::new(&bytes[..15]).unwrap()
-        } else {
-            name
-        };
-    }
 }
 
 impl fmt::Debug for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}]", self.id, self.read().command.to_string_lossy())
+        write!(f, "{}[{}]", self.id, self.command.read().to_string_lossy())
     }
 }
 

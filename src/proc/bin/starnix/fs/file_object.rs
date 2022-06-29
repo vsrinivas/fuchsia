@@ -191,11 +191,11 @@ pub trait FileOps: Send + Sync + AsAny {
     fn ioctl(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         request: u32,
         _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        default_ioctl(request)
+        default_ioctl(current_task, request)
     }
 
     fn fcntl(
@@ -426,8 +426,8 @@ pub(crate) use fileops_impl_nonseekable;
 pub(crate) use fileops_impl_seekable;
 pub(crate) use fileops_impl_seekless;
 
-pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
-    not_implemented!("ioctl: request=0x{:x}", request);
+pub fn default_ioctl(current_task: &CurrentTask, request: u32) -> Result<SyscallResult, Errno> {
+    not_implemented!(current_task, "ioctl: request=0x{:x}", request);
     error!(ENOTTY)
 }
 

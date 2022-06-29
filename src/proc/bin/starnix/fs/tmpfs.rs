@@ -110,7 +110,11 @@ impl TmpFs {
                     _ => {}
                 }
                 // Overall fallback. All matched option ended up in a continue.
-                not_implemented!("Unknown tmpfs option: {}", String::from_utf8_lossy(option));
+                not_implemented!(
+                    "[system]",
+                    "Unknown tmpfs option: {}",
+                    String::from_utf8_lossy(option)
+                );
             }
         }
         fs

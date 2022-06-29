@@ -38,7 +38,7 @@ pub fn sys_mmap(
 ) -> Result<UserAddress, Errno> {
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
-        not_implemented!("mmap: prot: 0x{:x}", prot);
+        not_implemented!(current_task, "mmap: prot: 0x{:x}", prot);
         return error!(EINVAL);
     }
     if flags
@@ -54,7 +54,7 @@ pub fn sys_mmap(
             | MAP_DENYWRITE)
         != 0
     {
-        not_implemented!("mmap: flags: 0x{:x}", flags);
+        not_implemented!(current_task, "mmap: flags: 0x{:x}", flags);
         return error!(EINVAL);
     }
 
@@ -155,7 +155,8 @@ pub fn sys_mremap(
     new_addr: UserAddress,
 ) -> Result<UserAddress, Errno> {
     let flags = MremapFlags::from_bits(flags).ok_or_else(|| errno!(EINVAL))?;
-    let addr = current_task.mm.remap(addr, old_length, new_length, flags, new_addr)?;
+    let addr =
+        current_task.mm.remap(current_task, addr, old_length, new_length, flags, new_addr)?;
     Ok(addr)
 }
 
@@ -174,7 +175,7 @@ pub fn sys_msync(
     length: usize,
     _flags: u32,
 ) -> Result<(), Errno> {
-    not_implemented!("msync not implemented");
+    not_implemented!(current_task, "msync not implemented");
     // Perform some basic validation of the address range given to satisfy gvisor tests that
     // use msync as a way to probe whether a page is mapped or not.
     current_task.mm.ensure_mapped(addr, length)?;
@@ -187,7 +188,7 @@ pub fn sys_madvise(
     length: usize,
     advice: u32,
 ) -> Result<(), Errno> {
-    current_task.mm.madvise(addr, length, advice)?;
+    current_task.mm.madvise(current_task, addr, length, advice)?;
     Ok(())
 }
 
@@ -233,14 +234,20 @@ pub fn sys_process_vm_readv(
 }
 
 pub fn sys_membarrier(
-    _current_task: &CurrentTask,
+    current_task: &CurrentTask,
     cmd: uapi::membarrier_cmd,
     flags: u32,
     cpu_id: i32,
 ) -> Result<u32, Errno> {
     // Minimal implementation of membarrier that only handle queries, and return that it doesn't
     // support any other command.
-    not_implemented!("membarrier: cmd: 0x{:x}, flags: 0x{:x}, cpu_id: 0x{:x}", cmd, flags, cpu_id);
+    not_implemented!(
+        current_task,
+        "membarrier: cmd: 0x{:x}, flags: 0x{:x}, cpu_id: 0x{:x}",
+        cmd,
+        flags,
+        cpu_id
+    );
     if cmd == uapi::membarrier_cmd_MEMBARRIER_CMD_QUERY {
         Ok(0)
     } else {

@@ -1430,23 +1430,26 @@ impl BinderDriver {
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_SET_MAX_THREADS => {
-                not_implemented!("binder ignoring SET_MAX_THREADS ioctl");
+                not_implemented!(current_task, "binder ignoring SET_MAX_THREADS ioctl");
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION => {
-                not_implemented!("binder ignoring ENABLE_ONEWAY_SPAM_DETECTION ioctl");
+                not_implemented!(
+                    current_task,
+                    "binder ignoring ENABLE_ONEWAY_SPAM_DETECTION ioctl"
+                );
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_THREAD_EXIT => {
-                not_implemented!("binder ignoring THREAD_EXIT ioctl");
+                not_implemented!(current_task, "binder ignoring THREAD_EXIT ioctl");
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_GET_NODE_DEBUG_INFO => {
-                not_implemented!("binder GET_NODE_DEBUG_INFO ioctl not supported");
+                not_implemented!(current_task, "binder GET_NODE_DEBUG_INFO ioctl not supported");
                 error!(EOPNOTSUPP)
             }
             BINDER_IOCTL_GET_NODE_INFO_FOR_REF => {
-                not_implemented!("binder GET_NODE_INFO_FOR_REF ioctl not supported");
+                not_implemented!(current_task, "binder GET_NODE_INFO_FOR_REF ioctl not supported");
                 error!(EOPNOTSUPP)
             }
             _ => {
@@ -1478,7 +1481,7 @@ impl BinderDriver {
             | binder_driver_command_protocol_BC_DECREFS
             | binder_driver_command_protocol_BC_RELEASE => {
                 let handle = cursor.read_object::<u32>()?.into();
-                self.handle_refcount_operation(command, binder_proc, handle)
+                self.handle_refcount_operation(current_task, command, binder_proc, handle)
             }
             binder_driver_command_protocol_BC_INCREFS_DONE
             | binder_driver_command_protocol_BC_ACQUIRE_DONE => {
@@ -1486,7 +1489,7 @@ impl BinderDriver {
                     weak_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
                     strong_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
                 };
-                self.handle_refcount_operation_done(command, binder_thread, object)
+                self.handle_refcount_operation_done(current_task, command, binder_thread, object)
             }
             binder_driver_command_protocol_BC_FREE_BUFFER => {
                 let buffer_ptr = UserAddress::from(cursor.read_object::<binder_uintptr_t>()?);
@@ -1495,12 +1498,18 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_REQUEST_DEATH_NOTIFICATION => {
                 let handle = cursor.read_object::<u32>()?.into();
                 let cookie = cursor.read_object::<binder_uintptr_t>()?;
-                self.handle_request_death_notification(binder_proc, binder_thread, handle, cookie)
+                self.handle_request_death_notification(
+                    current_task,
+                    binder_proc,
+                    binder_thread,
+                    handle,
+                    cookie,
+                )
             }
             binder_driver_command_protocol_BC_CLEAR_DEATH_NOTIFICATION => {
                 let handle = cursor.read_object::<u32>()?.into();
                 let cookie = cursor.read_object::<binder_uintptr_t>()?;
-                self.handle_clear_death_notification(binder_proc, handle, cookie)
+                self.handle_clear_death_notification(current_task, binder_proc, handle, cookie)
             }
             binder_driver_command_protocol_BC_DEAD_BINDER_DONE => {
                 let _cookie = cursor.read_object::<binder_uintptr_t>()?;
@@ -1567,6 +1576,7 @@ impl BinderDriver {
     /// binder object.
     fn handle_refcount_operation(
         &self,
+        current_task: &CurrentTask,
         command: binder_driver_command_protocol,
         binder_proc: &Arc<BinderProcess>,
         handle: Handle,
@@ -1575,7 +1585,7 @@ impl BinderDriver {
             Handle::SpecialServiceManager => {
                 // TODO: Figure out how to acquire/release refs for the context manager
                 // object.
-                not_implemented!("acquire/release refs for context manager object");
+                not_implemented!(current_task, "acquire/release refs for context manager object");
                 return Ok(());
             }
             Handle::Object { index } => index,
@@ -1596,6 +1606,7 @@ impl BinderDriver {
     /// `BR_ACQUIRE`/`BR_INCREFS` command.
     fn handle_refcount_operation_done(
         &self,
+        current_task: &CurrentTask,
         command: binder_driver_command_protocol,
         binder_thread: &Arc<BinderThread>,
         object: LocalBinderObject,
@@ -1608,7 +1619,7 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_ACQUIRE_DONE => "BC_ACQUIRE_DONE",
             _ => unreachable!(),
         };
-        not_implemented!("binder thread {} {} {:?}", binder_thread.tid, msg, &object);
+        not_implemented!(current_task, "binder thread {} {} {:?}", binder_thread.tid, msg, &object);
         Ok(())
     }
 
@@ -1665,6 +1676,7 @@ impl BinderDriver {
     /// Subscribe a process to the death of the owner of `handle`.
     fn handle_request_death_notification(
         &self,
+        current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         handle: Handle,
@@ -1672,7 +1684,7 @@ impl BinderDriver {
     ) -> Result<(), Errno> {
         let proxy = match handle {
             Handle::SpecialServiceManager => {
-                not_implemented!("death notification for service manager");
+                not_implemented!(current_task, "death notification for service manager");
                 return Ok(());
             }
             Handle::Object { index } => {
@@ -1700,13 +1712,14 @@ impl BinderDriver {
     /// Remove a previously subscribed death notification.
     fn handle_clear_death_notification(
         &self,
+        current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         handle: Handle,
         cookie: binder_uintptr_t,
     ) -> Result<(), Errno> {
         let proxy = match handle {
             Handle::SpecialServiceManager => {
-                not_implemented!("clear death notification for service manager");
+                not_implemented!(current_task, "clear death notification for service manager");
                 return Ok(());
             }
             Handle::Object { index } => {
@@ -4117,6 +4130,7 @@ mod tests {
 
     #[fuchsia::test]
     fn death_notification_fires_when_process_dies() {
+        let (_kernel, current_task) = create_kernel_and_task();
         let driver = BinderDriver::new();
 
         let owner_proc = driver.create_process(1);
@@ -4136,6 +4150,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
+                &current_task,
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4162,6 +4177,7 @@ mod tests {
 
     #[fuchsia::test]
     fn death_notification_fires_when_request_for_death_notification_is_made_on_dead_binder() {
+        let (_kernel, current_task) = create_kernel_and_task();
         let driver = BinderDriver::new();
 
         let owner_proc = driver.create_process(1);
@@ -4184,6 +4200,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
+                &current_task,
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4202,6 +4219,7 @@ mod tests {
 
     #[fuchsia::test]
     fn death_notification_is_cleared_before_process_dies() {
+        let (_kernel, current_task) = create_kernel_and_task();
         let driver = BinderDriver::new();
 
         let owner_proc = driver.create_process(1);
@@ -4221,6 +4239,7 @@ mod tests {
         // Register a death notification handler.
         driver
             .handle_request_death_notification(
+                &current_task,
                 &client_proc,
                 &client_thread,
                 handle,
@@ -4230,7 +4249,12 @@ mod tests {
 
         // Now clear the death notification handler.
         driver
-            .handle_clear_death_notification(&client_proc, handle, death_notification_cookie)
+            .handle_clear_death_notification(
+                &current_task,
+                &client_proc,
+                handle,
+                death_notification_cookie,
+            )
             .expect("clear death notification");
 
         // Pretend the client thread is waiting for commands, so that it can be scheduled commands.

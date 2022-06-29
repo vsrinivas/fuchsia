@@ -167,7 +167,7 @@ impl SocketAddress {
                 bytes
             }
             SocketAddress::Inet(_) => {
-                not_implemented!("SocketAddress::to_bytes is stubbed for Inet");
+                not_implemented!("?", "SocketAddress::to_bytes is stubbed for Inet");
                 vec![]
             }
         }

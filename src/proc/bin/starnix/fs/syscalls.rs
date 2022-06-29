@@ -72,7 +72,7 @@ pub fn sys_fcntl(
         F_SETOWN => {
             if arg > std::i32::MAX as u64 {
                 // Negative values are process groups.
-                not_implemented!("fcntl(F_SETOWN) does not support process groups");
+                not_implemented!(current_task, "fcntl(F_SETOWN) does not support process groups");
                 return error!(EINVAL);
             }
             let file = current_task.files.get(fd)?;
@@ -104,7 +104,7 @@ pub fn sys_fcntl(
             file.fcntl(&current_task, cmd, arg)
         }
         _ => {
-            not_implemented!("fcntl command {} not implemented", cmd);
+            not_implemented!(current_task, "fcntl command {} not implemented", cmd);
             error!(ENOSYS)
         }
     }
@@ -420,7 +420,7 @@ pub fn sys_newfstatat(
 ) -> Result<(), Errno> {
     if flags & !(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH) != 0 {
         // TODO(fxbug.dev/91430): Support the `AT_NO_AUTOMOUNT` flag.
-        not_implemented!("newfstatat: flags 0x{:x}", flags);
+        not_implemented!(current_task, "newfstatat: flags 0x{:x}", flags);
         return error!(ENOSYS);
     }
     let flags = LookupFlags::from_bits(flags, AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)?;
@@ -539,7 +539,7 @@ pub fn sys_linkat(
     flags: u32,
 ) -> Result<(), Errno> {
     if flags & !(AT_SYMLINK_FOLLOW | AT_EMPTY_PATH) != 0 {
-        not_implemented!("linkat: flags 0x{:x}", flags);
+        not_implemented!(current_task, "linkat: flags 0x{:x}", flags);
         return error!(EINVAL);
     }
 
@@ -1067,7 +1067,7 @@ pub fn sys_memfd_create(
     flags: u32,
 ) -> Result<FdNumber, Errno> {
     if flags & !MFD_CLOEXEC != 0 {
-        not_implemented!("memfd_create: flags: {}", flags);
+        not_implemented!(current_task, "memfd_create: flags: {}", flags);
     }
     let file = new_memfd(current_task, OpenFlags::RDWR)?;
     let mut fd_flags = FdFlags::empty();
@@ -1098,6 +1098,7 @@ pub fn sys_mount(
 ) -> Result<(), Errno> {
     let flags = MountFlags::from_bits(flags).ok_or_else(|| {
         not_implemented!(
+            current_task,
             "unsupported mount flags: {:#x}",
             flags & !MountFlags::from_bits_truncate(flags).bits()
         );
@@ -1110,7 +1111,7 @@ pub fn sys_mount(
         strace!(current_task, "mount(MS_BIND)");
 
         if flags.contains(MountFlags::REC) {
-            not_implemented!("MS_REC unimplemented");
+            not_implemented!(current_task, "MS_REC unimplemented");
         }
 
         let source = lookup_for_mount(current_task, source_addr)?;
@@ -1169,7 +1170,7 @@ pub fn sys_timerfd_create(
         _ => return error!(EINVAL),
     };
     if flags & !(TFD_NONBLOCK | TFD_CLOEXEC) != 0 {
-        not_implemented!("timerfd_create: flags 0x{:x}", flags);
+        not_implemented!(current_task, "timerfd_create: flags 0x{:x}", flags);
         return error!(EINVAL);
     }
 
@@ -1209,7 +1210,7 @@ pub fn sys_timerfd_settime(
     user_old_value: UserRef<itimerspec>,
 ) -> Result<(), Errno> {
     if flags & !(TFD_TIMER_ABSTIME) != 0 {
-        not_implemented!("timerfd_settime: flags 0x{:x}", flags);
+        not_implemented!(current_task, "timerfd_settime: flags 0x{:x}", flags);
         return error!(EINVAL);
     }
 
@@ -1554,13 +1555,13 @@ pub fn sys_flock(current_task: &CurrentTask, fd: FdNumber, operation: u32) -> Re
     file.name.entry.node.flock(current_task, &file, operation)
 }
 
-pub fn sys_fsync(_current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
-    not_implemented!("fsync");
+pub fn sys_fsync(current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+    not_implemented!(current_task, "fsync");
     Ok(())
 }
 
-pub fn sys_fdatasync(_current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
-    not_implemented!("fdatasync");
+pub fn sys_fdatasync(current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+    not_implemented!(current_task, "fdatasync");
     Ok(())
 }
 

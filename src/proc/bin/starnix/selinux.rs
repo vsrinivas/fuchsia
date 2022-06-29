@@ -87,8 +87,8 @@ where
 }
 
 trait SeLinuxFile {
-    fn write(&self, data: Vec<u8>) -> Result<(), Errno>;
-    fn read(&self) -> Result<Vec<u8>, Errno> {
+    fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno>;
+    fn read(&self, _current_task: &CurrentTask) -> Result<Vec<u8>, Errno> {
         error!(ENOSYS)
     }
 }
@@ -110,7 +110,7 @@ impl<T: SeLinuxFile + Send + Sync + AsAny + 'static> FileOps for T {
         let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
-        self.write(buf)?;
+        self.write(current_task, buf)?;
         Ok(size)
     }
 
@@ -121,7 +121,7 @@ impl<T: SeLinuxFile + Send + Sync + AsAny + 'static> FileOps for T {
         _offset: usize,
         buffer: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let data = self.read()?;
+        let data = self.read(current_task)?;
         current_task.mm.write_all(buffer, &data)
     }
 }
@@ -146,30 +146,30 @@ struct selinux_status_t {
 
 struct SeLoad;
 impl SeLinuxFile for SeLoad {
-    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
-        not_implemented!("got selinux policy, length {}, ignoring", data.len());
+    fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno> {
+        not_implemented!(current_task, "got selinux policy, length {}, ignoring", data.len());
         Ok(())
     }
 }
 
 struct SeEnforce;
 impl SeLinuxFile for SeEnforce {
-    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
+    fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno> {
         let enforce = parse_int(&data)?;
-        not_implemented!("selinux setenforce: {}", enforce);
+        not_implemented!(current_task, "selinux setenforce: {}", enforce);
         Ok(())
     }
 
-    fn read(&self) -> Result<Vec<u8>, Errno> {
+    fn read(&self, _current_task: &CurrentTask) -> Result<Vec<u8>, Errno> {
         Ok(b"0\n".to_vec())
     }
 }
 
 struct SeCheckReqProt;
 impl SeLinuxFile for SeCheckReqProt {
-    fn write(&self, data: Vec<u8>) -> Result<(), Errno> {
+    fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno> {
         let checkreqprot = parse_int(&data)?;
-        not_implemented!("selinux checkreqprot: {}", checkreqprot);
+        not_implemented!(current_task, "selinux checkreqprot: {}", checkreqprot);
         Ok(())
     }
 }

@@ -7,8 +7,8 @@ use fuchsia_zircon as zx;
 use crate::types::Errno;
 
 macro_rules! not_implemented {
-    ($($arg:tt)+) => (
-        tracing::warn!(tag = "not_implemented", $($arg)+)
+    ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
+        tracing::warn!(tag = "not_implemented", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
     )
 }
 

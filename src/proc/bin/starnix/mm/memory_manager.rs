@@ -212,6 +212,7 @@ impl MemoryManagerState {
 
     fn remap(
         &mut self,
+        current_task: &CurrentTask,
         old_addr: UserAddress,
         old_length: usize,
         new_length: usize,
@@ -238,7 +239,7 @@ impl MemoryManagerState {
 
         // TODO(fxbug.dev/88262): Implement support for MREMAP_DONTUNMAP.
         if flags.contains(MremapFlags::DONTUNMAP) {
-            not_implemented!("mremap flag MREMAP_DONTUNMAP not implemented");
+            not_implemented!(current_task, "mremap flag MREMAP_DONTUNMAP not implemented");
             return error!(EOPNOTSUPP);
         }
 
@@ -592,7 +593,13 @@ impl MemoryManagerState {
         Ok(())
     }
 
-    fn madvise(&self, addr: UserAddress, length: usize, advice: u32) -> Result<(), Errno> {
+    fn madvise(
+        &self,
+        current_task: &CurrentTask,
+        addr: UserAddress,
+        length: usize,
+        advice: u32,
+    ) -> Result<(), Errno> {
         if !addr.is_aligned(*PAGE_SIZE) {
             return error!(EINVAL);
         }
@@ -619,7 +626,7 @@ impl MemoryManagerState {
                 MADV_DONTNEED => zx::VmoOp::ZERO,
                 MADV_WILLNEED => zx::VmoOp::COMMIT,
                 advice => {
-                    not_implemented!("madvise advice {} not implemented", advice);
+                    not_implemented!(current_task, "madvise advice {} not implemented", advice);
                     return error!(EINVAL);
                 }
             };
@@ -1037,6 +1044,7 @@ impl MemoryManager {
 
     pub fn remap(
         &self,
+        current_task: &CurrentTask,
         addr: UserAddress,
         old_length: usize,
         new_length: usize,
@@ -1044,7 +1052,7 @@ impl MemoryManager {
         new_addr: UserAddress,
     ) -> Result<UserAddress, Errno> {
         let mut state = self.state.write();
-        state.remap(addr, old_length, new_length, flags, new_addr)
+        state.remap(current_task, addr, old_length, new_length, flags, new_addr)
     }
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
@@ -1062,8 +1070,14 @@ impl MemoryManager {
         state.protect(addr, length, flags)
     }
 
-    pub fn madvise(&self, addr: UserAddress, length: usize, advice: u32) -> Result<(), Errno> {
-        self.state.read().madvise(addr, length, advice)
+    pub fn madvise(
+        &self,
+        current_task: &CurrentTask,
+        addr: UserAddress,
+        length: usize,
+        advice: u32,
+    ) -> Result<(), Errno> {
+        self.state.read().madvise(current_task, addr, length, advice)
     }
 
     pub fn set_mapping_name(
@@ -1452,7 +1466,7 @@ impl FileOps for ProcStatFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let command = self.task.read().command.clone();
+        let command = self.task.command();
         let mut seq = self.seq.lock();
         let iter = move |_cursor, sink: &mut SeqFileBuf| {
             let command = command.as_c_str().to_str().unwrap_or("unknown");

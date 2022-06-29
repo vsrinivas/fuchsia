@@ -12,7 +12,6 @@ use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;
@@ -127,7 +126,6 @@ pub struct FlockOperation {
 impl FlockOperation {
     pub fn from_flags(operation: u32) -> Result<Self, Errno> {
         if operation & !(LOCK_SH | LOCK_EX | LOCK_UN | LOCK_NB) != 0 {
-            not_implemented!("unsupported flock operation: {:#x}", operation);
             return error!(EINVAL);
         }
         if [LOCK_SH, LOCK_EX, LOCK_UN].iter().filter(|&&o| operation & o == o).count() != 1 {

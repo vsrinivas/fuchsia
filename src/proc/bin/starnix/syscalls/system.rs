@@ -129,7 +129,7 @@ pub fn sys_gettimeofday(
         current_task.mm.write_object(user_tv, &tv)?;
     }
     if !user_tz.is_null() {
-        not_implemented!("gettimeofday does not implement tz argument");
+        not_implemented!(current_task, "gettimeofday does not implement tz argument");
     }
     return Ok(());
 }
@@ -171,7 +171,7 @@ pub fn sys_time(
 }
 
 pub fn sys_unknown(ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
-    warn!(target: "unknown_syscall", "UNKNOWN pid: {}, syscall({}): {}", ctx.get_pid(), syscall_number, SyscallDecl::from_number(syscall_number).name);
+    warn!(target: "unknown_syscall", "UNKNOWN process: {:?}, syscall({}): {}", ctx, syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
     error!(ENOSYS)
 }

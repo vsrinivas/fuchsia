@@ -48,13 +48,13 @@ impl FileOps for SyslogFile {
     fn ioctl(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         request: u32,
         _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         match request {
             TCGETS => error!(ENOTTY),
-            _ => default_ioctl(request),
+            _ => default_ioctl(current_task, request),
         }
     }
 }

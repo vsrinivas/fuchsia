@@ -20,8 +20,8 @@ pub fn sys_socket(
     _protocol: u32,
 ) -> Result<FdNumber, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
-    let domain = parse_socket_domain(domain)?;
-    let socket_type = parse_socket_type(domain, socket_type)?;
+    let domain = parse_socket_domain(current_task, domain)?;
+    let socket_type = parse_socket_type(current_task, domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
     let socket_file = Socket::new_file(current_task, Socket::new(domain, socket_type), open_flags);
 
@@ -44,16 +44,20 @@ fn socket_flags_to_fd_flags(flags: u32) -> FdFlags {
     }
 }
 
-fn parse_socket_domain(domain: u32) -> Result<SocketDomain, Errno> {
+fn parse_socket_domain(current_task: &CurrentTask, domain: u32) -> Result<SocketDomain, Errno> {
     SocketDomain::from_raw(domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))?).ok_or_else(|| {
-        not_implemented!("unsupported socket domain {}", domain);
+        not_implemented!(current_task, "unsupported socket domain {}", domain);
         errno!(EAFNOSUPPORT)
     })
 }
 
-fn parse_socket_type(domain: SocketDomain, socket_type: u32) -> Result<SocketType, Errno> {
+fn parse_socket_type(
+    current_task: &CurrentTask,
+    domain: SocketDomain,
+    socket_type: u32,
+) -> Result<SocketType, Errno> {
     let socket_type = SocketType::from_raw(socket_type & 0xf).ok_or_else(|| {
-        not_implemented!("unsupported socket type 0x{:x}", socket_type);
+        not_implemented!(current_task, "unsupported socket type 0x{:x}", socket_type);
         errno!(EPROTONOSUPPORT)
     })?;
     // For AF_UNIX, SOCK_RAW sockets are treated as if they were SOCK_DGRAM.
@@ -346,11 +350,11 @@ pub fn sys_socketpair(
     user_sockets: UserRef<[FdNumber; 2]>,
 ) -> Result<(), Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
-    let domain = parse_socket_domain(domain)?;
+    let domain = parse_socket_domain(current_task, domain)?;
     if domain != SocketDomain::Unix {
         return error!(EAFNOSUPPORT);
     }
-    let socket_type = parse_socket_type(domain, socket_type)?;
+    let socket_type = parse_socket_type(current_task, domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
     let (left, right) = UnixSocket::new_pair(current_task, domain, socket_type, open_flags);

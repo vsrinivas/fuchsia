@@ -215,7 +215,7 @@ pub fn sys_signalfd4(
     flags: u32,
 ) -> Result<FdNumber, Errno> {
     if fd.raw() != -1 {
-        not_implemented!("changing mask of a signalfd");
+        not_implemented!(current_task, "changing mask of a signalfd");
         return error!(EINVAL);
     }
     if flags & !(SFD_CLOEXEC | SFD_NONBLOCK) != 0 {
@@ -491,9 +491,9 @@ impl WaitingOptions {
     }
 
     /// Build a `WaitingOptions` from the waiting flags of waitid.
-    pub fn new_for_waitid(options: u32) -> Result<Self, Errno> {
+    pub fn new_for_waitid(task: &Task, options: u32) -> Result<Self, Errno> {
         if options & !(WNOHANG | WNOWAIT | WSTOPPED | WEXITED | WCONTINUED) != 0 {
-            not_implemented!("unsupported waitid options: {:#x}", options);
+            not_implemented!(task, "unsupported waitid options: {:#x}", options);
             return error!(EINVAL);
         }
         if options & (WEXITED | WSTOPPED | WCONTINUED) == 0 {
@@ -503,9 +503,9 @@ impl WaitingOptions {
     }
 
     /// Build a `WaitingOptions` from the waiting flags of wait4.
-    pub fn new_for_wait4(options: u32) -> Result<Self, Errno> {
+    pub fn new_for_wait4(task: &Task, options: u32) -> Result<Self, Errno> {
         if options & !(WNOHANG | WUNTRACED | WCONTINUED) != 0 {
-            not_implemented!("unsupported waitid options: {:#x}", options);
+            not_implemented!(task, "unsupported waitid options: {:#x}", options);
             return error!(EINVAL);
         }
         Ok(Self::new(options | WEXITED))
@@ -557,7 +557,7 @@ pub fn sys_waitid(
     user_info: UserAddress,
     options: u32,
 ) -> Result<(), Errno> {
-    let waiting_options = WaitingOptions::new_for_waitid(options)?;
+    let waiting_options = WaitingOptions::new_for_waitid(current_task, options)?;
 
     let task_selector = match id_type {
         P_PID => ProcessSelector::Pid(id),
@@ -568,7 +568,7 @@ pub fn sys_waitid(
             id
         }),
         P_PIDFD => {
-            not_implemented!("unsupported waitpid id_type {:?}", id_type);
+            not_implemented!(current_task, "unsupported waitpid id_type {:?}", id_type);
             return error!(ENOSYS);
         }
         _ => return error!(EINVAL),
@@ -593,7 +593,7 @@ pub fn sys_wait4(
     options: u32,
     user_rusage: UserRef<rusage>,
 ) -> Result<pid_t, Errno> {
-    let waiting_options = WaitingOptions::new_for_wait4(options)?;
+    let waiting_options = WaitingOptions::new_for_wait4(current_task, options)?;
 
     let selector = if pid == 0 {
         ProcessSelector::Pgid(current_task.thread_group.read().process_group.leader)
@@ -604,7 +604,7 @@ pub fn sys_wait4(
     } else if pid < -1 {
         ProcessSelector::Pgid(-pid)
     } else {
-        not_implemented!("unimplemented wait4 pid selector {}", pid);
+        not_implemented!(current_task, "unimplemented wait4 pid selector {}", pid);
         return error!(ENOSYS);
     };
 
@@ -615,7 +615,7 @@ pub fn sys_wait4(
             let usage = rusage::default();
             // TODO(fxb/76976): Return proper usage information.
             current_task.mm.write_object(user_rusage, &usage)?;
-            not_implemented!("wait4 does not set rusage info");
+            not_implemented!(current_task, "wait4 does not set rusage info");
         }
 
         if !user_wstatus.is_null() {
@@ -1334,7 +1334,7 @@ mod tests {
             wait_on_pid(
                 &current_task,
                 ProcessSelector::Any,
-                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions")
+                &WaitingOptions::new_for_wait4(&current_task, 0).expect("WaitingOptions")
             ),
             Err(ECHILD)
         );
@@ -1357,7 +1357,7 @@ mod tests {
             wait_on_pid(
                 &current_task,
                 ProcessSelector::Any,
-                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions")
+                &WaitingOptions::new_for_wait4(&current_task, 0).expect("WaitingOptions")
             ),
             Ok(Some(expected_zombie))
         );
@@ -1373,7 +1373,7 @@ mod tests {
             wait_on_pid(
                 &task,
                 ProcessSelector::Any,
-                &WaitingOptions::new_for_wait4(WNOHANG).expect("WaitingOptions")
+                &WaitingOptions::new_for_wait4(&task, WNOHANG).expect("WaitingOptions")
             ),
             Ok(None)
         );
@@ -1385,7 +1385,7 @@ mod tests {
             let waited_child = wait_on_pid(
                 &task_clone,
                 ProcessSelector::Any,
-                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions"),
+                &WaitingOptions::new_for_wait4(&task_clone, 0).expect("WaitingOptions"),
             )
             .expect("wait_on_pid")
             .unwrap();
@@ -1427,7 +1427,7 @@ mod tests {
         let errno = wait_on_pid(
             &task,
             ProcessSelector::Any,
-            &WaitingOptions::new_for_wait4(0).expect("WaitingOptions"),
+            &WaitingOptions::new_for_wait4(&task, 0).expect("WaitingOptions"),
         )
         .expect_err("wait_on_pid");
         assert_eq!(errno, ERESTARTSYS);

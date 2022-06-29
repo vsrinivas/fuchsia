@@ -75,7 +75,7 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
     current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
     current_task.thread.write_state_general_regs(current_task.registers.into())?;
     mem::drop(suspend_token);
-    set_zx_name(&fuchsia_runtime::thread_self(), current_task.read().command.as_bytes());
+    set_zx_name(&fuchsia_runtime::thread_self(), current_task.command().as_bytes());
     Ok(exceptions)
 }
 
@@ -241,12 +241,11 @@ fn run_exception_loop(
 /// for the created thread.
 pub fn create_zircon_thread(
     parent: &Task,
-    parent_state: &TaskMutableState,
 ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
     let thread = parent
         .thread_group
         .process
-        .create_thread(parent_state.command.as_bytes())
+        .create_thread(parent.command().as_bytes())
         .map_err(|status| from_status_like_fdio!(status))?;
 
     let thread_group = parent.thread_group.clone();

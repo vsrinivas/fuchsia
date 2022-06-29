@@ -43,7 +43,7 @@ pub fn sys_clone(
 }
 
 pub fn sys_vfork(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    not_implemented!("vfork is not implemented. A normal fork is executed instead.");
+    not_implemented!(current_task, "vfork is not implemented. A normal fork is executed instead.");
     let mut new_task =
         current_task.clone_task(SIGCHLD.number() as u64, UserRef::default(), UserRef::default())?;
     let tid = new_task.id;
@@ -376,7 +376,7 @@ pub fn sys_prctl(
     match option {
         PR_SET_VMA => {
             if arg2 != PR_SET_VMA_ANON_NAME as u64 {
-                not_implemented!("prctl: PR_SET_VMA: Unknown arg2: 0x{:x}", arg2);
+                not_implemented!(current_task, "prctl: PR_SET_VMA: Unknown arg2: 0x{:x}", arg2);
                 return error!(ENOSYS);
             }
             let addr = UserAddress::from(arg3);
@@ -401,7 +401,7 @@ pub fn sys_prctl(
             })
         }
         PR_SET_PDEATHSIG => {
-            not_implemented!("PR_SET_PDEATHSIG");
+            not_implemented!(current_task, "PR_SET_PDEATHSIG");
             Ok(().into())
         }
         PR_SET_NAME => {
@@ -420,23 +420,23 @@ pub fn sys_prctl(
         }
         PR_GET_NAME => {
             let addr = UserAddress::from(arg2);
-            current_task.mm.write_memory(addr, current_task.read().command.to_bytes_with_nul())?;
+            current_task.mm.write_memory(addr, current_task.command().to_bytes_with_nul())?;
             Ok(().into())
         }
         PR_SET_PTRACER => {
-            not_implemented!("prctl(PR_SET_PTRACER, {})", arg2);
+            not_implemented!(current_task, "prctl(PR_SET_PTRACER, {})", arg2);
             Ok(().into())
         }
         PR_SET_KEEPCAPS => {
-            not_implemented!("prctl(PR_SET_KEEPCAPS, {})", arg2);
+            not_implemented!(current_task, "prctl(PR_SET_KEEPCAPS, {})", arg2);
             Ok(().into())
         }
         PR_SET_NO_NEW_PRIVS => {
-            not_implemented!("prctl(PR_SET_NO_NEW_PRIVS, {})", arg2);
+            not_implemented!(current_task, "prctl(PR_SET_NO_NEW_PRIVS, {})", arg2);
             Ok(().into())
         }
         PR_SET_SECCOMP => {
-            not_implemented!("prctl(PR_SET_SECCOMP, {})", arg2);
+            not_implemented!(current_task, "prctl(PR_SET_SECCOMP, {})", arg2);
             Ok(().into())
         }
         PR_GET_CHILD_SUBREAPER => {
@@ -451,7 +451,7 @@ pub fn sys_prctl(
             Ok(().into())
         }
         _ => {
-            not_implemented!("prctl: Unknown option: 0x{:x}", option);
+            not_implemented!(current_task, "prctl: Unknown option: 0x{:x}", option);
             error!(ENOSYS)
         }
     }
@@ -472,7 +472,12 @@ pub fn sys_arch_prctl(
             Ok(())
         }
         _ => {
-            not_implemented!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
+            not_implemented!(
+                current_task,
+                "arch_prctl: Unknown code: code=0x{:x} addr={}",
+                code,
+                addr
+            );
             error!(ENOSYS)
         }
     }
@@ -533,11 +538,11 @@ pub fn sys_prlimit64(
     old_limit: UserRef<rlimit>,
 ) -> Result<(), Errno> {
     if pid != 0 {
-        not_implemented!("prlimit64 with non 0 pid");
+        not_implemented!(current_task, "prlimit64 with non 0 pid");
         return error!(ENOSYS);
     }
     if !new_limit.is_null() {
-        not_implemented!("prlimit64 to edit limits");
+        not_implemented!(current_task, "prlimit64 to edit limits");
         return error!(ENOSYS);
     }
     if !old_limit.is_null() {
@@ -554,7 +559,7 @@ pub fn sys_prlimit64(
                 Ok(rlimit { rlim_cur: stack_size, rlim_max: stack_size })
             }
             _ => {
-                not_implemented!("getrlimit: {:?}", resource);
+                not_implemented!(current_task, "getrlimit: {:?}", resource);
                 error!(ENOSYS)
             }
         }?;
@@ -632,7 +637,7 @@ pub fn sys_futex(
             current_task.mm.futex.requeue(addr, value as usize, addr2);
         }
         _ => {
-            not_implemented!("futex: command 0x{:x} not implemented.", cmd);
+            not_implemented!(current_task, "futex: command 0x{:x} not implemented.", cmd);
             return error!(ENOSYS);
         }
     }
@@ -645,7 +650,7 @@ pub fn sys_capget(
     user_data: UserRef<__user_cap_data_struct>,
 ) -> Result<(), Errno> {
     // TODO: Implement capget. This is hardcoded to allow chroot tests to run.
-    not_implemented!("Stubbed capget only provides CAP_SYS_CHROOT");
+    not_implemented!(current_task, "Stubbed capget only provides CAP_SYS_CHROOT");
     let effective = 1 << CAP_SYS_CHROOT;
     let data = __user_cap_data_struct { effective: effective, permitted: 0, inheritable: 0 };
     current_task.mm.write_object(user_data, &data)?;
@@ -726,7 +731,11 @@ pub fn sys_setpriority(
 pub fn sys_unshare(current_task: &CurrentTask, flags: u32) -> Result<(), Errno> {
     const IMPLEMENTED_FLAGS: u32 = CLONE_NEWNS;
     if flags & !IMPLEMENTED_FLAGS != 0 {
-        not_implemented!("unshare does not implement flags: 0x{:x}", flags & !IMPLEMENTED_FLAGS);
+        not_implemented!(
+            current_task,
+            "unshare does not implement flags: 0x{:x}",
+            flags & !IMPLEMENTED_FLAGS
+        );
         return error!(EINVAL);
     }
 

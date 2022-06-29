@@ -34,22 +34,22 @@ impl SocketOps for InetSocket {
     }
 
     fn listen(&self, _socket: &Socket, _backlog: i32) -> Result<(), Errno> {
-        not_implemented!("InetSocket::listen is stubbed");
+        not_implemented!("?", "InetSocket::listen is stubbed");
         Ok(())
     }
 
     fn accept(&self, _socket: &Socket, _credentials: ucred) -> Result<SocketHandle, Errno> {
-        not_implemented!("InetSocket::accept is stubbed");
+        not_implemented!("?", "InetSocket::accept is stubbed");
         error!(EAGAIN)
     }
 
     fn remote_connection(&self, _socket: &Socket, _file: FileHandle) -> Result<(), Errno> {
-        not_implemented!("InetSocket::remote_connection is stubbed");
+        not_implemented!("?", "InetSocket::remote_connection is stubbed");
         Ok(())
     }
 
     fn bind(&self, _socket: &Socket, _socket_address: SocketAddress) -> Result<(), Errno> {
-        not_implemented!("InetSocket::bind is stubbed");
+        not_implemented!("?", "InetSocket::bind is stubbed");
         Ok(())
     }
 
@@ -83,7 +83,7 @@ impl SocketOps for InetSocket {
         _handler: EventHandler,
         _options: WaitAsyncOptions,
     ) -> WaitKey {
-        not_implemented!("InetSocket::wait_async is stubbed");
+        not_implemented!("?", "InetSocket::wait_async is stubbed");
         WaitKey::empty()
     }
 
@@ -97,7 +97,7 @@ impl SocketOps for InetSocket {
     }
 
     fn query_events(&self, _socket: &Socket, _current_task: &CurrentTask) -> FdEvents {
-        not_implemented!("InetSocket::query_events is stubbed");
+        not_implemented!("?", "InetSocket::query_events is stubbed");
         FdEvents::empty()
     }
 
