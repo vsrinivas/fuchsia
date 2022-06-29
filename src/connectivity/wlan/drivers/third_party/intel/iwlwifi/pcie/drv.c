@@ -571,7 +571,9 @@ static const struct iwl_pci_device_id iwl_devices[] = {
     {IWL_PCI_DEVICE(0x2526, 0x1210, iwl9260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x2526, 0x1410, iwl9270_2ac_cfg)},
     {IWL_PCI_DEVICE(0x2526, 0x1420, iwl9460_2ac_cfg_soc)},
+#endif  // NEEDS_PORTING
     {IWL_PCI_DEVICE(0x2526, 0x1550, iwl9260_killer_2ac_cfg)},
+#if 0   // NEEDS_PORTING
     {IWL_PCI_DEVICE(0x2526, 0x1551, iwl9560_killer_s_2ac_cfg_soc)},
     {IWL_PCI_DEVICE(0x2526, 0x1552, iwl9560_killer_2ac_cfg_soc)},
     {IWL_PCI_DEVICE(0x2526, 0x1610, iwl9270_2ac_cfg)},

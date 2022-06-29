@@ -116,7 +116,8 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
 
     const iwl_pci_device_id* id = nullptr;
     if ((status = iwl_pci_find_device_id(pci_info.device_id, subsystem_device_id, &id)) != ZX_OK) {
-      IWL_ERR(nullptr, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+      IWL_ERR(nullptr, "Failed to find PCI config: %s  device_id=0x%04x  subsys_did=0x%04x\n",
+              zx_status_get_string(status), pci_info.device_id, subsystem_device_id);
       return status;
     }
 
