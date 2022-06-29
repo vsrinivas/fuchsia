@@ -161,7 +161,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // Add this Node to its parents. This should be called when the node is created.
   void AddToParents();
 
-  const std::string name_;
+  std::string name_;
   // If this is a composite device, this stores the list of each parent's names.
   std::vector<std::string> parents_names_;
   std::vector<Node*> parents_;

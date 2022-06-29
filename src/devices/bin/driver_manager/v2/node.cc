@@ -264,6 +264,11 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
       parents_(std::move(parents)),
       driver_binder_(driver_binder),
       dispatcher_(dispatcher) {
+  // The driver's component name is based on the node name, which means that the
+  // node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
+  // which is not allowed, so replace those characters.
+  std::replace(name_.begin(), name_.end(), ':', '_');
+
   if (auto primary_parent = PrimaryParent(parents_)) {
     // By default, we set `driver_host_` to match the primary parent's
     // `driver_host_`. If the node is then subsequently bound to a driver in a
