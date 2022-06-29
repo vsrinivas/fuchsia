@@ -209,8 +209,6 @@ impl StreamCipher {
     pub fn new(key: &UnwrappedKey, offset: u64) -> Self {
         let mut cipher =
             Self(ChaCha20::new(Key::from_slice(&key.key), /* nonce: */ &[0; 12].into()));
-        // TODO(fxbug.dev/93354): Chacha20's 32 bit counter isn't quite big enough for our offset,
-        // so we need to handle that case.
         cipher.0.seek(offset);
         cipher
     }
