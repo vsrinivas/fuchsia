@@ -28,15 +28,8 @@ using DumpFileMap = std::map<std::string, std::string>;
 // key = data_sink name
 using DataSinkMap = std::map<std::string, DumpFileMap>;
 
-struct TestDebugDataMapValue {
-  /// processing of debug data passed without error.
-  bool data_processing_passed;
-
-  DataSinkMap data_sink_map;
-};
-
 // key = test url
-using TestDebugDataMap = std::map<std::string, TestDebugDataMapValue>;
+using TestDebugDataMap = std::map<std::string, DataSinkMap>;
 
 // key = sink name, value = vector of VMOs published to debug data.
 using SinkVMOMap = std::unordered_map<std::string, std::vector<zx::vmo>>;
@@ -70,7 +63,6 @@ class DataProcessor : public AbstractDataProcessor {
   ///   "tests":[
   ///      {
   ///         "name":"test_url1.cmx",
-  ///         "result":"PASS",
   ///         "data_sinks":{
   ///            "test1_sink1":[
   ///               {
@@ -120,9 +112,6 @@ class DataProcessor : public AbstractDataProcessor {
   struct ProcessorState {
     fbl::unique_fd dir_fd;
     debugdata::DataSink data_sink;
-    // TODO(satsukiu): test success isn't read from summary.json anymore, we should
-    // stop tracking it.
-    std::unordered_map<std::string, bool> tests_success;
 
     explicit ProcessorState(fbl::unique_fd arg_dir_fd)
         : dir_fd(std::move(arg_dir_fd)), data_sink(dir_fd) {}

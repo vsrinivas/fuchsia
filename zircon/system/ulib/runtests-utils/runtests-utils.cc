@@ -121,11 +121,6 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
     // Write the name of the test.
     fprintf(summary_json, "      \"name\": \"%s\",\n", result->name.c_str());
 
-    // Write the result of the test, which is either PASS or FAIL. We only
-    // have one PASS condition in TestResult, which is SUCCESS.
-    fprintf(summary_json, "      \"result\": \"%s\",\n",
-            result->launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
-
     fprintf(summary_json, "      \"duration_milliseconds\": %" PRId64,
             result->duration_milliseconds);
 

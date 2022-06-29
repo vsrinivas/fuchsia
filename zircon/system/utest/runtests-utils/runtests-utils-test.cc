@@ -128,12 +128,10 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceeds) {
   "tests": [
     {
       "name": "/a",
-      "result": "PASS",
       "duration_milliseconds": 10
     },
     {
       "name": "b",
-      "result": "FAIL",
       "duration_milliseconds": 0
     }
   ],
@@ -160,12 +158,10 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
   "tests": [
     {
       "name": "/a",
-      "result": "PASS",
       "duration_milliseconds": 10
     },
     {
       "name": "b",
-      "result": "FAIL",
       "duration_milliseconds": 0
     }
   ]
@@ -400,7 +396,6 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   sprintf(expected_pass_output_buf,
           R"(    \{
       "name": "%s",
-      "result": "PASS",
       "duration_milliseconds": \d+
     \})",
           succeed_file_name.c_str());
@@ -410,7 +405,6 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   sprintf(expected_fail_output_buf,
           R"(    \{
       "name": "%s",
-      "result": "FAIL",
       "duration_milliseconds": \d+
     \})",
           fail_file_name.c_str());

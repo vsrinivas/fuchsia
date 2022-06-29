@@ -142,7 +142,6 @@ TEST(RunTests, RunAllTestsPublishData) {
   expected_output_buf.AppendPrintf(
       R"(
       "name": "%s",
-      "result": "PASS",
       "duration_milliseconds": \d+)",
       test_name.c_str());
   re2::RE2 expected_output_regex(expected_output_buf.c_str());

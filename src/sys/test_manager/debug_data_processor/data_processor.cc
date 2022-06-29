@@ -125,10 +125,8 @@ void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
                                      std::shared_ptr<ProcessorState> state) {
   auto data_sink_map = inner->TakeMapContents();
   for (auto& [test_url, sink_vmo_map] : data_sink_map) {
-    bool got_error = false;
     debugdata::DataSinkCallback error_log_fn = [&](const std::string& error) {
       FX_LOGS(ERROR) << "ProcessDebugData: " << error;
-      got_error = true;
     };
     debugdata::DataSinkCallback warn_log_fn = [&](const std::string& warning) {
       FX_LOGS(WARNING) << "ProcessDebugData: " << warning;
@@ -139,8 +137,6 @@ void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
                                                 error_log_fn, warn_log_fn);
       }
     }
-    state->tests_success.try_emplace(test_url, true);
-    state->tests_success[test_url] = state->tests_success[test_url] && !got_error;
   }
 
   if (inner->DataFinished()) {
@@ -156,12 +152,9 @@ void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
     for (auto& [sink_name, dump_file_tag_map] : sinks_map) {
       for (auto& [dump_file, urls] : dump_file_tag_map) {
         for (auto url : urls) {
-          debug_data_map[url].data_sink_map[sink_name][dump_file.file] = dump_file.name;
+          debug_data_map[url][sink_name][dump_file.file] = dump_file.name;
         }
       }
-    }
-    for (auto& [url, success] : state->tests_success) {
-      debug_data_map[url].data_processing_passed = success;
     }
 
     WriteSummaryFile(state->dir_fd, debug_data_map);
@@ -172,12 +165,9 @@ void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
 namespace {
 const char* kSummaryTests = "tests";
 const char* kSummaryTestName = "name";
-const char* kSummaryResult = "result";
 const char* kSummaryDataSinks = "data_sinks";
 const char* kSummaryDataSinkName = "name";
 const char* kSummaryDataSinkFile = "file";
-const std::string kSummaryResultFail = "FAIL";
-const std::string kSummaryResultPass = "PASS";
 
 }  // namespace
 
@@ -193,14 +183,8 @@ void DataProcessor::WriteSummaryFile(fbl::unique_fd& fd, TestDebugDataMap debug_
       for (const auto& test : tests) {
         FX_CHECK(test.HasMember(kSummaryTestName));
         auto url = test[kSummaryTestName].GetString();
-        FX_CHECK(test.HasMember(kSummaryResult));
-        std::string result = test[kSummaryResult].GetString();
-        debug_data_map[url].data_processing_passed = true;
-        if (result == kSummaryResultFail) {
-          debug_data_map[url].data_processing_passed = false;
-        }
         if (test.HasMember(kSummaryDataSinks)) {
-          auto& map = debug_data_map[url].data_sink_map;
+          auto& map = debug_data_map[url];
           const auto& debug_data_map = test[kSummaryDataSinks].GetObject();
           for (auto& entry : debug_data_map) {
             auto& data_map = map[entry.name.GetString()];
@@ -222,16 +206,12 @@ void DataProcessor::WriteSummaryFile(fbl::unique_fd& fd, TestDebugDataMap debug_
   auto& allocator = doc.GetAllocator();
   auto tests = rapidjson::Value(rapidjson::kArrayType);
 
-  for (auto& [test_url, data_sink_map_value] : debug_data_map) {
+  for (auto& [test_url, data_sink_map] : debug_data_map) {
     auto test = rapidjson::Value(rapidjson::kObjectType);
     test.AddMember(rapidjson::Value(kSummaryTestName, allocator).Move(),
                    rapidjson::Value(test_url, allocator).Move(), allocator);
-    auto result =
-        data_sink_map_value.data_processing_passed ? kSummaryResultPass : kSummaryResultFail;
-    test.AddMember(rapidjson::Value(kSummaryResult, allocator).Move(),
-                   rapidjson::Value(result, allocator).Move(), allocator);
     auto debug_data_map = rapidjson::Value(rapidjson::kObjectType);
-    for (auto& [data_sink_name, dump_file_map] : data_sink_map_value.data_sink_map) {
+    for (auto& [data_sink_name, dump_file_map] : data_sink_map) {
       auto dump_files = rapidjson::Value(rapidjson::kArrayType);
       for (auto& [file, name] : dump_file_map) {
         auto dump_file = rapidjson::Value(rapidjson::kObjectType);
