@@ -407,9 +407,13 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
   FlashPartitionInfo info = GetPartitionInfo(args[1]);
-  if (info.partition == "bootloader" && info.configuration) {
+  if (info.partition == "bootloader") {
+    // If abr suffix is not given, assume that firmware ABR is not supported and just provide a
+    // A slot configuration. It will be ignored by the paver.
+    fuchsia_paver::wire::Configuration config =
+        info.configuration ? *info.configuration : fuchsia_paver::wire::Configuration::kA;
     std::string_view firmware_type = args.size() == 3 ? args[2] : "";
-    return WriteFirmware(*info.configuration, firmware_type, transport, data_sink);
+    return WriteFirmware(config, firmware_type, transport, data_sink);
   } else if (info.partition == "zircon" && info.configuration) {
     return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kKernel, transport,
                       data_sink);
