@@ -62,6 +62,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/self-test:ffx_selftest",
       "//src/developer/ffx/plugins/session:ffx_session",
       "//src/developer/ffx/plugins/setui:ffx_setui",
+      "//src/developer/ffx/plugins/sl4f:ffx_sl4f_plugin",
       "//src/developer/ffx/plugins/starnix:ffx_starnix",
       "//src/developer/ffx/plugins/target:ffx_target",
       "//src/developer/ffx/plugins/test:ffx_test",

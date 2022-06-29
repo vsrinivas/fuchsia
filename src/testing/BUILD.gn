@@ -22,6 +22,7 @@ group("tests") {
     "metrics-logger:tests",
     "perfcompare:tests",
     "sl4f:tests",
+    "sl4f_ffx/server:tests",
     "system-metrics-logger:tests",
   ]
 }

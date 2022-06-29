@@ -19,7 +19,7 @@ const SERVER_PORT: u16 = 80;
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     fuchsia_syslog::init_with_tags(&["sl4f"]).expect("Can't init logger");
-    log::info!("Starting sl4f server");
+    log::info!("  Starting sl4f server");
 
     // State for clients that utilize the /init endpoint
     let sl4f_clients = Arc::new(RwLock::new(Sl4fClients::new()));

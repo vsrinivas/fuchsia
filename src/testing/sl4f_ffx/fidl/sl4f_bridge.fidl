@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.sl4f.ffx;
+
+using fuchsia.developer.ffx;
+
+
+// Note that the transfers may be as large as the maximum JSON size allowed over HTTP. Adjust if
+// needed.
+const MAX_STRING_LENGTH uint64 = 2048;
+
+@discoverable
+protocol Sl4fBridge {
+    /// Execute passes commands from the SL4F host-side server to the client-side server and on to
+    /// the SL4F component.
+    Execute(struct {
+        /// The device target.
+        target_query fuchsia.developer.ffx.TargetQuery;
+        /// The SL4F query to send to the client-side SL4F instance.
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        /// The Sl4F component response and then the Bridge response.
+        response string:MAX_STRING_LENGTH;
+    });
+};

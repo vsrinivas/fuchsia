@@ -6,6 +6,11 @@
 {
     children: [
         {
+            name: "sl4f_bridge_server",
+            url: "fuchsia-pkg://fuchsia.com/sl4f-ffx-proxy-server#meta/sl4f_proxy_server.cm",
+            environment: "#full-resolver-env",
+        },
+        {
             name: "device_settings",
             url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cm",
         },
@@ -293,6 +298,11 @@
             to: [ "#agis" ],
         },
         {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#network",
+            to: [ "#sl4f_bridge_server" ],
+        },
+        {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash_secure",
             to: [
@@ -421,6 +431,7 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#sl4f_bridge_server",
                 "#ssh-key-manager",
                 "#starnix_manager",
                 "#stash",
