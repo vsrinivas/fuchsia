@@ -92,7 +92,8 @@ type ComponentStartInfo = resource table {
     4: outgoing_dir server_end:fuchsia.io.Directory;
 
     /// The directory served by the runner to present runtime information about
-    /// the component.
+    /// the component. The runner must either serve it, or drop it to avoid
+    /// blocking any consumers indefinitely.
     5: runtime_dir server_end:fuchsia.io.Directory;
 
     /// The numbered handles that were passed to the component.
