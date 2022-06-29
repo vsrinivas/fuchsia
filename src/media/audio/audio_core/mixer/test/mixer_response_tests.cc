@@ -3,6 +3,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <cmath>
 #include <iomanip>
 #include <ios>
 
@@ -10,6 +11,7 @@
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 #include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::test {
@@ -197,6 +199,16 @@ TEST(NoiseFloor, OutputFloat32) {
       << std::setprecision(10) << AudioResult::FloorOutputFloat;
 }
 
+// Resets mixer state by calling `Mixer::Mix` until all remained filter state gets cleared out.
+void ResetMixer(Mixer& mixer, int32_t num_chans) {
+  const int64_t frame_count = Fixed(mixer.neg_filter_width() + mixer.pos_filter_width()).Ceiling();
+  std::vector<float> zeros(num_chans * frame_count, 0.0f);
+  int64_t dest_offset = 0;
+  Fixed source_offset = Fixed(0);
+  mixer.Mix(zeros.data(), frame_count, &dest_offset, zeros.data(), frame_count, &source_offset,
+            false);
+}
+
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum
 //
 // Ideal SINAD is at least 6 dB per signal-bit (>96 dB, if 16-bit resolution).
@@ -302,7 +314,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // today, since each frequency test starts precisely at buffer-start (thus for Point
     // resamplers, no previously-cached state is needed). However, this IS a requirement for future
     // resamplers with larger positive filter widths (they exposed the bug); address this now.
-    mixer->Reset();
+    ResetMixer(*mixer, /*num_chans=*/1);
 
     // Is this source frequency beyond the Nyquist limit for our destination frame rate?
     const bool out_of_band = (frequency_to_measure * 2 >= num_dest_frames);
@@ -767,7 +779,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // the Point resamplers, no previously-cached state is needed).
   // However, this IS a requirement for upcoming resamplers with larger
   // positive filter widths (they exposed the bug; thus addressing it now).
-  mixer->Reset();
+  ResetMixer(*mixer, num_chans);
 
   auto mono_format = Format::Create<ASF::FLOAT>(1, dest_rate).take_value();
   auto mono = AudioBuffer(mono_format, num_dest_frames);

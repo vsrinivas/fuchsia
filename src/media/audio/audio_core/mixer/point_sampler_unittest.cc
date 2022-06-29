@@ -911,11 +911,6 @@ TEST_F(PointSamplerPositionTest, FilterWidth) {
 
   EXPECT_EQ(mixer->pos_filter_width().raw_value(), expect_pos_width);
   EXPECT_EQ(mixer->neg_filter_width().raw_value(), expect_neg_width);
-
-  mixer->Reset();
-
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), expect_pos_width);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), expect_neg_width);
 }
 
 }  // namespace

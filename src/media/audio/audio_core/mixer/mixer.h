@@ -536,14 +536,6 @@ class Mixer {
                    bool accumulate) = 0;
 
   //
-  // Reset
-  //
-  // Reset the internal state of the mixer. Will be called every time there is
-  // a discontinuity in the source stream. Mixer implementations should reset
-  // anything related to their internal filter state.
-  virtual void Reset() {}
-
-  //
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in fixed-point

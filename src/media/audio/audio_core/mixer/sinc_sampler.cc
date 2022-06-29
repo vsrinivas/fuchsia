@@ -57,11 +57,6 @@ class SincSamplerImpl : public SincSampler {
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
-  void Reset() override {
-    SincSampler::Reset();
-    working_data_.Clear();
-  }
-
   // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() override { filter_.EagerlyPrepare(); }
 
