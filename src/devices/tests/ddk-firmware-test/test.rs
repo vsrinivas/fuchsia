@@ -169,7 +169,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
 
     let out_dir = instance.root.get_exposed_dir();
     let driver_service =
-        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test")
+        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test-device-0")
             .await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
@@ -222,7 +222,7 @@ async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
     // Connect to our driver.
     let dev = instance.driver_test_realm_connect_to_dev()?;
     let driver_service =
-        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/ddk-firmware-test").await?;
+        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/ddk-firmware-test-device-0").await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );
@@ -280,7 +280,7 @@ async fn load_system_firmware_test() -> Result<(), Error> {
 
     let out_dir = instance.root.get_exposed_dir();
     let driver_service =
-        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test")
+        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test-device-0")
             .await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),

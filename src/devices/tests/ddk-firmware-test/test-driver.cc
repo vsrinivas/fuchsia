@@ -30,7 +30,13 @@ class TestFirmwareDriver : public DeviceType {
  public:
   explicit TestFirmwareDriver(zx_device_t* parent) : DeviceType(parent) {}
 
-  zx_status_t Bind() { return DdkAdd("ddk-firmware-test"); }
+  zx_status_t Bind() {
+    // Generate a unique child device name in case the driver is bound multiple
+    // times.
+    std::string name = std::string("ddk-firmware-test-device-").append(std::to_string(counter_));
+    counter_++;
+    return DdkAdd(name.c_str());
+  }
 
   // Device protocol implementation.
   void DdkRelease() { delete this; }
@@ -43,6 +49,9 @@ class TestFirmwareDriver : public DeviceType {
 
  private:
   static zx_status_t CheckFirmware(zx_handle_t fw, size_t size);
+
+  // A counter to generate unique child device names
+  inline static int counter_ = 0;
 };
 
 void TestFirmwareDriver::LoadFirmware(LoadFirmwareRequestView request,
