@@ -45,12 +45,12 @@ DeadlineParams GetDeadlineParamsForRole(ThreadRole role) {
     case ThreadRole::kVdec0Irq:
     case ThreadRole::kVdec1Irq:
       return DeadlineParams{.name = "aml-video/vdec_irq",
-                            .capacity = zx::usec(800),
+                            .capacity = zx::usec(1400),
                             .deadline = zx::usec(6000),
                             .period = zx::usec(6000)};
     case ThreadRole::kH264MultiCore:
       return DeadlineParams{.name = "aml-video/h264_core",
-                            .capacity = zx::usec(300),
+                            .capacity = zx::usec(600),
                             .deadline = zx::usec(6000),
                             .period = zx::usec(6000)};
     case ThreadRole::kH264MultiStreamControl:
