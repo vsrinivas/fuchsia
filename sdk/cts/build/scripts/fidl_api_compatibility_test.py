@@ -10,6 +10,7 @@ import sys
 import plasa_differ
 from enum import Enum
 
+# TODO(kjharland): Write unit tests.
 
 class Policy(Enum):
     # update_golden tells this script to overwrite the existing golden with
@@ -51,7 +52,7 @@ class CompatibilityError(Exception):
         self.golden = golden
 
     def __str__(self):
-        formatted_breaking_changes = '\n - '.join(breaking_changes)
+        formatted_breaking_changes = '\n - '.join(self.breaking_changes)
         return (
             f"These changes are incompatible with API level {self.api_level}\n"
             f"{formatted_breaking_changes}\n\n"
