@@ -25,6 +25,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::warn,
 };
 
 lazy_static! {
@@ -170,7 +171,7 @@ async fn report_routing_failure_to_target(
             report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end).await;
         }
         Err(err) => {
-            log::warn!("failed to upgrade reference to {}: {}", target.abs_moniker, err);
+            warn!(moniker=%target.abs_moniker, error=%err, "failed to upgrade reference");
         }
     }
 }

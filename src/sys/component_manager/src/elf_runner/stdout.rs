@@ -15,7 +15,7 @@ use {
     futures::AsyncReadExt,
     runner::component::ComponentNamespace,
     std::{boxed::Box, num::NonZeroUsize, sync::Arc},
-    tracing::{warn, Subscriber},
+    tracing::{info, warn, Subscriber},
     zx::HandleBased,
 };
 
@@ -92,8 +92,8 @@ fn forward_fd_to_syslog(
     let (rx, hnd) = new_socket_bound_to_fd(fd)?;
     let mut writer = SyslogWriter::new(logger, level);
     let task = fasync::Task::spawn(async move {
-        if let Err(err) = drain_lines(rx, &mut writer).await {
-            warn!("Draining output stream, fd {}, failed: {}", fd, err);
+        if let Err(error) = drain_lines(rx, &mut writer).await {
+            warn!(%fd, %error, "Draining output stream failed");
         }
     });
 
@@ -189,8 +189,8 @@ impl LogWriter for SyslogWriter {
     async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let msg = String::from_utf8_lossy(&bytes);
         tracing::subscriber::with_default(self.logger.clone(), || match self.level {
-            OutputLevel::Info => log::info!("{}", msg),
-            OutputLevel::Warn => log::warn!("{}", msg),
+            OutputLevel::Info => info!("{}", msg),
+            OutputLevel::Warn => warn!("{}", msg),
         });
         Ok(())
     }

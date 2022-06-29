@@ -4,7 +4,7 @@
 
 use {
     crate::model::hooks::Event as ComponentEvent, cm_rust::EventMode, futures::channel::oneshot,
-    moniker::ExtendedMoniker,
+    moniker::ExtendedMoniker, tracing::warn,
 };
 
 /// Created for a particular component event.
@@ -40,7 +40,7 @@ impl Event {
             // If this returns an error, there isn't much we can do, presumably
             // the caller hoping to resume the component manager has other
             // means to understand component manager didn't resume.
-            responder.send(()).unwrap_or_else(|_| log::warn!("failed to send response"));
+            responder.send(()).unwrap_or_else(|_| warn!("failed to send response"));
         }
     }
 }

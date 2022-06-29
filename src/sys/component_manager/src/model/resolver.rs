@@ -13,8 +13,8 @@ use {
     cm_rust::{FidlIntoNative, RegistrationSource, ResolverRegistration},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    log::*,
     std::{collections::HashMap, convert::TryInto, sync::Arc},
+    tracing::error,
 };
 
 /// Resolves a component URL to its content.
@@ -123,7 +123,7 @@ impl Resolver for RemoteResolver {
         let (component_url, some_context) = component_address.to_url_and_context();
         let component = if component_address.is_relative_path() {
             let context = some_context.ok_or_else(|| {
-                error!("calling resolve_with_context() for absolute URL {}", component_url);
+                error!(url=%component_url, "calling resolve_with_context() with absolute");
                 ResolverError::RelativeUrlMissingContext(component_url.to_string())
             })?;
             proxy

@@ -14,7 +14,7 @@ use {
     cm_rust::{ExposeDecl, UseDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    log::*,
+    tracing::error,
     vfs::{execution_scope::ExecutionScope, path::Path, remote::RoutingFn},
 };
 

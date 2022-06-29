@@ -19,6 +19,7 @@ use {
         fmt::Debug,
         sync::{Arc, Weak},
     },
+    tracing::debug,
 };
 
 pub(crate) fn create_cpu_histogram(
@@ -104,7 +105,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                 fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED)
                     .await
                     .map(|_: fidl::Signals| ()) // Discard.
-                    .unwrap_or_else(|s| log::debug!("error creating signal handler: {}", s));
+                    .unwrap_or_else(|error| debug!(%error, "error creating signal handler"));
             }
 
             // If we failed to duplicate the handle then still mark this task as terminated to

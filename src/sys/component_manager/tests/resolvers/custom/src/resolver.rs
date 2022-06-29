@@ -61,7 +61,10 @@ async fn serve_resolver(mut stream: fresolution::ResolverRequestStream) -> Resul
                 context,
                 responder,
             } => {
-                error!("custom resolver does not support ResolveWithContext, and could not resolve component URL {:?} with context {:?}", component_url, context);
+                error!(
+                    url=?component_url, ?context,
+                    "custom resolver does not support ResolveWithContext, and could not resolve",
+                );
                 responder.send(&mut Err(fresolution::ResolverError::InvalidArgs)).with_context(
                     || {
                         format!(
@@ -122,7 +125,7 @@ async fn main() -> Result<(), Error> {
             match request {
                 IncomingRequest::ResolverProtocol(stream) => match serve_resolver(stream).await {
                     Ok(()) => {}
-                    Err(err) => error!("resolver failed: {}", err),
+                    Err(error) => error!(%error, "resolver failed"),
                 },
             }
         })

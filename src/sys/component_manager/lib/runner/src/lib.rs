@@ -8,7 +8,7 @@ use {
     anyhow::Error, async_trait::async_trait, clonable_error::ClonableError,
     fidl::endpoints::ServerEnd, fidl::prelude::*, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::stream::StreamExt, log::*, thiserror::Error,
+    futures::stream::StreamExt, thiserror::Error, tracing::warn,
 };
 
 /// Executes a component instance.
@@ -187,7 +187,7 @@ impl Runner for RemoteRunner {
     ) {
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         if let Err(e) = self.client.start(start_info, server_end) {
-            warn!("Failed to call runner to start component `{}`: {}", resolved_url, e);
+            warn!(url=%resolved_url, error=%e, "Failed to call runner to start component");
         }
     }
 }

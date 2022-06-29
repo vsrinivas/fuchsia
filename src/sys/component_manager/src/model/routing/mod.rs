@@ -34,8 +34,8 @@ use {
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::Level,
     std::sync::Arc,
+    tracing::{debug, warn},
 };
 
 pub type RouteRequest = ::routing::RouteRequest;
@@ -348,27 +348,26 @@ pub async fn report_routing_failure(
 ) {
     server_end
         .close_with_epitaph(err.as_zx_status())
-        .unwrap_or_else(|e| log::debug!("failed to send epitaph: {}", e));
+        .unwrap_or_else(|error| debug!(%error, "failed to send epitaph"));
     let err_str = match err {
         ModelError::RoutingError { err } => err.to_string(),
         _ => err.to_string(),
     };
-    let log_level = match err {
+    let log_as_debug = matches!(
+        err,
         // If the route failed because the capability is intentionally not provided, then this
         // failure is expected and the warn level is unwarranted, so use the debug level in this
         // case.
         ModelError::RoutingError {
-            err:
-                RoutingError::AvailabilityRoutingError(
-                    AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
-                ),
-        } => Level::Debug,
-        _ => Level::Warn,
-    };
+            err: RoutingError::AvailabilityRoutingError(
+                AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+            ),
+        }
+    );
     target
         .with_logger_as_default(|| {
-            if log_level == Level::Debug {
-                log::debug!(
+            if log_as_debug {
+                debug!(
                     "Failed to route {} `{}` with target component `{}`: {}\n{}",
                     cap.type_name(),
                     cap.source_id(),
@@ -377,7 +376,7 @@ pub async fn report_routing_failure(
                     ROUTE_ERROR_HELP
                 );
             } else {
-                log::warn!(
+                warn!(
                     "Failed to route {} `{}` with target component `{}`: {}\n{}",
                     cap.type_name(),
                     cap.source_id(),

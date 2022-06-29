@@ -4,7 +4,7 @@
 
 use {
     ::routing::policy::PolicyError, anyhow::Error, clonable_error::ClonableError,
-    cm_runner::RunnerError, fuchsia_zircon as zx, log::error, thiserror::Error,
+    cm_runner::RunnerError, fuchsia_zircon as zx, thiserror::Error, tracing::error,
 };
 
 /// Errors produced by `ElfRunner`.

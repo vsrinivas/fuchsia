@@ -21,13 +21,13 @@ use {
     futures::lock::Mutex,
     futures::StreamExt,
     lazy_static::lazy_static,
-    log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::{
         convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::warn,
 };
 
 lazy_static! {
@@ -124,16 +124,16 @@ impl RealmQuery {
             let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
                 match stream.next().await {
                     Some(Ok(request)) => request,
-                    Some(Err(e)) => {
-                        warn!("Could not get next RealmQuery request: {:?}", e);
+                    Some(Err(error)) => {
+                        warn!(?error, "Could not get next RealmQuery request");
                         break;
                     }
                     None => break,
                 };
             let mut result =
                 self.get_instance_info_and_resolved_state(&scope_moniker, moniker).await;
-            if let Err(e) = responder.send(&mut result) {
-                warn!("Could not respond to GetInstanceInfo request: {:?}", e);
+            if let Err(error) = responder.send(&mut result) {
+                warn!(?error, "Could not respond to GetInstanceInfo request");
                 break;
             }
         }
@@ -176,7 +176,7 @@ impl CapabilityProvider for RealmQueryCapabilityProvider {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!("RealmQuery capability got open request with bad flags: {:?}", flags);
+            warn!(?flags, "RealmQuery capability got open request with bad");
             return Ok(());
         }
 

@@ -42,11 +42,11 @@ use {
         Time, Vmo,
     },
     futures::channel::oneshot,
-    log::warn,
     moniker::AbsoluteMoniker,
     runner::component::ChannelEpitaph,
     std::convert::TryFrom,
     std::{convert::TryInto, path::Path, sync::Arc},
+    tracing::warn,
 };
 
 // Maximum time that the runner will wait for break_on_start eventpair to signal.
@@ -400,7 +400,7 @@ impl ElfRunner {
                 .on_timeout(MAX_WAIT_BREAK_ON_START, || Err(Status::TIMED_OUT))
                 .await
                 .err()
-                .map(|e| log::warn!("Failed to wait break_on_start on {}: {}", &moniker, e));
+                .map(|error| warn!(%moniker, %error, "Failed to wait break_on_start"));
         }
 
         // Launch the component
@@ -532,8 +532,8 @@ impl Runner for ScopedElfRunner {
                         }),
                         ..ComponentDiagnostics::EMPTY
                     })
-                    .map_err(|e| {
-                        warn!("Failed to copy job for diagnostics: {}", e);
+                    .map_err(|error| {
+                        warn!(%error, "Failed to copy job for diagnostics");
                         ()
                     })
                     .ok();
@@ -546,7 +546,7 @@ impl Runner for ScopedElfRunner {
                     )
                     .await
                     .map(|_: fidl::Signals| ()) // Discard.
-                    .unwrap_or_else(|s| warn!("error creating signal handler: {}", s));
+                    .unwrap_or_else(|error| warn!(%error, "error creating signal handler"));
                     // Process exit code '0' is considered a clean return.
                     // TODO (fxbug.dev/57024) If we create an epitaph that indicates
                     // intentional, non-zero exit, use that for all non-0 exit
@@ -556,8 +556,8 @@ impl Runner for ScopedElfRunner {
                             zx::Status::OK.try_into().unwrap()
                         }
                         Ok(_) => fcomp::Error::InstanceDied.into(),
-                        Err(e) => {
-                            warn!("Unable to query process info: {}", e);
+                        Err(error) => {
+                            warn!(%error, "Unable to query process info");
                             fcomp::Error::Internal.into()
                         }
                     };
@@ -574,20 +574,20 @@ impl Runner for ScopedElfRunner {
                     let (server_stream, control) = match server_end.into_stream_and_control_handle()
                     {
                         Ok(s) => s,
-                        Err(e) => {
-                            warn!("Converting Controller channel to stream failed: {}", e);
+                        Err(error) => {
+                            warn!(%error, "Converting Controller channel to stream failed");
                             return;
                         }
                     };
                     if let Some(component_diagnostics) = component_diagnostics {
                         control.send_on_publish_diagnostics(component_diagnostics).unwrap_or_else(
-                            |e| warn!("sending diagnostics failed for {}: {}", resolved_url, e),
+                            |error| warn!(url=%resolved_url, %error, "sending diagnostics failed"),
                         );
                     }
                     runner::component::Controller::new(elf_component, server_stream)
                         .serve(epitaph_fn)
                         .await
-                        .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
+                        .unwrap_or_else(|error| warn!(%error, "serving ComponentController"));
                 })
                 .detach();
             }
@@ -1407,7 +1407,7 @@ mod tests {
             .try_next()
             .await
             .map(|_: Option<fcrunner::ComponentControllerEvent>| ()) // Discard.
-            .unwrap_or_else(|e| warn!("error reading from event stream: {}", e));
+            .unwrap_or_else(|error| warn!(%error, "error reading from event stream"));
     }
 
     fn hello_world_startinfo_forward_stdout_to_log(

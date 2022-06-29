@@ -57,7 +57,6 @@ use {
         future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt, TryFutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
-    log::{error, warn},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     std::iter::Iterator,
     std::{
@@ -71,6 +70,7 @@ use {
         sync::{Arc, Weak},
         time::Duration,
     },
+    tracing::{error, warn},
     vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
@@ -943,12 +943,15 @@ impl ComponentInstance {
                         // If the routing for this storage capability is invalid then there's no
                         // storage for us to delete. Ignore this error, and proceed.
                     }
-                    Err(e) => {
+                    Err(error) => {
                         // We received an error we weren't expecting, but we still want to destroy
                         // this instance. It's bad to leave storage state undeleted, but it would
                         // be worse to not continue with destroying this instance. Log the error,
                         // and proceed.
-                        warn!("failed to delete storage during instance destruction for component {}, proceeding with destruction anyway: {}", self.abs_moniker, e);
+                        warn!(
+                            component=%self.abs_moniker, %error,
+                            "failed to delete storage during instance destruction, proceeding with destruction anyway",
+                        );
                     }
                 }
             }
@@ -1897,7 +1900,7 @@ impl Runtime {
                     if let Ok(component) = component.upgrade() {
                         ActionSet::register(component, StopAction::new(false, false))
                             .await
-                            .unwrap_or_else(|e| error!("failed to register action: {}", e));
+                            .unwrap_or_else(|error| error!(%error, "failed to register action"));
                     }
                 },
                 abort_server,

@@ -37,7 +37,6 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
-    log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::component_instance::ComponentInstanceInterface,
     std::{
@@ -45,6 +44,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::{debug, warn},
 };
 
 lazy_static! {
@@ -94,8 +94,8 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
         let storage_admin = self.storage_admin.clone();
         task_scope
             .add_task(async move {
-                if let Err(e) = storage_admin.serve(storage_decl, component, server_end).await {
-                    warn!("failed to serve storage admin protocol: {:?}", e);
+                if let Err(error) = storage_admin.serve(storage_decl, component, server_end).await {
+                    warn!(?error, "failed to serve storage admin protocol");
                 }
             })
             .await;
@@ -253,8 +253,8 @@ impl StorageAdmin {
                                     iterator,
                                     storage_capability_source_info.clone(),
                                 )
-                                .unwrap_or_else(|e| {
-                                    warn!("Error serving storage iterator: {:?}", e)
+                                .unwrap_or_else(|error| {
+                                    warn!(?error, "Error serving storage iterator")
                                 }),
                             )
                             .detach();
@@ -292,8 +292,8 @@ impl StorageAdmin {
                     let mut response = match InstancedRelativeMoniker::try_from(
                         relative_moniker.as_str(),
                     ) {
-                        Err(e) => {
-                            warn!("couldn't parse string as relative moniker for storage admin protocol: {:?}", e);
+                        Err(error) => {
+                            warn!(?error, "couldn't parse string as relative moniker for storage admin protocol");
                             Err(fcomponent::Error::InvalidArguments)
                         }
                         Ok(instanced_relative_moniker) => {

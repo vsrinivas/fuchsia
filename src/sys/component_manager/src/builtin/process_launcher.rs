@@ -23,7 +23,6 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::{log, warn, Level},
     process_builder::{
         BuiltProcess, NamespaceEntry, ProcessBuilder, ProcessBuilderError, StartupHandle,
     },
@@ -34,6 +33,7 @@ use {
         sync::{Arc, Weak},
     },
     thiserror::Error,
+    tracing::{error, warn},
 };
 
 lazy_static! {
@@ -203,11 +203,16 @@ impl ProcessLauncher {
     }
 
     fn log_launcher_error(err: &LauncherError, op: &str, job: Arc<zx::Job>, name: String) {
+        enum LogLevel {
+            Warn,
+            Error,
+        }
+        let mut log_level = LogLevel::Warn;
+
         // Special case BAD_STATE errors to check the job's exited status and log more info.
         // BAD_STATE errors are expected if the job has exited for reasons outside our control, like
         // another process killing the job or the parent job exiting, while a new process is being
         // created in it.
-        let mut log_level = Level::Warn;
         let mut job_message = format!("");
         match err {
             LauncherError::BuilderError(err) if err.as_zx_status() == zx::Status::BAD_STATE => {
@@ -222,12 +227,12 @@ impl ProcessLauncher {
                         } else {
                             // If the job has not exited, then the BAD_STATE error was unexpected
                             // and indicates a bug somewhere.
-                            log_level = Level::Error;
+                            log_level = LogLevel::Error;
                             job_message = format!(", job has not exited (retcode 0)");
                         }
                     }
                     Err(status) => {
-                        log_level = Level::Error;
+                        log_level = LogLevel::Error;
                         job_message = format!(" (error {} getting job state)", status);
                     }
                 }
@@ -237,15 +242,18 @@ impl ProcessLauncher {
 
         let job_koid =
             job.get_koid().map(|j| j.raw_koid().to_string()).unwrap_or("<unknown>".to_string());
-        log!(
-            log_level,
-            "Failed to {} process '{}' in job {}{}: {}",
-            op,
-            name,
-            job_koid,
-            job_message,
-            err
-        );
+
+        // Repeat ourselves slightly here because tracing does not support runtime levels in macros.
+        match log_level {
+            LogLevel::Warn => warn!(
+                %op, process_name=%name, %job_koid, %job_message, error=%err,
+                "Process operation failed",
+            ),
+            LogLevel::Error => error!(
+                %op, process_name=%name, %job_koid, %job_message, error=%err,
+                "Process operation failed",
+            ),
+        }
     }
 
     async fn launch_process(
@@ -364,8 +372,8 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
         task_scope
             .add_task(async move {
                 let result = ProcessLauncher::serve(stream).await;
-                if let Err(e) = result {
-                    warn!("ProcessLauncher.serve failed: {}", e);
+                if let Err(error) = result {
+                    warn!(%error, "ProcessLauncher.serve failed");
                 }
             })
             .await;

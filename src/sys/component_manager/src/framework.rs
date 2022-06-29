@@ -26,13 +26,13 @@ use {
     fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::*,
     moniker::{AbsoluteMoniker, ChildMoniker, ChildMonikerBase},
     std::{
         cmp,
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::{debug, error, warn},
 };
 
 lazy_static! {
@@ -81,9 +81,9 @@ impl CapabilityProvider for RealmCapabilityProvider {
                             .expect("could not convert channel into stream"),
                     )
                     .await;
-                if let Err(e) = serve_result {
+                if let Err(error) = serve_result {
                     // TODO: Set an epitaph to indicate this was an unexpected error.
-                    warn!("serve failed: {}", e);
+                    warn!(%error, "serve failed");
                 }
             })
             .await;
@@ -120,8 +120,8 @@ impl RealmCapabilityHost {
             .try_for_each(|request| async {
                 let method_name = request.method_name();
                 let res = self.handle_request(request, &component).await;
-                if let Err(e) = &res {
-                    warn!("Error occurred sending Realm response for {}: {}", method_name, e);
+                if let Err(error) = &res {
+                    warn!(%method_name, %error, "Couldn't send Realm response");
                 }
                 res
             })
@@ -168,8 +168,8 @@ impl RealmCapabilityHost {
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        cm_fidl_validator::validate_dynamic_child(&child_decl).map_err(|e| {
-            debug!("validate_dynamic_child() failed: {}", e);
+        cm_fidl_validator::validate_dynamic_child(&child_decl).map_err(|error| {
+            debug!(%error, "validate_dynamic_child() failed");
             fcomponent::Error::InvalidArguments
         })?;
         if child_decl.environment.is_some() {
@@ -218,22 +218,22 @@ impl RealmCapabilityHost {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 child.start(&start_reason).await.map_err(|e| match e {
-                    ModelError::ResolverError { err, .. } => {
-                        debug!("failed to resolve child: {}", err);
+                    ModelError::ResolverError { err: error, .. } => {
+                        debug!(%error, "failed to resolve child");
                         fcomponent::Error::InstanceCannotResolve
                     }
-                    ModelError::RunnerError { err } => {
-                        debug!("failed to start child: {}", err);
+                    ModelError::RunnerError { err: error } => {
+                        debug!(%error, "failed to start child");
                         fcomponent::Error::InstanceCannotStart
                     }
-                    e => {
-                        error!("start() failed: {}", e);
+                    error => {
+                        error!(%error, "start() failed");
                         fcomponent::Error::Internal
                     }
                 })?;
             }
             None => {
-                debug!("start_child() failed: instance not found {:?}", child);
+                debug!(?child, "start_child() failed: instance not found");
                 return Err(fcomponent::Error::InstanceNotFound);
             }
         }
@@ -256,16 +256,17 @@ impl RealmCapabilityHost {
                     return fcomponent::Error::InstanceCannotResolve;
                 })?;
                 let mut exposed_dir = exposed_dir.into_channel();
-                let () = child.open_exposed(&mut exposed_dir).await.map_err(|e| match e {
-                    ModelError::InstanceShutDown { .. } => fcomponent::Error::InstanceDied,
-                    _ => {
-                        debug!("open_exposed() failed: {}", e);
-                        fcomponent::Error::Internal
-                    }
-                })?;
+                let () =
+                    child.open_exposed(&mut exposed_dir).await.map_err(|error| match error {
+                        ModelError::InstanceShutDown { .. } => fcomponent::Error::InstanceDied,
+                        _ => {
+                            debug!(%error, "open_exposed() failed");
+                            fcomponent::Error::Internal
+                        }
+                    })?;
             }
             None => {
-                debug!("open_exposed_dir() failed: instance not found {:?}", child);
+                debug!(?child, "open_exposed_dir() failed: instance not found");
                 return Err(fcomponent::Error::InstanceNotFound);
             }
         }
@@ -282,8 +283,8 @@ impl RealmCapabilityHost {
         component.remove_dynamic_child(&child_moniker).await.map_err(|e| match e {
             ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-            e => {
-                error!("remove_dynamic_child() failed: {}", e);
+            error => {
+                error!(%error, "remove_dynamic_child() failed");
                 fcomponent::Error::Internal
             }
         })?;
@@ -312,12 +313,12 @@ impl RealmCapabilityHost {
     ) -> Result<Option<Arc<ComponentInstance>>, fcomponent::Error> {
         let parent = parent.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         let state = parent.lock_resolved_state().await.map_err(|e| match e {
-            ComponentInstanceError::ResolveFailed { moniker, err, .. } => {
-                debug!("failed to resolve instance with moniker {}: {}", moniker, err);
+            ComponentInstanceError::ResolveFailed { moniker, err: error, .. } => {
+                debug!(%moniker, %error, "failed to resolve instance");
                 return fcomponent::Error::InstanceCannotResolve;
             }
-            e => {
-                error!("failed to resolve InstanceState: {}", e);
+            error => {
+                error!(%error, "failed to resolve InstanceState");
                 return fcomponent::Error::Internal;
             }
         })?;
@@ -332,8 +333,8 @@ impl RealmCapabilityHost {
         iter: ServerEnd<fcomponent::ChildIteratorMarker>,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        let state = component.lock_resolved_state().await.map_err(|e| {
-            error!("failed to resolve InstanceState: {}", e);
+        let state = component.lock_resolved_state().await.map_err(|error| {
+            error!(%error, "failed to resolve InstanceState");
             fcomponent::Error::Internal
         })?;
         let decl = state.decl();
@@ -367,9 +368,9 @@ impl RealmCapabilityHost {
         });
         let stream = iter.into_stream().map_err(|_| fcomponent::Error::AccessDenied)?;
         fasync::Task::spawn(async move {
-            if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
+            if let Err(error) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve_child_iterator failed: {}", e);
+                warn!(%error, "serve_child_iterator failed");
             }
         })
         .detach();

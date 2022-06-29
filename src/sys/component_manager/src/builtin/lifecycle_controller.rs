@@ -23,12 +23,12 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::component_instance::ComponentInstanceInterface,
     std::convert::TryFrom,
     std::path::PathBuf,
     std::sync::{Arc, Weak},
+    tracing::warn,
 };
 
 lazy_static! {
@@ -61,23 +61,23 @@ impl LifecycleController {
     ) -> Result<Arc<ComponentInstance>, fcomponent::Error> {
         let moniker = join_monikers(scope_moniker, &moniker)?;
         self.model.look_up(&moniker).await.map_err(|e| match e {
-            e @ ModelError::ResolverError { .. }
-            | e @ ModelError::ComponentInstanceError {
+            error @ ModelError::ResolverError { .. }
+            | error @ ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::ResolveFailed { .. },
             } => {
-                warn!("LifecycleController could not resolve {}: {:?}", moniker, e);
+                warn!(%moniker, ?error, "LifecycleController could not resolve");
                 fcomponent::Error::InstanceCannotResolve
             }
-            e @ ModelError::ComponentInstanceError {
+            error @ ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::InstanceNotFound { .. },
             } => {
-                warn!("LifecycleController could not find {}: {:?}", moniker, e,);
+                warn!(%moniker, ?error, "LifecycleController could not find");
                 fcomponent::Error::InstanceNotFound
             }
-            e => {
+            error => {
                 warn!(
-                    "LifecycleController encountered unknown error looking up {}: {:?}",
-                    moniker, e,
+                    %moniker, ?error,
+                    "LifecycleController encountered unknown error",
                 );
                 fcomponent::Error::Internal
             }
@@ -93,8 +93,8 @@ impl LifecycleController {
         let moniker = join_monikers(scope_moniker, &moniker)?;
         let component =
             self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
-        component.unresolve().await.map_err(|e: ModelError| {
-            warn!("LifecycleController could not unresolve {}: {:?}", moniker, e);
+        component.unresolve().await.map_err(|error| {
+            warn!(%moniker, ?error, "LifecycleController could not unresolve");
             fcomponent::Error::InstanceCannotUnresolve
         })
     }
@@ -123,8 +123,8 @@ impl LifecycleController {
         let moniker = join_monikers(scope_moniker, &moniker)?;
         let component =
             self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
-        component.stop_instance(false, is_recursive).await.map_err(|e: ModelError| {
-            warn!("LifecycleController could not stop {}: {:?}", moniker, e);
+        component.stop_instance(false, is_recursive).await.map_err(|error| {
+            warn!(%moniker, ?error, "LifecycleController could not stop");
             fcomponent::Error::Internal
         })
     }
@@ -172,8 +172,8 @@ impl LifecycleController {
         let task_scope = component.task_scope();
 
         let storage_decl = {
-            let locked_component = component.lock_resolved_state().await.map_err(|e| {
-                warn!("LifecycleController could not get resolved state of {}: {:?}", moniker, e);
+            let locked_component = component.lock_resolved_state().await.map_err(|error| {
+                warn!(%moniker, ?error, "LifecycleController could not get resolved state");
                 fcomponent::Error::InstanceCannotResolve
             })?;
 
@@ -181,7 +181,7 @@ impl LifecycleController {
                 .decl()
                 .find_storage_source(&CapabilityName::from(capability.as_str()))
                 .ok_or_else(|| {
-                    warn!("LifecycleController could not find the storage source with the name {} in {}", capability, moniker);
+                    warn!(%capability, provider=%moniker, "LifecycleController could not find the storage source");
                     fcomponent::Error::ResourceNotFound
                 })?
                 .clone()
@@ -212,27 +212,27 @@ impl LifecycleController {
             match operation {
                 fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
                     let mut res = self.resolve(&scope_moniker, moniker).await.map(|_| ());
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.Resolve failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.Resolve failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::Unresolve { moniker, responder } => {
                     let mut res = self.unresolve(&scope_moniker, moniker).await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.Unresolve failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.Unresolve failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::Start { moniker, responder } => {
                     let mut res = self.start(&scope_moniker, moniker).await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.Start failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.Start failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::Stop { moniker, is_recursive, responder } => {
                     let mut res = self.stop(&scope_moniker, moniker, is_recursive).await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.Stop failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.Stop failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::CreateChild {
                     parent_moniker,
@@ -244,9 +244,9 @@ impl LifecycleController {
                     let mut res = self
                         .create_child(&scope_moniker, parent_moniker, collection, decl, args)
                         .await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.CreateChild failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.CreateChild failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
                     parent_moniker,
@@ -254,9 +254,9 @@ impl LifecycleController {
                     responder,
                 } => {
                     let mut res = self.destroy_child(&scope_moniker, parent_moniker, child).await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.DestroyChild failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.DestroyChild failed to send"),
+                    );
                 }
                 fsys::LifecycleControllerRequest::GetStorageAdmin {
                     moniker,
@@ -267,9 +267,9 @@ impl LifecycleController {
                     let mut res = self
                         .open_storage_admin(&scope_moniker, moniker, capability, admin_server)
                         .await;
-                    responder.send(&mut res).unwrap_or_else(|e| {
-                        warn!("LifecycleController.GetStorageAdmin failed to send: {}", e)
-                    });
+                    responder.send(&mut res).unwrap_or_else(
+                        |error| warn!(%error, "LifecycleController.GetStorageAdmin failed to send"),
+                    );
                 }
             }
         }
@@ -336,14 +336,14 @@ impl CapabilityProvider for LifecycleControllerCapabilityProvider {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!("LifecycleController capability got open request with bad flags: {:?}", flags);
+            warn!(?flags, "LifecycleController capability got open request with bad");
             return Ok(());
         }
 
         if relative_path.components().count() != 0 {
             warn!(
-                "LifecycleController capability got open request with non-empty path: {}",
-                relative_path.display()
+                path=%relative_path.display(),
+                "LifecycleController capability got open request with non-empty",
             );
             return Ok(());
         }

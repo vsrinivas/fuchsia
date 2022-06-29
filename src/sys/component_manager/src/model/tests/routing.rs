@@ -45,7 +45,6 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
-    log::*,
     maplit::hashmap,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing_test_helpers::{
@@ -57,6 +56,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::warn,
     vfs::pseudo_directory,
 };
 

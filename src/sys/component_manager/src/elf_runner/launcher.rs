@@ -8,7 +8,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_component::client,
-    log::warn,
+    tracing::warn,
 };
 /// Connects to the appropriate `fuchsia.process.Launcher` service based on the options provided in
 /// `ProcessLauncherConnector::new`.
@@ -38,8 +38,8 @@ impl ProcessLauncherConnector {
                 fidl::endpoints::create_proxy_and_stream::<fproc::LauncherMarker>()?;
             fasync::Task::spawn(async move {
                 let result = ProcessLauncher::serve(stream).await;
-                if let Err(e) = result {
-                    warn!("ProcessLauncherConnector.connect failed: {}", e);
+                if let Err(error) = result {
+                    warn!(%error, "ProcessLauncherConnector.connect failed");
                 }
             })
             .detach();

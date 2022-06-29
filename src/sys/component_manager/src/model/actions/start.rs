@@ -23,9 +23,9 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    log::*,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
+    tracing::warn,
 };
 
 /// Starts a component instance.
@@ -79,9 +79,9 @@ async fn do_start(
         let component_info = component.resolve().await?;
 
         // Find the runner to use.
-        let runner = component.resolve_runner().await.map_err(|e| {
-            warn!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
-            e
+        let runner = component.resolve_runner().await.map_err(|error| {
+            warn!(component=%component.abs_moniker, %error, "Failed to resolve runner");
+            error
         })?;
 
         // Generate the Runtime which will be set in the Execution.

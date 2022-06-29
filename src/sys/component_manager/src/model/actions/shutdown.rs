@@ -21,6 +21,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
+    tracing::error,
 };
 
 /// Shuts down all component instances in this component (stops them and guarantees they will never
@@ -384,10 +385,9 @@ pub fn process_component_dependencies(
                 targets.insert(target);
             }
             None => {
-                log::error!(
+                error!(
                     "ignoring dependency edge from {:?} to {:?}, where source doesn't exist",
-                    source,
-                    target
+                    source, target
                 );
             }
         }
@@ -466,7 +466,7 @@ fn get_dependencies_from_uses(instance: &impl Component) -> HashSet<(ComponentRe
         let child = match instance.find_child(child_name, &None) {
             Some(child) => child.moniker.clone().into(),
             None => {
-                log::error!("use source doesn't exist: (name: {:?})", child_name);
+                error!(name=?child_name, "use source doesn't exist");
                 continue;
             }
         };
@@ -591,10 +591,9 @@ fn find_offer_sources(instance: &impl Component, source: &OfferSource) -> Vec<Co
             match instance.find_child(name, collection) {
                 Some(child) => vec![child.moniker.clone().into()],
                 None => {
-                    log::error!(
+                    error!(
                         "offer source doesn't exist: (name: {:?}, collection: {:?})",
-                        name,
-                        collection
+                        name, collection
                     );
                     vec![]
                 }
@@ -644,7 +643,7 @@ fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Vec<
     let decl = match decl {
         Some(d) => d,
         None => {
-            log::error!("could not find storage capability named {:?}", name,);
+            error!(?name, "could not find storage capability");
             return vec![];
         }
     };
@@ -654,10 +653,9 @@ fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Vec<
             match instance.find_child(&child_name, &None) {
                 Some(child) => vec![child.moniker.clone().into()],
                 None => {
-                    log::error!(
+                    error!(
                         "source for storage capability {:?} doesn't exist: (name: {:?})",
-                        name,
-                        child_name,
+                        name, child_name,
                     );
                     vec![]
                 }
@@ -678,10 +676,9 @@ fn find_offer_targets(instance: &impl Component, target: &OfferTarget) -> Vec<Co
             match instance.find_child(name, collection) {
                 Some(child) => vec![child.moniker.into()],
                 None => {
-                    log::error!(
+                    error!(
                         "offer target doesn't exist: (name: {:?}, collection: {:?})",
-                        name,
-                        collection
+                        name, collection
                     );
                     vec![]
                 }
@@ -719,10 +716,9 @@ fn get_dependencies_from_environments(
                     res.insert((source.clone(), child.moniker.clone().into()));
                 }
             } else {
-                log::error!(
+                error!(
                     "environment `{}` from child `{}` is not a valid environment",
-                    env_name,
-                    child.moniker
+                    env_name, child.moniker
                 )
             }
         }
@@ -754,10 +750,9 @@ fn find_environment_sources(
                 match instance.find_child(&child_name, &None) {
                     Some(child) => vec![child.moniker.into()],
                     None => {
-                        log::error!(
+                        error!(
                             "source for environment {:?} doesn't exist: (name: {:?})",
-                            env.name,
-                            child_name,
+                            env.name, child_name,
                         );
                         vec![]
                     }

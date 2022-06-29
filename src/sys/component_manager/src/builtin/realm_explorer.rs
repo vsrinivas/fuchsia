@@ -26,13 +26,13 @@ use {
     futures::lock::Mutex,
     futures::StreamExt,
     lazy_static::lazy_static,
-    log::warn,
     measure_tape_for_instance_info::Measurable,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::warn,
 };
 
 lazy_static! {
@@ -163,8 +163,8 @@ impl RealmExplorer {
             let fsys::RealmExplorerRequest::GetAllInstanceInfos { responder } =
                 match stream.next().await {
                     Some(Ok(request)) => request,
-                    Some(Err(e)) => {
-                        warn!("Could not get next RealmExplorer request: {:?}", e);
+                    Some(Err(error)) => {
+                        warn!(?error, "Could not get next RealmExplorer request");
                         break;
                     }
                     None => break,
@@ -176,8 +176,8 @@ impl RealmExplorer {
                 }
                 Err(e) => Err(e),
             };
-            if let Err(e) = responder.send(&mut result) {
-                warn!("Could not respond to GetAllInstanceInfos request: {:?}", e);
+            if let Err(error) = responder.send(&mut result) {
+                warn!(?error, "Could not respond to GetAllInstanceInfos request");
                 break;
             }
         }
@@ -211,8 +211,8 @@ fn serve_instance_info_iterator(
                 instance_infos.drain(0..instance_count).collect();
 
             let result = responder.send(&mut batch.iter_mut());
-            if let Err(e) = result {
-                warn!("RealmExplorer encountered error sending instance info batch: {:?}", e);
+            if let Err(error) = result {
+                warn!(?error, "RealmExplorer encountered error sending instance info batch");
                 break;
             }
         }
@@ -257,7 +257,7 @@ impl CapabilityProvider for RealmExplorerCapabilityProvider {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!("RealmExplorer capability got open request with bad flags: {:?}", flags);
+            warn!(?flags, "RealmExplorer capability got open request with bad");
             return Ok(());
         }
 

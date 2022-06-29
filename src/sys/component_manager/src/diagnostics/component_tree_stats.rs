@@ -30,7 +30,6 @@ use {
     },
     injectable_time::{MonotonicTime, TimeSource},
     lazy_static::lazy_static,
-    log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         boxed::Box,
@@ -38,6 +37,7 @@ use {
         fmt::Debug,
         sync::{Arc, Weak},
     },
+    tracing::warn,
 };
 
 macro_rules! maybe_return {

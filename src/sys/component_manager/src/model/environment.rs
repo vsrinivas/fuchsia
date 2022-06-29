@@ -16,11 +16,11 @@ use {
     async_trait::async_trait,
     cm_rust::EnvironmentDecl,
     fidl_fuchsia_component_decl as fdecl,
-    log::*,
     std::{
         sync::{Arc, Weak},
         time::Duration,
     },
+    tracing::error,
 };
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].

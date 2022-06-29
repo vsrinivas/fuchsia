@@ -223,7 +223,7 @@ async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(),
 
 /// Destroys a BankAccount provider component with the name `child_name`.
 async fn destroy_provider(branch: &ScopedInstance, child_name: &str) -> Result<(), Error> {
-    info!("destroying BankAccount provider \"{}\"", child_name);
+    info!(%child_name, "destroying BankAccount provider");
 
     let lifecycle_controller_proxy =
         client::connect_to_protocol::<fsys2::LifecycleControllerMarker>()

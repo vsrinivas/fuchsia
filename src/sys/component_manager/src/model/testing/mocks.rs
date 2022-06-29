@@ -42,7 +42,6 @@ use {
         lock::Mutex,
         prelude::*,
     },
-    log::warn,
     moniker::AbsoluteMoniker,
     std::{
         boxed::Box,
@@ -50,6 +49,7 @@ use {
         mem,
         sync::{Arc, Mutex as SyncMutex, Weak},
     },
+    tracing::warn,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::vmo::asynchronous::read_only_static, path::Path, pseudo_directory, remote::RoutingFn,

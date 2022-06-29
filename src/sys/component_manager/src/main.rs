@@ -17,9 +17,9 @@ use {
     fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},
     fuchsia_zircon::JobCriticalOptions,
-    log::*,
     std::path::PathBuf,
     std::{panic, process},
+    tracing::{error, info},
 };
 
 extern "C" {
@@ -70,13 +70,13 @@ fn main() {
         let mut builtin_environment = match build_environment(runtime_config, bootfs_svc).await {
             Ok(environment) => environment,
             Err(error) => {
-                error!("Component manager setup failed: {}", error);
+                error!(%error, "Component manager setup failed");
                 process::exit(1);
             }
         };
 
         if let Err(error) = builtin_environment.run_root().await {
-            error!("Failed to start root component: {}", error);
+            error!(%error, "Failed to start root component");
             process::exit(1);
         }
     };

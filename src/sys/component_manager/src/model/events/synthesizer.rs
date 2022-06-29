@@ -15,12 +15,12 @@ use {
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
-    log::error,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
     },
+    tracing::error,
 };
 
 /// A component instance or component manager itself
@@ -140,8 +140,8 @@ impl SynthesisTask {
                     .into_iter()
                     .map(|event_info| Self::run(&model, sender.clone(), event_info));
                 for result in join_all(futs).await {
-                    if let Err(e) = result {
-                        error!("Event synthesis failed: {:?}", e);
+                    if let Err(error) = result {
+                        error!(?error, "Event synthesis failed");
                     }
                 }
             }

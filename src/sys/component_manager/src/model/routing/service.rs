@@ -20,10 +20,9 @@ use {
     cm_util::channel,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    log::warn,
     moniker::AbsoluteMoniker,
     std::{collections::HashMap, collections::HashSet, path::PathBuf, sync::Arc},
-    tracing::error,
+    tracing::{error, warn},
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -204,8 +203,8 @@ impl Directory for FilteredServiceDirectory {
                     }
                 }
             }
-            Err(e) => {
-                warn!("Error reading the source components service directory: {}", e);
+            Err(error) => {
+                warn!(%error, "Error reading the source components service directory");
                 return Err(zx::Status::INTERNAL);
             }
         }
@@ -413,24 +412,22 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let target = match self.target.upgrade() {
                 Ok(target) => target,
                 Err(_) => {
-                    warn!("target of service routing is gone: {}", &self.target.abs_moniker);
+                    warn!(moniker=%self.target.abs_moniker, "target of service routing is gone");
                     return;
                 }
             };
 
             let source = match self.provider.route_instance(&self.component).await {
                 Ok(source) => source,
-                Err(err) => {
+                Err(error) => {
                     server_end
-                        .close_with_epitaph(err.as_zx_status())
-                        .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
+                        .close_with_epitaph(error.as_zx_status())
+                        .unwrap_or_else(|error| warn!(%error, "failed to close server end"));
                     target
                         .with_logger_as_default(|| {
-                            log::warn!(
-                                "Failed to route {} from {}: {}",
-                                self.component,
-                                self.intermediate_component,
-                                err,
+                            warn!(
+                                component=%self.component, from=%self.intermediate_component, %error,
+                                "Failed to route",
                             );
                         })
                         .await;
@@ -457,7 +454,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             {
                 server_end
                     .close_with_epitaph(err.as_zx_status())
-                    .unwrap_or_else(|e| warn!("failed to close server end: {}", e));
+                    .unwrap_or_else(|error| warn!(%error, "failed to close server end"));
 
                 target
                     .with_logger_as_default(|| {

@@ -25,12 +25,12 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::warn,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
         time::Duration,
     },
+    tracing::warn,
 };
 
 lazy_static! {
@@ -161,8 +161,8 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
         task_scope
             .add_task(async move {
                 let result = self.open_async(stream).await;
-                if let Err(e) = result {
-                    warn!("SystemController.open failed: {}", e);
+                if let Err(error) = result {
+                    warn!(%error, "SystemController.open failed");
                 }
             })
             .await;

@@ -28,9 +28,8 @@ use {
     fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
-    log::*,
     std::{collections::HashMap, sync::Arc},
-    tracing::Subscriber,
+    tracing::{error, info, warn, Subscriber},
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
@@ -517,8 +516,8 @@ async fn get_logger_from_dir(
                 Ok(ns_logger) => {
                     logger = Some(ns_logger);
                 }
-                Err(err) => {
-                    log::info!("LogSink.Connect() failed, logs will be attributed to component manager: {}", err);
+                Err(error) => {
+                    info!(%error, "LogSink.Connect() failed, logs will be attributed to component manager");
                 }
             }
 
@@ -526,11 +525,8 @@ async fn get_logger_from_dir(
             // protocol directory back where we found it.
             (
                 dir_proxy.into_channel().map_or_else(
-                    |e| {
-                        log::error!(
-                            "LogSink proxy could not be converted back to channel: {:?}",
-                            e
-                        );
+                    |error| {
+                        error!(?error, "LogSink proxy could not be converted back to channel");
                         None
                     },
                     |chan| Some(ClientEnd::<fio::DirectoryMarker>::new(chan.into())),
@@ -538,8 +534,8 @@ async fn get_logger_from_dir(
                 logger,
             )
         }
-        Err(e) => {
-            log::info!("Directory client channel could not be turned into proxy: {}", e);
+        Err(error) => {
+            info!(%error, "Directory client channel could not be turned into proxy");
             (None, logger)
         }
     }
@@ -565,11 +561,10 @@ fn make_dir_with_not_found_logging(
                 Ok(target) => {
                     target
                         .with_logger_as_default(|| {
-                            log::warn!(
+                            warn!(
                                 "No capability available at path {} for component {}, \
                                 verify the component has the proper `use` declaration.",
-                                requested_path,
-                                target.abs_moniker
+                                requested_path, target.abs_moniker
                             );
                         })
                         .await;

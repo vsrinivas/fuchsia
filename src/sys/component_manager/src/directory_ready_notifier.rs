@@ -21,12 +21,12 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
-    log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         sync::{Arc, Mutex, Weak},
         time::Duration,
     },
+    tracing::warn,
 };
 
 // TODO(fxbug.dev/49198): The out/diagnostics directory propagation for runners includes a retry.
@@ -140,8 +140,8 @@ impl DirectoryReadyNotifier {
         let directory_ready_events =
             self.create_events(outgoing_node_result, decl, matching_exposes, target).await;
         for directory_ready_event in directory_ready_events {
-            target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|e| {
-                warn!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
+            target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|error| {
+                warn!(for_component=%target.abs_moniker, %error, "Couldn't notify directory ready");
             });
         }
     }

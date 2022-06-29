@@ -31,6 +31,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::{info, warn},
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
@@ -62,7 +63,7 @@ impl CapabilityProvider for HubCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        log::info!("Opening the /hub capability provider: {:?}", relative_path);
+        info!(path=%relative_path.display(), "Opening the /hub capability provider");
         let mut relative_path = relative_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
@@ -258,10 +259,9 @@ impl Hub {
                     // TODO(fxbug.dev/89503): Investigate event ordering between
                     // parent and child, so that we can guarantee the parent is
                     // in the instance_map.
-                    log::warn!(
+                    warn!(
                         "Parent {} not found: could not add {} to children directory.",
-                        parent_moniker,
-                        moniker
+                        parent_moniker, moniker
                     );
                 }
             };
@@ -550,7 +550,7 @@ impl Hub {
             .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
         instance.directory.remove_node("exec")?.ok_or_else(|| {
-            log::warn!("exec directory for instance {} was already removed", target_moniker);
+            warn!(instance=%target_moniker, "exec directory was already removed");
             ModelError::remove_entry_error("exec")
         })?;
         instance.has_execution_directory = false;
@@ -581,10 +581,9 @@ impl Hub {
         };
 
         parent_instance.children_directory.remove_node(&child_entry)?.ok_or_else(|| {
-            log::warn!(
+            warn!(
                 "child directory {} in parent instance {} was already removed or never added",
-                child_entry,
-                parent_moniker
+                child_entry, parent_moniker
             );
             ModelError::remove_entry_error(child_entry)
         })?;

@@ -17,12 +17,12 @@ use {
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx, ResourceInfo},
-    log::warn,
     routing::capability_source::InternalCapability,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    tracing::warn,
 };
 
 /// A builtin capability, whether it be a `framework` capability
@@ -151,11 +151,11 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
         task_scope
             .add_task(async move {
                 if let Some(capability) = self.capability.upgrade() {
-                    if let Err(err) = capability.serve(stream).await {
-                        warn!("{}::open failed: {}", B::NAME, err);
+                    if let Err(error) = capability.serve(stream).await {
+                        warn!(protocol=%B::NAME, %error, "open failed");
                     }
                 } else {
-                    warn!("{} has been dropped", B::NAME);
+                    warn!(protocol=%B::NAME, "handle dropped");
                 }
             })
             .await;

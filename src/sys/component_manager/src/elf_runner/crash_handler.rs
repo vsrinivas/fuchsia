@@ -8,9 +8,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::TryStreamExt,
-    log::error,
     moniker::AbsoluteMoniker,
     task_exceptions,
+    tracing::error,
 };
 
 // Registers with the job to catch exceptions raised by it. Whenever we see an exception from this
@@ -28,7 +28,7 @@ pub fn run_exceptions_server(
         loop {
             match task_exceptions_stream.try_next().await {
                 Ok(Some(exception_info)) => {
-                    if let Err(e) = record_exception(
+                    if let Err(error) = record_exception(
                         resolved_url.clone(),
                         moniker.clone(),
                         exception_info,
@@ -36,14 +36,14 @@ pub fn run_exceptions_server(
                     )
                     .await
                     {
-                        error!("failed to handle exception ({}): {:?}", resolved_url, e);
+                        error!(url=%resolved_url, ?error, "failed to handle exception");
                     }
                 }
                 Ok(None) => break,
-                Err(e) => {
+                Err(error) => {
                     error!(
-                        "failed to read message stream for fuchsia.sys2.CrashIntrospect ({}): {:?}",
-                        resolved_url, e
+                        url=%resolved_url, ?error,
+                        "failed to read message stream for fuchsia.sys2.CrashIntrospect",
                     );
                     break;
                 }

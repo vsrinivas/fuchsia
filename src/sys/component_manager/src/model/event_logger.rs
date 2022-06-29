@@ -8,8 +8,8 @@ use {
         hooks::{Event, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    log::info,
     std::sync::{Arc, Weak},
+    tracing::info,
 };
 
 pub struct EventLogger;

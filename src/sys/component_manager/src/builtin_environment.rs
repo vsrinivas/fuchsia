@@ -89,9 +89,9 @@ use {
     fuchsia_zircon::{self as zx, Clock, HandleBased, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{path::PathBuf, sync::Arc},
+    tracing::{info, warn},
 };
 
 // Allow shutdown to take up to an hour.
@@ -995,8 +995,8 @@ impl BuiltinEnvironment {
 
         inspect_runtime::serve(component::inspector(), &mut service_fs)
             .map_err(|err| ModelError::Inspect { err })
-            .unwrap_or_else(|err| {
-                warn!("Failed to serve inspect: {:?}", err);
+            .unwrap_or_else(|error| {
+                warn!(%error, "Failed to serve inspect");
             });
 
         Ok(service_fs)
@@ -1011,8 +1011,8 @@ impl BuiltinEnvironment {
             .serve_connection(channel)
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
 
-        self.emit_diagnostics(&mut service_fs).unwrap_or_else(|err| {
-            warn!("Failed to serve diagnostics: {:?}", err);
+        self.emit_diagnostics(&mut service_fs).unwrap_or_else(|error| {
+            warn!(%error, "Failed to serve diagnostics");
         });
 
         // Start up ServiceFs
@@ -1166,7 +1166,7 @@ fn register_boot_resolver(
     let boot_resolver = FuchsiaBootResolver::new(path).context("Failed to create boot resolver")?;
     match boot_resolver {
         None => {
-            info!("No {} directory in namespace, fuchsia-boot resolver unavailable", path);
+            info!(%path, "fuchsia-boot resolver unavailable, not in namespace");
             Ok(None)
         }
         Some(boot_resolver) => {

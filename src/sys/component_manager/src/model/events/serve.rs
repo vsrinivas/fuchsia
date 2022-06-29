@@ -20,10 +20,11 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{lock::Mutex, TryStreamExt},
-    log::{error, info, warn},
-    moniker::ExtendedMoniker,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
+    },
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 pub async fn serve_event_source_sync(
@@ -57,8 +58,8 @@ pub async fn serve_event_source_sync(
                                 // Serve the event_stream over FIDL asynchronously
                                 serve_event_stream(event_stream, stream).await;
                             }
-                            Err(e) => {
-                                info!("Error subscribing to events: {:?}", e);
+                            Err(error) => {
+                                info!(?error, "Couldn't subscribe to events");
                                 responder.send(&mut Err(fcomponent::Error::ResourceUnavailable))?;
                             }
                         };
@@ -75,8 +76,8 @@ pub async fn serve_event_source_sync(
             }
         })
         .await;
-    if let Err(e) = result {
-        error!("Error serving EventSource: {}", e);
+    if let Err(error) = result {
+        error!(%error, "Couldn't serve EventSource");
     }
 }
 
@@ -90,16 +91,16 @@ pub async fn serve_event_stream(
     while let Some(event) = event_stream.next().await {
         // Create the basic Event FIDL object.
         let event_fidl_object = match create_event_fidl_object(event).await {
-            Err(e) => {
-                warn!("Failed to create event object: {:?}", e);
+            Err(error) => {
+                warn!(?error, "Failed to create event object");
                 continue;
             }
             Ok(res) => res,
         };
-        if let Err(e) = listener.on_event(event_fidl_object) {
+        if let Err(error) = listener.on_event(event_fidl_object) {
             // It's not an error for the client to drop the listener.
-            if !e.is_closed() {
-                warn!("Unexpected error while serving EventStream: {:?}", e);
+            if !error.is_closed() {
+                warn!(?error, "Unexpected error while serving EventStream");
             }
             return;
         }
