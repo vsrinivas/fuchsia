@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_starnix_developer::{
         ManagerProxy, ShellControllerEvent, ShellControllerMarker, ShellParams,
     },
-    futures::StreamExt,
+    futures::{FutureExt, StreamExt},
     signal_hook::{consts::signal::SIGINT, iterator::Signals},
 };
 
@@ -32,7 +32,7 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
     let mut stdin = fidl::AsyncSocket::from_socket(cin)?;
     let mut stdout = Unblock::new(std::io::stdout());
     let mut stderr = Unblock::new(std::io::stderr());
-    let copy_futures = futures::future::try_join3(
+    let copy_futures = futures::future::join3(
         // We may need to swap out for a latency sensitive copy that calls "flush" regularly.
         // If you see what feels like stalling behavior at odd buffer biases, it may down to this
         // copy not pumping sufficient to flush.
@@ -42,6 +42,9 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
         futures::io::copy(fidl::AsyncSocket::from_socket(cout)?, &mut stdout),
         futures::io::copy(fidl::AsyncSocket::from_socket(cerr)?, &mut stderr),
     );
+    // Ensure `copy_futures` never terminates by mapping it to a pending() one.
+    let copy_futures: Box<dyn futures::Future<Output = Result<()>> + Unpin> =
+        Box::new(copy_futures.then(|_| futures::future::pending()));
 
     let mut event_stream = controller_proxy.take_event_stream();
     let term_event_future = async move {
@@ -83,12 +86,11 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
         .start_shell(params, controller_server_end)
         .with_context(|| format!("Error starting shell"))?;
 
-    let (copy_result, return_code) = futures::join!(copy_futures, term_event_future);
-    copy_result?;
+    let (_ignore_copy_results, return_code) = futures::try_join!(copy_futures, term_event_future)?;
 
     // Shut down the signal thread.
     handle.close();
     thread.join().expect("thread to shutdown without panic");
 
-    return_code
+    Ok(return_code)
 }
