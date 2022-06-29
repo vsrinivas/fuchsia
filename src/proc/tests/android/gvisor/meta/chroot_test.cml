@@ -5,7 +5,7 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/chroot_test",
-        args: [ "--gunit_filter=-:*.PermissionDenied:*.WithoutCapability:*.ProcMemSelfFdsNoEscapeProcOpen:*.ProcMemSelfMapsNoEscapeProcOpen:*.ProcMountsMountinfoNoEscape" ],
+        args: [ "--gunit_filter=-:*.PermissionDenied:*.ProcMemSelfFdsNoEscapeProcOpen:*.ProcMemSelfMapsNoEscapeProcOpen:*.ProcMountsMountinfoNoEscape" ],
 
         // TODO: only include CAP_SYS_CHROOT when capabilities are implemented
         user: "fuchsia:x:0:0",
