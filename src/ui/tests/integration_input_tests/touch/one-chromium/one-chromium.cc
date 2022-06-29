@@ -175,7 +175,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     auto web_context_provider = context_->svc()->Connect<fuchsia::web::ContextProvider>();
     auto incoming_service_clone = context_->svc()->CloneChannel();
     web_context_provider.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_context_provider: " << zx_status_get_string(status);
+      FX_LOGS(WARNING) << "web_context_provider: " << zx_status_get_string(status);
     });
     FX_CHECK(incoming_service_clone.is_valid());
 
@@ -183,11 +183,11 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     params.set_service_directory(std::move(incoming_service_clone));
     web_context_provider->Create(std::move(params), web_context_.NewRequest());
     web_context_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_context_: " << zx_status_get_string(status);
+      FX_LOGS(WARNING) << "web_context_: " << zx_status_get_string(status);
     });
     web_context_->CreateFrame(web_frame_.NewRequest());
     web_frame_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(FATAL) << "web_frame_: " << zx_status_get_string(status);
+      FX_LOGS(WARNING) << "web_frame_: " << zx_status_get_string(status);
     });
   }
 
