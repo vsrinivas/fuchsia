@@ -25,5 +25,12 @@
             from: "parent",
             to: "#realm_builder",
         },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "config-data",
+            to: "#realm_builder",
+            subdir: "virtual-keyboard-test-ip",
+        },
     ],
 }

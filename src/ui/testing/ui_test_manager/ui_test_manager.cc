@@ -9,6 +9,7 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/session/scene/cpp/fidl.h>
@@ -42,6 +43,7 @@ namespace {
 
 using component_testing::Capability;
 using component_testing::ChildRef;
+using component_testing::Directory;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
@@ -299,6 +301,19 @@ void UITestManager::ConfigureClientSubrealm() {
     RouteServices({fuchsia::ui::app::ViewProvider::Name_},
                   /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
   }
+
+  // TODO(fxbug.dev/98545): Remove this escape hatch, or generalize to any
+  // capability.
+  //
+  // Allow child realm components to access to config-data directory by default.
+  //
+  // NOTE: The client must offer the "config-data" capability to #realm_builder in
+  // its test .cml file.
+  realm_builder_.AddRoute(
+      {.capabilities = {Directory{
+           .name = "config-data", .rights = fuchsia::io::R_STAR_DIR, .path = "/config/data"}},
+       .source = ParentRef(),
+       .targets = {ChildRef{kClientSubrealmName}}});
 }
 
 void UITestManager::ConfigureAccessibility() {
