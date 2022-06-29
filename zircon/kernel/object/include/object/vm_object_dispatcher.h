@@ -15,13 +15,8 @@
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/intrusive_container_utils.h>
-#include <fbl/intrusive_double_list.h>
-#include <ktl/atomic.h>
-#include <ktl/limits.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <vm/content_size_manager.h>
 #include <vm/vm_object.h>
 
 class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
@@ -55,8 +50,6 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // Dispatcher implementation.
   void on_zero_handles() final;
 
-  ContentSizeManager& content_size_manager() { return content_size_mgr_; }
-
   // VmObjectDispatcher own methods.
   zx_status_t Read(VmAspace* current_aspace, user_out_ptr<char> user_data, size_t length,
                    uint64_t offset, size_t* out_actual);
@@ -80,15 +73,23 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   zx_status_t SetContentSize(uint64_t);
   uint64_t GetContentSize() const;
 
-  // Expands the VMO to a requested size, if the VMO is smaller than that size.
-  // Note that this will not modify the content size.
-  //
-  // Returns the actual size of the VMO in |out_actual| after attempting to expand. This value is
-  // set, even in the case of a failure.
-  zx_status_t ExpandIfNecessary(uint64_t requested_vmo_size, uint64_t* out_actual);
+  // Attempts to resize the VMO to fit the |requested_content_size|. Returns the actual content size
+  // upon success, since the content size might have been expanded to partially accommodate
+  // |requested_content_size|. Otherwise returns the failure status.
+  zx::status<uint64_t> ExpandContentIfNeeded(uint64_t requested_content_size,
+                                             uint64_t zero_until_offset);
 
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }
+
+  // The shrink lock exists to prevent the VMO from being shrunk whilst stream reads are taking
+  // place, which would otherwise cause errors to be returned to clients.  Readers that care (e.g.
+  // reads that come via stream APIs) should acquire a ShrinkInhibitGuard whilst shrinking should
+  // acquire the ShrinkGuard.  For now, a mutex is used but it is possible that this could become a
+  // reader/writer lock at some point.
+  using ShrinkInhibitGuard = Guard<Mutex>;
+  using ShrinkGuard = Guard<Mutex>;
+  Lock<Mutex>& shrink_lock() const { return shrink_lock_; }
 
  private:
   explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t size, zx_koid_t pager_koid,
@@ -98,7 +99,17 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // except during destruction.
   fbl::RefPtr<VmObject> const vmo_;
 
-  ContentSizeManager content_size_mgr_;
+  // The content_size_lock_ is used to synchronize vmo_ operations and updates to content_size_.
+  // Ideally the existing dispatchers lock would be used, but presently it is possible for page
+  // requests to get waited on while this lock is held due to calls to vmo_->ZeroRange, and so
+  // prefer to use a separate lock that we can add instrumentation to without needing to change the
+  // entire dispatcher lock.
+  // TODO: Remove this and use dispatcher lock once content size operations will not block.
+  mutable DECLARE_MUTEX(VmObjectDispatcher,
+                        lockdep::LockFlagsActiveListDisabled) content_size_lock_;
+
+  // The size of the content stored in the VMO in bytes.
+  uint64_t content_size_ TA_GUARDED(content_size_lock_) = 0u;
 
   // The koid of the related pager object, or ZX_KOID_INVALID if
   // there is no related pager.

@@ -14,7 +14,6 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/vm_object_dispatcher.h>
-#include <vm/content_size_manager.h>
 #include <vm/vm_aspace.h>
 
 class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAULT_STREAM_RIGHTS> {
@@ -39,15 +38,16 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
  private:
   explicit StreamDispatcher(uint32_t options, fbl::RefPtr<VmObjectDispatcher> vmo, zx_off_t seek);
 
-  zx_status_t CreateWriteOpAndExpandVmo(size_t total_capacity, zx_off_t offset,
-                                        uint64_t* out_length,
-                                        ContentSizeManager::Operation* out_op);
+  // The seek_lock_ is used to synchronize vmo_ operations and updates to seek.
+  // Ideally the existing dispatchers lock would be used, but presently it is possible for page
+  // requests to get waited on while this lock is held due to calls to vmo_->ExpandContentIfNeeded
+  // being able to block, and so prefer to use a separate lock that we can add instrumentation to
+  // without needing to change the entire dispatcher lock.
+  // TODO: Remove this and use dispatcher lock once content size operations will not block.
+  mutable DECLARE_MUTEX(StreamDispatcher, lockdep::LockFlagsActiveListDisabled) seek_lock_;
 
   const uint32_t options_;
   const fbl::RefPtr<VmObjectDispatcher> vmo_;
-
-  // The seek_lock_ is used to make vmo_ operations and updates to seek atomic.
-  mutable DECLARE_MUTEX(StreamDispatcher, lockdep::LockFlagsActiveListDisabled) seek_lock_;
   zx_off_t seek_ TA_GUARDED(seek_lock_) = 0u;
 };
 

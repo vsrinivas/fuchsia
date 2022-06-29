@@ -16,9 +16,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
-#include <ktl/atomic.h>
 #include <ktl/optional.h>
-#include <vm/page_source.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
@@ -69,8 +67,8 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, uint64_t conte
 VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
                                        zx_koid_t pager_koid, InitialMutability initial_mutability)
     : SoloDispatcher(ZX_VMO_ZERO_CHILDREN),
-      vmo_(ktl::move(vmo)),
-      content_size_mgr_(content_size),
+      vmo_(vmo),
+      content_size_(content_size),
       pager_koid_(pager_koid),
       initial_mutability_(initial_mutability) {
   kcounter_add(dispatcher_vmo_create_count, 1);
@@ -135,39 +133,28 @@ zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<cons
 zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {
   canary_.Assert();
 
-  ContentSizeManager::Operation op;
-  Guard<Mutex> guard{content_size_mgr_.lock()};
+  Guard<Mutex> guard{&content_size_lock_};
 
-  content_size_mgr_.BeginSetContentSizeLocked(size, &op, &guard);
-
-  uint64_t size_aligned = ROUNDUP(size, PAGE_SIZE);
-  // Check for overflow when rounding up.
-  if (size_aligned < size) {
-    op.AssertParentLockHeld();
-    op.CancelLocked();
-    return ZX_ERR_OUT_OF_RANGE;
+  // If this involves shrinking the VMO, then we need to acquire the shrink lock.
+  ktl::optional<ShrinkGuard> shrink_guard;
+  if (size < content_size_) {
+    // We can't acquire this lock whilst we're holding our lock.  It won't matter if this operation
+    // turns into a grow (if another thread slips in first and changes the VMO's size).
+    guard.CallUnlocked([&] { shrink_guard.emplace(&shrink_lock_); });
   }
 
-  zx_status_t status = vmo_->Resize(size_aligned);
+  zx_status_t status = vmo_->Resize(size);
   if (status != ZX_OK) {
-    op.AssertParentLockHeld();
-    op.CancelLocked();
     return status;
   }
 
-  uint64_t remaining = size_aligned - size;
+  uint64_t remaining = ROUNDUP(size, PAGE_SIZE) - size;
   if (remaining > 0) {
-    // TODO(fxbug.dev/102757): Determine whether failure to ZeroRange here should undo this
-    // operation.
-    //
-    // Dropping the lock here is fine, as an `Operation` only needs to be locked when initializing,
-    // committing, or cancelling.
-    guard.CallUnlocked([&] { vmo_->ZeroRange(size, remaining); });
+    vmo_->ZeroRange(size, remaining);
   }
 
-  op.AssertParentLockHeld();
-  op.CommitLocked();
-  return status;
+  content_size_ = size;
+  return ZX_OK;
 }
 
 zx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
@@ -220,46 +207,53 @@ zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(zx_rights_t rights) {
 zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
   canary_.Assert();
 
-  ContentSizeManager::Operation op;
-  Guard<Mutex> guard{content_size_mgr_.lock()};
-  content_size_mgr_.BeginSetContentSizeLocked(content_size, &op, &guard);
-
-  op.AssertParentLockHeld();
-  op.CommitLocked();
+  Guard<Mutex> guard{&content_size_lock_};
+  content_size_ = content_size;
   return ZX_OK;
 }
 
 uint64_t VmObjectDispatcher::GetContentSize() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{content_size_mgr_.lock()};
-  return content_size_mgr_.content_size_locked();
+  Guard<Mutex> guard{&content_size_lock_};
+  return content_size_;
 }
 
-zx_status_t VmObjectDispatcher::ExpandIfNecessary(uint64_t requested_vmo_size,
-                                                  uint64_t* out_actual) {
+zx::status<uint64_t> VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_size,
+                                                               uint64_t zero_until_offset) {
   canary_.Assert();
 
-  uint64_t current_vmo_size = vmo_->size();
-  *out_actual = current_vmo_size;
-
-  uint64_t required_vmo_size = ROUNDUP(requested_vmo_size, PAGE_SIZE);
-  // Overflow when rounding up.
-  if (required_vmo_size < requested_vmo_size) {
-    return ZX_ERR_OUT_OF_RANGE;
+  Guard<Mutex> guard{&content_size_lock_};
+  if (requested_content_size <= content_size_) {
+    return zx::ok(content_size_);
   }
 
+  uint64_t previous_content_size = content_size_;
+
+  uint64_t required_vmo_size = ROUNDUP(requested_content_size, PAGE_SIZE);
+  // Overflow when rounding up.
+  if (required_vmo_size < requested_content_size) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  uint64_t current_vmo_size = vmo_->size();
   if (required_vmo_size > current_vmo_size) {
     zx_status_t status = vmo_->Resize(required_vmo_size);
     if (status != ZX_OK) {
-      // Resizing failed but the rest of the current VMO size can be used.
-      return status;
+      content_size_ = current_vmo_size;
+    } else {
+      content_size_ = requested_content_size;
     }
-
-    *out_actual = required_vmo_size;
+  } else {
+    content_size_ = requested_content_size;
   }
 
-  return ZX_OK;
+  zero_until_offset = ktl::min(content_size_, zero_until_offset);
+  if (zero_until_offset > previous_content_size) {
+    vmo_->ZeroRange(previous_content_size, zero_until_offset - previous_content_size);
+  }
+
+  return zx::ok(content_size_);
 }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
