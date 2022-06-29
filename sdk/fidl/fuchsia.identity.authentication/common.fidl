@@ -11,6 +11,10 @@ const PREKEY_MATERIAL_MAX_SIZE uint32 = 32;
 /// The maxium size of enrollment data in bytes.
 const ENROLLMENT_DATA_MAX_SIZE uint32 = 256;
 
+/// An empty struct for union variants without data.
+/// TODO(fxbug.dev/7913): Replace with a built-in type when one exists.
+type Empty = struct {};
+
 /// Specifies the reason that a fuchsia.identity.authentication method failed.
 type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the

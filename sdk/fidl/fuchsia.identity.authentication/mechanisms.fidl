@@ -1,0 +1,95 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.authentication;
+
+using zx;
+
+// This file defines protocols for the interaction between a user interface
+// and an authenticator for each type of authentication mechanism. See
+// `interaction.ui` for details of the common pattern these protocols follow.
+
+
+/// The complete set of authentication mechanisms that may be used for Fuchsia
+/// system authentication. Most products will only support a subset of these
+/// mechanisms.
+// Note: this list must be kept in sync with the contents of the
+// `InteractionProtocolServerEnd` union and with the `Start*` methods in
+// `Interaction`.
+type Mechanism = flexible enum {
+    PASSWORD = 1;
+};
+
+/// A union of server_end types for each authentication interaction protocol.
+type InterationProtocolServerEnd = flexible resource union {
+    1: password server_end:PasswordInteraction;
+};
+
+/// A protocol for a password user interface (the client) to interact with a
+/// password authenticator (the server), both during enrollment and during
+/// authentication. The server will close the channel when enrollment or
+/// authentication is complete.
+protocol PasswordInteraction {
+    /// Sets the password. Calling this method is guaranteed to lead to a
+    /// change in state and therefore a response to `WatchState`. During
+    /// password enrollment some server implementations may verify the supplied
+    /// password against rules defined by the product or policy and move to
+    /// an error state if the password does not meet these rules.
+    SetPassword(struct {
+        password string:PASSWORD_BYTES_MAX_SIZE;
+    });
+
+    /// Wait for a change in the state of the server. This method follows the
+    /// "hanging get" interface pattern, returning immediately on the first call
+    /// and hanging until a change in state on subsequent calls.
+    WatchState() -> (strict union {
+        /// The server is waiting for the supplied set of conditions.
+        1: waiting vector<PasswordCondition>:8;
+        /// The server is verifying the password. Reporting a verification state
+        /// is optional, some implementations may step directly from waiting to
+        /// error or to success.
+        2: verifying PasswordVerificationStatus;
+        /// Verification failed with the supplied error.
+        3: error PasswordError;
+    });
+};
+
+/// The maximum size of a password in bytes.
+const PASSWORD_BYTES_MAX_SIZE uint32 = 128;
+
+/// The set of conditions that the authenticator may need to wait for during
+/// enrollment or authentication using password.
+type PasswordCondition = flexible union {
+    /// (authentication) Too many incorrect password attempts have been made,
+    /// the client must wait until the specified time before another attempt
+    /// will be accepted.
+    1: wait_until zx.time;
+    /// (enrollment and authentication) The client should call `SetPassword`.
+    2: set_password Empty;
+};
+
+/// The set of verification statuses that may be returned during enrollment or
+/// authentication using password
+type PasswordVerificationStatus = flexible union {
+    /// (enrollment and authentication) An optional estimate of the verification
+    /// progress.
+    1: percent_complete uint8;
+};
+
+/// The set of errors that may be encountered during enrollment or
+/// authentication using password.
+type PasswordError = flexible union {
+    /// (enrollment) The supplied password did not meet the implementation's
+    /// required minimum length. The mimumum length is returned in the response.
+    1: too_short uint8;
+    /// (enrollment) The supplied password was a known weak password according
+    /// to whichever heuristic the implementation is using.
+    2: too_weak Empty;
+    /// (authentication) The supplied password did not match the password
+    /// supplied during enrollment.
+    3: incorrect Empty;
+    /// (authentication) Too many incorrect password attempts have been made,
+    /// the caller must wait for the `wait_until` condition before any other
+    /// response will be returned.
+    4: must_wait Empty;
+};

@@ -1,0 +1,78 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.authentication;
+
+/// The modes in which an authentication UI protocol may operate.
+type Mode = strict enum {
+    /// Authenticate a user against existing authentication mechanism
+    /// enrollment(s). For example, prove the user knows a password.
+    AUTHENTICATE = 1;
+    /// Create a new enrollment for an authentication mechanism. For example,
+    /// set a password.
+    ENROLL = 2;
+};
+
+/// A protocol for interactive enrollment of authentication mechanisms and
+/// authentication using these mechanisms. The client of this protocol is
+/// typically a user interface component and the server is the account system.
+/// The server will close the channel when enrollment or authentication is
+/// complete or when no further progress is possible.
+///
+/// Authentication and enrollment is performed using a set of more detailed
+/// protocols specific to a particular authentication mechanism. The client of
+/// these protocols is typically a user interface component and the server is
+/// an authenticator component implementing that authentication mechanism. All
+/// these protocols follow the same pattern where the authenticator follows the
+/// following state machine:
+///
+///      +---------+  [wait conditions met]    +-----------+
+///  O-->| WAITING |-------------------------->| VERIFYING |
+///      +---------+                           +-----------+
+///           ^                                      |
+///           |             +-------+                |
+///           +-------------| ERROR |<---------------+
+///      [error reported]   +-------+    [verification failed]
+///
+/// On initialization, the authenticator is "WAITING" for some combination of
+/// inputs from the UI (for example a password) and out of band events (for
+/// example a touch on the fingerprint sensor). Once these conditions have all
+/// been met the authenticator enters the "VERIFYING" state where it checks the
+/// validity of the inputs. If verification succeeds the authenticator closes
+/// the channel. If verification fails the authenticator enters the "ERROR"
+/// state until the UI collects the description of the error, whereafter it
+/// returns to the "WAITING" state. If the client closes the channel the
+/// authentication or enrollment attempt is abandoned.
+protocol Interaction {
+    /// Begins interactive authentication or enrollment for a password. This
+    /// method should only be called when a `WatchState` response indicated that
+    /// password is available for the requested mode.
+    ///
+    /// The server will close the supplied `PasswordInteraction` channel if the
+    /// requested mode or mechanism was invalid or when the authentication or
+    /// enrollment is complete. Either event will cause a response to
+    /// `WatchState`.
+    StartPassword(resource struct {
+        ui server_end:PasswordInteraction;
+        mode Mode;
+    });
+
+    /// Returns the authentication mechanisms that are available to either
+    /// authenticate or enroll. This method follows the "hanging get" interface
+    /// pattern, returning immediately on the first call and hanging until a
+    /// change in state on subsequent calls. Note that when a `Start*` method
+    /// fails, `WatchState` will return, and may return the same set of
+    /// mechanisms as the previous call.
+    WatchState() -> (strict union {
+        /// One or more mechanisms are available for authentication. Not all
+        /// products allow multiple concurrent mechanisms, but when multiple
+        /// mechanisms are allowed these are ordered from most preferred to
+        /// least preferred as determined by the product.
+        1: authenticate vector<Mechanism>:32;
+        /// One or more mechanisms are available for enrollment. Not all
+        /// products allow multiple concurrent mechanisms, but when multiple
+        /// mechanisms are allowed these are ordered from most preferred to
+        /// least preferred as determined by the product.
+        2: enrollment vector<Mechanism>:32;
+    });
+};
