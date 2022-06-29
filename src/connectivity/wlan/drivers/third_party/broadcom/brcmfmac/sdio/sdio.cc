@@ -3479,17 +3479,6 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
     .activate = brcmf_sdio_buscore_activate,
 };
 
-// This will wait, then dump out all SDIO transactions to date.
-#ifdef SDIO_PRINTER
-thrd_t sdio_thread;
-static int sdio_printer(void* foo) {
-  BRCMF_DBG(TEMP, "SDIO printer started");
-  zx_nanosleep(zx_deadline_after(ZX_SEC(10000000)));
-  psr();
-  return 0;
-}
-#endif  // SDIO_PRINTER
-
 static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   struct brcmf_sdio_dev* sdiodev;
   uint8_t clkctl = 0;
@@ -3503,14 +3492,6 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
   sdiodev = bus->sdiodev;
   sdio_claim_host(sdiodev->func1);
-
-#ifdef SDIO_PRINTER
-  int status = thrd_create_with_name(&sdio_thread, &sdio_printer, nullptr, "sdio_printer");
-  if (status != thrd_success) {
-    BRCMF_ERR("Unable to create sdio_printer thread: %d" < status);
-    goto fail;
-  }
-#endif  // SDIO_PRINTER
 
   BRCMF_DBG(SDIO, "brcmfmac: F1 signature read @0x18000000=0x%4x",
             brcmf_sdiod_func1_rl(sdiodev, SI_ENUM_BASE, NULL));
