@@ -45,21 +45,6 @@ constexpr const char kStackVmoName[] = "userboot-child-initial-stack";
 
 using namespace userboot;
 
-[[noreturn]] void DoPowerctl(const zx::debuglog& log, const zx::resource& power_rsrc,
-                             uint32_t reason) {
-  const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
-  if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
-    printl(log, "Waiting 3 seconds...");
-    zx::nanosleep(zx::deadline_after(zx::sec(3)));
-  }
-
-  printl(log, "Process exited.  Executing \"%s\".", r_str);
-  zx_system_powerctl(power_rsrc.get(), reason, nullptr);
-  printl(log, "still here after %s!", r_str);
-  while (true)
-    __builtin_trap();
-}
-
 // Reserve roughly the low half of the address space, so the initial
 // process can use sanitizers that need to allocate shadow memory there.
 // The reservation VMAR is kept around just long enough to make sure all
@@ -332,6 +317,55 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   return loader_svc;
 }
 
+[[noreturn]] void HandleTermination(const zx::debuglog& log, const Options& options,
+                                    std::string_view filename, ChildContext& child,
+                                    zx::resource power) {
+  auto wait_till_child_exits = [child_name = filename, &log, &child]() {
+    printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
+           child_name.data());
+    zx_status_t status =
+        child.process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+    check(log, status, "zx_object_wait_one on process failed");
+    zx_info_process_t info;
+    status = child.process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+    check(log, status, "zx_object_get_info on process failed");
+    printl(log, "*** Exit status %zd ***\n", info.return_code);
+    if (info.return_code == 0) {
+      // The test runners match this exact string on the console log
+      // to determine that the test succeeded since shutting the
+      // machine down doesn't return a value to anyone for us.
+      printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
+    }
+  };
+
+  // Now we've accomplished our purpose in life, and we can die happy.
+  if (options.epilogue == Epilogue::kExitAfterChildLaunch) {
+    child.process.reset();
+    printl(log, "finished!");
+    zx_process_exit(0);
+  }
+
+  wait_till_child_exits();
+
+  uint32_t reason = ZX_SYSTEM_POWERCTL_SHUTDOWN;
+  const char* reason_str = "poweroff";
+  if (options.epilogue == Epilogue::kRebootAfterChildExit) {
+    reason = ZX_SYSTEM_POWERCTL_REBOOT;
+    reason_str = "reboot";
+    printl(log, "Waiting 3 seconds...");
+    zx::nanosleep(zx::deadline_after(zx::sec(3)));
+  }
+
+  printl(log, "Process exited.  Executing \"%s\".", reason_str);
+  zx_system_powerctl(power.get(), reason, nullptr);
+  printl(log, "still here after %s!", reason_str);
+
+  while (true)
+    __builtin_trap();
+
+  __UNREACHABLE;
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -395,39 +429,7 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
     // All done with bootfs! Let it go out of scope.
   }
 
-  auto wait_till_child_exits = [child_name = filename, &log, &child]() {
-    printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
-           child_name.data());
-    zx_status_t status =
-        child.process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    check(log, status, "zx_object_wait_one on process failed");
-    zx_info_process_t info;
-    status = child.process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    check(log, status, "zx_object_get_info on process failed");
-    printl(log, "*** Exit status %zd ***\n", info.return_code);
-    if (info.return_code == 0) {
-      // The test runners match this exact string on the console log
-      // to determine that the test succeeded since shutting the
-      // machine down doesn't return a value to anyone for us.
-      printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
-    }
-  };
-
-  // Now we've accomplished our purpose in life, and we can die happy.
-  switch (opts.epilogue) {
-    case Epilogue::kExitAfterChildLaunch:
-      child.process.reset();
-      printl(log, "finished!");
-      zx_process_exit(0);
-    case Epilogue::kRebootAfterChildExit:
-      wait_till_child_exits();
-      DoPowerctl(log, power, ZX_SYSTEM_POWERCTL_REBOOT);
-    case Epilogue::kPowerOffAfterChildExit:
-      wait_till_child_exits();
-      DoPowerctl(log, power, ZX_SYSTEM_POWERCTL_SHUTDOWN);
-  }
-
-  __UNREACHABLE;
+  HandleTermination(log, opts, filename, child, std::move(power));
 }
 
 }  // anonymous namespace
