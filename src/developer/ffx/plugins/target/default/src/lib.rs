@@ -25,14 +25,14 @@ pub async fn exec_target_default_impl<W: std::io::Write>(
         SubCommand::Set(set) => {
             ffx_config::query(TARGET_DEFAULT_KEY)
                 .level(Some(set.level))
-                .build(set.build_dir.as_deref())
+                .build(set.build_dir.as_deref().map(|dir| dir.into()))
                 .set(serde_json::Value::String(set.nodename.clone()))
                 .await?
         }
         SubCommand::Unset(unset) => {
             let _ = ffx_config::query(TARGET_DEFAULT_KEY)
                 .level(Some(unset.level))
-                .build(unset.build_dir.as_deref())
+                .build(unset.build_dir.as_deref().map(|dir| dir.into()))
                 .remove()
                 .await
                 .map_err(|e| eprintln!("warning: {}", e));

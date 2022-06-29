@@ -9,11 +9,11 @@ use crate::api::{
 };
 use crate::cache::load_config;
 use crate::environment::Environment;
-use crate::paths::get_default_user_file_path;
 use crate::storage::Config;
 use analytics::{is_opted_in, set_opt_in_status};
-use anyhow::{anyhow, bail, Context, Result};
-use std::{convert::From, fs::File, io::Write, path::PathBuf};
+use anyhow::{anyhow, Context, Result};
+use futures::future::{BoxFuture, FutureExt};
+use std::{convert::From, io::Write, path::PathBuf};
 
 pub use config_macros::FfxConfigBacked;
 
@@ -29,9 +29,9 @@ mod paths;
 mod runtime;
 mod storage;
 
-pub use api::query::{ConfigQuery, SelectMode};
+pub use api::query::{BuildOverride, ConfigQuery, SelectMode};
 
-pub use cache::{env_file, init, test_env_file, test_init};
+pub use cache::{env_file, init, test_init};
 
 pub use paths::default_env_path;
 
@@ -43,13 +43,38 @@ If you are developing in the fuchsia tree, ensure \
 that you are running the `ffx` command (in $FUCHSIA_DIR/.jiri_root) or `fx ffx`, not a built binary.
 Running the binary directly is not supported in the fuchsia tree.\n\n";
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+/// The levels of configuration possible
+// If you edit this enum, make sure to also change the enum counter below to match.
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
 pub enum ConfigLevel {
+    /// Default configurations are provided through GN build rules across all subcommands and are hard-coded and immutable.
     Default,
-    Build,
+    /// Global configuration is intended to be a system-wide configuration level.
     Global,
+    /// User configuration is configuration set in the user's home directory and applies to all invocations of ffx by that user.
     User,
+    /// Build configuration is associated with a build directory.
+    Build,
+    /// Runtime configuration is set by the user when invoking ffx, and can't be 'set' by any other means.
     Runtime,
+}
+impl ConfigLevel {
+    /// The number of elements in the above enum, used for tests.
+    const _COUNT: usize = 5;
+
+    /// Iterates over the config levels in priority order, starting from the most narrow scope if given None.
+    /// Note this is not conformant to Iterator::next(), it's just meant to be a simple source of truth about ordering.
+    pub(crate) fn next(current: Option<Self>) -> Option<Self> {
+        use ConfigLevel::*;
+        match current {
+            Some(Default) => None,
+            Some(Global) => Some(Default),
+            Some(User) => Some(Global),
+            Some(Build) => Some(User),
+            Some(Runtime) => Some(Build),
+            None => Some(Runtime),
+        }
+    }
 }
 
 impl argh::FromArgValue for ConfigLevel {
@@ -71,12 +96,13 @@ impl argh::FromArgValue for ConfigLevel {
 ///
 /// ```no_run
 /// use ffx_config::ConfigLevel;
+/// use ffx_config::BuildSelect;
 /// use ffx_config::SelectMode;
 ///
 /// let query = ffx_config::build()
 ///     .name("testing")
 ///     .level(Some(ConfigLevel::Build))
-///     .build(Some("/tmp/build.json"))
+///     .build(Some(BuildSelect::Path("/tmp/build.json")))
 ///     .select(SelectMode::All);
 /// let value = query.get().await?;
 /// ```
@@ -111,54 +137,7 @@ where
 fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
-    match level {
-        ConfigLevel::User => {
-            if let None = environment.user {
-                let default_path = get_default_user_file_path();
-                // This will override the config file if it exists.  This would happen anyway
-                // because of the cache.
-                let mut file = File::create(&default_path).context("opening write buffer")?;
-                file.write_all(b"{}").context("writing default user configuration file")?;
-                file.sync_all().context("syncing default user configuration file to filesystem")?;
-                environment.user = Some(
-                    default_path
-                        .to_str()
-                        .map(|s| s.to_string())
-                        .context("home path is not proper unicode")?,
-                );
-                environment.save(&e)?;
-            }
-        }
-        ConfigLevel::Global => {
-            if let None = environment.global {
-                bail!(
-                    "Global configuration not set. Use 'ffx config env set' command \
-                     to setup the environment."
-                );
-            }
-        }
-        ConfigLevel::Build => match build_dir {
-            Some(b_dir) => match environment.build {
-                None => bail!(
-                    "Build configuration not set for '{}'. Use 'ffx config env set' command \
-                     to setup the environment.",
-                    b_dir
-                ),
-                Some(b) => {
-                    if let None = b.get(b_dir) {
-                        bail!(
-                            "Build configuration not set for '{}'. Use 'ffx config env \
-                             set' command to setup the environment.",
-                            b_dir
-                        );
-                    }
-                }
-            },
-            None => bail!("Cannot set a build configuration without a build directory."),
-        },
-        _ => bail!("This config level is not writable."),
-    }
-    Ok(())
+    environment.check(&e, level, build_dir)
 }
 
 fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
@@ -174,6 +153,20 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
     writeln!(writer, "{}", *read_guard).context("displaying config")
 }
 
+/// Finds the currently active default build directory based on the known sdk path,
+/// using that as the build root if it's an InTree sdk.
+pub(crate) fn default_build_dir() -> BoxFuture<'static, Option<String>> {
+    async move {
+        match get_sdk_root().await {
+            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => {
+                Some(sdk_path.to_str()?.to_owned())
+            }
+            _ => None,
+        }
+    }
+    .boxed()
+}
+
 pub async fn get_log_dirs() -> Result<Vec<String>> {
     match query("log.dir").get().await {
         Ok(log_dirs) => Ok(log_dirs),
@@ -181,15 +174,23 @@ pub async fn get_log_dirs() -> Result<Vec<String>> {
     }
 }
 
-pub async fn get_sdk() -> Result<sdk::Sdk> {
+/// Gets the basic information about the sdk as configured, without diving deeper into the sdk's own configuration.
+async fn get_sdk_root() -> (Result<PathBuf, ConfigError>, String) {
     // All gets in this function should declare that they don't want the build directory searched, because
     // if there is a build directory it *is* generally the sdk.
-    let sdk_root = query("sdk.root").get().await;
-    let sdk_type = query("sdk.type").get().await.unwrap_or("".to_string());
-    match (sdk_root, sdk_type) {
+    let sdk_root = query("sdk.root").build(Some(BuildOverride::NoBuild)).get().await;
+    let sdk_type =
+        query("sdk.type").build(Some(BuildOverride::NoBuild)).get().await.unwrap_or("".to_string());
+    (sdk_root, sdk_type)
+}
+
+/// Does a full load of the sdk configuration.
+pub async fn get_sdk() -> Result<sdk::Sdk> {
+    match get_sdk_root().await {
         (Ok(manifest), sdk_type) => {
             if sdk_type == SDK_TYPE_IN_TREE {
-                let module_manifest: Option<String> = query("sdk.module").get().await.ok();
+                let module_manifest: Option<String> =
+                    query("sdk.module").build(Some(BuildOverride::NoBuild)).get().await.ok();
                 sdk::Sdk::from_build_dir(manifest, module_manifest)
             } else {
                 sdk::Sdk::from_sdk_dir(manifest)
@@ -260,6 +261,7 @@ mod test {
     // creates a token stream referencing `ffx_config` on the inside.
     use crate as ffx_config;
     use serde_json::{json, Value};
+    use std::collections::HashSet;
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -276,6 +278,28 @@ mod test {
             let result = check_config_files(&level, &build_dir);
             assert!(result.is_err());
         }
+    }
+
+    #[test]
+    fn test_config_levels_make_sense_from_first() {
+        let mut found_set = HashSet::new();
+        let mut from_first = None;
+        for _ in 0..ConfigLevel::_COUNT + 1 {
+            if let Some(next) = ConfigLevel::next(from_first) {
+                let entry = found_set.get(&next);
+                assert!(entry.is_none(), "Found duplicate config level while iterating: {next:?}");
+                found_set.insert(next);
+                from_first = Some(next);
+            } else {
+                break;
+            }
+        }
+
+        assert_eq!(
+            ConfigLevel::_COUNT,
+            found_set.len(),
+            "A config level was missing from the forward iteration of levels: {found_set:?}"
+        );
     }
 
     #[test]
@@ -385,16 +409,17 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_find_sdk_root_finds_root() {
         let temp = tempdir().unwrap();
+        let temp_path = std::fs::canonicalize(temp.path()).expect("canonical temp path");
 
-        let start_path = temp.path().to_path_buf().join("test1").join("test2");
+        let start_path = temp_path.join("test1").join("test2");
         std::fs::create_dir_all(start_path.clone()).unwrap();
 
-        let meta_path = temp.path().to_path_buf().join("meta");
+        let meta_path = temp_path.join("meta");
         std::fs::create_dir(meta_path.clone()).unwrap();
 
         std::fs::write(meta_path.join("manifest.json"), "").unwrap();
 
-        assert_eq!(find_sdk_root(start_path).unwrap().unwrap(), temp.path().to_path_buf());
+        assert_eq!(find_sdk_root(start_path).unwrap().unwrap(), temp_path);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

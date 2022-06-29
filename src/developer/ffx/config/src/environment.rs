@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    crate::paths::get_default_user_file_path,
     crate::ConfigLevel,
-    anyhow::{Context, Result},
+    anyhow::{bail, Context, Result},
     errors::ffx_error,
+    log::info,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -134,6 +136,63 @@ impl Environment {
         f.sync_all()?;
         Ok(())
     }
+
+    /// Checks the config files at the requested level to make sure they exist and are configured
+    /// properly.
+    pub fn check(
+        &mut self,
+        path: &Path,
+        level: &ConfigLevel,
+        build_dir: &Option<String>,
+    ) -> Result<()> {
+        match level {
+            ConfigLevel::User => {
+                if let None = self.user {
+                    let default_path = get_default_user_file_path();
+                    // This will override the config file if it exists.  This would happen anyway
+                    // because of the cache.
+                    let mut file = File::create(&default_path).context("opening write buffer")?;
+                    file.write_all(b"{}").context("writing default user configuration file")?;
+                    file.sync_all()
+                        .context("syncing default user configuration file to filesystem")?;
+                    self.user = Some(
+                        default_path
+                            .to_str()
+                            .map(|s| s.to_string())
+                            .context("home path is not proper unicode")?,
+                    );
+                    self.save(path)?;
+                }
+            }
+            ConfigLevel::Global => {
+                if let None = self.global {
+                    bail!(
+                        "Global configuration not set. Use 'ffx config env set' command \
+                         to setup the environment."
+                    );
+                }
+            }
+            ConfigLevel::Build => match build_dir {
+                Some(b_dir) => {
+                    let build_dirs = match &mut self.build {
+                        Some(build_dirs) => build_dirs,
+                        None => self.build.get_or_insert_with(Default::default),
+                    };
+                    if !build_dirs.contains_key(b_dir) {
+                        let config = format!("{b_dir}.json");
+                        if !std::path::PathBuf::from(&config).is_file() {
+                            info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set");
+                        }
+                        build_dirs.insert(b_dir.clone(), config);
+                        self.save(path)?;
+                    }
+                }
+                None => bail!("Cannot set a build configuration without a build directory."),
+            },
+            _ => bail!("This config level is not writable."),
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for Environment {
@@ -180,5 +239,78 @@ mod test {
         let env_save: Environment = serde_json::from_slice(&env_file).unwrap();
 
         assert_eq!(env, env_save);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn build_config_autoconfigure() {
+        let temp = tempfile::tempdir().expect("temporary build directory");
+        let temp_dir = std::fs::canonicalize(temp.path()).expect("canonical temp path");
+        let build_dir_path = temp_dir.join("build");
+        let build_dir_config = temp_dir.join("build.json");
+        let env_path = temp_dir.join("env.json");
+
+        assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
+        Environment::init_env_file(&env_path)
+            .expect("Should be able to initialize the environment file");
+        let mut env = Environment::load(&env_path).expect("Should be able to load the environment");
+
+        env.check(
+            &env_path,
+            &ConfigLevel::Build,
+            &Some(build_dir_path.to_string_lossy().to_string()),
+        )
+        .expect("Setting build level environment to automatic path should work");
+
+        if let Some(build_configs) = Environment::load(&env_path)
+            .expect("should be able to load the test-configured env-file.")
+            .build
+        {
+            match build_configs.get(build_dir_path.to_string_lossy().as_ref()) {
+                Some(config) if &config == &build_dir_config.to_string_lossy().as_ref() => (),
+                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display()),
+                None => panic!("No build directory config was set"),
+            }
+        } else {
+            panic!("No build configurations set after setting a configuration value");
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn build_config_manual_configure() {
+        let temp = tempfile::tempdir().expect("temporary build directory");
+        let temp_dir = std::fs::canonicalize(temp.path()).expect("canonical temp path");
+        let build_dir_path = temp_dir.join("build");
+        let build_dir_config = temp_dir.join("build-manual.json");
+        let env_path = temp_dir.join("env.json");
+
+        assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
+        let mut env = Environment::default();
+        let mut config_map = std::collections::HashMap::new();
+        config_map.insert(
+            build_dir_path.to_string_lossy().to_string(),
+            build_dir_config.to_string_lossy().to_string(),
+        );
+        env.build = Some(config_map);
+        env.save(&env_path).expect("Should be able to save the configured environment");
+
+        env.check(
+            &env_path,
+            &ConfigLevel::Build,
+            &Some(build_dir_path.to_string_lossy().to_string()),
+        )
+        .expect("Setting build level environment to automatic path should work");
+
+        if let Some(build_configs) = Environment::load(&env_path)
+            .expect("should be able to load the manually configured env-file.")
+            .build
+        {
+            match build_configs.get(build_dir_path.to_string_lossy().as_ref()) {
+                Some(config) if &config == &build_dir_config.to_string_lossy().as_ref() => (),
+                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display()),
+                None => panic!("No build directory config was set"),
+            }
+        } else {
+            panic!("No build configurations set after setting a configuration value");
+        }
     }
 }

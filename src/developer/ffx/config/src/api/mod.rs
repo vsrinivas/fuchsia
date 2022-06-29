@@ -14,7 +14,7 @@ pub mod query;
 pub mod value;
 
 pub type ConfigResult = Result<ConfigValue>;
-pub use query::ConfigQuery;
+pub use query::{BuildOverride, ConfigQuery};
 pub use value::ConfigValue;
 
 #[derive(Debug, Error)]
@@ -26,9 +26,8 @@ impl ConfigError {
         Self(e)
     }
 }
-
 pub(crate) async fn get_config<'a>(query: &'a ConfigQuery<'a>) -> ConfigResult {
-    let config = load_config(&query.build_dir.map(String::from)).await?;
+    let config = load_config(&query.get_build_dir().await).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(&query).into())
 }

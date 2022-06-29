@@ -22,11 +22,20 @@ impl Default for SelectMode {
     }
 }
 
+/// Overrides the build directory search
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum BuildOverride<'a> {
+    /// Do not search a build directory, even if a 'default' one is known.
+    NoBuild,
+    /// Use a specific path to look up the build directory, ignoring the default.
+    Path(&'a str),
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ConfigQuery<'a> {
     pub name: Option<&'a str>,
     pub level: Option<ConfigLevel>,
-    pub build_dir: Option<&'a str>,
+    pub build: Option<BuildOverride<'a>>,
     pub select: SelectMode,
 }
 
@@ -34,10 +43,10 @@ impl<'a> ConfigQuery<'a> {
     pub fn new(
         name: Option<&'a str>,
         level: Option<ConfigLevel>,
-        build_dir: Option<&'a str>,
+        build: Option<BuildOverride<'a>>,
         select: SelectMode,
     ) -> Self {
-        Self { name, level, build_dir, select }
+        Self { name, level, build, select }
     }
 
     /// Adds the given name to the query and returns a new composed query.
@@ -49,8 +58,8 @@ impl<'a> ConfigQuery<'a> {
         Self { level, ..self }
     }
     /// Adds the given build to the query and returns a new composed query.
-    pub fn build(self, build_dir: Option<&'a str>) -> Self {
-        Self { build_dir, ..self }
+    pub fn build(self, build: Option<BuildOverride<'a>>) -> Self {
+        Self { build, ..self }
     }
     /// Adds the given select mode to the query and returns a new composed query.
     pub fn select(self, select: SelectMode) -> Self {
@@ -121,8 +130,9 @@ impl<'a> ConfigQuery<'a> {
         } else {
             bail!("level of configuration is required to set a value");
         };
-        check_config_files(&level, &self.build_dir.map(String::from))?;
-        let config = load_config(&self.build_dir.map(String::from)).await?;
+        let build_dir = self.get_build_dir().await;
+        check_config_files(&level, &build_dir)?;
+        let config = load_config(&build_dir).await?;
         let mut write_guard = config.write().await;
         let config_changed = (*write_guard).set(&self, value)?;
 
@@ -131,7 +141,7 @@ impl<'a> ConfigQuery<'a> {
         // config at the same time. We can reduce the rate of races by only writing
         // to the config if the value actually changed.
         if config_changed {
-            save_config(&mut *write_guard, &self.build_dir.map(String::from))
+            save_config(&mut *write_guard, &build_dir)
         } else {
             Ok(())
         }
@@ -139,10 +149,11 @@ impl<'a> ConfigQuery<'a> {
 
     /// Remove the value at the queried location.
     pub async fn remove(&self) -> Result<()> {
-        let config = load_config(&self.build_dir.map(String::from)).await?;
+        let build_dir = self.get_build_dir().await;
+        let config = load_config(&build_dir).await?;
         let mut write_guard = config.write().await;
         (*write_guard).remove(&self)?;
-        save_config(&mut *write_guard, &self.build_dir.map(String::from))
+        save_config(&mut *write_guard, &build_dir)
     }
 
     /// Add this value at the queried location as an array item, converting the location to an array
@@ -153,8 +164,9 @@ impl<'a> ConfigQuery<'a> {
         } else {
             bail!("level of configuration is required to add a value");
         };
-        check_config_files(&level, &self.build_dir.map(String::from))?;
-        let config = load_config(&self.build_dir.map(String::from)).await?;
+        let build_dir = self.get_build_dir().await;
+        check_config_files(&level, &build_dir)?;
+        let config = load_config(&build_dir).await?;
         let mut write_guard = config.write().await;
         let config_changed = if let Some(mut current) = (*write_guard).get(&self) {
             if current.is_object() {
@@ -177,10 +189,34 @@ impl<'a> ConfigQuery<'a> {
         // config at the same time. We can reduce the rate of races by only writing
         // to the config if the value actually changed.
         if config_changed {
-            save_config(&mut *write_guard, &self.build_dir.map(String::from))
+            save_config(&mut *write_guard, &build_dir)
         } else {
             Ok(())
         }
+    }
+    /// Returns the build directory if this query is for a level that might include the build directory,
+    /// and a build directory is configured or given (even if it's configured to default).
+    /// Searches for the default build dir if necessary, using [`crate::default_build_dir`].
+    pub async fn get_build_dir(&self) -> Option<String> {
+        match (self.level, self.build) {
+            (_, Some(BuildOverride::NoBuild)) => None,
+            (None | Some(ConfigLevel::Build), Some(BuildOverride::Path(path))) => {
+                Some(path.to_owned())
+            }
+            (None | Some(ConfigLevel::Build), None) => crate::default_build_dir().await,
+            _ => None,
+        }
+    }
+}
+
+impl<'a> From<&'a str> for BuildOverride<'a> {
+    fn from(s: &'a str) -> Self {
+        BuildOverride::Path(s)
+    }
+}
+impl<'a> From<&'a String> for BuildOverride<'a> {
+    fn from(s: &'a String) -> Self {
+        BuildOverride::Path(s.as_str())
     }
 }
 
@@ -202,5 +238,12 @@ impl<'a> From<ConfigLevel> for ConfigQuery<'a> {
     fn from(value: ConfigLevel) -> Self {
         let level = Some(value);
         ConfigQuery { level, ..Default::default() }
+    }
+}
+
+impl<'a> From<BuildOverride<'a>> for ConfigQuery<'a> {
+    fn from(build: BuildOverride<'a>) -> Self {
+        let build = Some(build);
+        ConfigQuery { build, ..Default::default() }
     }
 }

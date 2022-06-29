@@ -77,7 +77,7 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
                 output(writer, value)
             }
         },
-        None => print_config(writer, &get_cmd.build_dir).await,
+        None => print_config(writer, &get_cmd.query().get_build_dir().await).await,
     }
 }
 

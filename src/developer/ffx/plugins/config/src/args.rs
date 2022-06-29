@@ -46,11 +46,9 @@ pub struct SetCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
-    // from which ffx is called? This will probably go away.
     #[argh(option, short = 'b')]
-    /// an optional build directory to associate the build config provided - use used for "build"
-    /// configs
+    /// an optional build directory to associate the build config provided - used for "build"
+    /// configs. If not provided, it may attempt to autodiscover your active build directory.
     pub build_dir: Option<String>,
 }
 
@@ -59,7 +57,7 @@ impl SetCommand {
         ConfigQuery::new(
             Some(self.name.as_str()),
             Some(self.level),
-            self.build_dir.as_deref().into(),
+            self.build_dir.as_deref().map(|dir| dir.into()),
             SelectMode::default(),
         )
     }
@@ -101,17 +99,20 @@ pub struct GetCommand {
     /// returned. Currently only supported if a name is given.
     pub select: SelectMode,
 
-    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
-    // from which ffx is called? This will probably go away.
     #[argh(option, short = 'b')]
-    /// an optional build directory to associate the build config provided - use used for "build"
-    /// configs
+    /// an optional build directory to associate the build config provided - used for "build"
+    /// configs. If not provided, it may attempt to autodiscover your active build directory.
     pub build_dir: Option<String>,
 }
 
 impl GetCommand {
     pub fn query<'a>(&'a self) -> ConfigQuery<'a> {
-        ConfigQuery::new(self.name.as_deref(), None, self.build_dir.as_deref().into(), self.select)
+        ConfigQuery::new(
+            self.name.as_deref(),
+            None,
+            self.build_dir.as_deref().map(|dir| dir.into()),
+            self.select,
+        )
     }
 }
 
@@ -134,11 +135,9 @@ pub struct RemoveCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
-    // from which ffx is called? This will probably go away.
     #[argh(option, short = 'b')]
-    /// an optional build directory to associate the build config provided - use used for "build"
-    /// configs
+    /// an optional build directory to associate the build config provided - used for "build"
+    /// configs. If not provided, it may attempt to autodiscover your active build directory.
     pub build_dir: Option<String>,
 }
 
@@ -147,7 +146,7 @@ impl RemoveCommand {
         ConfigQuery::new(
             Some(self.name.as_str()),
             Some(self.level),
-            self.build_dir.as_deref().into(),
+            self.build_dir.as_deref().map(|dir| dir.into()),
             SelectMode::default(),
         )
     }
@@ -177,11 +176,9 @@ pub struct AddCommand {
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
-    // TODO(fxbug.dev/45493): figure out how to work with build directories.  Is it just the directory
-    // from which ffx is called? This will probably go away.
     #[argh(option, short = 'b')]
-    /// an optional build directory to associate the build config provided - use used for "build"
-    /// configs
+    /// an optional build directory to associate the build config provided - used for "build"
+    /// configs. If not provided, it may attempt to autodiscover your active build directory.
     pub build_dir: Option<String>,
 }
 
@@ -190,7 +187,7 @@ impl AddCommand {
         ConfigQuery::new(
             Some(self.name.as_str()),
             Some(self.level),
-            self.build_dir.as_deref().into(),
+            self.build_dir.as_deref().map(|dir| dir.into()),
             SelectMode::default(),
         )
     }
@@ -222,8 +219,8 @@ pub struct EnvSetCommand {
     pub level: ConfigLevel,
 
     #[argh(option, short = 'b')]
-    /// an optional build directory to associate the build config provided - use used for "build"
-    /// configs
+    /// an optional build directory to associate the build config provided - used for "build"
+    /// configs. If not provided, it may attempt to autodiscover your active build directory.
     pub build_dir: Option<String>,
 }
 

@@ -40,7 +40,7 @@ pub fn env_file() -> Option<PathBuf> {
     ENV_FILE.lock().unwrap().as_ref().map(|p| p.to_path_buf())
 }
 
-pub fn test_env_file() -> PathBuf {
+fn test_env_file() -> PathBuf {
     use tempfile::NamedTempFile;
     lazy_static::lazy_static! {
         static ref ENV_FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");

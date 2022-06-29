@@ -21,9 +21,9 @@ use {
 #[derive(Debug, Clone)]
 pub struct Config {
     default: Option<Value>,
-    build: Option<Value>,
     global: Option<Value>,
     user: Option<Value>,
+    build: Option<Value>,
     runtime: Option<Value>,
 }
 
@@ -36,30 +36,15 @@ impl<'a> Iterator for PriorityIterator<'a> {
     type Item = &'a Option<Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match &self.curr {
-            None => {
-                self.curr = Some(ConfigLevel::Runtime);
-                Some(&self.config.runtime)
-            }
-            Some(level) => match level {
-                ConfigLevel::Runtime => {
-                    self.curr = Some(ConfigLevel::User);
-                    Some(&self.config.user)
-                }
-                ConfigLevel::User => {
-                    self.curr = Some(ConfigLevel::Build);
-                    Some(&self.config.build)
-                }
-                ConfigLevel::Build => {
-                    self.curr = Some(ConfigLevel::Global);
-                    Some(&self.config.global)
-                }
-                ConfigLevel::Global => {
-                    self.curr = Some(ConfigLevel::Default);
-                    Some(&self.config.default)
-                }
-                ConfigLevel::Default => None,
-            },
+        use ConfigLevel::*;
+        self.curr = ConfigLevel::next(self.curr);
+        match self.curr {
+            Some(Runtime) => Some(&self.config.runtime),
+            Some(Build) => Some(&self.config.build),
+            Some(User) => Some(&self.config.user),
+            Some(Global) => Some(&self.config.global),
+            Some(Default) => Some(&self.config.default),
+            None => None,
         }
     }
 }
@@ -399,7 +384,7 @@ mod test {
 
         let value = persistent_config.get(&"name".into());
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), Value::String(String::from("User")));
+        assert_eq!(value.unwrap(), Value::String(String::from("Build")));
 
         let mut user_file_out = String::new();
         let mut build_file_out = String::new();
@@ -440,8 +425,8 @@ mod test {
 
         let mut test_iter = test.iter();
         assert_eq!(test_iter.next(), Some(&test.runtime));
-        assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.build));
+        assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.global));
         assert_eq!(test_iter.next(), Some(&test.default));
         Ok(())
@@ -459,8 +444,8 @@ mod test {
 
         let mut test_iter = test.iter();
         assert_eq!(test_iter.next(), Some(&test.runtime));
-        assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.build));
+        assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.global));
         assert_eq!(test_iter.next(), Some(&test.default));
         Ok(())
@@ -478,11 +463,11 @@ mod test {
 
         let value = test.get(&"name".into());
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), Value::String(String::from("User")));
+        assert_eq!(value.unwrap(), Value::String(String::from("Build")));
 
         let test_build = Config {
-            user: None,
-            build: Some(serde_json::from_str(BUILD)?),
+            user: Some(serde_json::from_str(USER)?),
+            build: None,
             global: Some(serde_json::from_str(GLOBAL)?),
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
@@ -490,7 +475,7 @@ mod test {
 
         let value_build = test_build.get(&"name".into());
         assert!(value_build.is_some());
-        assert_eq!(value_build.unwrap(), Value::String(String::from("Build")));
+        assert_eq!(value_build.unwrap(), Value::String(String::from("User")));
 
         let test_global = Config {
             user: None,
@@ -566,12 +551,12 @@ mod test {
             runtime: None,
         };
         test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("user-test")),
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build-test")),
         )?;
         let value = test.get(&"name".into());
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
+        assert_eq!(value.unwrap(), Value::String(String::from("build-test")));
         Ok(())
     }
 
@@ -585,22 +570,22 @@ mod test {
             runtime: None,
         };
         assert!(test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("user-test1"))
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build-test1"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test1")));
+        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test1")));
 
         assert!(!test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("user-test1"))
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build-test1"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test1")));
+        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test1")));
 
         assert!(test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("user-test2"))
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build-test2"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("user-test2")));
+        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test2")));
 
         Ok(())
     }
@@ -629,19 +614,19 @@ mod test {
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
         test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
-            Value::String(String::from("build")),
-        )?;
-        let value_build = test.get(&"name".into());
-        assert!(value_build.is_some());
-        assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
-        test.set(
             &query("name").level(Some(ConfigLevel::User)),
             Value::String(String::from("user")),
         )?;
         let value_user = test.get(&"name".into());
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
+        test.set(
+            &query("name").level(Some(ConfigLevel::Build)),
+            Value::String(String::from("build")),
+        )?;
+        let value_build = test.get(&"name".into());
+        assert!(value_build.is_some());
+        assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
         Ok(())
     }
 
@@ -913,11 +898,12 @@ mod test {
         match value {
             Some(Value::Array(v)) => {
                 assert_eq!(v.len(), 5);
-                assert_eq!(v[0], Value::String("Runtime".to_string()));
-                assert_eq!(v[1], Value::String("User".to_string()));
-                assert_eq!(v[2], Value::String("Build".to_string()));
-                assert_eq!(v[3], Value::String("Global".to_string()));
-                assert_eq!(v[4], Value::String("Default".to_string()));
+                let mut v = v.into_iter();
+                assert_eq!(v.next(), Some(Value::String("Runtime".to_string())));
+                assert_eq!(v.next(), Some(Value::String("Build".to_string())));
+                assert_eq!(v.next(), Some(Value::String("User".to_string())));
+                assert_eq!(v.next(), Some(Value::String("Global".to_string())));
+                assert_eq!(v.next(), Some(Value::String("Default".to_string())));
             }
             _ => bail!("additive mode should return a Value::Array full of all values."),
         }
