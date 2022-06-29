@@ -54,7 +54,9 @@ func TestLockedWriter(t *testing.T) {
 	mock.finishWrite <- struct{}{}
 	// Wait for the first write to complete.
 	<-mock.done
-	if w.String() != "hello" {
+	// At this point, the writer should have finished its first write and
+	// may have started the second.
+	if !strings.HasPrefix(w.String(), "hello") {
 		t.Errorf("got %q, want \"hello\"", w.String())
 	}
 	// Signal for the second write to complete.
