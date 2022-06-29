@@ -60,20 +60,12 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
   // Truncate the effective argv under later consideration.
   argc = args_start;
 
-  std::optional<uint32_t> env_id, cid, port;
+  std::optional<uint32_t> port;
   bool success = true;
   switch (argc) {
-    case 4:
+    case 2:
       port = -1;
       success &= parse_number(argv[3], "port", &*port);
-      __FALLTHROUGH;
-    case 3:
-      cid = -1;
-      success &= parse_number(argv[2], "context ID", &*cid);
-      __FALLTHROUGH;
-    case 2:
-      env_id = -1;
-      success &= parse_number(argv[1], "environment ID", &*env_id);
       __FALLTHROUGH;
     case 1:
       break;
@@ -85,8 +77,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     return false;
   }
 
-  *func = [env_id, cid, port, args, loop, context]() -> zx_status_t {
-    return handle_vsh(env_id, cid, port, args, loop, context);
+  *func = [port, args, loop, context]() -> zx_status_t {
+    return handle_vsh(port, args, loop, context);
   };
   return true;
 }

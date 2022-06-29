@@ -9,8 +9,6 @@ executable("bin") {
 
   sources = [
     "main.cc",
-    "services.cc",
-    "services.h",
     "vshc.cc",
     "vshc.h",
   ]
@@ -34,8 +32,6 @@ executable("bin") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  defines = [ "USE_CFV1=0" ]
 }
 
 fuchsia_shell_package("vsh") {
