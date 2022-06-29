@@ -656,8 +656,6 @@ TEST_F(VirtioVsockTest, GuestInitiatedConnectionRefused) {
   EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
 }
 
-#if ENABLE_UNSUPPORTED_TESTS
-
 TEST_F(VirtioVsockTest, GuestInitiatedConnectionWrongCid) {
   TestListener listener;
   HostListenOnPort(kVirtioVsockHostPort, &listener);
@@ -679,6 +677,8 @@ TEST_F(VirtioVsockTest, GuestInitiatedConnectionWrongCid) {
   EXPECT_EQ(header->src_port, kVirtioVsockHostPort);
   EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
 }
+
+#if ENABLE_UNSUPPORTED_TESTS
 
 TEST_F(VirtioVsockTest, ConnectEarlyData) {
   TestConnection connection;

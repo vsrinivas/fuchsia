@@ -14,7 +14,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_virtualization::{
         HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder,
-        HostVsockEndpointListenResponder, DEFAULT_GUEST_CID, HOST_CID,
+        HostVsockEndpointListenResponder, HOST_CID,
     },
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
@@ -322,12 +322,8 @@ impl VsockDevice {
                 return responder.send(&mut Err(err.into_raw()));
             }
 
-            let key = VsockConnectionKey::new(
-                HOST_CID,
-                host_port.unwrap(),
-                DEFAULT_GUEST_CID,
-                guest_port,
-            );
+            let key =
+                VsockConnectionKey::new(HOST_CID, host_port.unwrap(), self.guest_cid(), guest_port);
             if let Err(_) = self.register_connection_ports(key) {
                 panic!(
                     "Client initiated connections should never be duplicates \
@@ -525,7 +521,7 @@ mod tests {
         fidl::endpoints::{create_proxy_and_stream, create_request_stream},
         fidl_fuchsia_virtualization::{
             HostVsockAcceptorMarker, HostVsockEndpointMarker, HostVsockEndpointProxy,
-            HostVsockEndpointRequest,
+            HostVsockEndpointRequest, DEFAULT_GUEST_CID,
         },
         fuchsia_async as fasync,
         futures::{FutureExt, TryStreamExt},
