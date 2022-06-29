@@ -148,6 +148,8 @@ fidl("fuchsia.zircon.benchmarks") {
 # package).  Those point to the copies of those executables in
 # fuchsia_microbenchmarks_perftestmode, which is why that package is
 # required.
+# TODO(https://fxbug.dev/103374): This is no longer true,
+# so these packages could be simplified and possibly merged.
 #
 # Since Fuchsia packages cannot declare dependencies on other packages, GN
 # targets that require fuchsia_microbenchmarks_unittestmode should depend
@@ -169,7 +171,12 @@ fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
 
   manifest = "meta/fuchsia_microbenchmarks.cmx"
 
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":context_switch_overhead_helper",
+    ":get_info_helper",
+    ":no_op_executable",
+  ]
 }
 
 # This package contains the fuchsia_microbenchmarks executable and installs

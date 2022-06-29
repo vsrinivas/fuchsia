@@ -24,7 +24,7 @@
 
 namespace {
 
-constexpr const char* kPath = "/bin/get_info_helper";
+constexpr const char* kPath = "/pkg/bin/get_info_helper";
 
 // Measure the time taken by various zx_object_get_info() calls on collections of processes and
 // threads.  Specifically:

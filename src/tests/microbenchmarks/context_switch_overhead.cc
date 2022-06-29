@@ -18,7 +18,7 @@
 
 namespace {
 
-constexpr const char* kPath = "/bin/context_switch_overhead_helper";
+constexpr const char* kPath = "/pkg/bin/context_switch_overhead_helper";
 
 void ChannelWait(const zx::channel& channel) {
   // If we only pass ZX_CHANNEL_READABLE here, we will end up waiting
