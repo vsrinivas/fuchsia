@@ -1,28 +1,26 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
+use super::install_plan::FuchsiaInstallPlan;
+use futures::future::BoxFuture;
+use futures::prelude::*;
+use omaha_client::{
     common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
-    installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     request_builder::RequestParams,
     time::TimeSource,
 };
-use futures::future::BoxFuture;
-use futures::prelude::*;
 
-/// A stub policy implementation that allows everything immediately.
-pub struct StubPolicy<P: Plan> {
-    _phantom_data: std::marker::PhantomData<P>,
-}
+/// The Policy implementation for isolated SWD.
+pub struct IsolatedPolicy;
 
-impl<P: Plan> Policy for StubPolicy<P> {
+impl Policy for IsolatedPolicy {
     type ComputeNextUpdateTimePolicyData = PolicyData;
     type UpdateCheckAllowedPolicyData = ();
     type UpdateCanStartPolicyData = ();
     type RebootPolicyData = ();
-    type InstallPlan = P;
+    type InstallPlan = FuchsiaInstallPlan;
 
     fn compute_next_update_time(
         policy_data: &Self::ComputeNextUpdateTimePolicyData,
@@ -43,7 +41,8 @@ impl<P: Plan> Policy for StubPolicy<P> {
         CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
-            ..RequestParams::default()
+            disable_updates: false,
+            offer_update_if_same_version: true,
         })
     }
 
@@ -66,32 +65,29 @@ impl<P: Plan> Policy for StubPolicy<P> {
     }
 }
 
-/// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
-/// PolicyData.
+/// The Policy implementation for isolated SWD that just gathers the current time and hands it off
+/// to the IsolatedPolicy as the PolicyData.
 #[derive(Debug)]
-pub struct StubPolicyEngine<P: Plan, T: TimeSource> {
+pub struct IsolatedPolicyEngine<T: TimeSource> {
     time_source: T,
-    _phantom_data: std::marker::PhantomData<P>,
 }
 
-impl<P, T> StubPolicyEngine<P, T>
+impl<T> IsolatedPolicyEngine<T>
 where
     T: TimeSource,
-    P: Plan,
 {
     pub fn new(time_source: T) -> Self {
-        Self { time_source, _phantom_data: std::marker::PhantomData }
+        Self { time_source }
     }
 }
 
-impl<P, T> PolicyEngine for StubPolicyEngine<P, T>
+impl<T> PolicyEngine for IsolatedPolicyEngine<T>
 where
     T: TimeSource + Clone,
-    P: Plan,
 {
     type TimeSource = T;
     type InstallResult = ();
-    type InstallPlan = P;
+    type InstallPlan = FuchsiaInstallPlan;
 
     fn time_source(&self) -> &Self::TimeSource {
         &self.time_source
@@ -103,7 +99,7 @@ where
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
     ) -> BoxFuture<'_, CheckTiming> {
-        let check_timing = StubPolicy::<P>::compute_next_update_time(
+        let check_timing = IsolatedPolicy::compute_next_update_time(
             &PolicyData::builder().use_timesource(&self.time_source).build(),
             apps,
             scheduling,
@@ -119,7 +115,7 @@ where
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
     ) -> BoxFuture<'_, CheckDecision> {
-        let decision = StubPolicy::<P>::update_check_allowed(
+        let decision = IsolatedPolicy::update_check_allowed(
             &(),
             apps,
             scheduling,
@@ -133,7 +129,7 @@ where
         &mut self,
         proposed_install_plan: &'p Self::InstallPlan,
     ) -> BoxFuture<'p, UpdateDecision> {
-        let decision = StubPolicy::<P>::update_can_start(&(), proposed_install_plan);
+        let decision = IsolatedPolicy::update_can_start(&(), proposed_install_plan);
         future::ready(decision).boxed()
     }
 
@@ -142,12 +138,12 @@ where
         check_options: &CheckOptions,
         _install_result: &Self::InstallResult,
     ) -> BoxFuture<'_, bool> {
-        let decision = StubPolicy::<P>::reboot_allowed(&(), check_options);
+        let decision = IsolatedPolicy::reboot_allowed(&(), check_options);
         future::ready(decision).boxed()
     }
 
     fn reboot_needed(&mut self, install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool> {
-        let decision = StubPolicy::<P>::reboot_needed(install_plan);
+        let decision = IsolatedPolicy::reboot_needed(install_plan);
         future::ready(decision).boxed()
     }
 }
@@ -155,16 +151,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        installer::stub::StubPlan, protocol::request::InstallSource, time::MockTimeSource,
-    };
+    use fuchsia_url::PinnedAbsolutePackageUrl;
+    use omaha_client::{protocol::request::InstallSource, time::MockTimeSource};
 
     #[test]
     fn test_compute_next_update_time() {
         let policy_data =
             PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let update_check_schedule = UpdateCheckSchedule::default();
-        let result = StubPolicy::<StubPlan>::compute_next_update_time(
+        let result = IsolatedPolicy::compute_next_update_time(
             &policy_data,
             &[],
             &update_check_schedule,
@@ -177,7 +172,7 @@ mod tests {
     #[test]
     fn test_update_check_allowed_on_demand() {
         let check_options = CheckOptions { source: InstallSource::OnDemand };
-        let result = StubPolicy::<StubPlan>::update_check_allowed(
+        let result = IsolatedPolicy::update_check_allowed(
             &(),
             &[],
             &UpdateCheckSchedule::default(),
@@ -187,6 +182,7 @@ mod tests {
         let expected = CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
+            offer_update_if_same_version: true,
             ..RequestParams::default()
         });
         assert_eq!(result, expected);
@@ -195,7 +191,7 @@ mod tests {
     #[test]
     fn test_update_check_allowed_scheduled_task() {
         let check_options = CheckOptions { source: InstallSource::ScheduledTask };
-        let result = StubPolicy::<StubPlan>::update_check_allowed(
+        let result = IsolatedPolicy::update_check_allowed(
             &(),
             &[],
             &UpdateCheckSchedule::default(),
@@ -205,6 +201,7 @@ mod tests {
         let expected = CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
+            offer_update_if_same_version: true,
             ..RequestParams::default()
         });
         assert_eq!(result, expected);
@@ -212,7 +209,13 @@ mod tests {
 
     #[test]
     fn test_update_can_start() {
-        let result = StubPolicy::update_can_start(&(), &StubPlan);
+        const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
+        let install_plan = FuchsiaInstallPlan {
+            url: PinnedAbsolutePackageUrl::parse(TEST_URL).unwrap(),
+            install_source: InstallSource::ScheduledTask,
+        };
+
+        let result = IsolatedPolicy::update_can_start(&(), &install_plan);
         assert_eq!(result, UpdateDecision::Ok);
     }
 }

@@ -56,6 +56,10 @@ pub struct RequestParams {
     /// If true, the request should set the "updatedisabled" property for all apps in the update
     /// check request.
     pub disable_updates: bool,
+
+    /// If true, the request should set the "sameversionupdate" property for all apps in the update
+    /// check request.
+    pub offer_update_if_same_version: bool,
 }
 
 /// The AppEntry holds the data for the app whose request is currently being constructed.  An app
@@ -70,12 +74,9 @@ struct AppEntry {
     /// The identifying data for the application.
     app: App,
 
-    /// Set to true if an update check should be performed.
-    update_check: bool,
-
-    /// Set to true if an update check should set the "updatedisabled" update check parameter to
-    /// true.
-    updates_disabled: bool,
+    /// The updatecheck object if an update check should be performed, if None, the request will not
+    /// include an updatecheck.
+    update_check: Option<UpdateCheck>,
 
     /// Set to true if a ping should be send.
     ping: bool,
@@ -88,13 +89,7 @@ impl AppEntry {
     /// Basic constructor for the AppEntry.  All AppEntries MUST have an App and a Cohort,
     /// everything else can be omitted.
     fn new(app: &App) -> AppEntry {
-        AppEntry {
-            app: app.clone(),
-            update_check: false,
-            updates_disabled: false,
-            ping: false,
-            events: Vec::new(),
-        }
+        AppEntry { app: app.clone(), update_check: None, ping: false, events: Vec::new() }
     }
 }
 
@@ -102,7 +97,7 @@ impl AppEntry {
 /// it's members into the generated ProtocolApp.
 impl From<AppEntry> for ProtocolApp {
     fn from(entry: AppEntry) -> ProtocolApp {
-        if !entry.update_check && entry.events.is_empty() && !entry.ping {
+        if entry.update_check.is_none() && entry.events.is_empty() && !entry.ping {
             warn!(
                 "Generated protocol::request for {} has no update check, ping, or events",
                 entry.app.id
@@ -119,11 +114,7 @@ impl From<AppEntry> for ProtocolApp {
             version: entry.app.version.to_string(),
             fingerprint: entry.app.fingerprint,
             cohort: Some(entry.app.cohort),
-            update_check: entry.update_check.then(if entry.updates_disabled {
-                UpdateCheck::disabled
-            } else {
-                UpdateCheck::default
-            }),
+            update_check: entry.update_check,
             events: entry.events,
             ping,
             extra_fields: entry.app.extra_fields,
@@ -195,15 +186,15 @@ impl<'a> RequestBuilder<'a> {
 
     /// This function adds an update check for the given App, in the given Cohort.  This function is
     /// an idempotent accumulator, in that it only once adds the App with it's associated Cohort to
-    /// the request.  Afterward, it just marks the App as needing an update check.
+    /// the request.  Afterward, it just adds the update check to the App.
     pub fn add_update_check(mut self, app: &App) -> Self {
-        let disable_updates = self.params.disable_updates;
+        let update_check = UpdateCheck {
+            disabled: self.params.disable_updates,
+            offer_update_if_same_version: self.params.offer_update_if_same_version,
+        };
 
         self.insert_and_modify_entry(app, |entry| {
-            entry.update_check = true;
-            if disable_updates {
-                entry.updates_disabled = true;
-            }
+            entry.update_check = Some(update_check);
         });
         self
     }

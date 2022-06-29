@@ -1190,6 +1190,7 @@ where
             source: InstallSource::ScheduledTask,
             use_configured_proxies: true,
             disable_updates: false,
+            offer_update_if_same_version: false,
         };
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, &request_params);

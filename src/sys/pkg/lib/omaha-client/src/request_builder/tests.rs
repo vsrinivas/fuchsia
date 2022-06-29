@@ -145,6 +145,60 @@ fn test_updates_disabled_request() {
     assert_eq!(app.update_check, Some(UpdateCheck::disabled()));
 }
 
+/// Test that a request sets the same version update field when configured to do so.
+#[test]
+fn test_same_version_update_request() {
+    let config = config_generator();
+
+    let (intermediate, _request_metadata) = RequestBuilder::new(
+        &config,
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            offer_update_if_same_version: true,
+            ..RequestParams::default()
+        },
+    )
+    .add_update_check(
+        &App::builder()
+            .id("app id 1")
+            .version([1, 2, 3, 4])
+            .fingerprint("fp")
+            .cohort(Cohort::new("some-channel"))
+            .build(),
+    )
+    .add_update_check(
+        &App::builder()
+            .id("app id 2")
+            .version([5, 6, 7, 8])
+            .cohort(Cohort::new("some-channel"))
+            .build(),
+    )
+    .build_intermediate(None::<&StandardCupv2Handler>)
+    .unwrap();
+
+    let request = intermediate.body.request;
+    // Validate that the App was added, with it's cohort and all of the other expected
+    // fields for an update check request.
+    let app = &request.apps[0];
+    assert_eq!(app.id, "app id 1");
+    assert_eq!(app.version, "1.2.3.4");
+    assert_eq!(app.fingerprint, Some("fp".to_string()));
+    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(
+        app.update_check,
+        Some(UpdateCheck { offer_update_if_same_version: true, ..UpdateCheck::default() })
+    );
+    assert!(app.events.is_empty());
+    assert_eq!(app.ping, None);
+
+    // Validate that the second App also has its same version update set.
+    let app = &request.apps[1];
+    assert_eq!(
+        app.update_check,
+        Some(UpdateCheck { offer_update_if_same_version: true, ..UpdateCheck::default() })
+    );
+}
+
 /// Test that a request attaches the extras to the protocol App from the common App.
 #[test]
 fn test_app_includes_extras() {

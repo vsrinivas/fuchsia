@@ -201,13 +201,18 @@ pub struct UpdateCheck {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     #[serde(rename = "updatedisabled")]
     pub disabled: bool,
+
+    /// If true, Omaha will offer an update even if the client is already running the same version.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[serde(rename = "sameversionupdate")]
+    pub offer_update_if_same_version: bool,
 }
 
 impl UpdateCheck {
     /// Public constructor for an update check request on an app that will not honor an 'update'
     /// response and will not perform an update if one is available.
     pub fn disabled() -> Self {
-        UpdateCheck { disabled: true }
+        UpdateCheck { disabled: true, offer_update_if_same_version: false }
     }
 }
 

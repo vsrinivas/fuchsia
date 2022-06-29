@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/51770): move everything except installer into a shared crate,
+// TODO(fxbug.dev/51770): move everything except installer and policy into a shared crate,
 // because these modules all come from //src/sys/pkg/bin/omaha-client.
 mod http_request;
 mod install_plan;
 mod installer;
+mod policy;
 mod timer;
 use {
     crate::{
@@ -31,7 +32,6 @@ use {
         cup_ecdsa::StandardCupv2Handler,
         http_request::HttpRequest,
         metrics::StubMetricsReporter,
-        policy::StubPolicyEngine,
         protocol::{request::OS, Cohort},
         state_machine::{update_check, StateMachineBuilder, StateMachineEvent, UpdateCheckError},
         storage::MemStorage,
@@ -116,7 +116,7 @@ where
         IsolatedInstaller::new(blobfs, paver, cache, resolver, board_name.to_owned(), updater_url);
     let cup_handler = config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
     let state_machine = StateMachineBuilder::new(
-        StubPolicyEngine::new(StandardTimeSource),
+        policy::IsolatedPolicyEngine::new(StandardTimeSource),
         http_request,
         installer,
         FuchsiaTimer,
