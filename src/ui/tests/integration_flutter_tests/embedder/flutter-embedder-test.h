@@ -102,7 +102,8 @@ class FlutterEmbedderTest : public ::loop_fixture::RealLoop, public ::testing::T
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
-  void InjectInput() {
+  // (0, 0) is the center of the display.
+  void InjectInput(int32_t x = 0, int32_t y = 0) {
     using fuchsia::ui::input::InputReport;
     // Device parameters
     auto parameters = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
@@ -120,7 +121,7 @@ class FlutterEmbedderTest : public ::loop_fixture::RealLoop, public ::testing::T
     {
       // Inject one input report, then a conclusion (empty) report.
       auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
-      *touch = {.touches = {{.finger_id = 1, .x = 0, .y = 0}}};  // center of display
+      *touch = {.touches = {{.finger_id = 1, .x = x, .y = y}}};
       InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));

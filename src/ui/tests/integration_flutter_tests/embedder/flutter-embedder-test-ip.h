@@ -134,15 +134,17 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
   }
 
   // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
-  void InjectInput() {
+  // (0, 0) is the center of the display.
+  void InjectInput(int64_t x, int64_t y) {
     FX_LOGS(INFO) << "Injecting input... ";
 
-    // Set InputReports to inject. One contact at the center of the display, followed
-    // by no contacts.
+    // Set InputReports to inject. One contact at the specified location (x, y),
+    // followed by no contacts.
     fuchsia::input::report::ContactInputReport contact_input_report;
     contact_input_report.set_contact_id(1);
-    contact_input_report.set_position_x(0);
-    contact_input_report.set_position_y(0);
+
+    contact_input_report.set_position_x(x);
+    contact_input_report.set_position_y(y);
 
     fuchsia::input::report::TouchInputReport touch_input_report;
     auto contacts = touch_input_report.mutable_contacts();
@@ -179,10 +181,10 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
   // drop the touch event.
   //
   // TODO(fxbug.dev/96986): Improve synchronization and remove retry logic.
-  void TryInject() {
-    InjectInput();
+  void TryInject(int64_t x = 0, int64_t y = 0) {
+    InjectInput(x, y);
     async::PostDelayedTask(
-        dispatcher(), [this] { TryInject(); }, kTapRetryInterval);
+        dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
   }
 
  private:
