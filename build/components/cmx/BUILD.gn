@@ -281,6 +281,7 @@ group("cmx_allowlist") {
     "//src/identity/bin/account_handler:account_handler_cmp_manifest_compile",
     "//src/identity/bin/account_handler:account_handler_ephemeral_manifest_compile",
     "//src/identity/bin/account_manager:account_manager_component_manifest_compile",
+    "//src/identity/bin/account_manager:account_manager_for_test_manifest_compile",
     "//src/identity/bin/dev_auth_provider:dev_auth_provider_component_manifest_compile",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_fail_authentication_manifest_compile",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_succeed_manifest_compile",

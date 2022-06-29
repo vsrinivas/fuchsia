@@ -1,0 +1,23 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/account_manager",
+        "args": [
+            "--dev-auth-mechanisms"
+        ]
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.stash.Store",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

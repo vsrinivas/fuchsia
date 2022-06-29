@@ -53,10 +53,22 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("account_manager") {
+fuchsia_component("account_manager_for_test") {
+  # Needed to pass arguments to account manager during test.
+  # TODO(fxbug.dev/90404): Remove/Migrate the legacy component for test too.
+  deps = [ ":bin" ]
+  manifest = "meta/account_manager_for_test.cmx"
+}
+
+fuchsia_component("account_manager_component") {
+  component_name = "account_manager"
   deps = [ ":bin" ]
 
   # fxbug.dev/83213 retain the v1 component while out of tree components still
   # need it
   manifest = "meta/account_manager.cmx"
+}
+
+fuchsia_package("account_manager") {
+  deps = [ ":account_manager_component" ]
 }
