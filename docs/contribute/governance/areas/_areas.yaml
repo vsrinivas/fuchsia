@@ -18,7 +18,7 @@
 
 - name: 'Diagnostics'
   api_primary: 'crjohns@google.com'
-  api_secondary: ''
+  api_secondary: 'miguelfrde@google.com'
 
 - name: 'Drivers'
   api_primary: 'cja@google.com'
