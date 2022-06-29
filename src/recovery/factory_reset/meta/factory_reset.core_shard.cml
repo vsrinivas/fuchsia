@@ -30,9 +30,9 @@
                 "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
                 "fuchsia.tee.DeviceInfo",
             ],
-            from: "self",
+            from: "#tee_manager",
             to: "#factory_reset",
-            dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             directory: "dev",
