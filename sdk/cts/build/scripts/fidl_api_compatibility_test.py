@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import argparse
+import errno
 import filecmp
-import json
 import os
 import sys
 import plasa_differ
@@ -80,6 +80,15 @@ class GoldenMismatchError(Exception):
         return f"Detected changes to API level {self.api_level}\n" + hint_lines
 
 
+def golden_not_found_error(filename):
+    message = (
+        f"The golden file {filename} does not exist.\n"
+        f"If this is a new FIDL API you must first create this file.\n"
+        f"To do so, run:\n"
+        f"  touch {os.path.abspath(filename)}\n")
+    return FileNotFoundError(errno.ENOENT, message, filename)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -88,6 +97,8 @@ def main():
         type=Policy,
         default=Policy.no_breaking_changes,
         choices=list(Policy))
+    parser.add_argument(
+        '--depfile', help='Where to write the depfile', required=True)
     parser.add_argument(
         '--api-level', help='The API level being tested', required=True)
     parser.add_argument(
@@ -106,7 +117,19 @@ def main():
         action='store_true')
     args = parser.parse_args()
 
-    if args.policy == Policy.update_golden:
+    dependencies = [args.current, args.golden]
+
+    if not os.path.exists(args.golden):
+        if os.path.getsize(args.current) > 0:
+            err = golden_not_found_error(args.golden)
+        else:
+            # Don't depend on files that don't exist.
+            dependencies.remove(args.golden)
+
+            # Skip testing if current is empty and golden is missing.
+            # This prevents us from asking users to create empty golden files.
+            err = None
+    elif args.policy == Policy.update_golden:
         err = update_golden(args)
     elif args.policy == Policy.no_breaking_changes:
         err = fail_on_breaking_changes(args)
@@ -116,6 +139,9 @@ def main():
         err = fail_on_unacknowledged_changes(args)
     else:
         raise ValueError("unknown policy: {}".format(args.policy))
+
+    with open(args.depfile, 'w') as f:
+        f.write("{}: {}\n".format(args.stamp, ' '.join(dependencies)))
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('Golden!\n')
