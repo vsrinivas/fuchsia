@@ -99,9 +99,9 @@ protocol Host {
 
     /// Terminates discovery if one was started via StartDiscovery().
     ///
-    /// NOTE: If another client is performing discovery (e.g. via its own le.Central interface handle),
-    /// then the system will continue performing device discovery even if this method results in
-    /// success.
+    /// NOTE: If another client is performing discovery (e.g. via its own le.Central interface
+    /// handle), then the system will continue performing device discovery even if this method
+    /// results in success.
     StopDiscovery();
 
     /// Sets whether this host should be connectable.
@@ -139,9 +139,9 @@ protocol Host {
     /// Terminate all connections (BR/EDR or LE) to the remote peer with identifier `id`.
     ///
     /// + request `id` The identifier of the peer to disconnect.
-    /// - response `status` Contains an error if either LE or BR/EDR transport fails to disconnect. Contains
-    ///                     success when both transports are successfully disconnected or if the peer is already
-    ///                     disconnected.
+    /// - response `status` Contains an error if either LE or BR/EDR transport fails to disconnect.
+    ///                     Contains success when both transports are successfully disconnected or
+    ///                     if the peer is already disconnected.
     Disconnect(struct {
         id bt.PeerId;
     }) -> (struct {}) error sys.Error;
@@ -180,9 +180,9 @@ protocol Host {
         enabled bool;
     });
 
-    /// Enable or disable the LE privacy feature. When enabled, the bt-host device will use a private
-    /// device address in all LE procedures. When disabled, the public identity address will be used
-    /// instead (which is the default).
+    /// Enable or disable the LE privacy feature. When enabled, the bt-host device will use a
+    /// private device address in all LE procedures. When disabled, the public identity address will
+    /// be used instead (which is the default).
     EnablePrivacy(struct {
         enabled bool;
     });

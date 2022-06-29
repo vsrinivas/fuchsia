@@ -10,7 +10,7 @@ use {
 
 bitfield! {
     /// The header for an RTP packet.
-    /// The meanding of each field will vary based on the negotiated codec.
+    /// The meaning of each field will vary based on the negotiated codec.
     struct RtpHeader(MSB0 [u8]);
     u8, version, set_version: 1, 0;
     bool, padding, set_padding: 2;

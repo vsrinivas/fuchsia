@@ -30,7 +30,7 @@ pub struct Stream {
     media_task_runner: Option<Box<dyn MediaTaskRunner>>,
     /// The MediaTask, if it is running.
     media_task: Option<Box<dyn MediaTask>>,
-    /// The peer associated with thie endpoint, if it is configured.
+    /// The peer associated with this endpoint, if it is configured.
     /// Used during reconfiguration for MediaTask recreation.
     peer_id: Option<PeerId>,
     /// Inspect Node for this stream
