@@ -291,7 +291,19 @@ TEST_F(MFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {
   }
 
   // Send up events.
-  SendPointerEvents(UpEvents(1, {0.04, 0.05}) + UpEvents(2, {0.06, 0.07}));
+  {
+    auto event = ToPointerEvent({1, Phase::UP, {0.04, 0.05}}, 0);
+    event.set_viewref_koid(100);
+    event.set_local_point({4, 5});
+    recognizer_->HandleEvent(event);
+  }
+  {
+    auto event = ToPointerEvent({2, Phase::UP, {0.06, 0.07}}, 0);
+    event.set_viewref_koid(100);
+    event.set_local_point({6, 7});
+    recognizer_->HandleEvent(event);
+  }
+
   recognizer_->OnWin();
 
   EXPECT_TRUE(gesture_won_);

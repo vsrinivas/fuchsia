@@ -98,6 +98,11 @@ bool UpdateGestureContext(const fuchsia::ui::input::accessibility::PointerEvent&
   }
   pointer_id = pointer_event.pointer_id();
 
+  if (!pointer_event.has_viewref_koid()) {
+    return false;
+  }
+  gesture_context->view_ref_koid = pointer_event.viewref_koid();
+
   if (pointer_event.has_ndc_point()) {
     gesture_context->current_pointer_locations[pointer_id].ndc_point = pointer_event.ndc_point();
   }
