@@ -26,6 +26,7 @@ async fn routes_from_echo() -> Result<(), Error> {
     // [END init_realm_builder_rust]
 
     // [START add_component_rust]
+    // [START add_server_rust]
     // Add component to the realm, which is fetched using a URL.
     let echo_server = builder
         .add_child(
@@ -34,6 +35,7 @@ async fn routes_from_echo() -> Result<(), Error> {
             ChildOptions::new(),
         )
         .await?;
+    // [END add_server_rust]
     // Add component to the realm, which is fetched using a relative URL. The
     // child is not exposing a service, so the `eager` option ensures the child
     // starts when the realm is built.
