@@ -57,8 +57,11 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
     exporter_ = fidl::WireClient(std::move(*exporter), dispatcher_);
 
     // Connect to parent.
-    auto parent = ns_.Connect<fuchsia_driver_compat::Device>(
-        "/svc/fuchsia.driver.compat.Service/default/device");
+    auto default_parent = ns_.OpenService<fuchsia_driver_compat::Service>("default");
+    if (default_parent.is_error()) {
+      return default_parent.take_error();
+    }
+    auto parent = default_parent->connect_device();
     if (parent.status_value() != ZX_OK) {
       return parent.take_error();
     }
