@@ -64,6 +64,7 @@ def files_match(file1: str, file2: str):
 def move_if_different(src: str, dest: str, verbose: bool = False):
     if not os.path.exists(src):
         # Then original command failed to produce this file.
+        print(f"  *** Expected file not found: {src}")
         return
     if not os.path.exists(dest) or not files_match(dest, src):
         if verbose:
@@ -217,6 +218,8 @@ class Action(object):
             tempfile_transform)
 
         if verbose or dry_run:
+            for orig, renamed in renamed_outputs.items():
+              print(f"=== renamed: {orig} -> {renamed}")
             cmd_str = " ".join(substituted_command)
             print(f"=== substituted command: {cmd_str}")
 
@@ -241,7 +244,7 @@ class Action(object):
             move_if_different(src=temp_out, dest=orig_out, verbose=verbose)
 
         if verbose:
-            unrenamed_outputs = self.outputs - set(renamed_outputs.keys())
+            unrenamed_outputs = set(self.substitutions.keys()) - set(renamed_outputs.keys())
             if unrenamed_outputs:
                 # Having un-renamed outputs is not an error, but rather an indicator
                 # of a potentially missed opportunity to cache unchanged outputs.
