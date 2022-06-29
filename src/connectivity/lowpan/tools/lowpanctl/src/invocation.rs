@@ -4,6 +4,7 @@
 
 use crate::prelude::*;
 
+pub use crate::attach_all_nodes_to_command::*;
 use crate::context::LowpanCtlContext;
 pub use crate::dataset_command::*;
 pub use crate::energy_scan_command::*;
@@ -91,6 +92,7 @@ pub enum CommandEnumWithRepeat {
     RegisterExternalRoute(RegisterExternalRouteCommand),
     UnregisterExternalRoute(UnregisterExternalRouteCommand),
     GetExternalRoutes(GetExternalRoutesCommand),
+    AttachAllNodesTo(AttachAllNodesToCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -123,6 +125,7 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::RegisterExternalRoute(x) => x.exec(context).await,
             CommandEnumWithRepeat::UnregisterExternalRoute(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetExternalRoutes(x) => x.exec(context).await,
+            CommandEnumWithRepeat::AttachAllNodesTo(x) => x.exec(context).await,
         }
     }
 }
@@ -158,6 +161,7 @@ pub enum CommandEnum {
     RegisterExternalRoute(RegisterExternalRouteCommand),
     UnregisterExternalRoute(UnregisterExternalRouteCommand),
     GetExternalRoutes(GetExternalRoutesCommand),
+    AttachAllNodesTo(AttachAllNodesToCommand),
 }
 
 impl CommandEnum {
@@ -188,6 +192,7 @@ impl CommandEnum {
             CommandEnum::RegisterExternalRoute(x) => x.exec(context).await,
             CommandEnum::UnregisterExternalRoute(x) => x.exec(context).await,
             CommandEnum::GetExternalRoutes(x) => x.exec(context).await,
+            CommandEnum::AttachAllNodesTo(x) => x.exec(context).await,
         }
     }
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod attach_all_nodes_to_command;
 pub mod context;
 pub mod dataset_command;
 pub mod energy_scan_command;

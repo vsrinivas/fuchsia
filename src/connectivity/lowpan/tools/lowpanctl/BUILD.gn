@@ -34,6 +34,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/attach_all_nodes_to_command.rs",
     "src/context.rs",
     "src/dataset_command.rs",
     "src/energy_scan_command.rs",
