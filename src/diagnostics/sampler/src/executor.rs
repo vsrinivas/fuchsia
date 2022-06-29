@@ -898,8 +898,8 @@ fn process_sample_for_data_type(
 
     match event_payload_res {
         Ok(payload_opt) => payload_opt,
-        Err(e) => {
-            warn!(concat!("Failed to process Inspect property for cobalt: {:?}"), e);
+        Err(err) => {
+            warn!(?data_source, ?err, "Failed to process Inspect property for cobalt",);
             None
         }
     }
@@ -985,7 +985,7 @@ fn compute_histogram_diff(
                     concat!(
                         "Selector referenced an Inspect IntArray",
                         " that was specified as an IntHistogram type ",
-                        " but atleast one bucket saw the count decrease",
+                        " but at least one bucket saw the count decrease",
                         " between samples, which is incompatible with Cobalt's",
                         " need for monotonically increasing counts.",
                         " Selector: {:?}, Inspect type: {}"
@@ -1182,7 +1182,12 @@ fn compute_event_count_diff(
         // produce an errorful state.
         (Property::Int(_, new_count), Property::Int(_, old_count)) => Ok(new_count - old_count),
         (Property::Uint(_, new_count), Property::Uint(_, old_count)) => {
-            sanitize_unsigned_numerical(new_count - old_count, data_source)
+            // u64::MAX will cause sanitized_unsigned_numerical to build an
+            // appropriate error message for a subtraction underflow.
+            sanitize_unsigned_numerical(
+                new_count.checked_sub(*old_count).unwrap_or(u64::MAX),
+                data_source,
+            )
         }
         // If we have a correctly typed new sample, but it didn't match either of the above cases,
         // this means the new sample changed types compared to the old sample. We should just
@@ -1325,6 +1330,34 @@ mod tests {
             Ok((SnapshotOutcome::SelectorsUnchanged, _events)) => (),
             _ => panic!("Expecting SelectorsUnchanged from process_component_data."),
         }
+    }
+
+    /// Test that a decreasing occurrence type (which is not allowed) doesn't crash due to e.g.
+    /// unchecked unsigned subtraction overflow.
+    #[fuchsia::test]
+    fn decreasing_occurrence_is_correct() {
+        let big_number = Property::Uint("foo".to_string(), 5);
+        let small_number = Property::Uint("foo".to_string(), 2);
+        let key = MetricCacheKey { filename: "some_file".to_string(), selector: "sel".to_string() };
+
+        assert_eq!(
+            process_sample_for_data_type(
+                &big_number,
+                Some(&small_number),
+                &key,
+                &DataType::Occurrence
+            ),
+            Some(MetricEventPayload::Count(3))
+        );
+        assert_eq!(
+            process_sample_for_data_type(
+                &small_number,
+                Some(&big_number),
+                &key,
+                &DataType::Occurrence
+            ),
+            None
+        );
     }
 
     /// Test removal of selectors marked with upload_once.
