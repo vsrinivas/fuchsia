@@ -7,7 +7,6 @@
 
 #include <endian.h>
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <zircon/types.h>
 
@@ -51,23 +50,6 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
 
   using RegisterBaseType = RegisterBase<DerivedType, IntType, PrinterState>;
 
-  zx_status_t ReadFrom(ddk::I2cProtocolClient& i2c) {
-    uint32_t addr = RegisterBaseType::reg_addr();
-
-    addr = ConvertToI2cByteOrder(addr, AddrIntSize);
-
-    uint8_t* buf = reinterpret_cast<uint8_t*>(&addr);
-    IntType value = 0;
-    i2c_protocol_t proto = {};
-    i2c.GetProto(&proto);
-    auto status = i2c_write_read_sync(&proto, buf, AddrIntSize, &value, sizeof(IntType));
-    if (status == ZX_OK) {
-      value = ConvertFromI2cByteOrder(value);
-      RegisterBaseType::set_reg_value(value);
-    }
-    return status;
-  }
-
   zx_status_t ReadFrom(const fidl::ClientEnd<fuchsia_hardware_i2c::Device>& client) {
     uint32_t addr = RegisterBaseType::reg_addr();
 
@@ -106,23 +88,6 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
     value = ConvertFromI2cByteOrder(value);
     RegisterBaseType::set_reg_value(value);
     return ZX_OK;
-  }
-
-  zx_status_t WriteTo(ddk::I2cProtocolClient& i2c) {
-    uint32_t addr = RegisterBaseType::reg_addr();
-    IntType value = RegisterBaseType::reg_value();
-
-    addr = ConvertToI2cByteOrder(addr, AddrIntSize);
-    value = ConvertToI2cByteOrder(value, sizeof(IntType));
-
-    uint8_t buf[AddrIntSize + sizeof(IntType)] = {};
-    std::memcpy(buf, &addr, AddrIntSize);
-    std::memcpy(buf + AddrIntSize, &value, sizeof(IntType));
-
-    i2c_protocol_t proto = {};
-    i2c.GetProto(&proto);
-    auto status = i2c_write_read_sync(&proto, &buf, AddrIntSize + sizeof(IntType), nullptr, 0);
-    return status;
   }
 
   zx_status_t WriteTo(const fidl::ClientEnd<fuchsia_hardware_i2c::Device>& client) {
