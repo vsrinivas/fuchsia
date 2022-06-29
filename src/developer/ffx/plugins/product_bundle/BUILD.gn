@@ -17,6 +17,7 @@ ffx_plugin("ffx_product_bundle") {
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
+    "//src/lib/fuchsia-url",
     "//src/lib/gcs:lib",
     "//third_party/rust_crates:fs_extra",
     "//third_party/rust_crates:log",

@@ -45,6 +45,10 @@ pub struct GetCommand {
     /// display list of downloaded files and other details.
     #[argh(switch)]
     pub verbose: bool,
+
+    /// repositories will be named `NAME`. Defaults to the product bundle name.
+    #[argh(option)]
+    pub repository: Option<String>,
 }
 
 /// Type of PBM.
