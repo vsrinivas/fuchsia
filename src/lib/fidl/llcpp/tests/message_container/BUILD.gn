@@ -39,9 +39,9 @@ test("fidl_llcpp_message_container_tests_bin") {
     "wire_format_metadata_test.cc",
   ]
   deps = [
-    ":fidl.llcpp.empty.test_llcpp",
-    ":fidl.llcpp.linearized.test_llcpp",
-    "//sdk/testing/fidl:fidl_test_llcpp",
+    ":fidl.llcpp.empty.test_cpp_wire",
+    ":fidl.llcpp.linearized.test_cpp_wire",
+    "//sdk/testing/fidl:fidl_test_cpp_wire",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -75,7 +75,7 @@ test("fidl_llcpp_message_storage_tests_bin") {
     "message_buffer_size_test.cc",
   ]
   deps = [
-    ":fidl.llcpp.buffersize.test_llcpp",
+    ":fidl.llcpp.buffersize.test_cpp_wire",
     "//zircon/system/ulib/zxtest",
   ]
 }

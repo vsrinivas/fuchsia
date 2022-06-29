@@ -47,7 +47,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   ]
   deps = [
     ":client_test_helpers",
-    "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_llcpp",
+    "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_cpp_wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -82,7 +82,7 @@ test("fidl_llcpp_endpoints_tests_bin") {
     "server_end_test.cc",
   ]
   deps = [
-    "//src/lib/fidl/llcpp/tests/integration:llcpptest.protocol.test_llcpp",
+    "//src/lib/fidl/llcpp/tests/integration:llcpptest.protocol.test_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",

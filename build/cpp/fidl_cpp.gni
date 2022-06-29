@@ -445,7 +445,7 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "llcpp"  # AKA: wire_channel_messaging
+      layer = "cpp_wire"  # AKA: wire_channel_messaging
       headers = [
         "fidl/$library_name/cpp/wire.h",
         "fidl/$library_name/cpp/wire_messaging.h",
@@ -455,9 +455,9 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "llcpp_testing"
+      layer = "cpp_wire_testing"
       headers = [ "fidl/$library_name/cpp/wire_test_base.h" ]
-      layer_deps = [ "llcpp" ]
+      layer_deps = [ "cpp_wire" ]
       testonly = true
     },
 
@@ -487,7 +487,7 @@ template("fidl_cpp_family") {
 
       layer_deps = [
         # TODO(fxbug.dev/101525): Replace with "wire_types".
-        "llcpp",
+        "cpp_wire",
         "natural_types",
       ]
     },
@@ -500,7 +500,7 @@ template("fidl_cpp_family") {
       ]
       sources = [ "fidl/$library_name/cpp/natural_messaging.cc" ]
       layer_deps = [
-        "llcpp",
+        "cpp_wire",
         "natural_types",
         "type_conversions",
       ]
@@ -586,6 +586,40 @@ template("fidl_cpp_family") {
           atom = ":$sdk_target_name($fidl_toolchain)"
         }
       }
+    }
+  }
+
+  # TODO(fxbug.dev/103483): Move all users away from the "_llcpp" suffix in GN targets.
+  if (current_toolchain != fidl_toolchain) {
+    # Set up an alias from ":my_lib_llcpp" to ":my_lib_cpp_wire".
+    group("${layer_target_prefix}llcpp") {
+      forward_variables_from(invoker,
+                             [
+                               "public_configs",
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [ ":${layer_target_prefix}cpp_wire" ]
+    }
+
+    # Set up an SDK item for ":my_lib_llcpp"
+    if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+      # Instead of depending on the generated bindings, set up a dependency on
+      # the original library.
+      sdk_atom_alias("${layer_target_prefix}llcpp_sdk") {
+        atom = ":$sdk_target_name($fidl_toolchain)"
+      }
+    }
+
+    # Set up an alias from ":my_lib_llcpp_testing" to ":my_lib_cpp_wire_testing".
+    group("${layer_target_prefix}llcpp_testing") {
+      testonly = true
+      forward_variables_from(invoker,
+                             [
+                               "public_configs",
+                               "visibility",
+                             ])
+      public_deps = [ ":${layer_target_prefix}cpp_wire_testing" ]
     }
   }
 

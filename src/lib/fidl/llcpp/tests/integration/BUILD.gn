@@ -32,7 +32,7 @@ test("fidl_llcpp_dispatcher_handle_ownership_tests_bin") {
   output_name = "fidl_llcpp_dispatcher_handle_ownership_tests"
   sources = [ "dispatcher_handle_ownership_test.cc" ]
   deps = [
-    ":llcpptest.dispatcher.handle.ownership.test_llcpp_testing",
+    ":llcpptest.dispatcher.handle.ownership.test_cpp_wire_testing",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -50,7 +50,7 @@ test("fidl_llcpp_unknown_interactions_tests_bin") {
   output_name = "fidl_llcpp_unknown_interactions_tests"
   sources = [ "unknown_interactions_tests.cc" ]
   deps = [
-    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_llcpp",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -74,7 +74,7 @@ test("fidl_llcpp_gen_api_tests_bin") {
     "sync_event_handler_test.cc",
   ]
   deps = [
-    ":fidl.test.coding.fuchsia_llcpp_testing",
+    ":fidl.test.coding.fuchsia_cpp_wire_testing",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -106,7 +106,7 @@ test("fidl_llcpp_flexible_tests_bin") {
   output_name = "fidl_llcpp_flexible_tests"
   sources = [ "flexible_test.cc" ]
   deps = [
-    ":llcpptest.flexible.test_llcpp",
+    ":llcpptest.flexible.test_cpp_wire",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -134,7 +134,7 @@ test("fidl_llcpp_handle_rights_tests_bin") {
   output_name = "fidl_llcpp_handle_rights_tests"
   sources = [ "handle_rights_test.cc" ]
   deps = [
-    ":llcpptest.handlerights.test_llcpp",
+    ":llcpptest.handlerights.test_cpp_wire",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -163,7 +163,7 @@ test("fidl_llcpp_protocol_tests_bin") {
     "sync_client_error_tests.cc",
   ]
   deps = [
-    ":llcpptest.protocol.test_llcpp",
+    ":llcpptest.protocol.test_cpp_wire",
     "//src/lib/fidl/llcpp/tests:arena_checker",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
@@ -188,7 +188,7 @@ test("fidl_llcpp_handle_raii_tests_bin") {
   output_name = "fidl_llcpp_handle_raii_tests"
   sources = [ "handle_raii_test.cc" ]
   deps = [
-    ":llcpptest.handleraii.test_llcpp",
+    ":llcpptest.handleraii.test_cpp_wire",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -212,7 +212,7 @@ test("fidl_llcpp_transitional_tests_bin") {
   output_name = "fidl_llcpp_transitional_tests"
   sources = [ "transitional_test.cc" ]
   deps = [
-    ":llcpptest.transitional.test_llcpp",
+    ":llcpptest.transitional.test_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
@@ -236,7 +236,7 @@ test("fidl_llcpp_v2_integration_tests_bin") {
   output_name = "fidl_llcpp_v2_integration_tests"
   sources = [ "v2_integration_test.cc" ]
   deps = [
-    ":llcpptest.v2integration.test_llcpp",
+    ":llcpptest.v2integration.test_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
@@ -255,7 +255,7 @@ test("fidl_llcpp_header_coding_tests_bin") {
   output_name = "fidl_llcpp_header_coding_tests"
   sources = [ "header_coding_test.cc" ]
   deps = [
-    ":fidl.test.coding.fuchsia_llcpp",
+    ":fidl.test.coding.fuchsia_cpp_wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
