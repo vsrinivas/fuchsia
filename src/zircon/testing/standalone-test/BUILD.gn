@@ -1,0 +1,34 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# For environments where fdio is not suitable, such as kernel ZBI tests (e.g. core-tests)
+# this library provides some minimal implementations for dealing with options and stdio.
+# This implementation is meant for testing environments.
+
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  testonly = true
+  headers = [ "lib/standalone-test/standalone.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+static_library("standalone-test") {
+  testonly = true
+  sources = [
+    "standalone-init.cc",
+    "standalone-io.cc",
+    "standalone-options.cc",
+  ]
+  public_deps = [ ":headers" ]
+  deps = [
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/system/ulib/lazy_init",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/system/ulib/zx",
+  ]
+}

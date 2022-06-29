@@ -5,13 +5,12 @@
 #include "helpers.h"
 
 #include <lib/boot-options/boot-options.h>
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
-
-#include "../standalone.h"
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 

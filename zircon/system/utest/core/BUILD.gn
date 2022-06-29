@@ -177,15 +177,10 @@ if (is_fuchsia) {
       configs -= fdio_config
     }
     deps = all_bootfs_tests + unified_only
-    sources = [
-      "standalone-init.cc",
-      "standalone-io.cc",
-      "standalone-options.cc",
-      "test-main-with-filter.cc",
-    ]
+    sources = [ "test-main-with-filter.cc" ]
     deps += [
-      ":maybe-standalone",
       "//sdk/lib/stdcompat",
+      "//src/zircon/testing/standalone-test",
       "//zircon/kernel/lib/boot-options",
       "//zircon/system/ulib/lazy_init",
       "//zircon/system/ulib/zbitl",
@@ -193,16 +188,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/zxtest",
     ]
   }
-}
-
-source_set("maybe-standalone") {
-  visibility = [ "./*" ]
-  testonly = true
-  public = [ "standalone.h" ]
-  public_deps = [
-    "//zircon/kernel/lib/boot-options",
-    "//zircon/system/ulib/zx",
-  ]
 }
 
 # Make that into a bootable ZBI with just the kernel.

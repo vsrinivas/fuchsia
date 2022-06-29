@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/lazy_init/lazy_init.h>
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
@@ -14,14 +15,12 @@
 #include <string>
 #include <string_view>
 
-#include "standalone.h"
-
 namespace {
 
 zx::resource root_resource, mmio_root_resource, system_root_resource;
 
 constexpr std::string_view kStandaloneMsg =
-    "*** Standalone core-tests must run directly from userboot ***\n";
+    "*** standalone-test must run directly from userboot ***\n";
 
 lazy_init::LazyInit<std::map<std::string, zx::vmo>> gVmos;
 

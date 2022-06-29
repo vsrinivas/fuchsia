@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
-#define ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
+#ifndef SRC_ZIRCON_TESTING_STANDALONE_TEST_INCLUDE_LIB_STANDALONE_TEST_STANDALONE_H_
+#define SRC_ZIRCON_TESTING_STANDALONE_TEST_INCLUDE_LIB_STANDALONE_TEST_STANDALONE_H_
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/zx/resource.h>
@@ -27,4 +27,4 @@ struct StandaloneOption {
 
 void StandaloneGetOptions(std::initializer_list<std::reference_wrapper<StandaloneOption>> opts);
 
-#endif  // ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
+#endif  // SRC_ZIRCON_TESTING_STANDALONE_TEST_INCLUDE_LIB_STANDALONE_TEST_STANDALONE_H_

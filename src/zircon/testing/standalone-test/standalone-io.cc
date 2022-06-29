@@ -15,7 +15,7 @@
 #include <mutex>
 #include <string_view>
 
-#include "standalone.h"
+#include "lib/standalone-test/standalone.h"
 
 // output via debuglog syscalls
 

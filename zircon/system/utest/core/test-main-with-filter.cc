@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zxtest/zxtest.h>
+#include <lib/standalone-test/standalone.h>
 
-#include "standalone.h"
+#include <zxtest/zxtest.h>
 
 // This is the same as zxtest's default main() except that it checks the kernel
 // command line for gtest arguments and passes them through to the test.

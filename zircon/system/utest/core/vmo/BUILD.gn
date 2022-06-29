@@ -16,9 +16,9 @@ source_set("vmo") {
     "vmo.cc",
   ]
   deps = [
-    "..:maybe-standalone",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
+    "//src/zircon/testing/standalone-test:headers",
     "//zircon/kernel/lib/boot-options",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",

@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "standalone.h"
+#include "lib/standalone-test/standalone.h"
 
 namespace {
 
