@@ -6,31 +6,31 @@ use anyhow::{Context as _, Error};
 use channel_config::ChannelConfigs;
 use fuchsia_url::UnpinnedAbsolutePackageUrl;
 use omaha_client::cup_ecdsa::PublicKeys;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::io;
 
 const EAGER_PACKAGE_CONFIG_PATH: &str = "/config/data/eager_package_config.json";
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct OmahaServer {
     pub service_url: String,
     pub public_keys: PublicKeys,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct EagerPackageConfig {
     pub url: UnpinnedAbsolutePackageUrl,
     pub flavor: Option<String>,
     pub channel_config: ChannelConfigs,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct EagerPackageConfigs {
     pub server: Option<OmahaServer>,
     pub packages: Vec<EagerPackageConfig>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct EagerPackageConfigsJson {
     pub eager_package_configs: Vec<EagerPackageConfigs>,
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/config.gni")
 
 # eager_package_config produces config-data for omaha-client and pkg-resolver to
@@ -82,9 +83,9 @@ template("eager_package_config") {
 
   eager_package_config_script_label =
       "${target_name}_eager_package_config_script"
-  action(eager_package_config_script_label) {
-    script = "//src/sys/pkg/scripts/eager_package_config.py"
-    inputs = invoker.sources
+  compiled_action(eager_package_config_script_label) {
+    tool = "//src/sys/pkg/scripts/gen_eager_package_config:bin"
+    inputs = invoker.sources + [ invoker.key_config ]
     outputs = [
       omaha_client_config_path,
       pkg_resolver_config_path,

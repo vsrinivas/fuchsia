@@ -1,0 +1,13 @@
+{
+    "url": "fuchsia-pkg://example.org/name",
+    "realms": [
+        {
+            "app_id": "foo",
+            "channels": [
+                "bar",
+                "baz"
+            ]
+        }
+    ],
+    "service_url": "https://example.com"
+}

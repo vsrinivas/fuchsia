@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 
 /// Wrapper for deserializing repository configs to the on-disk JSON format.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ChannelConfigs {
     pub default_channel: Option<String>,
     #[serde(rename = "channels")]

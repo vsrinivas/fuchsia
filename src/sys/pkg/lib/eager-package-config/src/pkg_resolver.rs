@@ -3,21 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
     fuchsia_url::UnpinnedAbsolutePackageUrl,
-    fuchsia_zircon as zx,
     omaha_client::cup_ecdsa::PublicKeys,
-    serde::Deserialize,
+    serde::{Deserialize, Serialize},
 };
 
+#[cfg(target_os = "fuchsia")]
+use {
+    anyhow::{Context as _, Error},
+    fuchsia_zircon as zx,
+};
+
+#[cfg(target_os = "fuchsia")]
 const EAGER_PACKAGE_CONFIG_PATH: &str = "/config/data/eager_package_config.json";
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct EagerPackageConfigs {
     pub packages: Vec<EagerPackageConfig>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct EagerPackageConfig {
     pub url: UnpinnedAbsolutePackageUrl,
     #[serde(default)]
@@ -25,6 +30,7 @@ pub struct EagerPackageConfig {
     pub public_keys: PublicKeys,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl EagerPackageConfigs {
     /// Read eager config from namespace. Returns an empty instance of `EagerPackageConfigs` in
     /// case config was not found.
