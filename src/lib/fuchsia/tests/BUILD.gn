@@ -1,0 +1,355 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
+import("//build/rust/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/testing/golden_file.gni")
+
+bins = [
+  {
+    name = "async_main_no_args"
+    logging = {
+      tags = []
+    }
+  },
+  {
+    name = "main_no_args"
+    logging = {
+      tags = []
+    }
+  },
+  {
+    name = "main_with_logging"
+    logging = {
+      tags = []
+    }
+  },
+  {
+    name = "main_with_logging_tags"
+    logging = {
+      tags = [
+        "foo",
+        "bar",
+      ]
+    }
+  },
+  {
+    name = "main_with_logging_no_tags"
+    logging = {
+      tags = []
+    }
+  },
+  {
+    name = "main_without_logging"
+  },
+  {
+    name = "main_with_min_severity_trace"
+    logging = {
+      tags = []
+      min_severity = "TRACE"
+    }
+  },
+  {
+    name = "main_with_min_severity_debug"
+    logging = {
+      tags = []
+      min_severity = "DEBUG"
+    }
+  },
+  {
+    name = "main_with_min_severity_info"
+    logging = {
+      tags = []
+      min_severity = "INFO"
+    }
+  },
+  {
+    name = "main_with_min_severity_warn"
+    logging = {
+      tags = []
+      min_severity = "WARN"
+    }
+  },
+  {
+    name = "main_with_min_severity_error"
+    logging = {
+      tags = []
+      min_severity = "ERROR"
+    }
+  },
+]
+
+tests = [
+  {
+    name = "async_test_no_args"
+    logging = {
+      tags = [ "empty_async_test" ]
+    }
+  },
+  {
+    name = "async_test_allow_stalls"
+    logging = {
+      tags = [ "empty_async_test_allow_stalls" ]
+    }
+  },
+  {
+    name = "async_test_no_stalls"
+    target_only = true
+    panics = true
+    logging = {
+      tags = [ "empty_async_test_no_stalls" ]
+    }
+  },
+  {
+    name = "test_no_args"
+    logging = {
+      tags = [ "empty_test" ]
+    }
+  },
+  {
+    name = "test_with_manual_attribute"
+    logging = {
+      tags = [ "empty_test_with_test_attribute" ]
+    }
+  },
+  {
+    name = "test_with_logging"
+    logging = {
+      tags = [ "empty_test_with_logging" ]
+    }
+  },
+  {
+    name = "test_with_logging_tags"
+    logging = {
+      tags = [
+        "empty_test_with_logging_tags",
+        "foo",
+        "bar",
+      ]
+    }
+  },
+  {
+    name = "test_with_logging_no_tags"
+    logging = {
+      # TODO(https://fxbug.dev/99855) this should not produce tags
+      tags = [ "empty_test" ]
+    }
+  },
+  {
+    name = "test_without_logging"
+  },
+  {
+    name = "test_with_min_severity_trace"
+    logging = {
+      tags = [ "empty_test_severity_trace" ]
+      min_severity = "TRACE"
+    }
+  },
+  {
+    name = "test_with_min_severity_debug"
+    logging = {
+      tags = [ "empty_test_severity_debug" ]
+      min_severity = "DEBUG"
+    }
+  },
+  {
+    name = "test_with_min_severity_info"
+    logging = {
+      tags = [ "empty_test_severity_info" ]
+      min_severity = "INFO"
+    }
+  },
+  {
+    name = "test_with_min_severity_warn"
+    logging = {
+      tags = [ "empty_test_severity_warn" ]
+      min_severity = "WARN"
+    }
+  },
+  {
+    name = "test_with_min_severity_error"
+    logging = {
+      tags = [ "empty_test_severity_error" ]
+      min_severity = "ERROR"
+    }
+  },
+]
+
+# Generate target-side and host-side tests for a given test spec.
+template("fuchsia_lib_test") {
+  assert(defined(invoker.test))
+  _test = invoker.test
+  _test_source = "cases/" + _test.name + ".rs"
+
+  assert(defined(invoker.kind) &&
+         (invoker.kind == "binary" || invoker.kind == "test"))
+  _is_binary = invoker.kind == "binary"
+  _test.kind = invoker.kind
+
+  _child_bin_name = "fuchsia_lib_" + target_name + "_bin"
+  _spec_gen_name = target_name + "_spec_gen"
+
+  _bin_deps = [
+    "support:squawk",
+    "//src/lib/fuchsia",
+  ]
+
+  if (_is_binary) {
+    rustc_binary(_child_bin_name) {
+      edition = "2021"
+      source_root = _test_source
+      sources = [ _test_source ]
+      deps = _bin_deps
+    }
+  } else {
+    rustc_test(_child_bin_name) {
+      edition = "2021"
+      source_root = _test_source
+      sources = [ _test_source ]
+      deps = _bin_deps
+    }
+  }
+
+  generated_file(_spec_gen_name) {
+    contents = _test
+    output_conversion = "json"
+    outputs = [ "$target_out_dir/${_spec_gen_name}.json" ]
+  }
+
+  if (is_fuchsia) {
+    _test_name = target_name
+    _parent_name = target_name + "_wrapper"
+    _child_name = target_name + "_actual"
+    _child_bin_resource_name = _child_name + "_bin_resource"
+    _spec_name = _child_name + "_spec"
+
+    resource(_spec_name) {
+      sources = get_target_outputs(":$_spec_gen_name")
+      outputs = [ "data/test_spec.json" ]
+      deps = [ ":$_spec_gen_name" ]
+    }
+
+    # package the binary at a well-known location without creating conflicting output names
+    renamed_binary(_child_bin_resource_name) {
+      testonly = true
+      source = "$root_out_dir/$_child_bin_name"
+      source_deps = [ ":$_child_bin_name" ]
+      dest = "bin/child_under_test"
+    }
+
+    fuchsia_test_component(_child_name) {
+      component_name = "child_under_test"
+      if (_is_binary) {
+        manifest = "meta/binary_child.cml"
+      } else {
+        manifest = "meta/test_child.cml"
+      }
+      deps = [ ":$_child_bin_resource_name" ]
+    }
+
+    fuchsia_test_component(_parent_name) {
+      component_name = _test_name
+      if (_is_binary) {
+        manifest = "meta/binary_wrapper.cml"
+      } else {
+        manifest = "meta/test_wrapper.cml"
+      }
+      deps = [ "support:target_wrapper" ]
+    }
+
+    fuchsia_test_package(target_name) {
+      package_name = "fuchsia_lib_" + target_name
+      test_components = [ ":$_parent_name" ]
+      deps = [
+        ":$_child_name",
+        ":$_spec_name",
+      ]
+    }
+  }
+
+  if (is_host) {
+    _child_bin_data_name = _child_bin_name + "_host_data"
+    _test_spec_data_name = _spec_gen_name + "_host_data"
+    _check_stdio_name = target_name + "_stdio"
+
+    _target_only = false
+    if (defined(_test.target_only)) {
+      _target_only = _test.target_only
+    }
+
+    _spec_gen_outputs = get_target_outputs(":$_spec_gen_name")
+    host_test_data(_test_spec_data_name) {
+      sources = _spec_gen_outputs
+      deps = [ ":$_spec_gen_name" ]
+    }
+
+    _child_bin_path = root_build_dir + "/host_x64/" + _child_bin_name
+    host_test_data(_child_bin_data_name) {
+      sources = [ _child_bin_path ]
+      deps = [ ":$_child_bin_name" ]
+    }
+
+    host_test(_check_stdio_name) {
+      binary_path = "$root_out_dir/fuchsia_lib_host_wrapper"
+      deps = [
+        ":$_child_bin_data_name",
+        ":$_test_spec_data_name",
+        "support:host_wrapper($host_toolchain)",
+      ]
+      args = [
+        "--test-spec",
+        rebase_path(_spec_gen_outputs[0], root_build_dir),
+        "--binary",
+        rebase_path(_child_bin_path, root_build_dir),
+      ]
+    }
+
+    group(target_name) {
+      testonly = true
+
+      # Only include the test in the build graph if we think we can run it.
+      if (!_target_only) {
+        deps = [ ":$_check_stdio_name" ]
+      }
+    }
+  }
+}
+
+_fuchsia_test_labels = []
+_host_test_labels = []
+foreach(_bin, bins) {
+  fuchsia_lib_test(_bin.name) {
+    kind = "binary"
+    test = _bin
+  }
+  _fuchsia_test_labels += [ ":${_bin.name}($default_toolchain)" ]
+  _host_test_labels += [ ":${_bin.name}($host_toolchain)" ]
+}
+
+foreach(_test, tests) {
+  fuchsia_lib_test(_test.name) {
+    kind = "test"
+    test = _test
+  }
+  _fuchsia_test_labels += [ ":${_test.name}($default_toolchain)" ]
+  _host_test_labels += [ ":${_test.name}($host_toolchain)" ]
+}
+
+if (is_fuchsia) {
+  group("tests") {
+    testonly = true
+    deps = _fuchsia_test_labels
+  }
+}
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = _host_test_labels
+  }
+}

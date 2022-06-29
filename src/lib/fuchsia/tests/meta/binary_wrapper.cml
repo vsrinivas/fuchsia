@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/target_wrapper",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
+    },
+    children: [
+        {
+            name: "child_under_test",
+            url: "#meta/child_under_test.cm",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.fuchsialibtest.ConnectOnDone",
+                "fuchsia.logger.LogSink",
+                "fuchsia.test.Suite",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.component.Binder" ],
+            from: "#child_under_test",
+            dependency: "weak_for_migration",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.fuchsialibtest.ConnectOnDone",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "self",
+            to: "#child_under_test",
+        },
+    ],
+
+    // we serve this ourselves so that we can offer services to child_under_test
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
