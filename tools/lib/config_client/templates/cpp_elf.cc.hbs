@@ -21,7 +21,7 @@ namespace {{cpp_namespace}} {
 
 Config Config::TakeFromStartupHandle() noexcept {
   // Get the VMO containing FIDL config
-  zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_CONFIG_VMO);
+  zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_VMO_COMPONENT_CONFIG);
   ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID, "Could not obtain Config VMO Handle");
   zx::vmo config_vmo(config_vmo_handle);
 

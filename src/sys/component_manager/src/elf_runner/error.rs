@@ -75,7 +75,7 @@ pub enum ElfRunnerError {
     #[error("failed to duplicate UTC clock for component with url \"{}\": {}", url, status)]
     DuplicateUtcClockError { url: String, status: zx::Status },
     #[error("failed to populate component's structured config vmo: {_0}")]
-    ConfigVmoError(
+    ComponentConfigVmoError(
         #[from]
         #[source]
         ConfigError,

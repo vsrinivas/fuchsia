@@ -211,7 +211,7 @@ impl ElfRunner {
             };
             handle_infos.push(fproc::HandleInfo {
                 handle,
-                id: HandleInfo::new(HandleType::ConfigVmo, 0).as_raw(),
+                id: HandleInfo::new(HandleType::ComponentConfigVmo, 0).as_raw(),
             });
         }
 
