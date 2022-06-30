@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod markdown;
+pub mod syscall;
 
 use crate::fidljson::to_lower_snake_case;
 use anyhow::Error;

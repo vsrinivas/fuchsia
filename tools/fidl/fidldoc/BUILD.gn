@@ -15,6 +15,7 @@ if (is_host) {
     "src/main.rs",
     "src/templates/markdown/mod.rs",
     "src/templates/mod.rs",
+    "src/templates/syscall/mod.rs",
   ]
 
   common_inputs = [
@@ -36,6 +37,7 @@ if (is_host) {
     "src/templates/markdown/partials/types/type.hbs",
     "src/templates/markdown/partials/declarations/structs.hbs",
     "src/templates/markdown/style.css",
+    "src/templates/syscall/syscall.hbs",
   ]
 
   rustc_binary("fidldoc_bin") {
