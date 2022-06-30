@@ -33,6 +33,7 @@ source_set("no_hooks") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//third_party/modp_b64",
     "//zircon/system/ulib/backtrace-request",
   ]
 }
@@ -51,6 +52,7 @@ source_set("unittests") {
   ]
   deps = [
     ":no_hooks",
+    "../coverage:coverage-lib",
     "../engine:engine-lib",
     "../testing",
     "//src/sys/fuzzing/common/testing",

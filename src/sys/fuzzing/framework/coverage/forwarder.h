@@ -32,7 +32,7 @@ class CoverageForwarder final {
   fidl::InterfaceRequestHandler<CoverageProvider> GetCoverageProviderHandler();
 
  private:
-  uint64_t last_target_id_ = kInvalidTargetId;
+  uint64_t last_target_id_ = kTimeoutTargetId;
   ExecutorPtr executor_;
   OptionsPtr options_;
   AsyncDequePtr<CoverageEvent> events_;

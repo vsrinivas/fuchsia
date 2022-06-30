@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <zircon/status.h>
 
+#include <iomanip>
+#include <iostream>
+
 #include "src/sys/fuzzing/common/module.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/framework/target/weak-symbols.h"
@@ -17,8 +20,8 @@
 namespace fuzzing {
 namespace {
 
-using ::fuchsia::fuzzer::InstrumentedProcess;
-using ::fuchsia::fuzzer::LlvmModule;
+using fuchsia::fuzzer::InstrumentedProcess;
+using fuchsia::fuzzer::LlvmModule;
 
 // Maximum number of LLVM modules per process. This limit matches libFuzzer.
 constexpr size_t kMaxModules = 4096;
@@ -28,9 +31,9 @@ constexpr size_t kTopPercentChunks = 95;
 constexpr size_t kMaxUniqueContexts = 8;
 
 // Static context; used to store module info until the process singleton is created and to find the
-// singleton from the static hook functions. This structure is NOT thread-safe, and MUST NOT be
-// written to once the singleton has been constructed. Except for in unit tests, this singleton is
-// constructed before |main| and before any threads other than the main thread have started.
+// singleton from the static hook functions. This structure is NOT thread-safe, and should only be
+// accessed from the main thread. More precisely, do not load multiple shared libraries concurrently
+// from different threads.
 struct {
   CountersInfo counters[kMaxModules];
   size_t num_counters = 0;
@@ -114,26 +117,26 @@ namespace fuzzing {
 Process::Process(ExecutorPtr executor)
     : executor_(executor), eventpair_(executor), next_purge_(zx::time::infinite()) {
   FX_CHECK(!gContext.process);
-  gContext.process = this;
-  // Safe: |gProcess.num_counters| and |gContext.num_pcs| are only modified while the process is
-  // single-threaded.
+  // The AsyncDeques must be created on the dispatcher thread.
+  auto task = fpromise::make_promise([this]() -> Result<> {
+                counters_ = AsyncDeque<CountersInfo>::MakePtr();
+                pcs_ = AsyncDeque<PCsInfo>::MakePtr();
+                return fpromise::ok();
+              })
+                  .wrap_with(scope_)
+                  .wrap_with(sequencer_);
+  executor_->schedule_task(std::move(task));
+  // Forward coverage for modules added up to this point.
+  FX_CHECK(gContext.num_counters == gContext.num_pcs);
   for (size_t i = 0; i < gContext.num_counters; ++i) {
-    if (auto status = counters_.Send(std::move(gContext.counters[i])); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to send counter data: " << zx_status_get_string(status);
-    }
-  }
-  for (size_t i = 0; i < gContext.num_pcs; ++i) {
-    if (auto status = pcs_.Send(std::move(gContext.pcs[i])); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to send PC data: " << zx_status_get_string(status);
-    }
+    AddCounters(std::move(gContext.counters[i]));
+    AddPCs(std::move(gContext.pcs[i]));
   }
   AddDefaults(&options_);
+  gContext.process = this;
 }
 
-Process::~Process() {
-  // This is only reached in unit tests or on exit.
-  memset(&gContext, 0, sizeof(gContext));
-}
+Process::~Process() { memset(&gContext, 0, sizeof(gContext)); }
 
 void Process::AddDefaults(Options* options) {
   if (!options->has_detect_leaks()) {
@@ -166,24 +169,29 @@ void Process::AddCounters(CountersInfo counters) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
   auto task =
       fpromise::make_promise([this, counters = std::move(counters)]() mutable -> ZxResult<> {
-        if (auto status = counters_.Send(std::move(counters)); status != ZX_OK) {
-          FX_LOGS(WARNING) << "Failed to send counter data: " << zx_status_get_string(status);
+        if (auto status = counters_->Send(std::move(counters)); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to send counters to engine: " << zx_status_get_string(status);
           return fpromise::error(status);
         }
         return fpromise::ok();
-      });
+      })
+          .wrap_with(scope_)
+          .wrap_with(sequencer_);
   executor_->schedule_task(std::move(task));
 }
 
 void Process::AddPCs(PCsInfo pcs) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
   auto task = fpromise::make_promise([this, pcs = std::move(pcs)]() mutable -> ZxResult<> {
-    if (auto status = pcs_.Send(std::move(pcs)); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to send PC data: " << zx_status_get_string(status);
-      return fpromise::error(status);
-    }
-    return fpromise::ok();
-  });
+                if (auto status = pcs_->Send(std::move(pcs)); status != ZX_OK) {
+                  FX_LOGS(WARNING)
+                      << "Failed to send PCs to engine: " << zx_status_get_string(status);
+                  return fpromise::error(status);
+                }
+                return fpromise::ok();
+              })
+                  .wrap_with(scope_)
+                  .wrap_with(sequencer_);
   executor_->schedule_task(std::move(task));
 }
 
@@ -231,28 +239,63 @@ void Process::InstallHooks() {
   std::atexit([]() { ExitHook(); });
 }
 
-Promise<> Process::Connect(fidl::InterfaceRequestHandler<Instrumentation> handler) {
-  handler(instrumentation_.NewRequest(executor_->dispatcher()));
-
-  // Create the eventpair.
-  InstrumentedProcess instrumented;
-  instrumented.set_eventpair(eventpair_.Create());
-
-  // Duplicate a handle to ourselves.
-  zx::process process;
-  auto self = zx::process::self();
-  self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
-  instrumented.set_process(std::move(process));
-
-  // Connect to the engine and wait for it to acknowledge it has added a proxy for this object.
-  Bridge<Options> bridge;
-  instrumentation_->Initialize(std::move(instrumented), bridge.completer.bind());
-  return bridge.consumer.promise_or(fpromise::error())
-      .and_then([this](Options& options) -> Result<> {
-        Configure(std::move(options));
-        return fpromise::ok();
+ZxPromise<> Process::Connect(fidl::InterfaceHandle<Instrumentation> handle,
+                             zx::eventpair eventpair) {
+  return fpromise::make_promise([this, handle = std::move(handle), connect = Future<Options>()](
+                                    Context& context) mutable -> ZxResult<> {
+           if (!connect) {
+             if (auto status = instrumentation_.Bind(std::move(handle)); status != ZX_OK) {
+               FX_LOGS(WARNING) << "Failed to bind instrumentation: "
+                                << zx_status_get_string(status);
+               return fpromise::error(status);
+             }
+             zx::process process;
+             auto self = zx::process::self();
+             if (auto status = self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process); status != ZX_OK) {
+               FX_LOGS(WARNING) << "Failed to duplicate process handle: "
+                                << zx_status_get_string(status);
+               return fpromise::error(status);
+             }
+             zx_info_handle_basic_t info;
+             if (auto status =
+                     self->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+                 status != ZX_OK) {
+               FX_LOGS(WARNING) << "Failed to set target id: " << zx_status_get_string(status);
+               return fpromise::error(status);
+             }
+             target_id_ = info.koid;
+             InstrumentedProcess instrumented;
+             instrumented.set_process(std::move(process));
+             instrumented.set_eventpair(eventpair_.Create());
+             Bridge<Options> bridge;
+             instrumentation_->Initialize(std::move(instrumented), bridge.completer.bind());
+             connect = bridge.consumer.promise_or(fpromise::error());
+           }
+           if (!connect(context)) {
+             return fpromise::pending();
+           }
+           if (connect.is_error()) {
+             return fpromise::error(ZX_ERR_CANCELED);
+           }
+           Configure(connect.take_value());
+           return fpromise::ok();
+         })
+      .and_then([this, eventpair = std::move(eventpair), add = ZxFuture<>(),
+                 run = ZxFuture<>()](Context& context) mutable -> ZxResult<> {
+        if (!add) {
+          add = AddModules(std::move(eventpair));
+        }
+        if (!run) {
+          run = Run();
+        }
+        if (add(context)) {
+          return add.take_result();
+        }
+        if (run(context)) {
+          return run.take_result();
+        }
+        return fpromise::pending();
       })
-      .and_then(AwaitSync())
       .wrap_with(scope_);
 }
 
@@ -299,143 +342,174 @@ void Process::Configure(Options options) {
   malloc_limit_ = malloc_limit ? malloc_limit : std::numeric_limits<size_t>::max();
 }
 
-Promise<> Process::AwaitSync() {
-  return eventpair_.WaitFor(kSync).then([](const ZxResult<zx_signals_t>& result) -> Result<> {
-    if (result.is_error()) {
-      return fpromise::error();
+ZxPromise<> Process::AddModules(zx::eventpair eventpair) {
+  return fpromise::make_promise([this, eventpair = std::move(eventpair), num_modules = 0ULL,
+                                 add_module =
+                                     ZxFuture<>()](Context& context) mutable -> ZxResult<> {
+    while (true) {
+      // Notify the engine when initial modules have all been sent and acknowledged.
+      if (!add_module) {
+        if (num_modules == gContext.num_pcs) {
+          if (auto status = eventpair.signal_peer(0, kSync); status != ZX_OK) {
+            FX_LOGS(WARNING) << "Failed to acknowledge module: " << zx_status_get_string(status);
+          }
+        }
+        add_module = AddModule();
+      }
+      if (!add_module(context)) {
+        return fpromise::pending();
+      }
+      auto result = add_module.take_result();
+      if (result.is_error()) {
+        FX_LOGS(ERROR) << "Failed to add module: " << zx_status_get_string(result.error());
+      }
+      ++num_modules;
     }
-    return fpromise::ok();
   });
 }
 
-Promise<> Process::AddModules() {
-  // Safe: |gProcess.num_counters| and |gContext.num_pcs| are only modified while the process is
-  // single-threaded.
-  if (gContext.num_counters == 0 || gContext.num_pcs == 0) {
-    FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
-  }
+ZxPromise<> Process::AddModule() {
+  auto eventpair = std::make_shared<AsyncEventPair>(executor_);
   return fpromise::make_promise(
-      [this, add_module = Future<>()](Context& context) mutable -> Result<> {
-        while (true) {
-          if (!add_module) {
-            add_module = AddModule();
+             [this, recv_counters = Future<CountersInfo>(),
+              recv_pcs = Future<PCsInfo>()](Context& context) mutable -> ZxResult<Module> {
+               // Get the next |CountersInfo|.
+               if (!recv_counters) {
+                 recv_counters = counters_->Receive();
+               }
+               if (!recv_counters(context)) {
+                 return fpromise::pending();
+               }
+               if (recv_counters.is_error()) {
+                 FX_LOGS(WARNING) << "Missing expected inline 8-bit counters.";
+                 return fpromise::error(ZX_ERR_BAD_STATE);
+               }
+               // Get the next |PCsInfo|.
+               if (!recv_pcs) {
+                 recv_pcs = pcs_->Receive();
+               }
+               if (!recv_pcs(context)) {
+                 return fpromise::pending();
+               }
+               if (recv_pcs.is_error()) {
+                 FX_LOGS(WARNING) << "Missing expected PC table.";
+                 return fpromise::error(ZX_ERR_BAD_STATE);
+               }
+               // Combine into a |Module|.
+               auto counters = recv_counters.take_value();
+               auto pcs = recv_pcs.take_value();
+               if (counters.len != pcs.len * sizeof(uintptr_t) / sizeof(ModulePC)) {
+                 FX_LOGS(WARNING) << "Length mismatch: counters=" << counters.len
+                                  << ", pcs=" << pcs.len;
+                 return fpromise::error(ZX_ERR_BAD_STATE);
+               }
+               Module module(counters.data, pcs.data, counters.len);
+               module.Clear();
+               return fpromise::ok(std::move(module));
+             })
+      .and_then([this, eventpair, add = Future<>()](Context& context,
+                                                    Module& module) mutable -> ZxResult<> {
+        if (!add) {
+          LlvmModule llvm_module;
+          llvm_module.set_legacy_id(module.legacy_id());
+          zx::vmo inline_8bit_counters;
+          if (auto status = module.Share(target_id_, &inline_8bit_counters); status != ZX_OK) {
+            FX_LOGS(FATAL) << "Failed to share LLVM module: " << zx_status_get_string(status);
           }
-          if (!add_module(context)) {
-            return fpromise::pending();
-          }
-          if (add_module.is_error()) {
-            return fpromise::error();
-          }
-          add_module = nullptr;
+          llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
+          modules_.emplace_back(std::move(module));
+          Bridge<> bridge;
+          instrumentation_->AddLlvmModule(std::move(llvm_module), bridge.completer.bind());
+          add = bridge.consumer.promise_or(fpromise::error());
         }
+        if (!add(context)) {
+          return fpromise::pending();
+        }
+        if (add.is_error()) {
+          return fpromise::error(ZX_ERR_CANCELED);
+        }
+        return fpromise::ok();
+      })
+      .and_then([this, eventpair,
+                 wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
+        if (!wait) {
+          wait = eventpair_.WaitFor(kSync);
+        }
+        if (!wait(context)) {
+          return fpromise::pending();
+        }
+        if (wait.is_error()) {
+          auto status = wait.error();
+          FX_LOGS(WARNING) << "Failed to wait for module acknowledgement: "
+                           << zx_status_get_string(status);
+          return fpromise::error(status);
+        }
+        if (awaiting_ && modules_.size() >= gContext.num_pcs) {
+          awaiting_.resume_task();
+        }
+        return fpromise::ok();
       });
 }
 
-Promise<> Process::AddModule() {
-  return fpromise::make_promise(
-             [this, recv_counters = Future<CountersInfo>(),
-              recv_pcs = Future<PCsInfo>()](Context& context) mutable -> Result<Module> {
-               while (true) {
-                 // Get the next |CountersInfo|.
-                 if (!recv_counters) {
-                   recv_counters = counters_.Receive();
-                 }
-                 if (!recv_counters(context)) {
-                   return fpromise::pending();
-                 }
-                 if (recv_counters.is_error()) {
-                   return fpromise::error();
-                 }
-                 // Get the next |PCsInfo|.
-                 if (!recv_pcs) {
-                   recv_pcs = pcs_.Receive();
-                 }
-                 if (!recv_pcs(context)) {
-                   return fpromise::pending();
-                 }
-                 if (recv_pcs.is_error()) {
-                   return fpromise::error();
-                 }
-                 // Combine into a |Module|.
-                 auto counters = recv_counters.take_value();
-                 auto pcs = recv_pcs.take_value();
-                 if (counters.len != pcs.len * sizeof(uintptr_t) / sizeof(ModulePC)) {
-                   FX_LOGS(WARNING) << "Length mismatch: counters=" << counters.len
-                                    << ", pcs=" << pcs.len << "; module will be skipped.";
-                   continue;
-                 }
-                 Module module(counters.data, pcs.data, counters.len);
-                 module.Clear();
-                 return fpromise::ok(std::move(module));
-               }
-             })
-      .and_then(
-          [this, add_module = Future<>()](Context& context, Module& module) mutable -> Result<> {
-            // Send the module to the coverage component.
-            if (!add_module) {
-              Bridge<> bridge;
-              instrumentation_->AddLlvmModule(module.GetLlvmModule(), bridge.completer.bind());
-              modules_.push_back(std::move(module));
-              add_module = bridge.consumer.promise_or(fpromise::error()).and_then(AwaitSync());
-            }
-            if (!add_module(context)) {
-              return fpromise::pending();
-            }
-            return fpromise::ok();
-          });
-}
-
-Promise<> Process::Run() {
+ZxPromise<> Process::Run() {
   // Processes typically connect during a fuzzing run, but may connect between runs as well. As a
   // result, the first wait is for any run-related signal.
   auto expected = kStart | kStartLeakCheck | kFinish;
-  return fpromise::make_promise(
-      [this, expected, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> Result<> {
-        while (true) {
-          if (!wait) {
-            wait = eventpair_.WaitFor(expected);
-          }
-          if (!wait(context)) {
-            return fpromise::pending();
-          }
-          if (wait.is_error()) {
-            return fpromise::ok();
-          }
-          auto observed = wait.take_value();
-          if (eventpair_.SignalSelf(observed, 0) != ZX_OK) {
-            return fpromise::error();
-          }
-          zx_signals_t reply = 0;
-          switch (observed) {
-            case kStartLeakCheck:
-              ConfigureLeakDetection();
-              [[fallthrough]];
-            case kStart:
-              // Reset coverage data and leak detection.
-              for (auto& module : modules_) {
-                module.Clear();
-              }
-              num_mallocs_ = 0;
-              num_frees_ = 0;
-              reply = kStart;
-              expected = kFinish;
-              break;
-            case kFinish:
-              // Forward coverage data to engine, and respond with leak status.
-              for (auto& module : modules_) {
-                module.Update();
-              }
-              reply = DetectLeak() ? kFinishWithLeaks : kFinish;
-              expected = kStart | kStartLeakCheck;
-              break;
-            default:
-              FX_NOTREACHED();
-              break;
-          }
-          if (eventpair_.SignalPeer(0, reply) != ZX_OK) {
-            return fpromise::error();
-          }
+  return fpromise::make_promise([this, expected, wait = ZxFuture<zx_signals_t>()](
+                                    Context& context) mutable -> ZxResult<> {
+           while (true) {
+             if (!wait) {
+               wait = eventpair_.WaitFor(expected);
+             }
+             if (!wait(context)) {
+               return fpromise::pending();
+             }
+             if (wait.is_error()) {
+               return fpromise::error(wait.error());
+             }
+             auto observed = wait.take_value();
+             if (auto status = eventpair_.SignalSelf(observed, 0); status != ZX_OK) {
+               return fpromise::error(status);
+             }
+             zx_signals_t reply = 0;
+             switch (observed) {
+               case kStartLeakCheck:
+                 ConfigureLeakDetection();
+                 [[fallthrough]];
+               case kStart:
+                 // Reset coverage data and leak detection.
+                 for (auto& module : modules_) {
+                   module.Clear();
+                 }
+                 num_mallocs_ = 0;
+                 num_frees_ = 0;
+                 reply = kStart;
+                 expected = kFinish;
+                 break;
+               case kFinish:
+                 // Forward coverage data to engine, and respond with leak status.
+                 for (auto& module : modules_) {
+                   module.Update();
+                 }
+                 reply = DetectLeak() ? kFinishWithLeaks : kFinish;
+                 expected = kStart | kStartLeakCheck;
+                 break;
+               default:
+                 FX_NOTREACHED();
+                 break;
+             }
+             if (auto status = eventpair_.SignalPeer(0, reply); status != ZX_OK) {
+               return fpromise::error(status);
+             }
+           }
+         })
+      .or_else([](const zx_status_t& status) -> ZxResult<> {
+        if (status != ZX_ERR_PEER_CLOSED) {
+          FX_LOGS(WARNING) << "Failed to exchange signals with engine: "
+                           << zx_status_get_string(status);
+          return fpromise::error(status);
         }
+        return fpromise::ok();
       });
 }
 

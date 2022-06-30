@@ -17,7 +17,6 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::LlvmModule;
 using Identifier = std::array<uint64_t, 2>;
 
 // Represents an LLVM "module", e.g. a collection of translation units, such as a shared object
@@ -25,9 +24,6 @@ using Identifier = std::array<uint64_t, 2>;
 // code coverage) for the fuzzer engine.
 class Module final {
  public:
-  // Returns a unique, position-independent identifier for the module.
-  static Identifier Identify(const uintptr_t* pcs, size_t num_pcs);
-
   // For every edge, there should be an 8-bit counter, a PC uintptr_t, and a PCFlags uintptr_t.
   // Thus, |counters| should be an array of length |num_pcs|, and |pcs| of length |num_pcs| * 2.
   // See also: https://clang.llvm.org/docs/SanitizerCoverage.html
@@ -41,11 +37,9 @@ class Module final {
   const Identifier& legacy_id() const { return legacy_id_; }
   const std::string& id() const { return id_; }
 
-  // Shares the VMO containing the code coverage.
-  __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) const { return counters_.Share(out); }
-
-  // Shares the VMO containing the code coverage as an |fuchsia.fuzzer.LlvmModule|.
-  LlvmModule GetLlvmModule();
+  // Shares the VMO containing the code coverage. This will set a name on the VMO constructed from
+  // the given |target_id| and the module's id.
+  __WARN_UNUSED_RESULT zx_status_t Share(uint64_t target_id, zx::vmo* out) const;
 
   // Update the code-coverage counters to produce feedback for this module.
   void Update() { counters_.Update(); }

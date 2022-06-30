@@ -141,41 +141,39 @@ TEST_F(CoverageDataProviderClientTest, GetModule) {
   CoverageData coverage_data;
 
   zx::vmo counters;
-  AsyncEventPair eventpair(executor());
-  char actual[ZX_MAX_NAME_LEN];
+  char name[ZX_MAX_NAME_LEN];
 
   // Send multiple, and verify they arrive in order.
   FakeFrameworkModule module1(1);
-  EXPECT_EQ(module1.Share(&counters), ZX_OK);
-  EXPECT_EQ(counters.set_property(ZX_PROP_NAME, "foo1", 5), ZX_OK);
+  EXPECT_EQ(module1.Share(0x1111, &counters), ZX_OK);
   Pend(CoverageData::WithInline8bitCounters(std::move(counters)));
 
-  FakeFrameworkModule module2(2);
-  EXPECT_EQ(module2.Share(&counters), ZX_OK);
-  EXPECT_EQ(counters.set_property(ZX_PROP_NAME, "foo2", 5), ZX_OK);
+  FakeFrameworkModule module2(1);
+  EXPECT_EQ(module2.Share(0x2222, &counters), ZX_OK);
   Pend(CoverageData::WithInline8bitCounters(std::move(counters)));
 
   FUZZING_EXPECT_OK(provider_client->GetCoverageData(), &coverage_data);
   RunUntilIdle();
   ASSERT_TRUE(coverage_data.is_inline_8bit_counters());
   auto& counters1 = coverage_data.inline_8bit_counters();
-  EXPECT_EQ(counters1.get_property(ZX_PROP_NAME, actual, sizeof(actual)), ZX_OK);
-  EXPECT_STREQ(actual, "foo1");
+  EXPECT_EQ(counters1.get_property(ZX_PROP_NAME, name, sizeof(name)), ZX_OK);
+  EXPECT_EQ(GetTargetId(name), 0x1111U);
+  EXPECT_EQ(GetModuleId(name), module1.id());
 
   FUZZING_EXPECT_OK(provider_client->GetCoverageData(), &coverage_data);
   RunUntilIdle();
   ASSERT_TRUE(coverage_data.is_inline_8bit_counters());
   auto& counters2 = coverage_data.inline_8bit_counters();
-  EXPECT_EQ(counters2.get_property(ZX_PROP_NAME, actual, sizeof(actual)), ZX_OK);
-  EXPECT_STREQ(actual, "foo2");
+  EXPECT_EQ(counters2.get_property(ZX_PROP_NAME, name, sizeof(name)), ZX_OK);
+  EXPECT_EQ(GetTargetId(name), 0x2222U);
+  EXPECT_EQ(GetModuleId(name), module2.id());
 
   // Intentionally drop a |GetCoverageData| future and ensure no data is lost.
   FakeFrameworkModule module3(3);
   {
     auto dropped = provider_client->GetCoverageData();
     RunOnce();
-    EXPECT_EQ(module3.Share(&counters), ZX_OK);
-    EXPECT_EQ(counters.set_property(ZX_PROP_NAME, "foo3", 5), ZX_OK);
+    EXPECT_EQ(module3.Share(0x1111, &counters), ZX_OK);
     Pend(CoverageData::WithInline8bitCounters(std::move(counters)));
   }
 
@@ -183,8 +181,9 @@ TEST_F(CoverageDataProviderClientTest, GetModule) {
   RunUntilIdle();
   ASSERT_TRUE(coverage_data.is_inline_8bit_counters());
   auto& counters3 = coverage_data.inline_8bit_counters();
-  EXPECT_EQ(counters3.get_property(ZX_PROP_NAME, actual, sizeof(actual)), ZX_OK);
-  EXPECT_STREQ(actual, "foo3");
+  EXPECT_EQ(counters3.get_property(ZX_PROP_NAME, name, sizeof(name)), ZX_OK);
+  EXPECT_EQ(GetTargetId(name), 0x1111U);
+  EXPECT_EQ(GetModuleId(name), module3.id());
 }
 
 }  // namespace fuzzing

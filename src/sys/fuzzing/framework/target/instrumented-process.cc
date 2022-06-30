@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sync/completion.h>
+#include <lib/zx/eventpair.h>
 #include <zircon/time.h>
 
 #include <memory>
@@ -13,6 +13,8 @@
 
 namespace fuzzing {
 
+using fuchsia::fuzzer::Instrumentation;
+
 // This class extends |Process| by automatically connecting in a public default constructor. The
 // class is instantiated as a singleton below, and lives as long as the process. All other
 // fuzzing-related code executed in the target runs as result of the singleton's constructor.
@@ -22,19 +24,23 @@ class InstrumentedProcess final {
     Process::InstallHooks();
     context_ = ComponentContext::CreateAuxillary();
     process_ = std::make_unique<Process>(context_->executor());
-    auto sync = std::make_shared<sync_completion_t>();
-    auto handler = context_->MakeRequestHandler<Instrumentation>();
-    auto task = process_->Connect(std::move(handler))
-                    .and_then([sync] {
-                      sync_completion_signal(sync.get());
-                      return fpromise::ok();
-                    })
-                    .and_then(process_->Run());
-    context_->ScheduleTask(std::move(task));
-    if (auto status = context_->Run(); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to start loop: " << zx_status_get_string(status);
+    fidl::InterfaceHandle<Instrumentation> instrumentation;
+    if (auto status = context_->Connect(instrumentation.NewRequest()); status != ZX_OK) {
+      FX_LOGS(FATAL) << "Failed to connect to instrumentation: " << zx_status_get_string(status);
     }
-    sync_completion_wait(sync.get(), ZX_TIME_INFINITE);
+    zx::eventpair send, recv;
+    if (auto status = zx::eventpair::create(0, &send, &recv); status != ZX_OK) {
+      FX_LOGS(FATAL) << "Failed to create eventpair: " << zx_status_get_string(status);
+    }
+    context_->ScheduleTask(process_->Connect(std::move(instrumentation), std::move(send)));
+    if (auto status = context_->Run(); status != ZX_OK) {
+      FX_LOGS(FATAL) << "Failed to start component context: " << zx_status_get_string(status);
+    }
+    if (auto status =
+            recv.wait_one(kSync | ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite(), nullptr);
+        status != ZX_OK) {
+      FX_LOGS(FATAL) << "Failed to wait on eventpair: " << zx_status_get_string(status);
+    }
   }
 
   ~InstrumentedProcess() { FX_NOTREACHED(); }

@@ -203,7 +203,7 @@ TEST(ModuleProxyTest, FromModule) {
 
   // Share it.
   zx::vmo vmo;
-  EXPECT_EQ(module->Share(&vmo), ZX_OK);
+  EXPECT_EQ(module->Share(0x1234, &vmo), ZX_OK);
   auto shmem = std::make_unique<SharedMemory>();
   EXPECT_EQ(shmem->Link(std::move(vmo)), ZX_OK);
 

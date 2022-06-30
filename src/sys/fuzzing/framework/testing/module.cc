@@ -24,16 +24,8 @@ FakeFrameworkModule& FakeFrameworkModule::operator=(FakeFrameworkModule&& other)
   return *this;
 }
 
-LlvmModule FakeFrameworkModule::GetLlvmModule() {
-  LlvmModule llvm_module;
-  llvm_module.set_legacy_id(legacy_id());
-  zx::vmo inline_8bit_counters;
-  auto status = Share(&inline_8bit_counters);
-  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
-  status = inline_8bit_counters.set_property(ZX_PROP_NAME, id().c_str(), id().size() + 1);
-  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
-  llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
-  return llvm_module;
+zx_status_t FakeFrameworkModule::Share(uint64_t target_id, zx::vmo* out) const {
+  return module_->Share(target_id, out);
 }
 
 }  // namespace fuzzing

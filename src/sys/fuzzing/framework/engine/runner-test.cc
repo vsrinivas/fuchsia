@@ -98,13 +98,11 @@ ZxPromise<> RunnerImplTest::PublishModule() {
   return fpromise::make_promise(
       [this, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
         if (!wait) {
-          zx::vmo data;
-          if (auto status = module_.Share(&data); status != ZX_OK) {
-            return fpromise::error(wait.error());
-          }
           LlvmModule llvm_module;
           llvm_module.set_legacy_id(module_.legacy_id());
-          llvm_module.set_inline_8bit_counters(std::move(data));
+          zx::vmo inline_8bit_counters;
+          EXPECT_EQ(module_.Share(target_id_, &inline_8bit_counters), ZX_OK);
+          llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
           CoverageEvent event;
           event.target_id = target_id_;
           event.payload = Payload::WithLlvmModuleAdded(std::move(llvm_module));

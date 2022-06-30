@@ -35,8 +35,7 @@ class FakeFrameworkModule final : public FakeModule {
   // See corresponding |Module| methods.
   Identifier legacy_id() const { return module_->legacy_id(); }
   const std::string& id() const { return module_->id(); }
-  __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) { return module_->Share(out); }
-  LlvmModule GetLlvmModule();
+  __WARN_UNUSED_RESULT zx_status_t Share(uint64_t target_id, zx::vmo* out) const;
   void Update() { module_->Update(); }
   void Clear() { module_->Clear(); }
 

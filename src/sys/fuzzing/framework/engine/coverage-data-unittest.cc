@@ -9,14 +9,18 @@
 namespace fuzzing {
 
 TEST(CoverageDataTest, GetTargetId) {
-  EXPECT_EQ(GetTargetId("12e"), kInvalidTargetId);
-  EXPECT_EQ(GetTargetId("123"), 123U);
-  EXPECT_EQ(GetTargetId("123/foo.bar"), 123U);
+  EXPECT_EQ(GetTargetId("invalid="), kInvalidTargetId);
+  // Compare with `echo 'a+target+id=' | base64 -d | xxd -e -g8`.
+  EXPECT_EQ(GetTargetId("a+target+id"), 0x27faad07ae5aeb6bULL);
+  EXPECT_EQ(GetTargetId("a+target+id="), 0x27faad07ae5aeb6bULL);
+  EXPECT_EQ(GetTargetId("a+target+id+and+a+module+id="), 0x27faad07ae5aeb6bULL);
 }
 
 TEST(CoverageDataTest, GetModuleId) {
-  EXPECT_EQ(GetModuleId("ignored"), "");
-  EXPECT_EQ(GetModuleId("ignored/foo.bar"), "foo.bar");
+  EXPECT_EQ(GetModuleId("invalid="), "");
+  EXPECT_EQ(GetModuleId("a+target+id"), "");
+  EXPECT_EQ(GetModuleId("a+target+id="), "=");
+  EXPECT_EQ(GetModuleId("a+target+id+and+a+module+id="), "+and+a+module+id=");
 }
 
 }  // namespace fuzzing

@@ -9,85 +9,182 @@
 
 #include "src/sys/fuzzing/framework/target/process.h"
 
-#include <lib/fidl/cpp/binding.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/status.h>
 
 #include <memory>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
+#include "src/sys/fuzzing/framework/coverage/forwarder.h"
+#include "src/sys/fuzzing/framework/engine/coverage-data.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
-#include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
-#include "src/sys/fuzzing/framework/testing/process-proxy.h"
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::CoverageProviderPtr;
+using ::fuchsia::fuzzer::InstrumentationPtr;
 using ::fuchsia::fuzzer::Options;
 
 // Test fixtures.
 
-constexpr uint32_t kNumModules = 4;
-
-// Generates some simple |modules|. |Collect| requires at least one module, so this initializes the
-// first one. This method should be called *before* instantiating a |Process|.
-std::vector<FakeFrameworkModule> CreateModulesAndInitFirst() {
-  std::vector<FakeFrameworkModule> modules;
-  for (uint32_t i = 0; i < kNumModules; ++i) {
-    modules.emplace_back(i + 1);
-  }
-  __sanitizer_cov_8bit_counters_init(modules[0].counters(), modules[0].counters_end());
-  __sanitizer_cov_pcs_init(modules[0].pcs(), modules[0].pcs_end());
-  return modules;
-}
-
-// The unit test base class.
 class ProcessTest : public AsyncTest {
  protected:
   void SetUp() override {
     AsyncTest::SetUp();
-    // Create and destroy a process. This will "consume" any extra modules added if the unit test
-    // itself is instrumented.
-    { Process process(executor()); }
+    eventpair_ = std::make_shared<AsyncEventPair>(executor());
     pool_ = ModulePool::MakePtr();
+
+    forwarder_ = std::make_unique<CoverageForwarder>(executor());
+    auto handler = forwarder_->GetCoverageProviderHandler();
+    handler(coverage_provider_.NewRequest(executor()->dispatcher()));
+    Configure(DefaultOptions());
   }
 
-  // Create a fake |ProcessProxy| with the given |options|.
-  std::unique_ptr<FakeProcessProxy> MakeProxy(OptionsPtr options) {
-    auto proxy = std::make_unique<FakeProcessProxy>(executor(), pool_);
-    proxy->Configure(options);
-    return proxy;
+  // Accessors.
+  ModulePoolPtr pool() const { return pool_; }
+  uint64_t target_id() const { return target_id_; }
+  size_t num_added() const { return added_.size(); }
+  std::shared_ptr<AsyncEventPair> eventpair() const { return eventpair_; }
+
+  // Returns options that limit the number of spurious warnings during tests.
+  static OptionsPtr DefaultOptions(bool disable_warnings = true) {
+    auto options = MakeOptions();
+    if (disable_warnings) {
+      options->set_malloc_limit(0);
+      options->set_purge_interval(0);
+    }
+    Process::AddDefaults(options.get());
+    return options;
   }
 
-  // Returns a |Process| that is |Connect|ed to the given |proxy|.
-  std::unique_ptr<Process> MakeProcess(std::unique_ptr<FakeProcessProxy>& proxy) {
-    auto process = std::make_unique<Process>(executor());
-    FUZZING_EXPECT_OK(process->Connect(proxy->GetHandler()));
-    FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
-    RunUntilIdle();
-    executor()->schedule_task(process->AddModules());
-    executor()->schedule_task(process->Run());
+  // Copies the given |options| to the watcher, to be given to new processes.
+  void Configure(OptionsPtr options) {
+    coverage_provider_->SetOptions(CopyOptions(*options));
     RunOnce();
-    return process;
   }
 
-  size_t MeasurePool() { return pool_->Measure(); }
+  // Returns a promises to connect the given process to the fake "engine" provided by the test.
+  // Tests typically need to call |WatchForProcess| and |WatchForModule| for this promise to
+  // complete.
+  ZxPromise<> Connect(Process* process) {
+    auto handler = forwarder_->GetInstrumentationHandler();
+    fidl::InterfaceHandle<Instrumentation> instrumentation;
+    handler(instrumentation.NewRequest());
+    auto eventpair = std::make_shared<AsyncEventPair>(executor());
+    auto task = process->Connect(std::move(instrumentation), eventpair->Create()).wrap_with(scope_);
+    executor()->schedule_task(std::move(task));
+    return fpromise::make_promise([eventpair, wait = ZxFuture<zx_signals_t>()](
+                                      Context& context) mutable -> ZxResult<> {
+             if (!wait) {
+               wait = eventpair->WaitFor(kSync);
+             }
+             if (!wait(context)) {
+               return fpromise::pending();
+             }
+             if (wait.is_error()) {
+               return fpromise::error(wait.error());
+             }
+             return fpromise::ok();
+           })
+        .wrap_with(scope_);
+  }
+
+  // Creates a fake module for the current process, but defers adding its coverage. Returns the
+  // unique module ID.
+  std::string CreateModule() {
+    FakeFrameworkModule module(static_cast<uint32_t>(modules_.size() + 1));
+    auto id = module.id();
+    auto result = modules_.emplace(id, std::move(module));
+    FX_CHECK(result.second);
+    return id;
+  }
+
+  // Creates a fake module for the current process and adds its coverage. Returns the unique module
+  // ID.
+  std::string AddModule() {
+    auto id = CreateModule();
+    auto* module = GetModule(id);
+    __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
+    __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
+    return id;
+  }
+
+  // The returned pointer may be invalidated by calls to |AddModule|.
+  FakeFrameworkModule* GetModule(const std::string& id) {
+    auto i = modules_.find(id);
+    return i == modules_.end() ? nullptr : &i->second;
+  }
+
+  // Returns a promise to handle an expected coverage event from a new process. Completes
+  // with an error if the next coverage event is for an LLVM module.
+  Promise<> WatchForProcess() {
+    Bridge<CoverageEvent> bridge;
+    coverage_provider_->WatchCoverageEvent(bridge.completer.bind());
+    return bridge.consumer.promise_or(fpromise::error())
+        .and_then([this](CoverageEvent& event) -> Result<> {
+          if (!event.payload.is_process_started()) {
+            return fpromise::error();
+          }
+          auto& instrumented = event.payload.process_started();
+          target_id_ = GetTargetId(instrumented.process());
+          auto* eventpair = instrumented.mutable_eventpair();
+          eventpair_->Pair(std::move(*eventpair));
+          if (auto status = eventpair_->SignalPeer(0, kSync); status != ZX_OK) {
+            return fpromise::error();
+          }
+          return fpromise::ok();
+        })
+        .wrap_with(scope_);
+  }
+
+  // Returns a promise to handle an expected coverage event from a new module. Completes
+  // with an error if the next coverage event is for an instrumented process.
+  Promise<> WatchForModule() {
+    Bridge<CoverageEvent> bridge;
+    coverage_provider_->WatchCoverageEvent(bridge.completer.bind());
+    return bridge.consumer.promise_or(fpromise::error())
+        .and_then([this](CoverageEvent& event) -> Result<> {
+          if (!event.payload.is_llvm_module_added()) {
+            return fpromise::error();
+          }
+          auto& llvm_module = event.payload.llvm_module_added();
+          SharedMemory counters;
+          auto* data = llvm_module.mutable_inline_8bit_counters();
+          if (auto status = counters.Link(std::move(*data)); status != ZX_OK) {
+            return fpromise::error();
+          }
+          auto* module = pool_->Get(llvm_module.legacy_id(), counters.size());
+          module->Add(counters.data(), counters.size());
+          added_.push_back(std::move(counters));
+          if (auto status = eventpair_->SignalPeer(0, kSync); status != ZX_OK) {
+            return fpromise::error();
+          }
+          return fpromise::ok();
+        })
+        .wrap_with(scope_);
+  }
 
  private:
+  std::unique_ptr<CoverageForwarder> forwarder_;
+  CoverageProviderPtr coverage_provider_;
+  std::shared_ptr<AsyncEventPair> eventpair_;
   ModulePoolPtr pool_;
+  uint64_t target_id_ = kInvalidTargetId;
+  std::unordered_map<std::string, FakeFrameworkModule> modules_;
+  std::vector<SharedMemory> added_;
+  Completer<zx_signals_t> completer_;
+  Scope scope_;
 };
-
-OptionsPtr DefaultOptions(bool disable_warnings = true) {
-  auto options = MakeOptions();
-  if (disable_warnings) {
-    options->set_malloc_limit(0);
-    options->set_purge_interval(0);
-  }
-  Process::AddDefaults(options.get());
-  return options;
-}
 
 // Unit tests.
 
@@ -105,22 +202,26 @@ TEST_F(ProcessTest, AddDefaults) {
 }
 
 TEST_F(ProcessTest, ConnectProcess) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
 
   auto self = zx::process::self();
   zx_info_handle_basic_t info;
   EXPECT_EQ(self->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr), ZX_OK);
-  EXPECT_EQ(proxy->process_koid(), info.koid);
+  EXPECT_EQ(target_id(), info.koid);
 }
 
 TEST_F(ProcessTest, ConnectWithDefaultOptions) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions(/* disable_warnings */ false));
-  auto process = MakeProcess(proxy);
+  Configure(DefaultOptions(/* disable_warnings */ false));
 
-  const auto& options = process->options();
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  const auto& options = process.options();
   EXPECT_EQ(options.detect_leaks(), kDefaultDetectLeaks);
   EXPECT_EQ(options.malloc_limit(), kDefaultMallocLimit);
   EXPECT_EQ(options.oom_limit(), kDefaultOomLimit);
@@ -132,258 +233,289 @@ TEST_F(ProcessTest, ConnectWithDefaultOptions) {
 }
 
 TEST_F(ProcessTest, ConnectDisableLimits) {
-  auto modules = CreateModulesAndInitFirst();
   auto options = DefaultOptions();
   options->set_malloc_limit(0);
   options->set_purge_interval(0);
-  auto proxy = MakeProxy(options);
-  auto process = MakeProcess(proxy);
+  Configure(options);
 
-  EXPECT_EQ(process->malloc_limit(), std::numeric_limits<size_t>::max());
-  EXPECT_EQ(process->next_purge(), zx::time::infinite());
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  EXPECT_EQ(process.malloc_limit(), std::numeric_limits<size_t>::max());
+  EXPECT_EQ(process.next_purge(), zx::time::infinite());
 }
 
 TEST_F(ProcessTest, ConnectAndAddModules) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  // Add some, but not all, of the modules (modules[0] was already added).
-  for (size_t i = 1; i < kNumModules - 1; ++i) {
-    __sanitizer_cov_8bit_counters_init(modules[i].counters(), modules[i].counters_end());
-    __sanitizer_cov_pcs_init(modules[i].pcs(), modules[i].pcs_end());
-  }
-  auto process = MakeProcess(proxy);
+  // Modules can be added "early", i.e. before the |Process| constructor...
+  auto id1 = AddModule();
+  auto id2 = AddModule();
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
 
-  // The mock ProcessProxy should eventually receive exactly the IDs added via
-  // |__sanitizer_cov_*_init|.
-  while (proxy->num_modules() < kNumModules - 1) {
-    FX_LOGS(WARNING) << proxy->num_modules();
-    FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
-    RunUntilIdle();
-  }
-  for (size_t i = 0; i < kNumModules - 1; ++i) {
-    EXPECT_TRUE(proxy->has_module(&modules[i]));
-  }
-  auto* module = &modules[kNumModules - 1];
-  EXPECT_FALSE(proxy->has_module(module));
+  // Add ALL the modules. This may include extras if the test itself is instrumented. The promise
+  // will be dropped when the test completes and the scope object is destroyed.
+  Scope scope;
+  auto task = WatchForProcess()
+                  .and_then([this, watch = Future<>()](Context& context) mutable -> Result<> {
+                    while (true) {
+                      if (!watch) {
+                        watch = WatchForModule();
+                      }
+                      if (!watch(context)) {
+                        return fpromise::pending();
+                      }
+                      if (watch.is_error()) {
+                        return fpromise::error();
+                      }
+                      watch = nullptr;
+                    }
+                  })
+                  .wrap_with(scope);
+  executor()->schedule_task(std::move(task));
 
-  // Late-added modules (e.g. via `dlopen`) are added automatically.
-  __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
-  __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
-  FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
+  // ...or late, i.e. via `dlopen`.
+  auto id3 = AddModule();
+  auto id4 = AddModule();
   RunUntilIdle();
-  EXPECT_TRUE(proxy->has_module(module));
+
+  EXPECT_NE(GetModule(id1), nullptr);
+  EXPECT_NE(GetModule(id2), nullptr);
+  EXPECT_NE(GetModule(id3), nullptr);
+  EXPECT_NE(GetModule(id4), nullptr);
 }
 
 TEST_F(ProcessTest, ConnectBadModules) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  // |initial| may be non-zero when the test is instrumented.
+  size_t initial = num_added();
 
   // Empty-length module.
-  size_t num_modules = proxy->num_modules();
-  auto* module = &modules[1];
+  auto* module = GetModule(CreateModule());
   __sanitizer_cov_8bit_counters_init(module->counters(), module->counters());
   __sanitizer_cov_pcs_init(module->pcs(), module->pcs());
-  EXPECT_EQ(proxy->num_modules(), num_modules);
+  EXPECT_EQ(num_added(), initial);
 
   // Module ends before it begins.
   __sanitizer_cov_8bit_counters_init(module->counters() + 1, module->counters());
   __sanitizer_cov_pcs_init(module->pcs() + 2, module->pcs());
-  EXPECT_EQ(proxy->num_modules(), num_modules);
+  EXPECT_EQ(num_added(), initial);
 
   // Mismatched length.
   __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end() - 1);
   __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
-  EXPECT_EQ(proxy->num_modules(), num_modules);
+  EXPECT_EQ(num_added(), initial);
 }
 
 TEST_F(ProcessTest, ConnectLateModules) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  // |initial| may be non-zero when the test is instrumented.
+  size_t initial = num_added();
 
   // Modules with missing fields are deferred.
-  size_t num_modules = proxy->num_modules();
-  auto* module = &modules[1];
+  FUZZING_EXPECT_OK(WatchForModule());
+  auto id1 = CreateModule();
+  auto* module = GetModule(id1);
   __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
   RunOnce();
-  EXPECT_EQ(proxy->num_modules(), num_modules);
+  EXPECT_EQ(num_added(), initial);
 
   __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
-  FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
   RunUntilIdle();
-  EXPECT_EQ(proxy->num_modules(), num_modules + 1);
+  EXPECT_EQ(num_added(), initial + 1);
 
-  module = &modules[2];
-  __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
-  RunOnce();
-  EXPECT_EQ(proxy->num_modules(), num_modules + 1);
-
-  module = &modules[3];
+  FUZZING_EXPECT_OK(WatchForModule());
+  auto id2 = CreateModule();
+  module = GetModule(id2);
   __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
   RunOnce();
-  EXPECT_EQ(proxy->num_modules(), num_modules + 1);
+  EXPECT_EQ(num_added(), initial + 1);
 
-  module = &modules[2];
-  __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
-  FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
-  RunUntilIdle();
-  EXPECT_EQ(proxy->num_modules(), num_modules + 2);
+  FUZZING_EXPECT_OK(WatchForModule());
+  auto id3 = CreateModule();
+  module = GetModule(id3);
+  __sanitizer_cov_pcs_init(module->pcs(), module->pcs_end());
+  RunOnce();
+  EXPECT_EQ(num_added(), initial + 1);
 
-  module = &modules[3];
+  module = GetModule(id2);
   __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
-  FUZZING_EXPECT_OK(proxy->AwaitSent(kSync));
+  RunOnce();
+  EXPECT_EQ(num_added(), initial + 2);
+
+  module = GetModule(id3);
+  __sanitizer_cov_8bit_counters_init(module->counters(), module->counters_end());
   RunUntilIdle();
-  EXPECT_EQ(proxy->num_modules(), num_modules + 3);
+  EXPECT_EQ(num_added(), initial + 3);
 }
 
 TEST_F(ProcessTest, ImplicitStart) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
-
-  // Processes should be implicitly |Start|ed on |Connect|ing.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
   RunUntilIdle();
 
-  EXPECT_EQ(MeasurePool(), 0U);
+  // Processes should be implicitly |Start|ed on |Connect|ing.
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
+  RunUntilIdle();
+
+  EXPECT_EQ(pool()->Measure(), 0U);
 }
 
 TEST_F(ProcessTest, UpdateOnFinish) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  auto* module = GetModule(AddModule());
+  FUZZING_EXPECT_OK(WatchForModule());
+  RunUntilIdle();
 
   // No new coverage.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 
-  EXPECT_EQ(MeasurePool(), 0U);
+  EXPECT_EQ(pool()->Measure(), 0U);
 
   // Add some counters.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStart), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(kFinish, kStart), ZX_OK);
   RunUntilIdle();
 
-  auto& module = modules[0];
-  module[0] = 4;
-  module[module.num_pcs() / 2] = 16;
-  module[module.num_pcs() - 1] = 128;
+  (*module)[0] = 4;
+  (*module)[module->num_pcs() / 2] = 16;
+  (*module)[module->num_pcs() - 1] = 128;
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(kStart, kFinish), ZX_OK);
   RunUntilIdle();
 
-  EXPECT_EQ(MeasurePool(), 3U);
+  EXPECT_EQ(pool()->Measure(), 3U);
 }
 
 TEST_F(ProcessTest, UpdateOnExit) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
+
+  auto* module = GetModule(AddModule());
+  FUZZING_EXPECT_OK(WatchForModule());
+  RunUntilIdle();
 
   // Add some counters.
-  auto& module = modules[0];
-  module[module.num_pcs() - 4] = 64;
-  module[module.num_pcs() - 3] = 32;
-  module[module.num_pcs() - 2] = 16;
-  module[module.num_pcs() - 1] = 8;
+  (*module)[module->num_pcs() - 4] = 64;
+  (*module)[module->num_pcs() - 3] = 32;
+  (*module)[module->num_pcs() - 2] = 16;
+  (*module)[module->num_pcs() - 1] = 8;
 
   //  Fake a call to |exit|.
-  process->OnExit();
-  EXPECT_EQ(MeasurePool(), 4U);
+  process.OnExit();
+  EXPECT_EQ(pool()->Measure(), 4U);
 }
 
 TEST_F(ProcessTest, FinishWithoutLeaks) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
 
   // No mallocs/frees, and no leak detection.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 
   // Balanced mallocs/frees, and no leak detection.
   // The pointers and sizes don't actually matter; just the number of calls.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStart), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kStart), ZX_OK);
   RunUntilIdle();
 
-  process->OnMalloc(nullptr, 0);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
-  process->OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
+  process.OnFree(nullptr);
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 
   // No mallocs/frees, with leak detection.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStartLeakCheck), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kStartLeakCheck), ZX_OK);
   RunUntilIdle();
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 
   // Balanced mallocs/frees, with leak detection.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStartLeakCheck), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kStartLeakCheck), ZX_OK);
   RunUntilIdle();
 
-  process->OnMalloc(nullptr, 0);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
-  process->OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
+  process.OnFree(nullptr);
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 }
 
 TEST_F(ProcessTest, FinishWithLeaks) {
-  auto modules = CreateModulesAndInitFirst();
-  auto proxy = MakeProxy(DefaultOptions());
-  auto process = MakeProcess(proxy);
+  Process process(executor());
+  FUZZING_EXPECT_OK(Connect(&process));
+  FUZZING_EXPECT_OK(WatchForProcess());
+  RunUntilIdle();
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinish));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinish));
+  EXPECT_EQ(eventpair()->SignalPeer(0, kFinish), ZX_OK);
   RunUntilIdle();
 
   // Unbalanced mallocs/frees, and no leak detection.
   // The pointers and sizes don't actually matter; just the number of calls.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStart), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(kFinish, kStart), ZX_OK);
   RunUntilIdle();
 
-  process->OnMalloc(nullptr, 0);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinishWithLeaks));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinishWithLeaks));
+  EXPECT_EQ(eventpair()->SignalPeer(kStart, kFinish), ZX_OK);
   RunUntilIdle();
 
   // Unbalanced mallocs/frees, with leak detection.
   // Since these aren't real leaks, this will not abort.
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kStart));
-  EXPECT_EQ(proxy->SignalPeer(kStartLeakCheck), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kStart));
+  EXPECT_EQ(eventpair()->SignalPeer(kFinish, kStartLeakCheck), ZX_OK);
   RunUntilIdle();
 
-  process->OnMalloc(nullptr, 0);
-  process->OnMalloc(nullptr, 0);
-  process->OnFree(nullptr);
+  process.OnMalloc(nullptr, 0);
+  process.OnMalloc(nullptr, 0);
+  process.OnFree(nullptr);
 
-  FUZZING_EXPECT_OK(proxy->AwaitReceived(kFinishWithLeaks));
-  EXPECT_EQ(proxy->SignalPeer(kFinish), ZX_OK);
+  FUZZING_EXPECT_OK(eventpair()->WaitFor(kFinishWithLeaks));
+  EXPECT_EQ(eventpair()->SignalPeer(kStartLeakCheck, kFinish), ZX_OK);
   RunUntilIdle();
 }
 

@@ -13,8 +13,6 @@ source_set("testing") {
     "adapter.h",
     "module.cc",
     "module.h",
-    "process-proxy.cc",
-    "process-proxy.h",
     "target.cc",
     "target.h",
   ]

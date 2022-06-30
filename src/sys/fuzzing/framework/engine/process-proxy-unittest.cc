@@ -43,13 +43,12 @@ TEST_F(ProcessProxyTest, AddLlvmModule) {
   TestTarget target(executor());
   auto process_proxy = CreateAndConnectProxy(target.Launch());
   FakeFrameworkModule module;
-  zx::vmo data;
-
-  EXPECT_EQ(module.Share(&data), ZX_OK);
-  LlvmModule valid;
-  valid.set_legacy_id(module.legacy_id());
-  valid.set_inline_8bit_counters(std::move(data));
-  EXPECT_EQ(process_proxy->AddModule(std::move(valid)), ZX_OK);
+  LlvmModule llvm_module;
+  llvm_module.set_legacy_id(module.legacy_id());
+  zx::vmo inline_8bit_counters;
+  EXPECT_EQ(module.Share(0x1234, &inline_8bit_counters), ZX_OK);
+  llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
+  EXPECT_EQ(process_proxy->AddModule(std::move(llvm_module)), ZX_OK);
   FUZZING_EXPECT_OK(eventpair().WaitFor(kSync));
   RunUntilIdle();
 

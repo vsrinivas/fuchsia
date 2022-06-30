@@ -66,6 +66,7 @@ source_set("engine-lib") {
   ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//third_party/modp_b64",
     "//third_party/re2",
     "//zircon/system/ulib/inspector",
   ]

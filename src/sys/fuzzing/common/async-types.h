@@ -46,6 +46,7 @@
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/result.h>
 #include <lib/fpromise/scope.h>
+#include <lib/fpromise/sequencer.h>
 #include <zircon/types.h>
 
 namespace fuzzing {
@@ -114,10 +115,9 @@ inline ZxResult<> AsZxResult(const Result<zx_status_t>& result) {
 // Additional supporting types from fpromise.
 
 using Barrier = fpromise::barrier;
-
-using Scope = fpromise::scope;
-
 using Context = fpromise::context;
+using Scope = fpromise::scope;
+using Sequencer = fpromise::sequencer;
 
 }  // namespace fuzzing
 

@@ -6,12 +6,13 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_TARGET_PROCESS_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <atomic>
-#include <limits>
+#include <string>
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
@@ -21,17 +22,20 @@
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/sancov.h"
 #include "src/sys/fuzzing/framework/target/module.h"
-#include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
 using ::fuchsia::fuzzer::Instrumentation;
 using ::fuchsia::fuzzer::InstrumentationPtr;
 
-// Reserved target IDs. |kTimeoutTargetId| is a pseudo-ID used to signify a timeout across all
-// target processes rather than an error in a specific one.
-constexpr uint64_t kInvalidTargetId = std::numeric_limits<uint64_t>::min();
-constexpr uint64_t kTimeoutTargetId = std::numeric_limits<uint64_t>::max();
+// Reserved target IDs:
+//  * |kInvalidTargetId| is used when a target identifier has not been set or could be parsed.
+//  * |kTimeoutTargetId| is a pseudo-ID used to signify a timeout across all target processes rather
+//    than an error in a specific one. It uses the "kernel" value, as it a) is guaranteed never to
+//    be produced for a valid process, and b) is usually technically correct, since a deadlock often
+//    means a routine is waiting for a syscall to complete, e.g. a |wait_one| call.
+constexpr uint64_t kInvalidTargetId = ZX_KOID_INVALID;
+constexpr uint64_t kTimeoutTargetId = ZX_KOID_KERNEL;
 
 // This struct is simply a container for holding and moving module details like inline 8-bit
 // counters and PC tables that are recorded by the |__sanitizer_cov_*_init| functions. This
@@ -73,8 +77,12 @@ class Process final {
   // called once per process; subsequent calls will panic.
   static void InstallHooks();
 
-  // Returns a promise to connects to the |Coverage| component and begin fuzzing.
-  Promise<> Connect(fidl::InterfaceRequestHandler<Instrumentation> handler);
+  // Returns a promise to connect to the coverage component and add modules for coverage. This
+  // promise does not return unless there is an error; instead, it |Run|s the fuzzed process and
+  // continues to wait for any dynamically loaded modules. The given |eventpair| is signalled with
+  // |kSync| after the initial set of modules have been published and acknowledged by the engine.
+  ZxPromise<> Connect(fidl::InterfaceHandle<Instrumentation> instrumentation,
+                      zx::eventpair eventpair);
 
   // Adds the counters and PCs associated with modules for this process. Invoked via the
   // |__sanitizer_cov_*_init| functions.
@@ -96,25 +104,21 @@ class Process final {
   size_t malloc_limit() const { return malloc_limit_; }
   zx::time next_purge() const { return next_purge_; }
 
-  // Returns a promise to send complete pending modules to the coverage component. This promise does
-  // not return unless there is an error.
-  Promise<> AddModules();
-
-  // Promises to clear and update modules in response to signals from the engine to start and finish
-  // fuzzing runs, respectively. This promise does not return unless there is an error.
-  Promise<> Run();
-
  private:
   // Parses the given |options| and prepares this object to manage fuzzing its process.
   void Configure(Options options);
 
-  // Returns a promise that completes when the engine signals it has added a process or module proxy
-  // for this object.
-  Promise<> AwaitSync();
+  // Returns a promise to publish coverage for added modules as debug data. This promise does not
+  // complete unless there is an error.
+  ZxPromise<> AddModules(zx::eventpair eventpair);
 
   // Returns a promise to build a |Module| from |CountersInfo| and |PCsInfo|, and send it to the
   // coverage component.
-  Promise<> AddModule();
+  ZxPromise<> AddModule();
+
+  // Promises to clear and update modules in response to signals from the engine to start and finish
+  // fuzzing runs, respectively. This promise does not return unless there is an error.
+  ZxPromise<> Run();
 
   // Configures the target for leak detection, if available. See |DetectLeak| below for details.
   void ConfigureLeakDetection();
@@ -144,6 +148,7 @@ class Process final {
   ExecutorPtr executor_;
   InstrumentationPtr instrumentation_;
   AsyncEventPair eventpair_;
+  uint64_t target_id_ = kInvalidTargetId;
 
   // Options provided by the engine.
   Options options_;
@@ -151,10 +156,10 @@ class Process final {
   size_t malloc_limit_ = 0;
 
   // Queues for adding modules.
-  AsyncDeque<CountersInfo> counters_;
-  AsyncDeque<PCsInfo> pcs_;
+  AsyncDequePtr<CountersInfo> counters_;
+  AsyncDequePtr<PCsInfo> pcs_;
 
-  // Module feedback.
+  // Published debug data.
   std::vector<Module> modules_;
 
   // Memory tracking.
@@ -162,8 +167,9 @@ class Process final {
   std::atomic<uint64_t> num_mallocs_ = 0;
   std::atomic<uint64_t> num_frees_ = 0;
   zx::time next_purge_;
-
+  fpromise::suspended_task awaiting_;
   Scope scope_;
+  Sequencer sequencer_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Process);
 };
