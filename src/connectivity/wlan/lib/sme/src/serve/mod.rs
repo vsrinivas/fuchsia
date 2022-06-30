@@ -38,6 +38,9 @@ pub enum SmeServer {
 async fn serve_generic_sme(
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
     mut sme_server: SmeServer,
+    mut telemetry_server: Option<
+        mpsc::UnboundedSender<fidl::endpoints::ServerEnd<fidl_sme::TelemetryMarker>>,
+    >,
 ) -> Result<(), anyhow::Error> {
     let mut generic_sme_stream = match generic_sme.into_stream() {
         Ok(stream) => stream,
@@ -45,8 +48,6 @@ async fn serve_generic_sme(
     };
     loop {
         match generic_sme_stream.next().await {
-            // Right now we only support one API per-sme, but in the future we plan to support
-            // multiple and this fn will be more useful.
             Some(Ok(req)) => {
                 let result = match req {
                     fidl_sme::GenericSmeRequest::GetClientSme { responder } => {
@@ -79,9 +80,21 @@ async fn serve_generic_sme(
                         responder.send(&mut response)
                     }
                     fidl_sme::GenericSmeRequest::GetSmeTelemetry { responder } => {
-                        // TODO(fxbug.dev/66772): Support SME Telemetry API
-                        warn!("Requested unsupported SME telemetry API");
-                        responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
+                        let mut response = if let Some(telemetry_server) = telemetry_server.as_mut()
+                        {
+                            let (client_end, server_end) =
+                                create_endpoints::<fidl_sme::TelemetryMarker>()
+                                    .expect("failed to create Telemetry");
+                            telemetry_server
+                                .send(server_end)
+                                .await
+                                .map(|_| client_end)
+                                .map_err(|_| zx::Status::PEER_CLOSED.into_raw())
+                        } else {
+                            warn!("Requested unsupported SME telemetry API");
+                            Err(zx::Status::NOT_SUPPORTED.into_raw())
+                        };
+                        responder.send(&mut response)
                     }
                 };
                 if let Err(e) = result {
@@ -112,8 +125,9 @@ pub fn create_sme(
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
 ) -> (SmeServer, MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let device_info = device_info.clone();
-    let (server, mlme_req_stream, sme_fut) = match device_info.role {
+    let (server, mlme_req_stream, telemetry_sender, sme_fut) = match device_info.role {
         fidl_common::WlanMacRole::Client => {
+            let (telemetry_endpoint_sender, telemetry_endpoint_receiver) = mpsc::unbounded();
             let (sender, receiver) = mpsc::unbounded();
             let (mlme_req_stream, fut) = client::serve(
                 cfg,
@@ -123,25 +137,31 @@ pub fn create_sme(
                 spectrum_management_support,
                 mlme_event_stream,
                 receiver,
+                telemetry_endpoint_receiver,
                 iface_tree_holder,
                 hasher,
                 persistence_req_sender,
             );
-            (SmeServer::Client(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
+            (
+                SmeServer::Client(sender),
+                mlme_req_stream,
+                Some(telemetry_endpoint_sender),
+                FutureObj::new(Box::new(fut)),
+            )
         }
         fidl_common::WlanMacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
             let (mlme_req_stream, fut) =
                 ap::serve(device_info, mac_sublayer_support, mlme_event_stream, receiver);
-            (SmeServer::Ap(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
+            (SmeServer::Ap(sender), mlme_req_stream, None, FutureObj::new(Box::new(fut)))
         }
         fidl_common::WlanMacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
             let (mlme_req_stream, fut) = mesh::serve(device_info, mlme_event_stream, receiver);
-            (SmeServer::Mesh(sender), mlme_req_stream, FutureObj::new(Box::new(fut)))
+            (SmeServer::Mesh(sender), mlme_req_stream, None, FutureObj::new(Box::new(fut)))
         }
     };
-    let generic_sme_fut = serve_generic_sme(generic_sme, server.clone());
+    let generic_sme_fut = serve_generic_sme(generic_sme, server.clone(), telemetry_sender);
     let sme_fut_with_shutdown = async move {
         select! {
             sme_fut = sme_fut.fuse() => sme_fut,
@@ -284,13 +304,14 @@ mod tests {
 
     struct GenericSmeTestHelper {
         proxy: fidl_sme::GenericSmeProxy,
+        mlme_req_stream: MlmeStream,
+
         // These values must stay in scope or the SME will terminate, but they
         // are not relevant to Generic SME tests.
         _inspector: Inspector,
         _shutdown_sender: mpsc::Sender<()>,
         _persistence_stream: mpsc::Receiver<String>,
-        _mlme_req_stream: MlmeStream,
-        _mlme_event_sender: mpsc::UnboundedSender<fidl_mlme::MlmeEvent>,
+        _mlme_event_sender: mpsc::UnboundedSender<crate::MlmeEvent>,
         // Executor goes last to avoid test shutdown failures.
         exec: fasync::TestExecutor,
     }
@@ -327,10 +348,10 @@ mod tests {
         (
             GenericSmeTestHelper {
                 proxy: generic_sme_proxy,
+                mlme_req_stream,
                 _inspector: inspector,
                 _shutdown_sender: shutdown_sender,
                 _persistence_stream: persistence_stream,
-                _mlme_req_stream: mlme_req_stream,
                 _mlme_event_sender: mlme_event_sender,
                 exec,
             },
@@ -394,5 +415,62 @@ mod tests {
             helper.exec.run_until_stalled(&mut client_sme_fut),
             Poll::Ready(Ok(Err(_)))
         );
+    }
+
+    #[test]
+    fn generic_sme_get_histogram_stats_for_client() {
+        let (mut helper, mut serve_fut) = start_generic_sme_test(fidl_common::WlanMacRole::Client);
+
+        let mut telemetry_fut = helper.proxy.get_sme_telemetry();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let telemetry = assert_variant!(helper.exec.run_until_stalled(&mut telemetry_fut), Poll::Ready(Ok(Ok(telemetry))) => telemetry);
+        let telemetry_proxy = telemetry.into_proxy().unwrap();
+
+        // Forward request to MLME.
+        let mut histogram_fut = telemetry_proxy.get_histogram_stats();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Mock response from MLME. Use a fake error code to make the response easily verifiable.
+        let histogram_req = assert_variant!(helper.exec.run_until_stalled(&mut helper.mlme_req_stream.next()), Poll::Ready(Some(req)) => req);
+        let histogram_responder = assert_variant!(histogram_req, crate::MlmeRequest::GetIfaceHistogramStats(responder) => responder);
+        histogram_responder.respond(fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(1337));
+
+        // Verify that the response made it to us without alteration.
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let histogram_result = assert_variant!(helper.exec.run_until_stalled(&mut histogram_fut), Poll::Ready(Ok(histogram_result)) => histogram_result);
+        assert_eq!(histogram_result, Err(1337));
+    }
+
+    #[test]
+    fn generic_sme_get_counter_stats_for_client() {
+        let (mut helper, mut serve_fut) = start_generic_sme_test(fidl_common::WlanMacRole::Client);
+
+        let mut telemetry_fut = helper.proxy.get_sme_telemetry();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let telemetry = assert_variant!(helper.exec.run_until_stalled(&mut telemetry_fut), Poll::Ready(Ok(Ok(telemetry))) => telemetry);
+        let telemetry_proxy = telemetry.into_proxy().unwrap();
+
+        // Forward request to MLME.
+        let mut counter_fut = telemetry_proxy.get_counter_stats();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Mock response from MLME. Use a fake error code to make the response easily verifiable.
+        let counter_req = assert_variant!(helper.exec.run_until_stalled(&mut helper.mlme_req_stream.next()), Poll::Ready(Some(req)) => req);
+        let counter_responder = assert_variant!(counter_req, crate::MlmeRequest::GetIfaceCounterStats(responder) => responder);
+        counter_responder.respond(fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(1337));
+
+        // Verify that the response made it to us without alteration.
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let counter_result = assert_variant!(helper.exec.run_until_stalled(&mut counter_fut), Poll::Ready(Ok(counter_result)) => counter_result);
+        assert_eq!(counter_result, Err(1337));
+    }
+
+    #[test]
+    fn generic_sme_get_telemetry_for_ap_fails() {
+        let (mut helper, mut serve_fut) = start_generic_sme_test(fidl_common::WlanMacRole::Ap);
+
+        let mut telemetry_fut = helper.proxy.get_sme_telemetry();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(helper.exec.run_until_stalled(&mut telemetry_fut), Poll::Ready(Ok(Err(_))));
     }
 }

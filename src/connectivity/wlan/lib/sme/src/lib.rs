@@ -48,6 +48,8 @@ pub enum MlmeRequest {
     SendMpOpenAction(fidl_mlme::MeshPeeringOpenAction),
     SendMpConfirmAction(fidl_mlme::MeshPeeringConfirmAction),
     MeshPeeringEstablished(fidl_mlme::MeshPeeringParams),
+    GetIfaceCounterStats(responder::Responder<fidl_mlme::GetIfaceCounterStatsResponse>),
+    GetIfaceHistogramStats(responder::Responder<fidl_mlme::GetIfaceHistogramStatsResponse>),
     SaeHandshakeResp(fidl_mlme::SaeHandshakeResponse),
     SaeFrameTx(fidl_mlme::SaeFrame),
     WmmStatusReq,

@@ -177,7 +177,7 @@ async fn forward_mlme_msgs(
                 Some(Err(e)) => return Err(format_err!("Error reading an event from MLME channel: {}", e)),
             },
             mlme_req = mlme_req_stream.next().fuse() => match mlme_req {
-                Some(req) => match forward_mlme_request(req, &mlme_proxy) {
+                Some(req) => match forward_mlme_request(req, &mlme_proxy).await {
                     Ok(()) => {},
                     Err(ref e) if e.is_closed() => return Ok(()),
                     Err(e) => return Err(format_err!("Error forwarding a request from SME to MLME: {}", e)),
@@ -188,7 +188,7 @@ async fn forward_mlme_msgs(
     }
 }
 
-fn forward_mlme_request(
+async fn forward_mlme_request(
     req: wlan_sme::MlmeRequest,
     proxy: &fidl_mlme::MlmeProxy,
 ) -> Result<(), fidl::Error> {
@@ -208,6 +208,12 @@ fn forward_mlme_request(
         MlmeRequest::SendMpOpenAction(mut req) => proxy.send_mp_open_action(&mut req),
         MlmeRequest::SendMpConfirmAction(mut req) => proxy.send_mp_confirm_action(&mut req),
         MlmeRequest::MeshPeeringEstablished(mut req) => proxy.mesh_peering_established(&mut req),
+        MlmeRequest::GetIfaceCounterStats(responder) => {
+            proxy.get_iface_counter_stats().await.map(|resp| responder.respond(resp))
+        }
+        MlmeRequest::GetIfaceHistogramStats(responder) => {
+            proxy.get_iface_histogram_stats().await.map(|resp| responder.respond(resp))
+        }
         MlmeRequest::SaeHandshakeResp(mut resp) => proxy.sae_handshake_resp(&mut resp),
         MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
         MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),

@@ -615,6 +615,20 @@ impl ClientSme {
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
+
+    pub fn counter_stats(&mut self) -> oneshot::Receiver<fidl_mlme::GetIfaceCounterStatsResponse> {
+        let (responder, receiver) = Responder::new();
+        self.context.mlme_sink.send(MlmeRequest::GetIfaceCounterStats(responder));
+        receiver
+    }
+
+    pub fn histogram_stats(
+        &mut self,
+    ) -> oneshot::Receiver<fidl_mlme::GetIfaceHistogramStatsResponse> {
+        let (responder, receiver) = Responder::new();
+        self.context.mlme_sink.send(MlmeRequest::GetIfaceHistogramStats(responder));
+        receiver
+    }
 }
 
 impl super::Station for ClientSme {
