@@ -38,6 +38,21 @@ class Library {
       type_alias: this.ir.type_alias_declarations,
     }
 
+    let findPayloadDeclaration = (payload) => {
+      const method_type_declarations = [
+        this.ir.external_struct_declarations,
+        this.ir.struct_declarations,
+        this.ir.table_declarations,
+      ]
+      for (const declarations of method_type_declarations) {
+        let decl = this._findDeclaration(declarations, payload);
+        if (decl != null) {
+          return decl
+        }
+      }
+      return null
+    }
+
     // Match each method with its request and response payloads.
     for (let protocol of this.ir.protocol_declarations) {
       for (let method of protocol.methods) {
@@ -49,12 +64,10 @@ class Library {
           }
 
           let payload = method.maybe_request_payload.identifier;
-          let decl = this._findDeclaration(this.ir.struct_declarations, payload);
+
+          let decl = findPayloadDeclaration(payload);
           if (decl == null) {
-            decl = this._findDeclaration(this.ir.external_struct_declarations, payload);
-            if (decl == null) {
-              throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown payload '${payload}'`);
-            }
+            throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown request payload '${payload}'`);
           }
 
           method.maybe_request = decl.members;
@@ -68,12 +81,10 @@ class Library {
           }
 
           let payload = method.maybe_response_payload.identifier;
-          let decl = this._findDeclaration(this.ir.struct_declarations, payload);
+
+          let decl = findPayloadDeclaration(payload);
           if (decl == null) {
-            decl = this._findDeclaration(this.ir.external_struct_declarations, payload);
-            if (decl == null) {
-              throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown payload '${payload}'`);
-            }
+            throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown response payload '${payload}'`);
           }
 
           method.maybe_response = decl.members;
