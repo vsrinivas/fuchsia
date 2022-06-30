@@ -9,7 +9,7 @@
         "sys/testing/system-test.shard.cml",
     ],
     program: {
-        binary: "bin/web-semantics-test-bin",
+        binary: "bin/web-semantics-test",
     },
     offer: [
         {
@@ -28,6 +28,13 @@
             ],
             from: "parent",
             to: "#realm_builder",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "config-data",
+            to: "#realm_builder",
+            subdir: "web-semantics-test",
         },
     ],
 }

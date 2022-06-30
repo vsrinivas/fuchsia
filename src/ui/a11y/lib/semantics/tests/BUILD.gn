@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/flutter/config.gni")
 import("//build/testing/environments.gni")
+import("//src/fonts/build/fonts.gni")
 
 group("unit") {
   testonly = true
@@ -18,7 +19,6 @@ group("integration") {
     ":web-semantics-test",
     "//src/chromium:web_engine",
     "//src/flutter",
-    "//src/fonts:downstream_test_deps",
   ]
 }
 
@@ -165,8 +165,8 @@ fuchsia_test_package("flutter-semantics-test") {
 
 executable("web-semantics-test-bin") {
   testonly = true
-
   sources = [ "web_semantics_tests.cc" ]
+  output_name = "web-semantics-test"
   deps = [
     ":semantics_integration_test_fixture",
     "//sdk/fidl/fuchsia.buildinfo",
@@ -210,12 +210,25 @@ fuchsia_component("web-semantics-test-component") {
   deps = [ ":web-semantics-test-bin" ]
 }
 
+# The web engine requires a font provider for any test that attempts
+# to render text, and the font provider requires at least one font
+# asset.
+font_collection("single-font-collection") {
+  testonly = true
+  product_config_path =
+      "//src/ui/testing/data/single-font-collection.fontcfg.json5"
+  local_asset_names = [ "Roboto-Regular.ttf" ]
+  font_service_pkg = "web-semantics-test"
+}
+
 fuchsia_test_package("web-semantics-test") {
   test_components = [ ":web-semantics-test-component" ]
   deps = [
-    "//src/connectivity/network/netstack:component-legacy",
+    ":single-font-collection",
+    "//src/connectivity/network/netstack:component",
     "//src/developer/build_info/testing:fake-build-info-component",
     "//src/developer/memory/monitor:component",
+    "//src/fonts:font_provider_cm",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/a11y/lib/semantics/tests/web_client:component",
     "//src/ui/a11y/lib/semantics/tests/web_client:web_client_default_config",

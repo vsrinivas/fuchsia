@@ -7,6 +7,7 @@
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
@@ -48,6 +49,7 @@ namespace accessibility_test {
 namespace {
 
 using component_testing::ChildRef;
+using component_testing::Directory;
 using component_testing::LocalComponent;
 using component_testing::ParentRef;
 using component_testing::Protocol;
@@ -109,7 +111,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   static constexpr auto kWebViewUrl = "#meta/semantics-test-web-client.cm";
 
   static constexpr auto kFontsProvider = "fonts_provider";
-  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
+  static constexpr auto kFontsProviderUrl = "#meta/fonts.cm";
 
   static constexpr auto kTextManager = "text_manager";
   static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
@@ -121,8 +123,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl =
-      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
@@ -140,11 +141,11 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   void ConfigureRealm() override {
     // First, add all child components of this test suite.
     realm()->AddChild(kWebView, kWebViewUrl);
-    realm()->AddLegacyChild(kFontsProvider, kFontsProviderUrl);
+    realm()->AddChild(kFontsProvider, kFontsProviderUrl);
     realm()->AddChild(kTextManager, kTextManagerUrl);
     realm()->AddChild(kIntl, kIntlUrl);
     realm()->AddChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
-    realm()->AddLegacyChild(kNetstack, kNetstackUrl);
+    realm()->AddChild(kNetstack, kNetstackUrl);
     realm()->AddLegacyChild(kWebContextProvider, kWebContextProviderUrl);
     realm()->AddChild(kBuildInfoProvider, kBuildInfoProviderUrl);
     realm()->AddChild(kMockCobalt, kMockCobaltUrl);
@@ -157,6 +158,13 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
                        .source = ChildRef{kFontsProvider},
                        .targets = {ChildRef{kWebView}}});
+    realm()->AddRoute({.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                        Protocol{fuchsia::logger::LogSink::Name_},
+                                        Directory{.name = "config-data",
+                                                  .rights = fuchsia::io::R_STAR_DIR,
+                                                  .path = "/config/data"}},
+                       .source = ParentRef(),
+                       .targets = {ChildRef{kFontsProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
                        .source = ChildRef{kTextManager},
                        .targets = {ChildRef{kWebView}}});
@@ -176,8 +184,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
                        .targets = {ChildRef{kWebView}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
                        .source = ParentRef(),
-                       .targets = {ChildRef{kFontsProvider}, ChildRef{kNetstack},
-                                   ChildRef{kWebContextProvider}}});
+                       .targets = {ChildRef{kFontsProvider}, ChildRef{kWebContextProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
                        .source = ChildRef{kMockCobalt},
                        .targets = {ChildRef{kMemoryPressureProvider}}});

@@ -14,14 +14,16 @@ fidl("test.virtualkeyboard") {
 
 font_collection("single-font-collection") {
   testonly = true
-  product_config_path = "single-font-collection.fontcfg.json5"
+  product_config_path =
+      "//src/ui/testing/data/single-font-collection.fontcfg.json5"
   local_asset_names = [ "Roboto-Regular.ttf" ]
   font_service_pkg = "virtual-keyboard-test"
 }
 
 font_collection("single-font-collection-ip") {
   testonly = true
-  product_config_path = "single-font-collection.fontcfg.json5"
+  product_config_path =
+      "//src/ui/testing/data/single-font-collection.fontcfg.json5"
   local_asset_names = [ "Roboto-Regular.ttf" ]
   font_service_pkg = "virtual-keyboard-test-ip"
 }
