@@ -78,6 +78,7 @@ impl<'a> CompiledBindRules<'a> {
     pub fn empty_bind_rules(
         use_new_bytecode: bool,
         disable_autobind: bool,
+        enable_debug: bool,
     ) -> CompiledBindRules<'a> {
         let mut instructions = vec![];
 
@@ -96,15 +97,18 @@ impl<'a> CompiledBindRules<'a> {
             instructions: instructions,
             symbol_table: HashMap::new(),
             use_new_bytecode: use_new_bytecode,
+            enable_debug: enable_debug,
         })
     }
 }
 
+// TODO(fxb/103352): Use enable debug flag.
 #[derive(Debug, PartialEq)]
 pub struct BindRules<'a> {
     pub symbol_table: SymbolTable,
     pub instructions: Vec<SymbolicInstructionInfo<'a>>,
     pub use_new_bytecode: bool,
+    pub enable_debug: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -196,6 +200,7 @@ pub fn compile<'a>(
     lint: bool,
     disable_autobind: bool,
     use_new_bytecode: bool,
+    enable_debug: bool,
 ) -> Result<CompiledBindRules<'a>, CompilerError> {
     if bind_composite::Ast::try_from(rules_str).is_ok() {
         return Ok(CompiledBindRules::CompositeBind(compile_bind_composite(
@@ -212,6 +217,7 @@ pub fn compile<'a>(
         lint,
         disable_autobind,
         use_new_bytecode,
+        enable_debug,
     )?))
 }
 
@@ -221,6 +227,7 @@ pub fn compile_bind<'a>(
     lint: bool,
     disable_autobind: bool,
     use_new_bytecode: bool,
+    enable_debug: bool,
 ) -> Result<BindRules<'a>, CompilerError> {
     let ast = bind_rules::Ast::try_from(rules_str).map_err(CompilerError::BindParserError)?;
     let symbol_table = get_symbol_table_from_libraries(&ast.using, libraries, lint)?;
@@ -234,6 +241,7 @@ pub fn compile_bind<'a>(
         symbol_table: symbol_table,
         instructions: instructions,
         use_new_bytecode: use_new_bytecode,
+        enable_debug: enable_debug,
     })
 }
 

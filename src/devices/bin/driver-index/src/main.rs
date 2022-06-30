@@ -789,6 +789,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(bind_rules).unwrap(),
@@ -914,6 +915,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -983,6 +985,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: true,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1046,6 +1049,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1143,6 +1147,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1214,6 +1219,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1301,6 +1307,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1395,6 +1402,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -1487,6 +1495,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
@@ -2199,6 +2208,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
@@ -2335,6 +2345,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
@@ -2413,6 +2424,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
@@ -2629,6 +2641,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
@@ -2692,6 +2705,7 @@ mod tests {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),

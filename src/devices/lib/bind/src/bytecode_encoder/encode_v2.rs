@@ -333,6 +333,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -383,6 +384,7 @@ mod test {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -427,6 +429,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -484,6 +487,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -509,6 +513,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -539,6 +544,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -572,6 +578,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -622,6 +629,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -680,6 +688,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -743,6 +752,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -801,6 +811,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -846,6 +857,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(Err(BindRulesEncodeError::DuplicateLabel(1)), encode_to_bytecode_v2(bind_rules));
@@ -863,6 +875,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
@@ -888,6 +901,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -908,6 +922,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(Err(BindRulesEncodeError::MissingLabel(2)), encode_to_bytecode_v2(bind_rules));
@@ -924,6 +939,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -943,6 +959,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -961,6 +978,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         assert_eq!(
             Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
@@ -975,6 +993,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: true,
         };
         assert_eq!(
             Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
@@ -991,6 +1010,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
 
         assert_eq!(Err(BindRulesEncodeError::MatchNotSupported), encode_to_bytecode_v2(bind_rules));

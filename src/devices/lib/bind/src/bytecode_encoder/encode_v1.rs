@@ -309,6 +309,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         };
 
         assert_eq!(Err(BindRulesEncodeError::UnsupportedSymbol), encode_to_bytecode_v1(bind_rules));
@@ -323,6 +324,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         };
 
         assert_eq!(Err(BindRulesEncodeError::IntegerOutOfRange), encode_to_bytecode_v1(bind_rules));

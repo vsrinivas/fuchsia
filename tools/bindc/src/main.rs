@@ -303,7 +303,8 @@ fn handle_command(command: Command) -> Result<(), Error> {
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
             let input = options.input.ok_or(anyhow!("The debug command requires an input."))?;
             let rules = read_file(&input)?;
-            let bind_rules = compiler::compile_bind(&rules, &includes, options.lint, false, false)?;
+            let bind_rules =
+                compiler::compile_bind(&rules, &includes, options.lint, false, false, false)?;
 
             let device = read_file(&device_file)?;
             let binds = offline_debugger::debug_from_str(&bind_rules, &device)?;
@@ -400,16 +401,22 @@ fn handle_compile(
         let input = input.ok_or(anyhow!("An input is required when disable_autobind is false."))?;
         rules_str = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        compiler::compile(&rules_str, &includes, lint, disable_autobind, use_new_bytecode)?
+        compiler::compile(&rules_str, &includes, lint, disable_autobind, use_new_bytecode, false)?
     } else if let Some(input) = input {
         // Autobind is disabled but there are some bind rules for manual binding.
         rules_str = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        let compiled_bind_rules =
-            compiler::compile(&rules_str, &includes, lint, disable_autobind, use_new_bytecode)?;
+        let compiled_bind_rules = compiler::compile(
+            &rules_str,
+            &includes,
+            lint,
+            disable_autobind,
+            use_new_bytecode,
+            false,
+        )?;
         compiled_bind_rules
     } else {
-        CompiledBindRules::empty_bind_rules(disable_autobind, use_new_bytecode)
+        CompiledBindRules::empty_bind_rules(disable_autobind, use_new_bytecode, false)
     };
 
     if output_bytecode {
@@ -504,6 +511,7 @@ mod tests {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
@@ -513,6 +521,7 @@ mod tests {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
@@ -529,6 +538,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
@@ -541,6 +551,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
@@ -555,6 +566,7 @@ mod tests {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         });
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
@@ -567,6 +579,7 @@ mod tests {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
@@ -587,6 +600,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         });
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
@@ -603,6 +617,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
+            enable_debug: false,
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
@@ -626,6 +641,7 @@ mod tests {
             ],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
@@ -641,6 +657,7 @@ mod tests {
             ],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
+            enable_debug: false,
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
@@ -692,7 +709,7 @@ mod tests {
             }";
 
         let compiled_bind_rules =
-            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true, false).unwrap();
 
         assert_eq!(
             compiled_bind_rules.encode_to_bytecode().unwrap(),
@@ -718,7 +735,7 @@ mod tests {
         );
 
         let compiled_bind_rules =
-            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true, false).unwrap();
 
         assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
         if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
@@ -737,7 +754,7 @@ mod tests {
             }";
 
         let compiled_bind_rules =
-            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true, false).unwrap();
         assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
         if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
             assert_eq!(

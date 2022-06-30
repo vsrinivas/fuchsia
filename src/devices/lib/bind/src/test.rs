@@ -71,8 +71,9 @@ impl TestSuite {
     fn run(&self, rules: &str, libraries: &[String]) -> Result<bool, TestError> {
         match &self.specs {
             TestSpec::Bind(test_specs) => {
-                let bind_rules = compiler::compile_bind(rules, libraries, false, false, false)
-                    .map_err(TestError::CompilerError)?;
+                let bind_rules =
+                    compiler::compile_bind(rules, libraries, false, false, false, false)
+                        .map_err(TestError::CompilerError)?;
                 run_bind_test_specs(test_specs, &bind_rules.symbol_table, &bind_rules.instructions)
             }
             TestSpec::CompositeBind(test_specs) => {
