@@ -920,7 +920,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-protected", &req.ssid[..]);
-                assert_eq!(Credential::Password(b"supersecure".to_vec()), req.authentication.credentials.into())
+                assert_eq!(Credential::Password(b"supersecure".to_vec()), req.authentication.credentials)
                 // TODO(hahnr): Send connection response.
             }
         );
@@ -971,7 +971,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-psk", &req.ssid[..]);
-                assert_eq!(Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.authentication.credentials.into())
+                assert_eq!(Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.authentication.credentials)
                 // TODO(hahnr): Send connection response.
             }
         );

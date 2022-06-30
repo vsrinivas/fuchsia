@@ -12,6 +12,7 @@ use {
         convert::TryFrom,
         fmt::{self, Debug},
     },
+    wlan_common::security::wep::WepKey,
 };
 
 /// The max number of connection results we will store per BSS at a time. For now, this number is
@@ -421,22 +422,43 @@ impl From<Credential> for fidl_policy::Credential {
     }
 }
 
-// TODO(fxbug.dev/102606): Remove this conversion. Once calls to `select_authentication_method` are
-//                         removed from the state machine, there will instead be an
-//                         `Authentication` (or `SecurityAuthenticator`) field in
-//                         `ScannedCandidate` which can be more directly compared to SME
+// TODO(fxbug.dev/102606): Remove this operator implementation. Once calls to
+//                         `select_authentication_method` are removed from the state machine, there
+//                         will instead be an `Authentication` (or `SecurityAuthenticator`) field
+//                         in `ScannedCandidate` which can be more directly compared to SME
 //                         `ConnectRequest`s in tests.
 #[cfg(test)]
-impl From<Option<fidl_security::Credentials>> for Credential {
-    fn from(credentials: Option<fidl_security::Credentials>) -> Self {
+impl PartialEq<Option<fidl_security::Credentials>> for Credential {
+    fn eq(&self, credentials: &Option<fidl_security::Credentials>) -> bool {
         use fidl_security::{Credentials, WepCredentials, WpaCredentials};
 
         match credentials {
-            None => Credential::None,
-            Some(Credentials::Wep(WepCredentials { key })) => Credential::Password(key.into()),
-            Some(Credentials::Wpa(credentials)) => match credentials {
-                WpaCredentials::Passphrase(passphrase) => Credential::Password(passphrase.into()),
-                WpaCredentials::Psk(psk) => Credential::Psk(psk.into()),
+            None => matches!(self, Credential::None),
+            Some(Credentials::Wep(WepCredentials { ref key })) => {
+                if let Credential::Password(ref unparsed) = self {
+                    // `Credential::Password` is used for both WEP and WPA. The encoding of WEP
+                    // keys is unspecified and may be either binary (unencoded) or ASCII-encoded
+                    // hexadecimal. To compare, this WEP key must be parsed.
+                    WepKey::parse(unparsed).map_or(false, |parsed| &Vec::from(parsed) == key)
+                } else {
+                    false
+                }
+            }
+            Some(Credentials::Wpa(ref credentials)) => match credentials {
+                WpaCredentials::Passphrase(ref passphrase) => {
+                    if let Credential::Password(ref unparsed) = self {
+                        unparsed == &Vec::from(passphrase.clone())
+                    } else {
+                        false
+                    }
+                }
+                WpaCredentials::Psk(ref psk) => {
+                    if let Credential::Psk(ref unparsed) = self {
+                        unparsed == &Vec::from(psk.clone())
+                    } else {
+                        false
+                    }
+                }
                 _ => panic!("unrecognized FIDL variant"),
             },
             Some(_) => panic!("unrecognized FIDL variant"),
@@ -444,11 +466,11 @@ impl From<Option<fidl_security::Credentials>> for Credential {
     }
 }
 
-// TODO(fxbug.dev/102606): Remove this conversion. See the similar conversion above.
+// TODO(fxbug.dev/102606): Remove this operator implementation. See the similar conversion above.
 #[cfg(test)]
-impl From<Option<Box<fidl_security::Credentials>>> for Credential {
-    fn from(credentials: Option<Box<fidl_security::Credentials>>) -> Self {
-        credentials.map(|credentials| *credentials).into()
+impl PartialEq<Option<Box<fidl_security::Credentials>>> for Credential {
+    fn eq(&self, credentials: &Option<Box<fidl_security::Credentials>>) -> bool {
+        self.eq(&credentials.as_ref().map(|credentials| *credentials.clone()))
     }
 }
 
@@ -702,6 +724,7 @@ pub fn select_authentication_method(
         },
         SecurityTypeDetailed::Wep => match credential {
             Credential::Password(key) => {
+                let key = WepKey::parse(key).ok()?.into();
                 Some((Protocol::Wep, Some(Credentials::Wep(WepCredentials { key }))))
             }
             _ => None,
@@ -1359,7 +1382,7 @@ mod tests {
 
     fn fidl_wep_key() -> Box<fidl_security::Credentials> {
         Box::new(fidl_security::Credentials::Wep(fidl_security::WepCredentials {
-            key: "abcdef0000".as_bytes().to_vec(),
+            key: vec![171, 205, 239, 0, 0],
         }))
     }
 

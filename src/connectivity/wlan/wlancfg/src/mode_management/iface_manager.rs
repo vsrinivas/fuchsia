@@ -2104,7 +2104,7 @@ mod tests {
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                     assert_eq!(req.ssid, TEST_SSID.clone());
-                    assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials.into());
+                    assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials);
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
                     ctrl
@@ -2266,7 +2266,7 @@ mod tests {
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                     assert_eq!(req.ssid, TEST_SSID.clone());
-                    assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials.into());
+                    assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials);
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
                     ctrl
@@ -5038,7 +5038,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_stream),
             Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, TEST_SSID.clone());
-                assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials.into());
+                assert_eq!(Credential::Password(TEST_PASSWORD.as_bytes().to_vec()), req.authentication.credentials);
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
                 ctrl
