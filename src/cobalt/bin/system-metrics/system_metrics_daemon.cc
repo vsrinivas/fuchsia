@@ -94,7 +94,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       //     - mean
       metric_cpu_node_(platform_metric_node_.CreateChild(kCPUNodeName)),
       inspect_cpu_max_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMax, kCPUArraySize)),
-      inspect_cpu_mean_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMean, kCPUArraySize)) {}
+      inspect_cpu_mean_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMean, kCPUArraySize)),
+      unlogged_active_duration_(std::chrono::steady_clock::duration::zero()) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
@@ -138,7 +139,6 @@ void SystemMetricsDaemon::RepeatedlyLogUptime() {
   std::chrono::seconds seconds_to_sleep = LogFuchsiaUptime();
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogUptime(); }, zx::sec(seconds_to_sleep.count()));
-  return;
 }
 
 void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
@@ -149,7 +149,12 @@ void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
   std::chrono::seconds seconds_to_sleep = LogCpuUsage();
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogCpuUsage(); }, zx::sec(seconds_to_sleep.count()));
-  return;
+}
+
+void SystemMetricsDaemon::RepeatedlyLogActiveTime() {
+  std::chrono::seconds seconds_to_sleep = LogActiveTime();
+  async::PostDelayedTask(
+      dispatcher_, [this]() { RepeatedlyLogActiveTime(); }, zx::sec(seconds_to_sleep.count()));
 }
 
 std::unique_ptr<IntegerBucketConfig> SystemMetricsDaemon::InitializeLinearBucketConfig(
@@ -167,7 +172,7 @@ std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
   // as a proxy for the system start time. This is fine as long as we don't
   // start seeing systematic restarts of the SystemMetricsDaemon. If that
   // starts happening we should look into how to capture actual boot time.
-  auto now = clock_->Now();
+  std::chrono::steady_clock::time_point now = clock_->Now();
   return std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
 }
 
@@ -404,6 +409,37 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   }
 }
 
+std::chrono::seconds SystemMetricsDaemon::LogActiveTime() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogActiveTime");
+  std::lock_guard<std::mutex> lock(active_time_mutex_);
+
+  if (!logger_) {
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
+    InitializeLogger();
+    return std::chrono::minutes(1);
+  }
+  std::chrono::steady_clock::time_point now = clock_->Now();
+  if (current_state_ == fuchsia::ui::activity::State::ACTIVE) {
+    unlogged_active_duration_ += (now - active_start_time_);
+    active_start_time_ = now;
+  }
+
+  // Log even if no active time has elapsed, so we will get an accurate count of devices with
+  // no activity during the day.
+  fuchsia::metrics::MetricEventLogger_LogInteger_Result result;
+  ReinitializeIfPeerClosed(logger_->LogInteger(
+      fuchsia_system_metrics::kActiveTimeMetricId,
+      std::chrono::duration_cast<std::chrono::seconds>(unlogged_active_duration_).count(), {},
+      &result));
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "LogInteger() returned error=" << ErrorToString(result.err());
+  } else {
+    unlogged_active_duration_ = std::chrono::steady_clock::duration::zero();
+  }
+
+  return std::chrono::minutes(15);
+}
+
 void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {
   uint32_t bucket_index = cpu_bucket_config_->BucketIndex(cpu_percentage * 100);
   activity_state_to_cpu_map_[current_state_][bucket_index]++;
@@ -457,6 +493,20 @@ bool SystemMetricsDaemon::LogCpuToCobalt() {
     return false;
   }
   return true;
+}
+
+void SystemMetricsDaemon::UpdateState(fuchsia::ui::activity::State state) {
+  std::lock_guard<std::mutex> lock(active_time_mutex_);
+  if (current_state_ == state) {
+    return;
+  }
+  if (state == fuchsia::ui::activity::State::ACTIVE) {
+    active_start_time_ = clock_->Now();
+  } else {
+    unlogged_active_duration_ += (clock_->Now() - active_start_time_);
+    active_start_time_ = std::chrono::steady_clock::time_point();
+  }
+  current_state_ = state;
 }
 
 zx_status_t SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status) {

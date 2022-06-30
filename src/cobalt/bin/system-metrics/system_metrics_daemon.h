@@ -117,6 +117,11 @@ class SystemMetricsDaemon {
   // the next round.
   void RepeatedlyLogCpuUsage();
 
+  // Calls LogActiveTime,
+  // then uses the |dispatcher| passed to the constructor to schedule
+  // the next round.
+  void RepeatedlyLogActiveTime();
+
   // Create linear bucket config with the bucket_floor, number of buckets and step size.
   std::unique_ptr<cobalt::config::IntegerBucketConfig> InitializeLinearBucketConfig(
       int64_t bucket_floor, int32_t num_buckets, int32_t step_size);
@@ -162,6 +167,11 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   std::chrono::seconds LogCpuUsage();
 
+  // Logs active minutes since the last call.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogActiveTime();
+
   // Helper function to store the fetched CPU data and store until flush.
   void StoreCpuData(double cpu_percentage);  // histogram, flush every 10 min
 
@@ -170,7 +180,7 @@ class SystemMetricsDaemon {
   bool LogCpuToCobalt();  // INT_HISTOGRAM metric type
 
   // Callback function to be called by ActivityListener to update current_state_
-  void UpdateState(fuchsia::ui::activity::State state) { current_state_ = state; }
+  void UpdateState(fuchsia::ui::activity::State state);
 
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
@@ -194,6 +204,10 @@ class SystemMetricsDaemon {
   double cpu_usage_accumulator_ = 0;
   double cpu_usage_max_ = 0;
   size_t cpu_array_index_ = 0;
+
+  std::chrono::steady_clock::time_point active_start_time_;
+  std::chrono::steady_clock::duration unlogged_active_duration_;
+  std::mutex active_time_mutex_;
 
   template <typename T>
   T GetCobaltEventCodeForDeviceState(fuchsia::ui::activity::State state) {

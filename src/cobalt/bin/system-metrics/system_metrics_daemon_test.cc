@@ -96,6 +96,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   bool LogFuchsiaLifetimeEventBoot() { return daemon_->LogFuchsiaLifetimeEventBoot(); }
 
+  seconds LogActiveTime() { return daemon_->LogActiveTime(); }
+
   bool LogFuchsiaLifetimeEventActivation() { return daemon_->LogFuchsiaLifetimeEventActivation(); }
 
   seconds LogFuchsiaUptime() { return daemon_->LogFuchsiaUptime(); }
@@ -109,6 +111,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   void LogLifetimeEventActivation() { return daemon_->LogLifetimeEventActivation(); }
 
   void RepeatedlyLogUptime() { return daemon_->RepeatedlyLogUptime(); }
+
+  void RepeatedlyLogActiveTime() { return daemon_->RepeatedlyLogActiveTime(); }
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
@@ -138,6 +142,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     EXPECT_THAT(stub_logger_.last_event_codes(),
                 testing::ElementsAreArray(expected_last_event_codes));
     EXPECT_EQ(expected_last_up_hours, stub_logger_.last_integer());
+  }
+
+  void CheckActiveTimeValues(size_t expected_call_count, seconds expected_last_active_seconds) {
+    EXPECT_EQ(cobalt::LogMetricMethod::kLogInteger, stub_logger_.last_log_method_invoked());
+    EXPECT_EQ(expected_call_count, stub_logger_.call_count());
+    EXPECT_EQ(fuchsia_system_metrics::kActiveTimeMetricId, stub_logger_.last_metric_id());
+    EXPECT_EQ(expected_last_active_seconds.count(), stub_logger_.last_integer());
   }
 
   void DoFuchsiaUpPingTest(seconds now_seconds, seconds expected_sleep_seconds,
@@ -188,6 +199,17 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     EXPECT_EQ(expected_activity, RunLoopFor(zx::sec(advance_time_seconds.count())));
     if (expected_activity) {
       CheckUptimeValues(expected_call_count, expected_last_event_codes, expected_last_up_hours);
+    }
+    stub_logger_.reset();
+  }
+
+  void AdvanceAndCheckActiveTime(seconds advance_time_seconds, size_t expected_call_count,
+                                 seconds expected_active_time_seconds) {
+    bool expected_activity = (expected_call_count != 0);
+    fake_clock_->Increment(advance_time_seconds);
+    EXPECT_EQ(expected_activity, RunLoopFor(zx::sec(advance_time_seconds.count())));
+    if (expected_activity) {
+      CheckActiveTimeValues(expected_call_count, expected_active_time_seconds);
     }
     stub_logger_.reset();
   }
@@ -353,6 +375,106 @@ TEST_F(SystemMetricsDaemonTest, LogFuchsiaLifetimeEventBoot) {
   CheckValues(cobalt::LogMetricMethod::kLogOccurrence, 1,
               fuchsia_system_metrics::kFuchsiaLifetimeEventsMigratedMetricId,
               {FuchsiaLifetimeEventsMigratedMetricDimensionEvents::Boot});
+}
+
+// Tests the method LogActiveTime(). Uses a local FakeLogger_Sync
+// and does not use FIDL. Does not use the message loop.
+TEST_F(SystemMetricsDaemonTest, LogActiveTime) {
+  minutes one_minute(1);
+  stub_logger_.reset();
+
+  // Initially 0
+  EXPECT_EQ(minutes(15), LogActiveTime());
+  CheckActiveTimeValues(1, seconds(0));
+
+  // Set ACTIVE for 1 minute.
+  stub_logger_.reset();
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  fake_clock_->Increment(one_minute);
+  LogActiveTime();
+  CheckActiveTimeValues(1, one_minute);
+
+  // Continue Active for 1 minute.
+  stub_logger_.reset();
+  fake_clock_->Increment(minutes(1));
+  LogActiveTime();
+  CheckActiveTimeValues(1, one_minute);
+
+  // Continue for 1 minute, then set to IDLE and continue for another minute
+  stub_logger_.reset();
+  fake_clock_->Increment(one_minute);
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  fake_clock_->Increment(one_minute);
+  LogActiveTime();
+  CheckActiveTimeValues(1, one_minute);
+
+  // Set ACTIVE and IDLE alternatively and confirm that 2 minutes active time acrues.
+  stub_logger_.reset();
+  fake_clock_->Increment(one_minute);
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  fake_clock_->Increment(one_minute);
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  fake_clock_->Increment(one_minute);
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  fake_clock_->Increment(one_minute);
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  fake_clock_->Increment(one_minute);
+  LogActiveTime();
+  CheckActiveTimeValues(1, one_minute * 2);
+}
+
+// Tests the method RepeatedlyLogActiveTime(). This test uses the message loop to
+// schedule future runs of work. Uses a local FakeLogger_Sync and does not use
+// FIDL.
+TEST_F(SystemMetricsDaemonTest, RepeatedlyLogActiveTime) {
+  // Make sure the loop has no initial pending work.
+  seconds zero_seconds(0);
+  RunLoopUntilIdle();
+  auto seconds_to_wait = LogActiveTime();
+  RepeatedlyLogActiveTime();
+
+  // IDLE so no active time.
+  stub_logger_.reset();
+  AdvanceAndCheckActiveTime(seconds_to_wait, 1, zero_seconds);
+
+  // Active for whole time.
+  stub_logger_.reset();
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  AdvanceAndCheckActiveTime(seconds_to_wait, 1, seconds_to_wait);
+
+  // Still active so whole time.
+  stub_logger_.reset();
+  AdvanceAndCheckActiveTime(seconds_to_wait, 1, seconds_to_wait);
+
+  // IDLE again, so no active time.
+  stub_logger_.reset();
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  AdvanceAndCheckActiveTime(seconds_to_wait, 1, zero_seconds);
+
+  // IDLE, ACTIVE, IDLE, ACTIVE, IDLE. Active for 10 seconds.
+  seconds five_seconds(5);
+  ASSERT_LT(4 * five_seconds, seconds_to_wait);
+
+  auto run_time = seconds(0);
+  stub_logger_.reset();
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  AdvanceAndCheckActiveTime(five_seconds, 0, zero_seconds);
+  run_time += five_seconds;
+
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  AdvanceAndCheckActiveTime(five_seconds, 0, zero_seconds);
+  run_time += five_seconds;
+
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  AdvanceAndCheckActiveTime(five_seconds, 0, zero_seconds);
+  run_time += five_seconds;
+
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  AdvanceAndCheckActiveTime(five_seconds, 0, zero_seconds);
+  run_time += five_seconds;
+
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  AdvanceAndCheckActiveTime(seconds_to_wait - run_time, 1, 2 * five_seconds);
 }
 
 // Tests the method LogFuchsiaLifetimeEventActivation(). Uses a local FakeLogger_Sync
