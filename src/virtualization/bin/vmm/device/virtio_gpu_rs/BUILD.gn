@@ -16,6 +16,7 @@ rustc_binary("virtio_gpu_bin") {
   with_unit_tests = true
 
   sources = [
+    "src/gpu_device.rs",
     "src/main.rs",
     "src/wire.rs",
   ]

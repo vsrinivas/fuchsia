@@ -73,7 +73,7 @@ pub const VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER: u32 = 0x1205;
 pub const VIRTIO_GPU_FLAG_FENCE: u32 = 0x01;
 pub const VIRTIO_GPU_FLAG_INFO_RING_IDX: u32 = 0x02;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuCtrlHeader {
     pub ty: LE32,
@@ -89,7 +89,7 @@ pub struct VirtioGpuCtrlHeader {
 //
 pub const VIRTIO_GPU_MAX_SCANOUTS: usize = 16;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuRect {
     pub x: LE32,
@@ -98,7 +98,7 @@ pub struct VirtioGpuRect {
     pub height: LE32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuDisplayOne {
     pub r: VirtioGpuRect,
@@ -106,7 +106,7 @@ pub struct VirtioGpuDisplayOne {
     pub flags: LE32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuRespDisplayInfo {
     pub hdr: VirtioGpuCtrlHeader,

@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod gpu_device;
 mod wire;
 
 use {
+    crate::gpu_device::GpuDevice,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioGpuRequestStream,
     fuchsia_component::server,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     tracing,
+    virtio_device::chain::ReadableChain,
 };
 
 async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(), anyhow::Error> {
@@ -39,13 +42,30 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let _control_stream = device.take_stream(wire::CONTROLQ)?;
-    let _cursor_stream = device.take_stream(wire::CURSORQ)?;
+    let gpu_device = GpuDevice::new();
+    let control_stream = device.take_stream(wire::CONTROLQ)?;
+    let cursor_stream = device.take_stream(wire::CURSORQ)?;
     ready_responder.send()?;
 
-    futures::try_join!(device
-        .run_device_notify(virtio_device_fidl)
-        .map_err(|e| anyhow!("run_device_notify: {}", e)),)?;
+    futures::try_join!(
+        device
+            .run_device_notify(virtio_device_fidl)
+            .map_err(|e| anyhow!("run_device_notify: {}", e)),
+        control_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+            let guest_mem = &guest_mem;
+            let gpu_device = &gpu_device;
+            move |chain| async move {
+                gpu_device.process_control_chain(ReadableChain::new(chain, guest_mem))
+            }
+        }),
+        cursor_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+            let guest_mem = &guest_mem;
+            let gpu_device = &gpu_device;
+            move |chain| async move {
+                gpu_device.process_cursor_chain(ReadableChain::new(chain, guest_mem))
+            }
+        }),
+    )?;
     Ok(())
 }
 
