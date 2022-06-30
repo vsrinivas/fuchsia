@@ -15,7 +15,7 @@ FakeProcessProxy::FakeProcessProxy(ExecutorPtr executor, ModulePoolPtr pool)
     : binding_(this), eventpair_(std::move(executor)), pool_(std::move(pool)) {}
 
 bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
-  auto id = module->id();
+  auto id = module->legacy_id();
   auto iter = ids_.find(id[0]);
   return iter != ids_.end() && iter->second == id[1];
 }
@@ -50,7 +50,7 @@ void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallba
   auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
   auto status = counters.Link(std::move(*inline_8bit_counters));
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  auto id = llvm_module.id();
+  auto id = llvm_module.legacy_id();
   ids_[id[0]] = id[1];
   auto* module = pool_->Get(id, counters.size());
   module->Add(counters.data(), counters.size());

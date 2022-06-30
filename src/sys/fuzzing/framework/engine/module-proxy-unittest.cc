@@ -208,7 +208,7 @@ TEST(ModuleProxyTest, FromModule) {
   EXPECT_EQ(shmem->Link(std::move(vmo)), ZX_OK);
 
   // Add module to a proxy.
-  ModuleProxy proxy(module->id(), shmem->size());
+  ModuleProxy proxy(module->legacy_id(), shmem->size());
   proxy.Add(shmem->data(), shmem->size());
   EXPECT_EQ(proxy.Measure(), 0U);
 

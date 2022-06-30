@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <string>
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
@@ -37,10 +38,11 @@ class Module final {
 
   // Return a unique identifier for this module as described in |fuchsia.fuzzer.Feedback|. This
   // identifier will be the same for the same module across multiple processes and/or invocations.
-  const Identifier& id() const { return id_; }
+  const Identifier& legacy_id() const { return legacy_id_; }
+  const std::string& id() const { return id_; }
 
-  // Shares the VMO containing the code coverage as a |fuchsia.mem.Buffer|.
-  __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) { return counters_.Share(out); }
+  // Shares the VMO containing the code coverage.
+  __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) const { return counters_.Share(out); }
 
   // Shares the VMO containing the code coverage as an |fuchsia.fuzzer.LlvmModule|.
   LlvmModule GetLlvmModule();
@@ -52,7 +54,8 @@ class Module final {
   void Clear() { counters_.Clear(); }
 
  private:
-  Identifier id_;
+  Identifier legacy_id_;
+  std::string id_;
   SharedMemory counters_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Module);

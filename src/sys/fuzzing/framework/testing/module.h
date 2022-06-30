@@ -33,7 +33,8 @@ class FakeFrameworkModule final : public FakeModule {
   FakeFrameworkModule& operator=(FakeFrameworkModule&& other) noexcept;
 
   // See corresponding |Module| methods.
-  Identifier id() const { return module_->id(); }
+  Identifier legacy_id() const { return module_->legacy_id(); }
+  const std::string& id() const { return module_->id(); }
   __WARN_UNUSED_RESULT zx_status_t Share(zx::vmo* out) { return module_->Share(out); }
   LlvmModule GetLlvmModule();
   void Update() { module_->Update(); }

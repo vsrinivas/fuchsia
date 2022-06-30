@@ -7,6 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <iomanip>
+#include <iostream>
+
 #include "src/sys/fuzzing/common/module.h"
 
 namespace fuzzing {
@@ -47,10 +50,15 @@ Module::Module(uint8_t* counters, const uintptr_t* pcs, size_t num_pcs) {
   if (auto status = counters_.Mirror(counters, num_pcs); status != ZX_OK) {
     FX_LOGS(FATAL) << "Failed to create module: " << zx_status_get_string(status);
   }
-  id_ = Module::Identify(pcs, num_pcs);
+  legacy_id_ = Module::Identify(pcs, num_pcs);
+
+  std::ostringstream oss;
+  oss << std::setw(16) << std::setfill('0') << id_[0] << "." << id_[1];
+  id_ = oss.str();
 }
 
 Module& Module::operator=(Module&& other) noexcept {
+  legacy_id_ = other.legacy_id_;
   id_ = other.id_;
   counters_ = std::move(other.counters_);
   return *this;
@@ -58,10 +66,14 @@ Module& Module::operator=(Module&& other) noexcept {
 
 LlvmModule Module::GetLlvmModule() {
   LlvmModule llvm_module;
-  llvm_module.set_id(id());
+  llvm_module.set_legacy_id(legacy_id());
   zx::vmo inline_8bit_counters;
   if (auto status = Share(&inline_8bit_counters); status != ZX_OK) {
     FX_LOGS(FATAL) << "Failed to share LLVM module: " << zx_status_get_string(status);
+  }
+  if (auto status = inline_8bit_counters.set_property(ZX_PROP_NAME, id_.c_str(), id_.size() + 1);
+      status != ZX_OK) {
+    FX_LOGS(FATAL) << "Failed to set LLVM module ID: " << zx_status_get_string(status);
   }
   llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
   return llvm_module;

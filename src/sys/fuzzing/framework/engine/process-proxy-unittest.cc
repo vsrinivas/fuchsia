@@ -62,7 +62,7 @@ TEST_F(ProcessProxyTest, AddFeedback) {
   auto llvm_module2 = module2.GetLlvmModule();
   EXPECT_EQ(process_proxy->AddLlvmModule(std::move(llvm_module2)), ZX_OK);
 
-  auto* module_impl = pool()->Get(module2.id(), fake.num_pcs());
+  auto* module_impl = pool()->Get(module2.legacy_id(), fake.num_pcs());
   EXPECT_EQ(module_impl->Measure(), 3U);
 }
 

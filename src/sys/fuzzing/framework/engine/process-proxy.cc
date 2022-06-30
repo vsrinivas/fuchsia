@@ -98,7 +98,7 @@ zx_status_t ProcessProxy::AddLlvmModule(LlvmModule llvm_module) {
     FX_LOGS(WARNING) << "Failed to link module: " << zx_status_get_string(status);
     return status;
   }
-  auto* module_proxy = pool_->Get(llvm_module.id(), counters.size());
+  auto* module_proxy = pool_->Get(llvm_module.legacy_id(), counters.size());
   module_proxy->Add(counters.data(), counters.size());
   modules_[module_proxy] = std::move(counters);
   return eventpair_.SignalPeer(0, kSync);

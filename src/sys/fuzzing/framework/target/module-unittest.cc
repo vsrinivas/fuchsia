@@ -23,7 +23,7 @@ TEST(ModuleTest, Identifier) {
   }
   FakeFrameworkModule module1(std::move(pc_table1));
   Identifier expected = {9595151602815918885ULL, 10676851608648082213ULL};
-  EXPECT_EQ(module1.id(), expected);
+  EXPECT_EQ(module1.legacy_id(), expected);
 
   // Shifting all the PCs by a random basis does not affect the source ID, i.e., the ID is
   // independent of where it is mapped in memory.
@@ -32,17 +32,17 @@ TEST(ModuleTest, Identifier) {
     pc_table2.emplace_back(0xdeadbeef + i * 0x10, (i % 8) == 0);
   }
   FakeFrameworkModule module2(std::move(pc_table2));
-  EXPECT_EQ(module1.id(), module2.id());
+  EXPECT_EQ(module1.legacy_id(), module2.legacy_id());
 
   // Changing the counters has no effect on identifiers.
   memset(module1.counters(), 1, module1.num_pcs());
-  EXPECT_EQ(module1.id(), expected);
+  EXPECT_EQ(module1.legacy_id(), expected);
 
   // Check for collisions. This isn't exhaustive; it is simply a smoke test to check if things are
   // very broken.
   for (uint32_t i = 0; i < 100; ++i) {
     FakeFrameworkModule moduleN(/* seed */ i);
-    EXPECT_NE(moduleN.id(), expected);
+    EXPECT_NE(moduleN.legacy_id(), expected);
   }
 }
 
