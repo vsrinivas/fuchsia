@@ -25,8 +25,11 @@ test("sysmem") {
 }
 
 fuchsia_unittest_package("sysmem-test") {
-  manifest = "meta/sysmem.cmx"
-  deps = [ ":sysmem" ]
+  manifest = "meta/sysmem.cml"
+  deps = [
+    ":sysmem",
+    "//src/devices/sysmem/bin/sysmem_connector:sysmem_connector_cmp",
+  ]
 }
 
 bootfs_test("sysmem-bootfs-test") {
