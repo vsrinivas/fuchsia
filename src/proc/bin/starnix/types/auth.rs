@@ -4,11 +4,13 @@
 
 #![allow(dead_code)]
 
+use std::ops;
+
 use crate::types::*;
 
 // We don't use bitflags for this because capability sets can have bits set that don't have defined
 // meaning as capabilities. init has all 64 bits set, even though only 40 of them are valid.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Capabilities {
     mask: u64,
 }
@@ -35,15 +37,15 @@ impl Capabilities {
     }
 
     pub fn contains(self, caps: Capabilities) -> bool {
-        self.mask & caps.mask == caps.mask
+        (self & caps) == caps
     }
 
     pub fn insert(&mut self, caps: Capabilities) {
-        self.mask |= !caps.mask;
+        *self |= caps;
     }
 
     pub fn remove(&mut self, caps: Capabilities) {
-        self.mask &= !caps.mask;
+        *self &= !caps;
     }
 
     pub fn as_abi_v3(self) -> (u32, u32) {
@@ -52,6 +54,48 @@ impl Capabilities {
 
     pub fn from_abi_v3(u32s: (u32, u32)) -> Self {
         Self { mask: u32s.0 as u64 | ((u32s.1 as u64) << 32) }
+    }
+
+    pub fn from(mask: u64) -> Self {
+        Self { mask }
+    }
+}
+
+impl ops::BitAnd for Capabilities {
+    type Output = Self;
+
+    // rhs is the "right-hand side" of the expression `a & b`
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self { mask: self.mask & rhs.mask }
+    }
+}
+
+impl ops::BitAndAssign for Capabilities {
+    // rhs is the "right-hand side" of the expression `a & b`
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.mask &= rhs.mask;
+    }
+}
+
+impl ops::BitOr for Capabilities {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self { mask: self.mask | rhs.mask }
+    }
+}
+
+impl ops::BitOrAssign for Capabilities {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.mask |= rhs.mask;
+    }
+}
+
+impl ops::Not for Capabilities {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self { mask: !self.mask }
     }
 }
 
@@ -107,3 +151,67 @@ pub const CAP_PERFMON: Capabilities = Capabilities { mask: 1u64 << uapi::CAP_PER
 pub const CAP_BPF: Capabilities = Capabilities { mask: 1u64 << uapi::CAP_BPF };
 pub const CAP_CHECKPOINT_RESTORE: Capabilities =
     Capabilities { mask: 1u64 << uapi::CAP_CHECKPOINT_RESTORE };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[::fuchsia::test]
+    fn test_empty() {
+        assert_eq!(Capabilities::empty().mask, 0);
+    }
+
+    #[::fuchsia::test]
+    fn test_all() {
+        // all() should be every bit set, not just all the CAP_* constants.
+        assert_eq!(Capabilities::all().mask, u64::MAX);
+    }
+
+    #[::fuchsia::test]
+    fn test_union() {
+        let expected = Capabilities { mask: CAP_BLOCK_SUSPEND.mask | CAP_AUDIT_READ.mask };
+        assert_eq!(CAP_BLOCK_SUSPEND.union(CAP_AUDIT_READ), expected);
+        assert_eq!(CAP_BLOCK_SUSPEND.union(CAP_BLOCK_SUSPEND), CAP_BLOCK_SUSPEND);
+    }
+
+    #[::fuchsia::test]
+    fn test_difference() {
+        let base = CAP_BPF | CAP_AUDIT_WRITE;
+        let expected = CAP_BPF;
+        assert_eq!(base.difference(CAP_AUDIT_WRITE), expected);
+        assert_eq!(base.difference(CAP_AUDIT_WRITE | CAP_BPF), Capabilities::empty());
+    }
+
+    #[::fuchsia::test]
+    fn test_contains() {
+        let base = CAP_BPF | CAP_AUDIT_WRITE;
+        assert_eq!(base.contains(CAP_AUDIT_WRITE), true);
+        assert_eq!(base.contains(CAP_BPF), true);
+        assert_eq!(base.contains(CAP_AUDIT_WRITE | CAP_BPF), true);
+
+        assert_eq!(base.contains(CAP_AUDIT_CONTROL), false);
+        assert_eq!(base.contains(CAP_AUDIT_WRITE | CAP_BPF | CAP_AUDIT_CONTROL), false);
+    }
+
+    #[::fuchsia::test]
+    fn test_insert() {
+        let mut capabilities = CAP_BLOCK_SUSPEND;
+        capabilities.insert(CAP_BLOCK_SUSPEND);
+        assert_eq!(capabilities, CAP_BLOCK_SUSPEND);
+
+        capabilities.insert(CAP_AUDIT_READ);
+        let expected = Capabilities { mask: CAP_BLOCK_SUSPEND.mask | CAP_AUDIT_READ.mask };
+        assert_eq!(capabilities, expected);
+    }
+
+    #[::fuchsia::test]
+    fn test_remove() {
+        let mut capabilities = CAP_BLOCK_SUSPEND;
+        capabilities.remove(CAP_BLOCK_SUSPEND);
+        assert_eq!(capabilities, Capabilities::empty());
+
+        let mut capabilities = CAP_BLOCK_SUSPEND | CAP_AUDIT_READ;
+        capabilities.remove(CAP_AUDIT_READ);
+        assert_eq!(capabilities, CAP_BLOCK_SUSPEND);
+    }
+}
