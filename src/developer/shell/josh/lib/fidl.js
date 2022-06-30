@@ -160,8 +160,8 @@ function loadIR(libraryName) {
     f.close();
     let ir = stringToJsonIr(str);
     libraries.set(ir.name, new Library(ir));
-  } catch {
-    throw 'FIDL definition for ' + libraryName + ' not found in ' + irPath;
+  } catch (e) {
+    throw `failed to load FIDL definition for ${libraryName} in ${irPath}: ${e.toString()}`
   }
 
   // Load for C++ level operations, like encoding and decoding.
