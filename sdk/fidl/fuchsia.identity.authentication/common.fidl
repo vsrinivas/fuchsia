@@ -16,7 +16,7 @@ const ENROLLMENT_DATA_MAX_SIZE uint32 = 256;
 type Empty = struct {};
 
 /// Specifies the reason that a fuchsia.identity.authentication method failed.
-type Error = strict enum {
+type Error = flexible enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     UNKNOWN = 1;
@@ -48,31 +48,21 @@ type Error = strict enum {
 
     /// An interactive authentication operation was cancelled by the user.
     ABORTED = 8;
-
-    // This enumeration may expand to include additional statuses in the future.
-    // Examples are likely to include: MECHANISM_NOT_FOUND,
-    // MECHANISM_NOT_AVAILABLE.
 };
 
 /// The maximum number of active enrollments per authentication mechanism and
 /// account.
 const MAX_ENROLLMENTS uint32 = 16;
 
-/// Enrollments allow some authentication mechanisms to produce authentication
-/// events. An enrollment must first be created in order to be authenticated
-/// against. Both creation and authentication may involve user interaction.
-/// An enrollment is typically tied to a user controlled authentication factor,
-/// such as a fingerprint, a password or a security key.
-@max_handles("0")
+/// An Enrollment is an instantiation of an authentication mechanism for a
+/// particular account. An enrollment is typically tied to a user-controlled
+/// authentication factor, such as a fingerprint, a password or a security key.
 type Enrollment = struct {
-    /// A unique identifier associated with the enrollment.
+    /// An identifier for the enrollment within the scope of the account.
     id EnrollmentId;
 
     /// Data associated with the enrollment.
     data EnrollmentData;
-
-    // TODO(dnordstrom): We might want to version label all persistent data in
-    // the future.
 };
 
 /// A unique identifier for an `Enrollment` within an account and an
@@ -96,44 +86,33 @@ alias PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
 /// on the properties of the authentication mechanism which created it.
 /// A positive authentication event may contribute to an increase in
 /// authentication state.
-@max_handles("0")
-type PositiveEvent = struct {
+type PositiveEvent = table {
     /// The UTC time when the event completed.
-    timestamp zx.time;
-
-    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
-    // and mobility.
+    1: timestamp zx.time;
 };
 
 /// A negative authentication event may contribute to a decrease in
 /// authentication state.
-@max_handles("0")
-type NegativeEvent = struct {
+type NegativeEvent = table {
     /// The UTC time when the event completed.
-    timestamp zx.time;
-
-    // TODO(dnordstrom): Add fields for account, range and disengagement.
+    1: timestamp zx.time;
 };
 
 /// A attempted authentication event may contribute to an increase in
 /// authentication state if and only if the pre-key material is correct.
 /// Otherwise, it does not affect the authentication state.
-@max_handles("0")
-type AttemptedEvent = struct {
+type AttemptedEvent = table {
     /// The UTC time when the event completed.
-    timestamp zx.time;
+    1: timestamp zx.time;
 
     /// The id of the enrollment used to produce this attempt.
-    enrollment_id EnrollmentId;
+    2: enrollment_id EnrollmentId;
 
     /// Enrollment data which should should replace the old enrollment data upon
-    /// successful authentication. This field is only populated if a
-    /// change in enrollment data is required.
-    updated_enrollment_data EnrollmentData:optional;
+    /// successful authentication. This field is only populated if a change in
+    /// enrollment data is required.
+    3: updated_enrollment_data EnrollmentData;
 
     /// Pre-key material produced during the authentication attempt.
-    prekey_material PrekeyMaterial;
-
-    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
-    // and mobility (or a shared type with PositiveEvent).
+    4: prekey_material PrekeyMaterial;
 };

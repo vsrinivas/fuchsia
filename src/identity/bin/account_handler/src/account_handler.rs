@@ -446,13 +446,19 @@ impl AccountHandler {
                 AccountManagerError::new(ApiError::Unknown)
                     .with_cause(format_err!("Error connecting to authenticator: {:?}", err))
             })??;
-            if auth_attempt.enrollment_id != ENROLLMENT_ID {
+            match auth_attempt.enrollment_id {
+                None => Err(AccountManagerError::new(ApiError::Internal).with_cause(format_err!(
+                    "Authenticator returned an empty enrollment id during authentication."
+                ))),
+                Some(id) if id != ENROLLMENT_ID =>
                 // TODO(dnordstrom): Error code for unexpected behavior from another component.
-                return Err(AccountManagerError::new(ApiError::Internal)
-                    .with_cause(format_err!(
+                {
+                    Err(AccountManagerError::new(ApiError::Internal).with_cause(format_err!(
                     "Authenticator returned an unexpected enrollment id {} during authentication.",
-                    auth_attempt.enrollment_id)));
-            }
+                    id)))
+                }
+                _ => Ok(()),
+            }?;
             // Determine whether pre-auth state should be updated
             let updated_pre_auth_state = auth_attempt.updated_enrollment_data.map(|data| {
                 pre_auth::State::SingleEnrollment {
@@ -460,8 +466,7 @@ impl AccountHandler {
                     data: data,
                 }
             });
-            let prekey_material = Some(auth_attempt.prekey_material);
-            Ok((prekey_material, updated_pre_auth_state))
+            Ok((auth_attempt.prekey_material, updated_pre_auth_state))
         } else {
             Ok((None, None))
         }
@@ -919,10 +924,11 @@ mod tests {
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
-                enrollment_id: 0,
-                prekey_material: MAGIC_PREKEY.clone(),
-                timestamp: 1337,
+                enrollment_id: Some(0),
+                prekey_material: Some(MAGIC_PREKEY.clone()),
+                timestamp: Some(1337),
                 updated_enrollment_data: None,
+                ..AttemptedEvent::EMPTY
             }),
         });
         let location = TempLocation::new();
@@ -963,10 +969,11 @@ mod tests {
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
-                enrollment_id: 0,
-                prekey_material: MAGIC_PREKEY.clone(),
-                timestamp: 1337,
+                enrollment_id: Some(0),
+                prekey_material: Some(MAGIC_PREKEY.clone()),
+                timestamp: Some(1337),
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
+                ..AttemptedEvent::EMPTY
             }),
         });
         let location = TempLocation::new();
@@ -1016,10 +1023,11 @@ mod tests {
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
-                enrollment_id: 1,
-                prekey_material: MAGIC_PREKEY.clone(),
-                timestamp: 1337,
+                enrollment_id: Some(1),
+                prekey_material: Some(MAGIC_PREKEY.clone()),
+                timestamp: Some(1337),
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
+                ..AttemptedEvent::EMPTY
             }),
         });
 
@@ -1027,10 +1035,11 @@ mod tests {
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
-                enrollment_id: 0,
-                prekey_material: TEST_NOT_MAGIC_PREKEY.clone(),
-                timestamp: 1337,
+                enrollment_id: Some(0),
+                prekey_material: Some(TEST_NOT_MAGIC_PREKEY.clone()),
+                timestamp: Some(1337),
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
+                ..AttemptedEvent::EMPTY
             }),
         });
 

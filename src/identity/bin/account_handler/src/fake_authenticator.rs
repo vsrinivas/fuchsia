@@ -105,16 +105,18 @@ mod test {
         static ref TEST_ENROLLMENT_2: Enrollment =
             Enrollment { id: 1, data: TEST_ENROLLMENT_DATA_2.clone() };
         static ref TEST_ATTEMPT_1: AttemptedEvent = AttemptedEvent {
-            enrollment_id: 9,
-            prekey_material: TEST_PREKEY_MATERIAL.clone(),
-            timestamp: 13371337,
+            enrollment_id: Some(9),
+            prekey_material: Some(TEST_PREKEY_MATERIAL.clone()),
+            timestamp: Some(13371337),
             updated_enrollment_data: None,
+            ..AttemptedEvent::EMPTY
         };
         static ref TEST_ATTEMPT_2: AttemptedEvent = AttemptedEvent {
-            enrollment_id: 10,
-            prekey_material: TEST_PREKEY_MATERIAL.clone(),
-            timestamp: 13391339,
+            enrollment_id: Some(10),
+            prekey_material: Some(TEST_PREKEY_MATERIAL.clone()),
+            timestamp: Some(13391339),
             updated_enrollment_data: Some(TEST_ENROLLMENT_DATA_2.clone()),
+            ..AttemptedEvent::EMPTY
         };
     }
 

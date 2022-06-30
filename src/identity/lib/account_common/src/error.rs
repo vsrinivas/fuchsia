@@ -100,7 +100,7 @@ impl From<AuthenticationApiError> for AccountManagerError {
 
                 AuthenticationApiError::InvalidDataFormat
                 | AuthenticationApiError::Aborted // TODO(dnordstrom): Needs a non-generic error
-                | AuthenticationApiError::Unknown => AccountApiError::Unknown,
+                | AuthenticationApiError::Unknown | _ => AccountApiError::Unknown,
             },
             fatal: false,
             cause: Some(format_err!("Authenticator error: {:?}", authentication_error)),

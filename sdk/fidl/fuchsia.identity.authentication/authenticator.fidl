@@ -34,17 +34,11 @@ protocol StorageUnlockMechanism {
     /// Returns: `enrollment_data` Data associated with this enrollment,
     ///                            to be provided during authentication in
     ///                            the future.
-    ///          `prekey_material` The the pre-key material that will be
-    ///                            produced by successfully authenticating
-    ///                            against this enrollment.
+    ///          `prekey_material` The pre-key material that will be produced
+    ///                            by successfully authenticating against this
+    ///                            enrollment.
     Enroll() -> (struct {
         enrollment_data EnrollmentData;
         prekey_material PrekeyMaterial;
     }) error Error;
-
-    // TODO(dnordstrom): Add method for initilizing authentication event,
-    // in order to support user initiated authentication mode.
 };
-
-// TODO(dnordstrom): Add a layer of indirection such that multiple
-// authentication mechansims can be served by a single discoverable interface.

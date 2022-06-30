@@ -7,6 +7,8 @@ use {
         AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
         StorageUnlockMechanismRequestStream,
     },
+    fuchsia_runtime::duplicate_utc_clock_handle,
+    fuchsia_zircon::{self as zx, Clock},
     futures::prelude::*,
     lazy_static::lazy_static,
 };
@@ -46,15 +48,26 @@ pub enum Mode {
 /// that responds according to its `mode`.
 pub struct StorageUnlockMechanism {
     mode: Mode,
+    clock: Clock,
 }
 
 impl StorageUnlockMechanism {
     pub fn new(mode: Mode) -> Self {
-        Self { mode }
+        Self {
+            mode,
+            clock: duplicate_utc_clock_handle(zx::Rights::SAME_RIGHTS)
+                .expect("Failed to duplicate UTC clock handle."),
+        }
     }
-}
 
-impl StorageUnlockMechanism {
+    /// Returns the time in the clock object, or None if time has not yet started.
+    fn read_clock(&self) -> Option<i64> {
+        match (self.clock.read(), self.clock.get_details()) {
+            (Ok(time), Ok(details)) if time > details.backstop => Some(time.into_nanos()),
+            _ => None,
+        }
+    }
+
     /// Asynchronously handle fidl requests received on the provided stream.
     pub async fn handle_requests_from_stream(
         &self,
@@ -80,17 +93,21 @@ impl StorageUnlockMechanism {
 
     /// Implementation of `authenticate` fidl method.
     fn authenticate(&self, enrollments: Vec<Enrollment>) -> Result<AttemptedEvent, ApiError> {
+        // Take the ID of the first enrollment
         let enrollment = enrollments.into_iter().next().ok_or(ApiError::InvalidRequest)?;
         let Enrollment { id, .. } = enrollment;
+
+        // Return either the correct or incorrect prekey based on the enrollment mode.
         let prekey_material = match self.mode {
             Mode::AlwaysSucceed => MAGIC_PREKEY.clone(),
             Mode::AlwaysFailAuthentication => NOT_MAGIC_PREKEY.clone(),
         };
         Ok(AttemptedEvent {
-            timestamp: fuchsia_runtime::utc_time().into_nanos(),
-            enrollment_id: id,
+            timestamp: self.read_clock(),
+            enrollment_id: Some(id),
             updated_enrollment_data: None,
-            prekey_material,
+            prekey_material: Some(prekey_material),
+            ..AttemptedEvent::EMPTY
         })
     }
 
@@ -142,9 +159,9 @@ mod test {
             let AttemptedEvent { enrollment_id, updated_enrollment_data, prekey_material, .. } =
                 proxy.authenticate(&mut vec![enrollment].iter_mut()).await?.unwrap();
 
-            assert_eq!(enrollment_id, TEST_ENROLLMENT_ID);
+            assert_eq!(enrollment_id, Some(TEST_ENROLLMENT_ID));
             assert!(updated_enrollment_data.is_none());
-            assert_eq!(prekey_material, enrollment_prekey);
+            assert_eq!(prekey_material, Some(enrollment_prekey));
             Ok(())
         })
         .await
@@ -159,9 +176,9 @@ mod test {
             let AttemptedEvent { enrollment_id, updated_enrollment_data, prekey_material, .. } =
                 proxy.authenticate(&mut vec![enrollment, enrollment_2].iter_mut()).await?.unwrap();
 
-            assert_eq!(enrollment_id, TEST_ENROLLMENT_ID);
+            assert_eq!(enrollment_id, Some(TEST_ENROLLMENT_ID));
             assert!(updated_enrollment_data.is_none());
-            assert_eq!(prekey_material, MAGIC_PREKEY.clone());
+            assert_eq!(prekey_material, Some(MAGIC_PREKEY.clone()));
             Ok(())
         })
         .await
@@ -178,9 +195,9 @@ mod test {
             let AttemptedEvent { enrollment_id, updated_enrollment_data, prekey_material, .. } =
                 proxy.authenticate(&mut vec![enrollment].iter_mut()).await?.unwrap();
 
-            assert_ne!(prekey_material, MAGIC_PREKEY.clone());
-            assert_eq!(enrollment_id, TEST_ENROLLMENT_ID);
+            assert_ne!(prekey_material, Some(MAGIC_PREKEY.clone()));
             assert!(updated_enrollment_data.is_none());
+            assert_eq!(enrollment_id, Some(TEST_ENROLLMENT_ID));
             Ok(())
         })
         .await
