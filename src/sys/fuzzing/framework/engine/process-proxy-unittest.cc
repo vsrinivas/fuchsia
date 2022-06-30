@@ -45,7 +45,15 @@ TEST_F(ProcessProxyTest, AddLlvmModule) {
   auto process_proxy = CreateAndConnectProxy(target.Launch(), eventpair.Create());
 
   FakeFrameworkModule module;
+  // Invalid id.
   zx::vmo inline_8bit_counters;
+  EXPECT_EQ(module.Share(0x1234, &inline_8bit_counters), ZX_OK);
+  const char* invalid_name = "invalid";
+  EXPECT_EQ(inline_8bit_counters.set_property(ZX_PROP_NAME, invalid_name, strlen(invalid_name)),
+            ZX_OK);
+  EXPECT_EQ(process_proxy->AddModule(inline_8bit_counters), ZX_ERR_INVALID_ARGS);
+
+  // Valid.
   EXPECT_EQ(module.Share(0x1234, &inline_8bit_counters), ZX_OK);
   EXPECT_EQ(process_proxy->AddModule(inline_8bit_counters), ZX_OK);
 

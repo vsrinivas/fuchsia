@@ -67,9 +67,10 @@ ZxPromise<> RunnerImplTest::PublishProcess() {
                // Connect and send the process.
                auto handler = coverage_->GetCollectorHandler();
                handler(collector_.NewRequest(executor()->dispatcher()));
-               InstrumentedProcess instrumented;
-               instrumented.set_process(target_->Launch());
-               instrumented.set_eventpair(eventpair_->Create());
+               InstrumentedProcess instrumented{
+                   .eventpair = eventpair_->Create(),
+                   .process = target_->Launch(),
+               };
                collector_->Initialize(std::move(instrumented), completer.bind());
                return fpromise::ok();
              })

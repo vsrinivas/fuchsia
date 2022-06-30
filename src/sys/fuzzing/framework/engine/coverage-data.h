@@ -17,8 +17,6 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::LlvmModule;
-
 // Returns the target identifier for the given |process|.
 uint64_t GetTargetId(const zx::process& process);
 

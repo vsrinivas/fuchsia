@@ -21,7 +21,6 @@ namespace fuzzing {
 namespace {
 
 using fuchsia::fuzzer::InstrumentedProcess;
-using fuchsia::fuzzer::LlvmModule;
 
 // Maximum number of LLVM modules per process. This limit matches libFuzzer.
 constexpr size_t kMaxModules = 4096;
@@ -279,9 +278,10 @@ ZxPromise<> Process::Connect(fidl::InterfaceHandle<CoverageDataCollector> collec
       .and_then([this, completer = std::move(bridge.completer)](
                     zx::process& process) mutable -> ZxResult<> {
         // Now create an |InstrumentedProcess| for this process and send it to the collector.
-        InstrumentedProcess instrumented;
-        instrumented.set_process(std::move(process));
-        instrumented.set_eventpair(eventpair_.Create());
+        InstrumentedProcess instrumented{
+            .eventpair = eventpair_.Create(),
+            .process = std::move(process),
+        };
         collector_->Initialize(std::move(instrumented), completer.bind());
         return fpromise::ok();
       })

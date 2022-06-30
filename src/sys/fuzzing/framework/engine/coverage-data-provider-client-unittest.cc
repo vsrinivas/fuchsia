@@ -119,20 +119,20 @@ TEST_F(CoverageDataProviderClientTest, GetProcess) {
   zx::process process;
   EXPECT_EQ(self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process), ZX_OK);
   AsyncEventPair eventpair(executor());
-  InstrumentedProcess sent;
-  sent.set_process(std::move(process));
-  sent.set_eventpair(eventpair.Create());
+  InstrumentedProcess sent{
+      .eventpair = eventpair.Create(),
+      .process = std::move(process),
+  };
   Pend(CoverageData::WithInstrumented(std::move(sent)));
   RunUntilIdle();
 
   ASSERT_TRUE(coverage_data.is_instrumented());
   auto& received = coverage_data.instrumented();
-  EXPECT_EQ(
-      received.process().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr),
-      ZX_OK);
+  EXPECT_EQ(received.process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr),
+            ZX_OK);
   EXPECT_EQ(koid, info.koid);
   FUZZING_EXPECT_OK(eventpair.WaitFor(kSync));
-  EXPECT_EQ(received.eventpair().signal_peer(0, kSync), ZX_OK);
+  EXPECT_EQ(received.eventpair.signal_peer(0, kSync), ZX_OK);
   RunUntilIdle();
 }
 

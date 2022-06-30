@@ -56,8 +56,8 @@ zx_status_t ProcessProxy::Connect(InstrumentedProcess& instrumented) {
   }
 
   zx_info_handle_basic_t info;
-  auto* process = instrumented.mutable_process();
-  if (auto status = process->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (auto status = instrumented.process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                                  nullptr, nullptr);
       status != ZX_OK) {
     FX_LOGS(WARNING) << " Failed to get target id for process: " << zx_status_get_string(status);
     return ZX_ERR_INVALID_ARGS;
@@ -67,10 +67,9 @@ zx_status_t ProcessProxy::Connect(InstrumentedProcess& instrumented) {
     return ZX_ERR_INVALID_ARGS;
   }
   target_id_ = info.koid;
-  process_ = std::move(*process);
+  process_ = std::move(instrumented.process);
 
-  auto* eventpair = instrumented.mutable_eventpair();
-  eventpair_.Pair(std::move(*eventpair));
+  eventpair_.Pair(std::move(instrumented.eventpair));
   zx::channel channel;
   if (auto status = process_.create_exception_channel(0, &channel); status != ZX_OK) {
     // The process already crashed!

@@ -99,7 +99,6 @@ source_set("testing") {
     "//src/sys/fuzzing/common:runner-unittests",
     "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
-    "//src/sys/fuzzing/framework/coverage:coverage-lib",
     "//src/sys/fuzzing/framework/target:no_hooks",
     "//src/sys/fuzzing/framework/testing",
     "//third_party/googletest:gtest",

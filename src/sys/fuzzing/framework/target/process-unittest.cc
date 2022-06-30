@@ -135,9 +135,8 @@ class ProcessTest : public AsyncTest {
             return fpromise::error();
           }
           auto& instrumented = coverage_data.instrumented();
-          target_id_ = GetTargetId(instrumented.process());
-          auto* eventpair = instrumented.mutable_eventpair();
-          eventpair_->Pair(std::move(*eventpair));
+          target_id_ = GetTargetId(instrumented.process);
+          eventpair_->Pair(std::move(instrumented.eventpair));
           return fpromise::ok();
         })
         .wrap_with(scope_);

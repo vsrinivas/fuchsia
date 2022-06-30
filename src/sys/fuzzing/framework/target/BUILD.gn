@@ -53,7 +53,6 @@ source_set("unittests") {
   ]
   deps = [
     ":no_hooks",
-    "../coverage:coverage-lib",
     "../engine:engine-lib",
     "../testing",
     "//src/sys/fuzzing/common/testing",
