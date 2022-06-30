@@ -155,7 +155,9 @@ class MoveIfDifferentTests(unittest.TestCase):
                                return_value=False) as mock_exists:
             with mock.patch.object(shutil, "move") as mock_move:
                 with mock.patch.object(os, "remove") as mock_remove:
-                    output_cacher.move_if_different("source.txt", "dest.txt")
+                    with self.assertRaises(FileNotFoundError):
+                        output_cacher.move_if_different(
+                            "source.txt", "dest.txt")
         mock_exists.assert_called()
         mock_move.assert_not_called()
         mock_remove.assert_not_called()
@@ -173,8 +175,9 @@ class MoveIfDifferentTests(unittest.TestCase):
             with mock.patch.object(output_cacher, "files_match") as mock_diff:
                 with mock.patch.object(shutil, "move") as mock_move:
                     with mock.patch.object(os, "remove") as mock_remove:
-                        output_cacher.move_if_different(
+                        moved = output_cacher.move_if_different(
                             "source.txt", "dest.txt")
+        self.assertTrue(moved)
         mock_exists.assert_called()
         mock_diff.assert_not_called()
         mock_move.assert_called_with("source.txt", "dest.txt")
@@ -187,8 +190,9 @@ class MoveIfDifferentTests(unittest.TestCase):
                                    return_value=False) as mock_diff:
                 with mock.patch.object(shutil, "move") as mock_move:
                     with mock.patch.object(os, "remove") as mock_remove:
-                        output_cacher.move_if_different(
+                        moved = output_cacher.move_if_different(
                             "source.txt", "dest.txt")
+        self.assertTrue(moved)
         mock_exists.assert_called()
         mock_diff.assert_called()
         mock_move.assert_called_with("source.txt", "dest.txt")
@@ -201,8 +205,9 @@ class MoveIfDifferentTests(unittest.TestCase):
                                    return_value=True) as mock_diff:
                 with mock.patch.object(shutil, "move") as mock_move:
                     with mock.patch.object(os, "remove") as mock_remove:
-                        output_cacher.move_if_different(
+                        moved = output_cacher.move_if_different(
                             "source.txt", "dest.txt")
+        self.assertFalse(moved)
         mock_exists.assert_called()
         mock_diff.assert_called()
         mock_move.assert_not_called()
@@ -297,8 +302,9 @@ class ReplaceOutputArgsTest(unittest.TestCase):
             command=["run.sh", "in.put", "out.put"],
             substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
-            with mock.patch.object(output_cacher,
-                                   "move_if_different") as mock_update:
+            # This test doesn't care if move happened.
+            with mock.patch.object(output_cacher, "move_if_different",
+                                   return_value=False) as mock_update:
                 self.assertEqual(action.run_cached(transform), 0)
         mock_call.assert_called_with(["run.sh", "in.put", "out.put.tmp"])
         mock_update.assert_called_with(
@@ -310,8 +316,9 @@ class ReplaceOutputArgsTest(unittest.TestCase):
             command=["run.sh", "in.put", "foo/out.put"],
             substitutions={"foo/out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
-            with mock.patch.object(output_cacher,
-                                   "move_if_different") as mock_update:
+            # This test doesn't care if move happened.
+            with mock.patch.object(output_cacher, "move_if_different",
+                                   return_value=False) as mock_update:
                 with mock.patch.object(os, "makedirs") as mock_mkdir:
                     self.assertEqual(action.run_cached(transform), 0)
         mock_mkdir.assert_called_with("temp/temp/foo", exist_ok=True)

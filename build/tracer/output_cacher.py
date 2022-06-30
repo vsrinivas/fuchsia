@@ -61,19 +61,34 @@ def files_match(file1: str, file2: str):
     return filecmp.cmp(file1, file2, shallow=False)
 
 
-def move_if_different(src: str, dest: str, verbose: bool = False):
+def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
+    """Moves src -> dest if their contents differ.
+
+    Args:
+      src: source path
+      dest: destination path
+      verbose: if True, print whether a move actually happened.
+
+    Raises:
+      FileNotFoundError if src does not exist.
+
+    Returns:
+      True if move occurred,
+      False if the destination already matches source.
+    """
     if not os.path.exists(src):
-        # Then original command failed to produce this file.
-        print(f"  *** Expected file not found: {src}")
-        return
+        # The original command failed to produce this file.
+        raise FileNotFoundError(f"  *** Expected file not found: {src}")
     if not os.path.exists(dest) or not files_match(dest, src):
         if verbose:
             print(f"  === Updated: {dest}")
         shutil.move(src, dest)
+        return True
     else:
         if verbose:
             print(f"  === Cached: {dest}")
         os.remove(src)
+        return False
 
 
 @dataclasses.dataclass
@@ -219,7 +234,7 @@ class Action(object):
 
         if verbose or dry_run:
             for orig, renamed in renamed_outputs.items():
-              print(f"=== renamed: {orig} -> {renamed}")
+                print(f"=== renamed: {orig} -> {renamed}")
             cmd_str = " ".join(substituted_command)
             print(f"=== substituted command: {cmd_str}")
 
@@ -240,11 +255,21 @@ class Action(object):
 
         # Otherwise command succeeded, so conditionally move outputs in-place.
         # TODO(fangism): This loop could be parallelized.
+        move_err = False
         for orig_out, temp_out in renamed_outputs.items():
-            move_if_different(src=temp_out, dest=orig_out, verbose=verbose)
+            try:
+                move_if_different(src=temp_out, dest=orig_out, verbose=verbose)
+            except FileNotFoundError as e:
+                print(e)
+                move_err = True
+
+        if move_err:
+            print("  *** Aborting due to previous error.")
+            return 1
 
         if verbose:
-            unrenamed_outputs = set(self.substitutions.keys()) - set(renamed_outputs.keys())
+            unrenamed_outputs = set(self.substitutions.keys()) - set(
+                renamed_outputs.keys())
             if unrenamed_outputs:
                 # Having un-renamed outputs is not an error, but rather an indicator
                 # of a potentially missed opportunity to cache unchanged outputs.
