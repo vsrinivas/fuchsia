@@ -77,11 +77,6 @@ fuchsia_component("component-conformance") {
   deps = [ ":bin_with_deadlock_detection" ]
 }
 
-# TODO(https://fxbug.dev/84248): rm once no longer used in network:config.
-fuchsia_package("netstack") {
-  deps = [ ":component-legacy" ]
-}
-
 go_binary("bin_with_tracing") {
   gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
   output_name = string_replace(target_name, "bin", "netstack")
