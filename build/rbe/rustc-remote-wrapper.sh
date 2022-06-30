@@ -729,9 +729,12 @@ test "${#link_sysroot[@]}" = 0 || {
       "$sysroot_dir"/lib/libm.so
       "$sysroot_dir"/lib/libpthread.so
       "$sysroot_dir"/lib/librt.so
-      "$sysroot_dir"/lib/libzircon.so
       "$sysroot_dir"/lib/Scrt1.o
     )
+    # Not every sysroot dir has a libzircon.
+    if test -f "$project_root_rel/$sysroot_dir"/lib/libzircon.so ; then
+      sysroot_files+=( "$sysroot_dir"/lib/libzircon.so )
+    fi
   fi
 }
 
