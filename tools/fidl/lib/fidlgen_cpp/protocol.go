@@ -161,7 +161,7 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 }
 
 // These correspond to templated classes forward-declared in
-// //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
+// //zircon/system/ulib/fidl/include/lib/fidl/cpp/wire/wire_messaging.h
 var (
 	// Protocol related
 	WireSyncClient                 = fidlNs.member("WireSyncClient")
@@ -1259,7 +1259,7 @@ const (
 )
 
 // This value needs to be kept in sync with the one defined in
-// zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
+// sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/sync_call.h
 const llcppMaxStackAllocSize = 512
 const channelMaxMessageSize = 65536
 const channelMaxHandleCount = 64

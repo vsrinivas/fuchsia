@@ -63,7 +63,7 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 // It would not dispatch a second message on a channel if there were already
 // another message being handled or whose response deferred asynchronously.
 // New clients should use the |fidl::BindServer| API from
-// `zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h`.
+// `sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/channel.h`.
 //
 // This function adds an |async_wait_t| to the given |dispatcher| that waits
 // asynchronously for new messages to arrive on |server_end|. When a message

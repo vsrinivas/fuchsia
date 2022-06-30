@@ -11,7 +11,7 @@ source_set("testing") {
   sources = [ "test_server_and_client.h" ]
 
   public_deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//src/media/audio/services/common",
   ]
 }

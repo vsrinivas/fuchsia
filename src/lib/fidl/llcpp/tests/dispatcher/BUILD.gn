@@ -25,7 +25,7 @@ source_set("client_test_helpers") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -65,7 +65,7 @@ test("fidl_llcpp_private_intrusive_wavl_tree_tests_bin") {
   output_name = "fidl_llcpp_private_intrusive_wavl_tree_tests"
   sources = [ "intrusive_wavl_tree_tests.cc" ]
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]

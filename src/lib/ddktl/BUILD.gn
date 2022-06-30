@@ -15,7 +15,7 @@ config("include") {
 }
 
 sdk_source_set("ddktl") {
-  category = "experimental"  # due to //sdk/lib/fidl/llcpp
+  category = "experimental"  # due to //sdk/lib/fidl/cpp/wire
   sdk_name = "ddktl"
   sources = [
     "include/ddktl/device-internal.h",
@@ -33,7 +33,7 @@ sdk_source_set("ddktl") {
     "//sdk/lib/stdcompat",
 
     # <ddktl/fidl.h> has #include <lib/fidl/llcpp/transaction.h>.
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
 
     # <ddktl/device.h> has #include <lib/zx/channel.h>.
     "//zircon/system/ulib/zx",

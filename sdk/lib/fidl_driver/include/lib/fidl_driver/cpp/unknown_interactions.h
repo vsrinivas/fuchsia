@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_UNKNOWN_INTERACTIONS_H_
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_UNKNOWN_INTERACTIONS_H_
 
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/unknown_interactions.h>
+#include <lib/fidl/cpp/wire/transaction.h>
+#include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace fidl::internal {
 

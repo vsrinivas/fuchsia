@@ -13,7 +13,7 @@ group("tests_no_e2e") {
     "//sdk/cts/tests/pkg/fidl/cpp:tests",
     "//sdk/dart/fidl:fidl_detect_action(//build/dart:dartlang)",
     "//sdk/lib/fidl/cpp/fuzzing:tests",
-    "//sdk/lib/fidl/llcpp:llcpp_sdk",
+    "//sdk/lib/fidl/cpp/wire:wire_sdk",
     "//sdk/lib/fidl_driver/tests",
     "//src/lib/fidl:tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",

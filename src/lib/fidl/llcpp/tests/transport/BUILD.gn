@@ -22,7 +22,7 @@ test("fidl_llcpp_transport_tests_bin") {
     "waiter_test.cc",
   ]
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -35,7 +35,7 @@ test("fidl_llcpp_channel_transport_tests_bin") {
   output_name = "fidl_llcpp_channel_transport_tests"
   sources = [ "channel_transport_test.cc" ]
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -55,7 +55,7 @@ test("fidl_llcpp_transport_integration_tests_bin") {
     "transport_socket.cc",
   ]
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

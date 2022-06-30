@@ -7,7 +7,7 @@ source_set("service_hub_connector") {
   public_deps = [
     ":service_reconnector",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/syslog/cpp",
     "//src/lib/backoff",
     "//src/lib/fidl/cpp",

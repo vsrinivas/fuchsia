@@ -37,7 +37,7 @@ source_set("driver_runtime_impl") {
   ]
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_internal",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//src/devices/lib/log",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
@@ -75,7 +75,7 @@ test("driver_runtime_test") {
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",
@@ -90,7 +90,7 @@ test("driver_runtime_death_test") {
     ":driver_runtime_impl",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zx",

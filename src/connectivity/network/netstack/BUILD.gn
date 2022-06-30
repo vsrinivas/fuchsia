@@ -254,7 +254,7 @@ test("udp_serde_test") {
   deps = [
     ":udp_serde",
     ":udp_serde_test_util",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

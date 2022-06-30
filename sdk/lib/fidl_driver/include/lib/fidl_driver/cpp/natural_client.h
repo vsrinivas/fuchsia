@@ -16,7 +16,7 @@ namespace fdf {
 //
 // Note: when updating the documentation below, please make similar updates to
 // the one in //src/lib/fidl/cpp/include/lib/fidl/cpp/client.h and
-// //zircon/system/ulib/fidl/include/lib/fidl/llcpp/client.h
+// //sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/client.h
 //
 // The interface documentation on |fdf::Client| is largely identical to those
 // on |fidl::Client|.

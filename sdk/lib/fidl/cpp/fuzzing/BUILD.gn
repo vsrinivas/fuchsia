@@ -16,7 +16,7 @@ source_set("fuzzing") {
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/fuzzing/cpp",
     "//sdk/lib/fuzzing/cpp:traits",
     "//zircon/system/public",

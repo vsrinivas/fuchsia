@@ -15,7 +15,7 @@ source_set("common") {
   sources = [ "base_fidl_server.h" ]
 
   public_deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
   ]

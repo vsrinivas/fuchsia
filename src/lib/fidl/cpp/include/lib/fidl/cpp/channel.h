@@ -19,7 +19,7 @@ namespace fidl {
 
 //
 // Note: when updating the documentation below, please make similar updates to
-// the one in //zircon/system/ulib/fidl/include/lib/fidl/llcpp/channel.h
+// the one in //sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/channel.h
 //
 // The interface documentation on |fidl::SyncClient| is largely identical to
 // those on |fidl::WireSyncClient|, after removing the "wire" portion from

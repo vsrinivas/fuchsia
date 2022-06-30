@@ -25,7 +25,7 @@ source_set("arena_checker") {
   ]
   public_deps = [
     "//sdk/lib/fidl",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
   ]
 }
 
@@ -38,7 +38,7 @@ source_set("types_test_utils") {
   ]
   public_deps = [
     "//sdk/lib/fidl",
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//third_party/googletest:gtest",
   ]
 

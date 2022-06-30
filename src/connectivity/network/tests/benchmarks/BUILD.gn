@@ -19,7 +19,7 @@ test("udp_serde_benchmarks") {
   sources = [ "udp_serde_benchmarks.cc" ]
 
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/network/netstack:udp_serde",
     "//src/connectivity/network/netstack:udp_serde_test_util",

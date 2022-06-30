@@ -59,7 +59,7 @@ test("fidl_llcpp_status_types_tests_bin") {
   output_name = "fidl_llcpp_status_types_tests"
   sources = [ "status_description_test.cc" ]
   deps = [
-    "//sdk/lib/fidl/llcpp",
+    "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/zxtest",
   ]
 }

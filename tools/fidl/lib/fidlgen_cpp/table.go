@@ -13,7 +13,7 @@ import (
 type TableFrameItem *TableMember
 
 // These correspond to templated classes forward-declared in
-// //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_types.h
+// //sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/wire_types.h
 var (
 	WireTableFrame           = fidlNs.member("WireTableFrame")
 	WireTableBuilder         = fidlNs.member("WireTableBuilder")

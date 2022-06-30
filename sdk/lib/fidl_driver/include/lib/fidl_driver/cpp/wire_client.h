@@ -15,7 +15,7 @@
 //
 // Maintainer's note: when updating the documentation and function signatures
 // below, please make similar updates to the one in
-// //zircon/system/ulib/fidl/include/lib/fidl/llcpp/client.h.
+// //sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/client.h.
 //
 // |fdf::WireClient| is the driver counterpart to |fidl::WireClient|, augmented
 // to work with driver runtime objects, and similar for |fdf::WireSharedClient|

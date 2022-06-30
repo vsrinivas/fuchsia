@@ -4,14 +4,19 @@
 
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/system/public/zircon/syscalls.h>
 
 #include <map>
 #include <mutex>
@@ -21,12 +26,6 @@
 
 #include "src/media/codec/examples/use_media_decoder/use_video_decoder.h"
 #include "src/media/codec/examples/use_media_decoder/util.h"
-#include <fidl/fuchsia.sysmem/cpp/wire_types.h>
-#include <lib/fidl/llcpp/include/lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/include/lib/fidl/llcpp/connect_service.h>
-#include <lib/zx/time.h>
-#include <zircon/system/public/zircon/syscalls.h>
-
 #include "use_video_decoder_test.h"
 
 namespace {

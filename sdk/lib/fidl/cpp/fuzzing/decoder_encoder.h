@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_FUZZING_DECODER_ENCODER_H_
 #define LIB_FIDL_CPP_FUZZING_DECODER_ENCODER_H_
 
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/errors.h>

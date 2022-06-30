@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNKNOWN_INTERACTION_HANDLER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNKNOWN_INTERACTION_HANDLER_H_
 
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/unknown_interactions.h>
+#include <lib/fidl/cpp/wire/transaction.h>
+#include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace fidl {
 
