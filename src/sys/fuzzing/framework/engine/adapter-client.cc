@@ -33,9 +33,6 @@ Promise<> TargetAdapterClient::Connect() {
                return fpromise::ok();
              }
              handler_(ptr_.NewRequest(executor_->dispatcher()));
-
-             ptr_.set_error_handler([](zx_status_t status) {});
-
              zx::vmo test_input;
              if (auto status = test_input_.Share(&test_input); status != ZX_OK) {
                FX_LOGS(WARNING) << "Failed to share test input: " << zx_status_get_string(status);
@@ -81,7 +78,6 @@ Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
     return fpromise::make_error_promise();
   }
   return Connect()
-      .inspect([](const Result<>& result) {})
       .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
       .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalSelf(kFinish, 0)); })
       .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalPeer(0, kStart)); })

@@ -18,8 +18,8 @@
     offer: [
         {
             protocol: [
-                "fuchsia.fuzzer.CoverageProvider",
-                "fuchsia.fuzzer.Instrumentation",
+                "fuchsia.debugdata.Publisher",
+                "fuchsia.fuzzer.CoverageDataProvider",
             ],
             from: "#coverage",
             to: "#engine",

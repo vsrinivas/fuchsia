@@ -12,12 +12,12 @@
         binary: "test/component_fuzzing_framework_tests",
     },
     use: [
-        { protocol: "fuchsia.fuzzer.CoverageProvider" },
+        { protocol: "fuchsia.fuzzer.CoverageDataProvider" },
         { protocol: "fuchsia.process.Launcher" },
     ],
     offer: [
         {
-            protocol: "fuchsia.fuzzer.Instrumentation",
+            protocol: "fuchsia.debugdata.Publisher",
             from: "parent",
             to: "#fuzzer",
         },

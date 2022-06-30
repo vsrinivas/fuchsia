@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include "src/sys/fuzzing/common/input.h"
 
 // A simple fuzzer that can be used in integration tests.
 

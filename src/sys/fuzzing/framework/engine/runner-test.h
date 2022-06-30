@@ -15,16 +15,15 @@
 #include <string>
 #include <vector>
 
-#include "src/sys/fuzzing/common/async-deque.h"
 #include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/common/testing/module.h"
-#include "src/sys/fuzzing/framework/coverage/provider.h"
 #include "src/sys/fuzzing/framework/engine/runner.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 #include "src/sys/fuzzing/framework/testing/adapter.h"
+#include "src/sys/fuzzing/framework/testing/coverage.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
 
@@ -69,12 +68,11 @@ class RunnerImplTest : public RunnerTest {
 
   RunnerPtr runner_;
   std::unique_ptr<FakeTargetAdapter> target_adapter_;
-  std::unique_ptr<CoverageProviderImpl> coverage_provider_;
-  AsyncDequePtr<CoverageEvent> events_;
+  std::unique_ptr<FakeCoverage> coverage_;
+  CoverageDataCollectorPtr collector_;
   std::unique_ptr<AsyncEventPair> eventpair_;
   FakeFrameworkModule module_;
   std::unique_ptr<TestTarget> target_;
-  uint64_t target_id_;
   bool running_ = false;
   bool leak_suspected_ = false;
   Scope scope_;

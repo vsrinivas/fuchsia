@@ -22,19 +22,19 @@ TEST(ModulePoolTest, Get) {
   ModulePool pool;
 
   // Creates missing proxies automatically.
-  auto* proxy1 = pool.Get({0, 0}, sizeof(uint64_t));
+  auto* proxy1 = pool.Get("foo", sizeof(uint64_t));
   EXPECT_NE(proxy1, nullptr);
 
   // Different IDs result in different proxies.
-  auto* proxy2 = pool.Get({0, 1}, sizeof(uint64_t));
+  auto* proxy2 = pool.Get("bar", sizeof(uint64_t));
   EXPECT_NE(proxy1, proxy2);
 
   // Different sizes result in different proxies, mitigating hash collisions further.
-  auto* proxy3 = pool.Get({0, 0}, sizeof(uint64_t) * 2);
+  auto* proxy3 = pool.Get("foo", sizeof(uint64_t) * 2);
   EXPECT_NE(proxy1, proxy3);
 
   // Can return previously created proxies.
-  auto* proxy4 = pool.Get({0, 0}, sizeof(uint64_t));
+  auto* proxy4 = pool.Get("foo", sizeof(uint64_t));
   EXPECT_EQ(proxy1, proxy4);
 }
 
@@ -43,14 +43,14 @@ TEST(ModulePoolTest, ForEachModule) {
 
   // Set up two proxies with two attached "modules" each.
   uint64_t counters1a[1] = {0x01};
-  auto* proxy1 = pool.Get({0, 0}, sizeof(counters1a));
+  auto* proxy1 = pool.Get("foo", sizeof(counters1a));
   proxy1->Add(counters1a, sizeof(counters1a));
 
   uint64_t counters1b[1] = {0x02};
   proxy1->Add(counters1b, sizeof(counters1b));
 
   uint64_t counters2a[2] = {0x03, 0x04};
-  auto* proxy2 = pool.Get({0, 0}, sizeof(counters2a));
+  auto* proxy2 = pool.Get("foo", sizeof(counters2a));
   proxy2->Add(counters2a, sizeof(counters2a));
 
   uint64_t counters2b[2] = {0x05, 0x06};

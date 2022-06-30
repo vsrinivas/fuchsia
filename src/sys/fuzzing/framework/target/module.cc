@@ -13,10 +13,11 @@
 
 namespace fuzzing {
 
-Module::Module(uint8_t* counters, const uintptr_t* pcs, size_t num_pcs) {
+zx_status_t Module::Import(uint8_t* counters, const uintptr_t* pcs, size_t num_pcs) {
   FX_CHECK(counters && pcs && num_pcs);
   if (auto status = counters_.Mirror(counters, num_pcs); status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to create module: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Failed to mirror module counters: " << zx_status_get_string(status);
+    return status;
   }
   // Make a position independent table from the PCs.
   auto pc_table = std::make_unique<ModulePC[]>(num_pcs);
@@ -50,13 +51,7 @@ Module::Module(uint8_t* counters, const uintptr_t* pcs, size_t num_pcs) {
   len2 += len1 - 2;
   FX_DCHECK(id[len2] == '=');
   id_ = std::string(id, len2);
-}
-
-Module& Module::operator=(Module&& other) noexcept {
-  legacy_id_ = other.legacy_id_;
-  id_ = other.id_;
-  counters_ = std::move(other.counters_);
-  return *this;
+  return ZX_OK;
 }
 
 zx_status_t Module::Share(uint64_t target_id, zx::vmo* out) const {

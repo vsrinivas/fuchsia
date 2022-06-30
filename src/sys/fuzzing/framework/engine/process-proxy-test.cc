@@ -13,7 +13,6 @@ namespace fuzzing {
 
 void ProcessProxyTest::SetUp() {
   AsyncTest::SetUp();
-  eventpair_ = std::make_unique<AsyncEventPair>(executor());
   pool_ = std::make_shared<ModulePool>();
 }
 
@@ -29,7 +28,8 @@ std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::proces
 
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
                                                                       const OptionsPtr& options) {
-  return CreateAndConnectProxy(std::move(process), options, eventpair_->Create());
+  AsyncEventPair eventpair(executor());
+  return CreateAndConnectProxy(std::move(process), options, eventpair.Create());
 }
 
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
@@ -41,15 +41,12 @@ std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::proces
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
                                                                       const OptionsPtr& options,
                                                                       zx::eventpair eventpair) {
-  zx_info_handle_basic_t info;
-  auto status = process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
-  auto process_proxy = std::make_unique<ProcessProxy>(executor(), info.koid, pool_);
+  auto process_proxy = std::make_unique<ProcessProxy>(executor(), pool_);
   process_proxy->Configure(options);
   InstrumentedProcess instrumented;
   instrumented.set_process(std::move(process));
   instrumented.set_eventpair(std::move(eventpair));
-  EXPECT_EQ(process_proxy->Connect(std::move(instrumented)), ZX_OK);
+  EXPECT_EQ(process_proxy->Connect(instrumented), ZX_OK);
   return process_proxy;
 }
 

@@ -11,6 +11,8 @@ source_set("testing") {
   sources = [
     "adapter.cc",
     "adapter.h",
+    "coverage.cc",
+    "coverage.h",
     "module.cc",
     "module.h",
     "target.cc",
@@ -60,4 +62,23 @@ executable("engine-bin") {
 fuchsia_test_component("engine") {
   manifest = "meta/engine.cml"
   deps = [ ":engine-bin" ]
+}
+
+# The test coverage component is a simpler version of test_manager's fuzz_coverage component. It
+# can handle a single watcher, and doesn't need |fuchsia.sys2.EventStream|, making it suitable for
+# use in integration tests.
+executable("coverage-bin") {
+  output_name = "component_fuzzing_test_coverage"
+  testonly = true
+  sources = [ "coverage-main.cc" ]
+  deps = [
+    ":testing",
+    "//sdk/fidl/fuchsia.debugdata",
+    "//src/sys/fuzzing/common",
+  ]
+}
+
+fuchsia_test_component("coverage") {
+  manifest = "meta/coverage.cml"
+  deps = [ ":coverage-bin" ]
 }

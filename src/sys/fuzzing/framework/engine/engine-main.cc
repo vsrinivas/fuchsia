@@ -14,18 +14,22 @@ namespace fuzzing {
 zx_status_t RunFrameworkEngine() {
   // Take start up handles.
   auto context = ComponentContext::Create();
-  zx::channel registry_channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
+  zx::channel fuzz_registry_channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
+  zx::channel fuzz_coverage_channel{zx_take_startup_handle(PA_HND(PA_USER0, 1))};
 
   // Create the runner.
   auto runner = RunnerImpl::MakePtr(context->executor());
   auto runner_impl = std::static_pointer_cast<RunnerImpl>(runner);
-  runner_impl->set_target_adapter_handler(context->MakeRequestHandler<TargetAdapter>());
-  runner_impl->set_coverage_provider_handler(context->MakeRequestHandler<CoverageProvider>());
+  runner_impl->SetTargetAdapterHandler(context->MakeRequestHandler<TargetAdapter>());
+  if (auto status = runner_impl->BindCoverageDataProvider(std::move(fuzz_coverage_channel));
+      status != ZX_OK) {
+    return status;
+  }
 
   // Serve |fuchsia.fuzzer.ControllerProvider| to the registry.
   ControllerProviderImpl provider(context->executor());
   provider.SetRunner(std::move(runner));
-  auto task = provider.Serve(std::move(registry_channel));
+  auto task = provider.Serve(std::move(fuzz_registry_channel));
   context->ScheduleTask(std::move(task));
 
   return context->Run();

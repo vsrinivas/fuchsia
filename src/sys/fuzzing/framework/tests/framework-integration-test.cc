@@ -20,6 +20,7 @@ namespace fuzzing {
 
 using fuchsia::fuzzer::ControllerProviderPtr;
 using fuchsia::fuzzer::ControllerPtr;
+using fuchsia::fuzzer::CoverageDataProvider;
 using fuchsia::fuzzer::Registrar;
 
 // Test fixtures.
@@ -43,7 +44,14 @@ class FrameworkIntegrationTest : public AsyncTest {
     return fpromise::make_promise([this]() -> ZxResult<> {
              std::vector<zx::channel> channels;
              fidl::InterfaceHandle<Registrar> registrar_handle = registrar_->NewBinding();
+             fidl::InterfaceHandle<CoverageDataProvider> provider_handle;
+             if (auto status = context_->Connect(provider_handle.NewRequest()); status != ZX_OK) {
+               FX_LOGS(ERROR) << "Failed to connect to fuzz_coverage: "
+                              << zx_status_get_string(status);
+               return fpromise::error(status);
+             }
              channels.emplace_back(registrar_handle.TakeChannel());
+             channels.emplace_back(provider_handle.TakeChannel());
              if (auto status =
                      StartProcess("component_fuzzing_engine", std::move(channels), &engine_);
                  status != ZX_OK) {

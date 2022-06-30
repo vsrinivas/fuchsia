@@ -24,15 +24,14 @@
 #include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
-#include "src/sys/fuzzing/framework/coverage/forwarder.h"
 #include "src/sys/fuzzing/framework/engine/coverage-data.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
+#include "src/sys/fuzzing/framework/testing/coverage.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::CoverageProviderPtr;
-using ::fuchsia::fuzzer::InstrumentationPtr;
+using ::fuchsia::fuzzer::CoverageDataProviderPtr;
 using ::fuchsia::fuzzer::Options;
 
 // Test fixtures.
@@ -41,12 +40,12 @@ class ProcessTest : public AsyncTest {
  protected:
   void SetUp() override {
     AsyncTest::SetUp();
+    coverage_ = std::make_unique<FakeCoverage>(executor());
     eventpair_ = std::make_shared<AsyncEventPair>(executor());
     pool_ = ModulePool::MakePtr();
 
-    forwarder_ = std::make_unique<CoverageForwarder>(executor());
-    auto handler = forwarder_->GetCoverageProviderHandler();
-    handler(coverage_provider_.NewRequest(executor()->dispatcher()));
+    auto provider_handler = coverage_->GetProviderHandler();
+    provider_handler(provider_.NewRequest(executor()->dispatcher()));
     Configure(DefaultOptions());
   }
 
@@ -69,7 +68,7 @@ class ProcessTest : public AsyncTest {
 
   // Copies the given |options| to the watcher, to be given to new processes.
   void Configure(OptionsPtr options) {
-    coverage_provider_->SetOptions(CopyOptions(*options));
+    provider_->SetOptions(CopyOptions(*options));
     RunOnce();
   }
 
@@ -77,11 +76,11 @@ class ProcessTest : public AsyncTest {
   // Tests typically need to call |WatchForProcess| and |WatchForModule| for this promise to
   // complete.
   ZxPromise<> Connect(Process* process) {
-    auto handler = forwarder_->GetInstrumentationHandler();
-    fidl::InterfaceHandle<Instrumentation> instrumentation;
-    handler(instrumentation.NewRequest());
+    fidl::InterfaceHandle<CoverageDataCollector> collector;
+    auto collector_handler = coverage_->GetCollectorHandler();
+    collector_handler(collector.NewRequest());
     auto eventpair = std::make_shared<AsyncEventPair>(executor());
-    auto task = process->Connect(std::move(instrumentation), eventpair->Create()).wrap_with(scope_);
+    auto task = process->Connect(std::move(collector), eventpair->Create()).wrap_with(scope_);
     executor()->schedule_task(std::move(task));
     return fpromise::make_promise([eventpair, wait = ZxFuture<zx_signals_t>()](
                                       Context& context) mutable -> ZxResult<> {
@@ -128,20 +127,17 @@ class ProcessTest : public AsyncTest {
   // Returns a promise to handle an expected coverage event from a new process. Completes
   // with an error if the next coverage event is for an LLVM module.
   Promise<> WatchForProcess() {
-    Bridge<CoverageEvent> bridge;
-    coverage_provider_->WatchCoverageEvent(bridge.completer.bind());
+    Bridge<CoverageData> bridge;
+    provider_->GetCoverageData(bridge.completer.bind());
     return bridge.consumer.promise_or(fpromise::error())
-        .and_then([this](CoverageEvent& event) -> Result<> {
-          if (!event.payload.is_process_started()) {
+        .and_then([this](CoverageData& coverage_data) -> Result<> {
+          if (!coverage_data.is_instrumented()) {
             return fpromise::error();
           }
-          auto& instrumented = event.payload.process_started();
+          auto& instrumented = coverage_data.instrumented();
           target_id_ = GetTargetId(instrumented.process());
           auto* eventpair = instrumented.mutable_eventpair();
           eventpair_->Pair(std::move(*eventpair));
-          if (auto status = eventpair_->SignalPeer(0, kSync); status != ZX_OK) {
-            return fpromise::error();
-          }
           return fpromise::ok();
         })
         .wrap_with(scope_);
@@ -150,35 +146,32 @@ class ProcessTest : public AsyncTest {
   // Returns a promise to handle an expected coverage event from a new module. Completes
   // with an error if the next coverage event is for an instrumented process.
   Promise<> WatchForModule() {
-    Bridge<CoverageEvent> bridge;
-    coverage_provider_->WatchCoverageEvent(bridge.completer.bind());
+    Bridge<CoverageData> bridge;
+    provider_->GetCoverageData(bridge.completer.bind());
     return bridge.consumer.promise_or(fpromise::error())
-        .and_then([this](CoverageEvent& event) -> Result<> {
-          if (!event.payload.is_llvm_module_added()) {
+        .and_then([this](CoverageData& coverage_data) -> Result<> {
+          if (!coverage_data.is_inline_8bit_counters()) {
             return fpromise::error();
           }
-          auto& llvm_module = event.payload.llvm_module_added();
+          auto& inline_8bit_counters = coverage_data.inline_8bit_counters();
+          auto module_id = GetModuleId(inline_8bit_counters);
           SharedMemory counters;
-          auto* data = llvm_module.mutable_inline_8bit_counters();
-          if (auto status = counters.Link(std::move(*data)); status != ZX_OK) {
+          if (auto status = counters.Link(std::move(inline_8bit_counters)); status != ZX_OK) {
             return fpromise::error();
           }
-          auto* module = pool_->Get(llvm_module.legacy_id(), counters.size());
+          auto* module = pool_->Get(module_id, counters.size());
           module->Add(counters.data(), counters.size());
           added_.push_back(std::move(counters));
-          if (auto status = eventpair_->SignalPeer(0, kSync); status != ZX_OK) {
-            return fpromise::error();
-          }
           return fpromise::ok();
         })
         .wrap_with(scope_);
   }
 
  private:
-  std::unique_ptr<CoverageForwarder> forwarder_;
-  CoverageProviderPtr coverage_provider_;
+  std::unique_ptr<FakeCoverage> coverage_;
   std::shared_ptr<AsyncEventPair> eventpair_;
   ModulePoolPtr pool_;
+  CoverageDataProviderPtr provider_;
   uint64_t target_id_ = kInvalidTargetId;
   std::unordered_map<std::string, FakeFrameworkModule> modules_;
   std::vector<SharedMemory> added_;

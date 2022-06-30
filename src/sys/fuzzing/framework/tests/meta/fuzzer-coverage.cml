@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 // This manifest corresponds to the fuzzer used by the integration tests.
+// It is meant to be used when the overall build is using the 'coverage' toolchain variant. In this
+// configuration, //tools/cmc/build/cml.gni will add a `use declaration for
+// `fuchsia.debugdata.Publisher`, so that declaration is omitted from this file.
 {
     include: [ "//src/sys/fuzzing/framework/adapters/llvm.shard.cml" ],
     program: {
@@ -10,7 +13,4 @@
         binary: "bin/component_fuzzing_framework_test_fuzzer",
         args: [ "data/corpus" ],
     },
-    use: [
-        { protocol: "fuchsia.debugdata.Publisher" },
-    ],
 }

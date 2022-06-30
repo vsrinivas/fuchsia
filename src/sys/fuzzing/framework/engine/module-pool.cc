@@ -4,15 +4,20 @@
 
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 
+#include <iomanip>
+#include <sstream>
+
 namespace fuzzing {
 
-ModuleProxy* ModulePool::Get(const Identifier& id, size_t size) {
-  Key key = {id, size};
-  auto iter = modules_.find(key);
-  if (iter == modules_.end()) {
-    iter = modules_.emplace(key, std::make_unique<ModuleProxy>(id, size)).first;
+ModuleProxy* ModulePool::Get(const std::string& id, size_t size) {
+  std::ostringstream oss;
+  oss << id << std::setw(16) << std::setfill('0') << ":" << size;
+  auto key = oss.str();
+  auto& module = modules_[key];
+  if (!module) {
+    module = std::make_unique<ModuleProxy>(id, size);
   }
-  return iter->second.get();
+  return module.get();
 }
 
 void ModulePool::ForEachModule(fit::function<void(ModuleProxy&)> func) {
@@ -49,14 +54,6 @@ size_t ModulePool::GetCoverage(size_t* out_num_features) {
 
 void ModulePool::Clear() {
   ForEachModule([](ModuleProxy& module) { module.Clear(); });
-}
-
-bool ModulePool::Key::operator==(const Key& key) const {
-  return id[0] == key.id[0] && id[1] == key.id[1] && size == key.size;
-}
-
-size_t ModulePool::Hasher::operator()(const Key& key) const {
-  return key.id[0] ^ key.id[1] ^ key.size;
 }
 
 }  // namespace fuzzing

@@ -20,19 +20,17 @@
 
 namespace fuzzing {
 
-using Identifier = std::array<uint64_t, 2>;
-
 // This class in the fuzzer engine is analogous to |fuzzing::Module| in an instrumented process.
 // This association is one-to-many: The engine collects feedback from multiple processes which may
 // possibly even restart. As a result it maintains a single |ModuleProxy| for all instances of a
 // particular LLVM module across multiple processes, uniquely identified by the combination of its
-// |fuchsia.fuzzer.Identifier| and its number of PCs, e.g. its size.
+// given |id| and its number of PCs, e.g. its size.
 class ModuleProxy final {
  public:
-  ModuleProxy(Identifier id, size_t size);
+  ModuleProxy(const std::string& id, size_t size);
   ~ModuleProxy() = default;
 
-  Identifier id() const { return id_; }
+  const std::string& id() const { return id_; }
   size_t size() const { return num_u64s_ * sizeof(uint64_t); }
 
   // De/registers the shared memory as a source of counter values. This object does not take
@@ -60,7 +58,7 @@ class ModuleProxy final {
  private:
   size_t MeasureImpl(bool accumulate);
 
-  const Identifier id_;
+  const std::string id_;
   const size_t num_u64s_;
 
   std::vector<uint64_t*> counters_;

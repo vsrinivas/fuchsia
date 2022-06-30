@@ -30,7 +30,6 @@ class ProcessProxyTest : public AsyncTest {
  protected:
   void SetUp() override;
 
-  AsyncEventPair& eventpair() { return *eventpair_; }
   ModulePoolPtr pool() const { return pool_; }
 
   static OptionsPtr DefaultOptions();
@@ -51,7 +50,6 @@ class ProcessProxyTest : public AsyncTest {
                                                       const OptionsPtr& options,
                                                       zx::eventpair eventpair);
 
-  std::unique_ptr<AsyncEventPair> eventpair_;
   ModulePoolPtr pool_;
 };
 

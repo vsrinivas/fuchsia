@@ -41,18 +41,20 @@ TEST_F(ProcessProxyTest, Connect) {
 
 TEST_F(ProcessProxyTest, AddLlvmModule) {
   TestTarget target(executor());
-  auto process_proxy = CreateAndConnectProxy(target.Launch());
+  AsyncEventPair eventpair(executor());
+  auto process_proxy = CreateAndConnectProxy(target.Launch(), eventpair.Create());
+
   FakeFrameworkModule module;
-  LlvmModule llvm_module;
-  llvm_module.set_legacy_id(module.legacy_id());
   zx::vmo inline_8bit_counters;
   EXPECT_EQ(module.Share(0x1234, &inline_8bit_counters), ZX_OK);
-  llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
-  EXPECT_EQ(process_proxy->AddModule(std::move(llvm_module)), ZX_OK);
-  FUZZING_EXPECT_OK(eventpair().WaitFor(kSync));
-  RunUntilIdle();
+  EXPECT_EQ(process_proxy->AddModule(inline_8bit_counters), ZX_OK);
 
-  auto* module_impl = pool()->Get(module.legacy_id(), module.num_pcs());
+  // Adding a duplicate module fails.
+  EXPECT_EQ(module.Share(0x1234, &inline_8bit_counters), ZX_OK);
+  EXPECT_EQ(process_proxy->AddModule(inline_8bit_counters), ZX_ERR_ALREADY_BOUND);
+
+  // Coverage should be reflected in the pool.
+  auto* module_impl = pool()->Get(module.id(), module.num_pcs());
   EXPECT_EQ(module_impl->Measure(), 0U);
   module[0] = 1;
   module[1] = 4;

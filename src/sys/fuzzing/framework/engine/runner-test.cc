@@ -16,19 +16,18 @@
 
 namespace fuzzing {
 
-using fuchsia::fuzzer::Payload;
-
 void RunnerImplTest::SetUp() {
   RunnerTest::SetUp();
   runner_ = RunnerImpl::MakePtr(executor());
   auto runner_impl = std::static_pointer_cast<RunnerImpl>(runner_);
-
   target_adapter_ = std::make_unique<FakeTargetAdapter>(executor());
-  runner_impl->set_target_adapter_handler(target_adapter_->GetHandler());
+  runner_impl->SetTargetAdapterHandler(target_adapter_->GetHandler());
 
-  events_ = AsyncDeque<CoverageEvent>::MakePtr();
-  coverage_provider_ = std::make_unique<CoverageProviderImpl>(executor(), options(), events_);
-  runner_impl->set_coverage_provider_handler(coverage_provider_->GetHandler());
+  coverage_ = std::make_unique<FakeCoverage>(executor());
+  auto handler = coverage_->GetProviderHandler();
+  fidl::InterfaceHandle<CoverageDataProvider> provider;
+  handler(provider.NewRequest());
+  EXPECT_EQ(runner_impl->BindCoverageDataProvider(provider.TakeChannel()), ZX_OK);
 
   eventpair_ = std::make_unique<AsyncEventPair>(executor());
   target_ = std::make_unique<TestTarget>(executor());
@@ -62,60 +61,48 @@ ZxPromise<Input> RunnerImplTest::GetTestInput() {
 }
 
 ZxPromise<> RunnerImplTest::PublishProcess() {
+  Bridge<Options> bridge;
   return fpromise::make_promise(
-      [this, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
-        if (!wait) {
-          auto process = target_->Launch();
-          zx_info_handle_basic_t info;
-          if (auto status =
-                  process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-              status != ZX_OK) {
-            return fpromise::error(status);
-          }
-          target_id_ = info.koid;
-          InstrumentedProcess instrumented;
-          instrumented.set_process(std::move(process));
-          instrumented.set_eventpair(eventpair_->Create());
-          CoverageEvent event;
-          event.target_id = target_id_;
-          event.payload = Payload::WithProcessStarted(std::move(instrumented));
-          if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
-            return fpromise::error(status);
-          }
-          wait = eventpair_->WaitFor(kSync);
-        }
+             [this, completer = std::move(bridge.completer)]() mutable -> ZxResult<> {
+               // Connect and send the process.
+               auto handler = coverage_->GetCollectorHandler();
+               handler(collector_.NewRequest(executor()->dispatcher()));
+               InstrumentedProcess instrumented;
+               instrumented.set_process(target_->Launch());
+               instrumented.set_eventpair(eventpair_->Create());
+               collector_->Initialize(std::move(instrumented), completer.bind());
+               return fpromise::ok();
+             })
+      .and_then([wait = Future<Options>(bridge.consumer.promise_or(fpromise::error()))](
+                    Context& context) mutable -> ZxResult<> {
         if (!wait(context)) {
           return fpromise::pending();
         }
         if (wait.is_error()) {
-          return fpromise::error(wait.error());
+          return fpromise::error(ZX_ERR_CANCELED);
         }
         return fpromise::ok();
       });
 }
 
 ZxPromise<> RunnerImplTest::PublishModule() {
-  return fpromise::make_promise(
-      [this, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
-        if (!wait) {
-          LlvmModule llvm_module;
-          llvm_module.set_legacy_id(module_.legacy_id());
-          zx::vmo inline_8bit_counters;
-          EXPECT_EQ(module_.Share(target_id_, &inline_8bit_counters), ZX_OK);
-          llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
-          CoverageEvent event;
-          event.target_id = target_id_;
-          event.payload = Payload::WithLlvmModuleAdded(std::move(llvm_module));
-          if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
-            return fpromise::error(status);
-          }
-          wait = eventpair_->WaitFor(kSync);
-        }
+  Bridge<> bridge;
+  return fpromise::make_promise([this,
+                                 completer = std::move(bridge.completer)]() mutable -> ZxResult<> {
+           zx::vmo inline_8bit_counters;
+           if (auto status = module_.Share(target_->id(), &inline_8bit_counters); status != ZX_OK) {
+             return fpromise::error(status);
+           }
+           collector_->AddLlvmModule(std::move(inline_8bit_counters), completer.bind());
+           return fpromise::ok();
+         })
+      .and_then([this, wait = Future<>(bridge.consumer.promise_or(fpromise::error()))](
+                    Context& context) mutable -> ZxResult<> {
         if (!wait(context)) {
           return fpromise::pending();
         }
         if (wait.is_error()) {
-          return fpromise::error(wait.error());
+          return fpromise::error(ZX_ERR_CANCELED);
         }
         // Automatically clear feedback on start. This will complete when |eventpair_| is reset.
         executor()->schedule_task(AwaitStart());

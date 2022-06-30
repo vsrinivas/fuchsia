@@ -8,15 +8,16 @@
 #include <lib/zx/clock.h>
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 
 #include <deque>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/framework/engine/coverage-data.h"
 #include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::CoverageEvent;
 using ::fuchsia::fuzzer::MAX_PROCESS_STATS;
 
 RunnerPtr RunnerImpl::MakePtr(ExecutorPtr executor) {
@@ -24,12 +25,20 @@ RunnerPtr RunnerImpl::MakePtr(ExecutorPtr executor) {
 }
 
 RunnerImpl::RunnerImpl(ExecutorPtr executor)
-    : Runner(executor), target_adapter_(executor), coverage_provider_(executor), workflow_(this) {
+    : Runner(executor), adapter_(executor), provider_(executor), workflow_(this) {
   generated_.Close();
   processed_.Close();
   seed_corpus_ = Corpus::MakePtr();
   live_corpus_ = Corpus::MakePtr();
   pool_ = std::make_shared<ModulePool>();
+}
+
+void RunnerImpl::SetTargetAdapterHandler(TargetAdapterClient::RequestHandler handler) {
+  adapter_.set_handler(std::move(handler));
+}
+
+zx_status_t RunnerImpl::BindCoverageDataProvider(zx::channel provider) {
+  return provider_.Bind(std::move(provider));
 }
 
 void RunnerImpl::AddDefaults(Options* options) {
@@ -69,16 +78,18 @@ ZxPromise<> RunnerImpl::Configure(const OptionsPtr& options) {
            seed_corpus_->Configure(options_);
            live_corpus_->Configure(options_);
            mutagen_.Configure(options_);
-           target_adapter_.Configure(options_);
-           coverage_provider_.SetOptions(options_);
+           adapter_.Configure(options_);
+           for (auto& [target_id, process_proxy] : process_proxies_) {
+             process_proxy->Configure(options_);
+           }
            return fpromise::ok();
          })
-      .and_then(target_adapter_.GetParameters().or_else([] {
+      .and_then(adapter_.GetParameters().or_else([] {
         FX_LOGS(WARNING) << "Failed to load seed corpora.";
         return fpromise::error(ZX_ERR_CANCELED);
       }))
       .and_then([this](const std::vector<std::string>& parameters) {
-        return AsZxResult(seed_corpus_->Load(target_adapter_.GetSeedCorpusDirectories(parameters)));
+        return AsZxResult(seed_corpus_->Load(adapter_.GetSeedCorpusDirectories(parameters)));
       })
       .wrap_with(workflow_);
 }
@@ -397,20 +408,32 @@ void RunnerImpl::StartWorkflow(Scope& scope) {
   start_ = zx::clock::get_monotonic();
   pulse_start_ = start_ + zx::sec(2);
   stopped_ = false;
-  // Watch for coverage events during the workflow.
-  auto task = fpromise::make_promise([this, watch = Future<CoverageEvent>()](
+  // Handle coverage data produced during the workflow.
+  auto task = fpromise::make_promise([this, get_coverage_data = Future<CoverageData>()](
                                          Context& context) mutable -> Result<> {
                 while (true) {
-                  if (!watch) {
-                    watch = coverage_provider_.WatchCoverageEvent();
+                  if (!get_coverage_data) {
+                    get_coverage_data = provider_.GetCoverageData();
                   }
-                  if (!watch(context)) {
+                  if (!get_coverage_data(context)) {
                     return fpromise::pending();
                   }
-                  if (watch.is_error()) {
-                    return fpromise::ok();
+                  if (get_coverage_data.is_error()) {
+                    return fpromise::error();
                   }
-                  AddCoverage(watch.take_value());
+                  auto coverage_data = get_coverage_data.take_value();
+                  switch (coverage_data.Which()) {
+                    case CoverageData::Tag::kInstrumented:
+                      ConnectProcess(coverage_data.instrumented());
+                      break;
+                    case CoverageData::Tag::kInline8bitCounters:
+                      AddLlvmModule(coverage_data.inline_8bit_counters());
+                      break;
+                    default:
+                      FX_LOGS(WARNING)
+                          << "Unrecgonized coverage data type: " << coverage_data.Which();
+                      return fpromise::error();
+                  }
                 }
               }).wrap_with(scope);
   executor()->schedule_task(std::move(task));
@@ -792,7 +815,7 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
              for (auto& [target_id, process_proxy] : process_proxies_) {
                futures_.emplace_back(process_proxy->AwaitFinish());
              }
-             futures_.emplace_back(target_adapter_.TestOneInput(input)
+             futures_.emplace_back(adapter_.TestOneInput(input)
                                        .or_else([] { return fpromise::error(kInvalidTargetId); })
                                        .and_then([this]() -> Result<bool, uint64_t> {
                                          for (auto& [target_id, process_proxy] : process_proxies_) {
@@ -828,41 +851,31 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
       .or_else([this](const uint64_t& target_id) { return GetFuzzResult(target_id); });
 }
 
-void RunnerImpl::AddCoverage(CoverageEvent event) {
-  auto target_id = event.target_id;
-  if (target_id == kInvalidTargetId || target_id == kTimeoutTargetId) {
-    FX_LOGS(ERROR) << "Received invalid target_id: " << target_id;
+void RunnerImpl::ConnectProcess(InstrumentedProcess& instrumented) {
+  auto process_proxy = std::make_unique<ProcessProxy>(executor(), pool_);
+  process_proxy->Configure(options_);
+  if (auto status = process_proxy->Connect(instrumented); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to add process: " << zx_status_get_string(status);
     return;
   }
-  auto payload = std::move(event.payload);
-  if (payload.is_process_started()) {
-    // Handle new process.
-    auto instrumented = std::move(payload.process_started());
-    auto process_proxy = std::make_unique<ProcessProxy>(executor(), target_id, pool_);
-    process_proxy->Configure(options_);
-    auto status = process_proxy->Connect(std::move(instrumented));
-    if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to add proxy for process: " << zx_status_get_string(status);
-      return;
-    }
-    futures_.emplace_back(process_proxy->AwaitFinish());
-    process_proxies_[target_id] = std::move(process_proxy);
-    // Kick |RunOne| to check the |AwaitFinish| future.
-    suspended_.resume_task();
+  auto target_id = process_proxy->target_id();
+  futures_.emplace_back(process_proxy->AwaitFinish());
+  process_proxies_[target_id] = std::move(process_proxy);
+  // Kick |RunOne| to check the |AwaitFinish| future.
+  suspended_.resume_task();
+}
+
+void RunnerImpl::AddLlvmModule(zx::vmo& inline_8bit_counters) {
+  auto target_id = GetTargetId(inline_8bit_counters);
+  auto iter = process_proxies_.find(target_id);
+  if (iter == process_proxies_.end()) {
+    FX_LOGS(WARNING) << "Failed to add module: no such target_id: " << target_id;
+    return;
   }
-  if (payload.is_llvm_module_added()) {
-    // Handle new module for existing process.
-    auto llvm_module = std::move(payload.llvm_module_added());
-    auto iter = process_proxies_.find(target_id);
-    if (iter == process_proxies_.end()) {
-      FX_LOGS(WARNING) << "Received module for unknown target_id: " << target_id;
-      return;
-    }
-    auto& process_proxy = iter->second;
-    auto status = process_proxy->AddModule(std::move(llvm_module));
-    if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to add proxy for module: " << zx_status_get_string(status);
-    }
+  auto& process_proxy = iter->second;
+  if (auto status = process_proxy->AddModule(inline_8bit_counters); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to add module: " << zx_status_get_string(status);
+    return;
   }
 }
 
@@ -911,7 +924,7 @@ Promise<bool, FuzzResult> RunnerImpl::GetFuzzResult(uint64_t target_id) {
           return fpromise::ok(false);
         }
         // Otherwise, it's really an error. Remove the target adapter and all proxies.
-        target_adapter_.Disconnect();
+        adapter_.Disconnect();
         process_proxies_.clear();
         return fpromise::error(fuzz_result);
       });
@@ -983,7 +996,7 @@ bool RunnerImpl::Recycle(Input&& input, size_t& attempts_left, bool suspected, b
       }
     }
   }
-  //  Send input to be recycled.
+  // Send input to be recycled.
   if (auto status = processed_.Send(std::move(input)); status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to recycle input: " << zx_status_get_string(status);
   }
@@ -994,7 +1007,7 @@ bool RunnerImpl::Recycle(Input&& input, size_t& attempts_left, bool suspected, b
 // Clean-up methods.
 
 void RunnerImpl::Disconnect() {
-  target_adapter_.Disconnect();
+  adapter_.Disconnect();
   process_proxies_.clear();
 }
 

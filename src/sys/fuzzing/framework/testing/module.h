@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 
@@ -15,8 +16,6 @@
 #include "src/sys/fuzzing/framework/target/module.h"
 
 namespace fuzzing {
-
-using ::fuchsia::fuzzer::LlvmModule;
 
 // Wraps a |Module| and automatically provides fake counters and PC tables based on a seed value.
 class FakeFrameworkModule final : public FakeModule {
@@ -31,6 +30,8 @@ class FakeFrameworkModule final : public FakeModule {
   ~FakeFrameworkModule() override = default;
 
   FakeFrameworkModule& operator=(FakeFrameworkModule&& other) noexcept;
+
+  const Module& module() const { return *module_; }
 
   // See corresponding |Module| methods.
   Identifier legacy_id() const { return module_->legacy_id(); }

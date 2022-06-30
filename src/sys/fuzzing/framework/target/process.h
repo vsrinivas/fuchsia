@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_FUZZING_FRAMEWORK_TARGET_PROCESS_H_
 #define SRC_SYS_FUZZING_FRAMEWORK_TARGET_PROCESS_H_
 
+#include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
@@ -25,8 +26,8 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::Instrumentation;
-using ::fuchsia::fuzzer::InstrumentationPtr;
+using ::fuchsia::fuzzer::CoverageDataCollector;
+using ::fuchsia::fuzzer::CoverageDataCollectorPtr;
 
 // Reserved target IDs:
 //  * |kInvalidTargetId| is used when a target identifier has not been set or could be parsed.
@@ -81,7 +82,7 @@ class Process final {
   // promise does not return unless there is an error; instead, it |Run|s the fuzzed process and
   // continues to wait for any dynamically loaded modules. The given |eventpair| is signalled with
   // |kSync| after the initial set of modules have been published and acknowledged by the engine.
-  ZxPromise<> Connect(fidl::InterfaceHandle<Instrumentation> instrumentation,
+  ZxPromise<> Connect(fidl::InterfaceHandle<CoverageDataCollector> collector,
                       zx::eventpair eventpair);
 
   // Adds the counters and PCs associated with modules for this process. Invoked via the
@@ -108,8 +109,8 @@ class Process final {
   // Parses the given |options| and prepares this object to manage fuzzing its process.
   void Configure(Options options);
 
-  // Returns a promise to publish coverage for added modules as debug data. This promise does not
-  // complete unless there is an error.
+  // Returns a promise to publish coverage for added modules to the |CoverageDataCollector|. This
+  // promise does not complete unless there is an error.
   ZxPromise<> AddModules(zx::eventpair eventpair);
 
   // Returns a promise to build a |Module| from |CountersInfo| and |PCsInfo|, and send it to the
@@ -146,7 +147,7 @@ class Process final {
   static bool AcquireCrashState();
 
   ExecutorPtr executor_;
-  InstrumentationPtr instrumentation_;
+  CoverageDataCollectorPtr collector_;
   AsyncEventPair eventpair_;
   uint64_t target_id_ = kInvalidTargetId;
 
@@ -159,7 +160,7 @@ class Process final {
   AsyncDequePtr<CountersInfo> counters_;
   AsyncDequePtr<PCsInfo> pcs_;
 
-  // Published debug data.
+  // Published coverage data.
   std::vector<Module> modules_;
 
   // Memory tracking.

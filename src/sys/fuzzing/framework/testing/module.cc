@@ -10,12 +10,16 @@
 namespace fuzzing {
 
 FakeFrameworkModule::FakeFrameworkModule(uint32_t seed) : FakeModule(seed) {
-  module_ = std::make_unique<Module>(counters(), pcs(), num_pcs());
+  module_ = std::make_unique<Module>();
+  auto status = module_->Import(counters(), pcs(), num_pcs());
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 
 FakeFrameworkModule::FakeFrameworkModule(std::vector<ModulePC>&& pc_table) noexcept
     : FakeModule(std::move(pc_table)) {
-  module_ = std::make_unique<Module>(counters(), pcs(), num_pcs());
+  module_ = std::make_unique<Module>();
+  auto status = module_->Import(counters(), pcs(), num_pcs());
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 
 FakeFrameworkModule& FakeFrameworkModule::operator=(FakeFrameworkModule&& other) noexcept {

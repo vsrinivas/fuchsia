@@ -5,16 +5,18 @@
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/job.h>
 #include <zircon/status.h>
 
 #include <inspector/inspector.h>
 
 #include "src/sys/fuzzing/common/status.h"
+#include "src/sys/fuzzing/framework/engine/coverage-data.h"
 
 namespace fuzzing {
 
-ProcessProxy::ProcessProxy(ExecutorPtr executor, uint64_t target_id, const ModulePoolPtr& pool)
-    : executor_(executor), target_id_(target_id), eventpair_(executor), pool_(std::move(pool)) {
+ProcessProxy::ProcessProxy(ExecutorPtr executor, const ModulePoolPtr& pool)
+    : executor_(executor), eventpair_(executor), pool_(std::move(pool)) {
   FX_DCHECK(executor);
 }
 
@@ -47,34 +49,48 @@ void ProcessProxy::AddDefaults(Options* options) {
 
 void ProcessProxy::Configure(const OptionsPtr& options) { options_ = options; }
 
-zx_status_t ProcessProxy::Connect(InstrumentedProcess instrumented) {
+zx_status_t ProcessProxy::Connect(InstrumentedProcess& instrumented) {
+  if (target_id_ != kInvalidTargetId) {
+    FX_LOGS(WARNING) << "Failed to connect process proxy: already connected.";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  zx_info_handle_basic_t info;
   auto* process = instrumented.mutable_process();
+  if (auto status = process->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    FX_LOGS(WARNING) << " Failed to get target id for process: " << zx_status_get_string(status);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (info.koid == kInvalidTargetId || info.koid == kTimeoutTargetId) {
+    FX_LOGS(WARNING) << "Received invalid target_id: " << info.koid;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  target_id_ = info.koid;
   process_ = std::move(*process);
 
   auto* eventpair = instrumented.mutable_eventpair();
   eventpair_.Pair(std::move(*eventpair));
-
-  // Create exception channel.
   zx::channel channel;
-  auto status = process_.create_exception_channel(0, &channel);
-  if (status != ZX_OK) {
+  if (auto status = process_.create_exception_channel(0, &channel); status != ZX_OK) {
     // The process already crashed!
-    FX_LOGS(WARNING) << "Failed to create exception channel: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Failed to create exception channel: " << zx_status_get_string(status)
+                     << " (target_id=" << target_id_ << ")";
     result_ = FuzzResult::CRASH;
     return status;
   }
-
-  // If this task produces an error, then the process exited and channel was closed before or during
-  // the wait and/or read. |GetResult| will attempt to determine the reason using the exitcode.
+  // If the process exits, the channel will be closed before or during the wait and/or read. In this
+  // case, the task will return an error and |GetResult| will attempt to determine the reason using
+  // the exitcode.
   auto task =
       executor_->MakePromiseWaitHandle(zx::unowned_handle(channel.get()), ZX_CHANNEL_READABLE)
           .and_then(
               [this, channel = std::move(channel)](const zx_packet_signal_t& packet) -> ZxResult<> {
                 zx_exception_info_t info;
                 zx::exception exception;
-                auto status = channel.read(0, &info, exception.reset_and_get_address(),
-                                           sizeof(info), 1, nullptr, nullptr);
-                if (status != ZX_OK) {
+                if (auto status = channel.read(0, &info, exception.reset_and_get_address(),
+                                               sizeof(info), 1, nullptr, nullptr);
+                    status != ZX_OK) {
                   return fpromise::error(status);
                 }
                 result_ = FuzzResult::CRASH;
@@ -82,26 +98,33 @@ zx_status_t ProcessProxy::Connect(InstrumentedProcess instrumented) {
               })
           .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
-
-  // Let the process know the proxy is ready to proceed.
-  return eventpair_.SignalPeer(0, kSync);
+  return ZX_OK;
 }
 
-zx_status_t ProcessProxy::AddModule(LlvmModule llvm_module) {
-  if (!eventpair_.IsConnected()) {
-    FX_LOGS(WARNING) << "Failed to add module: Disconnected.";
-    return ZX_ERR_PEER_CLOSED;
+zx_status_t ProcessProxy::AddModule(zx::vmo& inline_8bit_counters) {
+  // Get the module identifer.
+  auto id = GetModuleId(inline_8bit_counters);
+  if (id.empty()) {
+    FX_LOGS(WARNING) << "Failed to get module ID (target_id=" << target_id_ << ")";
+    return ZX_ERR_INVALID_ARGS;
   }
+  // Link the shared memory and add it to the pool.
   SharedMemory counters;
-  auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
-  if (auto status = counters.Link(std::move(*inline_8bit_counters)); status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to link module: " << zx_status_get_string(status);
+  if (auto status = counters.Link(std::move(inline_8bit_counters)); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to link module: " << zx_status_get_string(status)
+                     << " (target_id=" << target_id_ << ")";
     return status;
   }
-  auto* module_proxy = pool_->Get(llvm_module.legacy_id(), counters.size());
+  auto* module_proxy = pool_->Get(std::move(id), counters.size());
+  auto i = modules_.find(module_proxy);
+  if (i != modules_.end()) {
+    FX_LOGS(WARNING) << "Duplicate module: " << id << " (target_id=" << target_id_ << ")";
+    return ZX_ERR_ALREADY_BOUND;
+  }
   module_proxy->Add(counters.data(), counters.size());
   modules_[module_proxy] = std::move(counters);
-  return eventpair_.SignalPeer(0, kSync);
+
+  return ZX_OK;
 }
 
 ///////////////////////////////////////////////////////////////

@@ -7,9 +7,9 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <stddef.h>
-#include <zircon/compiler.h>
 
 #include <memory>
 #include <vector>
@@ -21,7 +21,7 @@
 #include "src/sys/fuzzing/common/runner.h"
 #include "src/sys/fuzzing/framework/engine/adapter-client.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
-#include "src/sys/fuzzing/framework/engine/coverage-client.h"
+#include "src/sys/fuzzing/framework/engine/coverage-data-provider-client.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/mutagen.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
@@ -36,12 +36,12 @@ class RunnerImpl final : public Runner {
   // Factory method.
   static RunnerPtr MakePtr(ExecutorPtr executor);
 
-  void set_target_adapter_handler(TargetAdapterClient::RequestHandler handler) {
-    target_adapter_.set_handler(std::move(handler));
-  }
-  void set_coverage_provider_handler(CoverageProviderClient::RequestHandler handler) {
-    coverage_provider_.set_handler(std::move(handler));
-  }
+  // Sets the |handler| to use to (re)connect to the target adapter.
+  void SetTargetAdapterHandler(TargetAdapterClient::RequestHandler handler);
+
+  // Takes a channel to a |fuchsia.fuzzer.CoverageDataProvider| implementation and uses it to watch
+  // for new coverage data produced by targets.
+  __WARN_UNUSED_RESULT zx_status_t BindCoverageDataProvider(zx::channel provider);
 
   // |Runner| method implementations.
   void AddDefaults(Options* options) override;
@@ -158,10 +158,11 @@ class RunnerImpl final : public Runner {
   // |malloc|s than |free|s.
   Promise<bool, FuzzResult> RunOne(const Input& input);
 
-  // Adds a new process or module for coverage collection as represented by the given |event|. New
-  // processes are typically started as a result of the target adapter processing some input, and
-  // there in turn add their modules.
-  void AddCoverage(CoverageEvent event);
+  // Adds a new process proxy for the given |instrumented| process.
+  void ConnectProcess(InstrumentedProcess& instrumented);
+
+  // Adds sanitizer coverage data for a new LLVM module from its |inline_8bit_counters|.
+  void AddLlvmModule(zx::vmo& inline_8bit_counters);
 
   // Returns a promise to determine the cause of an error in the target process identified by the
   // given |target_id|. In the case of multiple errors, only the first error is reported. However,
@@ -209,8 +210,8 @@ class RunnerImpl final : public Runner {
   AsyncDeque<Input> generated_;
 
   // Interfaces to other components.
-  TargetAdapterClient target_adapter_;
-  CoverageProviderClient coverage_provider_;
+  TargetAdapterClient adapter_;
+  CoverageDataProviderClient provider_;
 
   // Feedback collection and analysis variables.
   ModulePoolPtr pool_;

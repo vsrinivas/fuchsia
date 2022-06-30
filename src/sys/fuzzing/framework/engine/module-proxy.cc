@@ -41,7 +41,8 @@ constexpr uint64_t kHiBitsMask = 0x80'80'80'80'80'80'80'80ULL;
 
 }  // namespace
 
-ModuleProxy::ModuleProxy(Identifier id, size_t size) : id_(id), num_u64s_(size / sizeof(uint64_t)) {
+ModuleProxy::ModuleProxy(const std::string& id, size_t size)
+    : id_(id), num_u64s_(size / sizeof(uint64_t)) {
   // This method expects 64-bit alignment to simplify iteration.
   FX_CHECK(size % sizeof(uint64_t) == 0);
   features_.reset(new uint64_t[num_u64s_]);

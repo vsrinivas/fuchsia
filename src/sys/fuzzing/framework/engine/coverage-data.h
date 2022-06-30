@@ -17,12 +17,22 @@
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::LlvmModule;
+
 // Returns the target identifier for the given |process|.
 uint64_t GetTargetId(const zx::process& process);
+
+// Returns target identifier encoded in the name of the |inline_8bit_counters| VMO, or
+// |kInvalidTargetId| if no identifier could be parsed.
+uint64_t GetTargetId(const zx::vmo& inline_8bit_counters);
 
 // Returns the target identifier encoded in the given |id|, or |kInvalidTargetId| if no
 // identifier could be parsed.
 uint64_t GetTargetId(const std::string& id);
+
+// Returns the module identifier encoded in the name of the |inline_8bit_counters| VMO, or an empty
+// string if no identifier could be parsed.
+std::string GetModuleId(const zx::vmo& inline_8bit_counters);
 
 // Returns the module identifier encoded in the given |id|, or an empty string if no
 // identifier could be parsed.

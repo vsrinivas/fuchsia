@@ -239,49 +239,68 @@ void Process::InstallHooks() {
   std::atexit([]() { ExitHook(); });
 }
 
-ZxPromise<> Process::Connect(fidl::InterfaceHandle<Instrumentation> handle,
+ZxPromise<> Process::Connect(fidl::InterfaceHandle<CoverageDataCollector> collector,
                              zx::eventpair eventpair) {
-  return fpromise::make_promise([this, handle = std::move(handle), connect = Future<Options>()](
-                                    Context& context) mutable -> ZxResult<> {
-           if (!connect) {
-             if (auto status = instrumentation_.Bind(std::move(handle)); status != ZX_OK) {
-               FX_LOGS(WARNING) << "Failed to bind instrumentation: "
-                                << zx_status_get_string(status);
-               return fpromise::error(status);
-             }
-             zx::process process;
-             auto self = zx::process::self();
-             if (auto status = self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process); status != ZX_OK) {
-               FX_LOGS(WARNING) << "Failed to duplicate process handle: "
-                                << zx_status_get_string(status);
-               return fpromise::error(status);
-             }
-             zx_info_handle_basic_t info;
-             if (auto status =
-                     self->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-                 status != ZX_OK) {
-               FX_LOGS(WARNING) << "Failed to set target id: " << zx_status_get_string(status);
-               return fpromise::error(status);
-             }
-             target_id_ = info.koid;
-             InstrumentedProcess instrumented;
-             instrumented.set_process(std::move(process));
-             instrumented.set_eventpair(eventpair_.Create());
-             Bridge<Options> bridge;
-             instrumentation_->Initialize(std::move(instrumented), bridge.completer.bind());
-             connect = bridge.consumer.promise_or(fpromise::error());
+  Bridge<Options> bridge;
+  return fpromise::make_promise([this, collector = std::move(collector)]() mutable -> ZxResult<> {
+           // Connect the `fuchsia.fuzzer.CoverageDataCollector`.
+           if (auto status = collector_.Bind(collector.TakeChannel()); status != ZX_OK) {
+             FX_LOGS(WARNING) << "Failed to bind `fuchsia.fuzzer.CoverageDataCollector`: "
+                              << zx_status_get_string(status);
+             return fpromise::error(status);
            }
-           if (!connect(context)) {
-             return fpromise::pending();
-           }
-           if (connect.is_error()) {
-             return fpromise::error(ZX_ERR_CANCELED);
-           }
-           Configure(connect.take_value());
            return fpromise::ok();
          })
+      .and_then([]() -> ZxResult<zx::process> {
+        // Duplicate this process.
+        auto self = zx::process::self();
+        zx::process process;
+        if (auto status = self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to duplicate process handle: "
+                           << zx_status_get_string(status);
+          return fpromise::error(status);
+        }
+        return fpromise::ok(std::move(process));
+      })
+      .and_then([this](zx::process& process) -> ZxResult<zx::process> {
+        // Next, determine this process's target id, which is just its koid. The process will
+        // annotate all modules it shares with this id to allow the engine to clean up the module
+        // pool if this process exits.
+        zx_info_handle_basic_t info;
+        if (auto status =
+                process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+            status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to set target id: " << zx_status_get_string(status);
+          return fpromise::error(status);
+        }
+        target_id_ = info.koid;
+        return fpromise::ok(std::move(process));
+      })
+      .and_then([this, completer = std::move(bridge.completer)](
+                    zx::process& process) mutable -> ZxResult<> {
+        // Now create an |InstrumentedProcess| for this process and send it to the collector.
+        InstrumentedProcess instrumented;
+        instrumented.set_process(std::move(process));
+        instrumented.set_eventpair(eventpair_.Create());
+        collector_->Initialize(std::move(instrumented), completer.bind());
+        return fpromise::ok();
+      })
+      .and_then([this, connect = Future<Options>(bridge.consumer.promise_or(fpromise::error()))](
+                    Context& context) mutable -> ZxResult<> {
+        // Wait for the collector to respond with options, and use them to configure this process.
+        if (!connect(context)) {
+          return fpromise::pending();
+        }
+        if (connect.is_error()) {
+          return fpromise::error(ZX_ERR_CANCELED);
+        }
+        Configure(connect.take_value());
+        return fpromise::ok();
+      })
       .and_then([this, eventpair = std::move(eventpair), add = ZxFuture<>(),
                  run = ZxFuture<>()](Context& context) mutable -> ZxResult<> {
+        // Now execute both the |AddModules| and |Run| futures. These only complete on error, and
+        // need to be executed concurrently.
         if (!add) {
           add = AddModules(std::move(eventpair));
         }
@@ -369,80 +388,62 @@ ZxPromise<> Process::AddModules(zx::eventpair eventpair) {
 }
 
 ZxPromise<> Process::AddModule() {
-  auto eventpair = std::make_shared<AsyncEventPair>(executor_);
-  return fpromise::make_promise(
-             [this, recv_counters = Future<CountersInfo>(),
-              recv_pcs = Future<PCsInfo>()](Context& context) mutable -> ZxResult<Module> {
-               // Get the next |CountersInfo|.
-               if (!recv_counters) {
-                 recv_counters = counters_->Receive();
-               }
-               if (!recv_counters(context)) {
-                 return fpromise::pending();
-               }
-               if (recv_counters.is_error()) {
-                 FX_LOGS(WARNING) << "Missing expected inline 8-bit counters.";
-                 return fpromise::error(ZX_ERR_BAD_STATE);
-               }
-               // Get the next |PCsInfo|.
-               if (!recv_pcs) {
-                 recv_pcs = pcs_->Receive();
-               }
-               if (!recv_pcs(context)) {
-                 return fpromise::pending();
-               }
-               if (recv_pcs.is_error()) {
-                 FX_LOGS(WARNING) << "Missing expected PC table.";
-                 return fpromise::error(ZX_ERR_BAD_STATE);
-               }
-               // Combine into a |Module|.
-               auto counters = recv_counters.take_value();
-               auto pcs = recv_pcs.take_value();
-               if (counters.len != pcs.len * sizeof(uintptr_t) / sizeof(ModulePC)) {
-                 FX_LOGS(WARNING) << "Length mismatch: counters=" << counters.len
-                                  << ", pcs=" << pcs.len;
-                 return fpromise::error(ZX_ERR_BAD_STATE);
-               }
-               Module module(counters.data, pcs.data, counters.len);
-               module.Clear();
-               return fpromise::ok(std::move(module));
-             })
-      .and_then([this, eventpair, add = Future<>()](Context& context,
-                                                    Module& module) mutable -> ZxResult<> {
-        if (!add) {
-          LlvmModule llvm_module;
-          llvm_module.set_legacy_id(module.legacy_id());
-          zx::vmo inline_8bit_counters;
-          if (auto status = module.Share(target_id_, &inline_8bit_counters); status != ZX_OK) {
-            FX_LOGS(FATAL) << "Failed to share LLVM module: " << zx_status_get_string(status);
-          }
-          llvm_module.set_inline_8bit_counters(std::move(inline_8bit_counters));
-          modules_.emplace_back(std::move(module));
-          Bridge<> bridge;
-          instrumentation_->AddLlvmModule(std::move(llvm_module), bridge.completer.bind());
-          add = bridge.consumer.promise_or(fpromise::error());
-        }
-        if (!add(context)) {
+  Bridge<> bridge;
+  return fpromise::make_promise([recv = Future<CountersInfo>(counters_->Receive())](
+                                    Context& context) mutable -> ZxResult<CountersInfo> {
+           // Get the next |CountersInfo|.
+           if (!recv(context)) {
+             return fpromise::pending();
+           }
+           if (recv.is_error()) {
+             FX_LOGS(WARNING) << "Missing expected inline 8-bit counters.";
+             return fpromise::error(ZX_ERR_BAD_STATE);
+           }
+           return fpromise::ok(recv.take_value());
+         })
+      .and_then([recv = Future<PCsInfo>(pcs_->Receive())](
+                    Context& context, CountersInfo& counters) mutable -> ZxResult<Module> {
+        // Get the next |PCsInfo|.
+        if (!recv(context)) {
           return fpromise::pending();
         }
-        if (add.is_error()) {
-          return fpromise::error(ZX_ERR_CANCELED);
+        if (recv.is_error()) {
+          FX_LOGS(WARNING) << "Missing expected PC table.";
+          return fpromise::error(ZX_ERR_BAD_STATE);
         }
-        return fpromise::ok();
+        // Combine into a |Module|.
+        auto pcs = recv.take_value();
+        if (counters.len != pcs.len * sizeof(uintptr_t) / sizeof(ModulePC)) {
+          FX_LOGS(WARNING) << "Length mismatch: counters=" << counters.len << ", pcs=" << pcs.len;
+          return fpromise::error(ZX_ERR_BAD_STATE);
+        }
+        Module module;
+        if (auto status = module.Import(counters.data, pcs.data, counters.len); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to import module data: " << zx_status_get_string(status);
+          return fpromise::error(status);
+        }
+        module.Clear();
+        return fpromise::ok(std::move(module));
       })
-      .and_then([this, eventpair,
-                 wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
-        if (!wait) {
-          wait = eventpair_.WaitFor(kSync);
-        }
+      .and_then(
+          [this, completer = std::move(bridge.completer)](Module& module) mutable -> ZxResult<> {
+            zx::vmo inline_8bit_counters;
+            if (auto status = module.Share(target_id_, &inline_8bit_counters); status != ZX_OK) {
+              FX_LOGS(WARNING) << "Failed to share inline 8-bit counters: "
+                               << zx_status_get_string(status);
+              return fpromise::error(status);
+            }
+            modules_.emplace_back(std::move(module));
+            collector_->AddLlvmModule(std::move(inline_8bit_counters), completer.bind());
+            return fpromise::ok();
+          })
+      .and_then([this, wait = Future<>(bridge.consumer.promise_or(fpromise::error()))](
+                    Context& context) mutable -> ZxResult<> {
         if (!wait(context)) {
           return fpromise::pending();
         }
         if (wait.is_error()) {
-          auto status = wait.error();
-          FX_LOGS(WARNING) << "Failed to wait for module acknowledgement: "
-                           << zx_status_get_string(status);
-          return fpromise::error(status);
+          return fpromise::error(ZX_ERR_CANCELED);
         }
         if (awaiting_ && modules_.size() >= gContext.num_pcs) {
           awaiting_.resume_task();

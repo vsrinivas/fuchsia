@@ -22,7 +22,7 @@ constexpr zx_signals_t kLeakSignal = ZX_USER_SIGNAL_3;
 // This enum renames some Zircon user signals to associate them with certain actions performed by
 // the engine.
 enum Signal : zx_signals_t {
-  // Sent by the engine to the targets after it has added a process or module proxy object for them.
+  // Sent by the engine to the targets after it has added a process proxy object for them.
   kSync = kSyncSignal,
 
   // Sent by the engine to the targets at the start of a fuzzing run, and echoed by the targets back

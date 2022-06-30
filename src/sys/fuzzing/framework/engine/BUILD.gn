@@ -35,8 +35,6 @@ source_set("engine-lib") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
-    "coverage-client.cc",
-    "coverage-client.h",
     "coverage-data-provider-client.cc",
     "coverage-data-provider-client.h",
     "coverage-data.cc",
@@ -114,7 +112,6 @@ source_set("unittests") {
   sources = [
     "adapter-client-unittest.cc",
     "corpus-unittest.cc",
-    "coverage-client-unittest.cc",
     "coverage-data-provider-client-unittest.cc",
     "coverage-data-unittest.cc",
     "dictionary-unittest.cc",

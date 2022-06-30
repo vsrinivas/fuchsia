@@ -36,7 +36,7 @@ zx_status_t CoverageDataProviderClient::Bind(zx::channel channel) {
     return status;
   }
   provider_->SetOptions(CopyOptions(*options_));
-  // |GetCoverageData| futures may be abandoned. To prevent debug data being dropped, a separate
+  // |GetCoverageData| futures may be abandoned. To prevent coverage data being dropped, a separate
   // future, scoped to this object, should handle the FIDL requests and responses.
   auto task = fpromise::make_promise([this, watch = Future<CoverageData>()](
                                          Context& context) mutable -> Result<> {
@@ -50,11 +50,11 @@ zx_status_t CoverageDataProviderClient::Bind(zx::channel channel) {
                     return fpromise::pending();
                   }
                   if (watch.is_error()) {
-                    FX_LOGS(WARNING) << "Failed to receive debug data.";
+                    FX_LOGS(WARNING) << "Failed to receive coverage data.";
                     return fpromise::error();
                   }
                   if (auto status = pending_.Send(watch.take_value()); status != ZX_OK) {
-                    FX_LOGS(WARNING) << "Failed to forward received debug data: "
+                    FX_LOGS(WARNING) << "Failed to forward received coverage data: "
                                      << zx_status_get_string(status);
                   }
                 }

@@ -22,7 +22,6 @@ test("unittests-bin") {
   testonly = true
   deps = [
     "adapters:unittests",
-    "coverage:unittests",
     "engine:unittests",
     "target:unittests",
     "//src/lib/fxl/test:gtest_main",

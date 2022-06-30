@@ -11,6 +11,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
@@ -20,6 +21,8 @@ class TestTarget final {
  public:
   explicit TestTarget(ExecutorPtr executor);
   ~TestTarget();
+
+  uint64_t id() const { return id_; }
 
   // Spawns the process, and returns a copy of the spawned process handle.
   zx::process Launch();
@@ -40,6 +43,7 @@ class TestTarget final {
   ExecutorPtr executor_;
   zx::process process_;
   zx::channel local_;
+  uint64_t id_ = kInvalidTargetId;
   Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TestTarget);

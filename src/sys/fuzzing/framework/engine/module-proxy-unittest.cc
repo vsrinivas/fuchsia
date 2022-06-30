@@ -199,7 +199,8 @@ TEST(ModuleProxyTest, Features) {
 
 TEST(ModuleProxyTest, FromModule) {
   FakeModule fake;
-  auto module = std::make_unique<Module>(fake.counters(), fake.pcs(), fake.num_pcs());
+  auto module = std::make_unique<Module>();
+  EXPECT_EQ(module->Import(fake.counters(), fake.pcs(), fake.num_pcs()), ZX_OK);
 
   // Share it.
   zx::vmo vmo;
@@ -208,7 +209,7 @@ TEST(ModuleProxyTest, FromModule) {
   EXPECT_EQ(shmem->Link(std::move(vmo)), ZX_OK);
 
   // Add module to a proxy.
-  ModuleProxy proxy(module->legacy_id(), shmem->size());
+  ModuleProxy proxy(module->id(), shmem->size());
   proxy.Add(shmem->data(), shmem->size());
   EXPECT_EQ(proxy.Measure(), 0U);
 

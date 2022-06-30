@@ -30,7 +30,7 @@ class ModulePool final {
 
   // Returns a pointer to the |ModuleProxy| for a given |id| and |size|, creating it first if
   // necessary.
-  ModuleProxy* Get(const Identifier& id, size_t size);
+  ModuleProxy* Get(const std::string& id, size_t size);
 
   // These correspond to |ModuleProxy| methods, but are applied to all modules.
   size_t Measure();
@@ -39,20 +39,10 @@ class ModulePool final {
   void Clear();
 
  private:
-  // These structures enable convenient mapping below.
-  struct Key {
-    Identifier id;
-    size_t size;
-    bool operator==(const Key& key) const;
-  };
-  struct Hasher {
-    size_t operator()(const Key& key) const;
-  };
-
   // Apply a function to all modules.
   void ForEachModule(fit::function<void(ModuleProxy&)> func);
 
-  std::unordered_map<Key, std::unique_ptr<ModuleProxy>, Hasher> modules_;
+  std::unordered_map<std::string, std::unique_ptr<ModuleProxy>> modules_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ModulePool);
 };

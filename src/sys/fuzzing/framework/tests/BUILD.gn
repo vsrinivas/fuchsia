@@ -30,7 +30,11 @@ executable("fuzzer-bin") {
 }
 
 fuchsia_test_component("fuzzer") {
-  manifest = "meta/fuzzer.cml"
+  if (is_coverage) {
+    manifest = "meta/fuzzer-coverage.cml"
+  } else {
+    manifest = "meta/fuzzer.cml"
+  }
   deps = [
     ":fuzzer-bin",
     "//src/sys/fuzzing/framework/testing/data:corpus",
@@ -66,7 +70,7 @@ fuchsia_test_component("fuzzer-integration-tests") {
   deps = [
     ":engine",
     ":fuzzer",
-    "//src/sys/fuzzing/framework/coverage",
+    "//src/sys/fuzzing/framework/testing:coverage",
   ]
 }
 
@@ -96,7 +100,11 @@ renamed_binary("fuzzer-uninstrumented-renamed") {
 
 fuchsia_test_component("fuzzer-uninstrumented") {
   component_name = "fuzzer"
-  manifest = "meta/fuzzer.cml"
+  if (is_coverage) {
+    manifest = "meta/fuzzer-coverage.cml"
+  } else {
+    manifest = "meta/fuzzer.cml"
+  }
   deps = [
     ":fuzzer-uninstrumented-renamed",
     "//src/sys/fuzzing/framework/testing/data:corpus",

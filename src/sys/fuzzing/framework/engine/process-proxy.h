@@ -30,7 +30,6 @@
 namespace fuzzing {
 
 using ::fuchsia::fuzzer::InstrumentedProcess;
-using ::fuchsia::fuzzer::LlvmModule;
 using ::fuchsia::fuzzer::ProcessStats;
 
 // This class presents an interface to the engine for a instrumented target process. It tracks the
@@ -38,7 +37,7 @@ using ::fuchsia::fuzzer::ProcessStats;
 // It also monitors the process for crashes and abnormal exits.
 class ProcessProxy final {
  public:
-  ProcessProxy(ExecutorPtr executor, uint64_t target_id, const ModulePoolPtr& pool);
+  ProcessProxy(ExecutorPtr executor, const ModulePoolPtr& pool);
   ~ProcessProxy();
 
   uint64_t target_id() const { return target_id_; }
@@ -49,9 +48,9 @@ class ProcessProxy final {
   // Sets options for this object.
   void Configure(const OptionsPtr& options);
 
-  // Coverage methods.
-  __WARN_UNUSED_RESULT zx_status_t Connect(InstrumentedProcess instrumented);
-  __WARN_UNUSED_RESULT zx_status_t AddModule(LlvmModule llvm_module);
+  // ControllerDataCollector-related methods.
+  __WARN_UNUSED_RESULT zx_status_t Connect(InstrumentedProcess& instrumented);
+  __WARN_UNUSED_RESULT zx_status_t AddModule(zx::vmo& inline_8bit_counters);
 
   // Signals the associated process that a fuzzing run is starting and if it should |detect_leaks|.
   // Returns a promise that completes when the process acknowledges the signal.

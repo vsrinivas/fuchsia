@@ -94,11 +94,16 @@ zx::process TestTarget::Launch() {
   FX_DCHECK(executor_);
   executor_->schedule_task(std::move(task));
 
+  zx_info_handle_basic_t info;
+  status = process_.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+  id_ = info.koid;
+
   // Return a copy of the process.
-  zx::process copy;
-  status = process_.duplicate(ZX_RIGHT_SAME_RIGHTS, &copy);
-  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  return copy;
+  zx::process process;
+  status = process_.duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+  return process;
 }
 
 ZxPromise<> TestTarget::Crash() {

@@ -154,6 +154,7 @@ void RunnerTest::ExecuteWithLeak() {
   FUZZING_EXPECT_OK(RunOne(FuzzResult::LEAK), std::move(input));
   RunUntilIdle();
 }
+
 // Simulate no error on the original input.
 void RunnerTest::MinimizeNoError() {
   Configure(DefaultOptions());
