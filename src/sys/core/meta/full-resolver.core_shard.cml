@@ -24,6 +24,11 @@
             from: "parent",
             to: "#full-resolver",
         },
+        {
+            resolver: "full-resolver",
+            from: "#universe-resolver",
+            to: "#session-manager",
+        },
     ],
     environments: [
         // Components that simply need access to full-resolver can use this environment.

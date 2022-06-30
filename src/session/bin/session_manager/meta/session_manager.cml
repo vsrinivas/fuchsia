@@ -343,6 +343,11 @@
             from: "self",
             to: "#session",
         },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#session",
+        },
     ],
     expose: [
         {

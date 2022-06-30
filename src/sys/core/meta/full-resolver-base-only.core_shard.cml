@@ -8,6 +8,13 @@
             url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
         },
     ],
+    offer: [
+        {
+            resolver: "full-resolver",
+            from: "#universe-resolver",
+            to: "#session-manager",
+        },
+    ],
     environments: [
         // Components that simply need access to full-resolver can use this environment.
         {
