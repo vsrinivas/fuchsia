@@ -25,7 +25,7 @@
                                         capability_use_disallowed: {
                                             cap: "bin",
                                             source_moniker: {
-                                                component_instance: "/bootstrap/fshost",
+                                                component_instance: "/bootstrap/pkg-cache",
                                             },
                                             target_moniker: "/bootstrap",
                                         },
@@ -33,7 +33,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"bin\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
+                        message: "security policy disallows \"bin\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap\"",
                     },
                 },
                 {
@@ -47,7 +47,7 @@
                                         capability_use_disallowed: {
                                             cap: "build-info",
                                             source_moniker: {
-                                                component_instance: "/bootstrap/fshost",
+                                                component_instance: "/bootstrap/pkg-cache",
                                             },
                                             target_moniker: "/bootstrap",
                                         },
@@ -55,7 +55,29 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"build-info\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
+                        message: "security policy disallows \"build-info\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "pkgfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "pkgfs",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"pkgfs\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap\"",
                     },
                 },
                 {
@@ -81,7 +103,29 @@
                     },
                 },
                 {
-                    using_node: "/bootstrap/fshost",
+                    using_node: "/bootstrap/pkg-cache",
+                    capability: "bin",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "bin",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap/pkg-cache",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"bin\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/pkg-cache",
                     capability: "build-info",
                     error: {
                         error: {
@@ -91,15 +135,103 @@
                                         capability_use_disallowed: {
                                             cap: "build-info",
                                             source_moniker: {
-                                                component_instance: "/bootstrap/fshost",
+                                                component_instance: "/bootstrap/pkg-cache",
                                             },
-                                            target_moniker: "/bootstrap/fshost",
+                                            target_moniker: "/bootstrap/pkg-cache",
                                         },
                                     },
                                 },
                             },
                         },
-                        message: "security policy disallows \"build-info\" from \"/bootstrap/fshost\" being used at \"/bootstrap/fshost\"",
+                        message: "security policy disallows \"build-info\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/pkg-cache",
+                    capability: "pkgfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "pkgfs",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap/pkg-cache",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"pkgfs\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/pkg-cache",
+                    capability: "pkgfs-packages",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "pkgfs-packages",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap/pkg-cache",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"pkgfs-packages\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/pkg-cache",
+                    capability: "pkgfs-versions",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "pkgfs-versions",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap/pkg-cache",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"pkgfs-versions\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/pkg-cache",
+                    capability: "system",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "system",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap/pkg-cache",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"system\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
                     },
                 },
             ],
@@ -404,17 +536,39 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageCache",
                                             source_moniker: {
-                                                component_instance: "/core/pkg-cache",
+                                                component_instance: "/bootstrap/pkg-cache",
                                             },
-                                            target_moniker: "/core/pkg-cache",
+                                            target_moniker: "/bootstrap/pkg-cache",
                                         },
                                     },
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/core/pkg-cache\" being used at \"/core/pkg-cache\"",
+                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
                     },
-                    using_node: "/core/pkg-cache",
+                    using_node: "/bootstrap/pkg-cache",
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "fuchsia.pkg.PackageCache",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageCache",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap\"",
+                    },
                 },
                 {
                     capability: "fuchsia.pkg.PackageResolver",
@@ -448,17 +602,39 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.RetainedPackages",
                                             source_moniker: {
-                                                component_instance: "/core/pkg-cache",
+                                                component_instance: "/bootstrap/pkg-cache",
                                             },
-                                            target_moniker: "/core/pkg-cache",
+                                            target_moniker: "/bootstrap/pkg-cache",
                                         },
                                     },
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/core/pkg-cache\" being used at \"/core/pkg-cache\"",
+                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap/pkg-cache\"",
                     },
-                    using_node: "/core/pkg-cache",
+                    using_node: "/bootstrap/pkg-cache",
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "fuchsia.pkg.RetainedPackages",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.RetainedPackages",
+                                            source_moniker: {
+                                                component_instance: "/bootstrap/pkg-cache",
+                                            },
+                                            target_moniker: "/bootstrap",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/bootstrap/pkg-cache\" being used at \"/bootstrap\"",
+                    },
                 },
                 {
                     using_node: "/core/temperature-logger",

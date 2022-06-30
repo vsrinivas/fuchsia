@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-pkg-cache-url") {
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+
+  visibility = [
+    ":*",
+    "//src/security/scrutiny/*",
+    "//src/sys/base-resolver/*",
+    "//src/sys/pkg/lib",
+  ]
+
+  deps = [
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:url",
+  ]
+  test_deps = [ "//src/lib/fuchsia" ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":fuchsia-pkg-cache-url_test($host_toolchain)" ]
+}

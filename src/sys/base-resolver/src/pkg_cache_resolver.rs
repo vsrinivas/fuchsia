@@ -10,16 +10,16 @@ use {
     },
     fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
+    fuchsia_pkg_cache_url::{
+        fuchsia_pkg_cache_component_url, fuchsia_pkg_cache_manifest_path_str,
+        fuchsia_pkg_cache_package_url, pkg_cache_package_path,
+    },
     futures::{
         future::TryFutureExt as _,
         stream::{StreamExt as _, TryStreamExt as _},
     },
     log::error,
 };
-
-static PKG_CACHE_COMPONENT_URL: &'static str = "fuchsia-pkg-cache:///#meta/pkg-cache.cm";
-static PKG_CACHE_MANIFEST_PATH: &'static str = "meta/pkg-cache.cm";
-static PKG_CACHE_PACKAGE_URL: &'static str = "fuchsia-pkg-cache:///";
 
 pub(crate) async fn main() -> anyhow::Result<()> {
     log::info!("started");
@@ -71,12 +71,8 @@ async fn get_pkg_cache_hash(
         .static_packages()
         .await
         .context("failed to read static packages")?
-        .hash_for_package(&pkg_cache_path())
+        .hash_for_package(pkg_cache_package_path())
         .ok_or_else(|| anyhow::anyhow!("failed to find pkg-cache hash in static packages manifest"))
-}
-
-fn pkg_cache_path() -> fuchsia_pkg::PackagePath {
-    "pkg-cache/0".parse().expect("valid package path literal")
 }
 
 async fn serve_impl(
@@ -89,7 +85,7 @@ async fn serve_impl(
     {
         match request {
             ResolverRequest::Resolve { component_url, responder } => {
-                if component_url != PKG_CACHE_COMPONENT_URL {
+                if &component_url != fuchsia_pkg_cache_component_url().as_str() {
                     error!("failed to resolve invalid pkg-cache URL {:?}", component_url);
                     responder
                         .send(&mut Err(fresolution::ResolverError::InvalidArgs))
@@ -134,17 +130,17 @@ async fn resolve_pkg_cache(
     )
     .await
     .map_err(crate::ResolverError::ServePackageDirectory)?;
-    let data = mem_util::open_file_data(&proxy, PKG_CACHE_MANIFEST_PATH)
+    let data = mem_util::open_file_data(&proxy, fuchsia_pkg_cache_manifest_path_str())
         .await
         .map_err(crate::ResolverError::ComponentNotFound)?;
     let client = ClientEnd::new(
         proxy.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fresolution::Component {
-        url: Some(PKG_CACHE_COMPONENT_URL.into()),
+        url: Some(fuchsia_pkg_cache_component_url().clone().into_string()),
         decl: Some(data),
         package: Some(fresolution::Package {
-            url: Some(PKG_CACHE_PACKAGE_URL.to_string()),
+            url: Some(fuchsia_pkg_cache_package_url().clone().into_string()),
             directory: Some(client),
             ..fresolution::Package::EMPTY
         }),
@@ -155,11 +151,6 @@ async fn resolve_pkg_cache(
 #[cfg(test)]
 mod tests {
     use {super::*, assert_matches::assert_matches, fidl_fuchsia_mem as fmem};
-
-    #[fuchsia::test]
-    fn pkg_cache_path_does_not_panic() {
-        assert_eq!(pkg_cache_path().to_string(), "pkg-cache/0");
-    }
 
     #[fuchsia::test]
     async fn serve_rejects_invalid_url() {

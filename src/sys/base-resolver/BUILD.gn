@@ -51,6 +51,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/blobfs",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg-cache-url",
     "//src/sys/pkg/lib/package-directory",
     "//src/sys/pkg/lib/system-image",
     "//third_party/rust_crates:anyhow",
