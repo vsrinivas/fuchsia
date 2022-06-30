@@ -30,6 +30,18 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
+#if defined(__linux__)
+void ExpectNoPollin(int fd) {
+  pollfd pfd = {
+      .fd = fd,
+      .events = POLLIN,
+  };
+  int n = poll(&pfd, 1, std::chrono::milliseconds(std::chrono::seconds(1)).count());
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 0);
+}
+#endif
+
 template <typename T>
 void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg_type,
                   T cmsg_value) {
@@ -1357,6 +1369,166 @@ class NetDatagramSocketsTestBase {
   fbl::unique_fd bound_;
   fbl::unique_fd connected_;
 };
+
+enum class SendZeroBytesTestCase {
+  NullBuffer,
+  ZeroBufferLen,
+};
+
+using DomainAndIOMethodAndSendZeroBytesTestCase =
+    std::tuple<SocketDomain, IOMethod, SendZeroBytesTestCase>;
+
+std::string DomainAndIOMethodAndSendZeroBytesTestCaseToString(
+    const testing::TestParamInfo<DomainAndIOMethodAndSendZeroBytesTestCase>& info) {
+  auto const& [domain, io_method, test_case] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << io_method.IOMethodToString();
+  switch (test_case) {
+    case SendZeroBytesTestCase::NullBuffer:
+      oss << '_' << "NullBuffer";
+      break;
+    case SendZeroBytesTestCase::ZeroBufferLen:
+      oss << '_' << "ZeroBufferLen";
+      break;
+  }
+  return oss.str();
+}
+
+class IOSendingMethodTest
+    : public NetDatagramSocketsTestBase,
+      public testing::TestWithParam<DomainAndIOMethodAndSendZeroBytesTestCase> {
+  void SetUp() override {
+    auto const& [domain, io_method, test_case] = GetParam();
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_P(IOSendingMethodTest, ZeroLengthPayload) {
+  const auto& [domain, io_method, test_case] = GetParam();
+  char buf[1];
+  char* data;
+  switch (test_case) {
+    case SendZeroBytesTestCase::NullBuffer:
+      data = nullptr;
+      break;
+    case SendZeroBytesTestCase::ZeroBufferLen:
+      data = buf;
+      break;
+  }
+  EXPECT_EQ(io_method.ExecuteIO(connected().get(), data, 0), 0) << strerror(errno);
+
+#if defined(__linux__)
+  // TODO(https://fxbug.dev/103497): Match Linux behavior when calling `writev` with zero length
+  // payloads.
+  if (io_method.Op() == IOMethod::Op::WRITEV) {
+    ASSERT_NO_FATAL_FAILURE(ExpectNoPollin(bound().get()));
+    return;
+  }
+#endif
+
+  EXPECT_EQ(read(bound().get(), buf, sizeof(buf)), 0);
+}
+
+INSTANTIATE_TEST_SUITE_P(IOSendingMethodTests, IOSendingMethodTest,
+                         testing::Combine(testing::Values(SocketDomain::IPv4(),
+                                                          SocketDomain::IPv6()),
+                                          testing::ValuesIn(kSendIOMethods),
+                                          testing::Values(SendZeroBytesTestCase::NullBuffer,
+                                                          SendZeroBytesTestCase::ZeroBufferLen)),
+                         DomainAndIOMethodAndSendZeroBytesTestCaseToString);
+
+enum class SendZeroBytesVectorizedTestCase {
+  NullIovecPointer,
+  ZeroIovCnt,
+};
+
+using DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCase =
+    std::tuple<SocketDomain, VectorizedIOMethod, SendZeroBytesVectorizedTestCase>;
+
+std::string DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCaseToString(
+    const testing::TestParamInfo<DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCase>&
+        info) {
+  auto const& [domain, io_method, test_case] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << io_method.IOMethodToString();
+  switch (test_case) {
+    case SendZeroBytesVectorizedTestCase::NullIovecPointer:
+      oss << '_' << "NullIovecPointer";
+      break;
+    case SendZeroBytesVectorizedTestCase::ZeroIovCnt:
+      oss << '_' << "ZeroIovCnt";
+      break;
+  }
+  return oss.str();
+}
+
+class VectorizedIOMethodTest
+    : public NetDatagramSocketsTestBase,
+      public testing::TestWithParam<DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCase> {
+  void SetUp() override {
+    auto const& [domain, io_method, test_case] = GetParam();
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_P(VectorizedIOMethodTest, ZeroLengthPayload) {
+  const auto& [domain, io_method, test_case] = GetParam();
+  char buf[1];
+  iovec* iov_ptr;
+  size_t iov_size;
+  std::vector<iovec> iovecs;
+
+  switch (test_case) {
+    case SendZeroBytesVectorizedTestCase::NullIovecPointer:
+      iov_ptr = nullptr;
+      iov_size = 0;
+      break;
+    case SendZeroBytesVectorizedTestCase::ZeroIovCnt:
+      iovecs.push_back({
+          .iov_base = buf,
+          .iov_len = sizeof(buf),
+      });
+      iov_ptr = iovecs.data();
+      iov_size = 0;
+      break;
+  }
+
+  EXPECT_EQ(io_method.ExecuteIO(connected().get(), iov_ptr, iov_size), 0) << strerror(errno);
+
+#if defined(__linux__)
+  // TODO(https://fxbug.dev/103497): Match Linux behavior when calling `writev` with zero length
+  // payloads.
+  if (io_method.Op() == VectorizedIOMethod::Op::WRITEV) {
+    ASSERT_NO_FATAL_FAILURE(ExpectNoPollin(bound().get()));
+    return;
+  }
+#endif
+
+  EXPECT_EQ(read(bound().get(), buf, sizeof(buf)), 0);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    VectorizedIOMethodTests, VectorizedIOMethodTest,
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(VectorizedIOMethod::Op::WRITEV,
+                                     VectorizedIOMethod::Op::SENDMSG),
+                     testing::Values(SendZeroBytesVectorizedTestCase::NullIovecPointer,
+                                     SendZeroBytesVectorizedTestCase::ZeroIovCnt)),
+    DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCaseToString);
 
 struct Cmsg {
   Cmsg(int level, std::string level_str, int type, std::string type_str)

@@ -114,6 +114,37 @@ sockaddr_in6 LoopbackSockaddrV6(in_port_t port);
 // Assumes that `fd` was previously connected to `peer_fd`.
 void fill_stream_send_buf(int fd, int peer_fd, ssize_t* out_bytes_written);
 
+class VectorizedIOMethod {
+ public:
+  enum class Op {
+    READV,
+    RECVMSG,
+    WRITEV,
+    SENDMSG,
+  };
+
+  explicit constexpr VectorizedIOMethod(Op op) : op_(op) {}
+  Op Op() const { return op_; }
+
+  ssize_t ExecuteIO(int fd, iovec* iovecs, size_t len) const;
+
+  constexpr const char* IOMethodToString() const {
+    switch (op_) {
+      case Op::READV:
+        return "Readv";
+      case Op::RECVMSG:
+        return "Recvmsg";
+      case Op::WRITEV:
+        return "Writev";
+      case Op::SENDMSG:
+        return "Sendmsg";
+    }
+  }
+
+ private:
+  const enum Op op_;
+};
+
 class IOMethod {
  public:
   enum class Op {
@@ -141,23 +172,23 @@ class IOMethod {
       case Op::READ:
         return "Read";
       case Op::READV:
-        return "Readv";
+        return VectorizedIOMethod(VectorizedIOMethod::Op::READV).IOMethodToString();
       case Op::RECV:
         return "Recv";
       case Op::RECVFROM:
         return "Recvfrom";
       case Op::RECVMSG:
-        return "Recvmsg";
+        return VectorizedIOMethod(VectorizedIOMethod::Op::RECVMSG).IOMethodToString();
       case Op::WRITE:
         return "Write";
       case Op::WRITEV:
-        return "Writev";
+        return VectorizedIOMethod(VectorizedIOMethod::Op::WRITEV).IOMethodToString();
       case Op::SEND:
         return "Send";
       case Op::SENDTO:
         return "Sendto";
       case Op::SENDMSG:
-        return "Sendmsg";
+        return VectorizedIOMethod(VectorizedIOMethod::Op::SENDMSG).IOMethodToString();
     }
   }
 
@@ -168,6 +199,11 @@ class IOMethod {
 constexpr std::initializer_list<IOMethod> kRecvIOMethods = {
     IOMethod::Op::READ,     IOMethod::Op::READV,   IOMethod::Op::RECV,
     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
+};
+
+constexpr std::initializer_list<IOMethod> kSendIOMethods = {
+    IOMethod::Op::WRITE,  IOMethod::Op::WRITEV,  IOMethod::Op::SEND,
+    IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG,
 };
 
 constexpr std::initializer_list<IOMethod> kAllIOMethods = {

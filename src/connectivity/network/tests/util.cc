@@ -187,6 +187,27 @@ bool IsRoot() {
 }
 #endif
 
+ssize_t VectorizedIOMethod::ExecuteIO(const int fd, iovec* iov, size_t len) const {
+  msghdr msg = {
+      .msg_iov = iov,
+      // Linux defines `msg_iovlen` as size_t, out of compliance with
+      // with POSIX, whereas Fuchsia defines it as int. Bridge the
+      // divide using decltype.
+      .msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(len),
+  };
+
+  switch (op_) {
+    case Op::READV:
+      return readv(fd, iov, static_cast<int>(len));
+    case Op::RECVMSG:
+      return recvmsg(fd, &msg, 0);
+    case Op::WRITEV:
+      return writev(fd, iov, static_cast<int>(len));
+    case Op::SENDMSG:
+      return sendmsg(fd, &msg, 0);
+  }
+}
+
 ssize_t IOMethod::ExecuteIO(const int fd, char* const buf, const size_t len) const {
   // Vectorize the provided buffer into multiple differently-sized iovecs.
   std::vector<iovec> iov;
@@ -214,35 +235,31 @@ ssize_t IOMethod::ExecuteIO(const int fd, char* const buf, const size_t len) con
                                         });
   }
 
-  msghdr msg = {
-      .msg_iov = iov.data(),
-      // Linux defines `msg_iovlen` as size_t, out of compliance with
-      // with POSIX, whereas Fuchsia defines it as int. Bridge the
-      // divide using decltype.
-      .msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(iov.size()),
-  };
-
   switch (op_) {
     case Op::READ:
       return read(fd, buf, len);
     case Op::READV:
-      return readv(fd, iov.data(), static_cast<int>(iov.size()));
+      return VectorizedIOMethod(VectorizedIOMethod::Op::READV)
+          .ExecuteIO(fd, iov.data(), iov.size());
     case Op::RECV:
       return recv(fd, buf, len, 0);
     case Op::RECVFROM:
       return recvfrom(fd, buf, len, 0, nullptr, nullptr);
     case Op::RECVMSG:
-      return recvmsg(fd, &msg, 0);
+      return VectorizedIOMethod(VectorizedIOMethod::Op::RECVMSG)
+          .ExecuteIO(fd, iov.data(), iov.size());
     case Op::WRITE:
       return write(fd, buf, len);
     case Op::WRITEV:
-      return writev(fd, iov.data(), static_cast<int>(iov.size()));
+      return VectorizedIOMethod(VectorizedIOMethod::Op::WRITEV)
+          .ExecuteIO(fd, iov.data(), iov.size());
     case Op::SEND:
       return send(fd, buf, len, 0);
     case Op::SENDTO:
       return sendto(fd, buf, len, 0, nullptr, 0);
     case Op::SENDMSG:
-      return sendmsg(fd, &msg, 0);
+      return VectorizedIOMethod(VectorizedIOMethod::Op::SENDMSG)
+          .ExecuteIO(fd, iov.data(), iov.size());
   }
 }
 
