@@ -8,6 +8,7 @@ use std::sync::Arc;
 use super::*;
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
+use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
@@ -183,6 +184,20 @@ impl FileOps for VmoFileObject {
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        request: u32,
+        _user_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        // Fake SEAL ioctl
+        match request {
+            F_ADD_SEALS | F_GET_SEALS => Ok(SUCCESS),
+            _ => default_ioctl(current_task, request),
+        }
     }
 }
 
