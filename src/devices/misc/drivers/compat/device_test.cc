@@ -578,8 +578,13 @@ TEST_F(DeviceTest, GetFragmentProtocolFromDevice) {
     return ZX_OK;
   };
   compat::Device with(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(), dispatcher());
+  std::vector<std::string> fragments;
+  fragments.push_back("fragment-name");
+  with.set_fragments(std::move(fragments));
   ASSERT_EQ(ZX_OK, device_get_fragment_protocol(with.ZxDevice(), "fragment-name", ZX_PROTOCOL_BLOCK,
                                                 nullptr));
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, device_get_fragment_protocol(with.ZxDevice(), "unknown-fragment",
+                                                           ZX_PROTOCOL_BLOCK, nullptr));
 }
 
 TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {

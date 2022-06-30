@@ -177,6 +177,14 @@ __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t
 
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,
                                                   uint32_t proto_id, void* out) {
+  bool has_fragment =
+      std::find(dev->fragments().begin(), dev->fragments().end(), name) != dev->fragments().end();
+
+  // TODO(fxbug.dev/103734): Fix sysmem routing and remove this.
+  if (!has_fragment && proto_id != ZX_PROTOCOL_SYSMEM) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
   // TODO(fxbug.dev/93678): Fully support composite devices.
   FDF_LOGL(WARNING, dev->logger(),
            "DFv2 currently only supports primary fragment. Driver requests fragment %s but we are "
