@@ -1,0 +1,136 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Split out so that unittests can reference it.
+source_set("categories") {
+  sources = [
+    "categories.cc",
+    "categories.h",
+    "category-db.cc",
+  ]
+
+  if (current_cpu == "arm64") {
+    sources += [
+      "arm64-category-db.cc",
+      "arm64-events.h",
+      "arm64-pm-categories.inc",
+      "arm64-timebase-categories.inc",
+    ]
+  }
+
+  if (current_cpu == "x64") {
+    sources += [
+      "intel-category-db.cc",
+      "intel-events.h",
+      "intel-pm-categories.inc",
+      "intel-timebase-categories.inc",
+      "skylake-misc-categories.inc",
+      "skylake-pm-categories.inc",
+    ]
+  }
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  public_deps = [
+    "//src/performance/lib/perfmon",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+}
+
+executable("bin") {
+  output_name = "cpuperf_provider"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "importer.cc",
+    "importer.h",
+    "main.cc",
+  ]
+
+  deps = [
+    ":categories",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/performance/lib/perfmon",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+}
+
+fuchsia_package_with_single_component("cpuperf_provider") {
+  manifest = "meta/cpuperf_provider.cmx"
+  deps = [ ":bin" ]
+}
+
+group("report_generators") {
+  deps = [ "//src/performance/cpuperf_provider/report-generators/tally" ]
+}
+
+executable("cpuperf_provider_tests_bin") {
+  testonly = true
+  output_name = "cpuperf_provider_tests"
+
+  sources = [ "categories_unittest.cc" ]
+
+  deps = [
+    ":categories",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+if (current_cpu == "x64") {
+  executable("cpuperf_provider_integration_tests_bin") {
+    testonly = true
+    output_name = "cpuperf_provider_integration_tests"
+
+    sources = [ "cpuperf_provider_integration_tests.cc" ]
+
+    deps = [
+      "//src/lib/fxl",
+      "//src/lib/fxl/test:test_settings",
+      "//src/performance/lib/perfmon",
+      "//src/performance/lib/test_utils",
+      "//src/performance/trace:bin",
+      "//third_party/googletest:gtest",
+      "//zircon/system/ulib/trace-reader",
+      "//zircon/system/ulib/zx",
+    ]
+  }
+
+  fuchsia_test_component("cpuperf_provider_integration_tests_component") {
+    component_name = "cpuperf_provider_integration_tests"
+    manifest = "meta/cpuperf_provider_integration_tests.cmx"
+    deps = [ ":cpuperf_provider_integration_tests_bin" ]
+  }
+}
+
+fuchsia_unittest_component("cpuperf_provider_tests_component") {
+  component_name = "cpuperf_provider_tests"
+  deps = [ ":cpuperf_provider_tests_bin" ]
+}
+
+fuchsia_test_package("cpuperf_provider_tests") {
+  test_components = [ ":cpuperf_provider_tests_component" ]
+  if (current_cpu == "x64") {
+    test_components += [ ":cpuperf_provider_integration_tests_component" ]
+  }
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cpuperf_provider_tests" ]
+}

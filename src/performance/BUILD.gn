@@ -4,18 +4,19 @@
 group("tracing") {
   testonly = true
   public_deps = [
-    "//src/performance/bin/cpuperf_provider",
-    "//src/performance/bin/cpuperf_provider:report_generators",
-    "//src/performance/bin/ktrace_provider",
+    "//src/performance/cpuperf_provider",
+    "//src/performance/cpuperf_provider:report_generators",
+    "//src/performance/ktrace_provider",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "bin:tests",
     "cpuperf:tests",
+    "cpuperf_provider:tests",
     "insntrace:tests",
+    "ktrace_provider:tests",
     "lib:tests",
     "trace/tests",
     "trace_manager/tests",

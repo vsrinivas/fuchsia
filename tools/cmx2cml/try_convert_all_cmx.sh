@@ -76,7 +76,7 @@ exceptions=(\
     "./src/performance/trace/tests/meta/trace_integration_tests.cmx"
     "./src/factory/fake_factory_store_providers/meta/fake_factory_store_providers_test.cmx"
     "./src/intl/intl_services/tests/meta/intl_services_test.cmx"
-    "./src/performance/bin/cpuperf_provider/meta/cpuperf_provider_integration_tests.cmx"
+    "./src/performance/cpuperf_provider/meta/cpuperf_provider_integration_tests.cmx"
     "./src/sys/sysmgr/integration_tests/meta/service_startup_test.cmx"\
 
     # does not have a registered v2 child for an injected service replacement
