@@ -36,14 +36,14 @@ class ResizeTest : public BaseFilesystemTest, public testing::WithParamInterface
  public:
   ResizeTest() : BaseFilesystemTest(std::get<0>(GetParam())) {}
 
-  bool ShouldRemount() const { return std::get<1>(GetParam()); }
+  static bool ShouldRemount() { return std::get<1>(GetParam()); }
 
  protected:
   void QueryInfo(uint64_t* out_free_pool_size) {
     fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto query_result = fidl::WireCall<fuchsia_io::Directory>(caller.channel())->QueryFilesystem();
+    auto query_result = fidl::WireCall(caller.borrow_as<fio::Directory>())->QueryFilesystem();
     ASSERT_EQ(query_result.status(), ZX_OK);
     ASSERT_NE(query_result->info, nullptr);
     fuchsia_io::wire::FilesystemInfo* info = query_result->info.get();
@@ -201,9 +201,9 @@ std::vector<ParamType> GetTestCombinationsForMaxInodeTest() {
       options.device_block_count = 1LLU << 15;
       options.device_block_size = 1LLU << 9;
       options.fvm_slice_size = 1LLU << 20;
-      test_combinations.push_back(ParamType{options, false});
+      test_combinations.emplace_back(options, false);
       if (!options.filesystem->GetTraits().in_memory) {
-        test_combinations.push_back(ParamType{options, true});
+        test_combinations.emplace_back(options, true);
       }
     }
   }
@@ -217,9 +217,9 @@ std::vector<ParamType> GetTestCombinationsForMaxDataTest() {
       options.device_block_count = 1LLU << 17;
       options.device_block_size = 1LLU << 9;
       options.fvm_slice_size = 1LLU << 20;
-      test_combinations.push_back(ParamType{options, false});
+      test_combinations.emplace_back(options, false);
       if (!options.filesystem->GetTraits().in_memory) {
-        test_combinations.push_back(ParamType{options, true});
+        test_combinations.emplace_back(options, true);
       }
     }
   }

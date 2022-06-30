@@ -46,15 +46,6 @@ static_library("fs_test") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("access_tests") {
@@ -65,15 +56,6 @@ test("access_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("append_tests") {
@@ -83,10 +65,6 @@ test("append_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("attr_tests") {
@@ -96,10 +74,6 @@ test("attr_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("basic_tests") {
@@ -109,10 +83,6 @@ test("basic_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/minfs",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("case_sensitivity_tests") {
@@ -121,10 +91,6 @@ test("case_sensitivity_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("clone_tests") {
@@ -134,10 +100,6 @@ test("clone_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("corrupt_tests") {
@@ -149,15 +111,6 @@ test("corrupt_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("directory_tests") {
@@ -167,10 +120,6 @@ test("directory_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("dot_dot_tests") {
@@ -182,15 +131,6 @@ test("dot_dot_tests") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("fcntl_tests") {
@@ -200,10 +140,6 @@ test("fcntl_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("filename_tests") {
@@ -213,10 +149,6 @@ test("filename_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("full_tests") {
@@ -226,10 +158,6 @@ test("full_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("inspect_tests") {
@@ -244,10 +172,6 @@ test("inspect_tests") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("link_tests") {
@@ -257,10 +181,6 @@ test("link_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("lseek_tests") {
@@ -270,10 +190,6 @@ test("lseek_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("mmap_tests") {
@@ -284,10 +200,6 @@ test("mmap_tests") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("open_tests") {
@@ -296,10 +208,6 @@ test("open_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("overflow_tests") {
@@ -308,10 +216,6 @@ test("overflow_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("persist_tests") {
@@ -320,10 +224,6 @@ test("persist_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("query_filesystem_tests") {
@@ -334,10 +234,6 @@ test("query_filesystem_tests") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("random_op_tests") {
@@ -347,10 +243,6 @@ test("random_op_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("realpath_tests") {
@@ -360,10 +252,6 @@ test("realpath_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("rename_tests") {
@@ -375,15 +263,6 @@ test("rename_tests") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("resize_tests") {
@@ -397,15 +276,6 @@ test("resize_tests") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("rw_tests") {
@@ -415,10 +285,6 @@ test("rw_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("rw_workers_tests") {
@@ -428,10 +294,6 @@ test("rw_workers_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("sparse_tests") {
@@ -441,10 +303,6 @@ test("sparse_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("sync_tests") {
@@ -454,10 +312,6 @@ test("sync_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("threading_tests") {
@@ -467,10 +321,6 @@ test("threading_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("truncate_tests") {
@@ -483,10 +333,6 @@ test("truncate_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("unicode_tests") {
@@ -496,10 +342,6 @@ test("unicode_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("unlink_tests") {
@@ -509,10 +351,6 @@ test("unlink_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("watcher_tests") {
@@ -524,15 +362,6 @@ test("watcher_tests") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("directory_large_tests") {
@@ -542,10 +371,6 @@ test("directory_large_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("max_file_tests") {
@@ -555,10 +380,6 @@ test("max_file_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("sparse_large_tests") {
@@ -569,10 +390,6 @@ test("sparse_large_tests") {
     "//src/storage/minfs",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("truncate_large_tests") {
@@ -585,10 +402,6 @@ test("truncate_large_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 expect_includes("test_crypt_service") {

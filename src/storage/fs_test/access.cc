@@ -170,7 +170,7 @@ class DirectoryPermissionTest : public AccessTest {
     EXPECT_EQ(close(fd), 0);
   }
 
-  ~DirectoryPermissionTest() {
+  ~DirectoryPermissionTest() override {
     EXPECT_EQ(unlink(GetPath("foo/bar_file").c_str()), 0);
     EXPECT_EQ(unlink(GetPath("foo/sub_dir/sub_file").c_str()), 0);
     EXPECT_EQ(rmdir(GetPath("foo/sub_dir").c_str()), 0);
@@ -181,21 +181,20 @@ class DirectoryPermissionTest : public AccessTest {
 void CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
   // Obtain the underlying connection behind |in_fd|.
   fdio_cpp::FdioCaller fdio_caller(std::move(in_fd));
-  zx_handle_t foo_handle = fdio_caller.borrow_channel();
 
   // Clone |in_fd| as read-only; the entire tree under the new connection now becomes read-only
-  zx::channel foo_handle_read_only, foo_request_read_only;
-  ASSERT_EQ(zx::channel::create(0, &foo_handle_read_only, &foo_request_read_only), ZX_OK);
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   auto clone_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
-          ->Clone(fio::wire::OpenFlags::kRightReadable, std::move(foo_request_read_only));
+      fidl::WireCall(fdio_caller.borrow_as<fio::Node>())
+          ->Clone(fio::wire::OpenFlags::kRightReadable, std::move(std::move(endpoints->server)));
   ASSERT_EQ(clone_result.status(), ZX_OK);
 
   // Turn the handle back to an fd to test posix functions
   fbl::unique_fd fd = ([&]() -> fbl::unique_fd {
     int tmp_fd = -1;
-    zx_status_t status = fdio_fd_create(foo_handle_read_only.release(), &tmp_fd);
+    zx_status_t status = fdio_fd_create(endpoints->client.TakeChannel().release(), &tmp_fd);
     EXPECT_GT(tmp_fd, 0);
     EXPECT_EQ(status, ZX_OK);
     return fbl::unique_fd(tmp_fd);
@@ -217,16 +216,15 @@ TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
 
     // Obtain the underlying connection behind |foo_fd|.
     fdio_cpp::FdioCaller fdio_caller(std::move(foo_fd));
-    zx_handle_t foo_handle = fdio_caller.borrow_channel();
 
-    zx::channel foo_clone_client_end, foo_clone_server_end;
-    ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
-    auto clone_result = fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
-                            ->Clone(fio::wire::OpenFlags::kCloneSameRights | right,
-                                    std::move(foo_clone_server_end));
+    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+
+    auto clone_result =
+        fidl::WireCall(fdio_caller.borrow_as<fio::Node>())
+            ->Clone(fio::wire::OpenFlags::kCloneSameRights | right, std::move(endpoints->server));
     ASSERT_EQ(clone_result.status(), ZX_OK);
-    auto describe_result =
-        fidl::WireCall<fio::Node>(zx::unowned_channel(foo_clone_client_end.get()))->Describe();
+    auto describe_result = fidl::WireCall(endpoints->client)->Describe();
     ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
   }
 }
@@ -240,16 +238,16 @@ TEST_P(DirectoryPermissionTest, TestCloneCannotIncreaseRights) {
 
   // Attempt to clone the read-only fd back to read-write.
   fdio_cpp::FdioCaller fdio_caller(std::move(foo_readonly));
-  zx_handle_t foo_handle = fdio_caller.borrow_channel();
-  zx::channel foo_clone_client_end, foo_clone_server_end;
-  ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
+
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+
   auto clone_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(foo_handle))
+      fidl::WireCall(fdio_caller.borrow_as<fio::Node>())
           ->Clone(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-                  std::move(foo_clone_server_end));
+                  std::move(endpoints->server));
   ASSERT_EQ(clone_result.status(), ZX_OK);
-  auto describe_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(foo_clone_client_end.get()))->Describe();
+  auto describe_result = fidl::WireCall(endpoints->client)->Describe();
   ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
 }
 

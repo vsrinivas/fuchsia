@@ -101,15 +101,16 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
   fdio_cpp::FdioCaller caller(std::move(fd));
 
   // Opening with kOpenFlagCreate should succeed.
-  zx::channel local, remote;
-  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  auto result = fidl::WireCall<fio::Directory>(caller.channel())
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+
+  auto result = fidl::WireCall(caller.borrow_as<fio::Directory>())
                     ->Open(fio::wire::OpenFlags::kRightReadable |
                                fio::wire::OpenFlags::kRightWritable | fio::wire::OpenFlags::kCreate,
-                           0755, fidl::StringView("."), std::move(remote));
+                           0755, fidl::StringView("."), std::move(endpoints->server));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  const fidl::WireResult close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
+  const fidl::WireResult close_result = fidl::WireCall(endpoints->client)->Close();
   ASSERT_EQ(close_result.status(), ZX_OK);
   const fitx::result close_response = close_result.value();
   ASSERT_TRUE(close_response.is_ok()) << close_response.error_value();
@@ -122,16 +123,17 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   fdio_cpp::FdioCaller caller(std::move(fd));
 
   // Opening with kOpenFlagCreateIfAbsent should fail.
-  zx::channel local, remote;
-  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+
   auto result =
-      fidl::WireCall<fio::Directory>(caller.channel())
+      fidl::WireCall(caller.borrow_as<fio::Directory>())
           ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable |
                      fio::wire::OpenFlags::kCreate | fio::wire::OpenFlags::kCreateIfAbsent,
-                 0755, fidl::StringView("."), std::move(remote));
+                 0755, fidl::StringView("."), std::move(endpoints->server));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  const fidl::WireResult close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
+  const fidl::WireResult close_result = fidl::WireCall(endpoints->client)->Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
   ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
 }
