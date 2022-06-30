@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "60",
+        cases: [
+            // Asserts that persistence started.
+            // Persistence in production has a delay startup time of 120s. So for that period of
+            // time we'll be seeing the status of STARTING_UP. To avoid having a very slow test or
+            // introducing flakiness, we check either OK or STARTING_UP instead of increasing
+            // `timeout_seconds`. This at least will tell us that persistence started.
+            "core/diagnostics-persistence:root/fuchsia.inspect.Health:status WHERE [s] Or(s == 'OK', s == 'STARTING_UP')",
+        ],
+    },
+}
