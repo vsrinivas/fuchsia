@@ -65,12 +65,11 @@ cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
-  // TODO(jeremymanson): This is a bad default.
   if (options->fidl_ir_path.empty()) {
-    options->fidl_ir_path.push_back("/pkgfs/packages/josh/0/data/fidling");
+    options->fidl_ir_path = "/pkg/data/fidling";
   }
   if (options->boot_js_lib_path.empty()) {
-    options->boot_js_lib_path.push_back("/pkgfs/packages/josh/0/data/lib");
+    options->boot_js_lib_path = "/pkg/data/lib";
   }
 
   return cmdline::Status::Ok();

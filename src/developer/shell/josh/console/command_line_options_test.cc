@@ -29,8 +29,8 @@ TEST(CommandLineOptions, SimpleParseCommandLineTest) {
   auto status = ParseCommandLine(argv.size(), argv.data(), &options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
-  ASSERT_EQ(fidl_ir_path, options.fidl_ir_path[0]);
-  ASSERT_EQ(boot_js_lib_path, options.boot_js_lib_path[0]);
+  ASSERT_EQ(fidl_ir_path, options.fidl_ir_path);
+  ASSERT_EQ(boot_js_lib_path, options.boot_js_lib_path);
   ASSERT_EQ(command_line, options.command_string);
 
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());

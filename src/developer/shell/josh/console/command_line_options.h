@@ -15,8 +15,8 @@ namespace shell {
 
 struct CommandLineOptions {
   std::optional<std::string> command_string;
-  std::vector<std::string> fidl_ir_path;
-  std::vector<std::string> boot_js_lib_path;
+  std::string fidl_ir_path;
+  std::string boot_js_lib_path;
   bool line_editor = false;
 };
 

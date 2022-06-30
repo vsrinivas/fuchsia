@@ -49,7 +49,7 @@ int ConsoleMain(int argc, const char **argv) {
     return 1;
   }
 
-  if (!ctx.InitBuiltins(options.fidl_ir_path[0], options.boot_js_lib_path[0])) {
+  if (!ctx.InitBuiltins(options.fidl_ir_path, options.boot_js_lib_path)) {
     ctx.DumpError();
     return 1;
   }
