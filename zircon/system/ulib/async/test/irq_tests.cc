@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/irq.h>
 #include <lib/zx/interrupt.h>
@@ -63,6 +65,29 @@ TEST(IrqTests, unsupported_unbind_irq_test) {
   async::DispatcherStub dispatcher;
   async_irq_t irq{};
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_unbind_irq(&dispatcher, &irq), "valid args");
+}
+
+TEST(IrqTests, ShutdownWhileIrqBound) {
+  async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
+  config.irq_support = true;
+  async::Loop loop(&config);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  bool called = false;
+  async::Irq irq(irq_object.get(), 0,
+                 [&called](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg,
+                           zx_status_t status, const zx_packet_interrupt_t* interrupt) {
+                   ASSERT_EQ(ZX_ERR_CANCELED, status);
+                   called = true;
+                 });
+  ASSERT_EQ(ZX_OK, irq.Begin(loop.dispatcher()));
+
+  // This should invoke the irq handler with ZX_ERR_CANCELED.
+  loop.Shutdown();
+
+  ASSERT_TRUE(called);
 }
 
 }  // namespace

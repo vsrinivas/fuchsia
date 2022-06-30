@@ -57,7 +57,7 @@ Irq::~Irq() = default;
 
 void Irq::CallHandler(async_dispatcher_t* dispatcher, async_irq_t* irq, zx_status_t status,
                       const zx_packet_interrupt_t* signal) {
-  auto self = Dispatch<Irq>(irq);
+  auto self = Dispatch<Irq>(irq, status);
   self->handler_(dispatcher, self, status, signal);
 }
 

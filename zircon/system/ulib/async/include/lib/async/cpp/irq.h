@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ASYNC_CPP_irq_H_
-#define LIB_ASYNC_CPP_irq_H_
+#ifndef LIB_ASYNC_CPP_IRQ_H_
+#define LIB_ASYNC_CPP_IRQ_H_
 
 #include <lib/async/irq.h>
 #include <lib/fit/function.h>
@@ -58,9 +58,14 @@ class IrqBase {
 
  protected:
   template <typename T>
-  static T* Dispatch(async_irq* irq) {
+  static T* Dispatch(async_irq* irq, zx_status_t status) {
     static_assert(offsetof(IrqBase, irq_) == 0, "");
     auto self = reinterpret_cast<IrqBase*>(irq);
+    if (status == ZX_ERR_CANCELED) {
+      // If the irq has been canceled by the dispatcher shutting down,
+      // this should be cleared so the irq destructor does not try unbinding.
+      self->dispatcher_ = nullptr;
+    }
     return static_cast<T*>(self);
   }
 
@@ -132,7 +137,7 @@ class IrqMethod final : public IrqBase {
  private:
   static void CallHandler(async_dispatcher_t* dispatcher, async_irq_t* irq, zx_status_t status,
                           const zx_packet_interrupt_t* interrupt) {
-    auto self = Dispatch<IrqMethod>(irq);
+    auto self = Dispatch<IrqMethod>(irq, status);
     (self->instance_->*method)(dispatcher, self, status, interrupt);
   }
 
@@ -141,4 +146,4 @@ class IrqMethod final : public IrqBase {
 
 }  // namespace async
 
-#endif  // LIB_ASYNC_CPP_irq_H_
+#endif  // LIB_ASYNC_CPP_IRQ_H_
