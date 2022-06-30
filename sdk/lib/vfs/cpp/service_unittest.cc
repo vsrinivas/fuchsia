@@ -117,7 +117,6 @@ TEST_F(ServiceTest, CanOpenAsAService) {
       // Invalid mode types (should be ignored as node already exists):
       // fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
       fuchsia::io::MODE_TYPE_FILE,
-      fuchsia::io::MODE_TYPE_SOCKET,
   };
 
   for (uint32_t mode : modes) {

@@ -692,11 +692,6 @@
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.io/DirentType.SOCKET",
-        "value": "12"
-    },
-    {
-        "kind": "enum/member",
         "name": "fuchsia.io/DirentType.UNKNOWN",
         "value": "0"
     },
@@ -1534,12 +1529,6 @@
         "kind": "const",
         "name": "fuchsia.io/MODE_TYPE_SERVICE",
         "value": "65536"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "const",
-        "name": "fuchsia.io/MODE_TYPE_SOCKET",
-        "value": "49152"
     },
     {
         "declaration": "fuchsia.io/InotifyWatchMask",

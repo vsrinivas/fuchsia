@@ -704,7 +704,6 @@ macro_rules! assert_read_dirents_one_listing {
     (@expand_dirent_type DIRECTORY) => { fio::DirentType::Directory };
     (@expand_dirent_type BLOCK_DEVICE) => { fio::DirentType::BlockDevice };
     (@expand_dirent_type FILE) => { fio::DirentType::File };
-    (@expand_dirent_type SOCKET) => { fio::DirentType::Socket };
     (@expand_dirent_type SERVICE) => { fio::DirentType::Service };
 }
 

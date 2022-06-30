@@ -250,7 +250,7 @@ impl FxDirectory {
                 Ok(FxFile::new(self.directory.create_child_file(transaction, name).await?)
                     as Arc<dyn FxNode>)
             }
-            fio::MODE_TYPE_SOCKET | fio::MODE_TYPE_SERVICE => {
+            fio::MODE_TYPE_SERVICE => {
                 bail!(FxfsError::NotSupported)
             }
             _ => bail!(FxfsError::InvalidArgs),

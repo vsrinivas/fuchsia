@@ -70,7 +70,6 @@ void main() {
         io_fidl.modeTypeDirectory,
         io_fidl.modeTypeFile,
         io_fidl.modeTypeMask,
-        io_fidl.modeTypeSocket
       ];
       for (var mode in invalidModes) {
         var echoProxy = io_fidl.NodeProxy();

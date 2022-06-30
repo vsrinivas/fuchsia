@@ -30,7 +30,7 @@ pub fn new_connection_validate_flags(
     mut flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<fio::OpenFlags, Status> {
-    // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_SOCKET when the
+    // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_SERVICE when the
     // target is a service.
     if (mode & !fio::MODE_PROTECTION_MASK) & !fio::MODE_TYPE_SERVICE != 0 {
         if mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_DIRECTORY {
@@ -246,12 +246,6 @@ mod tests {
     fn mode_directory() {
         ncvf_err(fio::OpenFlags::NODE_REFERENCE, fio::MODE_TYPE_DIRECTORY, Status::NOT_DIR);
         ncvf_err(READ_WRITE, fio::MODE_TYPE_DIRECTORY, Status::NOT_DIR);
-    }
-
-    #[test]
-    fn mode_socket() {
-        ncvf_err(fio::OpenFlags::NODE_REFERENCE, fio::MODE_TYPE_SOCKET, Status::INVALID_ARGS);
-        ncvf_err(READ_WRITE, fio::MODE_TYPE_SOCKET, Status::INVALID_ARGS);
     }
 
     #[test]

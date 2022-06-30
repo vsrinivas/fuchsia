@@ -106,7 +106,6 @@ const MODE_TYPE_MASK uint32 = 0xFF000;
 const MODE_TYPE_DIRECTORY uint32 = 0x04000;
 const MODE_TYPE_BLOCK_DEVICE uint32 = 0x06000;
 const MODE_TYPE_FILE uint32 = 0x08000;
-const MODE_TYPE_SOCKET uint32 = 0x0C000;
 const MODE_TYPE_SERVICE uint32 = 0x10000;
 
 /// The maximal buffer size which can be transmitted for buffered operations.
@@ -130,8 +129,6 @@ type DirentType = strict enum : uint8 {
     BLOCK_DEVICE = 6;
     /// A dirent representing a file object.
     FILE = 8;
-    /// A dirent representing a socket object.
-    SOCKET = 12;
     /// A dirent representing a service object.
     SERVICE = 16;
 };

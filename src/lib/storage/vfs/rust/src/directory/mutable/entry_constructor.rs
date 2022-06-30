@@ -221,10 +221,6 @@ mod tests {
             force_directory: false,
             expected: status);
         assert_failure!(flags: fio::OpenFlags::empty(),
-            mode: fio::MODE_TYPE_SOCKET,
-            force_directory: false,
-            expected: status);
-        assert_failure!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_SERVICE,
             force_directory: false,
             expected: status);

@@ -39,8 +39,6 @@ TEST(PrettyPrinter, OpenModePrint) {
   PrettyPrinter printer(out, WithoutColors, false, "", 100, false);
   printer.DisplayDirectoryOpenMode(0x10fff);
   out << '\n';
-  printer.DisplayDirectoryOpenMode(0xc000);
-  out << '\n';
   printer.DisplayDirectoryOpenMode(0x8000);
   out << '\n';
   printer.DisplayDirectoryOpenMode(0x6000);
@@ -51,7 +49,6 @@ TEST(PrettyPrinter, OpenModePrint) {
   out << '\n';
   ASSERT_EQ(out.str(),
             "MODE_TYPE_SERVICE | S_ISUID | S_ISGID | S_IRWXU | S_IRWXG | S_IRWXO | 0x200\n"
-            "MODE_TYPE_SOCKET\n"
             "MODE_TYPE_FILE\n"
             "MODE_TYPE_BLOCK_DEVICE\n"
             "MODE_TYPE_DIRECTORY\n"

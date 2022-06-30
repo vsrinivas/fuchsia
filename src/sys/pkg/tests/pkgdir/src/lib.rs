@@ -49,13 +49,8 @@ macro_rules! flag_list {
 // easier to keep this list up to date. Although if this list gets out of date
 // it's not the end of the world, the debug printer just won't know how to
 // decode them and will octal format the not-decoded flags.
-const MODE_TYPES: &[(u32, &str)] = &flag_list![
-    MODE_TYPE_DIRECTORY,
-    MODE_TYPE_BLOCK_DEVICE,
-    MODE_TYPE_FILE,
-    MODE_TYPE_SOCKET,
-    MODE_TYPE_SERVICE,
-];
+const MODE_TYPES: &[(u32, &str)] =
+    &flag_list![MODE_TYPE_DIRECTORY, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_FILE, MODE_TYPE_SERVICE,];
 
 #[derive(PartialEq, Eq)]
 struct Mode(u32);

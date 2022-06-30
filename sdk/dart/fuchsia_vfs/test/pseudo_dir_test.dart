@@ -231,7 +231,6 @@ void main() {
           modeTypeFile,
           modeTypeService,
           modeTypeService,
-          modeTypeSocket
         ];
 
         for (final entry in invalidModes.asMap().entries) {

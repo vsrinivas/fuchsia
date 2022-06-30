@@ -25,7 +25,6 @@ using fuchsia::io::MODE_TYPE_BLOCK_DEVICE;
 using fuchsia::io::MODE_TYPE_DIRECTORY;
 using fuchsia::io::MODE_TYPE_FILE;
 using fuchsia::io::MODE_TYPE_SERVICE;
-using fuchsia::io::MODE_TYPE_SOCKET;
 
 constexpr int kCharactersPerByte = 2;
 
@@ -165,7 +164,6 @@ void PrettyPrinter::DisplayDirectoryOpenMode(uint32_t value) {
   // Type.
   switch (value & 0xff000) {
     OpenModeCase(MODE_TYPE_SERVICE);
-    OpenModeCase(MODE_TYPE_SOCKET);
     OpenModeCase(MODE_TYPE_FILE);
     OpenModeCase(MODE_TYPE_BLOCK_DEVICE);
     OpenModeCase(MODE_TYPE_DIRECTORY);
@@ -314,16 +312,16 @@ void PrettyPrinter::DisplayGuestTrap(uint32_t trap_id) {
 
 #define KoidCase(name)                                             \
   case name:                                                       \
-    *this << #name << " (" << static_cast<uint64_t>(state) << ")"; \
+    *this << #name << " (" << static_cast<uint64_t>(value) << ")"; \
     break
 
-void PrettyPrinter::DisplayKoid(uint64_t state) {
+void PrettyPrinter::DisplayKoid(uint64_t value) {
   *this << Red;
-  switch (state) {
+  switch (value) {
     KoidCase(ZX_KOID_INVALID);
     KoidCase(ZX_KOID_KERNEL);
     default:
-      *this << static_cast<uint64_t>(state);
+      *this << static_cast<uint64_t>(value);
       break;
   }
   *this << ResetColor;
@@ -850,7 +848,7 @@ void PrettyPrinter::DisplaySocketReadOptions(uint32_t options) {
 
 #define SocketDispositionCase(name)       \
   if ((disposition & (name)) == (name)) { \
-    disposition ^= name;                  \
+    disposition ^= (name);                \
     *this << separator << #name;          \
     separator = " | ";                    \
   }

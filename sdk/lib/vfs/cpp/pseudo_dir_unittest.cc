@@ -797,8 +797,11 @@ TEST_F(PseudoDirConnection, OpenDirWithIncorrectMode) {
   auto ptr = dir_.Serve();
   std::string paths[] = {".", "subdir1"};
 
-  uint32_t modes[] = {fuchsia::io::MODE_TYPE_FILE, fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
-                      fuchsia::io::MODE_TYPE_SOCKET, fuchsia::io::MODE_TYPE_SERVICE};
+  uint32_t modes[] = {
+      fuchsia::io::MODE_TYPE_FILE,
+      fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
+      fuchsia::io::MODE_TYPE_SERVICE,
+  };
 
   for (auto& path : paths) {
     for (auto mode : modes) {
@@ -828,8 +831,11 @@ TEST_F(PseudoDirConnection, OpenFileWithIncorrectMode) {
   dir_.AddReadOnlyFile("file1", "file1");
   auto ptr = dir_.Serve();
 
-  uint32_t modes[] = {fuchsia::io::MODE_TYPE_DIRECTORY, fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
-                      fuchsia::io::MODE_TYPE_SOCKET, fuchsia::io::MODE_TYPE_SERVICE};
+  uint32_t modes[] = {
+      fuchsia::io::MODE_TYPE_DIRECTORY,
+      fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
+      fuchsia::io::MODE_TYPE_SERVICE,
+  };
 
   for (auto mode : modes) {
     SCOPED_TRACE("mode: " + std::to_string(mode));

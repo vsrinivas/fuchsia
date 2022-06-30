@@ -83,12 +83,11 @@ const ALL_FLAGS: [fio::OpenFlags; 15] = [
     fio::OpenFlags::NOT_DIRECTORY,
 ];
 
-const ALL_MODES: [u32; 6] = [
+const ALL_MODES: [u32; 5] = [
     0,
     fio::MODE_TYPE_DIRECTORY,
     fio::MODE_TYPE_BLOCK_DEVICE,
     fio::MODE_TYPE_FILE,
-    fio::MODE_TYPE_SOCKET,
     fio::MODE_TYPE_SERVICE,
 ];
 
@@ -329,7 +328,6 @@ async fn assert_open_content_file(
         fio::MODE_TYPE_DIRECTORY,
         fio::MODE_TYPE_BLOCK_DEVICE,
         fio::MODE_TYPE_FILE,
-        fio::MODE_TYPE_SOCKET,
         fio::MODE_TYPE_SERVICE,
     ];
 
@@ -392,26 +390,14 @@ async fn assert_open_meta_as_directory_and_file(
                         Some(f | fio::OpenFlags::DIRECTORY)
                     }
                 }),
-                [
-                    0,
-                    fio::MODE_TYPE_DIRECTORY,
-                    fio::MODE_TYPE_BLOCK_DEVICE,
-                    fio::MODE_TYPE_SOCKET,
-                    fio::MODE_TYPE_SERVICE,
-                ],
+                [0, fio::MODE_TYPE_DIRECTORY, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SERVICE],
             ))
             .chain(product(
                 base_directory_success_flags
                     .clone()
                     .into_iter()
                     .map(|f| f | fio::OpenFlags::NODE_REFERENCE),
-                [
-                    0,
-                    fio::MODE_TYPE_DIRECTORY,
-                    fio::MODE_TYPE_BLOCK_DEVICE,
-                    fio::MODE_TYPE_SOCKET,
-                    fio::MODE_TYPE_SERVICE,
-                ],
+                [0, fio::MODE_TYPE_DIRECTORY, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SERVICE],
             ));
 
     let directory_child_paths = generate_valid_directory_paths(child_base_path);
@@ -426,13 +412,7 @@ async fn assert_open_meta_as_directory_and_file(
             .map(|((flag, mode), path)| (flag, mode, path))
             .chain(product3(
                 base_directory_success_flags,
-                [
-                    0,
-                    fio::MODE_TYPE_DIRECTORY,
-                    fio::MODE_TYPE_BLOCK_DEVICE,
-                    fio::MODE_TYPE_SOCKET,
-                    fio::MODE_TYPE_SERVICE,
-                ],
+                [0, fio::MODE_TYPE_DIRECTORY, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SERVICE],
                 directory_only_child_paths.iter().map(String::as_str),
             ))
             .filter_map(filter_out_contradictory_open_parameters);
@@ -468,7 +448,7 @@ async fn assert_open_meta_as_directory_and_file(
     )
     .chain(product(
         base_file_flags.iter().copied(),
-        [0, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SOCKET, fio::MODE_TYPE_SERVICE],
+        [0, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SERVICE],
     ));
     let file_child_paths = generate_valid_file_paths(child_base_path);
 
