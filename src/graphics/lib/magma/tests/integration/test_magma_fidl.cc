@@ -140,37 +140,6 @@ TEST_F(TestMagmaFidl, Connect) {
   // Just setup and teardown
 }
 
-TEST_F(TestMagmaFidl, Query2) {
-  {
-    auto wire_result =
-        device_->Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
-    EXPECT_TRUE(wire_result.ok());
-  }
-  {
-    auto wire_result =
-        device_->Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kDeviceId));
-    EXPECT_TRUE(wire_result.ok());
-  }
-  {
-    auto wire_result = device_->Query2(
-        static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kIsTotalTimeSupported));
-    EXPECT_TRUE(wire_result.ok());
-  }
-  {
-    auto wire_result = device_->Query2(
-        static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams));
-    EXPECT_TRUE(wire_result.ok());
-  }
-}
-
-TEST_F(TestMagmaFidl, QueryReturnsBuffer) {
-  // No predefined queries return a buffer
-  const uint64_t query_id = static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId);
-  auto wire_result = device_->QueryReturnsBuffer(query_id);
-  EXPECT_TRUE(wire_result.ok());
-  EXPECT_TRUE(wire_result->is_error());
-}
-
 TEST_F(TestMagmaFidl, Query) {
   {
     auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kVendorId);

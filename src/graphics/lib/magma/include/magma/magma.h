@@ -297,30 +297,6 @@ MAGMA_EXPORT magma_status_t magma_query(
     uint64_t* result_out);
 
 ///
-/// \brief DEPRECATED. Performs a query and returns a result synchronously.
-/// \param device An open device.
-/// \param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
-///        MAGMA_QUERY_VENDOR_PARAM_0.
-/// \param value_out Returned value.
-///
-MAGMA_EXPORT magma_status_t magma_query2(
-    magma_device_t device,
-    uint64_t id,
-    uint64_t* value_out);
-
-///
-/// \brief DEPRECATED. Performs a query for a large amount of data and puts that into a buffer.
-///        Returns synchronously
-/// \param device An open device.
-/// \param id A vendor-specific ID.
-/// \param handle_out Handle to the returned buffer.
-///
-MAGMA_EXPORT magma_status_t magma_query_returns_buffer2(
-    magma_device_t device,
-    uint64_t id,
-    magma_handle_t* handle_out);
-
-///
 /// \brief Opens a connection to a device.
 /// \param device An open device
 /// \param connection_out Returned connection.

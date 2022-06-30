@@ -66,20 +66,6 @@ type IcdInfo = table {
 /// a primary channel for making requests (see Primary protocol below), and a secondary channel
 /// for receiving notification messages.
 protocol Device {
-    /// DEPRECATED
-    Query2(struct {
-        query_id uint64;
-    }) -> (struct {
-        result uint64;
-    }) error zx.status;
-
-    /// DEPRECATED
-    QueryReturnsBuffer(struct {
-        query_id uint64;
-    }) -> (resource struct {
-        buffer zx.handle:VMO;
-    }) error zx.status;
-
     /// On success, returns a result either in a buffer or a simple value.
     Query(struct {
         query_id QueryId;

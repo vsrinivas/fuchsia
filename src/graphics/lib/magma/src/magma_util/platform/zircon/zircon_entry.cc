@@ -62,53 +62,6 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
     return true;
   }
 
-  void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
-    std::lock_guard lock(magma_mutex_);
-    if (!CheckSystemDevice(_completer))
-      return;
-
-    zx::vmo result_buffer;
-    uint64_t result = 0;
-
-    magma::Status status = this->magma_system_device_->Query(
-        request->query_id, result_buffer.reset_and_get_address(), &result);
-    if (!status.ok()) {
-      _completer.ReplyError(magma::ToZxStatus(status.get()));
-      return;
-    }
-
-    if (result_buffer) {
-      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-
-    _completer.ReplySuccess(result);
-  }
-
-  void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
-                          QueryReturnsBufferCompleter::Sync& _completer) override {
-    std::lock_guard<std::mutex> lock(magma_mutex_);
-    if (!CheckSystemDevice(_completer))
-      return;
-
-    zx::vmo result_buffer;
-    uint64_t result = 0;
-
-    magma::Status status = this->magma_system_device_->Query(
-        request->query_id, result_buffer.reset_and_get_address(), &result);
-    if (!status.ok()) {
-      _completer.ReplyError(magma::ToZxStatus(status.get()));
-      return;
-    }
-
-    if (!result_buffer) {
-      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-
-    _completer.ReplySuccess(std::move(result_buffer));
-  }
-
   void Query(QueryRequestView request, QueryCompleter::Sync& _completer) override {
     std::lock_guard lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))

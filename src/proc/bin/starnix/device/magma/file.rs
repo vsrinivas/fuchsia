@@ -320,20 +320,6 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_IMPORT as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
-            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY2 => {
-                let (control, mut response): (
-                    virtio_magma_query2_ctrl_t,
-                    virtio_magma_query2_resp_t,
-                ) = read_control_and_response(current_task, &command)?;
-
-                let mut value_out = 0;
-                response.result_return =
-                    unsafe { magma_query2(control.device, control.id, &mut value_out) as u64 };
-                response.value_out = value_out;
-
-                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY2 as u32;
-                current_task.mm.write_object(UserRef::new(response_address), &response)
-            }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_NOTIFICATION_CHANNEL_HANDLE => {
                 let (control, mut response): (
                     virtio_magma_get_notification_channel_handle_ctrl_t,
@@ -439,33 +425,6 @@ impl FileOps for MagmaFile {
                 response.semaphore_out = semaphore_out;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_SEMAPHORE as u32;
-                current_task.mm.write_object(UserRef::new(response_address), &response)
-            }
-            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY_RETURNS_BUFFER2 => {
-                let (control, mut response): (
-                    virtio_magma_query_returns_buffer2_ctrl_t,
-                    virtio_magma_query_returns_buffer2_resp_t,
-                ) = read_control_and_response(current_task, &command)?;
-
-                let mut handle_out = 0;
-                response.result_return = unsafe {
-                    magma_query_returns_buffer2(
-                        control.device as magma_device_t,
-                        control.id,
-                        &mut handle_out,
-                    ) as u64
-                };
-                let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(handle_out)) };
-                let file = Anon::new_file(
-                    current_task,
-                    Box::new(VmoFileObject::new(Arc::new(vmo))),
-                    OpenFlags::RDWR,
-                );
-                let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
-
-                response.handle_out = fd.raw() as u64;
-                response.hdr.type_ =
-                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_ERROR => {

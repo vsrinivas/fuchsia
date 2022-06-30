@@ -56,49 +56,6 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
     return true;
   }
 
-  void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
-    DLOG("sysdrv_device_t::Query2");
-    std::lock_guard lock(magma_mutex);
-    if (!CheckSystemDevice(_completer))
-      return;
-    DASSERT(this->magma_system_device);
-
-    uint64_t result;
-    magma::Status status = this->magma_system_device->Query(request->query_id, &result);
-    if (!status.ok()) {
-      _completer.ReplyError(magma::ToZxStatus(status.get()));
-      return;
-    }
-    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, request->query_id, result);
-
-    _completer.ReplySuccess(result);
-  }
-
-  void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
-                          QueryReturnsBufferCompleter::Sync& _completer) override {
-    DLOG("sysdrv_device_t::QueryReturnsBuffer");
-    std::lock_guard lock(magma_mutex);
-    if (!CheckSystemDevice(_completer))
-      return;
-
-    zx::vmo result_buffer;
-    uint64_t unused = 0;
-
-    magma::Status status = this->magma_system_device->Query(
-        request->query_id, result_buffer.reset_and_get_address(), &unused);
-    if (!status.ok()) {
-      _completer.ReplyError(magma::ToZxStatus(status.get()));
-      return;
-    }
-
-    if (!result_buffer) {
-      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-
-    _completer.ReplySuccess(std::move(result_buffer));
-  }
-
   void Query(QueryRequestView request, QueryCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::Query");
     std::lock_guard lock(magma_mutex);

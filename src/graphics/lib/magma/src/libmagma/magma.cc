@@ -53,17 +53,6 @@ void magma_device_release(magma_device_t device) {
   delete reinterpret_cast<magma::PlatformDeviceClient*>(device);
 }
 
-// DEPRECATED
-magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
-  return magma_query(device, id, nullptr, value_out);
-}
-
-// DEPRECATED
-magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
-                                           magma_handle_t* handle_out) {
-  return magma_query(device, id, handle_out, nullptr);
-}
-
 magma_status_t magma_query(magma_device_t device, uint64_t id, magma_handle_t* result_buffer_out,
                            uint64_t* result_out) {
   auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);

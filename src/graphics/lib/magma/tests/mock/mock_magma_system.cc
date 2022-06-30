@@ -63,15 +63,6 @@ magma_status_t magma_query(magma_device_t device, uint64_t id, uint32_t* result_
   return MAGMA_STATUS_INVALID_ARGS;
 }
 
-magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
-  return magma_query(device, id, nullptr, value_out);
-}
-
-magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
-                                           magma_handle_t* handle_out) {
-  return MAGMA_STATUS_INVALID_ARGS;
-}
-
 magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
   *context_id_out = reinterpret_cast<MockConnection*>(connection)->next_context_id();
   return MAGMA_STATUS_OK;
