@@ -237,6 +237,8 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("Now", Now),
             function!("Option", OptionF),
             function!("StringMatches", StringMatches),
+            function!("True", True),
+            function!("False", False),
         )),
     ))(i)
 }
@@ -933,6 +935,16 @@ mod test {
         assert_eq!(eval!("Filter(Fn([a], a > 5), [2, 4, 6, 8])"), v(&[i(6), i(8)]));
         assert_eq!(eval!("Count([1, 'a', 3, 2])"), i(4));
         Ok(())
+    }
+
+    #[fuchsia::test]
+    fn booleans() {
+        assert_eq!(eval!("True()"), MetricValue::Bool(true));
+        assert_eq!(eval!("False()"), MetricValue::Bool(false));
+        assert_problem!(
+            eval!("True(1)"),
+            "SyntaxError: Boolean functions don't take any arguments"
+        );
     }
 
     #[fuchsia::test]

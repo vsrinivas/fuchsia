@@ -130,6 +130,8 @@ pub enum Function {
     Now,
     OptionF,
     StringMatches,
+    True,
+    False,
 }
 
 /// Lambda stores a function; its parameters and body are evaluated lazily.
@@ -538,6 +540,8 @@ impl<'a> MetricState<'a> {
             Function::Now => self.now(operands),
             Function::OptionF => self.option(namespace, operands),
             Function::StringMatches => self.regex(namespace, operands),
+            Function::True => self.boolean(operands, true),
+            Function::False => self.boolean(operands, false),
         }
     }
 
@@ -812,6 +816,13 @@ impl<'a> MetricState<'a> {
             }
             bad => value_error(format!("Count only works on vectors, not {}", bad)),
         }
+    }
+
+    fn boolean(&self, operands: &[ExpressionTree], value: bool) -> MetricValue {
+        if operands.len() != 0 {
+            return syntax_error("Boolean functions don't take any arguments");
+        }
+        return MetricValue::Bool(value);
     }
 
     /// This implements the time-conversion functions.
