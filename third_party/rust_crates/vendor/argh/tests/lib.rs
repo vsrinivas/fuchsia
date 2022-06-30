@@ -1,7 +1,15 @@
-#![cfg(test)]
 // Copyright (c) 2020 Google LLC All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Deny a bunch of uncommon clippy lints to make sure the generated code won't trigger a warning.
+#![deny(
+    clippy::indexing_slicing,
+    clippy::panic_in_result_fn,
+    clippy::str_to_string,
+    clippy::unreachable,
+    clippy::unwrap_in_result
+)]
 
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -87,6 +95,119 @@ fn subcommand_example() {
 }
 
 #[test]
+fn dynamic_subcommand_example() {
+    #[derive(PartialEq, Debug)]
+    struct DynamicSubCommandImpl {
+        got: String,
+    }
+
+    impl argh::DynamicSubCommand for DynamicSubCommandImpl {
+        fn commands() -> &'static [&'static argh::CommandInfo] {
+            &[
+                &argh::CommandInfo { name: "three", description: "Third command" },
+                &argh::CommandInfo { name: "four", description: "Fourth command" },
+                &argh::CommandInfo { name: "five", description: "Fifth command" },
+            ]
+        }
+
+        fn try_redact_arg_values(
+            _command_name: &[&str],
+            _args: &[&str],
+        ) -> Option<Result<Vec<String>, argh::EarlyExit>> {
+            Some(Err(argh::EarlyExit::from("Test should not redact".to_owned())))
+        }
+
+        fn try_from_args(
+            command_name: &[&str],
+            args: &[&str],
+        ) -> Option<Result<DynamicSubCommandImpl, argh::EarlyExit>> {
+            let command_name = match command_name.last() {
+                Some(x) => *x,
+                None => return Some(Err(argh::EarlyExit::from("No command".to_owned()))),
+            };
+            let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
+            if args.len() > 1 {
+                Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
+            } else if let Some(arg) = args.get(0) {
+                Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
+            } else {
+                Some(Err(argh::EarlyExit::from("Not enough arguments".to_owned())))
+            }
+        }
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Top-level command.
+    struct TopLevel {
+        #[argh(subcommand)]
+        nested: MySubCommandEnum,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    #[argh(subcommand)]
+    enum MySubCommandEnum {
+        One(SubCommandOne),
+        Two(SubCommandTwo),
+        #[argh(dynamic)]
+        ThreeFourFive(DynamicSubCommandImpl),
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// First subcommand.
+    #[argh(subcommand, name = "one")]
+    struct SubCommandOne {
+        #[argh(option)]
+        /// how many x
+        x: usize,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Second subcommand.
+    #[argh(subcommand, name = "two")]
+    struct SubCommandTwo {
+        #[argh(switch)]
+        /// whether to fooey
+        fooey: bool,
+    }
+
+    let one = TopLevel::from_args(&["cmdname"], &["one", "--x", "2"]).expect("sc 1");
+    assert_eq!(one, TopLevel { nested: MySubCommandEnum::One(SubCommandOne { x: 2 }) },);
+
+    let two = TopLevel::from_args(&["cmdname"], &["two", "--fooey"]).expect("sc 2");
+    assert_eq!(two, TopLevel { nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true }) },);
+
+    let three = TopLevel::from_args(&["cmdname"], &["three", "beans"]).expect("sc 3");
+    assert_eq!(
+        three,
+        TopLevel {
+            nested: MySubCommandEnum::ThreeFourFive(DynamicSubCommandImpl {
+                got: "Third command got \"beans\"".to_owned()
+            })
+        },
+    );
+
+    let four = TopLevel::from_args(&["cmdname"], &["four", "boulders"]).expect("sc 4");
+    assert_eq!(
+        four,
+        TopLevel {
+            nested: MySubCommandEnum::ThreeFourFive(DynamicSubCommandImpl {
+                got: "Fourth command got \"boulders\"".to_owned()
+            })
+        },
+    );
+
+    let five = TopLevel::from_args(&["cmdname"], &["five", "gold rings"]).expect("sc 5");
+    assert_eq!(
+        five,
+        TopLevel {
+            nested: MySubCommandEnum::ThreeFourFive(DynamicSubCommandImpl {
+                got: "Fifth command got \"gold rings\"".to_owned()
+            })
+        },
+    );
+}
+
+#[test]
 fn multiline_doc_comment_description() {
     #[derive(FromArgs)]
     /// Short description
@@ -154,7 +275,7 @@ fn default_number() {
 fn default_function() {
     const MSG: &str = "hey I just met you";
     fn call_me_maybe() -> String {
-        MSG.to_string()
+        MSG.to_owned()
     }
 
     #[derive(FromArgs)]
@@ -790,6 +911,8 @@ Options:
     enum HelpExampleSubCommands {
         BlowUp(BlowUp),
         Grind(GrindCommand),
+        #[argh(dynamic)]
+        Plugin(HelpExamplePlugin),
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
@@ -809,6 +932,39 @@ Options:
         safely: bool,
     }
 
+    #[derive(PartialEq, Debug)]
+    struct HelpExamplePlugin {
+        got: String,
+    }
+
+    impl argh::DynamicSubCommand for HelpExamplePlugin {
+        fn commands() -> &'static [&'static argh::CommandInfo] {
+            &[&argh::CommandInfo { name: "plugin", description: "Example dynamic command" }]
+        }
+
+        fn try_redact_arg_values(
+            _command_name: &[&str],
+            _args: &[&str],
+        ) -> Option<Result<Vec<String>, argh::EarlyExit>> {
+            Some(Err(argh::EarlyExit::from("Test should not redact".to_owned())))
+        }
+
+        fn try_from_args(
+            command_name: &[&str],
+            args: &[&str],
+        ) -> Option<Result<HelpExamplePlugin, argh::EarlyExit>> {
+            if command_name.last() != Some(&"plugin") {
+                None
+            } else if args.len() > 1 {
+                Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
+            } else if let Some(arg) = args.get(0) {
+                Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
+            } else {
+                Some(Ok(HelpExamplePlugin { got: "plugin got no argument".to_owned() }))
+            }
+        }
+    }
+
     #[test]
     fn example_parses_correctly() {
         let help_example = HelpExample::from_args(
@@ -821,7 +977,7 @@ Options:
             help_example,
             HelpExample {
                 force: true,
-                scribble: "fooey".to_string(),
+                scribble: "fooey".to_owned(),
                 really_really_really_long_name_for_pat: false,
                 verbose: false,
                 command: HelpExampleSubCommands::BlowUp(BlowUp { safely: true }),
@@ -842,6 +998,7 @@ Options:
                 "    help\n",
                 "    blow-up\n",
                 "    grind\n",
+                "    plugin\n",
             ),
         );
     }
@@ -865,6 +1022,7 @@ Options:
 Commands:
   blow-up           explosively separate
   grind             make smaller by many small cuts
+  plugin            Example dynamic command
 
 Examples:
   Scribble 'abc' and then run |grind|.
@@ -1264,7 +1422,7 @@ Options:
   -n, --n           fooey
   --help            display usage information
 "###
-            .to_string(),
+            .to_owned(),
             status: Ok(()),
         }),
     );
@@ -1283,7 +1441,7 @@ fn redact_arg_values_produces_errors_with_bad_arguments() {
     assert_eq!(
         Cmd::redact_arg_values(&["program-name"], &["--n"]),
         Err(argh::EarlyExit {
-            output: "No value provided for option '--n'.\n".to_string(),
+            output: "No value provided for option '--n'.\n".to_owned(),
             status: Err(()),
         }),
     );
@@ -1305,4 +1463,59 @@ fn redact_arg_values_does_not_warn_if_used() {
 
     let actual = Cmd::redact_arg_values(&["program-name"], &["5"]).unwrap();
     assert_eq!(actual, &["program-name", "speed"]);
+}
+
+#[test]
+fn subcommand_does_not_panic() {
+    #[derive(FromArgs, PartialEq, Debug)]
+    #[argh(subcommand)]
+    enum SubCommandEnum {
+        Cmd(SubCommand),
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// First subcommand.
+    #[argh(subcommand, name = "one")]
+    struct SubCommand {
+        #[argh(positional)]
+        /// how many x
+        x: usize,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Second subcommand.
+    #[argh(subcommand, name = "two")]
+    struct SubCommandTwo {
+        #[argh(switch)]
+        /// whether to fooey
+        fooey: bool,
+    }
+
+    // Passing no subcommand name to an emum
+    assert_eq!(
+        SubCommandEnum::from_args(&[], &["5"]).unwrap_err(),
+        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+    );
+
+    assert_eq!(
+        SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
+        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+    );
+
+    // Passing unknown subcommand name to an emum
+    assert_eq!(
+        SubCommandEnum::from_args(&["fooey"], &["5"]).unwrap_err(),
+        argh::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+    );
+
+    assert_eq!(
+        SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
+        argh::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+    );
+
+    // Passing unknown subcommand name to a struct
+    assert_eq!(
+        SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
+        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+    );
 }

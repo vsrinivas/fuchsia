@@ -12,8 +12,12 @@
 [package]
 edition = "2018"
 name = "argh_shared"
-version = "0.1.7"
-authors = ["Taylor Cramer <cramertj@google.com>", "Benjamin Brittain <bwb@google.com>", "Erick Tryzelaar <etryzelaar@google.com>"]
+version = "0.1.8"
+authors = [
+    "Taylor Cramer <cramertj@google.com>",
+    "Benjamin Brittain <bwb@google.com>",
+    "Erick Tryzelaar <etryzelaar@google.com>",
+]
 description = "Derive-based argument parsing optimized for code size"
 readme = "README.md"
 license = "BSD-3-Clause"

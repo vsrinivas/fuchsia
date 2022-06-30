@@ -4,8 +4,6 @@
 
 use argh::FromArgs;
 
-use std::string::ToString;
-
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "dns")]
 /// commands to control the dns resolver
