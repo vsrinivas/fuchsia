@@ -95,7 +95,10 @@ if (current_toolchain == target_toolchain) {
 # Clients that want access to Vulkan validation layers should depend on this.
 fuchsia_component("validation-client") {
   component_name = "validation-client"
-  visibility += [ "*" ]
+
+  # This package component isn't ready for production use. Most clients should
+  # depend on //src/lib/vulkan/validation_layers instead.
+  visibility += [ "//src/graphics/tests/vkvalidation:*" ]
 
   cml_target = ":cml($target_toolchain)"
 

@@ -1,5 +1,8 @@
 # Vulkan Validation Package
 
+WARNING: This package is experimental and should not be used by most code. Most clients should
+depend on //src/lib/vulkan/validation_layers instead.
+
 Vulkan validation package, henceforth VVP, allows applications to depend on the Vulkan validation
 layers dynamically, rather than including the layers in their package. A package will always load
 the exact same version of the layers that it was compiled with. Further, it will only load the
