@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/zx/interrupt.h>
 
 #ifndef SRC_DEVICES_I2C_TESTING_FAKE_I2C_INCLUDE_LIB_FAKE_I2C_FAKE_I2C_H_
@@ -36,62 +35,17 @@ namespace fake_i2c {
 //
 class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
-  // This function takes the |op_list| and serialies the write data so it is easier to use
-  // in a fake. This will call |Transact| with the serialzed data.
-  void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                   void* cookie) {
-    zx_status_t status;
-
-    // Serialize the write information.
-    uint8_t write_buffer[I2C_MAX_TOTAL_TRANSFER];
-    size_t write_buffer_index = 0;
-    for (size_t i = 0; i < op_count; ++i) {
-      if (!op_list[i].is_read) {
-        if (write_buffer_index + op_list[i].data_size >= I2C_MAX_TOTAL_TRANSFER) {
-          callback(cookie, ZX_ERR_NO_MEMORY, nullptr, 0);
-          return;
-        }
-        memcpy(write_buffer + write_buffer_index, op_list[i].data_buffer, op_list[i].data_size);
-        write_buffer_index += op_list[i].data_size;
-      }
-    }
-
-    // Process the serialized ops.
-    uint8_t read_buffer[I2C_MAX_TOTAL_TRANSFER];
-    size_t read_buffer_size = 0;
-    status = Transact(write_buffer, write_buffer_index, read_buffer, &read_buffer_size);
-    if (status != ZX_OK) {
-      callback(cookie, status, nullptr, 0);
-      return;
-    }
-
-    // Return a read op if we have one.
-    if (read_buffer_size > 0) {
-      i2c_op_t read_op = {};
-      read_op.is_read = true;
-      read_op.stop = true;
-      read_op.data_buffer = read_buffer;
-      read_op.data_size = read_buffer_size;
-      callback(cookie, ZX_OK, &read_op, 1);
-    } else {
-      callback(cookie, ZX_OK, nullptr, 0);
-    }
-  }
-
-  zx_status_t I2cGetMaxTransferSize(size_t* out_size) {
-    *out_size = I2C_MAX_TOTAL_TRANSFER;
-    return ZX_OK;
-  }
-
   zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
     return irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq);
   }
 
   void SetInterrupt(zx::interrupt irq) { irq_ = std::move(irq); }
 
+  // This function takes |request| and serialies the write data so it is easier to use
+  // in a fake. This will call |Transact| with the serialzed data.
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
     // Serialize the write information.
-    uint8_t write_buffer[I2C_MAX_TOTAL_TRANSFER];
+    uint8_t write_buffer[fuchsia_hardware_i2c::wire::kMaxTransferSize];
     size_t write_buffer_index = 0;
     for (const auto& transaction : request->transactions) {
       if (!transaction.has_data_transfer()) {
@@ -101,7 +55,8 @@ class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
 
       if (transaction.data_transfer().is_write_data()) {
         const auto& write_data = transaction.data_transfer().write_data();
-        if (write_buffer_index + write_data.count() > I2C_MAX_TOTAL_TRANSFER) {
+        if (write_buffer_index + write_data.count() >
+            fuchsia_hardware_i2c::wire::kMaxTransferSize) {
           completer.ReplyError(ZX_ERR_NO_MEMORY);
           return;
         }
@@ -111,7 +66,7 @@ class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
     }
 
     // Process the serialized ops.
-    uint8_t read_buffer[I2C_MAX_TOTAL_TRANSFER];
+    uint8_t read_buffer[fuchsia_hardware_i2c::wire::kMaxTransferSize];
     size_t read_buffer_size = 0;
     zx_status_t status = Transact(write_buffer, write_buffer_index, read_buffer, &read_buffer_size);
     if (status != ZX_OK) {
@@ -147,8 +102,9 @@ class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
 
   void SetRead(const void* return_buffer, size_t return_buffer_size, uint8_t* read_buffer,
                size_t* read_buffer_size) {
-    size_t read_size =
-        (return_buffer_size < I2C_MAX_TOTAL_TRANSFER) ? return_buffer_size : I2C_MAX_TOTAL_TRANSFER;
+    size_t read_size = (return_buffer_size < fuchsia_hardware_i2c::wire::kMaxTransferSize)
+                           ? return_buffer_size
+                           : fuchsia_hardware_i2c::wire::kMaxTransferSize;
     memcpy(read_buffer, return_buffer, read_size);
     *read_buffer_size = read_size;
   }
