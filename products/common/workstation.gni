@@ -146,5 +146,4 @@ include_account_in_fvm = true
 # Use Flatland as the default graphics protocol in Scenic.
 use_flatland_by_default = true
 
-# TODO(fxbug.dev/96494): Switch to Fxfs.
-data_filesystem_format = "minfs"
+data_filesystem_format = "fxfs"
