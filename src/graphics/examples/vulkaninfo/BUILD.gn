@@ -5,7 +5,7 @@
 import("//build/components.gni")
 
 fuchsia_component("vulkaninfo-cmp") {
-  manifest = "meta/vulkaninfo.cmx"
+  manifest = "meta/vulkaninfo.cml"
   component_name = "vulkaninfo"
 
   deps = [
@@ -15,6 +15,6 @@ fuchsia_component("vulkaninfo-cmp") {
   ]
 }
 
-fuchsia_package("vulkaninfo") {
-  deps = [ ":vulkaninfo-cmp" ]
+fuchsia_test_package("vulkaninfo") {
+  test_components = [ ":vulkaninfo-cmp" ]
 }
