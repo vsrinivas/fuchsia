@@ -366,14 +366,13 @@ async fn main() -> Result<(), Error> {
             fx_log_warn!("OpenThread Reset: {:?}", ret);
         } else {
             fx_log_err!("Unexpected shutdown: {:?}", ret);
+            fx_log_warn!("Will attempt to restart in {} seconds.", delay);
+
+            fasync::Timer::new(fasync::Time::after(fz::Duration::from_seconds(delay))).await;
+
+            attempt_count += 1;
+
+            fx_log_info!("Restart attempt {} ({} max)", attempt_count, config.max_auto_restarts);
         }
-
-        fx_log_warn!("Will attempt to restart in {} seconds.", delay);
-
-        fasync::Timer::new(fasync::Time::after(fz::Duration::from_seconds(delay))).await;
-
-        attempt_count += 1;
-
-        fx_log_info!("Restart attempt {} ({} max)", attempt_count, config.max_auto_restarts);
     }
 }
