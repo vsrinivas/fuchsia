@@ -555,7 +555,9 @@ impl<'a> ValidationContext<'a> {
             // All directory "use" expressions must have directory rights.
             match &use_.rights {
                 Some(rights) => self.validate_directory_rights(&rights)?,
-                None => return Err(Error::validate("Rights required for this use statement.")),
+                None => {
+                    return Err(Error::validate("This use statement requires a `rights` field. Refer to: https://fuchsia.dev/go/components/directory#consumer."))
+                }
             };
         }
 
@@ -4840,7 +4842,7 @@ mod tests {
                   { "directory": "mydir", "path": "/mydir" },
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Rights required for this use statement."
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "This use statement requires a `rights` field. Refer to: https://fuchsia.dev/go/components/directory#consumer."
         ),
         test_cml_path(
             json!({

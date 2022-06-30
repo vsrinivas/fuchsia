@@ -42,6 +42,8 @@ redirects:
   to: https://fuchsia.dev/reference/fidl/fuchsia.component.test
 - from: /docs/go/components/capabilities
   to: /docs/concepts/components/v2/capabilities
+- from: /docs/go/components/directory
+  to: /docs/concepts/components/v2/capabilities/directory.md
   # Keep this item last as the default fallback path
 - from: /docs/go/components/...
   to: /docs/concepts/components/v2/README.md
