@@ -152,8 +152,43 @@ impl Executor {
     }
 
     #[cfg(not(target_os = "fuchsia"))]
-    unsafe fn begin_wait(&self, _wait: *mut async_wait_t) -> Result<(), zx_status::Status> {
-        Err(zx_status::Status::NOT_SUPPORTED)
+    unsafe fn begin_wait(&mut self, wait: *mut async_wait_t) -> Result<(), zx_status::Status> {
+        use fasync::emulated_handle::{Handle, Signals};
+        use fasync::OnSignals;
+
+        let wait_ptr = wait;
+        let dispatcher: *mut Executor = &mut *self;
+        let wait = &mut *wait;
+        // TODO(sadmac): Make sure the handle is guaranteed to remain open for the duration of the
+        // wait, or document what effect that has on correctness.
+        let object = std::mem::ManuallyDrop::new(Handle::from_raw(wait.object));
+        let trigger = Signals::from_bits_unchecked(wait.trigger);
+        let handler = wait.handler;
+
+        fasync::Task::local(async move {
+            match OnSignals::new(&*object, trigger).await {
+                Ok(sigs) => {
+                    let packet = zx_packet_signal_t {
+                        trigger: trigger.bits(),
+                        observed: sigs.bits(),
+                        count: 1,
+                    };
+
+                    handler(dispatcher as *mut std::ffi::c_void, wait_ptr, ZX_OK, &packet);
+                }
+                Err(x) => {
+                    handler(
+                        dispatcher as *mut std::ffi::c_void,
+                        wait_ptr,
+                        x.into_raw(),
+                        std::ptr::null_mut(),
+                    );
+                }
+            }
+        })
+        .detach();
+
+        Ok(())
     }
 
     fn now(&self) -> zx_time_t {

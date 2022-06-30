@@ -63,7 +63,28 @@ impl<'a> HandleRef<'a> {
 
     /// Signal an object
     pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        with_handle(self.0, |mut h, side| h.as_hdl_data().signal(side, clear_mask, set_mask))
+        if self.is_invalid() {
+            return Err(zx_status::Status::BAD_HANDLE);
+        }
+
+        clear_mask.validate_user_signals()?;
+        set_mask.validate_user_signals()?;
+
+        let rights = with_handle(self.raw_handle(), |mut h, side| h.as_hdl_data().rights(side));
+
+        if !rights.contains(Rights::SIGNAL) {
+            Err(Status::ACCESS_DENIED)
+        } else {
+            with_handle(self.0, |mut h, side| {
+                // We just checked for an invalid handle above, so this should never fail.
+                h.as_hdl_data()
+                    .signal(side, clear_mask, set_mask)
+                    .status_for_peer()
+                    .expect("Handle became invalid while processing signal call");
+            });
+
+            Ok(())
+        }
     }
 }
 
@@ -130,9 +151,22 @@ pub trait Peered: HandleBased {
     /// [zx_object_signal_peer](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        with_handle(self.raw_handle(), |mut h, side| {
-            h.as_hdl_data().signal(side.opposite(), clear_mask, set_mask)
-        })
+        if self.is_invalid() {
+            return Err(zx_status::Status::BAD_HANDLE);
+        }
+
+        clear_mask.validate_user_signals()?;
+        set_mask.validate_user_signals()?;
+
+        let rights = with_handle(self.raw_handle(), |mut h, side| h.as_hdl_data().rights(side));
+
+        if !rights.contains(Rights::SIGNAL_PEER) {
+            Err(Status::ACCESS_DENIED)
+        } else {
+            with_handle(self.raw_handle(), |mut h, side| {
+                h.as_hdl_data().signal(side.opposite(), clear_mask, set_mask).status_for_peer()
+            })
+        }
     }
 }
 
@@ -340,6 +374,18 @@ impl Channel {
         let (shard, slot) = CHANNELS.new_handle_slot(rights);
         let left = pack_handle(shard, slot, HdlType::Channel, Side::Left);
         let right = pack_handle(shard, slot, HdlType::Channel, Side::Right);
+
+        let mut shard = CHANNELS.shards[shard].lock().unwrap();
+        let mut hdl_ref = HdlRef::Channel(&mut shard[slot]);
+        hdl_ref
+            .as_hdl_data()
+            .signal(Side::Left, Signals::NONE, Signals::OBJECT_WRITABLE)
+            .expect("Handle wasn't open immediately after creation");
+        hdl_ref
+            .as_hdl_data()
+            .signal(Side::Right, Signals::NONE, Signals::OBJECT_WRITABLE)
+            .expect("Handle wasn't open immediately after creation");
+
         Ok((Channel(left), Channel(right)))
     }
 
@@ -380,9 +426,13 @@ impl Channel {
                 if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
                     std::mem::swap(bytes, &mut msg.bytes);
                     std::mem::swap(handles, &mut msg.handles);
+                    if obj.q.side_mut(side.opposite()).is_empty() {
+                        obj.signal(side, Signals::OBJECT_READABLE, Signals::NONE)
+                            .status_for_self()?;
+                    }
                     Poll::Ready(Ok(()))
                 } else if obj.liveness.is_open() {
-                    obj.wakers.side_mut(side.opposite()).readable.pending(cx)
+                    obj.wakers.side_mut(side).pending_readable(cx)
                 } else {
                     Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
                 }
@@ -443,7 +493,8 @@ impl Channel {
                 obj.q
                     .side_mut(side)
                     .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
-                obj.wakers.side_mut(side).readable.wake();
+                obj.signal(side.opposite(), Signals::NONE, Signals::OBJECT_READABLE)
+                    .status_for_peer()?;
                 Ok(())
             } else {
                 unreachable!();
@@ -485,7 +536,8 @@ impl Channel {
                 obj.q
                     .side_mut(side)
                     .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
-                obj.wakers.side_mut(side).readable.wake();
+                obj.signal(side.opposite(), Signals::NONE, Signals::OBJECT_READABLE)
+                    .expect("Signalling readable should never fail here");
                 Ok(())
             } else {
                 unreachable!();
@@ -542,17 +594,46 @@ impl Socket {
     pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
         match sock_opts {
             SocketOpts::STREAM => {
-                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ | Rights::WAIT;
+                let rights = Rights::TRANSFER
+                    | Rights::WRITE
+                    | Rights::READ
+                    | Rights::WAIT
+                    | Rights::SIGNAL
+                    | Rights::SIGNAL_PEER;
                 let (shard, slot) = STREAM_SOCKETS.new_handle_slot(rights);
                 let left = pack_handle(shard, slot, HdlType::StreamSocket, Side::Left);
                 let right = pack_handle(shard, slot, HdlType::StreamSocket, Side::Right);
+                let mut shard = STREAM_SOCKETS.shards[shard].lock().unwrap();
+                let mut hdl_ref = HdlRef::StreamSocket(&mut shard[slot]);
+                hdl_ref
+                    .as_hdl_data()
+                    .signal(Side::Left, Signals::NONE, Signals::OBJECT_WRITABLE)
+                    .expect("Handle wasn't open immediately after creation");
+                hdl_ref
+                    .as_hdl_data()
+                    .signal(Side::Right, Signals::NONE, Signals::OBJECT_WRITABLE)
+                    .expect("Handle wasn't open immediately after creation");
                 Ok((Socket(left), Socket(right)))
             }
             SocketOpts::DATAGRAM => {
-                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+                let rights = Rights::TRANSFER
+                    | Rights::WRITE
+                    | Rights::READ
+                    | Rights::SIGNAL
+                    | Rights::SIGNAL_PEER;
                 let (shard, slot) = DATAGRAM_SOCKETS.new_handle_slot(rights);
                 let left = pack_handle(shard, slot, HdlType::DatagramSocket, Side::Left);
                 let right = pack_handle(shard, slot, HdlType::DatagramSocket, Side::Right);
+                let mut shard = DATAGRAM_SOCKETS.shards[shard].lock().unwrap();
+                let mut hdl_ref = HdlRef::DatagramSocket(&mut shard[slot]);
+                hdl_ref
+                    .as_hdl_data()
+                    .signal(Side::Left, Signals::NONE, Signals::OBJECT_WRITABLE)
+                    .expect("Handle wasn't open immediately after creation");
+                hdl_ref
+                    .as_hdl_data()
+                    .signal(Side::Right, Signals::NONE, Signals::OBJECT_WRITABLE)
+                    .expect("Handle wasn't open immediately after creation");
                 Ok((Socket(left), Socket(right)))
             }
         }
@@ -568,14 +649,16 @@ impl Socket {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
                     obj.q.side_mut(side).extend(bytes);
-                    obj.wakers.side_mut(side).readable.wake();
+                    obj.signal(side.opposite(), Signals::NONE, Signals::OBJECT_READABLE)
+                        .status_for_peer()?;
                 }
                 HdlRef::DatagramSocket(obj) => {
                     if !obj.liveness.is_open() {
                         return Err(zx_status::Status::PEER_CLOSED);
                     }
                     obj.q.side_mut(side).push_back(bytes.to_vec());
-                    obj.wakers.side_mut(side).readable.wake();
+                    obj.signal(side.opposite(), Signals::NONE, Signals::OBJECT_READABLE)
+                        .status_for_peer()?;
                 }
                 _ => panic!("Non socket passed to Socket::write"),
             }
@@ -622,7 +705,7 @@ impl Socket {
                 let copy_bytes = std::cmp::min(bytes.len(), read.len());
                 if copy_bytes == 0 {
                     if obj.liveness.is_open() {
-                        return obj.wakers.side_mut(side.opposite()).readable.pending(ctx);
+                        return obj.wakers.side_mut(side).pending_readable(ctx);
                     } else {
                         return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
                     }
@@ -630,17 +713,24 @@ impl Socket {
                 for (i, b) in read.drain(..copy_bytes).enumerate() {
                     bytes[i] = b;
                 }
+                if read.is_empty() {
+                    obj.signal(side, Signals::OBJECT_READABLE, Signals::NONE).status_for_self()?;
+                }
                 Poll::Ready(Ok(copy_bytes))
             }
             HdlRef::DatagramSocket(obj) => {
                 if let Some(frame) = obj.q.side_mut(side.opposite()).pop_front() {
                     let n = std::cmp::min(bytes.len(), frame.len());
                     bytes[..n].clone_from_slice(&frame[..n]);
+                    if obj.q.side_mut(side.opposite()).is_empty() {
+                        obj.signal(side, Signals::OBJECT_READABLE, Signals::NONE)
+                            .status_for_self()?;
+                    }
                     Poll::Ready(Ok(n))
                 } else if !obj.liveness.is_open() {
                     Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
                 } else {
-                    obj.wakers.side_mut(side.opposite()).readable.pending(ctx)
+                    obj.wakers.side_mut(side).pending_readable(ctx)
                 }
             }
             _ => panic!("Non socket passed to Socket::read"),
@@ -693,7 +783,7 @@ impl Drop for EventPair {
 impl EventPair {
     /// Create an event pair.
     pub fn create() -> Result<(EventPair, EventPair), Status> {
-        let rights = Rights::TRANSFER;
+        let rights = Rights::EVENTPAIR_DEFAULT;
         let (shard, slot) = EVENT_PAIRS.new_handle_slot(rights);
         let left = pack_handle(shard, slot, HdlType::EventPair, Side::Left);
         let right = pack_handle(shard, slot, HdlType::EventPair, Side::Right);
@@ -938,10 +1028,15 @@ pub mod on_signals {
         fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
             with_handle(self.h, |mut h, side| {
                 let h = h.as_hdl_data();
-                if self.koid != h.koids(side).0 {
-                    return Poll::Pending;
+                if self.koid != h.koids(side).0 || !h.liveness().is_side_open(side) {
+                    if self.signals.contains(Signals::HANDLE_CLOSED) {
+                        Poll::Ready(Signals::HANDLE_CLOSED)
+                    } else {
+                        Poll::Pending
+                    }
+                } else {
+                    h.poll_signals(ctx, side, self.signals)
                 }
-                h.poll_signals(ctx, side, self.signals)
             })
             .map(Ok)
         }
@@ -951,28 +1046,108 @@ pub mod on_signals {
 bitflags! {
     /// Signals that can be waited upon.
     ///
-    /// See [rights](https://fuchsia.dev/fuchsia-src/concepts/kernel/rights) for more information.
-    /// Bit values are not the same as Zircon values.
+    /// See [signals](https://fuchsia.dev/fuchsia-src/concepts/kernel/signals) for more information.
     #[repr(transparent)]
     pub struct Signals : u32 {
+        /// No signals
+        const NONE = 0x00000000;
+        /// All object signals
+        const OBJECT_ALL = 0x00ffffff;
         /// All user signals
-        const USER_ALL = 0xff00;
+        const USER_ALL = 0xff000000;
+
+        /// Object signal 0
+        const OBJECT_0 = 1 << 0;
+        /// Object signal 1
+        const OBJECT_1 = 1 << 1;
+        /// Object signal 2
+        const OBJECT_2 = 1 << 2;
+        /// Object signal 3
+        const OBJECT_3 = 1 << 3;
+        /// Object signal 4
+        const OBJECT_4 = 1 << 4;
+        /// Object signal 5
+        const OBJECT_5 = 1 << 5;
+        /// Object signal 6
+        const OBJECT_6 = 1 << 6;
+        /// Object signal 7
+        const OBJECT_7 = 1 << 7;
+        /// Object signal 8
+        const OBJECT_8 = 1 << 8;
+        /// Object signal 9
+        const OBJECT_9 = 1 << 9;
+        /// Object signal 10
+        const OBJECT_10 = 1 << 10;
+        /// Object signal 11
+        const OBJECT_11 = 1 << 11;
+        /// Object signal 12
+        const OBJECT_12 = 1 << 12;
+        /// Object signal 13
+        const OBJECT_13 = 1 << 13;
+        /// Object signal 14
+        const OBJECT_14 = 1 << 14;
+        /// Object signal 15
+        const OBJECT_15 = 1 << 15;
+        /// Object signal 16
+        const OBJECT_16 = 1 << 16;
+        /// Object signal 17
+        const OBJECT_17 = 1 << 17;
+        /// Object signal 18
+        const OBJECT_18 = 1 << 18;
+        /// Object signal 19
+        const OBJECT_19 = 1 << 19;
+        /// Object signal 20
+        const OBJECT_20 = 1 << 20;
+        /// Object signal 21
+        const OBJECT_21 = 1 << 21;
+        /// Object signal 22
+        const OBJECT_22 = 1 << 22;
+        /// Handle closed
+        const HANDLE_CLOSED = 1 << 23;
         /// User signal 0
-        const USER_0 = 1 << 8;
+        const USER_0 = 1 << 24;
         /// User signal 1
-        const USER_1 = 1 << 9;
+        const USER_1 = 1 << 25;
         /// User signal 2
-        const USER_2 = 1 << 10;
+        const USER_2 = 1 << 26;
         /// User signal 3
-        const USER_3 = 1 << 11;
+        const USER_3 = 1 << 27;
         /// User signal 4
-        const USER_4 = 1 << 12;
+        const USER_4 = 1 << 28;
         /// User signal 5
-        const USER_5 = 1 << 13;
+        const USER_5 = 1 << 29;
         /// User signal 6
-        const USER_6 = 1 << 14;
+        const USER_6 = 1 << 30;
         /// User signal 7
-        const USER_7 = 1 << 15;
+        const USER_7 = 1 << 31;
+
+        /// All user signals
+        const USER_SIGNALS = Self::USER_0.bits() |
+        Self::USER_1.bits() |
+        Self::USER_2.bits() |
+        Self::USER_3.bits() |
+        Self::USER_4.bits() |
+        Self::USER_5.bits() |
+        Self::USER_6.bits() |
+        Self::USER_7.bits();
+
+        /// Object is readable
+        const OBJECT_READABLE = Self::OBJECT_0.bits();
+        /// Object is writable
+        const OBJECT_WRITABLE = Self::OBJECT_1.bits();
+        /// Object peer closed
+        const OBJECT_PEER_CLOSED = Self::OBJECT_2.bits();
+    }
+}
+
+impl Signals {
+    /// Returns `Status::INVALID_ARGS` if this signal set contains non-user signals.
+    fn validate_user_signals(&self) -> Result<(), Status> {
+        if Signals::USER_SIGNALS.contains(*self) {
+            Ok(())
+        } else {
+            Err(Status::INVALID_ARGS)
+        }
     }
 }
 
@@ -992,14 +1167,62 @@ bitflags! {
         const READ           = 1 << 2;
         /// Write right.
         const WRITE          = 1 << 3;
+        /// Execute right.
+        const EXECUTE = 1 << 4;
+        /// Map right.
+        const MAP = 1 << 5;
+        /// Get Property right.
+        const GET_PROPERTY = 1 << 6;
+        /// Set Property right.
+        const SET_PROPERTY = 1 << 7;
+        /// Enumerate right.
+        const ENUMERATE = 1 << 8;
+        /// Destroy right.
+        const DESTROY = 1 << 9;
+        /// Set Policy right.
+        const SET_POLICY = 1 << 10;
+        /// Get Policy right.
+        const GET_POLICY = 1 << 11;
+        /// Signal right.
+        const SIGNAL = 1 << 12;
+        /// Signal Peer right.
+        const SIGNAL_PEER = 1 << 13;
         /// Wait right.
-        const WAIT           = 1 << 14;
+        const WAIT = 1 << 14;
+        /// Inspect right.
+        const INSPECT = 1 << 15;
+        /// Manage Job right.
+        const MANAGE_JOB = 1 << 16;
+        /// Manage Process right.
+        const MANAGE_PROCESS = 1 << 17;
+        /// Manage Thread right.
+        const MANAGE_THREAD = 1 << 18;
+        /// Apply Profile right.
+        const APPLY_PROFILE = 1 << 19;
+        /// Manage Socket right.
+        const MANAGE_SOCKET = 1 << 20;
         /// Same rights.
         const SAME_RIGHTS = 1 << 31;
+        /// A basic set of rights for most things.
+        const BASIC_RIGHTS = Rights::TRANSFER.bits() |
+                             Rights::DUPLICATE.bits() |
+                             Rights::WAIT.bits() |
+                             Rights::INSPECT.bits();
+        /// IO related rights
+        const IO = Rights::WRITE.bits() |
+                   Rights::READ.bits();
         /// Rights of a new channel.
-        const CHANNEL_DEFAULT = Rights::TRANSFER.bits() |
-                                Rights::READ.bits() |
-                                Rights::WRITE.bits();
+        const CHANNEL_DEFAULT = (Rights::BASIC_RIGHTS.bits() & !Rights::DUPLICATE.bits()) |
+                                Rights::IO.bits() |
+                                Rights::SIGNAL.bits() |
+                                Rights::SIGNAL_PEER.bits();
+        /// Rights of a new channel.
+        const EVENTPAIR_DEFAULT =
+                                Rights::TRANSFER.bits() |
+                                Rights::DUPLICATE.bits() |
+                                Rights::IO.bits() |
+                                Rights::SIGNAL.bits() |
+                                Rights::SIGNAL_PEER.bits();
     }
 }
 
@@ -1150,32 +1373,26 @@ impl Liveness {
 }
 
 #[derive(Default)]
-struct WakerSlot(Option<Waker>);
+struct WakerSlot(Vec<Waker>);
 
 impl WakerSlot {
     fn wake(&mut self) {
-        self.0.take().map(|w| w.wake());
+        self.0.drain(..).for_each(|w| w.wake());
     }
 
     fn arm(&mut self, ctx: &mut Context<'_>) {
-        self.0 = Some(ctx.waker().clone())
-    }
-
-    fn pending<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
-        self.arm(ctx);
-        Poll::Pending
+        self.0.push(ctx.waker().clone())
     }
 }
 
 #[derive(Default)]
 struct Wakers {
-    readable: WakerSlot,
-    signals: [WakerSlot; 16],
+    signals: [WakerSlot; 32],
 }
 
 impl Wakers {
     fn for_signals_in(&mut self, signals: Signals, mut f: impl FnMut(&mut WakerSlot)) {
-        for i in 0..16 {
+        for i in 0..32 {
             if signals.bits() & (1 << i) != 0 {
                 f(&mut self.signals[i])
             }
@@ -1194,10 +1411,48 @@ impl Wakers {
         self.arm(signals, ctx);
         Poll::Pending
     }
+
+    fn pending_readable<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
+        self.pending(
+            Signals::OBJECT_READABLE | Signals::HANDLE_CLOSED | Signals::OBJECT_PEER_CLOSED,
+            ctx,
+        )
+    }
+}
+
+#[derive(Debug)]
+enum SignalError {
+    HandleInvalid,
+}
+
+trait SignalErrorToStatus<T> {
+    fn status_for_self(self) -> Result<T, Status>;
+    fn status_for_peer(self) -> Result<T, Status>;
+}
+
+impl<T> SignalErrorToStatus<T> for Result<T, SignalError> {
+    fn status_for_self(self) -> Result<T, Status> {
+        self.map_err(|e| {
+            let SignalError::HandleInvalid = e;
+            Status::BAD_HANDLE
+        })
+    }
+
+    fn status_for_peer(self) -> Result<T, Status> {
+        self.map_err(|e| {
+            let SignalError::HandleInvalid = e;
+            Status::PEER_CLOSED
+        })
+    }
 }
 
 trait HdlData {
-    fn signal(&mut self, side: Side, clear_mask: Signals, set_mask: Signals) -> Result<(), Status>;
+    fn signal(
+        &mut self,
+        side: Side,
+        clear_mask: Signals,
+        set_mask: Signals,
+    ) -> Result<(), SignalError>;
     fn poll_signals(
         &mut self,
         ctx: &mut Context<'_>,
@@ -1205,6 +1460,7 @@ trait HdlData {
         signals: Signals,
     ) -> Poll<Signals>;
     fn koids(&self, side: Side) -> (u64, u64);
+    fn liveness(&self) -> Liveness;
     fn rights(&self, side: Side) -> Rights;
 }
 
@@ -1218,15 +1474,24 @@ struct Hdl<Q> {
 }
 
 impl<Q> HdlData for Hdl<Q> {
-    fn signal(&mut self, side: Side, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+    fn signal(
+        &mut self,
+        side: Side,
+        clear_mask: Signals,
+        set_mask: Signals,
+    ) -> Result<(), SignalError> {
         if !self.liveness.is_side_open(side) {
-            return Err(Status::PEER_CLOSED);
+            return Err(SignalError::HandleInvalid);
         }
         let signals = self.signals.side_mut(side);
         signals.remove(clear_mask);
         signals.insert(set_mask);
         self.wakers.side_mut(side).wake(*signals);
         Ok(())
+    }
+
+    fn liveness(&self) -> Liveness {
+        self.liveness
     }
 
     fn poll_signals(
@@ -1420,10 +1685,15 @@ fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side
     let mut tbl = tbl.shards[shard].lock().unwrap();
     let h = &mut tbl[slot];
     let removed = match h.liveness.close(side) {
-        None => Some(tbl.remove(slot)),
+        None => {
+            h.wakers.side_mut(side).wake(Signals::HANDLE_CLOSED);
+            Some(tbl.remove(slot))
+        }
         Some(liveness) => {
             h.liveness = liveness;
-            h.wakers.side_mut(side).readable.wake();
+            h.wakers.side_mut(side).wake(Signals::HANDLE_CLOSED);
+            h.signal(side.opposite(), Signals::empty(), Signals::OBJECT_PEER_CLOSED)
+                .expect("Close reported other side was open but we could not signal it.");
             None
         }
     };
@@ -1534,7 +1804,7 @@ mod test {
 
         let mut c_handle_info = incoming.take_handle_info(0).unwrap();
         assert_eq!(c_handle_info.object_type, ObjectType::CHANNEL);
-        assert_eq!(c_handle_info.rights, Rights::TRANSFER | Rights::READ | Rights::WRITE);
+        assert_eq!(c_handle_info.rights, Rights::CHANNEL_DEFAULT);
         let mut d_handle_info = incoming.take_handle_info(1).unwrap();
         assert_eq!(d_handle_info.object_type, ObjectType::CHANNEL);
         assert_eq!(d_handle_info.rights, Rights::TRANSFER | Rights::READ);
@@ -1557,7 +1827,7 @@ mod test {
         assert_eq!(buf.n_handle_infos(), 1);
         let hi = &buf.handle_infos[0];
         assert_eq!(hi.object_type, ObjectType::CHANNEL);
-        assert_eq!(hi.rights, Rights::TRANSFER | Rights::READ | Rights::WRITE);
+        assert_eq!(hi.rights, Rights::CHANNEL_DEFAULT);
         assert_ne!(hi.handle, Handle::invalid());
     }
 
@@ -1751,7 +2021,7 @@ mod test {
         assert_eq!(c1_info.related_koid, c2_info.koid);
         assert_eq!(c1_info.koid, c2_info.related_koid);
 
-        assert_eq!(c1_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(c1_info.rights, Rights::CHANNEL_DEFAULT);
         assert_eq!(c1_info.object_type, ObjectType::CHANNEL);
         assert_eq!(c1_info.reserved, 0);
     }
@@ -1769,7 +2039,7 @@ mod test {
         let (c1, c2) = Channel::create().unwrap();
         let c1_basic_info = c1.basic_info().unwrap();
         let c2_basic_info = c2.basic_info().unwrap();
-        assert_eq!(c1_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(c1_basic_info.rights, Rights::CHANNEL_DEFAULT);
 
         let new_handle = c1.into_handle().replace(Rights::TRANSFER | Rights::WRITE).unwrap();
 
@@ -1812,7 +2082,7 @@ mod test {
     fn handle_replace_increasing_rights() {
         let (c1, _) = Channel::create().unwrap();
         let orig_basic_info = c1.basic_info().unwrap();
-        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(orig_basic_info.rights, Rights::CHANNEL_DEFAULT);
         assert_eq!(
             c1.into_handle().replace(Rights::DUPLICATE).unwrap_err(),
             zx_status::Status::INVALID_ARGS
@@ -1823,14 +2093,14 @@ mod test {
     fn handle_replace_same_rights() {
         let (c1, _) = Channel::create().unwrap();
         let orig_basic_info = c1.basic_info().unwrap();
-        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(orig_basic_info.rights, Rights::CHANNEL_DEFAULT);
         let orig_raw = c1.raw_handle();
 
         let new_handle = c1.into_handle().replace(Rights::SAME_RIGHTS).unwrap();
         assert_eq!(new_handle.raw_handle(), orig_raw);
 
         let new_basic_info = new_handle.basic_info().unwrap();
-        assert_eq!(new_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        assert_eq!(new_basic_info.rights, Rights::CHANNEL_DEFAULT);
     }
 
     #[test]
@@ -1853,5 +2123,113 @@ mod test {
         c1.signal_handle(Signals::empty(), Signals::USER_0).unwrap();
         assert_eq!(count, 2);
         assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::USER_0)));
+    }
+
+    #[test]
+    fn await_user_signal_peer() {
+        let (c1, c2) = EventPair::create().unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::USER_0);
+        let (waker, count) = futures_test::task::new_count_waker();
+        let mut ctx = Context::from_waker(&waker);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 0);
+        c2.signal_peer(Signals::empty(), Signals::USER_1).unwrap();
+        assert_eq!(count, 0);
+        c2.signal_peer(Signals::empty(), Signals::USER_0).unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::USER_0)));
+        c2.signal_peer(Signals::USER_0, Signals::empty()).unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::USER_0);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 1);
+        c2.signal_peer(Signals::empty(), Signals::USER_0).unwrap();
+        assert_eq!(count, 2);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::USER_0)));
+    }
+
+    #[test]
+    fn await_close_signal() {
+        let (c1, c2) = EventPair::create().unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::OBJECT_PEER_CLOSED);
+        let (waker, count) = futures_test::task::new_count_waker();
+        let mut ctx = Context::from_waker(&waker);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 0);
+        c1.signal_handle(Signals::empty(), Signals::USER_1).unwrap();
+        assert_eq!(count, 0);
+        c1.signal_handle(Signals::empty(), Signals::USER_0).unwrap();
+        assert_eq!(count, 0);
+        std::mem::drop(c2);
+        assert_eq!(count, 1);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_PEER_CLOSED)));
+    }
+
+    #[test]
+    fn user_signal_no_rights() {
+        let (c1, _) = EventPair::create().unwrap();
+        let c1 = c1.into_handle().replace(Rights::EVENTPAIR_DEFAULT & !Rights::SIGNAL).unwrap();
+        assert_eq!(c1.signal_handle(Signals::empty(), Signals::USER_1), Err(Status::ACCESS_DENIED));
+    }
+
+    #[test]
+    fn user_signal_peer_no_rights() {
+        let (c1, _) = EventPair::create().unwrap();
+        let c1 =
+            c1.into_handle().replace(Rights::EVENTPAIR_DEFAULT & !Rights::SIGNAL_PEER).unwrap();
+        let c1 = EventPair::from(c1);
+        assert_eq!(c1.signal_peer(Signals::empty(), Signals::USER_1), Err(Status::ACCESS_DENIED));
+    }
+
+    #[test]
+    fn kernel_signal_denied() {
+        let (c1, _) = EventPair::create().unwrap();
+        assert_eq!(
+            c1.signal_handle(Signals::empty(), Signals::OBJECT_WRITABLE),
+            Err(Status::INVALID_ARGS)
+        );
+    }
+
+    #[test]
+    fn kernel_signal_peer_denied() {
+        let (c1, _) = EventPair::create().unwrap();
+        assert_eq!(
+            c1.signal_peer(Signals::empty(), Signals::OBJECT_WRITABLE),
+            Err(Status::INVALID_ARGS)
+        );
+    }
+
+    #[test]
+    fn handles_always_writable() {
+        let mut ctx = futures_test::task::noop_context();
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&s1, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+        let mut on_sig = on_signals::OnSignals::new(&s2, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+
+        let (s1, s2) = Socket::create(SocketOpts::DATAGRAM).unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&s1, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+        let mut on_sig = on_signals::OnSignals::new(&s2, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+
+        let (c1, c2) = Channel::create().unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+        let mut on_sig = on_signals::OnSignals::new(&c2, Signals::OBJECT_WRITABLE);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_WRITABLE)));
+    }
+
+    #[test]
+    fn read_signal() {
+        let (c1, c2) = Channel::create().unwrap();
+        let mut on_sig = on_signals::OnSignals::new(&c1, Signals::OBJECT_READABLE);
+        let (waker, count) = futures_test::task::new_count_waker();
+        let mut ctx = Context::from_waker(&waker);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Pending);
+        assert_eq!(count, 0);
+        assert_eq!(c2.write(b"abc", &mut []), Ok(()));
+        assert_eq!(count, 1);
+        assert_eq!(on_sig.poll_unpin(&mut ctx), Poll::Ready(Ok(Signals::OBJECT_READABLE)));
     }
 }
