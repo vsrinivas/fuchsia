@@ -229,6 +229,7 @@
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.bitsconstants/BitsType",
     "test.bitsconstants/Const3",

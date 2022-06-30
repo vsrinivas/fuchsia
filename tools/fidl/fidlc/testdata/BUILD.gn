@@ -26,6 +26,7 @@ standalone_libraries = [
   "handles_in_types.test.fidl",
   "inheritance.test.fidl",
   "inheritance_with_recursive_decl.test.fidl",
+  "new_type.test.fidl",
   "nullable.test.fidl",
   "padding.test.fidl",
   "protocol_request.test.fidl",
@@ -58,6 +59,10 @@ foreach(filename, standalone_libraries) {
 
     if (filename == "unknown_interactions.test.fidl") {
       experimental_flags = [ "unknown_interactions" ]
+    }
+
+    if (filename == "new_type.test.fidl") {
+      experimental_flags = [ "allow_new_types" ]
     }
 
     # To ensure quality of generated Dart bindings.

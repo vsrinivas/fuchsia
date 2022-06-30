@@ -727,12 +727,15 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
 void JSONGenerator::Generate(const flat::TypeConstructor& value) {
   GenerateObject([&]() {
     const auto* type = value.type;
+    bool is_box = false;
     // TODO(fxbug.dev/70186): We need to coerce client/server
     // ends into the same representation as P, request<P>; and box<S> into S?
     // For box, we just need to access the inner IdentifierType and the rest
     // mostly works (except for the correct value for nullability)
-    if (type && type->kind == flat::Type::Kind::kBox)
+    if (type && type->kind == flat::Type::Kind::kBox) {
       type = static_cast<const flat::BoxType*>(type)->boxed_type;
+      is_box = true;
+    }
     const flat::TransportSideType* server_end = nullptr;
     if (type && type->kind == flat::Type::Kind::kTransportSide) {
       const auto* end_type = static_cast<const flat::TransportSideType*>(type);
@@ -760,7 +763,7 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
     // heterogeneous argument list to backends, rather than the currently
     // limited internal view.
     EmitArrayBegin();
-    if (server_end || invocation.element_type_resolved) {
+    if (server_end || is_box || invocation.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
       if (server_end) {
@@ -774,6 +777,8 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
           EmitArrayEnd();
           GenerateObjectMember("nullable", types::Nullability::kNonnullable);
         });
+      } else if (is_box) {
+        Generate(*invocation.boxed_type_raw);
       } else {
         Generate(*invocation.element_type_raw);
       }
@@ -805,6 +810,16 @@ void JSONGenerator::Generate(const flat::TypeAlias& value) {
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("partial_type_ctor", value.partial_type_ctor);
+  });
+}
+
+void JSONGenerator::Generate(const flat::NewType& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameSpan(value.name));
+    if (!value.attributes->Empty())
+      GenerateObjectMember("maybe_attributes", value.attributes);
+    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
   });
 }
 
@@ -875,6 +890,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Compilation::Declarat
 
     for (const auto& decl : declarations.type_aliases)
       GenerateDeclarationsEntry(count++, decl->name, "type_alias");
+
+    for (const auto& decl : declarations.new_types)
+      GenerateDeclarationsEntry(count++, decl->name, "new_type");
   });
 }
 
@@ -931,6 +949,9 @@ void JSONGenerator::GenerateExternalDeclarationsMember(
 
     for (const auto& decl : declarations.type_aliases)
       GenerateExternalDeclarationsEntry(count++, decl->name, "type_alias", std::nullopt);
+
+    for (const auto& decl : declarations.new_types)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "new_type", std::nullopt);
   });
 }
 
@@ -960,6 +981,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("table_declarations", compilation_->declarations.tables);
     GenerateObjectMember("union_declarations", compilation_->declarations.unions);
     GenerateObjectMember("type_alias_declarations", compilation_->declarations.type_aliases);
+    GenerateObjectMember("new_type_declarations", compilation_->declarations.new_types);
 
     std::vector<std::string> declaration_order;
     for (const auto decl : compilation_->declaration_order) {

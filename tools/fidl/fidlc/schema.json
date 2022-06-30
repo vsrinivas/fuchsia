@@ -356,7 +356,8 @@
                         "struct",
                         "table",
                         "union",
-                        "type_alias"
+                        "type_alias",
+                        "new_type"
                     ],
                     "type": "string"
                 }
@@ -490,7 +491,8 @@
                                         "protocol",
                                         "service",
                                         "experimental_resource",
-                                        "type_alias"
+                                        "type_alias",
+                                        "new_type"
                                     ],
                                     "type": "string"
                                 }
@@ -1620,6 +1622,37 @@
             ],
             "type": "object"
         },
+        "new-type": {
+            "additionalProperties": false,
+            "description": "Definition of a new-type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of new-type alias attributes"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of a new-type"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type corresponding to the new-type"
+                }
+            },
+            "required": [
+                "location",
+                "name",
+                "type"
+            ],
+            "type": "object"
+        },
         "typeshape": {
             "additionalProperties": false,
             "description": "Definition of a type shape",
@@ -1924,6 +1957,13 @@
             "description": "List of type aliases, sorted by fully qualified name",
             "items": {
                 "$ref": "#/definitions/type-alias"
+            },
+            "type": "array"
+        },
+        "new_type_declarations": {
+            "description": "List of new-types, sorted by fully qualified name",
+            "items": {
+                "$ref": "#/definitions/new-type"
             },
             "type": "array"
         },

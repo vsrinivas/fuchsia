@@ -48,6 +48,8 @@ inheritance.json.golden
 inheritance.tables.c.golden
 inheritance_with_recursive_decl.json.golden
 inheritance_with_recursive_decl.tables.c.golden
+new_type.json.golden
+new_type.tables.c.golden
 nullable.json.golden
 nullable.tables.c.golden
 padding.json.golden

@@ -929,6 +929,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
     "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",

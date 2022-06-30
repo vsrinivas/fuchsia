@@ -3997,6 +3997,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.protocolpayloads/MainProtocol_TwoWayImportWithError_Result",
     "test.protocolpayloads/MainProtocolTwoWayImportWithErrorTopResponse",

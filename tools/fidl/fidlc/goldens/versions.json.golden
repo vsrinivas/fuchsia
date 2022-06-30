@@ -1616,6 +1616,7 @@
       }
     }
   ],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.versions/Union",
     "test.versions/Table",

@@ -1674,6 +1674,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.anonymous/UnionMember",
     "test.anonymous/TableData",

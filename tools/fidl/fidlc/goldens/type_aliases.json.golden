@@ -752,6 +752,7 @@
       }
     }
   ],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.typealiases/vec_of_strings_at_most_5",
     "test.typealiases/vec_of_strings",

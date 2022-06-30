@@ -48,11 +48,14 @@ template("parsing_test") {
 
 all_test_deps = []
 foreach(info, fidl_testdata_info) {
-  parsing_test(info.target_name) {
-    deps = [ "${info.target}($fidl_toolchain)" ]
-    ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+  if (info.denylist + [ "fidlgen_banjo" ] - [ "fidlgen_banjo" ] ==
+      info.denylist) {
+    parsing_test(info.target_name) {
+      deps = [ "${info.target}($fidl_toolchain)" ]
+      ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+    }
+    all_test_deps += [ ":${info.target_name}" ]
   }
-  all_test_deps += [ ":${info.target_name}" ]
 }
 
 group("tests") {

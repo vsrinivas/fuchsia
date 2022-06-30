@@ -1895,6 +1895,7 @@
       }
     }
   ],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.handles/aliased_subtype_handle",
     "test.handles/aliased_rights_handle",

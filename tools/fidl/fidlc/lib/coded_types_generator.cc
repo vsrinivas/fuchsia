@@ -597,9 +597,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                                        types::Nullability::kNonnullable, nullable_xunion_ptr));
       break;
     }
-    case flat::Decl::Kind::kNewType:
-      // TODO(fxbug.dev/7807): Implement.
-      ZX_PANIC("coding tables for new-type not implemented yet");
+    case flat::Decl::Kind::kNewType: {
+      auto* new_type = static_cast<const flat::NewType*>(decl);
+      ZX_ASSERT(new_type->compiled);
+      auto actual_type = new_type->type_ctor->type;
+      CompileType(actual_type, coded::CodingContext::kOutsideEnvelope);
+      break;
+    }
     case flat::Decl::Kind::kConst:
     case flat::Decl::Kind::kResource:
     case flat::Decl::Kind::kService:

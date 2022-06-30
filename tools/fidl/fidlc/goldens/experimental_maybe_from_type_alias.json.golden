@@ -2501,6 +2501,7 @@
       }
     }
   ],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.experimentalmaybefromtypealias/Vector",
     "test.experimentalmaybefromtypealias/U64",

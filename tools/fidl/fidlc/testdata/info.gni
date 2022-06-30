@@ -15,8 +15,9 @@ import("//build/fidl/toolchain.gni")
 #
 #   denylist
 #     List of tools that should not generate golden files.
-#     Allowed items: fidldoc, fidlgen_dart, fidlgen_go, fidlgen_hlcpp,
-#       fidlgen_libfuzzer, fidlgen_cpp, fidlgen_rust, fidlgen_syzkaller.
+#     Allowed items: fidldoc, fidlgen_banjo, fidlgen_dart, fidlgen_go,
+#       fidlgen_hlcpp, fidlgen_libfuzzer, fidlgen_cpp, fidlgen_rust,
+#       fidlgen_syzkaller.
 #     To exclude a library from fidlc goldens, simply comment the whole item.
 #
 #   build_denylist
@@ -253,6 +254,22 @@ fidl_testdata_info = [
 
       # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
       "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "new_type"
+    target = "//tools/fidl/fidlc/testdata:test.newtype"
+    denylist = [
+      # TODO(deep.majumder2019): Handle the IR changes for each language binding and other tools
+      "fidldoc",
+      "fidlgen_banjo",
+      "fidlgen_dart",
+      "fidlgen_go",
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_cpp",
+      "fidlgen_rust",
+      "fidlgen_syzkaller",
     ]
   },
   {

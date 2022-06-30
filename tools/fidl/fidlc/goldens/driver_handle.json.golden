@@ -671,6 +671,7 @@
   ],
   "union_declarations": [],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.driverhandle/T",
     "test.driverhandle/HandlesInProtocolSendHandlesRequest",

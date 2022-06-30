@@ -792,6 +792,7 @@
       }
     }
   ],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.placementofattributes/TypeAlias",
     "test.placementofattributes/ExampleXUnion",

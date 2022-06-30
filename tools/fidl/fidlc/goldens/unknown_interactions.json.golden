@@ -5754,6 +5754,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
     "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Result",

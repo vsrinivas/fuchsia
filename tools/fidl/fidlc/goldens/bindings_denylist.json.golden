@@ -5851,6 +5851,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding9",
     "test.bindingsdenylist/ShouldNeverAppearInAnyBinding8",

@@ -1093,6 +1093,7 @@
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.consts/ZX_RIGHTS_VAL",
     "test.consts/ZX_OBJ_VAL",

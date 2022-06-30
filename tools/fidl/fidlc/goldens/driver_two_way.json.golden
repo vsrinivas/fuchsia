@@ -320,6 +320,7 @@
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.drivertwoway/TwoWayAddTopResponse",
     "test.drivertwoway/TwoWayAddRequest",

@@ -442,6 +442,7 @@
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.importedconstvalues/MyStruct",
     "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE",

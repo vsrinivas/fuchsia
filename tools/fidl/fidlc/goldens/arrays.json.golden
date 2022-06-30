@@ -595,6 +595,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.arrays/UnionSmallArray",
     "test.arrays/UnionLargeArray",

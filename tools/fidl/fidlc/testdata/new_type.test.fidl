@@ -1,0 +1,53 @@
+library test.newtype;
+
+type Bits = bits {
+    A = 1;
+};
+type Enum = enum {
+    A = 1;
+    B = 15;
+};
+type Struct = struct {
+    foo string;
+};
+type Table = table {};
+type Union = union {
+    1: b bool;
+};
+alias Alias = Struct;
+
+protocol Calculator {
+    Add(struct {
+        a int32;
+        b int32;
+    }) -> (struct {
+        sum int32;
+    });
+};
+
+
+// Now for the new-types
+
+// First simple ones
+type NewBits = Bits;
+type NewEnum = Enum;
+type NewStruct = Struct;
+type NewTable = Table;
+type NewUnion = Union;
+type NewAlias = Alias;
+
+// Then ones with inlined constructors
+type NewVec = vector<Union>;
+type NewBoxedStruct = box<Struct>;
+
+// Something to do with attributes
+@doc("A little note")
+type NewStructWithAttr = Struct;
+
+@nodoc
+type NewTableWithAttr = Table;
+
+// Protocol ends
+type NewServerEnd = server_end:Calculator;
+type NewCliendEnd = client_end:Calculator;
+type NewServerEndOpt = server_end:<Calculator, optional>;

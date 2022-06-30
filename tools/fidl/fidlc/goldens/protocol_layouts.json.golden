@@ -4224,6 +4224,7 @@
     }
   ],
   "type_alias_declarations": [],
+  "new_type_declarations": [],
   "declaration_order": [
     "test.protocollayouts/MainProtocol_TwoWayImportWithError_Result",
     "test.protocollayouts/MainProtocolTwoWayImportWithErrorTopResponse",
