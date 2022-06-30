@@ -41,15 +41,13 @@ async fn route_to_parent<P: DiscoverableProtocolMarker>(
         .await
 }
 
-/// Wrapper for a `NestedEnvironment` that exposes the protocols offered by `text_manager.cmx`.
+/// Wrapper for a `NestedEnvironment` that exposes the protocols offered by text_manager.
 /// Running each test method in its own environment allows the tests to be run in parallel.
 struct TestEnvironment {
     realm: RealmInstance,
 }
 
 impl TestEnvironment {
-    /// Creates a new `NestedEnvironment` exposing services from `text_manager.cmx`, which is
-    /// immediately launched.
     async fn new() -> Result<Self> {
         let builder = RealmBuilder::new().await?;
         let text_manager =
