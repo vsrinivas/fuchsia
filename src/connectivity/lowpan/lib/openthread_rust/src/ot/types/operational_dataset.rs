@@ -27,6 +27,9 @@ impl OperationalDataset {
             && self.get_mesh_local_prefix().is_some()
             && self.get_pan_id().is_some()
             && self.get_channel().is_some()
+            && self.get_pskc().is_some()
+            && self.get_security_policy().is_some()
+            && self.get_channel_mask().is_some()
     }
 
     /// Clears all of the fields in this dataset.
