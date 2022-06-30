@@ -67,7 +67,7 @@ rustc_library("lib") {
 
 # Rules defining the Persistence component.
 fuchsia_component_manifest("persistence-manifest") {
-  component_name = "persistence"
+  component_name = "diagnostics-persistence"
   manifest = "meta/persistence-for-production.cml"
 }
 
