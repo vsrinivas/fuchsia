@@ -6,7 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "fxt:tests",
+    "gperftools:tests",
     "perfmon:tests",
-    "profiler:tests",
   ]
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_PERFORMANCE_LIB_PROFILER_INCLUDE_CONFIG_H_
-#define SRC_PERFORMANCE_LIB_PROFILER_INCLUDE_CONFIG_H_
+#ifndef SRC_PERFORMANCE_LIB_GPERFTOOLS_INCLUDE_CONFIG_H_
+#define SRC_PERFORMANCE_LIB_GPERFTOOLS_INCLUDE_CONFIG_H_
 
 #pragma clang diagnostic ignored "-Wunused-variable"
 #pragma clang diagnostic ignored "-Wunused-function"
@@ -325,4 +325,4 @@
 #ifdef __MINGW32__
 #include "windows/mingw.h"
 #endif
-#endif  // SRC_PERFORMANCE_LIB_PROFILER_INCLUDE_CONFIG_H_
+#endif  // SRC_PERFORMANCE_LIB_GPERFTOOLS_INCLUDE_CONFIG_H_

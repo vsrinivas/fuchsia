@@ -14,7 +14,7 @@ executable("stacktrace_unittest") {
   deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/performance/lib/profiler:profiler_static",
+    "//src/performance/lib/gperftools:profiler_static",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -25,7 +25,7 @@ executable("stacktrace_unittest") {
 
 source_set("testutil") {
   sources = [ rebase_path("testutil.cc", ".", gperftools_src_root) ]
-  deps = [ "//src/performance/lib/profiler:profiler_static" ]
+  deps = [ "//src/performance/lib/gperftools:profiler_static" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -42,7 +42,7 @@ executable("profiler_unittest") {
     ":testutil",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/performance/lib/profiler:profiler_static",
+    "//src/performance/lib/gperftools:profiler_static",
   ]
 }
 
@@ -55,7 +55,7 @@ executable("profiledata_unittest") {
     ":testutil",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/performance/lib/profiler:profiler_static",
+    "//src/performance/lib/gperftools:profiler_static",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

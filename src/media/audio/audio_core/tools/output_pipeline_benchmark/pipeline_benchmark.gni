@@ -85,7 +85,7 @@ template("audio_pipeline_benchmark") {
       "//src/media/audio/lib/effects_loader",
       "//src/media/audio/lib/format",
       "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-      "//src/performance/lib/profiler",
+      "//src/performance/lib/gperftools",
       "//zircon/system/ulib/perftest",
     ]
   }

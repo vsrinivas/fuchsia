@@ -78,7 +78,7 @@ static_library("profiler_static") {
   public_deps = [ ":profiler_lib" ]
 }
 
-shared_library("profiler") {
+shared_library("gperftools") {
   public_deps = [ ":profiler_lib" ]
 }
 

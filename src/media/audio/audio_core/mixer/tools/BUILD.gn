@@ -27,7 +27,7 @@ executable("profiler_bin") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/processing",
     "//src/media/audio/lib/processing:empty_coefficient_tables",
-    "//src/performance/lib/profiler",
+    "//src/performance/lib/gperftools",
     "//zircon/system/ulib/perftest",
   ]
 }
