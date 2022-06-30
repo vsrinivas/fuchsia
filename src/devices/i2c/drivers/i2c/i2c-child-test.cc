@@ -21,11 +21,10 @@ constexpr uint8_t kTestRead0 = 0x12;
 constexpr uint8_t kTestRead1 = 0x34;
 constexpr uint8_t kTestRead2 = 0x56;
 
-class I2cTestChild : public I2cBanjoChild {
+class I2cTestChild : public I2cChild {
  public:
   I2cTestChild(zx_device_t* parent, fbl::RefPtr<I2cBus> bus, uint16_t address)
-      : I2cBanjoChild(parent, std::move(bus), address) {
-    ddk_proto_id_ = ZX_PROTOCOL_I2C;
+      : I2cChild(parent, std::move(bus), address) {
     ZX_ASSERT(DdkAdd("Test-device") == ZX_OK);
   }
 };

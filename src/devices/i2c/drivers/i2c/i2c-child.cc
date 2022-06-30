@@ -39,77 +39,25 @@ zx_status_t I2cChild::CreateAndAddDevice(
   auto metadata_bytes = metadata.GetOutgoingMessage().CopyBytes();
   cpp20::span<const uint8_t> metadata_span(metadata_bytes.data(), metadata_bytes.size());
 
-  if (vid || pid || did) {
-    zx_device_prop_t props[] = {
-        {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},
-        {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
-        {BIND_PLATFORM_DEV_DID, 0, did}, {BIND_I2C_CLASS, 0, i2c_class},
-    };
+  const zx_device_prop_t id_props[] = {
+      {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},
+      {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
+      {BIND_PLATFORM_DEV_DID, 0, did}, {BIND_I2C_CLASS, 0, i2c_class},
+  };
 
-    return CreateAndAddDevices(parent, address, bus_id, props, metadata_span, bus, dispatcher);
-  }
-
-  zx_device_prop_t props[] = {
+  const zx_device_prop_t no_id_props[] = {
       {BIND_I2C_BUS_ID, 0, bus_id},
       {BIND_I2C_ADDRESS, 0, address},
       {BIND_I2C_CLASS, 0, i2c_class},
   };
 
-  return CreateAndAddDevices(parent, address, bus_id, props, metadata_span, bus, dispatcher);
-}
-
-zx_status_t I2cChild::CreateAndAddDevices(zx_device_t* parent, uint16_t address, uint32_t bus_id,
-                                          cpp20::span<const zx_device_prop_t> props,
-                                          cpp20::span<const uint8_t> metadata,
-                                          const fbl::RefPtr<I2cBus>& bus,
-                                          async_dispatcher_t* dispatcher) {
-  zx_status_t status =
-      I2cBanjoChild::CreateAndAddDevice(parent, address, bus_id, props, metadata, bus);
-  if (status != ZX_OK) {
-    return status;
+  cpp20::span<const zx_device_prop_t> props = no_id_props;
+  if (vid || pid || did) {
+    props = id_props;
   }
 
-  return I2cFidlChild::CreateAndAddDevice(parent, address, bus_id, props, metadata, bus,
-                                          dispatcher);
-}
-
-zx_status_t I2cBanjoChild::CreateAndAddDevice(zx_device_t* parent, uint16_t address,
-                                              uint32_t bus_id,
-                                              cpp20::span<const zx_device_prop_t> props,
-                                              cpp20::span<const uint8_t> metadata,
-                                              const fbl::RefPtr<I2cBus>& bus) {
   fbl::AllocChecker ac;
-  std::unique_ptr<I2cBanjoChild> dev(new (&ac) I2cBanjoChild(parent, bus, address));
-  if (!ac.check()) {
-    zxlogf(ERROR, "Failed to create child device: %s", zx_status_get_string(ZX_ERR_NO_MEMORY));
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  char name[32];
-  snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
-  zx_status_t status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAdd failed: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  status = dev->DdkAddMetadata(DEVICE_METADATA_I2C_DEVICE, metadata.data(), metadata.size_bytes());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAddMetadata failed: %s", zx_status_get_string(status));
-  }
-
-  [[maybe_unused]] auto ptr = dev.release();
-  return status;
-}
-
-zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t address, uint32_t bus_id,
-                                             cpp20::span<const zx_device_prop_t> props,
-                                             cpp20::span<const uint8_t> metadata,
-                                             const fbl::RefPtr<I2cBus>& bus,
-                                             async_dispatcher_t* dispatcher) {
-  fbl::AllocChecker ac;
-  std::unique_ptr<I2cFidlChild> dev(new (&ac) I2cFidlChild(parent, bus, address));
+  std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(parent, bus, address));
   if (!ac.check()) {
     zxlogf(ERROR, "Failed to create child device: %s", zx_status_get_string(ZX_ERR_NO_MEMORY));
     return ZX_ERR_NO_MEMORY;
@@ -138,7 +86,7 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
   std::array offers = {fidl::DiscoverableProtocolName<fidl_i2c::Device>};
 
   char name[32];
-  snprintf(name, sizeof(name), "i2c-%u-%u-fidl", bus_id, address);
+  snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
   status = dev->DdkAdd(ddk::DeviceAddArgs(name)
                            .set_flags(DEVICE_ADD_MUST_ISOLATE)
                            .set_props(props)
@@ -150,7 +98,8 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
     return status;
   }
 
-  status = dev->DdkAddMetadata(DEVICE_METADATA_I2C_DEVICE, metadata.data(), metadata.size_bytes());
+  status = dev->DdkAddMetadata(DEVICE_METADATA_I2C_DEVICE, metadata_span.data(),
+                               metadata_span.size_bytes());
   if (status != ZX_OK) {
     zxlogf(ERROR, "DdkAddMetadata failed: %s", zx_status_get_string(status));
   }
@@ -221,16 +170,6 @@ void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device>::TransferRequestView 
   };
   bus_->Transact(address_, op_list.get(), request->transactions.count(), callback, &ctx);
   sync_completion_wait(&ctx.done, zx::duration::infinite().get());
-}
-
-void I2cChild::Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                        void* cookie) {
-  bus_->Transact(address_, op_list, op_count, callback, cookie);
-}
-
-zx_status_t I2cChild::GetMaxTransferSize(size_t* out_size) {
-  *out_size = bus_->max_transfer();
-  return ZX_OK;
 }
 
 }  // namespace i2c

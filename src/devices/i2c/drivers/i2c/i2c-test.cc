@@ -111,10 +111,8 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
   // Check the number of devices we have makes sense.
   ASSERT_EQ(impl->zxdev()->child_count(), 1);
   zx_device_t* i2c = impl->zxdev()->GetLatestChild();
-  // There should be two devices per channel, one for Banjo and one for FIDL.
-  ASSERT_EQ(i2c->child_count(), 4);
-
-  uint32_t banjo_protocols = 0;
+  // There should be two devices per channel.
+  ASSERT_EQ(i2c->child_count(), 2);
 
   for (auto& child : i2c->children()) {
     uint16_t expected_addr = 0xff;
@@ -124,17 +122,9 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
       }
     }
 
-    i2c_protocol_t proto;
-    if (device_get_protocol(child.get(), ZX_PROTOCOL_I2C, &proto) == ZX_OK) {
-      banjo_protocols++;
-    }
-
     auto decoded =
         ddk::GetEncodedMetadata<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
     ASSERT_TRUE(decoded.is_ok());
     ASSERT_EQ(decoded->PrimaryObject()->address(), expected_addr);
   }
-
-  // Half of the child devices should have Banjo protocols, the others should not.
-  EXPECT_EQ(banjo_protocols, 2);
 }
