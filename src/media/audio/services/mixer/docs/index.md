@@ -39,5 +39,6 @@ The following pages discuss specific topics in more detail:
 
 *   [Execution model and concurrency rules](execution_model.md)
 *   [Object lifetime and ownership](lifetime_and_ownership.md)
-*   [Presentation time and delay](presentation_time_and_delay.md)
+*   [Timelines](timelines.md)
+*   [Delay](delay.md)
 *   [Clocks](clocks.md)

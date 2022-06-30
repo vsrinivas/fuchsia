@@ -156,6 +156,12 @@ class PipelineStage {
   // The source streams may use different clocks.
   zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
 
+  // Returns a function that translates from presentation time to frame time, where frame time is
+  // represented by a `Fixed::raw_value()` while presentation time is represented by a `zx::time`.
+  std::optional<TimelineFunction> presentation_time_to_frac_frame() const {
+    return presentation_time_to_frac_frame_;
+  }
+
   // TODO(fxbug.dev/87651): Add functionality to set presentation delay.
 
  protected:
@@ -245,6 +251,10 @@ class PipelineStage {
   // This is accessed with atomic instructions (std::atomic_load and std::atomic_store) so that any
   // thread can call thread()->checker(). This can't be a std::atomic<ThreadPtr> until C++20.
   ThreadPtr thread_;
+
+  // Current translation from frame numbers to presentation timestamps.
+  // This is nullopt iff the stage is stopped. Otherwise the stage is started.
+  std::optional<TimelineFunction> presentation_time_to_frac_frame_;
 };
 
 }  // namespace media_audio
