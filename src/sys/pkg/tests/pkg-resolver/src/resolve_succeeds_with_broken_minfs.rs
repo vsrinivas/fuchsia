@@ -301,9 +301,9 @@ impl FailingWriteFileStreamHandler {
                             .send_on_open_(s, node_info)
                             .expect("send on open to fake file");
                     }
-                    fio::FileEvent::OnConnectionInfo { info } => {
+                    fio::FileEvent::OnConnectionInfo { payload } => {
                         control_handle
-                            .send_on_connection_info(info)
+                            .send_on_connection_info(payload)
                             .expect("send on open to fake file");
                     }
                 }

@@ -340,9 +340,9 @@ fn directory_open(
             zx::Status::ok(status)?;
             Ok(DescribedNode { node, kind: NodeKind::from(&*info.ok_or(zx::Status::IO)?) })
         }
-        fio::NodeEvent::OnConnectionInfo { info } => Ok(DescribedNode {
+        fio::NodeEvent::OnConnectionInfo { payload } => Ok(DescribedNode {
             node,
-            kind: NodeKind::from2(&info.representation.ok_or(zx::Status::IO)?),
+            kind: NodeKind::from2(&payload.representation.ok_or(zx::Status::IO)?),
         }),
     }
 }

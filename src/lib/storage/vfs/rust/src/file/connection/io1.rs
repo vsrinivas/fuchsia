@@ -932,9 +932,9 @@ mod tests {
                     fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
                 );
             }
-            Some(fio::FileEvent::OnConnectionInfo { info }) => {
+            Some(fio::FileEvent::OnConnectionInfo { payload }) => {
                 assert_eq!(
-                    info.representation,
+                    payload.representation,
                     Some(fio::Representation::File(fio::FileInfo::EMPTY))
                 );
             }

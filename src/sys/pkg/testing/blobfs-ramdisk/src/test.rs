@@ -91,7 +91,7 @@ async fn open_blob(
                 ),
             }
         }
-        fio::FileEvent::OnConnectionInfo { info } => match info.representation {
+        fio::FileEvent::OnConnectionInfo { payload } => match payload.representation {
             Some(fio::Representation::File(fio::FileInfo { observer: Some(event), .. })) => event,
             other => panic!(
                 "ConnectionInfo from fio::FileEventStream to be File variant with event: {:?}",

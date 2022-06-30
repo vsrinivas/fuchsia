@@ -117,9 +117,7 @@ protocol Node2 {
             /// Requests [`ConnectionInfo.available_operations`].
             AVAILABLE_OPERATIONS = 0x4;
         };
-    }) -> (resource struct {
-        info ConnectionInfo;
-    });
+    }) -> (ConnectionInfo);
 
     /// An event produced eagerly by the server if requested by
     /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
@@ -131,9 +129,7 @@ protocol Node2 {
     /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
     /// always manifested as an epitaph.
     @selector("fuchsia.io/Node.OnConnectionInfo")
-    -> OnConnectionInfo(resource struct {
-        info ConnectionInfo;
-    });
+    -> OnConnectionInfo(ConnectionInfo);
 
     // TODO(https://fxbug.dev/77623): uncomment and implement.
     // /// Acquires a token which can be used to identify this connection at

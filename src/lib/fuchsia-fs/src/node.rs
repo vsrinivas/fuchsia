@@ -245,8 +245,8 @@ pub(crate) async fn verify_directory_describe_event(
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
             })?;
         }
-        fio::DirectoryEvent::OnConnectionInfo { info } => {
-            let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
+        fio::DirectoryEvent::OnConnectionInfo { payload } => {
+            let representation = payload.representation.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_directory2(&representation).map_err(|actual| {
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
             })?;
@@ -275,8 +275,8 @@ pub(crate) async fn verify_file_describe_event(
             let () = Kind::expect_file(*info)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
         }
-        fio::FileEvent::OnConnectionInfo { info } => {
-            let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
+        fio::FileEvent::OnConnectionInfo { payload } => {
+            let representation = payload.representation.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_file2(&representation)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
         }

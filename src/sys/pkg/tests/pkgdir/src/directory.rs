@@ -665,9 +665,9 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> 
                 assert_eq!(*boxed, fio::NodeInfo::Directory(fio::DirectoryObject {}));
                 return Ok(());
             }
-            Some(Ok(fio::NodeEvent::OnConnectionInfo { info })) => {
+            Some(Ok(fio::NodeEvent::OnConnectionInfo { payload })) => {
                 assert_eq!(
-                    info.representation,
+                    payload.representation,
                     Some(fio::Representation::Directory(fio::DirectoryInfo::EMPTY))
                 );
                 return Ok(());
@@ -705,9 +705,9 @@ async fn verify_content_file_opened(
                     assert_eq!(*boxed, fio::NodeInfo::Service(fio::Service));
                     return Ok(());
                 }
-                Some(Ok(fio::NodeEvent::OnConnectionInfo { info })) => {
+                Some(Ok(fio::NodeEvent::OnConnectionInfo { payload })) => {
                     assert_eq!(
-                        info.representation,
+                        payload.representation,
                         Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY))
                     );
                     return Ok(());
@@ -733,8 +733,8 @@ async fn verify_content_file_opened(
                         _ => return Err(anyhow!("expected fio::FileObject")),
                     };
                 }
-                Some(Ok(fio::NodeEvent::OnConnectionInfo { info })) => {
-                    match info.representation {
+                Some(Ok(fio::NodeEvent::OnConnectionInfo { payload })) => {
+                    match payload.representation {
                         Some(fio::Representation::File(fio::FileInfo {
                             observer: Some(event),
                             ..
@@ -775,10 +775,12 @@ async fn verify_meta_as_file_opened(
                     _ => return Err(anyhow!("wrong fio::NodeInfo returned")),
                 }
             }
-            Some(Ok(fio::NodeEvent::OnConnectionInfo { info })) => match info.representation {
-                Some(fio::Representation::File(_)) => return Ok(()),
-                _ => return Err(anyhow!("wrong fio::NodeInfo returned")),
-            },
+            Some(Ok(fio::NodeEvent::OnConnectionInfo { payload })) => {
+                match payload.representation {
+                    Some(fio::Representation::File(_)) => return Ok(()),
+                    _ => return Err(anyhow!("wrong fio::NodeInfo returned")),
+                }
+            }
             Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Some(Err(e)) => return Err(e).context("failed to call onopen"),
             None => return Err(anyhow!("no events!")),

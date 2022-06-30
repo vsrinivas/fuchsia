@@ -268,7 +268,7 @@
         "name": "fuchsia.io/Directory.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Describe2"
     },
@@ -303,7 +303,7 @@
         "name": "fuchsia.io/Directory.Link"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.OnConnectionInfo"
     },
@@ -397,7 +397,7 @@
         "name": "fuchsia.io/Directory1.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.Describe2"
     },
@@ -427,7 +427,7 @@
         "name": "fuchsia.io/Directory1.Link"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.OnConnectionInfo"
     },
@@ -506,7 +506,7 @@
         "name": "fuchsia.io/Directory2.Close"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.Describe2"
     },
@@ -521,7 +521,7 @@
         "name": "fuchsia.io/Directory2.GetAttributes"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.OnConnectionInfo"
     },
@@ -727,7 +727,7 @@
         "name": "fuchsia.io/File.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Describe2"
     },
@@ -752,7 +752,7 @@
         "name": "fuchsia.io/File.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.OnConnectionInfo"
     },
@@ -846,7 +846,7 @@
         "name": "fuchsia.io/File1.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.Describe2"
     },
@@ -866,7 +866,7 @@
         "name": "fuchsia.io/File1.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.OnConnectionInfo"
     },
@@ -925,7 +925,7 @@
         "name": "fuchsia.io/File2.Close"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.Describe2"
     },
@@ -940,7 +940,7 @@
         "name": "fuchsia.io/File2.GetBackingMemory"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.OnConnectionInfo"
     },
@@ -1539,7 +1539,7 @@
         "name": "fuchsia.io/Node.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Describe2"
     },
@@ -1559,7 +1559,7 @@
         "name": "fuchsia.io/Node.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.OnConnectionInfo"
     },
@@ -1618,7 +1618,7 @@
         "name": "fuchsia.io/Node1.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.Describe2"
     },
@@ -1638,7 +1638,7 @@
         "name": "fuchsia.io/Node1.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.OnConnectionInfo"
     },
@@ -1687,7 +1687,7 @@
         "name": "fuchsia.io/Node2.Close"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.Describe2"
     },
@@ -1697,7 +1697,7 @@
         "name": "fuchsia.io/Node2.GetAttributes"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo info)",
+        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.OnConnectionInfo"
     },

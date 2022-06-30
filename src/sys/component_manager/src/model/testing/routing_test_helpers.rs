@@ -1541,9 +1541,9 @@ pub mod capability_util {
                     fio::NodeInfo::Vmofile(fio::Vmofile { .. })
                 ));
             }
-            fio::FileEvent::OnConnectionInfo { info } => {
+            fio::FileEvent::OnConnectionInfo { payload } => {
                 assert!(matches!(
-                    info.representation.expect("failed to receive node info"),
+                    payload.representation.expect("failed to receive node info"),
                     fio::Representation::Memory(fio::MemoryInfo { .. })
                 ));
             }

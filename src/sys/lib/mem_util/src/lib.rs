@@ -49,7 +49,7 @@ pub async fn open_file_data(
             _ => None,
         },
         fio::FileEvent::OnConnectionInfo {
-            info:
+            payload:
                 fio::ConnectionInfo {
                     representation:
                         Some(fio::Representation::Memory(fio::MemoryInfo {

@@ -240,12 +240,15 @@ impl Client {
                     _ => return false,
                 }
             }
-            Some(Ok(fio::FileEvent::OnConnectionInfo { info })) => match info.representation {
-                Some(fio::Representation::File(fio::FileInfo {
-                    observer: Some(event), ..
-                })) => event,
-                _ => return false,
-            },
+            Some(Ok(fio::FileEvent::OnConnectionInfo { payload })) => {
+                match payload.representation {
+                    Some(fio::Representation::File(fio::FileInfo {
+                        observer: Some(event),
+                        ..
+                    })) => event,
+                    _ => return false,
+                }
+            }
             _ => return false,
         };
 

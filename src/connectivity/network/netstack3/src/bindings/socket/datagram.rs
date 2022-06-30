@@ -3003,8 +3003,8 @@ mod tests {
                     ),
                 }
             }
-            fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { info } => {
-                match info.representation.expect("missing representation") {
+            fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { payload } => {
+                match payload.representation.expect("missing representation") {
                     fio::Representation::SynchronousDatagramSocket(_) => (),
                     representation => panic!(
                         "Socket Describe call did not return Node of type Socket, got {:?} instead",
