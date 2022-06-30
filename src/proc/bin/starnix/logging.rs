@@ -14,7 +14,7 @@ macro_rules! not_implemented {
 
 macro_rules! strace {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        tracing::debug!(tag = "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+        tracing::trace!(tag = "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
     )
 }
 
