@@ -11,12 +11,14 @@ import (
 	"fmt"
 
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/multicast/admin"
 	"fidl/fuchsia/net/stack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 func ToTCPIPNetProto(v net.IpVersion) (tcpip.NetworkProtocolNumber, bool) {
@@ -165,4 +167,29 @@ func ForwardingEntryToTCPIPRoute(forwardingEntry stack.ForwardingEntry) tcpip.Ro
 		route.Gateway = ToTCPIPAddress(*nextHop)
 	}
 	return route
+}
+
+// ToStackMulticastRoute converts the provided route to a stack multicast
+// route.
+//
+// Returns true if the provided route contains all required fields and the
+// conversion was successful. Otherwise, returns false.
+func ToStackMulticastRoute(route admin.Route) (tcpipstack.MulticastRoute, bool) {
+	if !route.HasExpectedInputInterface() || !route.HasAction() {
+		return tcpipstack.MulticastRoute{}, false
+	}
+
+	outgoingInterfaces := make([]tcpipstack.MulticastRouteOutgoingInterface, 0, len(route.Action.OutgoingInterfaces))
+
+	for _, outgoingInterface := range route.Action.OutgoingInterfaces {
+		outgoingInterfaces = append(outgoingInterfaces, tcpipstack.MulticastRouteOutgoingInterface{
+			ID:     tcpip.NICID(outgoingInterface.Id),
+			MinTTL: outgoingInterface.MinTtl,
+		})
+	}
+
+	return tcpipstack.MulticastRoute{
+		ExpectedInputInterface: tcpip.NICID(route.ExpectedInputInterface),
+		OutgoingInterfaces:     outgoingInterfaces,
+	}, true
 }

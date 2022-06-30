@@ -21,6 +21,7 @@ tests = [
   "ipv4",
   "ipv6",
   "management",
+  "multicast-forwarding",
   "reachability",
   "socket",
   "sys",

@@ -15,6 +15,7 @@ use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use fidl_fuchsia_net_multicast_admin as fnet_multicast_admin;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_routes as fnet_routes;
@@ -65,6 +66,7 @@ impl NetstackVersion {
                 fnet_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
                 fnet_debug::InterfacesMarker::PROTOCOL_NAME,
+                fnet_multicast_admin::Ipv4RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ViewMarker::PROTOCOL_NAME,
                 fnet_routes::StateMarker::PROTOCOL_NAME,
