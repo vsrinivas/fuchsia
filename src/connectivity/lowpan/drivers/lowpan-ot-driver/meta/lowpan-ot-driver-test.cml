@@ -21,6 +21,7 @@
                 "fuchsia.net.mdns.Resolver",
                 "fuchsia.net.mdns.ServiceInstancePublisher",
                 "fuchsia.net.mdns.ServiceSubscriber2",
+                "fuchsia.posix.socket.Provider",
             ],
         },
         {
