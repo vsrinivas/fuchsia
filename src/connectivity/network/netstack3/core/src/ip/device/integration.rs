@@ -71,7 +71,7 @@ impl<
         SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + CounterContext,
     > SlaacStateContext<C> for SC
 {
-    fn get_config(&self, _ctx: &mut C, device_id: Self::DeviceId) -> SlaacConfiguration {
+    fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration {
         let Ipv6DeviceConfiguration {
             dad_transmits: _,
             max_router_solicitations: _,
@@ -81,7 +81,7 @@ impl<
         slaac_config
     }
 
-    fn dad_transmits(&self, _ctx: &mut C, device_id: Self::DeviceId) -> Option<NonZeroU8> {
+    fn dad_transmits(&self, device_id: Self::DeviceId) -> Option<NonZeroU8> {
         let Ipv6DeviceConfiguration {
             dad_transmits,
             max_router_solicitations: _,
@@ -92,17 +92,17 @@ impl<
         dad_transmits
     }
 
-    fn retrans_timer(&self, _ctx: &mut C, device_id: SC::DeviceId) -> Duration {
+    fn retrans_timer(&self, device_id: SC::DeviceId) -> Duration {
         SC::get_ip_device_state(self, device_id).retrans_timer.get()
     }
 
-    fn get_interface_identifier(&self, _ctx: &mut C, device_id: Self::DeviceId) -> [u8; 8] {
+    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8] {
         SC::get_eui64_iid(self, device_id).unwrap_or_else(Default::default)
     }
 
     fn iter_slaac_addrs(
         &self,
-        _ctx: &mut C,
+
         device_id: Self::DeviceId,
     ) -> Box<dyn Iterator<Item = SlaacAddressEntry<C::Instant>> + '_> {
         Box::new(
@@ -119,7 +119,7 @@ impl<
 
     fn iter_slaac_addrs_mut(
         &mut self,
-        _ctx: &mut C,
+
         device_id: Self::DeviceId,
     ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_> {
         Box::new(SC::get_ip_device_state_mut(self, device_id).ip_state.iter_addrs_mut().filter_map(
