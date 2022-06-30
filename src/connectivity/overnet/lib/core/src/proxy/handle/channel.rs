@@ -73,7 +73,7 @@ impl<'a> IO<'a> for ChannelReader<'a> {
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         let read_result = channel.chan.read(fut_ctx, &mut msg.bytes, &mut msg.handles);
-        self.collector.after_read(fut_ctx, channel.chan.as_handle_ref(), read_result)
+        self.collector.after_read(fut_ctx, channel.chan.as_handle_ref(), read_result, false)
     }
 }
 

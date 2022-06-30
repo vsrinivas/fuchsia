@@ -78,7 +78,7 @@ impl<'a> IO<'a> for EventPairReader<'a> {
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         // There's no such thing as an event pair message, so we just pretend to be waiting forever
         let read_result = Poll::Pending;
-        self.collector.after_read(fut_ctx, event_pair.event_pair.as_handle_ref(), read_result)
+        self.collector.after_read(fut_ctx, event_pair.event_pair.as_handle_ref(), read_result, true)
     }
 }
 

@@ -84,7 +84,7 @@ impl<'a> IO<'a> for SocketReader<'a> {
             msg.0.truncate(n);
             Poll::Ready(Ok(()))
         })();
-        self.collector.after_read(fut_ctx, socket.socket.as_handle_ref(), read_result)
+        self.collector.after_read(fut_ctx, socket.socket.as_handle_ref(), read_result, false)
     }
 }
 

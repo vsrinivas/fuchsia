@@ -24,6 +24,7 @@ const POLLED_SIGNALS: Signals = Signals::from_bits_truncate(
 #[derive(Default)]
 pub(crate) struct Collector<'a> {
     on_signals: Option<OnSignals<'a>>,
+    shutdown: bool,
 }
 
 impl<'h> Collector<'h> {
@@ -32,22 +33,40 @@ impl<'h> Collector<'h> {
         ctx: &mut Context<'ctx>,
         hdl: HandleRef<'h>,
         read_result: Poll<Result<(), zx_status::Status>>,
+        do_peer_closed: bool,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         match read_result {
             Poll::Ready(Ok(())) => Poll::Ready(Ok(ReadValue::Message)),
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
             Poll::Pending => {
+                if self.shutdown {
+                    return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
+                }
+
+                let signals = if do_peer_closed {
+                    POLLED_SIGNALS | Signals::OBJECT_PEER_CLOSED
+                } else {
+                    POLLED_SIGNALS
+                };
+
                 let mut on_signals = self
                     .on_signals
                     .take()
-                    .unwrap_or_else(|| OnSignals::from_ref(hdl.clone(), POLLED_SIGNALS));
+                    .unwrap_or_else(|| OnSignals::from_ref(hdl.clone(), signals));
                 match on_signals.poll_unpin(ctx) {
-                    Poll::Ready(Ok(signals)) => {
-                        hdl.signal(signals, Signals::empty())?;
-                        Poll::Ready(Ok(ReadValue::SignalUpdate(SignalUpdate {
-                            assert_signals: Some(to_wire_signals(signals)),
-                            ..SignalUpdate::EMPTY
-                        })))
+                    Poll::Ready(Ok(mut signals)) => {
+                        self.shutdown =
+                            self.shutdown || signals.contains(Signals::OBJECT_PEER_CLOSED);
+                        signals.remove(Signals::OBJECT_PEER_CLOSED);
+                        if signals.is_empty() {
+                            Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
+                        } else {
+                            hdl.signal(signals, Signals::empty())?;
+                            Poll::Ready(Ok(ReadValue::SignalUpdate(SignalUpdate {
+                                assert_signals: Some(to_wire_signals(signals)),
+                                ..SignalUpdate::EMPTY
+                            })))
+                        }
                     }
                     Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
                     Poll::Pending => {
