@@ -195,12 +195,23 @@ impl LegacyIme {
                         state.cursor_horizontal_move(keyboard_event.modifiers, true);
                         state.increment_revision(true);
                     }
-                    HID_USAGE_KEY_ENTER => {
-                        state
-                            .client
-                            .on_action(state.action)
-                            .context("error sending action to ImeClient")?;
-                    }
+                    HID_USAGE_KEY_ENTER => match state.action {
+                        // Pressing "Enter" inserts a newline when the input
+                        // method is used to edit multi-line text. For other
+                        // input actions, we report back to the
+                        // client that it needs to perform some action (move
+                        // focus, perform a search etc.).
+                        uii::InputMethodAction::Newline => {
+                            state.type_keycode('\n' as u32);
+                            state.increment_revision(true);
+                        }
+                        _ => {
+                            state
+                                .client
+                                .on_action(state.action)
+                                .context("error sending action to ImeClient")?;
+                        }
+                    },
                     _ => {
                         // Not an editing key, forward the event to clients.
                         state.increment_revision(true);
