@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("builders") {
+  name = "fuchsia_cobalt_builders"
+  edition = "2021"
+  version = "0.1.0"
+
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
+    "//third_party/cobalt/src/lib/client/rust:cobalt-client",
+  ]
+
+  sources = [
+    "src/cobalt_event_builder.rs",
+    "src/lib.rs",
+    "src/metric_event_builder.rs",
+  ]
+}

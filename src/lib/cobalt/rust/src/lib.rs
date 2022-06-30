@@ -6,17 +6,16 @@
 
 #![deny(missing_docs)]
 
-pub mod cobalt_event_builder;
 pub mod connector;
-pub mod metric_event_builder;
 pub mod sender;
 
 use futures::prelude::*;
 
+// Re-export fuchsia-cobalt-builders to support legacy users of the fuchsia-cobalt lib.
+pub use fuchsia_cobalt_builders::*;
+
 pub use {
-    cobalt_event_builder::CobaltEventExt,
     connector::{CobaltConnector, ConnectionType},
-    metric_event_builder::MetricEventExt,
     sender::CobaltSender,
 };
 
