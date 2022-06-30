@@ -40,10 +40,10 @@ void main() {
 
   test('fuchsia_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'fuchsia_microbenchmarks_perftestmode',
         componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}'
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}'
             ' --runs $iterationsPerTestPerProcess',
         processRuns: processRuns);
   }, timeout: Timeout.none);

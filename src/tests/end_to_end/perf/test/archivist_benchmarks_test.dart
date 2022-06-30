@@ -14,17 +14,17 @@ void main() {
 
   test('archivist_logging_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'archivist-logging-benchmarks',
         componentName: 'archivist-logging-benchmarks.cm',
-        commandArgs: PerfTestHelper.componentV2OutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 
   test('archivist_formatter_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'archivist-formatter-benchmarks',
         componentName: 'archivist-formatter-benchmarks.cm',
-        commandArgs: PerfTestHelper.componentV2OutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 }

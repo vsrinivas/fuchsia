@@ -14,9 +14,9 @@ void main() {
 
   test('netstack3_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'netstack3_benchmarks',
         componentName: 'netstack3_benchmarks.cm',
-        commandArgs: PerfTestHelper.componentV2OutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
 }

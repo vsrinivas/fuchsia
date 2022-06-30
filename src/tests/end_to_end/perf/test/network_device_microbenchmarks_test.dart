@@ -14,10 +14,9 @@ void main() {
 
   test('network_device_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'network-device-microbenchmarks',
         componentName: 'network-device-microbenchmarks.cm',
-        commandArgs:
-            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 }

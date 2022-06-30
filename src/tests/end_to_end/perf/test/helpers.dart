@@ -50,9 +50,9 @@ void runShardTests(List<String> args, List<void Function()> tests) {
 }
 
 class PerfTestHelper {
-  // Pathname to which components run via runTestComponentV2() should
+  // Pathname to which components run via runTestComponent() should
   // write their results.
-  static const String componentV2OutputPath =
+  static const String componentOutputPath =
       '/custom_artifacts/results.fuchsiaperf.json';
 
   sl4f.Sl4f sl4fDriver;
@@ -138,8 +138,8 @@ class PerfTestHelper {
 
   // Runs a component and publishes the performance test results that
   // it produces, which the component should write to the file
-  // componentV2OutputPath.  This uses Components V2.
-  Future<void> runTestComponentV2(
+  // componentOutputPath.
+  Future<void> runTestComponent(
       {@required String packageName,
       @required String componentName,
       @required String commandArgs,
@@ -181,9 +181,9 @@ class PerfTestHelper {
     await processResultsSummarized(localResultsFiles);
   }
 
-  // Runs a V2 component without processing any results.  This is useful when
+  // Runs a component without processing any results.  This is useful when
   // the caller retrieves performance results via tracing.
-  Future<void> runTestComponentV2WithNoResults(
+  Future<void> runTestComponentWithNoResults(
       {@required String packageName,
       @required String componentName,
       @required String commandArgs}) async {

@@ -47,7 +47,7 @@ Future<void> runOdu(
   expect(fileSize % ioSize, equals(0));
   final operationCount = fileSize ~/ ioSize;
   const mountPath = '/benchmark';
-  await helper.runTestComponentV2WithNoResults(
+  await helper.runTestComponentWithNoResults(
       packageName: 'start-storage-benchmark',
       componentName: 'start-storage-benchmark.cm',
       commandArgs: [

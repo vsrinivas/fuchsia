@@ -14,9 +14,9 @@ void main() {
 
   test('fuchsia.audio.mixer', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'audio_mixer_profiler',
         componentName: 'audio_mixer_profiler.cm',
-        commandArgs: '--perftest-json=${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '--perftest-json=${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 }

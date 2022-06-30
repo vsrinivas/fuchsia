@@ -14,37 +14,33 @@ void main() {
 
   test('socket_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'socket-benchmarks',
         componentName: 'socket-benchmarks.cm',
-        commandArgs:
-            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fast_udp', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'socket-benchmarks-with-fast-udp',
         componentName: 'socket-benchmarks-with-fast-udp.cm',
-        commandArgs:
-            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fake_netstack', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'socket-benchmarks-with-fake-netstack',
         componentName: 'socket-benchmarks-with-fake-netstack.cm',
-        commandArgs:
-            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 
   test('udp_serde_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
+    await helper.runTestComponent(
         packageName: 'udp-serde-benchmarks',
         componentName: 'udp-serde-benchmarks.cm',
-        commandArgs:
-            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 }
