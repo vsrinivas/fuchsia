@@ -110,7 +110,7 @@ while others are trimmed down (timestamp, severity).
 Serial output should be piped in from the emulator or from other sources:
 
 ```
-fx emu | fx pretty_serial
+ffx emu start --console | fx symbolize
 ```
 
 For example, if the message "something happened" is printed to klog at WARN level by
