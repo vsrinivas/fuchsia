@@ -157,7 +157,10 @@ fn create_fs_context(
         create_remotefs_filesystem(&pkg_dir_proxy, "data")?,
         BTreeMap::from([(b"pkg".to_vec(), TmpFs::new())]),
     );
-    let root_fs = LayeredFs::new(root_fs, BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs)]));
+    let root_fs = LayeredFs::new(
+        root_fs,
+        BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new())]),
+    );
 
     Ok(FsContext::new(root_fs))
 }
