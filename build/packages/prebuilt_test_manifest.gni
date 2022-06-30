@@ -43,8 +43,8 @@ import("//build/packages/prebuilt_test_package.gni")
 #     Environment scope is defined in //build/testing/test_spec.gni
 #
 #   disabled_tests (optional)
-#     [list of scopes] List of scopes containing "package" and "component_name"
-#     entries to disable.
+#     [list of scopes] List of scopes containing a "component_name" and either
+#     a "package" or "archive_name" to disable.
 #
 #   manifest_name (optional, default: test_manifest.json):
 #     [string] Name of the test manifest file.
@@ -74,9 +74,13 @@ template("prebuilt_test_manifest") {
     test_disabled = false
     if (defined(invoker.disabled_tests)) {
       foreach(disabled_test, invoker.disabled_tests) {
-        if (test_package == disabled_test.package &&
-            component_name == disabled_test.component_name) {
-          test_disabled = true
+        if (component_name == disabled_test.component_name) {
+          if (defined(disabled_test.archive_name) &&
+              archive_name == disabled_test.archive_name) {
+            test_disabled = true
+          } else if (test_package == disabled_test.package) {
+            test_disabled = true
+          }
         }
       }
     }
