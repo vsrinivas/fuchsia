@@ -417,9 +417,9 @@ impl VmoFileConnection {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::FileRequest::UpdateAttributes { attributes, responder } => {
+            fio::FileRequest::UpdateAttributes { payload, responder } => {
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
             fio::FileRequest::Read { count, responder } => {
                 let result = self.handle_read(count).await;

@@ -387,7 +387,7 @@ func (ep *endpoint) SetAttr(fidl.Context, fidlio.NodeAttributeFlags, fidlio.Node
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) UpdateAttributes(_ fidl.Context, attributes fidlio.NodeAttributes2) (fidlio.Node2UpdateAttributesResult, error) {
+func (ep *endpoint) UpdateAttributes(_ fidl.Context, attributes fidlio.MutableNodeAttributes) (fidlio.Node2UpdateAttributesResult, error) {
 	_ = syslog.DebugTf("UpdateAttributes", "%p: attributes=%#v", ep, attributes)
 	return fidlio.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }

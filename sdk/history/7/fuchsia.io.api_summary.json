@@ -368,7 +368,7 @@
         "name": "fuchsia.io/Directory.Unlink"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.UpdateAttributes"
     },
@@ -477,7 +477,7 @@
         "name": "fuchsia.io/Directory1.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.UpdateAttributes"
     },
@@ -551,7 +551,7 @@
         "name": "fuchsia.io/Directory2.Unlink"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.UpdateAttributes"
     },
@@ -807,7 +807,7 @@
         "name": "fuchsia.io/File.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.UpdateAttributes"
     },
@@ -901,7 +901,7 @@
         "name": "fuchsia.io/File1.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File1.UpdateAttributes"
     },
@@ -975,7 +975,7 @@
         "name": "fuchsia.io/File2.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.UpdateAttributes"
     },
@@ -1275,6 +1275,40 @@
         "value": "18446744073709551615"
     },
     {
+        "declaration": "fuchsia.io/Operations",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.abilities"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.content_size"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.id"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.link_count"
+    },
+    {
+        "declaration": "fuchsia.io/NodeProtocols",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.protocols"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/ImmutableNodeAttributes.storage_size"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.io/ImmutableNodeAttributes"
+    },
+    {
         "kind": "protocol",
         "name": "fuchsia.io/Inotifier"
     },
@@ -1524,6 +1558,20 @@
         "resourceness": "resource"
     },
     {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/MutableNodeAttributes.creation_time"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.io/MutableNodeAttributes.modification_time"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.io/MutableNodeAttributes"
+    },
+    {
         "declaration": "(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Clone"
@@ -1594,7 +1642,7 @@
         "name": "fuchsia.io/Node.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.UpdateAttributes"
     },
@@ -1673,7 +1721,7 @@
         "name": "fuchsia.io/Node1.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.UpdateAttributes"
     },
@@ -1712,7 +1760,7 @@
         "name": "fuchsia.io/Node2.Sync"
     },
     {
-        "declaration": "(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
+        "declaration": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.UpdateAttributes"
     },
@@ -1740,21 +1788,12 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.io/NodeAttributes2",
-        "kind": "struct/member",
-        "name": "fuchsia.io/Node2_GetAttributes_Response.attributes"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/Node2_GetAttributes_Response"
-    },
-    {
         "declaration": "int32",
         "kind": "union/member",
         "name": "fuchsia.io/Node2_GetAttributes_Result.err"
     },
     {
-        "declaration": "fuchsia.io/Node2_GetAttributes_Response",
+        "declaration": "fuchsia.io/NodeAttributes2",
         "kind": "union/member",
         "name": "fuchsia.io/Node2_GetAttributes_Result.response"
     },
@@ -1857,47 +1896,17 @@
         "name": "fuchsia.io/NodeAttributes"
     },
     {
-        "declaration": "fuchsia.io/Operations",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.abilities"
+        "declaration": "fuchsia.io/ImmutableNodeAttributes",
+        "kind": "struct/member",
+        "name": "fuchsia.io/NodeAttributes2.immutable_attributes"
     },
     {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.content_size"
+        "declaration": "fuchsia.io/MutableNodeAttributes",
+        "kind": "struct/member",
+        "name": "fuchsia.io/NodeAttributes2.mutable_attributes"
     },
     {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.creation_time"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.id"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.link_count"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.modification_time"
-    },
-    {
-        "declaration": "fuchsia.io/NodeProtocols",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.protocols"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/NodeAttributes2.storage_size"
-    },
-    {
-        "kind": "table",
+        "kind": "struct",
         "name": "fuchsia.io/NodeAttributes2"
     },
     {

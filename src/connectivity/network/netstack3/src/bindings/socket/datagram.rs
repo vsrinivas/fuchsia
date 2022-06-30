@@ -1409,11 +1409,11 @@ where
                             todo!("https://fxbug.dev/77623: query={:?}", query);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::UpdateAttributes {
-                            attributes,
+                            payload,
                             responder,
                         } => {
                             let _ = responder;
-                            todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                            todo!("https://fxbug.dev/77623: payload={:?}", payload);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Bind { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));

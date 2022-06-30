@@ -21,62 +21,69 @@ namespace fio = fuchsia_io;
 namespace {
 
 zxio_node_attributes_t ToZxioNodeAttributes(const fio::wire::NodeAttributes2& attr) {
+  const fio::wire::MutableNodeAttributes& mutable_attributes = attr.mutable_attributes;
+  const fio::wire::ImmutableNodeAttributes& immutable_attributes = attr.immutable_attributes;
+
   zxio_node_attributes_t zxio_attr = {};
-  if (attr.has_protocols()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(attr.protocols()));
+  if (immutable_attributes.has_protocols()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(immutable_attributes.protocols()));
   }
-  if (attr.has_abilities()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioAbilities(attr.abilities()));
+  if (immutable_attributes.has_abilities()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioAbilities(immutable_attributes.abilities()));
   }
-  if (attr.has_id()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, id, attr.id());
+  if (immutable_attributes.has_id()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, id, immutable_attributes.id());
   }
-  if (attr.has_content_size()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, content_size, attr.content_size());
+  if (immutable_attributes.has_content_size()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, content_size, immutable_attributes.content_size());
   }
-  if (attr.has_storage_size()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, storage_size, attr.storage_size());
+  if (immutable_attributes.has_storage_size()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, storage_size, immutable_attributes.storage_size());
   }
-  if (attr.has_link_count()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, link_count, attr.link_count());
+  if (immutable_attributes.has_link_count()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, link_count, immutable_attributes.link_count());
   }
-  if (attr.has_creation_time()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, creation_time, attr.creation_time());
+  if (mutable_attributes.has_creation_time()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, creation_time, mutable_attributes.creation_time());
   }
-  if (attr.has_modification_time()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, modification_time, attr.modification_time());
+  if (mutable_attributes.has_modification_time()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, modification_time, mutable_attributes.modification_time());
   }
   return zxio_attr;
 }
 
 fio::wire::NodeAttributes2 ToIo2NodeAttributes(fidl::AnyArena& allocator,
                                                const zxio_node_attributes_t& attr) {
-  fio::wire::NodeAttributes2 node_attributes(allocator);
+  fio::wire::MutableNodeAttributes mutable_attributes(allocator);
+  fio::wire::ImmutableNodeAttributes immutable_attributes(allocator);
   if (attr.has.protocols) {
-    node_attributes.set_protocols(allocator, ToIo2NodeProtocols(attr.protocols));
+    immutable_attributes.set_protocols(allocator, ToIo2NodeProtocols(attr.protocols));
   }
   if (attr.has.abilities) {
-    node_attributes.set_abilities(allocator, ToIo2Abilities(attr.abilities));
+    immutable_attributes.set_abilities(allocator, ToIo2Abilities(attr.abilities));
   }
   if (attr.has.id) {
-    node_attributes.set_id(allocator, attr.id);
+    immutable_attributes.set_id(allocator, attr.id);
   }
   if (attr.has.content_size) {
-    node_attributes.set_content_size(allocator, attr.content_size);
+    immutable_attributes.set_content_size(allocator, attr.content_size);
   }
   if (attr.has.storage_size) {
-    node_attributes.set_storage_size(allocator, attr.storage_size);
+    immutable_attributes.set_storage_size(allocator, attr.storage_size);
   }
   if (attr.has.link_count) {
-    node_attributes.set_link_count(allocator, attr.link_count);
+    immutable_attributes.set_link_count(allocator, attr.link_count);
   }
   if (attr.has.creation_time) {
-    node_attributes.set_creation_time(allocator, attr.creation_time);
+    mutable_attributes.set_creation_time(allocator, attr.creation_time);
   }
   if (attr.has.modification_time) {
-    node_attributes.set_modification_time(allocator, attr.modification_time);
+    mutable_attributes.set_modification_time(allocator, attr.modification_time);
   }
-  return node_attributes;
+  return {
+      .mutable_attributes = mutable_attributes,
+      .immutable_attributes = immutable_attributes,
+  };
 }
 
 // These functions are named with "v2" to avoid mixing up with fuchsia.io v1
@@ -211,7 +218,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
   if (res->is_error()) {
     return res->error_value();
   }
-  const fio::wire::NodeAttributes2& attributes = res->value()->attributes;
+  const fio::wire::NodeAttributes2& attributes = *res->value();
   *out_attr = ToZxioNodeAttributes(attributes);
   return ZX_OK;
 }
@@ -219,8 +226,9 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   fidl::Arena<1024> allocator;
   RemoteV2 rio(io);
-  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))
-                                      ->UpdateAttributes(ToIo2NodeAttributes(allocator, *attr));
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))
+          ->UpdateAttributes(ToIo2NodeAttributes(allocator, *attr).mutable_attributes);
   if (!result.ok()) {
     return result.status();
   }

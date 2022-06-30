@@ -5,55 +5,12 @@ library fuchsia.io;
 
 using zx;
 
-/// Objective information about a filesystem node.
-/// See [`Node.GetAttributes`] and [`Node.UpdateAttributes`].
-///
-/// The attributes of a node should be stable, independent of the
-/// specific protocol used to access it.
-///
-/// If a particular attribute is not applicable or not supported,
-/// filesystems should leave the corresponding field absent.
-type NodeAttributes2 = table {
-    /// Describes the kinds of representations supported by the node.
-    /// Note: This is not the result of the connection-time negotiation,
-    /// which is conveyed via `representation`.
-    ///
-    /// This attribute is read-only.
-    1: protocols NodeProtocols;
-
-    /// Describes the kinds of operations supported by the node.
-    /// Note: This is distinct from the rights used at connection time.
-    ///
-    /// This attribute is read-only.
-    2: abilities Abilities;
-
-    /// Node size, in bytes.
-    ///
-    /// This attribute is read-only.
-    3: content_size uint64;
-
-    /// Space needed to store the node (possibly larger than size), in bytes.
-    ///
-    /// This attribute is read-only.
-    4: storage_size uint64;
-
-    /// Number of hard links to the node. It must be at least one.
-    ///
-    /// This attribute is read-only.
-    5: link_count uint64;
-
+type MutableNodeAttributes = table {
     /// Time of creation in nanoseconds since the Unix epoch, UTC.
-    /// It may be updated manually after creation.
-    6: creation_time uint64;
+    1: creation_time uint64;
 
     /// Time of last modification in nanoseconds since the Unix epoch, UTC.
-    7: modification_time uint64;
-
-    /// An ID for the node. See [`Id`].
-    /// This `id` should be unique among all entries of a directory.
-    ///
-    /// This attribute is read-only.
-    8: id Id;
+    2: modification_time uint64;
 };
 
 /// Node defines the minimal protocol for entities which can be accessed
@@ -147,6 +104,9 @@ protocol Node2 {
     /// The attributes of a node should be stable, independent of the
     /// specific protocol used to access it.
     ///
+    /// If a particular attribute is not applicable or not supported,
+    /// filesystems should leave the corresponding field absent.
+    ///
     /// + `query` a bit-mask specifying which attributes to fetch. The server
     ///   should not return more than necessary.
     /// - `attributes` the returned attributes.
@@ -183,8 +143,33 @@ protocol Node2 {
             /// Requests [`NodeAttributes.id`].
             ID = 0x80;
         };
-    }) -> (struct {
-        attributes NodeAttributes2;
+    }) -> (@generated_name("NodeAttributes2") struct {
+        // TODO(https://fxbug.dev/47480): fostr does not escape C++ keywords.
+        // Drop the `_attributes` suffixes when fostr is fixed or retired.
+        mutable_attributes MutableNodeAttributes;
+        immutable_attributes @generated_name("ImmutableNodeAttributes") table {
+            /// Describes the kinds of representations supported by the node.
+            /// Note: This is not the result of the connection-time negotiation,
+            /// which is conveyed via `representation`.
+            1: protocols NodeProtocols;
+
+            /// Describes the kinds of operations supported by the node.
+            /// Note: This is distinct from the rights used at connection time.
+            2: abilities Abilities;
+
+            /// Node size, in bytes.
+            3: content_size uint64;
+
+            /// Space needed to store the node (possibly larger than size), in bytes.
+            4: storage_size uint64;
+
+            /// Number of hard links to the node. It must be at least one.
+            5: link_count uint64;
+
+            /// An ID for the node. See [`Id`].
+            /// This `id` should be unique among all entries of a directory.
+            6: id Id;
+        };
     }) error zx.status;
 
     /// Updates information about the node.
@@ -195,9 +180,7 @@ protocol Node2 {
     /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
     @transitional
     @selector("fuchsia.io/Node.UpdateAttributes")
-    UpdateAttributes(struct {
-        attributes NodeAttributes2;
-    }) -> (struct {}) error zx.status;
+    UpdateAttributes(MutableNodeAttributes) -> (struct {}) error zx.status;
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///

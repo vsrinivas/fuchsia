@@ -144,7 +144,7 @@ func (*Service) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.Node2Get
 	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*Service) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+func (*Service) UpdateAttributes(fidl.Context, io.MutableNodeAttributes) (io.Node2UpdateAttributesResult, error) {
 	// TODO(https://fxbug.dev/77623): implement.
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
@@ -296,7 +296,7 @@ func (*directoryState) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.N
 	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*directoryState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+func (*directoryState) UpdateAttributes(fidl.Context, io.MutableNodeAttributes) (io.Node2UpdateAttributesResult, error) {
 	// TODO(https://fxbug.dev/77623): implement.
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
@@ -616,7 +616,7 @@ func (*fileState) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.Node2G
 	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+func (*fileState) UpdateAttributes(fidl.Context, io.MutableNodeAttributes) (io.Node2UpdateAttributesResult, error) {
 	// TODO(https://fxbug.dev/77623): implement.
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }

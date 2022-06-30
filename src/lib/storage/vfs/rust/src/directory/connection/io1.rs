@@ -217,7 +217,7 @@ where
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::DirectoryRequest::UpdateAttributes { attributes: _, responder } => {
+            fio::DirectoryRequest::UpdateAttributes { payload: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::UpdateAttributes");
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }

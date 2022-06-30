@@ -255,10 +255,10 @@ impl<T: 'static + File> FileConnection<T> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::FileRequest::UpdateAttributes { attributes, responder } => {
+            fio::FileRequest::UpdateAttributes { payload, responder } => {
                 fuchsia_trace::duration!("storage", "File::UpdateAttributes");
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
             fio::FileRequest::Read { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);

@@ -154,9 +154,9 @@ impl MutableConnection {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: flags={:?}", flags);
             }
-            fio::DirectoryRequest::UpdateAttributes { attributes, responder } => {
+            fio::DirectoryRequest::UpdateAttributes { payload, responder } => {
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
             request @ (fio::DirectoryRequest::AddInotifyFilter { .. }
             | fio::DirectoryRequest::AdvisoryLock { .. }

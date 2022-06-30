@@ -573,9 +573,9 @@ async fn serve_failing_blobfs(
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::DirectoryRequest::UpdateAttributes { attributes, responder } => {
+            fio::DirectoryRequest::UpdateAttributes { payload, responder } => {
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
             fio::DirectoryRequest::GetFlags { responder } => responder
                 .send(zx::Status::IO.into_raw(), fio::OpenFlags::empty())

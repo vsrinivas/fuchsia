@@ -115,11 +115,12 @@ TEST_F(RemoteV2, GetAttributes) {
       uint64_t id = kId;
 
       fidl::Arena allocator;
-      fio::wire::NodeAttributes2 nodes_attributes(allocator);
-      nodes_attributes.set_content_size(allocator, content_size)
+      fio::wire::MutableNodeAttributes mutable_attributes(allocator);
+      fio::wire::ImmutableNodeAttributes immutable_attributes(allocator);
+      immutable_attributes.set_content_size(allocator, content_size)
           .set_protocols(allocator, fio::wire::NodeProtocols::kFile)
           .set_id(allocator, id);
-      completer.ReplySuccess(nodes_attributes);
+      completer.ReplySuccess(mutable_attributes, immutable_attributes);
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());
@@ -160,16 +161,11 @@ TEST_F(RemoteV2, SetAttributes) {
    public:
     void UpdateAttributes(UpdateAttributesRequestView request,
                           UpdateAttributesCompleter::Sync& completer) override {
-      EXPECT_TRUE(request->attributes.has_creation_time());
-      EXPECT_FALSE(request->attributes.has_protocols());
-      EXPECT_FALSE(request->attributes.has_abilities());
-      EXPECT_FALSE(request->attributes.has_modification_time());
-      EXPECT_FALSE(request->attributes.has_content_size());
-      EXPECT_FALSE(request->attributes.has_storage_size());
-      EXPECT_FALSE(request->attributes.has_link_count());
+      EXPECT_TRUE(request->has_creation_time());
+      EXPECT_FALSE(request->has_modification_time());
 
       uint64_t creation_time = kCreationTime;
-      EXPECT_EQ(creation_time, request->attributes.creation_time());
+      EXPECT_EQ(creation_time, request->creation_time());
       called_.store(true);
       completer.ReplySuccess();
     }
