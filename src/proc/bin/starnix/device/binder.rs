@@ -2130,9 +2130,7 @@ impl BinderDriver {
                     SerializedBinderObject::File { fd: new_fd, flags, cookie }
                 }
                 SerializedBinderObject::Buffer { buffer, length, flags, parent, parent_offset } => {
-                    if length % std::mem::size_of::<binder_uintptr_t>() != 0
-                        || !buffer.is_aligned(std::mem::size_of::<binder_uintptr_t>() as u64)
-                    {
+                    if !buffer.is_aligned(std::mem::size_of::<binder_uintptr_t>() as u64) {
                         return error!(EINVAL)?;
                     }
 
@@ -2179,11 +2177,15 @@ impl BinderDriver {
                     }
 
                     // Update the scatter-gather buffer to account for the buffer we just wrote.
+                    // We pad the length of this buffer so that the next buffer starts at an aligned
+                    // offset.
+                    let padded_length =
+                        round_up_to_increment(length, std::mem::size_of::<binder_uintptr_t>())?;
                     sg_remaining_buffer = UserBuffer {
-                        address: sg_remaining_buffer.address + length,
-                        length: sg_remaining_buffer.length - length,
+                        address: sg_remaining_buffer.address + padded_length,
+                        length: sg_remaining_buffer.length - padded_length,
                     };
-                    sg_buffer_offset += length;
+                    sg_buffer_offset += padded_length;
 
                     // Patch this buffer with the translated address.
                     SerializedBinderObject::Buffer {
@@ -3510,11 +3512,13 @@ mod tests {
         let sender_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
         let mut writer = UserMemoryWriter::new(&test.sender_task, sender_addr);
 
-        // Serialize a string into memory and pad it to 8 bytes. Binder requires all buffers to be
-        // padded to 8-byte alignment.
+        // Serialize a string into memory.
         const FOO_STR_LEN: i32 = 3;
         const FOO_STR_PADDED_LEN: u64 = 8;
-        let sender_foo_addr = writer.write(b"foo\0\0\0\0\0");
+        let sender_foo_addr = writer.write(b"foo");
+
+        // Pad the next buffer to ensure 8-byte alignment.
+        writer.write(&[0; FOO_STR_PADDED_LEN as usize - FOO_STR_LEN as usize]);
 
         // Serialize a C struct that points to the above string.
         #[repr(C)]
@@ -3543,7 +3547,7 @@ mod tests {
         let sender_buffer1_addr = writer.write_object(&binder_buffer_object {
             hdr: binder_object_header { type_: BINDER_TYPE_PTR },
             buffer: sender_foo_addr.ptr() as u64,
-            length: FOO_STR_PADDED_LEN,
+            length: FOO_STR_LEN as u64,
             // Mark this buffer as having a parent who references it. The driver will then read
             // the next two fields.
             flags: BINDER_BUFFER_FLAG_HAS_PARENT,
@@ -3576,6 +3580,8 @@ mod tests {
                 },
                 ..binder_transaction_data::new_zeroed()
             },
+            // Each buffer size must be rounded up to a multiple of 8 to ensure enough
+            // space in the allocated target for 8-byte alignment.
             buffers_size: std::mem::size_of::<Bar>() as u64 + FOO_STR_PADDED_LEN,
         };
 
