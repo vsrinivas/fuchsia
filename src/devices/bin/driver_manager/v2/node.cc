@@ -477,8 +477,7 @@ void Node::Remove() {
 
     // If our parent is waiting to be removed and we are its last child,
     // then remove it.
-    // Also remove the parent if we are a composite node.
-    if ((parent->removal_in_progress_ && children.empty()) || (parents_.size() > 1)) {
+    if (parent->removal_in_progress_ && children.empty()) {
       parent->Remove();
     }
   }
