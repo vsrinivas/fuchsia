@@ -19,6 +19,10 @@
             url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
         },
         {
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
+        {
             // Centralized management of keyboard shortcuts.
             name: "shortcut_manager",
             url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
@@ -37,6 +41,7 @@
                 "#scene_manager",
                 "#scenic",
                 "#shortcut_manager",
+                "#text_manager",
             ],
         },
         {
@@ -64,15 +69,21 @@
             protocol: [
                 "fuchsia.settings.Keyboard",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
 
                 // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.vulkan.loader.Loader",
             ],
-            from: "parent",
+            from: "#text_manager",
             to: [ "#scene_manager" ],
         },
         {
@@ -195,6 +206,15 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#text_manager",
         },
     ],
 }

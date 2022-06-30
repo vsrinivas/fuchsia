@@ -61,11 +61,6 @@
             to: "#termina-guest-manager",
         },
         {
-            protocol: [ "fuchsia.ui.input.ImeService" ],
-            from: "#text_manager",
-            to: "#termina-guest-manager",
-        },
-        {
             protocol: [ "fuchsia.net.virtualization.Control" ],
             from: "#network",
             to: "#termina-guest-manager",
@@ -85,6 +80,13 @@
             from: "#termina-guest-manager",
             to: "#linux_runner",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.ui.input.ImeService" ],
+            from: "#ui",
+            to: [ "#termina-guest-manager" ],
+            dependency: "weak",
+            source_availability: "unknown",
         },
 
         // Route from CFv1 realm.

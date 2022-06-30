@@ -38,9 +38,13 @@
                 "fuchsia.component.Realm",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.sysmem.Allocator",
-
-                // Wayland bridge protocols.
                 "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+        },
+        {
+            protocol: [
+                // Wayland bridge protocols.
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
@@ -48,6 +52,7 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
+            availability: "optional",
         },
     ],
     expose: [

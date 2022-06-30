@@ -20,6 +20,10 @@
             name: "scenic",
             url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
         },
+        {
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
     ],
     offer: [
         {
@@ -71,6 +75,7 @@
                 "#input_pipeline",
                 "#root_presenter",
                 "#scenic",
+                "#text_manager",
             ],
         },
         {
@@ -96,9 +101,13 @@
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
-                "fuchsia.ui.keyboard.focus.Controller",
             ],
             from: "parent",
+            to: [ "#root_presenter" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
+            from: "#text_manager",
             to: [ "#root_presenter" ],
         },
         {
@@ -203,6 +212,15 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#text_manager",
         },
     ],
 }

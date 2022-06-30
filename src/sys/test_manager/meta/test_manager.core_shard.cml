@@ -120,13 +120,6 @@
             to: "#test_manager",
         },
         {
-            protocol: [ "fuchsia.ui.input3.Keyboard" ],
-
-            // Note: teXt vs teSt.
-            from: "#text_manager",
-            to: "#test_manager",
-        },
-        {
             protocol: [
                 "fuchsia.process.Resolver",
                 "fuchsia.ui.composition.Allocator",

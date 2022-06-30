@@ -82,15 +82,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
-        },
-        {
-            protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.Items",

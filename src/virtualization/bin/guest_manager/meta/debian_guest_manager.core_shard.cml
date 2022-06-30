@@ -61,11 +61,6 @@
             to: "#debian-guest-manager",
         },
         {
-            protocol: [ "fuchsia.ui.input.ImeService" ],
-            from: "#text_manager",
-            to: "#debian-guest-manager",
-        },
-        {
             protocol: [ "fuchsia.net.virtualization.Control" ],
             from: "#network",
             to: "#debian-guest-manager",
@@ -78,6 +73,13 @@
             // Trace manager may be excluded from builds where tracing is not
             // expected to be used for observability, such as in the bringup
             // product and non-eng builds of any product.
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.ui.input.ImeService" ],
+            from: "#ui",
+            to: [ "#debian-guest-manager" ],
+            dependency: "weak",
             source_availability: "unknown",
         },
 

@@ -124,11 +124,6 @@
             to: "#ui",
         },
         {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: "#ui",
-        },
-        {
             protocol: [ "fuchsia.vulkan.loader.Loader" ],
             from: "#vulkan_loader",
             to: "#ui",

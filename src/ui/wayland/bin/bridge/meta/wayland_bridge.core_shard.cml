@@ -45,8 +45,10 @@
         },
         {
             protocol: [ "fuchsia.ui.input3.Keyboard" ],
-            from: "#text_manager",
+            from: "#ui",
             to: [ "#wayland_bridge" ],
+            dependency: "weak",
+            source_availability: "unknown",
         },
     ],
 }

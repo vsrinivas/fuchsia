@@ -32,7 +32,6 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
             ],
@@ -42,6 +41,16 @@
                 "#starless",
                 "#starmium",
             ],
+        },
+        {
+            protocol: [ "fuchsia.ui.input3.Keyboard" ],
+            from: "parent",
+            to: [
+                "#stardroid",
+                "#starless",
+                "#starmium",
+            ],
+            availability: "optional",
         },
         {
             // Note that it's important that the runner gets access to starnix_manger's realm

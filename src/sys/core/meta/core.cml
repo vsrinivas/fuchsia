@@ -64,10 +64,6 @@
             on_terminate: "reboot",
         },
         {
-            name: "text_manager",
-            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
-        },
-        {
             name: "cobalt_system_metrics",
             url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cm",
             startup: "eager",
@@ -441,7 +437,6 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
-                "#text_manager",
                 "#universe-resolver",
                 "#vulkan_loader",
             ],
@@ -474,11 +469,6 @@
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
             to: [ "#starnix_manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.input3.Keyboard" ],
-            from: "#text_manager",
-            to: "#starnix_manager",
         },
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
@@ -787,16 +777,6 @@
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "parent",
-            to: "#session-manager",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
             to: "#session-manager",
         },
         {

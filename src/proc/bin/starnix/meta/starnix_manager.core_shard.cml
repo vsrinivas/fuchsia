@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    offer: [
+        {
+            protocol: [ "fuchsia.ui.input3.Keyboard" ],
+            from: "#ui",
+            to: [ "#starnix_manager" ],
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+    ],
+}

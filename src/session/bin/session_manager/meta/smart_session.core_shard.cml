@@ -32,6 +32,20 @@
             ],
         },
     ],
+
+    // Protocols used from a child are routed to the v1 sys realm.
+    use: [
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#ui",
+            dependency: "weak",
+        },
+    ],
     offer: [
         {
             // Routed from v1 components.
@@ -113,6 +127,16 @@
                 "fuchsia.settings.Setup",
             ],
             from: "#setui_service",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#ui",
             to: "#session-manager",
         },
         {

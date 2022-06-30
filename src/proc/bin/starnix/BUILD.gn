@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 declare_args() {
   # Whether wayland protocol logging should be enabled
@@ -275,6 +276,10 @@ if (target_cpu == "x64") {
 
 fuchsia_component("starnix_manager") {
   manifest = "meta/starnix_manager.cml"
+}
+
+core_shard("starnix_manager_core_shard") {
+  shard_file = "meta/starnix_manager.core_shard.cml"
 }
 
 fuchsia_package("starnix_package") {
