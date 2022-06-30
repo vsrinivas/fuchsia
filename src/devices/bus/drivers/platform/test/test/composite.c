@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/clock/c/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/power/c/banjo.h>
@@ -17,7 +16,6 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -150,38 +148,6 @@ static zx_status_t test_clock(clock_protocol_t* clock) {
   if (num_inputs == kBad || current_input == kBad) {
     // The above calls returned ZX_OK but the out value was unchanged?
     return ZX_ERR_BAD_STATE;
-  }
-
-  return ZX_OK;
-}
-
-static zx_status_t test_i2c(i2c_protocol_t* i2c) {
-  size_t max_transfer;
-
-  // i2c test driver returns 1024 for max transfer size
-  zx_status_t status = i2c_get_max_transfer_size(i2c, &max_transfer);
-  if (status != ZX_OK || max_transfer != 1024) {
-    zxlogf(ERROR, "%s: i2c_get_max_transfer_size failed", DRIVER_NAME);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // i2c test driver reverses digits
-  const uint32_t write_digits[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  uint32_t read_digits[10];
-  memset(read_digits, 0, sizeof(read_digits));
-
-  status = i2c_write_read_sync(i2c, write_digits, sizeof(write_digits), read_digits,
-                               sizeof(read_digits));
-  if (status != ZX_OK || max_transfer != 1024) {
-    zxlogf(ERROR, "%s: i2c_write_read_sync failed %d", DRIVER_NAME, status);
-    return status;
-  }
-
-  for (size_t i = 0; i < countof(read_digits); i++) {
-    if (read_digits[i] != write_digits[countof(read_digits) - i - 1]) {
-      zxlogf(ERROR, "%s: read_digits does not match reverse of write digits", DRIVER_NAME);
-      return ZX_ERR_INTERNAL;
-    }
   }
 
   return ZX_OK;
@@ -434,7 +400,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   power_protocol_t power;
   clock_protocol_t child4;
   gpio_protocol_t gpio;
-  i2c_protocol_t i2c;
   spi_protocol_t spi;
   pwm_protocol_t pwm;
   vreg_protocol_t vreg;
@@ -488,12 +453,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_I2C_1].name);
       return ZX_ERR_INTERNAL;
     }
-    status = device_get_protocol(fragments[FRAGMENT_I2C_1].device, ZX_PROTOCOL_I2C, &i2c);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", DRIVER_NAME);
-      return status;
-    }
-
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
       return status;
@@ -504,10 +463,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_gpio(&gpio)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_gpio failed: %d", DRIVER_NAME, status);
-      return status;
-    }
-    if ((status = test_i2c(&i2c)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_i2c failed: %d", DRIVER_NAME, status);
       return status;
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {

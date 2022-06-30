@@ -77,26 +77,7 @@ zx_status_t TestI2cDevice::I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) 
 
 zx_status_t TestI2cDevice::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list,
                                            size_t op_count) {
-  // We only support write/read transactions.
-  if (op_count != 2) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (op_list[0].is_read || !op_list[1].is_read) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (op_list[0].data_size != op_list[1].data_size) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Reverse the digits.
-  auto* src = reinterpret_cast<const uint32_t*>(op_list[0].data_buffer);
-  auto* dest = reinterpret_cast<uint32_t*>(op_list[1].data_buffer);
-  size_t count = op_list[0].data_size / sizeof(uint32_t);
-  for (size_t i = 0; i < count; i++) {
-    dest[i] = src[count - i - 1];
-  }
-
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t test_i2c_bind(void* ctx, zx_device_t* parent) { return TestI2cDevice::Create(parent); }
