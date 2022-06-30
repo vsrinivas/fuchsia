@@ -18,6 +18,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_trace as ftrace,
     fuchsia_url::{AbsolutePackageUrl, RepositoryUrl},
     fuchsia_zircon::Status,
     futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*},
@@ -277,6 +278,7 @@ impl RepositoryManager {
         url: &'a AbsolutePackageUrl,
         cache: &'a cache::Client,
         blob_fetcher: &'a BlobFetcher,
+        trace_id: ftrace::Id,
     ) -> LocalBoxFuture<'a, Result<(BlobId, PackageDirectory), GetPackageError>> {
         let config = if let Some(config) = self.get(url.repository()) {
             Arc::clone(config)
@@ -302,9 +304,17 @@ impl RepositoryManager {
         let cobalt_sender = self.cobalt_sender.clone();
         async move {
             let repo = fut.await?;
-            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher, cobalt_sender)
-                .await
-                .map_err(Into::into)
+            crate::cache::cache_package(
+                repo,
+                &config,
+                url,
+                cache,
+                blob_fetcher,
+                cobalt_sender,
+                trace_id,
+            )
+            .await
+            .map_err(Into::into)
         }
         .boxed_local()
     }

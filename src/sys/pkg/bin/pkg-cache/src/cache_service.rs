@@ -23,7 +23,7 @@ use {
     fuchsia_hash::Hash,
     fuchsia_inspect::{self as finspect, NumericProperty, Property, StringProperty},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as trace, fuchsia_zircon as zx,
+    fuchsia_trace as ftrace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
     std::{
@@ -57,8 +57,16 @@ pub async fn serve(
                     let id = serve_id.fetch_add(1, Ordering::SeqCst);
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
                     let node = get_node.create_child(id.to_string());
-                    trace::duration_begin!("app", "cache_get",
-                        "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str()
+                    let trace_id = ftrace::Id::random();
+                    let guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "cache_get",
+                        "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str(),
+                        // An async duration cannot have multiple concurrent child async durations
+                        // so we include the id as metadata to manually determine the
+                        // relationship.
+                        "trace_id" => u64::from(trace_id)
                     );
                     let response = get(
                         package_index.as_ref(),
@@ -71,17 +79,23 @@ pub async fn serve(
                         dir.map(|dir| (dir, scope.clone())),
                         cobalt_sender,
                         &node,
+                        trace_id,
                     )
                     .await;
-                    trace::duration_end!("app", "cache_get",
-                        "status" => Status::from(response).to_string().as_str()
-                    );
+                    guard.end(&[ftrace::ArgValue::of(
+                        "status",
+                        Status::from(response).to_string().as_str(),
+                    )]);
                     drop(node);
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::Open { meta_far_blob_id, dir, responder } => {
                     let meta_far: Hash = BlobId::from(meta_far_blob_id).into();
-                    trace::duration_begin!("app", "cache_open",
+                    let trace_id = ftrace::Id::random();
+                    let guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "cache_open",
                         "meta_far_blob_id" => meta_far.to_string().as_str()
                     );
                     let response = open(
@@ -96,9 +110,10 @@ pub async fn serve(
                         cobalt_sender,
                     )
                     .await;
-                    trace::duration_end!("app", "cache_open",
-                        "status" => Status::from(response).to_string().as_str()
-                    );
+                    guard.end(&[ftrace::ArgValue::of(
+                        "status",
+                        Status::from(response).to_string().as_str(),
+                    )]);
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
@@ -189,6 +204,7 @@ async fn get<'a>(
     dir_and_scope: Option<(ServerEnd<fio::DirectoryMarker>, package_directory::ExecutionScope)>,
     mut cobalt_sender: CobaltSender,
     node: &finspect::Node,
+    trace_id: ftrace::Id,
 ) -> Result<(), Status> {
     let _time_prop = node.create_int("started-time", zx::Time::get_monotonic().into_nanos());
     let _id_prop = node.create_string("meta-far-id", meta_far_blob.blob_id.to_string());
@@ -205,23 +221,29 @@ async fn get<'a>(
             }
             PackageStatus::Other => {
                 fx_log_info!("get package {}", meta_far_blob.blob_id);
-                let name =
-                    serve_needed_blobs(needed_blobs, meta_far_blob, package_index, blobfs, node)
-                        .await
-                        .map_err(|e| {
-                            fx_log_err!(
-                                "error while caching package {}: {:#}",
-                                meta_far_blob.blob_id,
-                                anyhow!(e)
-                            );
-                            cobalt_sender.log_event_count(
-                                metrics::PKG_CACHE_OPEN_METRIC_ID,
-                                metrics::PkgCacheOpenMetricDimensionResult::Io,
-                                0,
-                                1,
-                            );
-                            Status::UNAVAILABLE
-                        })?;
+                let name = serve_needed_blobs(
+                    needed_blobs,
+                    meta_far_blob,
+                    package_index,
+                    blobfs,
+                    node,
+                    trace_id,
+                )
+                .await
+                .map_err(|e| {
+                    fx_log_err!(
+                        "error while caching package {}: {:#}",
+                        meta_far_blob.blob_id,
+                        anyhow!(e)
+                    );
+                    cobalt_sender.log_event_count(
+                        metrics::PKG_CACHE_OPEN_METRIC_ID,
+                        metrics::PkgCacheOpenMetricDimensionResult::Io,
+                        0,
+                        1,
+                    );
+                    Status::UNAVAILABLE
+                })?;
                 if let Some(name) = name {
                     PackageStatus::Active(name)
                 } else {
@@ -408,13 +430,20 @@ async fn serve_needed_blobs(
     package_index: &async_lock::RwLock<PackageIndex>,
     blobfs: &blobfs::Client,
     node: &finspect::Node,
+    trace_id: ftrace::Id,
 ) -> Result<Option<fuchsia_pkg::PackageName>, ServeNeededBlobsError> {
     let state = node.create_string("state", "need-meta-far");
     let res = async {
         // Step 1: Open and write the meta.far, or determine it is not needed.
-        let content_blobs =
-            handle_open_meta_blob(&mut stream, meta_far_info, blobfs, package_index, &state)
-                .await?;
+        let content_blobs = handle_open_meta_blob(
+            &mut stream,
+            meta_far_info,
+            blobfs,
+            package_index,
+            &state,
+            trace_id,
+        )
+        .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
         let (serve_iterator, needs) =
@@ -423,7 +452,7 @@ async fn serve_needed_blobs(
         state.set("need-content-blobs");
 
         // Step 3: Open and write all needed data blobs.
-        let () = handle_open_blobs(&mut stream, needs, blobfs, &node).await?;
+        let () = handle_open_blobs(&mut stream, needs, blobfs, &node, trace_id).await?;
 
         serve_iterator.await;
         Ok(())
@@ -457,6 +486,7 @@ async fn handle_open_meta_blob(
     blobfs: &blobfs::Client,
     package_index: &async_lock::RwLock<PackageIndex>,
     state: &StringProperty,
+    trace_id: ftrace::Id,
 ) -> Result<HashSet<Hash>, ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
     package_index.write().await.start_install(hash);
@@ -477,7 +507,9 @@ async fn handle_open_meta_blob(
 
         let file_stream = file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
-        match open_write_blob(file_stream, responder, blobfs, hash, BlobKind::Package).await {
+        match open_write_blob(file_stream, responder, blobfs, hash, BlobKind::Package, trace_id)
+            .await
+        {
             Ok(()) => break,
             Err(OpenWriteBlobError::Serve(e)) => return Err(e),
             Err(OpenWriteBlobError::NonFatalWrite(e)) => {
@@ -543,6 +575,7 @@ async fn handle_open_blobs(
     mut needs: HashSet<Hash>,
     blobfs: &blobfs::Client,
     node: &finspect::Node,
+    trace_id: ftrace::Id,
 ) -> Result<(), ServeNeededBlobsError> {
     let mut writing = FuturesUnordered::new();
 
@@ -589,7 +622,14 @@ async fn handle_open_blobs(
                 // Do the actual async work of opening the blob for write and serving the write
                 // calls in a separate Future so this loop can run this Future and handle new
                 // requests concurrently.
-                let task = open_write_blob(file_stream, responder, blobfs, blob_id, BlobKind::Data);
+                let task = open_write_blob(
+                    file_stream,
+                    responder,
+                    blobfs,
+                    blob_id,
+                    BlobKind::Data,
+                    trace_id,
+                );
                 writing.push(async move { (blob_id, task.await) });
                 continue;
             }
@@ -666,8 +706,21 @@ async fn open_write_blob(
     blobfs: &blobfs::Client,
     blob_id: Hash,
     kind: BlobKind,
+    parent_trace_id: ftrace::Id,
 ) -> Result<(), OpenWriteBlobError> {
+    let trace_id = ftrace::Id::random();
+    let _guard = ftrace::async_enter!(
+        trace_id,
+        "app",
+        "open_write_blob",
+        "blob" => blob_id.to_string().as_str(),
+        // An async duration cannot have multiple concurrent child async durations
+        // so we include the nonce as metadata to manually determine the
+        // relationship.
+        "parent_trace_id" => u64::from(parent_trace_id)
+    );
     let create_res = blobfs.open_blob_for_write(&blob_id).await;
+    ftrace::async_instant!(trace_id, "app", "open_write_blob_opened");
 
     let is_readable = match &create_res {
         Err(blobfs::blob::CreateError::AlreadyExists) => {
@@ -694,7 +747,7 @@ async fn open_write_blob(
         .map_err(ServeNeededBlobsError::SendResponse)?;
 
     match create_res {
-        Ok(blob) => serve_write_blob(file_stream, blob).await.map_err(|e| {
+        Ok(blob) => serve_write_blob(file_stream, blob, trace_id).await.map_err(|e| {
             if e.is_fatal() {
                 OpenWriteBlobError::Serve(ServeNeededBlobsError::WriteBlob {
                     context: BlobContext { kind, hash: blob_id },
@@ -784,6 +837,7 @@ impl ServeWriteBlobError {
 async fn serve_write_blob(
     mut stream: fio::FileRequestStream,
     blob: blobfs::blob::Blob<blobfs::blob::NeedsTruncate>,
+    trace_id: ftrace::Id,
 ) -> Result<(), ServeWriteBlobError> {
     use blobfs::blob::{
         Blob, NeedsData, NeedsTruncate, TruncateError, TruncateSuccess, WriteError, WriteSuccess,
@@ -848,7 +902,15 @@ async fn serve_write_blob(
         while let Some(request) = stream.try_next().await.map_err(ServeWriteBlobError::Fidl)? {
             state = match (request, state) {
                 (fio::FileRequest::Resize { length, responder }, State::ExpectTruncate(blob)) => {
-                    let res = blob.truncate(length).await;
+                    let res_fut = blob.truncate(length);
+                    let guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "waiting_for_blobfs_to_ack_truncate",
+                        "size" => length
+                    );
+                    let res = res_fut.await;
+                    let () = guard.end(&[]);
 
                     // Interpret responding errors as the stream closing unexpectedly.
                     let _: Result<(), fidl::Error> =
@@ -865,13 +927,30 @@ async fn serve_write_blob(
                 }
 
                 (fio::FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
-                    let res = blob.write(&data).await;
+                    ftrace::async_instant!(
+                        trace_id, "app", "read_chunk_from_pkg_resolver",
+                        "size" => data.len() as u64
+                    );
+
+                    let res_fut = blob.write(&data);
+                    let guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "waiting_for_blobfs_to_ack_write",
+                        "size" => data.len() as u64
+                    );
+                    let res = res_fut.await;
+                    drop(guard);
 
                     let _: Result<(), fidl::Error> =
                         responder.send(&mut match write_result_to_status(&res) {
                             Status::OK => Ok(data.len() as u64),
                             error => Err(error.into_raw()),
                         });
+                    ftrace::async_instant!(
+                        trace_id, "app", "sent_write_ack_to_pkg_resolver",
+                        "size" => data.len() as u64
+                    );
 
                     match res? {
                         WriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
@@ -1000,7 +1079,8 @@ mod serve_needed_blobs_tests {
                 meta_blob_info,
                 &package_index,
                 &blobfs,
-                &inspector.root().create_child("test-node-name")
+                &inspector.root().create_child("test-node-name"),
+                0.into()
             )
             .await,
             Err(ServeNeededBlobsError::UnexpectedClose("handle_open_meta_blob"))
@@ -1027,6 +1107,7 @@ mod serve_needed_blobs_tests {
                     &package_index,
                     &blobfs,
                     &inspector.root().create_child("test-node-name"),
+                    0.into(),
                 )
                 .await
                 .map(|_| ())
@@ -1077,6 +1158,7 @@ mod serve_needed_blobs_tests {
             &blobfs,
             [0; 32].into(),
             BlobKind::Package,
+            0.into(),
         )
         .await;
 
@@ -2153,7 +2235,8 @@ mod get_handler_tests {
                 fuchsia_cobalt::CobaltConnector::default()
                     .serve(fuchsia_cobalt::ConnectionType::project_id(metrics::PROJECT_ID))
                     .0,
-                &inspector.root().create_child("get")
+                &inspector.root().create_child("get"),
+                0.into()
             )
             .await,
             Err(Status::UNAVAILABLE)
@@ -2180,7 +2263,7 @@ mod serve_write_blob_tests {
         let (pkg_cache_blob, pkg_cache_blob_stream) =
             fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
-        let task = serve_write_blob(pkg_cache_blob_stream, blobfs_blob);
+        let task = serve_write_blob(pkg_cache_blob_stream, blobfs_blob, 0.into());
         let test = cb(pkg_cache_blob, blobfs_blob_stream);
 
         let (res, ()) = future::join(task, test).await;
@@ -2456,7 +2539,7 @@ mod serve_write_blob_tests {
         let (pkg_cache_blob, pkg_cache_blob_stream) =
             fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
-        let task = serve_write_blob(pkg_cache_blob_stream, blobfs_blob);
+        let task = serve_write_blob(pkg_cache_blob_stream, blobfs_blob, 0.into());
         futures::pin_mut!(task);
 
         let mut close_fut = pkg_cache_blob.close();

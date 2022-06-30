@@ -10,7 +10,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_info,
-    fuchsia_trace as trace,
+    fuchsia_trace as ftrace,
     fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Status,
     futures::{lock::Mutex as AsyncMutex, prelude::*, stream::FuturesUnordered},
@@ -114,6 +114,7 @@ pub async fn cache_package<'a>(
     cache: &'a pkg::cache::Client,
     blob_fetcher: &'a BlobFetcher,
     cobalt_sender: CobaltSender,
+    trace_id: ftrace::Id,
 ) -> Result<(BlobId, PackageDirectory), CacheError> {
     let (merkle, size) =
         merkle_for_url(repo, url, cobalt_sender).await.map_err(CacheError::MerkleFor)?;
@@ -135,7 +136,7 @@ pub async fn cache_package<'a>(
         let mirrors = config.mirrors().to_vec().into();
 
         // Fetch the meta.far.
-        blob_fetcher
+        let () = blob_fetcher
             .push(
                 merkle,
                 FetchBlobContext {
@@ -143,6 +144,7 @@ pub async fn cache_package<'a>(
                     mirrors: Arc::clone(&mirrors),
                     expected_len: size,
                     use_local_mirror: config.use_local_mirror(),
+                    parent_trace_id: trace_id,
                 },
             )
             .await
@@ -166,6 +168,7 @@ pub async fn cache_package<'a>(
                         mirrors: Arc::clone(&mirrors),
                         expected_len: None,
                         use_local_mirror: config.use_local_mirror(),
+                        parent_trace_id: trace_id,
                     },
                 )
             }))
@@ -499,6 +502,7 @@ pub struct FetchBlobContext {
     mirrors: Arc<[MirrorConfig]>,
     expected_len: Option<u64>,
     use_local_mirror: bool,
+    parent_trace_id: ftrace::Id,
 }
 
 impl work_queue::TryMerge for FetchBlobContext {
@@ -628,11 +632,20 @@ async fn fetch_blob(
 ) -> Result<(), FetchError> {
     let use_remote_mirror = context.mirrors.len() != 0;
     let use_local_mirror = context.use_local_mirror;
+    let trace_id = ftrace::Id::random();
 
     match (use_remote_mirror, use_local_mirror, local_mirror_proxy) {
         (true, true, _) => Err(FetchError::ConflictingBlobSources),
         (false, true, Some(local_mirror)) => {
-            trace::duration_begin!("app", "fetch_blob_local", "merkle" => merkle.to_string().as_str());
+            let guard = ftrace::async_enter!(
+                trace_id,
+                "app",
+                "fetch_blob_local",
+                // Async tracing does not support multiple concurrent child durations, so we create
+                // a new top-level duration and attach the parent duration as metadata.
+                "parent_trace_id" => u64::from(context.parent_trace_id),
+                "hash" => merkle.to_string().as_str()
+            );
             let res = fetch_blob_local(
                 inspect.local_mirror(),
                 local_mirror,
@@ -641,11 +654,19 @@ async fn fetch_blob(
                 context.expected_len,
             )
             .await;
-            trace::duration_end!("app", "fetch_blob_local", "result" => format!("{:?}", res).as_str());
+            guard.end(&[ftrace::ArgValue::of("result", format!("{:?}", res).as_str())]);
             res
         }
         (true, false, _) => {
-            trace::duration_begin!("app", "fetch_blob_http", "merkle" => merkle.to_string().as_str());
+            let guard = ftrace::async_enter!(
+                trace_id.into(),
+                "app",
+                "fetch_blob_http",
+                // Async tracing does not support multiple concurrent child durations, so we create
+                // a new top-level duration and attach the parent duration as metadata.
+                "parent_trace_id" => u64::from(context.parent_trace_id),
+                "hash" => merkle.to_string().as_str()
+            );
             let res = fetch_blob_http(
                 inspect.http(),
                 http_client,
@@ -656,9 +677,10 @@ async fn fetch_blob(
                 blob_fetch_params,
                 stats,
                 cobalt_sender,
+                trace_id,
             )
             .await;
-            trace::duration_end!("app", "fetch_blob_http", "result" => format!("{:?}", res).as_str());
+            guard.end(&[ftrace::ArgValue::of("result", format!("{:?}", res).as_str())]);
             res
         }
         (use_remote_mirror, use_local_mirror, local_mirror) => Err(FetchError::NoBlobSource {
@@ -695,6 +717,7 @@ async fn fetch_blob_http(
     blob_fetch_params: BlobFetchParams,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
+    trace_id: ftrace::Id,
 ) -> Result<(), FetchError> {
     // TODO try the other mirrors depending on the errors encountered trying this one.
     let blob_mirror_url = if let Some(mirror) = mirrors.get(0) {
@@ -724,6 +747,12 @@ async fn fetch_blob_http(
                     opener.open().await.map_err(FetchError::CreateBlob)?
                 {
                     inspect.state(inspect::Http::DownloadBlob);
+                    let guard = ftrace::async_enter!(
+                        trace_id.into(),
+                        "app",
+                        "download_blob",
+                        "hash" => merkle.to_string().as_str()
+                    );
                     let res = download_blob(
                         &inspect,
                         client,
@@ -732,13 +761,21 @@ async fn fetch_blob_http(
                         blob,
                         blob_fetch_params,
                         &fetch_stats,
+                        trace_id,
                     )
                     .await;
+                    let (size_str, status_str) = match &res {
+                        Ok(size) => (size.to_string(), "success".to_string()),
+                        Err(e) => ("no size because download failed".to_string(), e.to_string()),
+                    };
+                    guard.end(&[
+                        ftrace::ArgValue::of("size", size_str.as_str()),
+                        ftrace::ArgValue::of("status", status_str.as_str()),
+                    ]);
                     inspect.state(inspect::Http::CloseBlob);
                     blob_closer.close().await;
                     res?;
                 }
-
                 Ok(())
             }
             .await;
@@ -859,6 +896,7 @@ fn make_blob_url(
     blob_mirror_url.extend_dir_with_path(&merkle.to_string())
 }
 
+// On success, returns the size of the downloaded blob in bytes (useful for tracing).
 async fn download_blob(
     inspect: &inspect::Attempt<inspect::Http>,
     client: &fuchsia_hyper::HttpsClient,
@@ -867,10 +905,13 @@ async fn download_blob(
     dest: pkg::cache::Blob<pkg::cache::NeedsTruncate>,
     blob_fetch_params: BlobFetchParams,
     fetch_stats: &FetchStats,
-) -> Result<(), FetchError> {
+    trace_id: ftrace::Id,
+) -> Result<u64, FetchError> {
     inspect.state(inspect::Http::HttpGet);
     let (expected_len, content) =
         resume::resuming_get(client, uri, expected_len, blob_fetch_params, fetch_stats).await?;
+    ftrace::async_instant!(trace_id.into(), "app", "header_received");
+
     inspect.expected_size_bytes(expected_len);
 
     inspect.state(inspect::Http::TruncateBlob);
@@ -884,9 +925,37 @@ async fn download_blob(
         if written + chunk.len() as u64 > expected_len {
             return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
         }
+        ftrace::async_instant!(
+            trace_id.into(),
+            "app",
+            "read_chunk_from_hyper",
+            "size" => chunk.len() as u64
+        );
 
         inspect.state(inspect::Http::WriteBlob);
-        dest = match dest.write(&chunk).await.map_err(FetchError::Write)? {
+        dest = match dest
+            .write_with_trace_callbacks(
+                &chunk,
+                |size: u64| {
+                    ftrace::async_begin(
+                        trace_id.into(),
+                        ftrace::cstr!("app"),
+                        ftrace::cstr!("waiting_for_pkg_cache_to_ack_write"),
+                        &[ftrace::ArgValue::of("size", size)],
+                    )
+                },
+                || {
+                    ftrace::async_end(
+                        trace_id.into(),
+                        ftrace::cstr!("app"),
+                        ftrace::cstr!("waiting_for_pkg_cache_to_ack_write"),
+                        &[],
+                    )
+                },
+            )
+            .await
+            .map_err(FetchError::Write)?
+        {
             pkg::cache::BlobWriteSuccess::MoreToWrite(blob) => {
                 written += chunk.len() as u64;
                 blob
@@ -905,7 +974,7 @@ async fn download_blob(
         return Err(FetchError::BlobTooSmall { uri: uri.to_string() });
     }
 
-    Ok(())
+    Ok(expected_len)
 }
 
 #[derive(Debug, thiserror::Error)]

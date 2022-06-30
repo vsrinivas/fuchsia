@@ -14,7 +14,7 @@ use {
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as trace,
+    fuchsia_trace as ftrace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{
@@ -359,7 +359,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         Instant::now().duration_since(startup_time).as_micros() as i64,
     );
 
-    trace::instant!("app", "startup", trace::Scope::Process);
+    ftrace::instant!("app", "startup", ftrace::Scope::Process);
 
     futures.collect::<()>().await;
 

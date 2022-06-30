@@ -366,14 +366,34 @@ impl Blob<NeedsData> {
     /// # Panics
     ///
     /// Panics if a write is attempted with a buf larger than the remaining blob size.
-    pub async fn write(mut self, mut buf: &[u8]) -> Result<BlobWriteSuccess, WriteBlobError> {
+    pub fn write(
+        self,
+        buf: &[u8],
+    ) -> impl Future<Output = Result<BlobWriteSuccess, WriteBlobError>> + '_ {
+        self.write_with_trace_callbacks(buf, |_| {}, || {})
+    }
+
+    /// Writes all of the given buffer to the blob.
+    /// Calls `after_write` after each fuchsia.io/File.Write message is sent with the number of
+    /// bytes sent.
+    /// Calls `after_write_ack` after each fuchsia.io/File.Write message is acknowledged.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a write is attempted with a buf larger than the remaining blob size.
+    pub async fn write_with_trace_callbacks(
+        mut self,
+        mut buf: &[u8],
+        after_write: impl Fn(u64),
+        after_write_ack: impl Fn(),
+    ) -> Result<BlobWriteSuccess, WriteBlobError> {
         assert!(self.state.written + buf.len() as u64 <= self.state.size);
 
         while !buf.is_empty() {
             // Don't try to write more than MAX_BUF bytes at a time.
             let limit = buf.len().min(fio::MAX_BUF as usize);
 
-            let written = self.write_some(&buf[..limit]).await?;
+            let written = self.write_some(&buf[..limit], &after_write, &after_write_ack).await?;
 
             buf = &buf[written..];
         }
@@ -389,8 +409,19 @@ impl Blob<NeedsData> {
     ///
     /// Returns the number of bytes written (which may be less than the buffer's size) or the error
     /// encountered during the write.
-    async fn write_some(&mut self, buf: &[u8]) -> Result<usize, WriteBlobError> {
-        let result = self.proxy.write(buf).await?.map_err(Status::from_raw);
+    async fn write_some(
+        &mut self,
+        buf: &[u8],
+        after_write: &impl Fn(u64),
+        after_write_ack: &impl Fn(),
+    ) -> Result<usize, WriteBlobError> {
+        let result_fut = self.proxy.write(buf);
+        after_write(buf.len() as u64);
+
+        let result = result_fut.await;
+        after_write_ack();
+
+        let result = result?.map_err(Status::from_raw);
 
         let actual = match result {
             Ok(actual) => actual,

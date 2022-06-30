@@ -258,7 +258,7 @@ where
                     tasks.remove(&key);
                 }
 
-                // Yield the key that was processed to the stream, indicating if proccessing that
+                // Yield the key that was processed to the stream, indicating if processing that
                 // value was successful or not.
                 Poll::Ready(Some(key))
             }

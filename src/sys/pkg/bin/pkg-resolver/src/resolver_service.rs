@@ -28,7 +28,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as trace,
+    fuchsia_trace as ftrace,
     fuchsia_url::{AbsolutePackageUrl, ParseError},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
@@ -46,7 +46,7 @@ pub use inspect::ResolverService as ResolverServiceInspectState;
 pub struct QueuedResolver {
     queue: work_queue::WorkSender<
         AbsolutePackageUrl,
-        (),
+        ResolveQueueContext,
         Result<(BlobId, PackageDirectory), Arc<GetPackageError>>,
     >,
     cache: pkg::cache::Client,
@@ -54,6 +54,27 @@ pub struct QueuedResolver {
     rewriter: Arc<AsyncRwLock<RewriteManager>>,
     system_cache_list: Arc<CachePackages>,
     inspect: Arc<ResolverServiceInspectState>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ResolveQueueContext {
+    trace_id: ftrace::Id,
+}
+
+impl ResolveQueueContext {
+    fn new(trace_id: ftrace::Id) -> Self {
+        Self { trace_id }
+    }
+}
+
+impl work_queue::TryMerge for ResolveQueueContext {
+    // Merges Contexts with different trace ids. This will not leak trace durations because the
+    // active duration associated with this id is started and stopped in QueuedResolver::resolve.
+    // If a resolve is merged, then to tell which blob fetches the merged resolve is waiting for you
+    // need to find the trace id of the first active resolve with the same package URL.
+    fn try_merge(&mut self, _other: Self) -> Result<(), Self> {
+        Ok(())
+    }
 }
 
 /// This trait represents an instance which can be used to resolve package URLs, which typically
@@ -105,19 +126,36 @@ impl Resolver for QueuedResolver {
         pkg_url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
-        trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
-        let resolve_res = self.resolve_with_source(pkg_url, eager_package_manager).await;
-        let err_str = match resolve_res {
-            Ok(_) => "success".to_string(),
-            Err(ref e) => e.to_string(),
-        };
-        let source_str = match resolve_res {
-            Ok(ref package_with_source) => package_with_source.source(),
-            Err(_) => "no source because resolve failed",
-        };
-        trace::duration_end!(
-            "app", "resolve", "status" => err_str.as_str(), "source" => source_str
+        let trace_id = ftrace::Id::random();
+        let guard = ftrace::async_enter!(
+            trace_id, "app", "resolve",
+            "url" => pkg_url.to_string().as_str(),
+            // An async duration cannot have multiple concurrent child async durations
+            // so we include the id as metadata to manually determine the
+            // relationship.
+            "trace_id" => u64::from(trace_id)
         );
+        let resolve_res = self.resolve_with_source(pkg_url, eager_package_manager, trace_id).await;
+        let error_string;
+        let () = guard.end(&[
+            ftrace::ArgValue::of(
+                "status",
+                match resolve_res {
+                    Ok(_) => "success",
+                    Err(ref e) => {
+                        error_string = e.to_string();
+                        error_string.as_str()
+                    }
+                },
+            ),
+            ftrace::ArgValue::of(
+                "source",
+                match resolve_res {
+                    Ok(ref package_with_source) => package_with_source.source(),
+                    Err(_) => "no source because resolve failed",
+                },
+            ),
+        ]);
         resolve_res.map(|pkg_with_source| pkg_with_source.into_package())
     }
 }
@@ -138,14 +176,20 @@ impl QueuedResolver {
         let cache = cache_client.clone();
         let (package_fetch_queue, queue) = work_queue::work_queue(
             max_concurrency,
-            move |rewritten_url: AbsolutePackageUrl, _: ()| {
+            move |rewritten_url: AbsolutePackageUrl, context: ResolveQueueContext| {
                 let cache = cache_client.clone();
                 let repo_manager = Arc::clone(&repo_manager);
                 let blob_fetcher = blob_fetcher.clone();
                 async move {
-                    Ok(package_from_repo(&repo_manager, &rewritten_url, cache, blob_fetcher)
-                        .await
-                        .map_err(Arc::new)?)
+                    Ok(package_from_repo(
+                        &repo_manager,
+                        &rewritten_url,
+                        cache,
+                        blob_fetcher,
+                        context.trace_id,
+                    )
+                    .await
+                    .map_err(Arc::new)?)
                 }
             },
         );
@@ -158,6 +202,7 @@ impl QueuedResolver {
         &self,
         pkg_url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
+        trace_id: ftrace::Id,
     ) -> Result<PackageWithSource, pkg::ResolveError> {
         // Base pin.
         let package_inspect = self.inspect.resolve(&pkg_url);
@@ -199,7 +244,8 @@ impl QueuedResolver {
         }
 
         // Fetch from TUF.
-        let queued_fetch = self.queue.push(rewritten_url.clone(), ());
+        let queued_fetch =
+            self.queue.push(rewritten_url.clone(), ResolveQueueContext::new(trace_id));
         match queued_fetch.await.expect("expected queue to be open") {
             Ok((hash, dir)) => {
                 fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
@@ -587,11 +633,13 @@ async fn package_from_repo(
     rewritten_url: &AbsolutePackageUrl,
     cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
+    trace_id: ftrace::Id,
 ) -> Result<(BlobId, PackageDirectory), GetPackageError> {
     // Rust temporaries are kept alive for the duration of the innermost enclosing statement, and
     // we don't want to hold the repo_manager lock while we fetch the package, so the following two
     // lines should not be combined.
-    let fut = repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher);
+    let fut =
+        repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher, trace_id);
     fut.await
 }
 
@@ -637,7 +685,7 @@ async fn get_hash(
 ) -> Result<BlobId, Status> {
     let pkg_url = AbsolutePackageUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
 
-    trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
+    ftrace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
     let hash_or_status = hash_from_base_or_repo_or_cache(
         &repo_manager,
         &rewriter,
@@ -648,7 +696,7 @@ async fn get_hash(
         eager_package_manager,
     )
     .await;
-    trace::duration_end!("app", "get-hash",
+    ftrace::duration_end!("app", "get-hash",
         "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     hash_or_status
 }
