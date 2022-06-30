@@ -219,21 +219,28 @@ inline void Scheduler::TraceThreadQueueEvent(StringRef* name, Thread* thread) {
   // Traces marking the end of a queue/dequeue operation have arguments encoded
   // as follows:
   //
-  // arg0[56..63] : Number of runnable tasks on this CPU after the queue event.
-  // arg0[48..55] : CPU_ID of the affected queue.
-  // arg0[ 0..47] : Lowest 48 bits of thread TID/ptr.
-  // arg1[ 0..63] : CPU availability mask.
+  // arg0[ 0..64] : TID
+  //
+  // arg1[ 0..15] : CPU availability mask.
+  // arg1[16..19] : CPU_ID of the affected queue.
+  // arg1[20..27] : Number of runnable tasks on this CPU after the queue event.
+  // arg1[28..28] : 1 == fair, 0 == deadline
+  // arg1[29..29] : 1 == eligible, 0 == ineligible
+  //
   if constexpr (SCHEDULER_QUEUE_TRACING_ENABLED) {
-    const uint64_t tid =
-        thread->IsIdle()
-            ? 0
-            : (thread->user_thread() ? thread->tid() : reinterpret_cast<uint64_t>(thread));
+    const zx_time_t now = current_time();  // TODO(johngro): plumb this in from above
+    const bool fair = IsFairThread(thread);
+    const bool eligible = fair || (thread->scheduler_state().start_time_ <= now);
     const size_t cnt = fair_run_queue_.size() + deadline_run_queue_.size() +
                        ((active_thread_ && !active_thread_->IsIdle()) ? 1 : 0);
-    const uint64_t arg0 = (tid & 0xFFFFFFFFFFFF) |
-                          (ktl::clamp<uint64_t>(this_cpu_, 0, 0xFF) << 48) |
-                          (ktl::clamp<uint64_t>(cnt, 0, 0xFF) << 56);
-    const uint64_t arg1 = thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask());
+
+    const uint64_t arg0 = thread->IsIdle() ? 0 : thread->tid();
+    const uint64_t arg1 =
+        (thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask()) & 0xFFFF) |
+        (ktl::clamp<uint64_t>(this_cpu_, 0, 0xF) << 16) |
+        (ktl::clamp<uint64_t>(cnt, 0, 0xFF) << 20) | ((fair ? 1 : 0) << 28) |
+        ((eligible ? 1 : 0) << 29);
+
     ktrace_probe(TraceAlways, TraceContext::Cpu, name, arg0, arg1);
   }
 }
