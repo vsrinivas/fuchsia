@@ -21,8 +21,9 @@ class BaseFidlServerUntyped {
  public:
   ~BaseFidlServerUntyped() = default;
 
-  // These are public so that BaseFidlServer<A> can wait for children of type BaseFidlServer<B>.
-  // BaseFidlServer will hide them from subclasses of BaseFidlServer.
+  virtual bool WaitForShutdown(zx::duration timeout) = 0;
+
+ protected:
   bool WaitForShutdownOfThisServer(zx::duration timeout) {
     return shutdown_complete_.Wait(timeout) == ZX_OK;
   }
@@ -82,8 +83,8 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT>, public internal::Base
     auto deadline = zx::clock::get_monotonic() + timeout;
     for (auto [p, weak_child] : children_) {
       if (auto child = weak_child.lock(); child) {
-        auto timeout = deadline - zx::clock::get_monotonic();
-        if (!child->WaitForShutdownOfThisServer(timeout)) {
+        timeout = deadline - zx::clock::get_monotonic();
+        if (!child->WaitForShutdown(timeout)) {
           return false;
         }
       }
