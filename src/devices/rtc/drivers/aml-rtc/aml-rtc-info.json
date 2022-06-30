@@ -1,0 +1,11 @@
+{
+    "short_description": "Amlogic RTC driver",
+    "manufacturer": "Amlogic",
+    "families": [],
+    "models": [
+        "aml"
+    ],
+    "areas": [
+        "RTC"
+    ]
+}

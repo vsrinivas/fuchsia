@@ -27,6 +27,10 @@
 #define A5_SPICC1_BASE 0xfe052000
 #define A5_SPICC1_LENGTH 0x1000
 
+// rtc
+#define A5_RTC_BASE 0xfe09a000
+#define A5_RTC_LENGTH 0x2000
+
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
 
@@ -93,6 +97,8 @@
 #define A5_SPICC1_IRQ 216  // 184+32
 
 #define A5_ETH_GMAC_IRQ 106  // 74+32
+
+#define A5_RTC_IRQ 163  // 131+32
 
 // Ethernet
 #define A5_ETH_MAC_BASE 0xfdc00000

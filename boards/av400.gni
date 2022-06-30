@@ -25,6 +25,7 @@ _common_bootfs_deps = [
   "//src/devices/pwm/drivers/aml-pwm",
   "//src/devices/pwm/drivers/aml-pwm-init",
   "//src/devices/registers/drivers/registers",
+  "//src/devices/rtc/drivers/aml-rtc",
   "//src/devices/spi/drivers/aml-spi",
 ]
 

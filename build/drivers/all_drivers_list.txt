@@ -178,6 +178,7 @@
 //src/devices/registers/drivers/registers:registers-driver
 //src/devices/rtc/drivers/nxp:nxp-driver
 //src/devices/rtc/drivers/pl031-rtc:pl031-rtc-driver
+//src/devices/rtc/drivers/aml-rtc:aml-rtc-driver
 //src/devices/securemem/drivers/aml-securemem:aml-securemem-driver
 //src/devices/serial/drivers/aml-uart:aml-uart-driver
 //src/devices/serial/drivers/ftdi:ftdi-driver
