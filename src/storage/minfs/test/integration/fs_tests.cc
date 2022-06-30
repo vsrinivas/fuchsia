@@ -39,14 +39,14 @@ namespace fio = fuchsia_io;
 // Tests using MinfsTest will get tested with and without FVM.
 using MinfsTest = FilesystemTest;
 
-void QueryInfo(const TestFilesystem& fs, fuchsia_io::wire::FilesystemInfo* info) {
+void QueryInfo(const TestFilesystem& fs, fio::wire::FilesystemInfo* info) {
   // Sync before querying fs so that we can obtain an accurate number of used bytes. Otherwise,
   // blocks which are reserved but not yet allocated won't be counted.
   fbl::unique_fd root_fd = fs.GetRootFd();
   fsync(root_fd.get());
 
   fdio_cpp::FdioCaller caller(std::move(root_fd));
-  auto result = fidl::WireCall<fuchsia_io::Directory>(caller.channel())->QueryFilesystem();
+  auto result = fidl::WireCall(caller.borrow_as<fio::Directory>())->QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_OK);
   ASSERT_NE(result->info, nullptr);
@@ -67,7 +67,7 @@ void QueryInfo(const TestFilesystem& fs, fuchsia_io::wire::FilesystemInfo* info)
 }
 
 void GetFreeBlocks(const TestFilesystem& fs, uint32_t* out_free_blocks) {
-  fuchsia_io::wire::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs, &info));
   uint64_t total_bytes = info.total_bytes + info.free_shared_pool_bytes;
   uint64_t used_bytes = info.used_bytes;
@@ -227,7 +227,7 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
   }
 
   void GetAllocatedBlocks(uint64_t* out_allocated_blocks) const {
-    fuchsia_io::wire::FilesystemInfo info;
+    fio::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
     *out_allocated_blocks = static_cast<uint64_t>(info.used_bytes) / info.block_size;
   }
@@ -236,7 +236,7 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
 // Verify initial conditions on a filesystem, and validate that filesystem modifications adjust the
 // query info accordingly.
 TEST_F(MinfsFvmTest, QueryInitialState) {
-  fuchsia_io::wire::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
 
   EXPECT_EQ(fs().options().fvm_slice_size, info.total_bytes);
@@ -309,7 +309,7 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FreeSharedPoolBytes) {
   uint64_t free_slices = manager_info->slice_count - manager_info->assigned_slice_count;
 
   // Normal free space size should just report the volume manager's free space.
-  fuchsia_io::wire::FilesystemInfo info;
+  fio::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
   ASSERT_EQ(kSliceSize * free_slices, info.free_shared_pool_bytes);
 
