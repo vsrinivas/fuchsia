@@ -2187,11 +2187,6 @@
         "value": "1"
     },
     {
-        "kind": "enum/member",
-        "name": "fuchsia.io/OpenMode.OPEN_MOUNT_POINT",
-        "value": "268435456"
-    },
-    {
         "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.io/OpenMode",
