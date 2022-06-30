@@ -54,8 +54,7 @@ fuchsia_test_package("icd-conformance") {
   package_name = "icd_conformance"
   test_components = [ ":icd_conformance_cmp" ]
   test_specs = {
-    # TODO(fxbug.dev/103295): Add aemu.
-    environments = magma_libvulkan_hardware_envs
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
 }
 
