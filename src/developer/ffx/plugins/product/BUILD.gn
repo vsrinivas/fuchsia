@@ -26,10 +26,7 @@ ffx_plugin("ffx_product") {
     "//third_party/rust_crates:url",
   ]
 
-  sources = [
-    "src/create.rs",
-    "src/lib.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 }
 
 group("product") {

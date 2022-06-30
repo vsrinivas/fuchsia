@@ -5,9 +5,9 @@ individual product. PBM files are also included in Product Bundle container
 files. The Product Bundle container holds data for product bundles, virtual
 device specification, etc.
 
-## Development of PBMS Lib
+## Development of the product plugin
 
-When working on the `ffx product` tool, consider using:
+When working on the `fx ffx product` tool, consider using:
 
 ```
 $ fx set [...] --with-host //src/developer/ffx

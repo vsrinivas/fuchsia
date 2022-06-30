@@ -9,7 +9,7 @@
 use {
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
-    ffx_product_args::{CreateCommand, GetCommand, ListCommand, ProductCommand, SubCommand},
+    ffx_product_args::{GetCommand, ListCommand, ProductCommand, SubCommand},
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata},
@@ -18,8 +18,6 @@ use {
         io::{stdout, Write},
     },
 };
-
-mod create;
 
 /// Provide functionality to show product-bundle metadata, fetch metadata, and
 /// pull images and related data.
@@ -40,7 +38,6 @@ where
     match &command.sub {
         SubCommand::List(cmd) => pb_list(writer, &cmd).await?,
         SubCommand::Get(cmd) => pb_get(writer, &cmd, repos).await?,
-        SubCommand::Create(cmd) => pb_create(&cmd).await?,
     }
     Ok(())
 }
@@ -101,11 +98,6 @@ async fn pb_get<W: Write + Sync>(
     }
 
     Ok(())
-}
-
-/// `ffx product create` sub-command.
-async fn pb_create(cmd: &CreateCommand) -> Result<()> {
-    create::create_product_bundle(cmd).await
 }
 
 #[cfg(test)]
