@@ -19,6 +19,7 @@
         {
             name: "chrome",
             url: "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm",
+            environment: "#full-resolver-env",
         },
     ],
     collections: [
@@ -215,6 +216,19 @@
         {
             protocol: "fuchsia.element.Manager",
             from: "#element_manager",
+        },
+    ],
+    environments: [
+        {
+            name: "full-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "parent",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
         },
     ],
 }

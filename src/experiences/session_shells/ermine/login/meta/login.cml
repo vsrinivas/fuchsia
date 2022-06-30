@@ -172,6 +172,11 @@
             from: "self",
             to: "#ermine_shell",
         },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#ermine_shell",
+        },
     ],
     expose: [
         {

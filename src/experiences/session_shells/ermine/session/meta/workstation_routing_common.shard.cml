@@ -97,6 +97,11 @@
             from: "parent",
             to: "#workstation_session",
         },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#workstation_session",
+        },
     ],
     expose: [
         {

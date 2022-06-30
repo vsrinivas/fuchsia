@@ -41,8 +41,8 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.bluetooth.sys.Access",
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
@@ -109,6 +109,11 @@
                 "cache",
                 "tmp",
             ],
+            from: "parent",
+            to: "#login_shell",
+        },
+        {
+            resolver: "full-resolver",
             from: "parent",
             to: "#login_shell",
         },
