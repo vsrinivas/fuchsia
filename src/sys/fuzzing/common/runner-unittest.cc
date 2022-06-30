@@ -17,6 +17,8 @@ static constexpr size_t kNumReplacements = 2;
 
 void RunnerTest::SetUp() {
   AsyncTest::SetUp();
+  options_ = MakeOptions();
+  options_->set_seed(1);
   handler_ = [](const Input& input) { return FuzzResult::NO_ERRORS; };
 }
 
@@ -28,7 +30,9 @@ OptionsPtr RunnerTest::DefaultOptions() {
 
 void RunnerTest::Configure(const OptionsPtr& options) {
   options_ = options;
-  options_->set_seed(1);
+  if (!options_->has_seed()) {
+    options_->set_seed(1);
+  }
   FUZZING_EXPECT_OK(runner()->Configure(options_));
   RunUntilIdle();
 }

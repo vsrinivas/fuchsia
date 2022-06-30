@@ -51,7 +51,7 @@ class ProcessProxy final {
 
   // Coverage methods.
   __WARN_UNUSED_RESULT zx_status_t Connect(InstrumentedProcess instrumented);
-  __WARN_UNUSED_RESULT zx_status_t AddLlvmModule(LlvmModule llvm_module);
+  __WARN_UNUSED_RESULT zx_status_t AddModule(LlvmModule llvm_module);
 
   // Signals the associated process that a fuzzing run is starting and if it should |detect_leaks|.
   // Returns a promise that completes when the process acknowledges the signal.

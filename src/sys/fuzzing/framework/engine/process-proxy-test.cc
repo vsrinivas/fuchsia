@@ -4,18 +4,17 @@
 
 #include "src/sys/fuzzing/framework/engine/process-proxy-test.h"
 
+#include <zircon/status.h>
+
+#include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
 void ProcessProxyTest::SetUp() {
   AsyncTest::SetUp();
+  eventpair_ = std::make_unique<AsyncEventPair>(executor());
   pool_ = std::make_shared<ModulePool>();
-  process_ = std::make_unique<FakeProcess>(executor());
-}
-
-std::unique_ptr<ProcessProxy> ProcessProxyTest::MakeProcessProxy() {
-  return std::make_unique<ProcessProxy>(executor(), kInvalidTargetId + 1, pool_);
 }
 
 OptionsPtr ProcessProxyTest::DefaultOptions() {
@@ -24,18 +23,34 @@ OptionsPtr ProcessProxyTest::DefaultOptions() {
   return options;
 }
 
-InstrumentedProcess ProcessProxyTest::IgnoreSentSignals(zx::process&& process) {
-  return process_->IgnoreSentSignals(std::move(process));
+std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process) {
+  return CreateAndConnectProxy(std::move(process), ProcessProxyTest::DefaultOptions());
 }
 
-InstrumentedProcess ProcessProxyTest::IgnoreTarget(zx::eventpair&& eventpair) {
-  return process_->IgnoreTarget(std::move(eventpair));
+std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
+                                                                      const OptionsPtr& options) {
+  return CreateAndConnectProxy(std::move(process), options, eventpair_->Create());
 }
 
-InstrumentedProcess ProcessProxyTest::IgnoreAll() { return process_->IgnoreAll(); }
+std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
+                                                                      zx::eventpair eventpair) {
+  return CreateAndConnectProxy(std::move(process), ProcessProxyTest::DefaultOptions(),
+                               std::move(eventpair));
+}
 
-void IgnoreReceivedSignals() {}
-
-void IgnoreErrors(uint64_t ignored) {}
+std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
+                                                                      const OptionsPtr& options,
+                                                                      zx::eventpair eventpair) {
+  zx_info_handle_basic_t info;
+  auto status = process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+  auto process_proxy = std::make_unique<ProcessProxy>(executor(), info.koid, pool_);
+  process_proxy->Configure(options);
+  InstrumentedProcess instrumented;
+  instrumented.set_process(std::move(process));
+  instrumented.set_eventpair(std::move(eventpair));
+  EXPECT_EQ(process_proxy->Connect(std::move(instrumented)), ZX_OK);
+  return process_proxy;
+}
 
 }  // namespace fuzzing

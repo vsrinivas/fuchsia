@@ -14,12 +14,12 @@
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/coverage/provider.h"
-#include "src/sys/fuzzing/framework/testing/process.h"
 
 namespace fuzzing {
 
 // Test fixtures.
 
+using fuchsia::fuzzer::InstrumentedProcess;
 using fuchsia::fuzzer::Payload;
 
 class CoverageProviderClientTest : public AsyncTest {};

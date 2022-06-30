@@ -859,7 +859,7 @@ void RunnerImpl::AddCoverage(CoverageEvent event) {
       return;
     }
     auto& process_proxy = iter->second;
-    auto status = process_proxy->AddLlvmModule(std::move(llvm_module));
+    auto status = process_proxy->AddModule(std::move(llvm_module));
     if (status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to add proxy for module: " << zx_status_get_string(status);
     }

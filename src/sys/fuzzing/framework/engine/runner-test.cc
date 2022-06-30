@@ -4,11 +4,19 @@
 
 #include "src/sys/fuzzing/framework/engine/runner-test.h"
 
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/syslog/cpp/macros.h>
+#include <string.h>
+#include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/framework/engine/coverage-data.h"
+
 namespace fuzzing {
+
+using fuchsia::fuzzer::Payload;
 
 void RunnerImplTest::SetUp() {
   RunnerTest::SetUp();
@@ -18,12 +26,12 @@ void RunnerImplTest::SetUp() {
   target_adapter_ = std::make_unique<FakeTargetAdapter>(executor());
   runner_impl->set_target_adapter_handler(target_adapter_->GetHandler());
 
-  coverage_forwarder_ = std::make_unique<CoverageForwarder>(executor());
-  auto handler = coverage_forwarder_->GetCoverageProviderHandler();
-  runner_impl->set_coverage_provider_handler(std::move(handler));
+  events_ = AsyncDeque<CoverageEvent>::MakePtr();
+  coverage_provider_ = std::make_unique<CoverageProviderImpl>(executor(), options(), events_);
+  runner_impl->set_coverage_provider_handler(coverage_provider_->GetHandler());
 
-  process_ = std::make_unique<FakeProcess>(executor());
-  process_->set_handler(coverage_forwarder_->GetInstrumentationHandler());
+  eventpair_ = std::make_unique<AsyncEventPair>(executor());
+  target_ = std::make_unique<TestTarget>(executor());
 }
 
 void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parameters) {
@@ -31,18 +39,90 @@ void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parame
 }
 
 ZxPromise<Input> RunnerImplTest::GetTestInput() {
+  auto stash = std::make_shared<Input>();
   return target_adapter_->AwaitStart()
-      .and_then([launch = ZxFuture<>(process_->Launch())](Context& context,
-                                                          Input& input) mutable -> ZxResult<Input> {
-        if (!launch(context)) {
+      .and_then([this, stash](Input& input) -> ZxResult<> {
+        *stash = std::move(input);
+        if (running_) {
+          return fpromise::error(ZX_ERR_ALREADY_EXISTS);
+        }
+        running_ = true;
+        return fpromise::ok();
+      })
+      .and_then(PublishProcess())
+      .and_then(PublishModule())
+      .or_else([](const zx_status_t& status) -> ZxResult<> {
+        if (status != ZX_ERR_ALREADY_EXISTS) {
+          return fpromise::error(status);
+        }
+        return fpromise::ok();
+      })
+      .and_then([stash] { return fpromise::ok(std::move(*stash)); })
+      .wrap_with(scope_);
+}
+
+ZxPromise<> RunnerImplTest::PublishProcess() {
+  return fpromise::make_promise(
+      [this, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
+        if (!wait) {
+          auto process = target_->Launch();
+          zx_info_handle_basic_t info;
+          if (auto status =
+                  process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+              status != ZX_OK) {
+            return fpromise::error(status);
+          }
+          target_id_ = info.koid;
+          InstrumentedProcess instrumented;
+          instrumented.set_process(std::move(process));
+          instrumented.set_eventpair(eventpair_->Create());
+          CoverageEvent event;
+          event.target_id = target_id_;
+          event.payload = Payload::WithProcessStarted(std::move(instrumented));
+          if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
+            return fpromise::error(status);
+          }
+          wait = eventpair_->WaitFor(kSync);
+        }
+        if (!wait(context)) {
           return fpromise::pending();
         }
-        if (launch.is_error()) {
-          return fpromise::error(launch.error());
+        if (wait.is_error()) {
+          return fpromise::error(wait.error());
         }
-        return fpromise::ok(std::move(input));
-      })
-      .wrap_with(scope_);
+        return fpromise::ok();
+      });
+}
+
+ZxPromise<> RunnerImplTest::PublishModule() {
+  return fpromise::make_promise(
+      [this, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
+        if (!wait) {
+          zx::vmo data;
+          if (auto status = module_.Share(&data); status != ZX_OK) {
+            return fpromise::error(wait.error());
+          }
+          LlvmModule llvm_module;
+          llvm_module.set_legacy_id(module_.legacy_id());
+          llvm_module.set_inline_8bit_counters(std::move(data));
+          CoverageEvent event;
+          event.target_id = target_id_;
+          event.payload = Payload::WithLlvmModuleAdded(std::move(llvm_module));
+          if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
+            return fpromise::error(status);
+          }
+          wait = eventpair_->WaitFor(kSync);
+        }
+        if (!wait(context)) {
+          return fpromise::pending();
+        }
+        if (wait.is_error()) {
+          return fpromise::error(wait.error());
+        }
+        // Automatically clear feedback on start. This will complete when |eventpair_| is reset.
+        executor()->schedule_task(AwaitStart());
+        return fpromise::ok();
+      });
 }
 
 ZxPromise<> RunnerImplTest::SetFeedback(Coverage coverage, FuzzResult fuzz_result, bool leak) {
@@ -52,8 +132,8 @@ ZxPromise<> RunnerImplTest::SetFeedback(Coverage coverage, FuzzResult fuzz_resul
                  return fpromise::ok();
                }
                // Fake some activity within the process.
-               process_->SetCoverage(coverage);
-               process_->SetLeak(leak);
+               module_.SetCoverage(coverage);
+               leak_suspected_ = leak;
                return AsZxResult(target_adapter_->Finish());
              })
       .and_then([this, fuzz_result, target = ZxFuture<>(),
@@ -61,25 +141,25 @@ ZxPromise<> RunnerImplTest::SetFeedback(Coverage coverage, FuzzResult fuzz_resul
         if (!target) {
           switch (fuzz_result) {
             case FuzzResult::NO_ERRORS:
-              target = process_->AwaitFinish();
+              target = AwaitFinish();
               break;
             case FuzzResult::BAD_MALLOC:
-              target = process_->ExitAsync(options()->malloc_exitcode());
+              target = ExitAsync(options()->malloc_exitcode());
               break;
             case FuzzResult::CRASH:
-              target = process_->CrashAsync();
+              target = CrashAsync();
               break;
             case FuzzResult::DEATH:
-              target = process_->ExitAsync(options()->death_exitcode());
+              target = ExitAsync(options()->death_exitcode());
               break;
             case FuzzResult::EXIT:
-              target = process_->ExitAsync(1);
+              target = ExitAsync(1);
               break;
             case FuzzResult::LEAK:
-              target = process_->ExitAsync(options()->leak_exitcode());
+              target = ExitAsync(options()->leak_exitcode());
               break;
             case FuzzResult::OOM:
-              target = process_->ExitAsync(options()->oom_exitcode());
+              target = ExitAsync(options()->oom_exitcode());
               break;
             case FuzzResult::TIMEOUT:
               // Don't signal from the target adapter and don't exit the fake process; just wait.
@@ -96,7 +176,8 @@ ZxPromise<> RunnerImplTest::SetFeedback(Coverage coverage, FuzzResult fuzz_resul
         if (target.is_error()) {
           return fpromise::error(target.error());
         }
-        if (process_->is_running()) {
+        if (fuzz_result == FuzzResult::NO_ERRORS) {
+          running_ = true;
           return fpromise::ok();
         }
         if (fuzz_result == FuzzResult::EXIT && !options()->detect_exits()) {
@@ -110,6 +191,73 @@ ZxPromise<> RunnerImplTest::SetFeedback(Coverage coverage, FuzzResult fuzz_resul
         if (!disconnect(context)) {
           return fpromise::pending();
         }
+        running_ = false;
+        return fpromise::ok();
+      })
+      .wrap_with(scope_);
+}
+
+ZxPromise<> RunnerImplTest::AwaitStart() {
+  return fpromise::make_promise(
+             [this, start = ZxFuture<zx_signals_t>()](Context& context) mutable -> ZxResult<> {
+               while (true) {
+                 if (!start) {
+                   start = eventpair_->WaitFor(kStart | kStartLeakCheck);
+                 }
+                 if (!start(context)) {
+                   return fpromise::pending();
+                 }
+                 if (start.is_error()) {
+                   // Disconnected; stop waiting for start signals.
+                   return fpromise::ok();
+                 }
+                 module_.Clear();
+                 leak_suspected_ = false;
+                 auto status = eventpair_->SignalSelf(start.take_value(), 0);
+                 if (status != ZX_OK) {
+                   return fpromise::error(status);
+                 }
+                 status = eventpair_->SignalPeer(0, kStart);
+                 if (status != ZX_OK) {
+                   return fpromise::error(status);
+                 }
+               }
+             })
+      .wrap_with(scope_);
+}
+
+ZxPromise<> RunnerImplTest::AwaitFinish() {
+  return eventpair_->WaitFor(kFinish)
+      .and_then([this](const zx_signals_t& observed) -> ZxResult<> {
+        module_.Update();
+        auto status = eventpair_->SignalSelf(observed, 0);
+        if (status != ZX_OK) {
+          return fpromise::error(status);
+        }
+        status = eventpair_->SignalPeer(0, leak_suspected_ ? kFinishWithLeaks : kFinish);
+        if (status != ZX_OK) {
+          return fpromise::error(status);
+        }
+        return fpromise::ok();
+      })
+      .wrap_with(scope_);
+}
+
+ZxPromise<> RunnerImplTest::ExitAsync(int32_t exitcode) {
+  return target_->Exit(exitcode)
+      .and_then([this] {
+        eventpair_->Reset();
+        running_ = false;
+        return fpromise::ok();
+      })
+      .wrap_with(scope_);
+}
+
+ZxPromise<> RunnerImplTest::CrashAsync() {
+  return target_->Crash()
+      .and_then([this] {
+        eventpair_->Reset();
+        running_ = false;
         return fpromise::ok();
       })
       .wrap_with(scope_);

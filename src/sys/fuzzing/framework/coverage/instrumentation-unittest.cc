@@ -11,7 +11,6 @@
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
-#include "src/sys/fuzzing/framework/testing/process.h"
 
 namespace fuzzing {
 

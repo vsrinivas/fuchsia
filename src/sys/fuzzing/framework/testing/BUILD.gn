@@ -15,8 +15,6 @@ source_set("testing") {
     "module.h",
     "process-proxy.cc",
     "process-proxy.h",
-    "process.cc",
-    "process.h",
     "target.cc",
     "target.h",
   ]

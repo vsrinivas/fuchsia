@@ -12,11 +12,11 @@
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
-#include "src/sys/fuzzing/framework/testing/process.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
 
 namespace fuzzing {
@@ -30,23 +30,30 @@ class ProcessProxyTest : public AsyncTest {
  protected:
   void SetUp() override;
 
+  AsyncEventPair& eventpair() { return *eventpair_; }
   ModulePoolPtr pool() const { return pool_; }
-
-  std::unique_ptr<ProcessProxy> MakeProcessProxy();
 
   static OptionsPtr DefaultOptions();
 
-  InstrumentedProcess IgnoreSentSignals(zx::process&& process);
-  InstrumentedProcess IgnoreTarget(zx::eventpair&& eventpair);
-  InstrumentedProcess IgnoreAll();
+  // Creates a proxy. Configures the proxy with default options, connects it to the given |process|,
+  // and waits for the proxy to acknowledge the connection.
+  std::unique_ptr<ProcessProxy> CreateAndConnectProxy(zx::process process);
+
+  // Like |CreateAndConnectProxy| above, but uses the given options instead of the defaults.
+  std::unique_ptr<ProcessProxy> CreateAndConnectProxy(zx::process process,
+                                                      const OptionsPtr& options);
+
+  // Like |CreateAndConnectProxy| above, but uses the given |eventpair| instead of a temporary one.
+  std::unique_ptr<ProcessProxy> CreateAndConnectProxy(zx::process process, zx::eventpair eventpair);
 
  private:
-  ModulePoolPtr pool_;
-  std::unique_ptr<FakeProcess> process_;
-};
+  std::unique_ptr<ProcessProxy> CreateAndConnectProxy(zx::process process,
+                                                      const OptionsPtr& options,
+                                                      zx::eventpair eventpair);
 
-void IgnoreReceivedSignals();
-void IgnoreErrors(uint64_t ignored);
+  std::unique_ptr<AsyncEventPair> eventpair_;
+  ModulePoolPtr pool_;
+};
 
 }  // namespace fuzzing
 

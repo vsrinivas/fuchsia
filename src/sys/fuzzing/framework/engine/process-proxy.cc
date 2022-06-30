@@ -87,7 +87,7 @@ zx_status_t ProcessProxy::Connect(InstrumentedProcess instrumented) {
   return eventpair_.SignalPeer(0, kSync);
 }
 
-zx_status_t ProcessProxy::AddLlvmModule(LlvmModule llvm_module) {
+zx_status_t ProcessProxy::AddModule(LlvmModule llvm_module) {
   if (!eventpair_.IsConnected()) {
     FX_LOGS(WARNING) << "Failed to add module: Disconnected.";
     return ZX_ERR_PEER_CLOSED;

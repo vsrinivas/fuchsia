@@ -15,11 +15,8 @@ namespace {
 using ProcessProxyFatalTest = ProcessProxyTest;
 
 TEST_F(ProcessProxyFatalTest, Crash) {
-  auto process_proxy = MakeProcessProxy();
-  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  auto process = target.Launch();
-  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(std::move(process))), ZX_OK);
+  auto process_proxy = CreateAndConnectProxy(target.Launch());
   FUZZING_EXPECT_OK(target.Crash());
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::CRASH);
   RunUntilIdle();
