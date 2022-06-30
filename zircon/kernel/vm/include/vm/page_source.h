@@ -363,7 +363,8 @@ class PageSource final : public PageRequestInterface {
   const fbl::RefPtr<PageProvider> page_provider_;
 
   // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
-  // |request| must already be initialized. |offset| must be page-aligned.
+  // |request| must already be initialized, and its page_request_type must be set to |type|.
+  // |offset| must be page-aligned.
   //
   // Returns ZX_ERR_NEXT if the PageRequest::batch_state_ is BatchState::Internal and more pages can
   // be added to it, in which case the caller of this function within PageSource *must* handle
@@ -375,7 +376,8 @@ class PageSource final : public PageRequestInterface {
   //
   // Otherwise this method always returns ZX_ERR_SHOULD_WAIT, and transitions the
   // PageRequest::batch_state_ as required.
-  zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset) TA_REQ(page_source_mtx_);
+  zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset, page_request_type type)
+      TA_REQ(page_source_mtx_);
 
   // Helper used to complete a batched page request if the last call to PopulateRequestLocked
   // left the page request in the BatchRequest::Accepting state.
@@ -417,7 +419,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // If |allow_batching| is true, then a single request can be used to service
   // multiple consecutive pages.
   explicit PageRequest(bool allow_batching = false)
-      : batch_state_(allow_batching ? BatchState::Accepting : BatchState::Unbatched) {}
+      : creation_batch_state_(allow_batching ? BatchState::Accepting : BatchState::Unbatched),
+        batch_state_(creation_batch_state_) {}
   ~PageRequest();
 
   // Returns ZX_OK on success, or a permitted error code if the backing page provider explicitly
@@ -467,6 +470,12 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
     Internal
   };
 
+  // The batch state the external caller created this request with. A single page request object can
+  // be reused multiple times by calling Init in between uses, at which point the batch_state_ is
+  // reset to this value (unless overridden by internal_batching).
+  const BatchState creation_batch_state_;
+  // The current batch state of this request. Used to determine what operations are legal to
+  // perform on the request.
   BatchState batch_state_;
 
   // The page source this request is currently associated with.

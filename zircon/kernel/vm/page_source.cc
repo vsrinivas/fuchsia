@@ -250,22 +250,26 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     // The user should never have been trying to keep using a PageRequest that ended up in any state
     // other than Accepting.
     DEBUG_ASSERT(request->batch_state_ == PageRequest::BatchState::Accepting);
-    if (request->src_.get() != static_cast<PageRequestInterface*>(this)) {
-      // Ask the correct page source to finalize the request as we cannot add our page to it, and
-      // the caller should stop trying to use it.
+    if (request->src_.get() != static_cast<PageRequestInterface*>(this) ||
+        request->type_ != page_request_type::READ) {
+      // If the request has a different owning page source, or if the request is of a different
+      // type, we cannot add our page to it. So the caller should not continue to use it. Ask the
+      // request's page source to finalize the request.
       return request->FinalizeRequest();
     }
   }
 
-  return PopulateRequestLocked(request, offset);
+  return PopulateRequestLocked(request, offset, page_request_type::READ);
 }
 
 void PageSource::FreePages(list_node* pages) { page_provider_->FreePages(pages); }
 
-zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset) {
+zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset,
+                                              page_request_type type) {
   ASSERT(request);
   DEBUG_ASSERT(IS_ALIGNED(offset, PAGE_SIZE));
-  DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
+  DEBUG_ASSERT(type < page_request_type::COUNT);
+  DEBUG_ASSERT(request->type_ == type);
   DEBUG_ASSERT(request->offset_ != UINT64_MAX);
 
 #ifdef DEBUG_ASSERT_IMPLEMENTED
@@ -494,7 +498,7 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   zx_status_t status;
   // Keep building up the current request as long as PopulateRequestLocked returns ZX_ERR_NEXT.
   do {
-    status = PopulateRequestLocked(request, offset);
+    status = PopulateRequestLocked(request, offset, page_request_type::DIRTY);
     offset += PAGE_SIZE;
   } while (offset < end && status == ZX_ERR_NEXT);
 
@@ -536,20 +540,22 @@ void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
   type_ = type;
   src_ = ktl::move(src);
 
-  // If this request was operating in external batch mode and has been Finalized, set it back to
-  // Accepting.
-  if (batch_state_ == BatchState::Finalized) {
-    batch_state_ = BatchState::Accepting;
-  }
-  // If internal batching was requested by the caller, set the batch mode to Internal. Otherwise,
-  // requests operate in either Unbatched mode or external batch mode (Accepting).
+  // If internal batching was requested by the caller, set the batch mode to Internal.
+  // Otherwise, restore the batch mode to whatever the request was created with.
   if (internal_batching) {
-    // We do not expect the external caller to have set up the request for batching, since we are
-    // using internal batching.
-    DEBUG_ASSERT(batch_state_ != BatchState::Accepting);
     batch_state_ = BatchState::Internal;
-  } else if (batch_state_ != BatchState::Accepting) {
-    batch_state_ = BatchState::Unbatched;
+  } else {
+    // We could only have reached the Finalized state if we started with Accepting.
+    DEBUG_ASSERT(batch_state_ != BatchState::Finalized ||
+                 creation_batch_state_ == BatchState::Accepting);
+    // An Unbatched state remains unchanged.
+    DEBUG_ASSERT(batch_state_ != BatchState::Unbatched ||
+                 creation_batch_state_ == BatchState::Unbatched);
+    // The creation state could only have been Accepting or Unbatched, indicating whether the
+    // external caller supports batching.
+    DEBUG_ASSERT(creation_batch_state_ != BatchState::Internal);
+    DEBUG_ASSERT(creation_batch_state_ != BatchState::Finalized);
+    batch_state_ = creation_batch_state_;
   }
 
   event_.Unsignal();
