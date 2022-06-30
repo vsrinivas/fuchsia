@@ -127,10 +127,6 @@ struct zx_proc_args {
 // /boot/kernel/<vmo-name>.
 #define PA_VMO_KERNEL_FILE 0x1Cu
 
-// Used by the ELF runner to deliver a component's structured configuration values.
-// See fuchsia.component.runner.ComponentStartInfo/encoded_config for more information.
-#define PA_VMO_COMPONENT_CONFIG 0x1Du
-
 // --- Namespace Handles ---
 
 // A handle which will handle OPEN requests relative
@@ -169,6 +165,7 @@ struct zx_proc_args {
 #define PA_IOPORT_RESOURCE 0x52
 #define PA_SMC_RESOURCE 0x53
 #define PA_SYSTEM_RESOURCE 0x54
+#define PA_CONFIG_VMO 0x55
 
 // --- Various ---
 

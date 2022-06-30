@@ -70,7 +70,7 @@ pub fn create_rust_wrapper(
 
         impl Config {
             pub fn take_from_startup_handle() -> Self {
-                let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ComponentConfigVmo, 0))
+                let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
                     .expect("must have been provided with a config vmo")
                     .into();
                 let config_size = config_vmo.get_content_size().expect("must be able to read config vmo content size");

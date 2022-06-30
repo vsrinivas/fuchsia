@@ -125,11 +125,6 @@ pub enum HandleType {
     /// Equivalent to PA_VMO_KERNEL_FILE.
     KernelFileVmo = 0x1C,
 
-    /// A Handle to a component's process' configuration VMO.
-    ///
-    /// Equivalent to PA_VMO_COMPONENT_CONFIG.
-    ComponentConfigVmo = 0x1D,
-
     /// A handle to a fuchsia.io.Directory service to be used as a directory in the process's
     /// namespace. Corresponds to a path in the processargs bootstrap message's namespace table
     /// based on the argument of a HandleInfo of this type.
@@ -188,6 +183,11 @@ pub enum HandleType {
     ///
     /// Equivalent to PA_SYSTEM_RESOURCE.
     SystemResource = 0x54,
+
+    /// A Handle to a component's process' configuration VMO.
+    ///
+    /// Equivalent to PA_CONFIG_VMO.
+    ConfigVmo = 0x55,
 
     /// A handle type with user-defined meaning.
     ///
