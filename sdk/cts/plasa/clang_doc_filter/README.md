@@ -24,8 +24,8 @@ The program supports a number of flags. (Please refresh this list if it goes
 out of date. In case of discrepancies, the tool output is always more current.)
 
 ```
-╰─>$ ./out/workstation.qemu-x64/host_x64/clang_doc_filter --help
-Usage of ./out/workstation.qemu-x64/host_x64/clang_doc_filter:
+╰─>$ ./out/workstation_eng.qemu-x64/host_x64/clang_doc_filter --help
+Usage of ./out/workstation_eng.qemu-x64/host_x64/clang_doc_filter:
   -allow-filename-regexp value
         a regexp that may match any part of the filename
   -allow-symbol-name-regexp value

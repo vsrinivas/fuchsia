@@ -15,7 +15,7 @@ use std::path::PathBuf;
     name = "start",
     description = "Start the Fuchsia emulator.",
     example = "ffx emu start
-ffx emu start workstation.qemu-x64 --name my-emulator --engine femu",
+ffx emu start workstation_eng.qemu-x64 --name my-emulator --engine femu",
     note = "The `start` subcommand is the starting point for all emulator interactions.
 The name provided here will be used for all later interactions to indicate
 which emulator to target. Emulator names must be unique.

@@ -43,7 +43,7 @@ is for a Chromebook device, but changing to `x64` would work if your workflow is
 example.
 
 ```bash
-fx set workstation.chromebook-x64 --with=//src/lib/icu_data/rust:tests
+fx set workstation_eng.chromebook-x64 --with=//src/lib/icu_data/rust:tests
 fx build
 fx serve
 fx test src/lib/icu_data/rust:tests

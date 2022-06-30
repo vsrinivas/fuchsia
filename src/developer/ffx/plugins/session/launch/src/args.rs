@@ -12,7 +12,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Launch a session",
     example = "To use the tiling session manager:
 
-       $ fx set workstation.x64 --with //src/session/examples/tiles-session:packages
+       $ fx set workstation_eng.x64 --with //src/session/examples/tiles-session:packages
 
        $ ffx session launch fuchsia-pkg://fuchsia.com/tiles-session-routing#meta/tiles-session-routing.cm
 

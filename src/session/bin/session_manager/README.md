@@ -13,7 +13,7 @@ Add the `session_manager` component to builds by including `--with-base
 rebuilding and re-paving the device.
 
 Product configurations built on Session Framework (such as `fx set
-workstation.x64`) include `//src/session/bin/session_manager` by default.
+workstation_eng.x64`) include `//src/session/bin/session_manager` by default.
 
 ## Running
 

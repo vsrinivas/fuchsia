@@ -76,7 +76,7 @@ options kvm_intel nested=1
 
 To run from Workstation, configure the guest package as follows:
 ```sh
-fx set workstation.x64 --with-base //src/virtualization
+fx set workstation_eng.x64 --with-base //src/virtualization
 ```
 
 After booting the guest packages can be launched from the system launcher as

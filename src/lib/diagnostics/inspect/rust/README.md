@@ -52,8 +52,8 @@ $ fx shell run rust_inspect_benchmarks --benchmark reader
 
 You'll need to include `//src/tests/end_to_end/perf:test` in your
 build, by including it in your build set. You also need to build as
-`workstation.x64` or `terminal.x64`. For example,
-`fx set workstation.x64 --with //src/tests/end_to_end/perf:test`.
+`workstation_eng.x64` or `terminal.x64`. For example,
+`fx set workstation_eng.x64 --with //src/tests/end_to_end/perf:test`.
 
 When adding a new benchmark, the test must be added to the appropriate Dart
 file, either `//src/tests/end_to_end/perf/test/rust_inspect_benchmarks_test.dart` or

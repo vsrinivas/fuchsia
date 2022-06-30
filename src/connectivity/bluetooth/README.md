@@ -69,7 +69,7 @@ Bluetooth tests are built and installed when paving or OTA'ing with
 [`fx set`](/docs/development/build/fx.md#configure-a-build):
 
 ```
-  $ fx set workstation.x64 --with //src/connectivity/bluetooth,//bundles:tools
+  $ fx set workstation_eng.x64 --with //src/connectivity/bluetooth,//bundles:tools
 ```
 
 #### Tests
@@ -123,7 +123,7 @@ The most reliable way to enable higher log verbosity is with kernel command line
 parameters. These can be configured through the `fx set` command:
 
 ```
-  fx set workstation.x64 --args="dev_bootfs_labels=[\"//src/connectivity/bluetooth:driver-debug-logging\"]"
+  fx set workstation_eng.x64 --args="dev_bootfs_labels=[\"//src/connectivity/bluetooth:driver-debug-logging\"]"
 ```
 
 This will enable debug-level logging for all supported chipsets. Using `fx set`

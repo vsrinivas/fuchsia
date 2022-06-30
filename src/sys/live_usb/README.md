@@ -14,7 +14,7 @@ sacrificing a computer to try it on.
 
   ```
   $ echo 'boot.usb=true bootloader.default=local devmgr.bind-eager=usb_composite' > cmdline
-  $ fx set workstation.x64 && fx build
+  $ fx set workstation_eng.x64 && fx build
   ```
 
 3. Insert a USB device. We will call it `/dev/sdX` - replace X with the

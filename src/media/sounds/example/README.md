@@ -9,7 +9,7 @@ If these components are not present in your build, they can be added by
 appending the following packages to your `fx set` command. For example:
 
 ```bash
-$ fx set workstation.x64 --with //src/media/sounds/example \
+$ fx set workstation_eng.x64 --with //src/media/sounds/example \
     --with //src/media/sounds/soundplayer
 $ fx build
 ```

@@ -18,7 +18,7 @@ example.
 
 Include the bt-device-id [core shard](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/src/connectivity/bluetooth/profiles/bt-device-id/meta/bt-device-id.core_shard.cml)
 in your target product configuration. For example, for the workstation configuration, add the core
-shard to the `core_realm_shards` list in [workstation.gni](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/products/workstation.gni).
+shard to the `core_realm_shards` list in [workstation_eng.gni](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/products/workstation_eng.gni).
 
 ## Component Startup
 

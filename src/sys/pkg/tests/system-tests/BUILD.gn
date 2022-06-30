@@ -159,7 +159,7 @@ if (is_linux || is_mac) {
 
   system_test_upgrade_suite("workstation-release-upgrade") {
     downgrade_release_builder =
-        "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
+        "fuchsia/global.ci/workstation_eng.x64-release-e2e-isolated"
 
     environments = [
       {
@@ -194,7 +194,7 @@ if (is_linux || is_mac) {
 
   system_test_upgrade_suite("workstation-release-upgrade-omaha") {
     downgrade_release_builder =
-        "fuchsia/global.ci/workstation.x64-release-e2e-isolated-omaha"
+        "fuchsia/global.ci/workstation_eng.x64-release-e2e-isolated-omaha"
     installer = "omaha"
     environments = [
       {
