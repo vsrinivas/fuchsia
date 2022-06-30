@@ -171,7 +171,7 @@ size_checker_input = {
       component = "Media"
       src = [ "build/images/fuchsia/fuchsia/legacy/packages/base/codec_runner_intel_gen" ]
       limit = 10485760  # 10 MiB
-      creep_limit = 49152  # 48.0 KiB
+      creep_limit = 428032  # 418.0 KiB
     },
     {
       component = "SetUI"
