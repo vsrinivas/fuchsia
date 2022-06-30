@@ -154,7 +154,7 @@ impl Payload for SendPayload<'_> {
 /// A circular buffer implementation.
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(super) struct RingBuffer {
+pub(crate) struct RingBuffer {
     storage: Vec<u8>,
     // The index where the reader starts to read.
     head: usize,

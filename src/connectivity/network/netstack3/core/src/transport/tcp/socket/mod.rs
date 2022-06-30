@@ -56,15 +56,26 @@ use crate::{
     },
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer},
-        socket::{
-            demux::{tcp_serialize_segment, TcpBufferContext},
-            isn::generate_isn,
-        },
+        socket::{demux::tcp_serialize_segment, isn::generate_isn},
         state::{Closed, Initial, State},
     },
     IdMap, Instant, IpDeviceIdContext, IpExt, IpSockCreationError, IpSockSendError,
     TransportIpContext,
 };
+
+/// Non-sync context for TCP.
+trait TcpNonSyncContext: InstantContext {
+    /// Receive buffer used by TCP.
+    type ReceiveBuffer: ReceiveBuffer;
+    /// Send buffer used by TCP.
+    type SendBuffer: SendBuffer;
+}
+
+trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
+    fn get_tcp_state_mut(
+        &mut self,
+    ) -> &mut TcpSockets<I, Self::DeviceId, C::Instant, C::ReceiveBuffer, C::SendBuffer>;
+}
 
 /// Socket address includes the ip address and the port number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -257,16 +268,13 @@ struct MaybeListenerId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct ConnectionId(usize);
 
-fn create_socket<I, D, II, R, S, SC, C>(sync_ctx: &mut SC, _ctx: &mut C) -> UnboundId
+fn create_socket<I, SC, C>(sync_ctx: &mut SC, _ctx: &mut C) -> UnboundId
 where
     I: IpExt,
-    D: IpDeviceId,
-    II: Instant,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    SC: AsMut<TcpSockets<I, D, II, R, S>>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C>,
 {
-    UnboundId(sync_ctx.as_mut().inactive.push(Inactive))
+    UnboundId(sync_ctx.get_tcp_state_mut().inactive.push(Inactive))
 }
 
 #[derive(Debug)]
@@ -276,7 +284,7 @@ enum BindError {
     Conflict(InsertError),
 }
 
-fn bind<I, II, R, S, SC, C>(
+fn bind<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UnboundId,
@@ -285,15 +293,13 @@ fn bind<I, II, R, S, SC, C>(
 ) -> Result<BoundId, BindError>
 where
     I: IpExt,
-    II: Instant,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    SC: AsMut<TcpSockets<I, SC::DeviceId, II, R, S>> + TransportIpContext<I, C>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + TransportIpContext<I, C>,
 {
     let port = match port {
         None => {
             let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
-                sync_ctx.as_mut();
+                sync_ctx.get_tcp_state_mut();
             match port_alloc.try_alloc(&local_ip, &socketmap) {
                 Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
                 None => return Err(BindError::NoPort),
@@ -304,7 +310,7 @@ where
     bind_inner(sync_ctx, ctx, id, local_ip, port)
 }
 
-fn bind_inner<I, II, R, S, SC, C>(
+fn bind_inner<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UnboundId,
@@ -313,13 +319,12 @@ fn bind_inner<I, II, R, S, SC, C>(
 ) -> Result<BoundId, BindError>
 where
     I: IpExt,
-    II: Instant,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    SC: AsMut<TcpSockets<I, SC::DeviceId, II, R, S>> + TransportIpContext<I, C>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + TransportIpContext<I, C>,
 {
     let idmap_key = id.into();
-    let inactive = sync_ctx.as_mut().inactive.remove(idmap_key).expect("invalid unbound socket id");
+    let inactive =
+        sync_ctx.get_tcp_state_mut().inactive.remove(idmap_key).expect("invalid unbound socket id");
     let local_ip = SpecifiedAddr::new(local_ip);
     if let Some(ip) = local_ip {
         if sync_ctx.get_device_with_assigned_addr(ip).is_none() {
@@ -327,7 +332,7 @@ where
         }
     }
     sync_ctx
-        .as_mut()
+        .get_tcp_state_mut()
         .socketmap
         .try_insert_listener_with_sharing(
             ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: port }, device: None },
@@ -337,12 +342,12 @@ where
         )
         .map(|MaybeListenerId(x)| BoundId(x))
         .map_err(|(err, _): (_, MaybeListener)| {
-            assert_eq!(sync_ctx.as_mut().inactive.insert(idmap_key, inactive), None);
+            assert_eq!(sync_ctx.get_tcp_state_mut().inactive.insert(idmap_key, inactive), None);
             BindError::Conflict(err)
         })
 }
 
-fn listen<I, D, II, R, S, SC, C>(
+fn listen<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: BoundId,
@@ -350,15 +355,15 @@ fn listen<I, D, II, R, S, SC, C>(
 ) -> ListenerId
 where
     I: IpExt,
-    D: IpDeviceId,
-    II: Instant,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    SC: AsMut<TcpSockets<I, D, II, R, S>>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C>,
 {
     let id = MaybeListenerId::from(id);
-    let (listener, _, _): (_, PosixSharingOptions, &ListenerAddr<_>) =
-        sync_ctx.as_mut().socketmap.get_listener_by_id_mut(id).expect("invalid listener id");
+    let (listener, _, _): (_, PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
+        .get_tcp_state_mut()
+        .socketmap
+        .get_listener_by_id_mut(id)
+        .expect("invalid listener id");
     match listener {
         MaybeListener::Bound(_) => {
             *listener = MaybeListener::Listener(Listener::new(backlog));
@@ -375,23 +380,21 @@ enum AcceptError {
     WouldBlock,
 }
 
-fn accept<I, D, II, R, S, SC, C>(
+fn accept<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: ListenerId,
 ) -> Result<(ConnectionId, SocketAddr<I::Addr>), AcceptError>
 where
     I: IpExt,
-    D: IpDeviceId,
-    II: Instant,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    SC: AsMut<TcpSockets<I, D, II, R, S>>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C>,
 {
-    let listener = sync_ctx.as_mut().get_listener_by_id_mut(id).expect("invalid listener id");
+    let listener =
+        sync_ctx.get_tcp_state_mut().get_listener_by_id_mut(id).expect("invalid listener id");
     let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
     let (conn, _, conn_addr): (_, PosixSharingOptions, _) = sync_ctx
-        .as_mut()
+        .get_tcp_state_mut()
         .socketmap
         .get_conn_by_id_mut(conn_id)
         .expect("failed to retrieve the connection state");
@@ -407,7 +410,7 @@ enum ConnectError {
     NoPort,
 }
 
-fn connect_bound<I, D, R, S, SC, C>(
+fn connect_bound<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: BoundId,
@@ -415,17 +418,15 @@ fn connect_bound<I, D, R, S, SC, C>(
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
-    D: IpDeviceId,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    C: InstantContext,
-    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
-        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
-        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let bound_id = MaybeListenerId::from(id);
-    let (bound, bound_addr) =
-        sync_ctx.as_mut().socketmap.get_listener_by_id(&bound_id).expect("invalid socket id");
+    let (bound, bound_addr) = sync_ctx
+        .get_tcp_state_mut()
+        .socketmap
+        .get_listener_by_id(&bound_id)
+        .expect("invalid socket id");
     assert_matches!(bound, (MaybeListener::Bound(_), PosixSharingOptions::Exclusive));
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *bound_addr;
@@ -433,11 +434,11 @@ where
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
         .map_err(ConnectError::IpSockCreationError)?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
-    let _: Option<_> = sync_ctx.as_mut().socketmap.remove_listener_by_id(bound_id);
+    let _: Option<_> = sync_ctx.get_tcp_state_mut().socketmap.remove_listener_by_id(bound_id);
     Ok(conn_id)
 }
 
-fn connect_unbound<I, D, R, S, SC, C>(
+fn connect_unbound<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UnboundId,
@@ -445,52 +446,42 @@ fn connect_unbound<I, D, R, S, SC, C>(
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
-    D: IpDeviceId,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    C: InstantContext,
-    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
-        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
-        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
+    C: TcpNonSyncContext,
+    SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>> + TcpSyncContext<I, C>,
 {
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), None)
         .map_err(ConnectError::IpSockCreationError)?;
     let local_port = {
         let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
-            sync_ctx.as_mut();
+            sync_ctx.get_tcp_state_mut();
         match port_alloc.try_alloc(&*ip_sock.local_ip(), &socketmap) {
             Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
             None => return Err(ConnectError::NoPort),
         }
     };
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
-    let _: Option<_> = sync_ctx.as_mut().inactive.remove(id.into());
+    let _: Option<_> = sync_ctx.get_tcp_state_mut().inactive.remove(id.into());
     Ok(conn_id)
 }
 
-fn connect_inner<I, D, R, S, SC, C>(
+fn connect_inner<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    ip_sock: IpSock<I, D>,
+    ip_sock: IpSock<I, SC::DeviceId>,
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
-    D: IpDeviceId,
-    R: ReceiveBuffer,
-    S: SendBuffer,
-    C: InstantContext,
-    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
-        + AsRef<TcpSockets<I, D, C::Instant, R, S>>
-        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let isn = generate_isn::<I::Addr>(
-        ctx.now().duration_since(sync_ctx.as_ref().isn_ts),
+        ctx.now().duration_since(sync_ctx.get_tcp_state_mut().isn_ts),
         SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
         SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
-        &sync_ctx.as_ref().secret,
+        &sync_ctx.get_tcp_state_mut().secret,
     );
     let conn_addr = ConnAddr {
         ip: ConnIpAddr {
@@ -504,7 +495,7 @@ where
     let now = ctx.now();
     let (syn_sent, syn) = Closed::<Initial>::connect(isn, now);
     let conn_id = sync_ctx
-        .as_mut()
+        .get_tcp_state_mut()
         .socketmap
         .try_insert_conn_with_sharing(
             conn_addr.clone(),
@@ -521,7 +512,10 @@ where
         .send_ip_packet(ctx, &ip_sock, tcp_serialize_segment(syn, conn_addr.ip), None)
         .map_err(|(body, err)| {
             warn!("tcp: failed to send ip packet {:?}: {:?}", body, err);
-            assert_matches!(sync_ctx.as_mut().socketmap.remove_conn_by_id(conn_id), Some(_));
+            assert_matches!(
+                sync_ctx.get_tcp_state_mut().socketmap.remove_conn_by_id(conn_id),
+                Some(_)
+            );
             ConnectError::IpSocketSendError(err)
         })?;
     Ok(conn_id)
@@ -627,7 +621,7 @@ mod tests {
 
     type TcpNonSyncCtx = DummyNonSyncCtx<(), (), ()>;
 
-    impl<I: TcpTestIpExt> TcpBufferContext for TcpSyncCtx<I> {
+    impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = RingBuffer;
         type SendBuffer = RingBuffer;
     }
@@ -645,21 +639,11 @@ mod tests {
         }
     }
 
-    impl<I: TcpTestIpExt> AsMut<TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer>>
-        for TcpSyncCtx<I>
-    {
-        fn as_mut(
+    impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
+        fn get_tcp_state_mut(
             &mut self,
         ) -> &mut TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer> {
             &mut self.get_mut().sockets
-        }
-    }
-
-    impl<I: TcpTestIpExt> AsRef<TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer>>
-        for TcpSyncCtx<I>
-    {
-        fn as_ref(&self) -> &TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer> {
-            &self.get_ref().sockets
         }
     }
 

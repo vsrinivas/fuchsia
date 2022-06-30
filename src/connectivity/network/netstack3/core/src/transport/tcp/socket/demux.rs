@@ -18,7 +18,6 @@ use packet_formats::{
 use thiserror::Error;
 
 use crate::{
-    context::InstantContext,
     ip::{BufferIpTransportContext, BufferTransportIpContext, TransportReceiveError},
     socket::{
         posix::{
@@ -28,34 +27,26 @@ use crate::{
         AddrVec,
     },
     transport::tcp::{
-        buffer::{ReceiveBuffer, SendBuffer, SendPayload},
+        buffer::SendPayload,
         segment::Segment,
         seqnum::WindowSize,
         socket::{
             isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
-            SocketAddr, TcpIpTransportContext, TcpPosixSocketSpec, TcpSockets,
+            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpPosixSocketSpec,
+            TcpSyncContext,
         },
         state::{Closed, State},
         Control, UserError,
     },
-    Instant as _, IpDeviceIdContext, IpExt,
+    Instant as _, IpExt,
 };
-
-pub(super) trait TcpBufferContext {
-    type ReceiveBuffer: ReceiveBuffer;
-    type SendBuffer: SendBuffer;
-}
 
 impl<I, B, C, SC> BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext
 where
     I: IpExt,
     B: BufferMut,
-    C: InstantContext,
-    SC: TcpBufferContext
-        + IpDeviceIdContext<I>
-        + AsMut<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
-        + AsRef<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
-        + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     fn receive_ip_packet(
         sync_ctx: &mut SC,
@@ -106,7 +97,7 @@ where
             // Connections are always searched before listeners because they
             // are more specific.
             AddrVec::Conn(conn_addr) => {
-                sync_ctx.as_ref().socketmap.get_conn_by_addr(&conn_addr).map(|addr_state| {
+                sync_ctx.get_tcp_state_mut().socketmap.get_conn_by_addr(&conn_addr).map(|addr_state| {
                     match addr_state {
                         PosixAddrState::Exclusive(conn_id) => *conn_id,
                         PosixAddrState::ReusePort(_) =>  {
@@ -125,7 +116,7 @@ where
                 // allocate a new connection entry in the demuxer.
                 // TODO(https://fxbug.dev/101992): Support SYN cookies.
                 let maybe_listener_id =
-                    sync_ctx.as_ref().socketmap.get_listener_by_addr(&listener_addr).map(
+                    sync_ctx.get_tcp_state_mut().socketmap.get_listener_by_addr(&listener_addr).map(
                         |addr_state| match addr_state {
                             PosixAddrState::Exclusive(listener_id) => *listener_id,
                             PosixAddrState::ReusePort(_) => {
@@ -134,7 +125,7 @@ where
                         },
                     );
                 maybe_listener_id.and_then(|listener_id| {
-                    let socketmap = &mut sync_ctx.as_mut().socketmap;
+                    let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
                     let ((maybe_listener, _), _): &((_, PosixSharingOptions), ListenerAddr<_>) =
                         socketmap.get_listener_by_id(&listener_id).expect("invalid listener_id");
 
@@ -172,15 +163,15 @@ where
                     };
 
                     let isn = generate_isn::<I::Addr>(
-                        now.duration_since(sync_ctx.as_ref().isn_ts),
+                        now.duration_since(sync_ctx.get_tcp_state_mut().isn_ts),
                         SocketAddr {
                             ip: local_ip,
                             port: local_port,
                         }, SocketAddr {
                             ip: remote_ip,
                             port: remote_port,
-                        }, &sync_ctx.as_ref().secret);
-                    let socketmap = &mut sync_ctx.as_mut().socketmap;
+                        }, &sync_ctx.get_tcp_state_mut().secret);
+                    let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
                     // TODO(https://fxbug.dev/102135): Inherit the socket
                     // options from the listener.
                     let conn_id = socketmap
@@ -204,7 +195,7 @@ where
                         .expect("failed to create a new connection");
 
                     let (maybe_listener, _, _): (_, PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
-                        .as_mut()
+                        .get_tcp_state_mut()
                         .socketmap
                         .get_listener_by_id_mut(listener_id)
                         .expect("the listener must still be active");
@@ -229,7 +220,7 @@ where
                     PosixSharingOptions,
                     &ConnAddr<_>,
                 ) = sync_ctx
-                    .as_mut()
+                    .get_tcp_state_mut()
                     .socketmap
                     .get_conn_by_id_mut(*id)
                     .expect("inconsistent state: invalid connection id");
@@ -281,7 +272,7 @@ where
 
         let _: Option<()> = conn_id.and_then(|conn_id| {
             let (conn, _, _): (_, PosixSharingOptions, &ConnAddr<_>) = sync_ctx
-                .as_mut()
+                .get_tcp_state_mut()
                 .socketmap
                 .get_conn_by_id_mut(conn_id)
                 .expect("inconsistent state: invalid connection id");
@@ -298,8 +289,10 @@ where
                 Connection { acceptor: _, state: _, ip_sock: _ } => None,
             };
             acceptor_id.map(|acceptor| {
-                let acceptor =
-                    sync_ctx.as_mut().get_listener_by_id_mut(acceptor).expect("orphaned acceptee");
+                let acceptor = sync_ctx
+                    .get_tcp_state_mut()
+                    .get_listener_by_id_mut(acceptor)
+                    .expect("orphaned acceptee");
                 let pos = acceptor
                     .pending
                     .iter()
