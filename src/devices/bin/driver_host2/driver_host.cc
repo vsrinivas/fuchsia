@@ -297,17 +297,6 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       // would happen if the driver attempts to access the dispatcher in its Stop hook.
       uint32_t options = default_dispatcher_opts;
 
-      // TODO(fxbug.dev/99310): When we can parse CMLs to get this information,
-      // please delete these.
-      if (url == "fuchsia-boot:///#meta/intel-i2c-dfv2.cm") {
-        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
-      }
-      if (url == "fuchsia-boot:///#meta/i2c.cm") {
-        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
-      }
-      if (url == "fuchsia-boot:///#meta/i2c-hid-dfv2.cm") {
-        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
-      }
       auto dispatcher =
           fdf::Dispatcher::Create(options, [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});
       if (dispatcher.is_error()) {
