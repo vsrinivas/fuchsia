@@ -38,9 +38,9 @@
 // Define a platform-specific prefix
 //
 #ifdef __Fuchsia__
-#define VK_PIPELINE_CACHE_PREFIX_STRING "/cache/."
+#define VK_PIPELINE_CACHE_NAME "/cache/.radix_sort_vk_bench_cache"
 #else
-#define VK_PIPELINE_CACHE_PREFIX_STRING "."
+#define VK_PIPELINE_CACHE_NAME ".radix_sort_vk_bench_cache"
 #endif
 
 //
@@ -888,7 +888,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   //
   VkPipelineCache pc;
 
-  vk_pipeline_cache_create(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", &pc);
+  vk_pipeline_cache_create(device, NULL, VK_PIPELINE_CACHE_NAME, &pc);
 
   //
   // Create Radix Sort instance
@@ -898,7 +898,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   //
   // Destroy the pipeline cache
   //
-  vk_pipeline_cache_destroy(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", pc);
+  vk_pipeline_cache_destroy(device, NULL, VK_PIPELINE_CACHE_NAME, pc);
 
   //
   // Free the target archive if it was loaded
