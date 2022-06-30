@@ -19,6 +19,7 @@ group("tests") {
     "fs_management:tests",
     "fuchsia-vfs-watcher:tests",
     "fuchsia-watch:tests",
+    "key-bag:tests",
     "ramdevice_client:tests",
     "storage_device:tests",
     "vfs/cpp:tests",

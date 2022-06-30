@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test.gni")
+
+rustc_staticlib("key-bag-static") {
+  name = "key_bag"
+  edition = "2018"
+  with_unit_tests = false
+  public = [ "key_bag.h" ]
+
+  deps = [
+    "//src/lib/storage/key-bag",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+  sources = [ "src/lib.rs" ]
+}
+
+test("key_bag_binding_test") {
+  sources = [ "binding_test.cc" ]
+  deps = [
+    ":key-bag-static",
+    "//sdk/lib/fit",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+
+fuchsia_unittest_package("key-bag-binding-test") {
+  deps = [ ":key_bag_binding_test" ]
+}
+
+group("c") {
+  deps = [ ":key-bag-static" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":key-bag-binding-test" ]
+}
