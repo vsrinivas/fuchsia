@@ -17,6 +17,11 @@ use std::task::{Context, Poll};
 use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
 use stream_link::run_stream_link;
 
+// Limits the maximum concurrent ascendd tasks as a stop-gap solution around issues that have
+// cropped up as a result of parallelized invocations into ffx (primarily for testing).
+// See http://fxbug.dev/87372
+const ASCENDD_MAX_CONCURRENT_TASKS: usize = 5;
+
 #[cfg(not(target_os = "fuchsia"))]
 pub use hoist::default_ascendd_path;
 
@@ -133,7 +138,7 @@ async fn run_ascendd(
         async move {
             incoming
                 .incoming()
-                .for_each_concurrent(None, |stream| async move {
+                .for_each_concurrent(Some(ASCENDD_MAX_CONCURRENT_TASKS), |stream| async move {
                     match stream {
                         Ok(stream) => {
                             let (mut rx, mut tx) = stream.split();
