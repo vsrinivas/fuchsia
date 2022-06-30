@@ -6,6 +6,12 @@ import("//build/test.gni")
 
 import("//src/devices/bus/drivers/pci/pci.gni")
 
+declare_args() {
+  # If true, power on the Atlas camera at boot.
+  # TODO(fxbug.dev/81684): remove once we have a better way to manage ACPI device power.
+  i_can_haz_atlas_camera = false
+}
+
 group("tests") {
   testonly = true
   deps = [ ":acpi-board-lib-tests" ]
@@ -72,13 +78,19 @@ source_set("acpi") {
     "resources.cc",
   ]
 
+  defines = []
+
   if (platform_enable_user_pci) {
     sources += [
       "pci.cc",
       "pci_irqs.cc",
       "pciroot.cc",
     ]
-    defines = [ "ENABLE_USER_PCI" ]
+    defines += [ "ENABLE_USER_PCI" ]
+  }
+
+  if (i_can_haz_atlas_camera) {
+    defines += [ "ENABLE_ATLAS_CAMERA" ]
   }
 
   public_deps = shared_public_deps + shared_fuchsia_public_deps
