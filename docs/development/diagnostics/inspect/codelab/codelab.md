@@ -57,7 +57,7 @@ Note: Replace core.x64 with your product and board configuration.
 * {Dart}
 
    ```
-   fx set workstation.x64
+   fx set workstation_eng.x64
    --with //examples/diagnostics/inspect/codelab/dart \
    --with //examples/diagnostics/inspect/codelab/dart:tests
    ```

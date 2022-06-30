@@ -117,15 +117,15 @@ being able to describe the content in sufficient detail.
 ```
 [
   {
-    "file": "//out/workstation.qemu-x64/gen/sdk/lib/fdio/fdio.fragment.plasa.json",
+    "file": "//out/workstation_eng.qemu-x64/gen/sdk/lib/fdio/fdio.fragment.plasa.json",
     "kind": "api_cc",
   },
   {
-    "file": "//out/workstation.qemu-x64/gen/sdk/lib/stdcompat/stdcompat.fragment.plasa.json",
+    "file": "//out/workstation_eng.qemu-x64/gen/sdk/lib/stdcompat/stdcompat.fragment.plasa.json",
     "kind": "api_cc",
   },
   {
-    "file": "//out/workstation.qemu-x64/gen/sdk/lib/fit/fit.fragment.plasa.json",
+    "file": "//out/workstation_eng.qemu-x64/gen/sdk/lib/fit/fit.fragment.plasa.json",
     "kind": "api_cc",
   }
 ]

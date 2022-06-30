@@ -53,14 +53,14 @@ section.
 ## 2. Build Fuchsia {#build-fuchsia}
 
 Installing Fuchsia on a NUC device requires that you build a Workstation
-image (`workstation.x64`) and generate build artifacts on your workstation.
+image (`workstation_eng.x64`) and generate build artifacts on your workstation.
 
 To build Fuchsia for NUC installation, do the following:
 
-1.  Set your build configuration to `workstation.x64`:
+1.  Set your build configuration to `workstation_eng.x64`:
 
     ```posix-terminal
-    fx set workstation.x64
+    fx set workstation_eng.x64
     ```
 
 1.  Build Fuchsia:

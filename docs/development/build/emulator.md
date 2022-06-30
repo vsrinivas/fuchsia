@@ -61,7 +61,7 @@ When setting up FEMU using `fx set`, FEMU supports the following boards:
 With the Fuchsia SDK, FEMU supports pre-built images, including:
 
 *   `qemu-x64`
-*   `workstation.qemu-x64-release`
+*   `workstation_eng.qemu-x64-release`
 *   `qemu-arm64`
 
 ARM64 support (`qemu-arm64`) is very limited and not recommended.

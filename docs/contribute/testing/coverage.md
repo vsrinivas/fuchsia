@@ -140,7 +140,7 @@ Support for the following additional use cases is currently under development:
 
 *   Kernel code coverage.
 *   Coverage on product configurations other than `core`, for instance `bringup`
-    or `workstation`.
+    or `workstation_eng`.
 *   Coverage on hardware targets, that is collecting from tests that don't run
     on qemu.
 

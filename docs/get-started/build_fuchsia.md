@@ -49,7 +49,7 @@ fx set {{ '<var>' }}PRODUCT{{ '</var>' }}.{{ '<var>' }}BOARD{{ '</var>' }}
 Replace the following:
 
 * `PRODUCT`: The Fuchsia product that you want to build; for example, `core` and
-  `workstation`.
+  `workstation_eng`.
 * `BOARD`: The architecture of the product; for example, `x64` and `qemu-x64`
 
 The example command below sets a build configuration to `core.qemu-x64`:
@@ -67,11 +67,11 @@ In this example:
     [QEMU][qemu]{:.external}.
 
 On the other hand, the example below sets the build configuration to
-`workstation.x64`, which is commonly used to
+`workstation_eng.x64`, which is commonly used to
 [install Fuchsia's Workstation product on a device][build-workstation]:
 
 ```posix-terminal
-fx set workstation.x64
+fx set workstation_eng.x64
 ```
 
 For more information on the build configuration,

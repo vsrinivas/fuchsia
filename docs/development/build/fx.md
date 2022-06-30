@@ -64,7 +64,7 @@ with this:
 First let's configure the build. To do this you need to make a few choices:
 
 * What [product configuration](#key-product-configurations) do you want?
-  (unsure: try `workstation`)
+  (unsure: try `workstation_eng`)
 * What board are you building for? (unsure: try `x64`)
 * What extra [test targets](#key-bundles) do you want? (unsure: try
   `//bundles:tools`, and if you're working on features, you probably want
@@ -74,7 +74,7 @@ Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
 
 ```posix-terminal
-fx set workstation.x64 --with //bundles:tests
+fx set workstation_eng.x64 --with //bundles:tests
 ```
 
 Once you ran `fx set` in your checkout, there is no need to run it again unless
@@ -93,7 +93,7 @@ graph.
 
 ### What just happened?
 
-* You selected the product `workstation` (run `fx list-products` for a list of
+* You selected the product `workstation_eng` (run `fx list-products` for a list of
   other product configurations).
 * You selected the board `x64`, which supports many typical boards based on the
   `x64` architecture. (Note that `arm64` boards are less interchangable, and you
@@ -166,7 +166,7 @@ important configurations to be familiar with:
   items added to the "universe" dependency set). It is the starting point for
   all higher-level product configurations. It has common network capabilities
   and can update a system over-the-air.
-* `workstation` is a basis for a general purpose development environment, good
+* `workstation_eng` is a basis for a general purpose development environment, good
   for working on UI, media and many other high-level features. This is also
   the best environment for enthusiasts to play with and explore.
 
@@ -509,7 +509,7 @@ keep several different devices in several build configurations, and could be
 setup as follows:
 
 ```none {:.devsite-disable-click-to-copy}
-$ fx --dir out/workstation set workstation.x64
+$ fx --dir out/workstation set workstation_eng.x64
 $ fx build
 $ fx set-device <workstation-node-name>
 

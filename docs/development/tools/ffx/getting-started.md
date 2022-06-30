@@ -23,7 +23,7 @@ see, [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
 Your device must be running a `core`
 [product configuration](/docs/development/build/build_system/boards_and_products.md)
-or a product configuration that extends `core` (such as `workstation`).
+or a product configuration that extends `core` (such as `workstation_eng`).
 
 Optionally, you can run `ffx log`, which will provide some additional information
 about the interactions between `ffx` and your Fuchsia target device.

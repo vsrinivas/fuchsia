@@ -240,7 +240,7 @@ services".
 ### Add the component to core {#add-component-to-core}
 
 -   [Add a core realm shard](#add-core-shard): Your component is **not** present
-    in *all* products (eg. maybe it is present on workstation, but not
+    in *all* products (eg. maybe it is present on Workstation, but not
     terminal). Using a [core realm shard][core-realm-rfc] allows the component
     to be safely excluded where it isn't available.
 -   [Add directly to core](#add-core-direct): Your component is present on all
@@ -286,14 +286,14 @@ services".
     ```
 
 1.  Add the core realm shard to the appropriate products. For example, you can
-    add the component to the workstation product by modifying
-    `//products/workstation.gni` by adding the build target path to the
+    add the component to the Workstation product by modifying
+    `//products/workstation_eng.gni` by adding the build target path to the
     `core_realm_shards` array. If your component is present on all products that
     derive from core and you are adding it via a shard, modify
     `//products/core.gni`.
 
     ```gn
-    # //products/workstation.gni
+    # //products/workstation_eng.gni
     ...
     core_realm_shards += [
         ...

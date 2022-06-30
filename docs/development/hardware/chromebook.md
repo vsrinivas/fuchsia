@@ -25,7 +25,7 @@ Ensure that you have a `chromebook-x64` build for Fuchsia.
     configuration to use the following Chromebook product:
 
     ```posix-terminal
-    fx set workstation.chromebook-x64 --release
+    fx set workstation_eng.chromebook-x64 --release
     ```
 
 
@@ -192,4 +192,3 @@ To go back to the Fuchsia kernel, just re-pave the device.
 
 [get-fuchsia-source]: /docs/get-started/get_fuchsia_source.md
 [build-fuchsia]: /docs/get-started/build_fuchsia.md
-

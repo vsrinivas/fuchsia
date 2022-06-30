@@ -173,14 +173,14 @@ Do the following:
 Before you can run an end-to-end test, you first need to configure and build a
 Fuchsia image to include the test in the build artifacts:
 
-Note: The examples in this guide use the `workstation` product. End-to-end tests work
+Note: The examples in this guide use the `workstation_eng` product. End-to-end tests work
 with most products except `core`.
 
 1.  Configure your Fuchsia image to include the `my_e2e_test_example` test
     directory and the `test` target group:
 
     ```posix-terminal
-    fx set workstation.qemu-x64 --with //src/tests/end_to_end/my_e2e_test_example:test
+    fx set workstation_eng.qemu-x64 --with //src/tests/end_to_end/my_e2e_test_example:test
     ```
 
     `//src/tests/end_to_end/my_e2e_test_example` is the path to your new test

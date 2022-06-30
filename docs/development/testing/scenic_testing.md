@@ -227,8 +227,9 @@ To run these applications, you need to include the following dependency in your 
 configuration:
 
 ```shell
-fx set workstation.x64 --with "//src/ui/examples"
+fx set workstation_eng.x64 --with "//src/ui/examples"
 ```
+
 ### Running UI examples
 
 #### Running in shell

@@ -134,7 +134,7 @@ version, depending on the package association.
 
 Sometimes a component is defined in one repository but its data is defined in
 another repository. For instance `fuchsia.git` defines a font provider service,
-but the `workstation` product configuration (defined in a different repository)
+but the `workstation_eng` product configuration (defined in a different repository)
 defines which fonts are available to the font provider.
 
 The `config_data()` template allows developers to make files available to

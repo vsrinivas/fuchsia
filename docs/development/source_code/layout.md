@@ -43,7 +43,7 @@ dependency on `vendor/B`.
 The `products` directory contains a list of products that you can build. Some
 products are quite small and build quickly (e.g., the [core](/products/core.gni)
 product), whereas others are more elaborate (e.g., the
-[workstation](/products/workstation.gni) product).
+[workstation_eng](/products/workstation_eng.gni) product).
 
 The `sdk` directory contains libraries that make up the Fuchsia API Surface.
 Some of these libraries are client libraries whereas others are FIDL libraries.

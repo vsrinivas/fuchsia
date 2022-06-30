@@ -79,10 +79,10 @@ these flags:
 This is a good way to temporarily enable packages for development that you don't
 want to include in the final build target, such as tests. For example, the
 following command adds all the packages in the Fuchsia `tests` bundle to a
-standard `workstation` build.
+standard `workstation_eng` build.
 
 ```posix-terminal
-fx set workstation.qemu-x64 --with //bundles:tests
+fx set workstation_eng.qemu-x64 --with //bundles:tests
 ```
 
 <aside class="key-point">
@@ -130,18 +130,18 @@ Note: For more details on the package development workflow, see
 
 ## Exercise: Customize the build
 
-In this exercise, you'll customize the `workstation` build by temporarily
+In this exercise, you'll customize the `workstation_eng` build by temporarily
 including additional packages in the universe package set — making them
 available to the target device.
 
 ### Add packages to the build
 
 You can bundle additional targets with your build configuration using the
-`--with` flag of `fx set`. Reconfigure your `workstation` build to include all
+`--with` flag of `fx set`. Reconfigure your `workstation_eng` build to include all
 the Fuchsia examples:
 
 ```posix-terminal
-fx set workstation.qemu-x64 --with //examples
+fx set workstation_eng.qemu-x64 --with //examples
 ```
 
 This is commonly used to include test packages you need to run on the device or
@@ -249,7 +249,7 @@ You should see the following output in the device logs:
 ## Exercise: Create a new build product
 
 In this next exercise, you'll encapsulate these additional packages into a new
-product configuration that extends `workstation`.
+product configuration that extends `workstation_eng`.
 
 ### Declare the product configuration
 
@@ -263,11 +263,11 @@ Create a new file `fuchsialab.gni` under `//vendor/fuchsia-codelab/products`
 with the following contents:
 
 ```gn
-# Extend the workstation product
-import("//products/workstation.gni")
+# Extend the workstation_eng product
+import("//products/workstation_eng.gni")
 ```
 
-This creates a new product called `fuchsialab` that extends `workstation`,
+This creates a new product called `fuchsialab` that extends `workstation_eng`,
 inheriting all the package labels it defines.
 
 Verify that the build system recognizes your new product with the

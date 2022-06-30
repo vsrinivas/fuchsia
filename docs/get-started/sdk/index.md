@@ -228,16 +228,16 @@ The tasks include:
 Do the following:
 
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
-   (`workstation.qemu-x64`):
+   (`workstation_eng.qemu-x64`):
 
    ```posix-terminal
-   tools/ffx product-bundle get workstation.qemu-x64
+   tools/ffx product-bundle get workstation_eng.qemu-x64
    ```
 
    This command may take a few minutes to download the image and product metadata.
 
    Once the download is finished, the `ffx product-bundle get` command creates
-   a local Fuchsia package repository named `workstation.qemu-x64` on your host
+   a local Fuchsia package repository named `workstation_eng.qemu-x64` on your host
    machine. This package repository hosts additional system packages for this
    Workstation prebuilt image. Later in Step 11 you’ll register this package
    repository to the emulator instance.
@@ -251,7 +251,7 @@ Do the following:
 1. Start a new Fuchsia emulator instance:
 
    ```posix-terminal
-   tools/ffx emu start workstation.qemu-x64 --headless
+   tools/ffx emu start workstation_eng.qemu-x64 --headless
    ```
 
    This command starts a headless emulator instance running a Fuchsia prebuilt
@@ -261,7 +261,7 @@ Do the following:
    following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start workstation.qemu-x64 --headless
+   $ tools/ffx emu start workstation_eng.qemu-x64 --headless
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds)...........
    Emulator is ready.
@@ -353,7 +353,7 @@ Do the following:
    ...
    ```
 
-   The example output above shows that the target device is running a `workstation.qemu-x64`
+   The example output above shows that the target device is running a `workstation_eng.qemu-x64`
    prebuilt image whose version is `8.20220609.3.1` (which indicates that this image was
    built and published on June 9, 2022).
 
@@ -391,10 +391,10 @@ Do the following:
    ffx repository server is listening on [::]:8083
    ```
 
-1. Register the system package repository (`workstation.qemu-x64`) to the target device:
+1. Register the system package repository (`workstation_eng.qemu-x64`) to the target device:
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
+   tools/ffx target repository register -r workstation_eng.qemu-x64 --alias fuchsia.com
    ```
 
    This command exits silently without output.
@@ -1027,7 +1027,7 @@ tools/ffx repository remove fuchsiasamples.com
 ```
 
 ```posix-terminal
-tools/ffx repository remove workstation.qemu-x64
+tools/ffx repository remove workstation_eng.qemu-x64
 ```
 
 ```posix-terminal

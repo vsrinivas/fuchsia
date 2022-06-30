@@ -90,7 +90,7 @@ and can update a system over-the-air.
 
 ### Workstation {#workstation-product}
 
-`workstation` is a basis for a general purpose development environment, good
+`workstation_eng` is a basis for a general purpose development environment, good
 for working on UI, media and many other high-level features. This is also
 the best environment for enthusiasts to play with and explore.
 

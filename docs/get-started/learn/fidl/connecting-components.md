@@ -488,7 +488,7 @@ fuchsia_package("echo-realm") {
 Update the build configuration to include the new components:
 
 ```posix-terminal
-fx set workstation.qemu-x64 \
+fx set workstation_eng.qemu-x64 \
     --with //vendor/fuchsia-codelab/echo-fidl:echo \
     --with //vendor/fuchsia-codelab/echo-server \
     --with //vendor/fuchsia-codelab/echo-client \

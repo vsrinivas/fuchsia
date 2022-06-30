@@ -24,7 +24,7 @@ For information about the future work related to localization, see
 
 ## Internationalization UI
 
--   For the workstation product, design and implement an i18n settings UI.
+-   For the Workstation product, design and implement an i18n settings UI.
 
 ## Fonts
 
@@ -50,20 +50,20 @@ For information about the future work related to localization, see
 
 -   Implement support for async local font loading in Chromium.
 
--   For workstation product, design and implement a font management UI for
+-   For Workstation product, design and implement a font management UI for
     reviewing and testing out fonts available in a given build.
 
 ## Time zones
 
 -   Implement a FIDL service that provides a listing of time zone IDs and
-    localized display names. This will initially be used in the workstation
+    localized display names. This will initially be used in the Workstation
     product's settings UI.
 
 ## Input methods
 
 -   Design and implement APIs for switching keyboard layouts.
 
--   For workstation product, design and implement UI for switching keyboard
+-   For Workstation product, design and implement UI for switching keyboard
     layouts.
 
 <!--xrefs-->
