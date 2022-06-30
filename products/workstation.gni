@@ -4,4 +4,7 @@
 
 # TODO(fxbug.dev/98011): Remove this file when it can be replaced by workstation_eng.
 
+print("***WARNING*** workstation.gni is deprecated and will be removed soon.",
+      "Please use workstation_eng instead.")
+
 import("//products/workstation_eng.gni")
