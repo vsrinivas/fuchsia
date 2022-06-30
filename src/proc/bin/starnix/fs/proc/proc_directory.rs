@@ -41,6 +41,9 @@ impl ProcDirectory {
             // TODO(tbodt): Put actual data in /proc/meminfo. Android is currently satistified by
             // an empty file though.
             &b"meminfo"[..] => fs.create_node_with_ops(ByteVecFile::new(vec![]), mode!(IFREG, 0o444), FsCred::root()),
+            // Fake kmsg as being empty.
+            &b"kmsg"[..] =>
+                fs.create_node_with_ops(SimpleFileNode::new(|| Ok(ProcKmsgFile{})), mode!(IFREG, 0o100), FsCred::root()),
         };
 
         Arc::new(ProcDirectory { kernel, nodes })
@@ -124,6 +127,56 @@ impl FileOps for Arc<ProcDirectory> {
         }
 
         Ok(())
+    }
+}
+
+struct ProcKmsgFile {}
+
+impl FileOps for ProcKmsgFile {
+    fileops_impl_seekless!();
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _waiter: &std::sync::Arc<Waiter>,
+        _events: FdEvents,
+        _handler: EventHandler,
+        _options: WaitAsyncOptions,
+    ) -> WaitKey {
+        WaitKey::empty()
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &std::sync::Arc<Waiter>,
+        _key: WaitKey,
+    ) {
+    }
+
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
+        FdEvents::empty()
+    }
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(EAGAIN)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(EIO)
     }
 }
 
