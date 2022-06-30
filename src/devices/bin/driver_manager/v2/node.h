@@ -133,6 +133,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   //   - The Node's parent is being removed.
   void Remove();
 
+  bool IsComposite() const;
+
   const std::string& name() const;
   const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;

@@ -315,7 +315,7 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
   // If this node is colocated with its parent, then provide the symbols.
   if (primary_parent != nullptr && primary_parent->driver_host_ == driver_host_) {
     // If we are a composite node, then take the symbols of our primary parent.
-    auto& symbols = (parents_.size() > 1) ? primary_parent->symbols_ : symbols_;
+    auto& symbols = IsComposite() ? primary_parent->symbols_ : symbols_;
     // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
     return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
         const_cast<decltype(symbols_)&>(symbols));
@@ -354,7 +354,6 @@ std::string Node::TopoName() const {
 fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) const {
   std::vector<fdecl::wire::Offer> node_offers;
   size_t parent_index = 0;
-  bool is_composite = parents_.size() > 1;
   for (const Node* parent : parents_) {
     // Find a parent node with a collection. This indicates that a driver has
     // been bound to the node, and the driver is running within the collection.
@@ -363,7 +362,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
          source_node = PrimaryParent(source_node->parents_)) {
     }
     // If this is a composite node, then the offers come from the parent nodes.
-    auto& parent_offers = is_composite ? parent->offers() : offers();
+    auto& parent_offers = IsComposite() ? parent->offers() : offers();
     node_offers.reserve(node_offers.size() + parent_offers.size());
 
     for (auto& parent_offer : parent_offers) {
@@ -379,7 +378,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
       });
 
       // If we are a composite node, then we route 'service' directories based on the parent's name.
-      if (is_composite && offer.is_directory()) {
+      if (IsComposite() && offer.is_directory()) {
         auto new_offer = CreateCompositeDirOffer(arena, offer, parents_names_[parent_index]);
         if (new_offer) {
           node_offers.push_back(*new_offer);
@@ -392,7 +391,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
       }
 
       // If we are a composite node, then we route 'service' directories based on the parent's name.
-      if (is_composite && offer.is_service()) {
+      if (IsComposite() && offer.is_service()) {
         auto new_offer = CreateCompositeServiceOffer(arena, offer, parents_names_[parent_index],
                                                      parent_index == 0);
         if (new_offer) {
@@ -489,6 +488,8 @@ void Node::Remove() {
   UnbindAndReset(controller_ref_);
   UnbindAndReset(node_ref_);
 }
+
+bool Node::IsComposite() const { return parents_.size() > 1; }
 
 void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) { Remove(); }
 
