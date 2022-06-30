@@ -14,8 +14,10 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fuchsia/hardware/block/cpp/banjo.h"
 #include "src/devices/block/drivers/nvme-cpp/fake/admin-commands.h"
 #include "src/devices/block/drivers/nvme-cpp/fake/fake-nvme-controller.h"
+#include "src/devices/block/drivers/nvme-cpp/fake/fake-nvme-namespace.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace nvme {
@@ -23,9 +25,6 @@ class NvmeTest : public inspect::InspectTestHelper, public zxtest::Test {
  public:
   void SetUp() override {
     fake_root_ = MockDevice::FakeRootParent();
-
-    // Set up fake controller.
-    fake_nvme::DefaultAdminCommands::RegisterCommands(controller_);
 
     // Set up dispatcher.
     auto dispatcher =
@@ -84,6 +83,7 @@ class NvmeTest : public inspect::InspectTestHelper, public zxtest::Test {
   zx_device* device_;
   Nvme* nvme_;
   fake_nvme::FakeNvmeController controller_;
+  fake_nvme::DefaultAdminCommands admin_commands_{controller_};
   fdf::Dispatcher dispatcher_;
   sync_completion_t shutdown_;
 };
@@ -93,6 +93,27 @@ TEST_F(NvmeTest, BasicTest) {
   ASSERT_NO_FATAL_FAILURE(ReadInspect(nvme_->inspect_vmo()));
   CheckStringPropertyPrefix(hierarchy().node(), "serial-no",
                             fake_nvme::DefaultAdminCommands::kSerialNumber);
+}
+
+TEST_F(NvmeTest, NamespaceBlockSize) {
+  fake_nvme::FakeNvmeNamespace ns;
+  controller_.AddNamespace(1, ns);
+  ASSERT_NO_FATAL_FAILURE(RunInit());
+  while (device_->child_count() == 0) {
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+
+  zx_device* ns_dev = device_->GetLatestChild();
+  ns_dev->InitOp();
+  ns_dev->WaitUntilInitReplyCalled(zx::time::infinite());
+  ASSERT_OK(ns_dev->InitReplyCallStatus());
+
+  ddk::BlockImplProtocolClient client(ns_dev);
+  block_info_t info;
+  uint64_t op_size;
+  client.Query(&info, &op_size);
+  ASSERT_EQ(512, info.block_size);
+  ASSERT_EQ(1024, info.block_count);
 }
 
 }  // namespace nvme

@@ -15,15 +15,17 @@ using nvme::Completion;
 using nvme::GenericStatus;
 using nvme::StatusCodeType;
 
-void DefaultAdminCommands::RegisterCommands(FakeNvmeController& controller) {
-  controller.AddAdminCommand(nvme::IdentifySubmission::kOpcode, DefaultAdminCommands::Identify);
+DefaultAdminCommands::DefaultAdminCommands(FakeNvmeController& controller)
+    : controller_(controller) {
+  controller.AddAdminCommand(nvme::IdentifySubmission::kOpcode,
+                             fit::bind_member(this, &DefaultAdminCommands::Identify));
 }
-
 namespace {
 void MakeIdentifyController(nvme::IdentifyController* out) {
   out->set_cqes_min_log2(__builtin_ctzl(sizeof(nvme::Completion)));
   out->set_sqes_min_log2(__builtin_ctzl(sizeof(nvme::Submission)));
-  out->num_namespaces = 1;
+  out->num_namespaces = 256;
+  out->max_data_transfer = 2;
 
   memset(out->serial_number, ' ', sizeof(out->serial_number));
   memset(out->model_number, ' ', sizeof(out->model_number));
@@ -48,6 +50,28 @@ void DefaultAdminCommands::Identify(nvme::Submission& default_submission,
   switch (submission.structure()) {
     case IdentifySubmission::IdentifyCns::kIdentifyController: {
       MakeIdentifyController(static_cast<nvme::IdentifyController*>(data.buffer.virt()));
+      break;
+    }
+    case IdentifySubmission::IdentifyCns::kActiveNamespaceList: {
+      uint32_t* list = static_cast<uint32_t*>(data.buffer.virt());
+      size_t i = 0;
+      for (auto& ns : controller_.namespaces()) {
+        list[i++] = ns.first;
+        if (i >= data.buffer.size() / sizeof(ns.first)) {
+          break;
+        }
+      }
+      break;
+    }
+    case IdentifySubmission::IdentifyCns::kIdentifyNamespace: {
+      uint32_t nsid = submission.namespace_id;
+      auto entry = controller_.namespaces().find(nsid);
+      if (entry == controller_.namespaces().cend()) {
+        completion.set_status_code(GenericStatus::kInvalidNamespaceOrFormat);
+        break;
+      }
+
+      entry->second.Identify(static_cast<nvme::IdentifyNvmeNamespace*>(data.buffer.virt()));
       break;
     }
     default:

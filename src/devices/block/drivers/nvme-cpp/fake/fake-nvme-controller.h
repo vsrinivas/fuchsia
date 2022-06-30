@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "src/devices/block/drivers/nvme-cpp/commands.h"
+#include "src/devices/block/drivers/nvme-cpp/fake/fake-nvme-namespace.h"
 #include "src/devices/block/drivers/nvme-cpp/fake/fake-nvme-registers.h"
 #include "src/devices/block/drivers/nvme-cpp/nvme.h"
 #include "src/devices/block/drivers/nvme-cpp/queue-pair.h"
@@ -48,6 +49,9 @@ class FakeNvmeController {
   // Called when one of the Admin Queue address registers is written to.
   void UpdateAdminQueue();
 
+  // Add a namespace to this controller.
+  void AddNamespace(uint32_t nsid, FakeNvmeNamespace& ns) { namespaces_.emplace(nsid, ns); }
+
   // Called by the test fixture to give us a pointer to the driver instance.
   // We use the driver instance to access data buffers and queues since the values written to the
   // register are fake values from fake_bti.
@@ -70,6 +74,7 @@ class FakeNvmeController {
   }
 
   FakeNvmeRegisters& registers() { return regs_; }
+  const std::map<uint32_t, FakeNvmeNamespace&>& namespaces() const { return namespaces_; }
 
   // Returns IRQ number |index|, and creates it if it doesn't yet exist.
   zx::status<zx::interrupt> GetOrCreateInterrupt(size_t index);
@@ -132,6 +137,8 @@ class FakeNvmeController {
   std::unordered_map<size_t, IrqState> irqs_;
   std::unordered_map<uint8_t, CommandHandler> admin_commands_;
   std::unordered_map<uint8_t, CommandHandler> io_commands_;
+  // This is ordered because "Get Active Namespaces" returns an ordered list of namespaces.
+  std::map<uint32_t, FakeNvmeNamespace&> namespaces_;
   nvme::Nvme* nvme_ = nullptr;
 
   FakeNvmeRegisters regs_;

@@ -161,6 +161,93 @@ struct IdentifyController {
 };
 static_assert(sizeof(IdentifyController) == 0x1000);
 
+// NVM Express Base Specification 2.0, section 5.17.2.2, "Active Namespace ID list"
+struct IdentifyActiveNamespaces {
+  uint32_t nsid[1024];
+};
+static_assert(sizeof(IdentifyActiveNamespaces) == 0x1000);
+
+struct LbaFormatField {
+  uint32_t value;
+  enum RelativePerformance {
+    kBest = 0,
+    kBetter = 1,
+    kGood = 2,
+    kDegraded = 3,
+  };
+  DEF_ENUM_SUBFIELD(value, RelativePerformance, 25, 24, relative_performance);
+  DEF_SUBFIELD(value, 23, 16, lba_data_size_log2);
+  DEF_SUBFIELD(value, 15, 0, metadata_size_bytes);
+
+  uint32_t lba_data_size_bytes() const { return 1 << lba_data_size_log2(); }
+};
+
+// NVM Command Set Specification 1.0b, section 4.1.5.1, "NVM Command Set Identify Namespace Data
+// Structure"
+struct IdentifyNvmeNamespace {
+  uint8_t lba_format_index() const {
+    if (n_lba_f <= 16) {
+      // If there are <= 16 formats supported, ignore the top two bits.
+      return lba_format_index_lo();
+    }
+    return static_cast<uint8_t>(lba_format_index_hi() << 4) | lba_format_index_lo();
+  }
+
+  uint64_t n_sze;
+  uint64_t n_cap;
+  uint64_t n_use;
+  uint8_t ns_feat;
+  uint8_t n_lba_f;
+  uint8_t f_lba_s;
+  uint8_t mc;
+  uint8_t dpc;
+  uint8_t dps;
+  uint8_t nmic;
+  uint8_t rescap;
+  uint8_t fpi;
+  uint8_t dlfeat;
+  uint16_t n_aw_un;
+  uint16_t n_aw_u_pf;
+  uint16_t n_acw_u;
+  uint16_t n_abs_n;
+  uint16_t n_ab_o;
+  uint16_t n_abs_pf;
+  uint16_t n_oio_b;
+  uint64_t nvm_cap[2];
+  uint16_t n_pwg;
+  uint16_t n_pwa;
+  uint16_t n_pdg;
+  uint16_t n_pda;
+  uint16_t n_ows;
+  uint16_t m_ss_rl;
+  uint32_t mcl;
+  uint8_t msrc;
+  uint8_t reserved0[11];
+  uint32_t ana_grp_id;
+  uint8_t reserved1[3];
+  uint8_t ns_attr;
+  uint16_t nvm_set_id;
+  uint16_t end_gid;
+  uint16_t nguid[8];
+  uint64_t eui64;
+
+  LbaFormatField lba_formats[64];
+
+  DEF_SUBBIT(ns_feat, 4, opt_perf);
+  DEF_SUBBIT(ns_feat, 3, uid_reuse);
+  DEF_SUBBIT(ns_feat, 2, dae);
+  DEF_SUBBIT(ns_feat, 1, ns_atomics);
+  DEF_SUBBIT(ns_feat, 0, thin_provisioning);
+
+  DEF_SUBFIELD(f_lba_s, 6, 5, lba_format_index_hi);
+  DEF_SUBBIT(f_lba_s, 4, lba_metadata_mode);
+  DEF_SUBFIELD(f_lba_s, 3, 0, lba_format_index_lo);
+
+} __PACKED;
+static_assert(offsetof(IdentifyNvmeNamespace, n_lba_f) == 25);
+// Bytes 4095..384 are vendor-defined, so we don't include them here.
+static_assert(sizeof(IdentifyNvmeNamespace) == 0x180);
+
 }  // namespace nvme
 
 #endif  // SRC_DEVICES_BLOCK_DRIVERS_NVME_CPP_COMMANDS_IDENTIFY_H_

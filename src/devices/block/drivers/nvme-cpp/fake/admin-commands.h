@@ -17,11 +17,14 @@ class DefaultAdminCommands {
   constexpr static const char* kSerialNumber = "12345678";
   constexpr static const char* kModelNumber = "PL4T-1234";
   constexpr static const char* kFirmwareRev = "7.4.2.1";
-  static void RegisterCommands(FakeNvmeController& controller);
+
+  explicit DefaultAdminCommands(FakeNvmeController& controller);
 
  private:
-  static void Identify(nvme::Submission& submission, const nvme::TransactionData& data,
-                       nvme::Completion& completion);
+  void Identify(nvme::Submission& submission, const nvme::TransactionData& data,
+                nvme::Completion& completion);
+
+  FakeNvmeController& controller_;
 };
 
 }  // namespace fake_nvme

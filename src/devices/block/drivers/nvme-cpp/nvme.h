@@ -42,8 +42,14 @@ class Nvme : public DeviceType {
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
+  // Returns the result of Identify with CNS set to 0.
+  // See NVME Command Set Specification 4.1.5, "Identify Command" for more information.
+  zx::status<fpromise::promise<Completion, Completion>> IdentifyNamespace(uint32_t id,
+                                                                          zx::vmo& data);
   // For inspect test.
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
+  async::Executor& executor() { return *executor_; }
+  uint32_t max_transfer_size() const { return maximum_data_transfer_size_; }
 
  private:
   friend class NvmeTest;
@@ -55,9 +61,12 @@ class Nvme : public DeviceType {
   // Called by DdkInit(). Asynchronously polls the controller until it enters reset
   // before setting up the admin queues and re-enabling it.
   void ResetAndPrepareQueues(zx::duration waited);
-  // Called by ResetAndPrepareQueues. Waits for the controller to leave reset and then queries it to
-  // find out about it.
+  // Called by ResetAndPrepareQueues. Waits for the controller to leave reset and then queries it
+  // to find out about it.
   void WaitForReadyAndStart(zx::duration waited);
+
+  // Enumerate namespaces attached to this controller, and create devices for them.
+  void InitializeNamespaces();
 
   void IrqHandler(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
                   const zx_packet_interrupt_t* interrupt);
@@ -85,7 +94,7 @@ class Nvme : public DeviceType {
   fdf::UnownedDispatcher dispatcher_;
   std::unique_ptr<async::Executor> executor_;
 
-  size_t maximum_data_transfer_size_ = 0;
+  uint32_t maximum_data_transfer_size_ = 0;
 };
 
 }  // namespace nvme

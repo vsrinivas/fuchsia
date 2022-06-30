@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -16,6 +17,7 @@
 #include <cstdint>
 
 #include "src/devices/block/drivers/nvme-cpp/commands/identify.h"
+#include "src/devices/block/drivers/nvme-cpp/namespace.h"
 #include "src/devices/block/drivers/nvme-cpp/nvme-bind.h"
 #include "src/devices/block/drivers/nvme-cpp/registers.h"
 
@@ -104,7 +106,9 @@ zx_status_t Nvme::Bind() {
 
   FillInspect();
 
-  return DdkAdd(ddk::DeviceAddArgs("nvme").set_inspect_vmo(inspect_.DuplicateVmo()));
+  return DdkAdd(ddk::DeviceAddArgs("nvme")
+                    .set_inspect_vmo(inspect_.DuplicateVmo())
+                    .set_flags(DEVICE_ADD_NON_BINDABLE));
 }
 
 constexpr zx::duration kResetPollInterval = zx::msec(1);
@@ -269,17 +273,82 @@ void Nvme::WaitForReadyAndStart(zx::duration waited) {
             zxlogf(INFO, "number of namespaces: %u", identify->num_namespaces);
             if (identify->max_data_transfer != 0) {
               maximum_data_transfer_size_ =
-                  static_cast<size_t>((1 << identify->max_data_transfer)) *
+                  static_cast<uint32_t>((1 << identify->max_data_transfer)) *
                   caps_.memory_page_size_min_bytes();
             }
-            zxlogf(INFO, "max data transfer size: %zu bytes", maximum_data_transfer_size_);
+            zxlogf(INFO, "max data transfer size: %u bytes", maximum_data_transfer_size_);
             init_txn_->Reply(ZX_OK);
+
+            InitializeNamespaces();
           })
           .or_else([this](Completion& result) {
             zxlogf(ERROR, "Identify failed: type=%d code=%d", result.status_code_type(),
                    result.status_code());
             init_txn_->Reply(ZX_ERR_INTERNAL);
           }));
+}
+
+void Nvme::InitializeNamespaces() {
+  zx::vmo identify_data;
+  zx_status_t status = zx::vmo::create(zx_system_get_page_size(), 0, &identify_data);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to init vmo: %s", zx_status_get_string(status));
+    return;
+  }
+
+  IdentifySubmission submission;
+  submission.set_structure(IdentifySubmission::IdentifyCns::kActiveNamespaceList);
+
+  auto bridge = fpromise::bridge<Completion, Completion>();
+  auto identify_status =
+      admin_queue_->Submit(submission, identify_data.borrow(), 0, bridge.completer);
+  if (identify_status.is_error()) {
+    zxlogf(ERROR, "Failed to submit identify active namespaces command: %s",
+           identify_status.status_string());
+    return;
+  }
+
+  executor_->schedule_task(
+      bridge.consumer.promise()
+          .and_then([this, vmo = std::move(identify_data)](Completion& result) {
+            fzl::VmoMapper mapper;
+            zx_status_t status = mapper.Map(vmo);
+            if (status != ZX_OK) {
+              zxlogf(ERROR, "Failed to map namespaces VMO: %s", zx_status_get_string(status));
+              return;
+            }
+
+            IdentifyActiveNamespaces* ns = static_cast<IdentifyActiveNamespaces*>(mapper.start());
+            for (size_t i = 0; i < std::size(ns->nsid) && ns->nsid[i] != 0; i++) {
+              status = Namespace::Create(this, ns->nsid[i]);
+              if (status != ZX_OK) {
+                zxlogf(WARNING, "Failed to add namespace %u: %s", ns->nsid[i],
+                       zx_status_get_string(status));
+              }
+            }
+          })
+          .or_else([](Completion& result) {
+            zxlogf(ERROR, "Failed to get namespace list Status type=0x%x code=0x%x",
+                   result.status_code_type(), result.status_code());
+          }));
+}
+
+zx::status<fpromise::promise<Completion, Completion>> Nvme::IdentifyNamespace(uint32_t id,
+                                                                              zx::vmo& data) {
+  IdentifySubmission submission;
+  submission.set_opcode(IdentifySubmission::kOpcode);
+  submission.namespace_id = id;
+  submission.set_structure(IdentifySubmission::IdentifyCns::kIdentifyNamespace);
+
+  auto bridge = fpromise::bridge<Completion, Completion>();
+  auto identify_status = admin_queue_->Submit(submission, data.borrow(), 0, bridge.completer);
+  if (identify_status.is_error()) {
+    zxlogf(ERROR, "Failed to submit identify namespace command: %s",
+           identify_status.status_string());
+    return identify_status.take_error();
+  }
+
+  return zx::ok(bridge.consumer.promise());
 }
 
 void Nvme::DdkInit(ddk::InitTxn txn) {
@@ -304,7 +373,7 @@ void Nvme::IrqHandler(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_st
     zxlogf(ERROR, "Failed to process interrupt: %s", zx_status_get_string(status));
   }
 
-  // This register is only available when using MSI-X.
+  // This register is only available when not using MSI-X.
   if (!is_msix_) {
     InterruptReg::MaskSet().FromValue(1).WriteTo(&mmio_);
   }

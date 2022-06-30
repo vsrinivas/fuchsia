@@ -48,6 +48,7 @@ common_deps = [
 fuchsia_driver("driver") {
   output_name = "nvme-cpp"
   sources = [
+    "namespace.cc",
     "nvme.cc",
     "queue-pair.cc",
     "queue.cc",
@@ -103,7 +104,9 @@ test("nvme-unit-tests-bin") {
   sources = [
     "fake/admin-commands.cc",
     "fake/fake-nvme-controller.cc",
+    "fake/fake-nvme-namespace.cc",
     "fake/fake-nvme-registers.cc",
+    "namespace.cc",
     "nvme-test.cc",
     "nvme.cc",
     "queue-pair.cc",
