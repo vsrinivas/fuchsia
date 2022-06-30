@@ -883,3 +883,43 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
   ASSERT_TRUE(test_loop().RunUntilIdle());
   ASSERT_TRUE(got_reply);
 }
+
+TEST_F(DeviceTest, CreateNodeProperties) {
+  fidl::Arena<512> arena;
+  driver::Logger logger;
+  device_add_args_t args;
+
+  zx_device_prop_t prop;
+  prop.id = 11;
+  prop.value = 2;
+  args.props = &prop;
+  args.prop_count = 1;
+
+  zx_device_str_prop_t str_prop;
+  str_prop.key = "test";
+  str_prop.property_value = str_prop_int_val(5);
+  args.str_props = &str_prop;
+  args.str_prop_count = 1;
+
+  args.proto_id = 10;
+
+  const char* protocol_offer = "fuchsia.hardware.fidl";
+  args.fidl_protocol_offers = &protocol_offer;
+  args.fidl_protocol_offer_count = 1;
+
+  auto properties = compat::CreateProperties(arena, logger, &args);
+
+  ASSERT_EQ(4ul, properties.size());
+
+  EXPECT_EQ(11u, properties[0].key().int_value());
+  EXPECT_EQ(2u, properties[0].value().int_value());
+
+  EXPECT_EQ("test", properties[1].key().string_value().get());
+  EXPECT_EQ(5u, properties[1].value().int_value());
+
+  EXPECT_EQ("fuchsia.hardware.fidl", properties[2].key().string_value().get());
+  EXPECT_EQ(true, properties[2].value().bool_value());
+
+  EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[3].key().int_value());
+  EXPECT_EQ(10u, properties[3].value().int_value());
+}

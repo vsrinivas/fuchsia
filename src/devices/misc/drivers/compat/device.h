@@ -164,6 +164,9 @@ class Device : public std::enable_shared_from_this<Device> {
   fpromise::scope scope_;
 };
 
+std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
+    fidl::AnyArena& arena, driver::Logger& logger, device_add_args_t* zx_args);
+
 }  // namespace compat
 
 struct zx_device : public compat::Device {

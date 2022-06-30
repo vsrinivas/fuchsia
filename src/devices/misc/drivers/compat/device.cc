@@ -49,6 +49,66 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 
 namespace compat {
 
+std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
+    fidl::AnyArena& arena, driver::Logger& logger, device_add_args_t* zx_args) {
+  std::vector<fuchsia_driver_framework::wire::NodeProperty> properties;
+  properties.reserve(zx_args->prop_count + zx_args->str_prop_count +
+                     zx_args->fidl_protocol_offer_count + 1);
+  bool has_protocol = false;
+  for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
+    properties.emplace_back(arena)
+        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(id))
+        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value));
+    if (id == BIND_PROTOCOL) {
+      has_protocol = true;
+    }
+  }
+
+  for (auto [key, value] : cpp20::span(zx_args->str_props, zx_args->str_prop_count)) {
+    auto& ref = properties.emplace_back(arena).set_key(
+        arena,
+        fdf::wire::NodePropertyKey::WithStringValue(arena, fidl::StringView::FromExternal(key)));
+    switch (value.value_type) {
+      case ZX_DEVICE_PROPERTY_VALUE_BOOL:
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(value.value.bool_val));
+        break;
+      case ZX_DEVICE_PROPERTY_VALUE_STRING:
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithStringValue(
+                                 arena, fidl::StringView::FromExternal(value.value.str_val)));
+        break;
+      case ZX_DEVICE_PROPERTY_VALUE_INT:
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value.value.int_val));
+        break;
+      case ZX_DEVICE_PROPERTY_VALUE_ENUM:
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithEnumValue(
+                                 arena, fidl::StringView::FromExternal(value.value.enum_val)));
+        break;
+      default:
+        FDF_LOGL(ERROR, logger, "Unsupported property type, key: %s", key);
+        break;
+    }
+  }
+
+  for (auto value :
+       cpp20::span(zx_args->fidl_protocol_offers, zx_args->fidl_protocol_offer_count)) {
+    properties.emplace_back(arena)
+        .set_key(arena, fdf::wire::NodePropertyKey::WithStringValue(
+                            arena, fidl::StringView::FromExternal(value)))
+        .set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(true));
+  }
+
+  // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
+  // If we see a BIND_PROTOCOL property, don't add our own.
+  if (!has_protocol) {
+    // If we do not have a protocol id, set it to MISC to match DFv1 behavior.
+    uint32_t proto_id = zx_args->proto_id == 0 ? ZX_PROTOCOL_MISC : zx_args->proto_id;
+    properties.emplace_back(arena)
+        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
+        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(proto_id));
+  }
+  return properties;
+}
+
 Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
                std::optional<Device*> parent, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
@@ -155,64 +215,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     }
   }
 
-  // +1 for the implicit BIND_PROTOCOL property.
-  device->properties_.reserve(zx_args->prop_count + zx_args->str_prop_count +
-                              zx_args->fidl_protocol_offer_count + 1);
-  bool has_protocol = false;
-  for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
-    device->properties_.emplace_back(arena_)
-        .set_key(arena_, fdf::wire::NodePropertyKey::WithIntValue(id))
-        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value));
-    if (id == BIND_PROTOCOL) {
-      has_protocol = true;
-    }
-  }
-
-  for (auto [key, value] : cpp20::span(zx_args->str_props, zx_args->str_prop_count)) {
-    auto& ref = device->properties_.emplace_back(arena_).set_key(
-        arena_,
-        fdf::wire::NodePropertyKey::WithStringValue(arena_, fidl::StringView::FromExternal(key)));
-    switch (value.value_type) {
-      case ZX_DEVICE_PROPERTY_VALUE_BOOL:
-        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithBoolValue(value.value.bool_val));
-        break;
-      case ZX_DEVICE_PROPERTY_VALUE_STRING:
-        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithStringValue(
-                                  arena_, fidl::StringView::FromExternal(value.value.str_val)));
-        break;
-      case ZX_DEVICE_PROPERTY_VALUE_INT:
-        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value.value.int_val));
-        break;
-      case ZX_DEVICE_PROPERTY_VALUE_ENUM:
-        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithEnumValue(
-                                  arena_, fidl::StringView::FromExternal(value.value.enum_val)));
-        break;
-      default:
-        FDF_LOG(ERROR, "Unsupported property type, key: %s", key);
-        break;
-    }
-  }
-
-  for (auto value :
-       cpp20::span(zx_args->fidl_protocol_offers, zx_args->fidl_protocol_offer_count)) {
-    device->properties_.emplace_back(arena_)
-        .set_key(arena_, fdf::wire::NodePropertyKey::WithStringValue(
-                             arena_, fidl::StringView::FromExternal(value)))
-        .set_value(arena_, fdf::wire::NodePropertyValue::WithBoolValue(true));
-  }
-
-  // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
-  // If we saw a BIND_PROTOCOL property, don't add our own.
-  if (!has_protocol) {
-    uint32_t proto_id = zx_args->proto_id;
-    // If we do not have a protocol id, set it to MISC to match DFv1 behavior.
-    if (proto_id == 0) {
-      proto_id = ZX_PROTOCOL_MISC;
-    }
-    device->properties_.emplace_back(arena_)
-        .set_key(arena_, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
-        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(proto_id));
-  }
+  device->properties_ = CreateProperties(arena_, logger_, zx_args);
   device->device_flags_ = zx_args->flags;
 
   children_.push_back(std::move(device));
