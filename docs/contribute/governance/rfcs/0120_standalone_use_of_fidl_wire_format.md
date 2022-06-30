@@ -160,7 +160,7 @@ The following persistence use cases are in scope:
   into a request/response paradigm. In other words, the data is "at rest".
 - Support messages larger than 64 KiB. The 64 KiB message size limit is a
   property of the Zircon channel transport. When persisting messages to a byte
-  vector, no such limitations apply. The existing Rust persistence API support
+  vector, no such limitations apply. The existing Rust persistence API supports
   large messages and has been used to workaround the channel message size limit
   pending built-in FIDL support for large messages, by manually persisting large
   values into a VMO.
