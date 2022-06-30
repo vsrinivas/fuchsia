@@ -49,7 +49,6 @@ rustc_library("serial_link") {
 }
 
 fuchsia_unittest_package("overnet-serial-link-tests") {
-  manifest = "meta/serial_link_lib_test.cmx"
   deps = [
     ":serial_link_test",
     "//src/connectivity/overnet/overnetstack:certificates",

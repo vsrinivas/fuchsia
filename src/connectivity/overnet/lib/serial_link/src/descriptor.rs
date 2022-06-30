@@ -631,9 +631,4 @@ mod tests {
             ]
         );
     }
-
-    #[test]
-    fn platform_enumerate_paths_succeeds() {
-        block_on(super::platform_enumerate_paths()).unwrap();
-    }
 }
