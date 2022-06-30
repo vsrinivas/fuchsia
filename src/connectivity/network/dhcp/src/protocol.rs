@@ -41,6 +41,7 @@ const UNUSED_CHADDR_BYTES: usize = 10;
 const CHADDR_LEN: usize = 6;
 const SNAME_LEN: usize = 64;
 const FILE_LEN: usize = 128;
+const IPV4_ADDR_LEN: usize = 4;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
@@ -72,6 +73,17 @@ pub enum ProtocolError {
     Utf8(usize),
     #[error("invalid protocol field {} = {} for message type {}", field, value, msg_type)]
     InvalidField { field: String, value: String, msg_type: MessageType },
+}
+
+#[derive(Debug, Error, PartialEq)]
+#[error("Buffer is of invalid length: {0}")]
+struct InvalidBufferLengthError(usize);
+
+impl From<InvalidBufferLengthError> for ProtocolError {
+    fn from(err: InvalidBufferLengthError) -> ProtocolError {
+        let InvalidBufferLengthError(len) = err;
+        ProtocolError::InvalidBufferLength(len)
+    }
 }
 
 /// A DHCP protocol message as defined in RFC 2131.
@@ -607,27 +619,6 @@ pub enum DhcpOption {
     ClientIdentifier(Vec<u8>),
 }
 
-struct AddressBuffer<'a> {
-    buffer: &'a [u8],
-}
-
-impl<'a> TryFrom<AddressBuffer<'a>> for Vec<Ipv4Addr> {
-    type Error = ProtocolError;
-
-    fn try_from(ab: AddressBuffer<'a>) -> Result<Vec<Ipv4Addr>, Self::Error> {
-        ab.buffer.chunks_exact(4).try_fold(Vec::new(), |mut addrs, chunk| {
-            let bytes = <[u8; 4]>::try_from(chunk)
-                .map_err(|_infallible| ProtocolError::InvalidBufferLength(ab.buffer.len()))?;
-            addrs.push(Ipv4Addr::from(bytes));
-            Ok(addrs)
-        })
-    }
-}
-
-fn slice_buffer(buf: &[u8], upper_bound: usize) -> Result<&[u8], ProtocolError> {
-    buf.get(..upper_bound).ok_or(ProtocolError::InvalidBufferLength(buf.len()))
-}
-
 /// Generates a match expression on `$option` which maps each of the supplied `DhcpOption` variants
 /// to their `OptionCode` equivalent.
 macro_rules! option_to_code {
@@ -643,321 +634,177 @@ impl DhcpOption {
         match code {
             OptionCode::Pad => Ok(DhcpOption::Pad()),
             OptionCode::End => Ok(DhcpOption::End()),
-            OptionCode::SubnetMask => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?;
-                Ok(DhcpOption::SubnetMask(Ipv4Addr::from(bytes)))
+            OptionCode::SubnetMask => Ok(DhcpOption::SubnetMask(bytes_to_addr(val)?)),
+            OptionCode::TimeOffset => {
+                let offset = get_byte_array::<4>(val).map(i32::from_be_bytes)?;
+                Ok(DhcpOption::TimeOffset(offset))
             }
-            OptionCode::TimeOffset => Ok(DhcpOption::TimeOffset(i32::from_be_bytes(
-                <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?,
-            ))),
-            OptionCode::Router => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::Router(addrs))
-            }
-            OptionCode::TimeServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::TimeServer(addrs))
-            }
-            OptionCode::NameServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NameServer(addrs))
-            }
-            OptionCode::DomainNameServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::DomainNameServer(addrs))
-            }
-            OptionCode::LogServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::LogServer(addrs))
-            }
-            OptionCode::CookieServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::CookieServer(addrs))
-            }
-            OptionCode::LprServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::LprServer(addrs))
-            }
-            OptionCode::ImpressServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::ImpressServer(addrs))
-            }
+            OptionCode::Router => Ok(DhcpOption::Router(bytes_to_addrs(val)?)),
+            OptionCode::TimeServer => Ok(DhcpOption::TimeServer(bytes_to_addrs(val)?)),
+            OptionCode::NameServer => Ok(DhcpOption::NameServer(bytes_to_addrs(val)?)),
+            OptionCode::DomainNameServer => Ok(DhcpOption::DomainNameServer(bytes_to_addrs(val)?)),
+            OptionCode::LogServer => Ok(DhcpOption::LogServer(bytes_to_addrs(val)?)),
+            OptionCode::CookieServer => Ok(DhcpOption::CookieServer(bytes_to_addrs(val)?)),
+            OptionCode::LprServer => Ok(DhcpOption::LprServer(bytes_to_addrs(val)?)),
+            OptionCode::ImpressServer => Ok(DhcpOption::ImpressServer(bytes_to_addrs(val)?)),
             OptionCode::ResourceLocationServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::ResourceLocationServer(addrs))
+                Ok(DhcpOption::ResourceLocationServer(bytes_to_addrs(val)?))
             }
-            OptionCode::HostName => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::HostName(name))
+            OptionCode::HostName => Ok(DhcpOption::HostName(bytes_to_nonempty_str(val)?)),
+            OptionCode::BootFileSize => {
+                let size = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                Ok(DhcpOption::BootFileSize(size))
             }
-            OptionCode::BootFileSize => Ok(DhcpOption::BootFileSize(u16::from_be_bytes(
-                <[u8; 2]>::try_from(slice_buffer(val, 2)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?,
-            ))),
-            OptionCode::MeritDumpFile => {
-                let path = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::MeritDumpFile(path))
-            }
-            OptionCode::DomainName => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::DomainName(name))
-            }
-            OptionCode::SwapServer => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?;
-                Ok(DhcpOption::SwapServer(Ipv4Addr::from(bytes)))
-            }
-            OptionCode::RootPath => {
-                let path = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::RootPath(path))
-            }
+            OptionCode::MeritDumpFile => Ok(DhcpOption::MeritDumpFile(bytes_to_nonempty_str(val)?)),
+            OptionCode::DomainName => Ok(DhcpOption::DomainName(bytes_to_nonempty_str(val)?)),
+            OptionCode::SwapServer => Ok(DhcpOption::SwapServer(bytes_to_addr(val)?)),
+            OptionCode::RootPath => Ok(DhcpOption::RootPath(bytes_to_nonempty_str(val)?)),
             OptionCode::ExtensionsPath => {
-                let path = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::ExtensionsPath(path))
+                Ok(DhcpOption::ExtensionsPath(bytes_to_nonempty_str(val)?))
             }
-            OptionCode::IpForwarding => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::IpForwarding(flag))
-            }
+            OptionCode::IpForwarding => Ok(DhcpOption::IpForwarding(bytes_to_bool(val)?)),
             OptionCode::NonLocalSourceRouting => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::NonLocalSourceRouting(flag))
+                Ok(DhcpOption::NonLocalSourceRouting(bytes_to_bool(val)?))
             }
             OptionCode::PolicyFilter => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
+                let addrs = bytes_to_addrs(val)?;
+                if addrs.len() < 2 || addrs.len() % 2 != 0 {
+                    return Err(ProtocolError::InvalidBufferLength(val.len()));
+                }
                 Ok(DhcpOption::PolicyFilter(addrs))
             }
-            OptionCode::MaxDatagramReassemblySize => Ok(DhcpOption::MaxDatagramReassemblySize(
-                u16::from_be_bytes(<[u8; 2]>::try_from(slice_buffer(val, 2)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
-            OptionCode::DefaultIpTtl => Ok(DhcpOption::DefaultIpTtl(
-                *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
-            )),
-            OptionCode::PathMtuAgingTimeout => Ok(DhcpOption::PathMtuAgingTimeout(
-                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
+            OptionCode::MaxDatagramReassemblySize => {
+                let max_datagram = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                Ok(DhcpOption::MaxDatagramReassemblySize(max_datagram))
+            }
+            OptionCode::DefaultIpTtl => {
+                let ttl = get_byte(val)?;
+                Ok(DhcpOption::DefaultIpTtl(ttl))
+            }
+            OptionCode::PathMtuAgingTimeout => {
+                let timeout = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::PathMtuAgingTimeout(timeout))
+            }
             OptionCode::PathMtuPlateauTable => {
-                let mtus = val.chunks_exact(2).try_fold(Vec::new(), |mut mtus, chunk| {
-                    let mtu = u16::from_be_bytes(chunk.try_into().map_err(
-                        |std::array::TryFromSliceError { .. }| {
-                            ProtocolError::InvalidBufferLength(val.len())
-                        },
-                    )?);
-                    mtus.push(mtu);
-                    Ok(mtus)
-                })?;
+                let val = nonempty(val)?;
+                let mtus = val
+                    .chunks(2)
+                    .map(|chunk| get_byte_array::<2>(chunk).map(u16::from_be_bytes))
+                    .collect::<Result<Vec<u16>, InvalidBufferLengthError>>()
+                    .map_err(|InvalidBufferLengthError(_)| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    })?;
                 Ok(DhcpOption::PathMtuPlateauTable(mtus))
             }
-            OptionCode::InterfaceMtu => Ok(DhcpOption::InterfaceMtu(u16::from_be_bytes(
-                <[u8; 2]>::try_from(slice_buffer(val, 2)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?,
-            ))),
-            OptionCode::AllSubnetsLocal => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::AllSubnetsLocal(flag))
+            OptionCode::InterfaceMtu => {
+                let mtu = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                Ok(DhcpOption::InterfaceMtu(mtu))
             }
-            OptionCode::BroadcastAddress => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?;
-                Ok(DhcpOption::BroadcastAddress(Ipv4Addr::from(bytes)))
-            }
+            OptionCode::AllSubnetsLocal => Ok(DhcpOption::AllSubnetsLocal(bytes_to_bool(val)?)),
+            OptionCode::BroadcastAddress => Ok(DhcpOption::BroadcastAddress(bytes_to_addr(val)?)),
             OptionCode::PerformMaskDiscovery => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::PerformMaskDiscovery(flag))
+                Ok(DhcpOption::PerformMaskDiscovery(bytes_to_bool(val)?))
             }
-            OptionCode::MaskSupplier => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::MaskSupplier(flag))
-            }
+            OptionCode::MaskSupplier => Ok(DhcpOption::MaskSupplier(bytes_to_bool(val)?)),
             OptionCode::PerformRouterDiscovery => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::PerformRouterDiscovery(flag))
+                Ok(DhcpOption::PerformRouterDiscovery(bytes_to_bool(val)?))
             }
             OptionCode::RouterSolicitationAddress => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?;
-                Ok(DhcpOption::RouterSolicitationAddress(Ipv4Addr::from(bytes)))
+                Ok(DhcpOption::RouterSolicitationAddress(bytes_to_addr(val)?))
             }
             OptionCode::StaticRoute => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
+                let addrs = bytes_to_addrs(val)?;
+                if addrs.len() < 2 || addrs.len() % 2 != 0 {
+                    return Err(ProtocolError::InvalidBufferLength(val.len()));
+                }
                 Ok(DhcpOption::StaticRoute(addrs))
             }
             OptionCode::TrailerEncapsulation => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::TrailerEncapsulation(flag))
+                Ok(DhcpOption::TrailerEncapsulation(bytes_to_bool(val)?))
             }
-            OptionCode::ArpCacheTimeout => Ok(DhcpOption::ArpCacheTimeout(u32::from_be_bytes(
-                <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?,
-            ))),
+            OptionCode::ArpCacheTimeout => {
+                let timeout = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::ArpCacheTimeout(timeout))
+            }
             OptionCode::EthernetEncapsulation => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::EthernetEncapsulation(flag))
+                Ok(DhcpOption::EthernetEncapsulation(bytes_to_bool(val)?))
             }
             OptionCode::TcpDefaultTtl => Ok(DhcpOption::TcpDefaultTtl(
                 *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
             )),
-            OptionCode::TcpKeepaliveInterval => Ok(DhcpOption::TcpKeepaliveInterval(
-                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
+            OptionCode::TcpKeepaliveInterval => {
+                let interval = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::TcpKeepaliveInterval(interval))
+            }
             OptionCode::TcpKeepaliveGarbage => {
-                let flag =
-                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
-                Ok(DhcpOption::TcpKeepaliveGarbage(flag))
+                Ok(DhcpOption::TcpKeepaliveGarbage(bytes_to_bool(val)?))
             }
             OptionCode::NetworkInformationServiceDomain => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                let name = bytes_to_nonempty_str(val)?;
                 Ok(DhcpOption::NetworkInformationServiceDomain(name))
             }
             OptionCode::NetworkInformationServers => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NetworkInformationServers(addrs))
+                Ok(DhcpOption::NetworkInformationServers(bytes_to_addrs(val)?))
             }
             OptionCode::NetworkTimeProtocolServers => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NetworkTimeProtocolServers(addrs))
+                Ok(DhcpOption::NetworkTimeProtocolServers(bytes_to_addrs(val)?))
             }
             OptionCode::VendorSpecificInformation => {
+                let val = nonempty(val)?;
                 Ok(DhcpOption::VendorSpecificInformation(val.to_owned()))
             }
             OptionCode::NetBiosOverTcpipNameServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NetBiosOverTcpipNameServer(addrs))
+                Ok(DhcpOption::NetBiosOverTcpipNameServer(bytes_to_addrs(val)?))
             }
             OptionCode::NetBiosOverTcpipDatagramDistributionServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NetBiosOverTcpipDatagramDistributionServer(addrs))
+                Ok(DhcpOption::NetBiosOverTcpipDatagramDistributionServer(bytes_to_addrs(val)?))
             }
             OptionCode::NetBiosOverTcpipNodeType => {
-                Ok(DhcpOption::NetBiosOverTcpipNodeType(NodeType::try_from(
-                    *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
-                )?))
+                let byte = get_byte(val)?;
+                Ok(DhcpOption::NetBiosOverTcpipNodeType(NodeType::try_from(byte)?))
             }
             OptionCode::NetBiosOverTcpipScope => {
-                let scope = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::NetBiosOverTcpipScope(scope))
+                Ok(DhcpOption::NetBiosOverTcpipScope(bytes_to_nonempty_str(val)?))
             }
             OptionCode::XWindowSystemFontServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::XWindowSystemFontServer(addrs))
+                Ok(DhcpOption::XWindowSystemFontServer(bytes_to_addrs(val)?))
             }
             OptionCode::XWindowSystemDisplayManager => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::XWindowSystemDisplayManager(addrs))
+                Ok(DhcpOption::XWindowSystemDisplayManager(bytes_to_addrs(val)?))
             }
             OptionCode::NetworkInformationServicePlusDomain => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::NetworkInformationServicePlusDomain(name))
+                Ok(DhcpOption::NetworkInformationServicePlusDomain(bytes_to_nonempty_str(val)?))
             }
             OptionCode::NetworkInformationServicePlusServers => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NetworkInformationServicePlusServers(addrs))
+                Ok(DhcpOption::NetworkInformationServicePlusServers(bytes_to_addrs(val)?))
             }
             OptionCode::MobileIpHomeAgent => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::MobileIpHomeAgent(addrs))
+                // Mobile IP Home Agent is allowed to be empty indicating no home agents are
+                // available: https://datatracker.ietf.org/doc/html/rfc2132#section-8.13
+                if val.len() == 0 {
+                    return Ok(DhcpOption::MobileIpHomeAgent(Vec::new()));
+                }
+                Ok(DhcpOption::MobileIpHomeAgent(bytes_to_addrs(val)?))
             }
-            OptionCode::SmtpServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::SmtpServer(addrs))
-            }
-            OptionCode::Pop3Server => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::Pop3Server(addrs))
-            }
-            OptionCode::NntpServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::NntpServer(addrs))
-            }
-            OptionCode::DefaultWwwServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::DefaultWwwServer(addrs))
-            }
+            OptionCode::SmtpServer => Ok(DhcpOption::SmtpServer(bytes_to_addrs(val)?)),
+            OptionCode::Pop3Server => Ok(DhcpOption::Pop3Server(bytes_to_addrs(val)?)),
+            OptionCode::NntpServer => Ok(DhcpOption::NntpServer(bytes_to_addrs(val)?)),
+            OptionCode::DefaultWwwServer => Ok(DhcpOption::DefaultWwwServer(bytes_to_addrs(val)?)),
             OptionCode::DefaultFingerServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::DefaultFingerServer(addrs))
+                Ok(DhcpOption::DefaultFingerServer(bytes_to_addrs(val)?))
             }
-            OptionCode::DefaultIrcServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::DefaultIrcServer(addrs))
-            }
-            OptionCode::StreetTalkServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::StreetTalkServer(addrs))
-            }
+            OptionCode::DefaultIrcServer => Ok(DhcpOption::DefaultIrcServer(bytes_to_addrs(val)?)),
+            OptionCode::StreetTalkServer => Ok(DhcpOption::StreetTalkServer(bytes_to_addrs(val)?)),
             OptionCode::StreetTalkDirectoryAssistanceServer => {
-                let addrs = AddressBuffer { buffer: val }.try_into()?;
-                Ok(DhcpOption::StreetTalkDirectoryAssistanceServer(addrs))
+                Ok(DhcpOption::StreetTalkDirectoryAssistanceServer(bytes_to_addrs(val)?))
             }
             OptionCode::RequestedIpAddress => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?;
-                Ok(DhcpOption::RequestedIpAddress(Ipv4Addr::from(bytes)))
+                Ok(DhcpOption::RequestedIpAddress(bytes_to_addr(val)?))
             }
-            OptionCode::IpAddressLeaseTime => Ok(DhcpOption::IpAddressLeaseTime(
-                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
+            OptionCode::IpAddressLeaseTime => {
+                let lease_time = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::IpAddressLeaseTime(lease_time))
+            }
             OptionCode::OptionOverload => {
                 let overload = Overload::try_from(
                     *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
@@ -965,13 +812,11 @@ impl DhcpOption {
                 Ok(DhcpOption::OptionOverload(overload))
             }
             OptionCode::TftpServerName => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                let name = bytes_to_nonempty_str(val)?;
                 Ok(DhcpOption::TftpServerName(name))
             }
             OptionCode::BootfileName => {
-                let name = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                let name = bytes_to_nonempty_str(val)?;
                 Ok(DhcpOption::BootfileName(name))
             }
             OptionCode::DhcpMessageType => {
@@ -980,44 +825,38 @@ impl DhcpOption {
                 )?;
                 Ok(DhcpOption::DhcpMessageType(message_type))
             }
-            OptionCode::ServerIdentifier => {
-                let bytes = <[u8; 4]>::try_from(slice_buffer(val, 4)?)
-                    .map_err(|_| ProtocolError::InvalidBufferLength(val.len()))?;
-                Ok(DhcpOption::ServerIdentifier(Ipv4Addr::from(bytes)))
+            OptionCode::ServerIdentifier => Ok(DhcpOption::ServerIdentifier(bytes_to_addr(val)?)),
+            OptionCode::ParameterRequestList => {
+                let val = nonempty(val)?;
+                let opcodes =
+                    val.into_iter().filter_map(|code| OptionCode::try_from(*code).ok()).collect();
+                Ok(DhcpOption::ParameterRequestList(opcodes))
             }
-            OptionCode::ParameterRequestList => Ok(DhcpOption::ParameterRequestList(
-                val.into_iter().filter_map(|code| OptionCode::try_from(*code).ok()).collect(),
-            )),
-            OptionCode::Message => {
-                let message = String::from_utf8(val.to_owned())
-                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
-                Ok(DhcpOption::Message(message))
+            OptionCode::Message => Ok(DhcpOption::Message(bytes_to_nonempty_str(val)?)),
+            OptionCode::MaxDhcpMessageSize => {
+                let max_size = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                Ok(DhcpOption::MaxDhcpMessageSize(max_size))
             }
-            OptionCode::MaxDhcpMessageSize => Ok(DhcpOption::MaxDhcpMessageSize(
-                u16::from_be_bytes(<[u8; 2]>::try_from(slice_buffer(val, 2)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
-            OptionCode::RenewalTimeValue => Ok(DhcpOption::RenewalTimeValue(u32::from_be_bytes(
-                <[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?,
-            ))),
-            OptionCode::RebindingTimeValue => Ok(DhcpOption::RebindingTimeValue(
-                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(val, 4)?).map_err(
-                    |std::array::TryFromSliceError { .. }| {
-                        ProtocolError::InvalidBufferLength(val.len())
-                    },
-                )?),
-            )),
+            OptionCode::RenewalTimeValue => {
+                let renewal_time = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::RenewalTimeValue(renewal_time))
+            }
+            OptionCode::RebindingTimeValue => {
+                let rebinding_time = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
+                Ok(DhcpOption::RebindingTimeValue(rebinding_time))
+            }
             OptionCode::VendorClassIdentifier => {
+                let val = nonempty(val)?;
                 Ok(DhcpOption::VendorClassIdentifier(val.to_owned()))
             }
-            OptionCode::ClientIdentifier => Ok(DhcpOption::ClientIdentifier(val.to_owned())),
+            OptionCode::ClientIdentifier => {
+                // Client Identifier must be at least two bytes.
+                // https://datatracker.ietf.org/doc/html/rfc2132#section-9.14
+                if val.len() < 2 {
+                    return Err(ProtocolError::InvalidBufferLength(val.len()));
+                }
+                Ok(DhcpOption::ClientIdentifier(val.to_owned()))
+            }
         }
     }
 
@@ -1950,6 +1789,8 @@ fn parse_options<T: Extend<DhcpOption>>(
                     })?;
                 buf = rest;
                 let opt_len = opt_len as usize;
+
+                // Reaching the end of the buffer means we never encountered an End code.
                 if buf.len() < opt_len {
                     return Err(ProtocolError::MalformedOption {
                         code: *raw_opt_code,
@@ -1970,10 +1811,64 @@ fn parse_options<T: Extend<DhcpOption>>(
                     Err(e) => return Err(e),
                 };
 
-                options.extend(std::iter::once(DhcpOption::from_raw_parts(code, val)?));
+                // Ignore options with incorrect lengths.
+                match DhcpOption::from_raw_parts(code, val) {
+                    Ok(option) => options.extend(std::iter::once(option)),
+                    Err(ProtocolError::InvalidBufferLength(_)) => continue,
+                    Err(e) => return Err(e),
+                }
             }
         }
     }
+}
+
+// Ensures slice is non empty. InvalidBufferLength is returned for empty slices.
+fn nonempty<T>(slice: &[T]) -> Result<&[T], InvalidBufferLengthError> {
+    if slice.len() == 0 {
+        return Err(InvalidBufferLengthError(slice.len()));
+    }
+    Ok(slice)
+}
+
+fn get_byte_array<const T: usize>(bytes: &[u8]) -> Result<[u8; T], InvalidBufferLengthError> {
+    bytes
+        .try_into()
+        .map_err(|std::array::TryFromSliceError { .. }| InvalidBufferLengthError(bytes.len()))
+}
+
+// Converts input byte slice into a single byte.
+fn get_byte(bytes: &[u8]) -> Result<u8, InvalidBufferLengthError> {
+    match bytes.len() {
+        1 => Ok(bytes[0]),
+        n => Err(InvalidBufferLengthError(n)),
+    }
+}
+
+// Converts input byte slice into a nonempty utf8 string.
+fn bytes_to_nonempty_str(bytes: &[u8]) -> Result<String, ProtocolError> {
+    String::from_utf8(nonempty(bytes)?.to_owned())
+        .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))
+}
+
+// Converts input byte slice into an Ipv4Addr.
+fn bytes_to_addr(bytes: &[u8]) -> Result<Ipv4Addr, InvalidBufferLengthError> {
+    Ok(Ipv4Addr::from(get_byte_array::<4>(bytes)?))
+}
+
+// Converts a nonempty input byte slice into a list of Ipv4Addr.
+fn bytes_to_addrs(bytes: &[u8]) -> Result<Vec<Ipv4Addr>, InvalidBufferLengthError> {
+    nonempty(bytes)?
+        .chunks(IPV4_ADDR_LEN)
+        .map(bytes_to_addr)
+        .collect::<Result<Vec<Ipv4Addr>, InvalidBufferLengthError>>()
+        .map_err(|InvalidBufferLengthError(_)| InvalidBufferLengthError(bytes.len()))
+}
+
+// Returns a bool from a nonempty byte slice.
+fn bytes_to_bool(bytes: &[u8]) -> Result<bool, InvalidBufferLengthError> {
+    let byte = get_byte(bytes)?;
+    // TODO(fxbug.dev/101061): Return Err if value is not either 0 or 1.
+    return Ok(byte == 1u8);
 }
 
 // Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
@@ -2012,6 +1907,7 @@ mod tests {
     use net_declare::std::ip_v4;
     use std::net::Ipv4Addr;
     use std::str::FromStr;
+    use test_case::test_case;
 
     const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!("255.255.255.0");
 
@@ -2271,6 +2167,36 @@ mod tests {
         let mut expected_msg = msg();
         assert_eq!(expected_msg.options.remove(0), DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
         assert_eq!(Message::from_buffer(&buf), Ok(expected_msg));
+    }
+
+    #[test_case(OptionCode::HostName, 0; "Min length 1")]
+    #[test_case(OptionCode::ClientIdentifier, 1; "Min length 2_1")]
+    #[test_case(OptionCode::PathMtuPlateauTable, 1; "Min length 2_2")]
+    #[test_case(OptionCode::Router, 0; "Min length 4")]
+    #[test_case(OptionCode::PolicyFilter, 4; "Min length 8_1")]
+    #[test_case(OptionCode::StaticRoute, 4; "Min length 8_2")]
+    fn parse_options_with_invalid_min_lengths(code: OptionCode, len: usize) {
+        let option = DhcpOption::from_raw_parts(code, &vec![0; len]);
+        assert_eq!(Err(ProtocolError::InvalidBufferLength(len)), option)
+    }
+
+    #[test_case(OptionCode::IpForwarding, 0; "Length = 1")]
+    #[test_case(OptionCode::BootfileName, 0; "Length = 2")]
+    #[test_case(OptionCode::TimeOffset, 0; "Length = 4")]
+    fn parse_options_with_invalid_static_length(code: OptionCode, len: usize) {
+        let option = DhcpOption::from_raw_parts(code, &vec![0; len]);
+        assert_eq!(Err(ProtocolError::InvalidBufferLength(len)), option)
+    }
+
+    #[test_case(OptionCode::PathMtuPlateauTable, 3; "Min length 2, multiple of 2")]
+    #[test_case(OptionCode::MobileIpHomeAgent, 5; "Min length 0, multiple of 4")]
+    #[test_case(OptionCode::PolicyFilter, 4; "PolicyFilter_4: Min length 8, multiple of 8")]
+    #[test_case(OptionCode::PolicyFilter, 12; "PolicyFilter_12: Min length 8, multiple of 8 - 2")]
+    #[test_case(OptionCode::StaticRoute, 4; "StaticRoute_4: Min length 8, multiple of 8 - 1")]
+    #[test_case(OptionCode::StaticRoute, 12; "StaticRoute_12: Min length 8, multiple of 8 - 2")]
+    fn parse_options_with_invalid_length_multiples(code: OptionCode, len: usize) {
+        let option = DhcpOption::from_raw_parts(code, &vec![0; len]);
+        assert_eq!(Err(ProtocolError::InvalidBufferLength(len)), option)
     }
 
     #[test]
