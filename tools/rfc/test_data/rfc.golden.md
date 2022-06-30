@@ -54,7 +54,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 interpreted as described in
 [IETF RFC 2119](https://tools.ietf.org/html/rfc2119).
 
-_Area: FIDL_
+_Prompt for Area: FIDL, replace with the relevant area(s)_
 
 One important high-level bit of your proposal is what part of FIDL your proposal
 modifies. This includes at least:
@@ -84,7 +84,7 @@ benchmarks should we monitor on an ongoing basis?
 
 ## Ergonomics
 
-_Area: FIDL_
+_Prompt for Area: FIDL, replace with the relevant area(s)_
 
 Does your change make FIDL easier to use, and simpler to understand? Does it
 make the bindings easier to use? If it doesn't, what's the justification for the
@@ -95,7 +95,7 @@ the concept.
 
 ## Backwards Compatibility
 
-_Area: FIDL_
+_Prompt for Area: FIDL, replace with the relevant area(s)_
 
 Backwards compatibility comes in two flavors: FIDL file source compatibility,
 and ABI or wire format compatibility. This section should speak to both. Over
@@ -136,7 +136,7 @@ If your system defines a contract implemented by other people, how will those
 people test that they have implemented the contract correctly? Consider, for
 example, creating a conformance test suite for this purpose.
 
-_Area: FIDL_
+_Prompt for Area: FIDL, replace with the relevant area(s)_
 
 How will your feature be tested? For instance, do you need to write new tests
 for `fidlc`, or for the C++ bindings?
@@ -163,7 +163,7 @@ accepted.
 
 [rfcs-vs-docs]: best_practices.md#rfcs-vs-docs
 
-_Area: FIDL_
+_Prompt for Area: FIDL, replace with the relevant area(s)_
 
 There are potentially several kinds of documentation to address.
 
