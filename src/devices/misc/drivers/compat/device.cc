@@ -23,6 +23,28 @@ namespace fcd = fuchsia_component_decl;
 
 namespace {
 
+std::optional<fdf::wire::NodeProperty> fidl_offer_to_device_prop(fidl::AnyArena& arena,
+                                                                 const char* fidl_offer) {
+  static const std::unordered_map<std::string_view, uint32_t> kPropMap = {
+#define DDK_FIDL_PROTOCOL_DEF(tag, val, name) \
+  {                                           \
+      name,                                   \
+      val,                                    \
+  },
+#include <lib/ddk/fidl-protodefs.h>
+  };
+
+  auto prop = kPropMap.find(fidl_offer);
+  if (prop == kPropMap.end()) {
+    return std::nullopt;
+  }
+
+  auto& [key, value] = *prop;
+  return fdf::wire::NodeProperty(arena)
+      .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(BIND_FIDL_PROTOCOL))
+      .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value));
+}
+
 // Makes a valid name. This must be a valid component framework instance name.
 std::string MakeValidName(std::string_view name) {
   std::string out;
@@ -95,6 +117,11 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
         .set_key(arena, fdf::wire::NodePropertyKey::WithStringValue(
                             arena, fidl::StringView::FromExternal(value)))
         .set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(true));
+
+    auto property = fidl_offer_to_device_prop(arena, value);
+    if (property) {
+      properties.push_back(*property);
+    }
   }
 
   // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
