@@ -96,7 +96,13 @@ async fn handle_provider_request(
                 fposix_socket::SynchronousDatagramSocketMarker,
             >()
             .context("create request stream")?;
-            responder.send(&mut Ok(client_end)).context("send DatagramSocket response")?;
+            responder
+                .send(&mut Ok(
+                    fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(
+                        client_end,
+                    ),
+                ))
+                .context("send DatagramSocket response")?;
             let socket = Rc::new(RefCell::new(
                 DatagramSocket::new(proto, domain, request_stream.control_handle())
                     .context("create socket")?,
@@ -117,7 +123,8 @@ async fn handle_provider_request(
         request @ (fposix_socket::ProviderRequest::InterfaceIndexToName { .. }
         | fposix_socket::ProviderRequest::InterfaceNameToIndex { .. }
         | fposix_socket::ProviderRequest::InterfaceNameToFlags { .. }
-        | fposix_socket::ProviderRequest::GetInterfaceAddresses { .. }) => {
+        | fposix_socket::ProviderRequest::GetInterfaceAddresses { .. }
+        | fposix_socket::ProviderRequest::DatagramSocketDeprecated { .. }) => {
             panic!("unsupported fuchsia.posix.socket/Provider request: {:?}", request);
         }
     }

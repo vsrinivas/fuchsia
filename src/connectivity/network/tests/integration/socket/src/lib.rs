@@ -21,7 +21,7 @@ use fuchsia_async::{
     net::{DatagramSocket, UdpSocket},
     TimeoutExt as _,
 };
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, AsHandleRef as _};
 use futures::{
     future, io::AsyncReadExt as _, io::AsyncWriteExt as _, Future, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
@@ -151,6 +151,462 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
     .await;
 
     run_udp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
+}
+
+enum UdpCacheInvalidationReason {
+    ConnectCalled,
+    InterfaceDisabled,
+    IPv6OnlyCalled,
+}
+
+enum ToAddrExpectation {
+    Unspecified,
+    Specified(Option<fidl_fuchsia_net::SocketAddress>),
+}
+
+struct UdpSendMsgPreflightSuccessExpectation {
+    expected_to_addr: ToAddrExpectation,
+    expect_all_eventpairs_valid: bool,
+}
+
+enum UdpSendMsgPreflightExpectation {
+    Success(UdpSendMsgPreflightSuccessExpectation),
+    Failure(fposix::Errno),
+}
+
+struct UdpSendMsgPreflight {
+    to_addr: Option<fidl_fuchsia_net::SocketAddress>,
+    expected_result: UdpSendMsgPreflightExpectation,
+}
+
+fn validate_send_msg_preflight_response(
+    response: &fposix_socket::DatagramSocketSendMsgPreflightResponse,
+    expectation: UdpSendMsgPreflightSuccessExpectation,
+) {
+    let fposix_socket::DatagramSocketSendMsgPreflightResponse {
+        to, validity, maximum_size, ..
+    } = response;
+    let UdpSendMsgPreflightSuccessExpectation { expected_to_addr, expect_all_eventpairs_valid } =
+        expectation;
+
+    match expected_to_addr {
+        ToAddrExpectation::Specified(to_addr) => {
+            assert_eq!(*to, to_addr, "unexpected to address in boarding pass");
+        }
+        ToAddrExpectation::Unspecified => (),
+    }
+
+    const MAXIMUM_UDP_PACKET_SIZE: u32 = 65535;
+    const UDP_HEADER_SIZE: u32 = 8;
+    assert_eq!(*maximum_size, Some(MAXIMUM_UDP_PACKET_SIZE - UDP_HEADER_SIZE));
+
+    let validity = validity.as_ref().expect("validity was missing");
+    assert!(validity.len() > 0, "validity was empty");
+    let all_eventpairs_valid = {
+        let mut wait_items = validity
+            .iter()
+            .map(|eventpair| zx::WaitItem {
+                handle: eventpair.as_handle_ref(),
+                waitfor: zx::Signals::EVENTPAIR_CLOSED,
+                pending: zx::Signals::NONE,
+            })
+            .collect::<Vec<_>>();
+        zx::object_wait_many(&mut wait_items, zx::Time::INFINITE_PAST) == Err(zx::Status::TIMED_OUT)
+    };
+    assert_eq!(
+        expect_all_eventpairs_valid, all_eventpairs_valid,
+        "mismatched expectation on eventpair validity"
+    );
+}
+
+/// Executes a preflight for each of the passed preflight configs, validating
+/// the result against the passed expectation and returning all successful responses.
+async fn execute_and_validate_preflights(
+    preflights: impl IntoIterator<Item = UdpSendMsgPreflight>,
+    proxy: &fposix_socket::DatagramSocketProxy,
+) -> Vec<fposix_socket::DatagramSocketSendMsgPreflightResponse> {
+    futures::stream::iter(preflights)
+        .then(|preflight| {
+            let UdpSendMsgPreflight { to_addr, expected_result } = preflight;
+            let result =
+                proxy.send_msg_preflight(fposix_socket::DatagramSocketSendMsgPreflightRequest {
+                    to: to_addr,
+                    ..fposix_socket::DatagramSocketSendMsgPreflightRequest::EMPTY
+                });
+            async move { (expected_result, result.await) }
+        })
+        .filter_map(|(expected, actual)| async move {
+            let actual = actual.expect("send_msg_preflight fidl error");
+            match expected {
+                UdpSendMsgPreflightExpectation::Success(success_expectation) => {
+                    let response = actual.expect("send_msg_preflight failed");
+                    let () = validate_send_msg_preflight_response(&response, success_expectation);
+                    Some(response)
+                }
+                UdpSendMsgPreflightExpectation::Failure(expected_errno) => {
+                    assert_eq!(Err(expected_errno), actual);
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .await
+}
+
+#[test_case("connect_called", UdpCacheInvalidationReason::ConnectCalled)]
+#[test_case("ipv6_only_called", UdpCacheInvalidationReason::IPv6OnlyCalled)]
+#[test_case("iface_disabled", UdpCacheInvalidationReason::InterfaceDisabled)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_udp_send_msg_cache(test_name: &str, invalidation_reason: UdpCacheInvalidationReason) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+    let netstack = sandbox
+        .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_netstack", test_name))
+        .expect("failed to create netstack realm");
+
+    let socket_provider = netstack
+        .connect_to_protocol::<fposix_socket::ProviderMarker>()
+        .expect("failed to connect to socket provider");
+
+    let datagram_socket = socket_provider
+        .datagram_socket(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
+        .await
+        .expect("datagram_socket fidl error")
+        .expect("failed to create datagram socket");
+
+    let datagram_socket = match datagram_socket {
+        fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(socket) => socket,
+        socket => panic!("unexpected datagram socket variant: {:?}", socket),
+    };
+
+    let proxy = datagram_socket.into_proxy().expect("failed to create proxy");
+
+    const PORT: u16 = 80;
+    const INSTALLED_ADDR: fidl_fuchsia_net::Ipv4SocketAddress =
+        fidl_fuchsia_net::Ipv4SocketAddress { address: fidl_ip_v4!("10.0.0.0"), port: PORT };
+    const REACHABLE_ADDR1: fidl_fuchsia_net::SocketAddress =
+        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+            address: fidl_ip_v4!("10.0.0.1"),
+            port: PORT,
+        });
+    const REACHABLE_ADDR2: fidl_fuchsia_net::SocketAddress =
+        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+            address: fidl_ip_v4!("10.0.0.2"),
+            port: PORT,
+        });
+    const UNREACHABLE_ADDR: fidl_fuchsia_net::SocketAddress =
+        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+            address: fidl_ip_v4!("11.0.0.0"),
+            port: PORT,
+        });
+
+    let iface = netstack
+        .join_network::<netemul::NetworkDevice, _>(&net, "ep")
+        .await
+        .expect("failed to join network");
+
+    iface
+        .add_address_and_subnet_route(fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(INSTALLED_ADDR.address),
+            prefix_len: 8,
+        })
+        .await
+        .expect("failed to add subnet route");
+
+    let successful_preflights = execute_and_validate_preflights(
+        [
+            UdpSendMsgPreflight {
+                to_addr: Some(UNREACHABLE_ADDR),
+                expected_result: UdpSendMsgPreflightExpectation::Failure(
+                    fposix::Errno::Ehostunreach,
+                ),
+            },
+            UdpSendMsgPreflight {
+                to_addr: None,
+                expected_result: UdpSendMsgPreflightExpectation::Failure(
+                    fposix::Errno::Edestaddrreq,
+                ),
+            },
+        ],
+        &proxy,
+    )
+    .await;
+    assert_eq!(successful_preflights, []);
+
+    let successful_preflights = {
+        let mut connected_addr = REACHABLE_ADDR1;
+        let () = proxy
+            .connect(&mut connected_addr)
+            .await
+            .expect("connect fidl error")
+            .expect("connect failed");
+
+        // We deliberately repeat an address here to ensure that the preflight can
+        // be called > 1 times with the same address.
+        let mut preflights: Vec<UdpSendMsgPreflight> =
+            vec![REACHABLE_ADDR1, REACHABLE_ADDR2, REACHABLE_ADDR2]
+                .iter()
+                .map(|socket_address| UdpSendMsgPreflight {
+                    to_addr: Some(*socket_address),
+                    expected_result: UdpSendMsgPreflightExpectation::Success(
+                        UdpSendMsgPreflightSuccessExpectation {
+                            expected_to_addr: ToAddrExpectation::Specified(None),
+                            expect_all_eventpairs_valid: true,
+                        },
+                    ),
+                })
+                .collect();
+        let () = preflights.push(UdpSendMsgPreflight {
+            to_addr: None,
+            expected_result: UdpSendMsgPreflightExpectation::Success(
+                UdpSendMsgPreflightSuccessExpectation {
+                    expected_to_addr: ToAddrExpectation::Specified(Some(connected_addr)),
+                    expect_all_eventpairs_valid: true,
+                },
+            ),
+        });
+
+        execute_and_validate_preflights(preflights, &proxy).await
+    };
+
+    match invalidation_reason {
+        UdpCacheInvalidationReason::ConnectCalled => {
+            let mut connected_addr = REACHABLE_ADDR2;
+            let () = proxy
+                .connect(&mut connected_addr)
+                .await
+                .expect("connect fidl error")
+                .expect("connect failed");
+        }
+        UdpCacheInvalidationReason::InterfaceDisabled => {
+            let disabled = iface
+                .control()
+                .disable()
+                .await
+                .expect("disable_interface fidl error")
+                .expect("failed to disable interface");
+            assert_eq!(disabled, true);
+        }
+        UdpCacheInvalidationReason::IPv6OnlyCalled => {
+            let () = proxy
+                .set_ipv6_only(true)
+                .await
+                .expect("set_ipv6_only fidl error")
+                .expect("failed to set ipv6 only");
+        }
+    }
+
+    for successful_preflight in successful_preflights {
+        let () = validate_send_msg_preflight_response(
+            &successful_preflight,
+            UdpSendMsgPreflightSuccessExpectation {
+                expected_to_addr: ToAddrExpectation::Unspecified,
+                expect_all_eventpairs_valid: false,
+            },
+        );
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum CmsgType {
+    IpTos,
+    IpTtl,
+    Ipv6Tclass,
+    Ipv6Hoplimit,
+    SoTimestamp,
+    SoTimestampNs,
+}
+
+struct RequestedCmsgSetExpectation {
+    requested_cmsg_type: Option<CmsgType>,
+    valid: bool,
+}
+
+fn validate_recv_msg_postflight_response(
+    response: &fposix_socket::DatagramSocketRecvMsgPostflightResponse,
+    expectation: RequestedCmsgSetExpectation,
+) {
+    let fposix_socket::DatagramSocketRecvMsgPostflightResponse {
+        validity,
+        requests,
+        timestamp,
+        ..
+    } = response;
+    let RequestedCmsgSetExpectation { valid, requested_cmsg_type } = expectation;
+    let cmsg_expected =
+        |cmsg_type| requested_cmsg_type.map_or(false, |req_type| req_type == cmsg_type);
+
+    use fposix_socket::{CmsgRequests, TimestampOption};
+
+    let bits_cmsg_requested = |cmsg_type| {
+        !(requests.unwrap_or_else(|| CmsgRequests::from_bits_allow_unknown(0)) & cmsg_type)
+            .is_empty()
+    };
+
+    assert_eq!(bits_cmsg_requested(CmsgRequests::IP_TOS), cmsg_expected(CmsgType::IpTos));
+    assert_eq!(bits_cmsg_requested(CmsgRequests::IP_TTL), cmsg_expected(CmsgType::IpTtl));
+    assert_eq!(bits_cmsg_requested(CmsgRequests::IPV6_TCLASS), cmsg_expected(CmsgType::Ipv6Tclass));
+    assert_eq!(
+        bits_cmsg_requested(CmsgRequests::IPV6_HOPLIMIT),
+        cmsg_expected(CmsgType::Ipv6Hoplimit)
+    );
+    assert_eq!(
+        *timestamp == Some(TimestampOption::Nanosecond),
+        cmsg_expected(CmsgType::SoTimestampNs)
+    );
+    assert_eq!(
+        *timestamp == Some(TimestampOption::Microsecond),
+        cmsg_expected(CmsgType::SoTimestamp)
+    );
+
+    let expected_validity =
+        if valid { Err(zx::Status::TIMED_OUT) } else { Ok(zx::Signals::EVENTPAIR_CLOSED) };
+    let validity = validity.as_ref().expect("expected validity present");
+    assert_eq!(
+        validity.wait_handle(zx::Signals::EVENTPAIR_CLOSED, zx::Time::INFINITE_PAST),
+        expected_validity,
+    );
+}
+
+async fn toggle_cmsg(
+    requested: bool,
+    proxy: &fposix_socket::DatagramSocketProxy,
+    cmsg_type: CmsgType,
+) {
+    match cmsg_type {
+        CmsgType::IpTos => {
+            let () = proxy
+                .set_ip_receive_type_of_service(requested)
+                .await
+                .expect("set_ip_receive_type_of_service fidl error")
+                .expect("set_ip_receive_type_of_service failed");
+        }
+        CmsgType::IpTtl => {
+            let () = proxy
+                .set_ip_receive_ttl(requested)
+                .await
+                .expect("set_ip_receive_ttl fidl error")
+                .expect("set_ip_receive_ttl failed");
+        }
+        CmsgType::Ipv6Tclass => {
+            let () = proxy
+                .set_ipv6_receive_traffic_class(requested)
+                .await
+                .expect("set_ipv6_receive_traffic_class fidl error")
+                .expect("set_ipv6_receive_traffic_class failed");
+        }
+        CmsgType::Ipv6Hoplimit => {
+            let () = proxy
+                .set_ipv6_receive_hop_limit(requested)
+                .await
+                .expect("set_ipv6_receive_hop_limit fidl error")
+                .expect("set_ipv6_receive_hop_limit failed");
+        }
+        CmsgType::SoTimestamp => {
+            let option = if requested {
+                fposix_socket::TimestampOption::Microsecond
+            } else {
+                fposix_socket::TimestampOption::Disabled
+            };
+            let () = proxy
+                .set_timestamp(option)
+                .await
+                .expect("set_timestamp fidl error")
+                .expect("set_timestamp failed");
+        }
+        CmsgType::SoTimestampNs => {
+            let option = if requested {
+                fposix_socket::TimestampOption::Nanosecond
+            } else {
+                fposix_socket::TimestampOption::Disabled
+            };
+            let () = proxy
+                .set_timestamp(option)
+                .await
+                .expect("set_timestamp fidl error")
+                .expect("set_timestamp failed");
+        }
+    }
+}
+
+#[test_case("ip_tos", CmsgType::IpTos)]
+#[test_case("ip_ttl", CmsgType::IpTtl)]
+#[test_case("ipv6_tclass", CmsgType::Ipv6Tclass)]
+#[test_case("ipv6_hoplimit", CmsgType::Ipv6Hoplimit)]
+#[test_case("so_timestamp_ns", CmsgType::SoTimestampNs)]
+#[test_case("so_timestamp", CmsgType::SoTimestamp)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_udp_recv_msg_cache(test_name: &str, cmsg_type: CmsgType) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let netstack = sandbox
+        .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_netstack", test_name))
+        .expect("failed to create netstack realm");
+
+    let socket_provider = netstack
+        .connect_to_protocol::<fposix_socket::ProviderMarker>()
+        .expect("failed to connect to socket provider");
+
+    let datagram_socket = socket_provider
+        .datagram_socket(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
+        .await
+        .expect("datagram_socket fidl error")
+        .expect("failed to create datagram socket");
+
+    let datagram_socket = match datagram_socket {
+        fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(socket) => socket,
+        socket => panic!("unexpected datagram socket variant: {:?}", socket),
+    };
+
+    let proxy = datagram_socket.into_proxy().expect("failed to create proxy");
+
+    // Expect no cmsgs requested by default.
+    let response = proxy
+        .recv_msg_postflight()
+        .await
+        .expect("recv_msg_postflight fidl error")
+        .expect("recv_msg_postflight failed");
+    validate_recv_msg_postflight_response(
+        &response,
+        RequestedCmsgSetExpectation { requested_cmsg_type: None, valid: true },
+    );
+
+    toggle_cmsg(true, &proxy, cmsg_type).await;
+
+    // Expect requesting a cmsg invalidates the returned cmsg set.
+    validate_recv_msg_postflight_response(
+        &response,
+        RequestedCmsgSetExpectation { requested_cmsg_type: None, valid: false },
+    );
+
+    // Expect the cmsg is returned in the latest requested set.
+    let response = proxy
+        .recv_msg_postflight()
+        .await
+        .expect("recv_msg_postflight fidl error")
+        .expect("recv_msg_postflight failed");
+    validate_recv_msg_postflight_response(
+        &response,
+        RequestedCmsgSetExpectation { requested_cmsg_type: Some(cmsg_type), valid: true },
+    );
+
+    toggle_cmsg(false, &proxy, cmsg_type).await;
+
+    // Expect unrequesting a cmsg invalidates the returned cmsg set.
+    validate_recv_msg_postflight_response(
+        &response,
+        RequestedCmsgSetExpectation { requested_cmsg_type: Some(cmsg_type), valid: false },
+    );
+
+    // Expect the cmsg is no longer returned in the latest requested set.
+    let response = proxy
+        .recv_msg_postflight()
+        .await
+        .expect("recv_msg_postflight fidl error")
+        .expect("recv_msg_postflight failed");
+    validate_recv_msg_postflight_response(
+        &response,
+        RequestedCmsgSetExpectation { requested_cmsg_type: None, valid: true },
+    );
 }
 
 async fn run_tcp_socket_test(

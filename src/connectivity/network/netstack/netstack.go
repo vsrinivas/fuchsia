@@ -142,11 +142,23 @@ type Netstack struct {
 		countNIC tcpip.NICID
 	}
 
+	destinationCacheMu struct {
+		sync.Mutex
+		destinationCache destinationCache
+	}
+
 	stats stats
 
 	endpoints endpointsMap
 
 	nicRemovedHandlers []NICRemovedHandler
+
+	featureFlags featureFlags
+}
+
+// Flags for turning on functionality in select environments.
+type featureFlags struct {
+	enableFastUDP bool
 }
 
 // Each ifState tracks the state of a network interface.
@@ -255,6 +267,12 @@ func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcp
 	}
 }
 
+func (ns *Netstack) resetDestinationCache() {
+	ns.destinationCacheMu.Lock()
+	defer ns.destinationCacheMu.Unlock()
+	ns.destinationCacheMu.destinationCache.reset()
+}
+
 func (ns *Netstack) name(nicid tcpip.NICID) string {
 	name := ns.stack.FindNICNameFromID(nicid)
 	if len(name) == 0 {
@@ -347,7 +365,7 @@ func (ifs *ifState) addRoutesWithPreferenceLocked(rs []tcpip.Route, prf routes.P
 			}
 		}
 	}
-	ifs.ns.routeTable.UpdateStackLocked(ifs.ns.stack)
+	ifs.ns.routeTable.UpdateStackLocked(ifs.ns.stack, ifs.ns.resetDestinationCache)
 }
 
 // delRouteLocked deletes routes from a single interface identified by `r.NIC`.
@@ -373,7 +391,7 @@ func (ns *Netstack) delRouteLocked(r tcpip.Route) []routes.ExtendedRoute {
 		}
 	}
 
-	ns.routeTable.UpdateStackLocked(ns.stack)
+	ns.routeTable.UpdateStackLocked(ns.stack, ns.resetDestinationCache)
 	return routesDeleted
 }
 
@@ -423,7 +441,7 @@ func (ns *Netstack) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action rout
 	hasDefaultIPv4Route, hasDefaultIPv6Route := ns.routeTable.HasDefaultRouteLocked(nicid)
 	ns.onDefaultRouteChangeLocked(nicid, hasDefaultIPv4Route, hasDefaultIPv6Route)
 
-	ns.routeTable.UpdateStackLocked(ns.stack)
+	ns.routeTable.UpdateStackLocked(ns.stack, ns.resetDestinationCache)
 }
 
 func (ifs *ifState) removeAddressLocked(protocolAddr tcpip.ProtocolAddress) zx.Status {
@@ -785,7 +803,9 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 
 	if closed {
 		switch err := ifs.ns.stack.RemoveNIC(ifs.nicid); err.(type) {
-		case nil, *tcpip.ErrUnknownNICID:
+		case nil:
+			ifs.ns.resetDestinationCache()
+		case *tcpip.ErrUnknownNICID:
 		default:
 			_ = syslog.Warnf("error removing NIC %s in stack.Stack: %s", name, err)
 		}
@@ -867,7 +887,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 				staticRouteAvoidingLifeCycleHooks,
 				true, /* enabled */
 			)
-			ifs.ns.routeTable.UpdateStack(ifs.ns.stack)
+			ifs.ns.routeTable.UpdateStack(ifs.ns.stack, ifs.ns.resetDestinationCache)
 		} else {
 			ifs.onDownLocked(name, false /* closed */)
 		}

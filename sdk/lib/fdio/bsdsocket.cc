@@ -188,14 +188,25 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(EIO);
       }
 
-      auto result = provider->DatagramSocket(sock_domain, proto);
+      fidl::WireResult result = provider->DatagramSocket(sock_domain, proto);
       if (result.status() != ZX_OK) {
         return ERROR(result.status());
       }
       if (result->is_error()) {
         return ERRNO(static_cast<int32_t>(result->error_value()));
       }
-      client_end.channel() = result->value()->s.TakeChannel();
+      fsocket::wire::ProviderDatagramSocketResponse& response = *result->value();
+      if (response.has_invalid_tag()) {
+        return ERRNO(EIO);
+      }
+      switch (response.Which()) {
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket:
+          client_end.channel() = response.datagram_socket().TakeChannel();
+          break;
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket:
+          client_end.channel() = response.synchronous_datagram_socket().TakeChannel();
+          break;
+      }
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {

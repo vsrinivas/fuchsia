@@ -702,7 +702,7 @@ async fn create_socket(
     connector: &HermeticNetworkConnector,
 ) -> Result<socket2::Socket, fntr::Error> {
     let socket_provider = connector.connect_to_protocol::<fposix_socket::ProviderMarker>()?;
-    let sock = socket_provider
+    let response = socket_provider
         .datagram_socket(domain, protocol)
         .await
         .map_err(|e| {
@@ -714,10 +714,20 @@ async fn create_socket(
             fntr::Error::Internal
         })?;
 
-    fdio::create_fd(sock.into()).map_err(|e| {
-        error!("create_fd from socket failed: {:?}", e);
-        fntr::Error::Internal
-    })
+    match response {
+        fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(sock) => {
+            fdio::create_fd(sock.into()).map_err(|e| {
+                error!("create_fd from DatagramSocket failed: {:?}", e);
+                fntr::Error::Internal
+            })
+        }
+        fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(sock) => {
+            fdio::create_fd(sock.into()).map_err(|e| {
+                error!("create_fd from SynchronousDatagramSocket failed: {:?}", e);
+                fntr::Error::Internal
+            })
+        }
+    }
 }
 
 async fn create_icmp_socket(

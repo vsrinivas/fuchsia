@@ -42,6 +42,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -59,6 +60,9 @@ const (
 	maxTCPKeepIdle  = 32767
 	maxTCPKeepIntvl = 32767
 	maxTCPKeepCnt   = 127
+
+	// Maximum size of a UDP payload.
+	maxUDPPayloadSize = header.UDPMaximumPacketSize - header.UDPMinimumSize
 )
 
 func optionalUint8ToInt(v socket.OptionalUint8, unset int) (int, tcpip.Error) {
@@ -1113,11 +1117,29 @@ type endpointWithSocket struct {
 	onHUp waiter.Entry
 }
 
-func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
-	localS, peerS, err := zx.NewSocket(zx.SocketStream)
+func newEndpointWithSocket(
+	ep tcpip.Endpoint,
+	wq *waiter.Queue,
+	transProto tcpip.TransportProtocolNumber,
+	netProto tcpip.NetworkProtocolNumber,
+	ns *Netstack,
+	socketType uint32,
+) (*endpointWithSocket, error) {
+	localS, peerS, err := zx.NewSocket(socketType)
 	if err != nil {
 		return nil, err
 	}
+
+	eventsToSignals := func() func(events waiter.EventMask) zx.Signals {
+		switch socketType {
+		case zx.SocketStream:
+			return eventsToStreamSignals
+		case zx.SocketDatagram:
+			return eventsToDatagramSignals
+		default:
+			panic(fmt.Sprintf("unknown socket type %d", socketType))
+		}
+	}()
 
 	eps := &endpointWithSocket{
 		endpoint: endpoint{
@@ -1127,7 +1149,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 			netProto:   netProto,
 			ns:         ns,
 			pending: signaler{
-				eventsToSignals: eventsToStreamSignals,
+				eventsToSignals: eventsToSignals,
 				readiness:       ep.Readiness,
 				signalPeer:      localS.Handle().SignalPeer,
 			},
@@ -1447,7 +1469,7 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 	}
 
 	{
-		eps, err := newEndpointWithSocket(ep, wq, s.transProto, s.netProto, s.endpoint.ns)
+		eps, err := newEndpointWithSocket(ep, wq, s.transProto, s.netProto, s.endpoint.ns, zx.SocketStream)
 		if err != nil {
 			return 0, nil, streamSocketImpl{}, err
 		}
@@ -1475,14 +1497,11 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 
 // handleZxSocketReadError contains handling logic for zx socket read errors.
 // Returns true iff the error was found to be terminal.
-func (eps *endpointWithSocket) handleZxSocketReadError(err zx.Error) bool {
+func (eps *endpointWithSocket) handleZxSocketReadError(err zx.Error, waitCallback func(zx.Signals) zx.Signals) bool {
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 	switch err.Status {
 	case zx.ErrShouldWait:
-		obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
-		if err != nil {
-			panic(err)
-		}
+		obs := waitCallback(sigs)
 		switch {
 		case obs&zx.SignalSocketReadable != 0:
 			// The client might have written some data into the socket.
@@ -1571,7 +1590,13 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			case nil:
 				continue
 			case *zx.Error:
-				if s.handleZxSocketReadError(*err) {
+				if s.handleZxSocketReadError(*err, func(sigs zx.Signals) zx.Signals {
+					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
+					if err != nil {
+						panic(err)
+					}
+					return obs
+				}) {
 					return
 				}
 			default:
@@ -1695,11 +1720,10 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 		trace.AsyncEnd("net", "fuchsia_posix_socket.streamSocket.transferRx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		s.terminal.setLocked(err)
 		s.terminal.mu.Unlock()
-		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
 		switch err.(type) {
 		case *tcpip.ErrNotConnected:
 			// Read never returns ErrNotConnected except for endpoints that were
-			// never connected. Such endpoints should never reach this loop.
+			// never connected. Such endpoints should never be read from.
 			panic(fmt.Sprintf("connected endpoint returned %s", err))
 		case *tcpip.ErrTimeout:
 			// At the time of writing, this error indicates that a TCP connection
@@ -1805,6 +1829,785 @@ func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode)
 		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
+}
+
+type destinationCache struct {
+	local, peer zx.Handle
+}
+
+func (d *destinationCache) initialized() bool {
+	return d.local != zx.HandleInvalid && d.peer != zx.HandleInvalid
+}
+
+func (d *destinationCache) reset() {
+	if d.initialized() {
+		d.clear()
+	}
+
+	if status := zx.Sys_eventpair_create(0, &d.local, &d.peer); status != zx.ErrOk {
+		panic(fmt.Sprintf("failed to create eventpairs with error: %s", status))
+	}
+}
+
+func (d *destinationCache) clear() {
+	// TODO(https://fxbug.dev/100894): Use a single syscall to close these eventpairs.
+	if err := d.local.Close(); err != nil {
+		panic(fmt.Sprintf("local.Close() = %s", err))
+	}
+
+	if err := d.peer.Close(); err != nil {
+		panic(fmt.Sprintf("peer.Close() = %s", err))
+	}
+}
+
+type cmsgCache struct {
+	local, peer  zx.Handle
+	ipTos        bool
+	ipTtl        bool
+	ipv6Tclass   bool
+	ipv6HopLimit bool
+	ipv6PktInfo  bool
+	timestamp    socket.TimestampOption
+}
+
+func (c *cmsgCache) initialized() bool {
+	return c.local != zx.HandleInvalid && c.peer != zx.HandleInvalid
+}
+
+func (c *cmsgCache) reset() {
+	if c.initialized() {
+		c.clear()
+	}
+	if status := zx.Sys_eventpair_create(0, &c.local, &c.peer); status != zx.ErrOk {
+		panic(fmt.Sprintf("failed to create cmsg eventpairs with error: %s", status))
+	}
+}
+
+func (c *cmsgCache) clear() {
+	// TODO(https://fxbug.dev/100894): Use a single syscall to close these eventpairs.
+	if err := c.local.Close(); err != nil {
+		panic(fmt.Sprintf("local.Close() = %s", err))
+	}
+
+	if err := c.peer.Close(); err != nil {
+		panic(fmt.Sprintf("peer.Close() = %s", err))
+	}
+}
+
+type datagramSocketImpl struct {
+	*endpointWithSocket
+
+	cancel context.CancelFunc
+
+	entry *waiter.Entry
+
+	destinationCacheMu *struct {
+		sync.Mutex
+		destinationCache destinationCache
+	}
+
+	cmsgCacheMu *struct {
+		sync.Mutex
+		cmsgCache cmsgCache
+	}
+
+	localEDrainedCond *sync.Cond
+}
+
+var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
+var _ waiter.EventListener = (*datagramSocketImpl)(nil)
+
+var (
+	udpTxPreludeSize = txUdpPreludeSize()
+	udpRxPreludeSize = rxUdpPreludeSize()
+)
+
+func newDatagramSocket(eps *endpointWithSocket) (socket.DatagramSocketWithCtxInterface, error) {
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.DatagramSocketWithCtxInterface{}, err
+	}
+	s := &datagramSocketImpl{
+		endpointWithSocket: eps,
+		entry:              &waiter.Entry{},
+		destinationCacheMu: &struct {
+			sync.Mutex
+			destinationCache destinationCache
+		}{},
+		cmsgCacheMu: &struct {
+			sync.Mutex
+			cmsgCache cmsgCache
+		}{},
+	}
+
+	// Listen for errors so we can signal the client.
+	s.pending.supported = waiter.EventErr
+	s.entry.Init(s, s.pending.supported)
+	s.wq.EventRegister(s.entry)
+
+	// Initialize caches.
+	s.destinationCacheMu.destinationCache.reset()
+	s.cmsgCacheMu.cmsgCache.reset()
+
+	// Initialize CV used to drain the socket.
+	s.localEDrainedCond = &sync.Cond{L: &sync.Mutex{}}
+
+	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	_ = syslog.DebugTf("NewDatagram", "%p", s)
+
+	// Datagram sockets should be readable/writeable immediately upon creation.
+	s.startReadWriteLoops(s.loopRead, s.loopWrite)
+	return socket.DatagramSocketWithCtxInterface{Channel: peerC}, nil
+}
+
+// loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
+func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
+	defer close(ch)
+
+	inEntry, inCh := waiter.NewChannelEntry(waiter.EventIn)
+	s.wq.EventRegister(&inEntry)
+	defer s.wq.EventUnregister(&inEntry)
+
+	buf := make([]byte, udpRxPreludeSize+maxUDPPayloadSize)
+	for {
+		payloadBuf := buf[udpRxPreludeSize:]
+		w := tcpip.SliceWriter(payloadBuf)
+		res, err := s.ep.Read(&w, tcpip.ReadOptions{NeedRemoteAddr: true})
+		switch err.(type) {
+		case nil:
+		case *tcpip.ErrBadBuffer:
+			panic(fmt.Sprintf("unexpected short read from UDP endpoint"))
+		default:
+			if s.handleEndpointReadError(err, inCh, udp.ProtocolNumber) {
+				return
+			}
+			continue
+		}
+
+		serializeRecvMsgMeta(s.netProto, res, buf[:udpRxPreludeSize])
+
+		v := buf[:udpRxPreludeSize+uint32(res.Count)]
+		for {
+			n, sockErr := s.local.Write(v[:], 0)
+			if sockErr != nil {
+				if sockErr, ok := sockErr.(*zx.Error); ok {
+					if s.handleZxSocketWriteError(*sockErr) {
+						return
+					}
+					continue
+				}
+				panic(sockErr)
+			}
+			if n < len(v) {
+				panic(fmt.Sprintf("unexpected short write on zx socket: %d/%d", n, len(v)))
+			}
+			break
+		}
+	}
+}
+
+// loopWrite shuttles datagrams from the zircon socket to the tcpip.Endpoint.
+func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
+	defer close(ch)
+
+	buf := make([]byte, udpTxPreludeSize+maxUDPPayloadSize)
+	s.localEDrainedCond.L.Lock()
+	defer s.localEDrainedCond.L.Unlock()
+	for {
+		v := buf
+		n, err := s.local.Read(v, 0)
+		if err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				if s.handleZxSocketReadError(*err, func(sigs zx.Signals) zx.Signals {
+					// FIDL methods on datagram sockets block until all of the payloads
+					// in the contained zircon socket have been dequeued. When the
+					// socket is readable (aka contains payloads), methods wait on
+					// a condition variable until the next time it might be empty.
+					//
+					// Since this callback is invoked precisely when the socket has
+					// been found to be empty (aka returns ErrShouldWait) wake up
+					// any waiters.
+					s.localEDrainedCond.L.Unlock()
+					s.localEDrainedCond.Broadcast()
+					sigs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
+					s.localEDrainedCond.L.Lock()
+					if err != nil {
+						panic(err)
+					}
+					return sigs
+				}) {
+					return
+				}
+				continue
+			}
+			panic(err)
+		}
+
+		v = v[:n]
+
+		opts := tcpip.WriteOptions{
+			Atomic: true,
+		}
+
+		addr := deserializeSendMsgAddress(v[:udpTxPreludeSize])
+
+		if addr != nil {
+			opts.To = addr
+		}
+
+		v = v[udpTxPreludeSize:]
+
+		var r bytes.Reader
+		r.Reset(v)
+		lenPrev := len(v)
+		written, writeErr := s.ep.Write(&r, opts)
+
+		if writeErr == nil {
+			if int(written) != lenPrev {
+				panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", written, lenPrev))
+			}
+		} else {
+			switch writeErr.(type) {
+			case *tcpip.ErrWouldBlock:
+				// TODO(https://fxbug.dev/101570): Handle tcpip.ErrWouldBlock.
+				panic(fmt.Sprintf("can't handle tcpip.ErrWouldBlock"))
+			default:
+				if s.handleEndpointWriteError(writeErr, udp.ProtocolNumber) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+	{
+		sCopy := *s
+		s := &sCopy
+
+		s.ns.stats.SocketCount.Increment()
+		s.endpoint.incRef()
+		go func() {
+			defer s.ns.stats.SocketCount.Decrement()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			s.cancel = cancel
+			defer func() {
+				// Avoid double close when the peer calls Close and then hangs up.
+				if ctx.Err() == nil {
+					s.close()
+				}
+			}()
+
+			stub := socket.DatagramSocketWithCtxStub{Impl: s}
+			component.Serve(ctx, &stub, object.Channel, component.ServeOptions{
+				OnError: func(err error) {
+					// NB: this protocol is not discoverable, so the bindings do not include its name.
+					_ = syslog.WarnTf("fuchsia.posix.socket.DatagramSocket", "%s", err)
+				},
+			})
+		}()
+	}
+}
+
+// FIDL calls modifying socket options affecting packet egress. These calls must
+// wait for the zircon socket to drain so as to avoid applying socket options
+// to packets enqueued before the call.
+
+func (s *datagramSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
+	s.blockUntilSocketDrained()
+	if err := s.endpoint.connect(address); err != nil {
+		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	s.destinationCacheMu.Lock()
+	s.destinationCacheMu.destinationCache.reset()
+	s.destinationCacheMu.Unlock()
+	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
+}
+
+func (s *datagramSocketImpl) Disconnect(ctx fidl.Context) (socket.BaseNetworkSocketDisconnectResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.Disconnect(ctx)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpTypeOfService(ctx fidl.Context, value uint8) (socket.BaseNetworkSocketSetIpTypeOfServiceResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpTypeOfService(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6Only(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6OnlyResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6Only(ctx, value)
+	s.destinationCacheMu.Lock()
+	defer s.destinationCacheMu.Unlock()
+	s.destinationCacheMu.destinationCache.reset()
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6TrafficClass(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6TrafficClassResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6TrafficClass(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6UnicastHops(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6UnicastHopsResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6UnicastHops(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpTtl(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpTtlResult, error) {
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpTtl(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetSendBuffer(ctx fidl.Context, size uint64) (socket.BaseSocketSetSendBufferResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetSendBuffer(ctx, size)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetBindToDevice(ctx fidl.Context, value string) (socket.BaseSocketSetBindToDeviceResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetBindToDevice(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetBroadcast(ctx fidl.Context, value bool) (socket.BaseSocketSetBroadcastResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetBroadcast(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetNoCheck(ctx fidl.Context, value bool) (socket.BaseSocketSetNoCheckResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetNoCheck(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6MulticastInterface(ctx fidl.Context, value uint64) (socket.BaseNetworkSocketSetIpv6MulticastInterfaceResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6MulticastInterface(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6MulticastHops(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpv6MulticastHopsResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6MulticastHops(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpv6MulticastLoopback(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6MulticastLoopbackResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpv6MulticastLoopback(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpMulticastTtl(ctx fidl.Context, value socket.OptionalUint8) (socket.BaseNetworkSocketSetIpMulticastTtlResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpMulticastTtl(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpMulticastInterface(ctx fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseNetworkSocketSetIpMulticastInterfaceResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpMulticastInterface(ctx, iface, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) SetIpMulticastLoopback(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpMulticastLoopbackResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.SetIpMulticastLoopback(ctx, value)
+	return result, err
+}
+
+func (s *datagramSocketImpl) AddIpMembership(ctx fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketAddIpMembershipResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.AddIpMembership(ctx, membership)
+	return result, err
+}
+
+func (s *datagramSocketImpl) DropIpMembership(ctx fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketDropIpMembershipResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.DropIpMembership(ctx, membership)
+	return result, err
+}
+
+func (s *datagramSocketImpl) AddIpv6Membership(ctx fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketAddIpv6MembershipResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
+	s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.AddIpv6Membership(ctx, membership)
+	return result, err
+}
+
+func (s *datagramSocketImpl) DropIpv6Membership(ctx fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketDropIpv6MembershipResult, error) {
+	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.s.blockUntilSocketDrained()
+	result, err := s.endpointWithSocket.DropIpv6Membership(ctx, membership)
+	return result, err
+}
+
+// blockUntilSocketDrained blocks the goroutine until all of the payloads in the contained
+// zircon socket have been dequeued. All control-path FIDL methods should call this method
+// before modifying endpoint state in order to avoid racing with concurrently enqueued
+// payloads.
+func (s *datagramSocketImpl) blockUntilSocketDrained() {
+	// TODO(https://fxbug.dev/100877): Prevent ingress into the socket while draining.
+	s.localEDrainedCond.L.Lock()
+	defer s.localEDrainedCond.L.Unlock()
+	for {
+		status := zx.Sys_object_wait_one(zx.Handle(s.local), zx.SignalSocketReadable, 0, nil)
+		switch status {
+		case zx.ErrOk:
+			s.localEDrainedCond.Wait()
+			continue
+		case zx.ErrTimedOut:
+			return
+		default:
+			panic(fmt.Sprintf("wait for socket to become readable failed with status = %s", status))
+
+		}
+	}
+}
+
+func (s *datagramSocketImpl) NotifyEvent(waiter.EventMask) {
+	if err := s.pending.update(); err != nil {
+		panic(err)
+	}
+}
+
+func (s *datagramSocketImpl) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
+	err := s.ep.LastError()
+	s.pending.mustUpdate()
+	if err != nil {
+		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
+}
+
+func (s *datagramSocketImpl) Shutdown(ctx fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdownResult, error) {
+	switch transport.DatagramEndpointState(s.ep.State()) {
+	case transport.DatagramEndpointStateConnected, transport.DatagramEndpointStateBound:
+		return s.endpointWithSocket.Shutdown(ctx, how)
+	default:
+		return socket.BaseNetworkSocketShutdownResultWithErr(tcpipErrorToCode(&tcpip.ErrNotConnected{})), nil
+	}
+}
+
+// FIDL calls accessing or modifying the set of requested control messages. Modifying calls
+// must invalidate any clients that depend upon the (now-outdated) cache.
+
+// TODO(https://fxbug.dev/87656): Remove after ABI transition.
+func (s *datagramSocketImpl) GetTimestampDeprecated(fidl.Context) (socket.BaseSocketGetTimestampDeprecatedResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseSocketGetTimestampDeprecatedResultWithResponse(socket.BaseSocketGetTimestampDeprecatedResponse{Value: s.cmsgCacheMu.cmsgCache.timestamp}), nil
+}
+
+// TODO(https://fxbug.dev/87656): Remove after ABI transition.
+func (s *datagramSocketImpl) SetTimestampDeprecated(ctx fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampDeprecatedResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.timestamp = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseSocketSetTimestampDeprecatedResultWithResponse(socket.BaseSocketSetTimestampDeprecatedResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: s.cmsgCacheMu.cmsgCache.timestamp}), nil
+}
+
+func (s *datagramSocketImpl) SetTimestamp(ctx fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.timestamp = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: s.cmsgCacheMu.cmsgCache.ipTos}), nil
+}
+
+func (s *datagramSocketImpl) SetIpReceiveTypeOfService(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.ipTos = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetIpReceiveTtl(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTtlResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTtlResponse{Value: s.cmsgCacheMu.cmsgCache.ipTtl}), nil
+}
+
+func (s *datagramSocketImpl) SetIpReceiveTtl(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTtlResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.ipTtl = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseNetworkSocketSetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTtlResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6Tclass}), nil
+}
+
+func (s *datagramSocketImpl) SetIpv6ReceiveTrafficClass(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.ipv6Tclass = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetIpv6ReceiveHopLimit(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6HopLimit}), nil
+}
+
+func (s *datagramSocketImpl) SetIpv6ReceiveHopLimit(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.ipv6HopLimit = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResponse{}), nil
+}
+
+func (s *datagramSocketImpl) SetIpv6ReceivePacketInfo(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	s.cmsgCacheMu.cmsgCache.ipv6PktInfo = value
+	s.cmsgCacheMu.cmsgCache.reset()
+	return socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResponse{}), nil
+}
+
+func (s *datagramSocketImpl) GetIpv6ReceivePacketInfo(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResult, error) {
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6PktInfo}), nil
+}
+
+func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object)
+
+	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
+
+	return nil
+}
+
+func (s *datagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithSocket, options)
+
+	return nil
+}
+
+func (s *datagramSocketImpl) close() {
+	if s.endpoint.decRef() {
+		s.wq.EventUnregister(s.entry)
+		s.endpointWithSocket.close()
+		if err := s.peer.Close(); err != nil {
+			panic(err)
+		}
+	}
+
+	s.cancel()
+}
+
+func (s *datagramSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+	_ = syslog.DebugTf("Close", "%p", s)
+	s.close()
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
+}
+
+func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	socket, err := s.describe()
+	if err != nil {
+		return fidlio.NodeInfo{}, err
+	}
+	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Socket: zx.Socket(socket), TxMetaBufSize: uint64(udpTxPreludeSize), RxMetaBufSize: uint64(udpRxPreludeSize)}), nil
+}
+
+func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
+	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
+		socket, err := s.describe()
+		if err != nil {
+			return connectionInfo, err
+		}
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithDatagramSocket(fidlio.DatagramSocketInfo{Socket: zx.Socket(socket), TxMetaBufSize: uint64(udpTxPreludeSize), RxMetaBufSize: uint64(udpRxPreludeSize)}))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := fidlio.RStarDir
+	if query&fidlio.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
+}
+
+func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagramSocketGetInfoResult, error) {
+	domain, err := s.domain()
+	if err != nil {
+		return socket.BaseDatagramSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var proto socket.DatagramSocketProtocol
+	switch s.transProto {
+	case udp.ProtocolNumber:
+		proto = socket.DatagramSocketProtocolUdp
+	default:
+		panic(fmt.Sprintf("unhandled transport protocol: %d", s.transProto))
+	}
+	return socket.BaseDatagramSocketGetInfoResultWithResponse(socket.BaseDatagramSocketGetInfoResponse{
+		Domain: domain,
+		Proto:  proto,
+	}), nil
+}
+
+func (s *datagramSocketImpl) GetInfoDeprecated(fidl.Context) (socket.BaseDatagramSocketGetInfoDeprecatedResult, error) {
+	domain, err := s.domain()
+	if err != nil {
+		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var proto socket.DatagramSocketProtocol
+	switch s.transProto {
+	case udp.ProtocolNumber:
+		proto = socket.DatagramSocketProtocolUdp
+	default:
+		panic(fmt.Sprintf("unhandled transport protocol: %d", s.transProto))
+	}
+	return socket.BaseDatagramSocketGetInfoDeprecatedResultWithResponse(socket.BaseDatagramSocketGetInfoDeprecatedResponse{
+		Domain: domain,
+		Proto:  proto,
+	}), nil
+}
+
+func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.DatagramSocketSendMsgPreflightRequest) (socket.DatagramSocketSendMsgPreflightResult, error) {
+	s.destinationCacheMu.Lock()
+	defer s.destinationCacheMu.Unlock()
+
+	var addr tcpip.FullAddress
+	useConnectedAddr := !req.HasTo()
+
+	if useConnectedAddr {
+		if connectedAddr, err := s.ep.GetRemoteAddress(); err == nil {
+			addr = connectedAddr
+		} else {
+			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrDestinationRequired{})), nil
+		}
+	} else {
+		var err error
+		addr, err = toTCPIPFullAddress(req.To)
+		if err != nil {
+			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
+		}
+		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
+			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
+		}
+	}
+
+	var writeOpts tcpip.WriteOptions
+	writeOpts.To = &addr
+	if epWithPreflight, ok := s.ep.(tcpip.EndpointWithPreflight); ok {
+		if err := epWithPreflight.Preflight(writeOpts); err != nil {
+			if err := s.pending.update(); err != nil {
+				panic(err)
+			}
+			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	} else {
+		panic("endpoint does not implement EndpointWithPreflight")
+	}
+
+	// The Netstack's destinationCache tracks the state of the route table and is invalidated
+	// whenever the route table is modified.
+	// TODO (https://fxbug.dev/100895): Implement per-route caching invalidation.
+	var nsEventPair zx.Handle
+	if status := func() zx.Status {
+		s.ns.destinationCacheMu.Lock()
+		defer s.ns.destinationCacheMu.Unlock()
+		return zx.Sys_handle_duplicate(s.ns.destinationCacheMu.destinationCache.peer, zx.RightsBasic, &nsEventPair)
+	}(); status != zx.ErrOk {
+		return socket.DatagramSocketSendMsgPreflightResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+	}
+
+	// The socket's destinationCache tracks the state of the socket itself and is invalidated
+	// whenever a FIDL call modifies that state.
+	var socketEventPair zx.Handle
+	if status := zx.Sys_handle_duplicate(s.destinationCacheMu.destinationCache.peer, zx.RightsBasic, &socketEventPair); status != zx.ErrOk {
+		return socket.DatagramSocketSendMsgPreflightResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+	}
+	response := socket.DatagramSocketSendMsgPreflightResponse{}
+	// TODO(https://fxbug.dev/93268): Compute MTU dynamically once `IP_DONTFRAG` is supported.
+	response.SetMaximumSize(maxUDPPayloadSize)
+
+	response.SetValidity([]zx.Handle{nsEventPair, socketEventPair})
+	if useConnectedAddr {
+		response.SetTo(toNetSocketAddress(s.netProto, addr))
+	}
+
+	return socket.DatagramSocketSendMsgPreflightResultWithResponse(response), nil
+}
+
+func (s *datagramSocketImpl) RecvMsgPostflight(_ fidl.Context) (socket.DatagramSocketRecvMsgPostflightResult, error) {
+	var response socket.DatagramSocketRecvMsgPostflightResponse
+	s.cmsgCacheMu.Lock()
+	defer s.cmsgCacheMu.Unlock()
+	var binaryCmsgRequests socket.CmsgRequests
+	if s.cmsgCacheMu.cmsgCache.ipTos {
+		binaryCmsgRequests |= socket.CmsgRequestsIpTos
+	}
+	if s.cmsgCacheMu.cmsgCache.ipTtl {
+		binaryCmsgRequests |= socket.CmsgRequestsIpTtl
+	}
+	if s.cmsgCacheMu.cmsgCache.ipv6Tclass {
+		binaryCmsgRequests |= socket.CmsgRequestsIpv6Tclass
+	}
+	if s.cmsgCacheMu.cmsgCache.ipv6HopLimit {
+		binaryCmsgRequests |= socket.CmsgRequestsIpv6Hoplimit
+	}
+	if s.cmsgCacheMu.cmsgCache.ipv6PktInfo {
+		binaryCmsgRequests |= socket.CmsgRequestsIpv6Pktinfo
+	}
+	response.SetRequests(binaryCmsgRequests)
+	response.SetTimestamp(s.cmsgCacheMu.cmsgCache.timestamp)
+
+	var validity zx.Handle
+	if status := zx.Sys_handle_duplicate(s.cmsgCacheMu.cmsgCache.peer, zx.RightsBasic, &validity); status != zx.ErrOk {
+		return socket.DatagramSocketRecvMsgPostflightResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+	}
+	response.SetValidity(validity)
+
+	return socket.DatagramSocketRecvMsgPostflightResultWithResponse(response), nil
 }
 
 type synchronousDatagramSocket struct {
@@ -2202,13 +3005,13 @@ func (s *synchronousDatagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagr
 		return socket.BaseDatagramSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var proto socket.DatagramSocketProtocol
-	switch transProto := s.transProto; transProto {
+	switch s.transProto {
 	case udp.ProtocolNumber:
 		proto = socket.DatagramSocketProtocolUdp
 	case header.ICMPv4ProtocolNumber, header.ICMPv6ProtocolNumber:
 		proto = socket.DatagramSocketProtocolIcmpEcho
 	default:
-		panic(fmt.Sprintf("unhandled transport protocol: %d", transProto))
+		panic(fmt.Sprintf("unhandled transport protocol: %d", s.transProto))
 	}
 	return socket.BaseDatagramSocketGetInfoResultWithResponse(socket.BaseDatagramSocketGetInfoResponse{
 		Domain: domain,
@@ -2264,7 +3067,7 @@ func newStreamSocket(s streamSocketImpl) (socket.StreamSocketWithCtxInterface, e
 		return socket.StreamSocketWithCtxInterface{}, err
 	}
 	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	_ = syslog.DebugTf("NewStream", "%p", s.endpointWithSocket)
+	_ = syslog.DebugTf("NewStream", "%p", s)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
@@ -2334,7 +3137,7 @@ func (s *streamSocketImpl) close() {
 }
 
 func (s *streamSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
-	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
+	_ = syslog.DebugTf("Close", "%p", s)
 	s.close()
 	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
@@ -2448,11 +3251,11 @@ func (s *streamSocketImpl) GetInfo(fidl.Context) (socket.StreamSocketGetInfoResu
 		return socket.StreamSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var proto socket.StreamSocketProtocol
-	switch transProto := s.transProto; transProto {
+	switch s.transProto {
 	case tcp.ProtocolNumber:
 		proto = socket.StreamSocketProtocolTcp
 	default:
-		panic(fmt.Sprintf("unhandled transport protocol: %d", transProto))
+		panic(fmt.Sprintf("unhandled transport protocol: %d", s.transProto))
 	}
 	return socket.StreamSocketGetInfoResultWithResponse(socket.StreamSocketGetInfoResponse{
 		Domain: domain,
@@ -2875,6 +3678,55 @@ func makeSynchronousDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProt
 	return s, nil
 }
 
+func (sp *providerImpl) DatagramSocketDeprecated(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketDeprecatedResult, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return socket.ProviderDatagramSocketDeprecatedResultWithErr(code), nil
+	}
+	code, transProto := toTransProtoDatagram(domain, proto)
+	if code != 0 {
+		return socket.ProviderDatagramSocketDeprecatedResultWithErr(code), nil
+	}
+
+	wq := new(waiter.Queue)
+	var ep tcpip.Endpoint
+	{
+		var err tcpip.Error
+		ep, err = sp.ns.stack.NewEndpoint(transProto, netProto, wq)
+		if err != nil {
+			return socket.ProviderDatagramSocketDeprecatedResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+
+	synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	if err != nil {
+		return socket.ProviderDatagramSocketDeprecatedResult{}, err
+	}
+
+	s := synchronousDatagramSocketImpl{
+		networkDatagramSocket: networkDatagramSocket{
+			synchronousDatagramSocket: synchronousDatagramSocket,
+		},
+	}
+
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.ProviderDatagramSocketDeprecatedResult{}, err
+	}
+
+	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
+	sp.ns.onAddEndpoint(&s.endpoint)
+
+	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
+		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
+	}
+
+	return socket.ProviderDatagramSocketDeprecatedResultWithResponse(socket.ProviderDatagramSocketDeprecatedResponse{
+		S: socket.SynchronousDatagramSocketWithCtxInterface{Channel: peerC},
+	}), nil
+}
+
 func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
 	code, netProto := toNetProto(domain)
 	if code != 0 {
@@ -2895,33 +3747,59 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		}
 	}
 
-	synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	if transProto != udp.ProtocolNumber || !sp.ns.featureFlags.enableFastUDP {
+		synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+		if err != nil {
+			return socket.ProviderDatagramSocketResult{}, err
+		}
+
+		s := synchronousDatagramSocketImpl{
+			networkDatagramSocket: networkDatagramSocket{
+				synchronousDatagramSocket: synchronousDatagramSocket,
+			},
+		}
+
+		localC, peerC, err := zx.NewChannel(0)
+		if err != nil {
+			return socket.ProviderDatagramSocketResult{}, err
+		}
+
+		s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+		_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
+		sp.ns.onAddEndpoint(&s.endpoint)
+
+		if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
+			panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
+		}
+
+		return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithSynchronousDatagramSocket(socket.SynchronousDatagramSocketWithCtxInterface{Channel: peerC})), nil
+	}
+
+	socketEp, err := newEndpointWithSocket(
+		ep,
+		wq,
+		transProto,
+		netProto,
+		sp.ns,
+		zx.SocketDatagram,
+	)
 	if err != nil {
 		return socket.ProviderDatagramSocketResult{}, err
 	}
 
-	s := synchronousDatagramSocketImpl{
-		networkDatagramSocket: networkDatagramSocket{
-			synchronousDatagramSocket: synchronousDatagramSocket,
-		},
-	}
+	// Receive all control messages that might be passed to the client.
+	socketEp.SetTimestamp(ctx, socket.TimestampOptionNanosecond)
+	socketEp.SetIpReceiveTypeOfService(ctx, true)
+	socketEp.SetIpReceiveTtl(ctx, true)
+	socketEp.SetIpv6ReceiveTrafficClass(ctx, true)
+	socketEp.SetIpv6ReceiveHopLimit(ctx, true)
+	socketEp.SetIpv6ReceivePacketInfo(ctx, true)
 
-	localC, peerC, err := zx.NewChannel(0)
+	datagramSocketInterface, err := newDatagramSocket(socketEp)
 	if err != nil {
 		return socket.ProviderDatagramSocketResult{}, err
 	}
-
-	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
-	sp.ns.onAddEndpoint(&s.endpoint)
-
-	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
-		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
-	}
-
-	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponse{
-		S: socket.SynchronousDatagramSocketWithCtxInterface{Channel: peerC},
-	}), nil
+	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithDatagramSocket(socket.DatagramSocketWithCtxInterface{Channel: datagramSocketInterface.Channel})), nil
 }
 
 func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
@@ -2944,7 +3822,7 @@ func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto
 		}
 	}
 
-	socketEp, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
+	socketEp, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns, zx.SocketStream)
 	if err != nil {
 		return socket.ProviderStreamSocketResult{}, err
 	}

@@ -125,6 +125,13 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
           std::move(socket.event),
           fidl::ClientEnd<fsocket::SynchronousDatagramSocket>(node.TakeChannel()));
     }
+    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
+      auto& datagram_socket = info.datagram_socket();
+      auto& socket = datagram_socket.socket;
+      return fdio_datagram_socket_create(
+          std::move(socket), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel()),
+          datagram_socket.tx_meta_buf_size, datagram_socket.rx_meta_buf_size);
+    }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
       auto& socket = info.stream_socket().socket;
       return fdio_stream_socket_create(std::move(socket),

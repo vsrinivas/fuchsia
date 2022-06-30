@@ -601,8 +601,10 @@ func TestGetNetstackTable(t *testing.T) {
 			var tb routes.RouteTable
 			tb.Set(testRouteTable)
 
+			onUpdateSucceeded := func() {}
+
 			var dummyStack stack.Stack
-			tb.UpdateStack(&dummyStack)
+			tb.UpdateStack(&dummyStack, onUpdateSucceeded)
 			tableGot := dummyStack.GetRouteTable()
 
 			// Verify no disabled routes are in the Netstack table we got.

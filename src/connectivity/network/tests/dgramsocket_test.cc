@@ -30,6 +30,8 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
+constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+
 #if defined(__linux__)
 void ExpectNoPollin(int fd) {
   pollfd pfd = {
@@ -556,8 +558,9 @@ TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWi
 
   constexpr int kTtl = 42;
   char send_buf[] = "abc";
-  ASSERT_NO_FATAL_FAILURE(
-      SendWithCmsg(send_fd.get(), send_buf, sizeof(send_buf), SOL_IP, IP_TTL, kTtl));
+  ASSERT_EQ(setsockopt(send_fd.get(), SOL_IP, IP_TTL, &kTtl, sizeof(kTtl)), 0) << strerror(errno);
+  ASSERT_EQ(send(send_fd.get(), send_buf, sizeof(send_buf), 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
   char control[CMSG_SPACE(sizeof(kTtl)) + 1];
   char recv_buf[sizeof(send_buf) + 1];
   iovec iovec = {
@@ -581,8 +584,8 @@ TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWi
   EXPECT_EQ(msghdr.msg_controllen, 0u);
   EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
 
-  ASSERT_NO_FATAL_FAILURE(
-      SendWithCmsg(send_fd.get(), send_buf, sizeof(send_buf), SOL_IP, IP_TTL, kTtl));
+  ASSERT_EQ(send(send_fd.get(), send_buf, sizeof(send_buf), 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
   ASSERT_NO_FATAL_FAILURE(ExpectPollin(fd));
 
   // Send to an unreachable port, which causes an ICMP error to be
@@ -2474,6 +2477,10 @@ TEST_P(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
 }
 
 TEST_P(NetDatagramSocketsCmsgIpTtlTest, SendCmsg) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // TODO(https://fxbug.dev/96338): Support validating send path cmsgs in Fast UDP.
+    GTEST_SKIP() << "Skip tests sending control messages with Fast UDP.";
+  }
   constexpr int kTtl = 42;
   char send_buf[] = "hello";
   ASSERT_NO_FATAL_FAILURE(
@@ -2496,6 +2503,10 @@ TEST_P(NetDatagramSocketsCmsgIpTtlTest, SendCmsg) {
 }
 
 TEST_P(NetDatagramSocketsCmsgIpTtlTest, SendCmsgInvalidValues) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // TODO(https://fxbug.dev/96338): Support validating send path cmsgs in Fast UDP.
+    GTEST_SKIP() << "Skip tests sending control messages with Fast UDP.";
+  }
   // A valid IP_TTL must fit in an single byte and must not be zero.
   // https://github.com/torvalds/linux/blob/f443e374ae1/net/ipv4/ip_sockglue.c#L304
   constexpr std::array<int, 3> kInvalidValues = {-1, 0, 256};
@@ -2682,6 +2693,10 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
 }
 
 TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsg) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // TODO(https://fxbug.dev/96338): Support validating send path cmsgs in Fast UDP.
+    GTEST_SKIP() << "Skip tests sending control messages with Fast UDP.";
+  }
   constexpr int kHopLimit = 42;
   char send_buf[] = "hello";
   ASSERT_NO_FATAL_FAILURE(SendWithCmsg(connected().get(), send_buf, sizeof(send_buf), SOL_IPV6,
@@ -2705,6 +2720,10 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsg) {
 }
 
 TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgDefaultValue) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // TODO(https://fxbug.dev/96338): Support validating send path cmsgs in Fast UDP.
+    GTEST_SKIP() << "Skip tests sending control messages with Fast UDP.";
+  }
   constexpr int kConfiguredHopLimit = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_UNICAST_HOPS, &kConfiguredHopLimit,
                        sizeof(kConfiguredHopLimit)),
@@ -2734,6 +2753,10 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgDefaultValue) {
 }
 
 TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgInvalidValues) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // TODO(https://fxbug.dev/96338): Support validating send path cmsgs in Fast UDP.
+    GTEST_SKIP() << "Skip tests sending control messages with Fast UDP.";
+  }
   constexpr std::array<int, 2> kInvalidValues = {-2, 256};
 
   for (int value : kInvalidValues) {

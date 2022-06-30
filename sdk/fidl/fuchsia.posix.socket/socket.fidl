@@ -637,8 +637,14 @@ type SendMsgMeta = table {
     2: control DatagramSocketSendControlData;
 };
 
-/// Matches the definition in //zircon/system/public/zircon/types.h.
-const ZX_WAIT_MANY_MAXIMUM_ITEMS uint32 = 64;
+/// Constant bounding the number of eventpairs returned by Netstack to clients
+/// of the fast protocol.
+///
+/// Set equal to `ZX_WAIT_MANY_MAXIMUM_ITEMS` - 1, where `ZX_WAIT_MANY_MAXIMUM_ITEMS`
+/// is defined in `//zircon/system/public/zircon/types.h` and bounds the number of eventpairs
+/// in a single call to `zx_object_wait_many`. The bias leaves room to allow clients to wait
+/// for errors on the zircon socket in the same call.
+const FAST_UDP_WAIT_MANY_MAXIMUM_ITEMS uint32 = 63;
 
 /// A datagram socket.
 ///
@@ -670,7 +676,7 @@ protocol DatagramSocket {
         /// The structure is invalid if any of the elements' peer is closed.
         /// Datagrams sent with the associated metadata after invalidation will be
         /// silently dropped.
-        2: validity vector<zx.handle:<EVENTPAIR, zx.RIGHTS_BASIC>>:ZX_WAIT_MANY_MAXIMUM_ITEMS;
+        2: validity vector<zx.handle:<EVENTPAIR, zx.RIGHTS_BASIC>>:FAST_UDP_WAIT_MANY_MAXIMUM_ITEMS;
         /// The maximum datagram size that can be sent.
         ///
         /// Datagrams exceeding this will be silently dropped.
@@ -701,6 +707,8 @@ protocol DatagramSocket {
             IPV6_TCLASS = 0x4;
             /// Identifies whether the `IPV6_RECVHOPLIMIT` control message is requested.
             IPV6_HOPLIMIT = 0x8;
+            /// Identifies whether the `IPV6_RECVPKTINFO` control message is requested.
+            IPV6_PKTINFO = 0x10;
         };
     }) error fuchsia.posix.Errno;
 };
@@ -1167,11 +1175,22 @@ protocol Provider {
         s client_end:StreamSocket;
     }) error fuchsia.posix.Errno;
     /// Requests a datagram socket with the specified parameters.
-    DatagramSocket(struct {
+    /// TODO(https://fxbug.dev/85027): Remove this method once no more callers rely on it.
+    @selector("fuchsia.posix.socket/Provider.DatagramSocket")
+    DatagramSocketDeprecated(struct {
         domain Domain;
         proto DatagramSocketProtocol;
     }) -> (resource struct {
         s client_end:SynchronousDatagramSocket;
+    }) error fuchsia.posix.Errno;
+    /// Requests a datagram socket with the specified parameters.
+    @selector("fuchsia.posix.socket/Provider.DatagramSocketTransitional")
+    DatagramSocket(struct {
+        domain Domain;
+        proto DatagramSocketProtocol;
+    }) -> (strict resource union {
+        1: datagram_socket client_end:DatagramSocket;
+        2: synchronous_datagram_socket client_end:SynchronousDatagramSocket;
     }) error fuchsia.posix.Errno;
 
     /// Looks up an interface by its index and returns its name. Returns

@@ -478,14 +478,21 @@ impl<'a> TestRealm<'a> {
         let socket_provider = self
             .connect_to_protocol::<fposix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
-        let sock = socket_provider
+        let response = socket_provider
             .datagram_socket(domain, proto)
             .await
             .context("failed to call socket")?
             .map_err(|e| std::io::Error::from_raw_os_error(e.into_primitive()))
             .context("failed to create socket")?;
 
-        Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
+        match response {
+            fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(sock) => {
+                Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
+            }
+            fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(sock) => {
+                Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
+            }
+        }
     }
 
     /// Creates a raw [`socket2::Socket`] backed by the implementation of

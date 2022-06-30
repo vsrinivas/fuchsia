@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# `udp_serde_include_dirs` lists the directories that need to be included
+# in order to use the `udp_serde` library.
+#
+# Any go_binary or go_test which depends on the udp_serde library needs to
+# set it in `include_dirs`.
+#
+# For example,
+#
+# go_binary("foo_with_udp_serde") {
+#   ...
+#   include_dirs = udp_serde_include_dirs
+# }
+
+udp_serde_include_dirs = [ rebase_path("//") ]

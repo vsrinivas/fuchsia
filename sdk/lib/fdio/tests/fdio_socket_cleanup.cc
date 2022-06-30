@@ -101,4 +101,25 @@ TEST(SocketCleanup, Stream) {
   EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), nullptr));
 }
 
+TEST(SocketCleanup, Datagram) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
+
+  zx::socket client_socket, server_socket;
+  ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
+
+  fuchsia_io::wire::DatagramSocket datagram_info{.socket = std::move(client_socket)};
+  fuchsia_io::wire::NodeInfo node_info = fuchsia_io::wire::NodeInfo::WithDatagramSocket(
+      fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&datagram_info));
+
+  ASSERT_NO_FATAL_FAILURE(
+      ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
+
+  // Client must have disposed of its channel and socket handles on close.
+  EXPECT_STATUS(endpoints->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                     zx::time::infinite_past(), nullptr),
+                ZX_ERR_BAD_HANDLE);
+  EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), nullptr));
+}
+
 }  // namespace

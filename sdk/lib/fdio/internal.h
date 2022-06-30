@@ -80,6 +80,10 @@ fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path);
 zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
     zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
 
+zx::status<fdio_ptr> fdio_datagram_socket_create(
+    zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client,
+    size_t tx_meta_buf_size, size_t rx_meta_buf_size);
+
 zx::status<fdio_ptr> fdio_stream_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
 

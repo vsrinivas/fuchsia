@@ -8,7 +8,11 @@
 #include <ifaddrs.h>
 #include <stdbool.h>
 
-#include "src/lib/fxl/fxl_export.h"
+#ifdef __Fuchsia__
+#define UDP_SERDE_EXPORT __attribute__((visibility("default")))
+#else
+#define UDP_SERDE_EXPORT
+#endif
 
 // `udp_serde` exposes methods for serializing and deserializing FIDL messages
 // used in the Fast UDP protocol. These methods serialize using a custom wire
@@ -65,7 +69,7 @@ typedef struct DeserializeSendMsgMetaResult {
 // On success, the `err` field of the returned result will be set to
 // `DeserializeSendMsgMetaErrorNone`. On failure, it will be set to an error
 // describing the reason for the failure.
-FXL_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf);
+UDP_SERDE_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf);
 
 typedef struct Ipv6PktInfo {
   uint64_t if_index;
@@ -113,14 +117,15 @@ typedef enum SerializeRecvMsgMetaError {
 //
 // On success, returns SerializeRecvMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
-FXL_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_,
-                                                             ConstBuffer from_addr, Buffer out_buf);
+UDP_SERDE_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_,
+                                                                   ConstBuffer from_addr,
+                                                                   Buffer out_buf);
 
 // The length of the prelude bytes in a Tx message.
-FXL_EXPORT extern const uint32_t kTxUdpPreludeSize;
+UDP_SERDE_EXPORT extern const uint32_t kTxUdpPreludeSize;
 
 // The length of the prelude bytes in an Rx message.
-FXL_EXPORT extern const uint32_t kRxUdpPreludeSize;
+UDP_SERDE_EXPORT extern const uint32_t kRxUdpPreludeSize;
 
 #ifdef __cplusplus
 }
@@ -134,15 +139,15 @@ namespace fsocket = fuchsia_posix_socket;
 // bindings.
 //
 // On success, returns true. On failure, returns false.
-FXL_EXPORT bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
-                                        cpp20::span<uint8_t> out_buf);
+UDP_SERDE_EXPORT bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
+                                              cpp20::span<uint8_t> out_buf);
 
 // Utility for deserializing a RecvMsgMeta from the provided buffer.
 //
 // Returns a DecodedMessage<RecvMsgPayload>. On success, the DecodedMessage will
 // be have `ok() == true`. On failure, the DecodedMessage will have `ok() == false`.
-FXL_EXPORT fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
-    cpp20::span<uint8_t> buf);
+UDP_SERDE_EXPORT fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>
+deserialize_recv_msg_meta(cpp20::span<uint8_t> buf);
 
 #endif  // __cplusplus
 

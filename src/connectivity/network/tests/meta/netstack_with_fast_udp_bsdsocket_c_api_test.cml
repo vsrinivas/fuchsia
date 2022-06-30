@@ -8,5 +8,6 @@
     ],
     program: {
         binary: "test/netstack_bsdsocket_c_api_test",
+        environ: [ "FAST_UDP=true" ],
     },
 }

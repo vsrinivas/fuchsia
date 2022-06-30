@@ -2506,14 +2506,23 @@ mod tests {
         proto: fposix_socket::DatagramSocketProtocol,
     ) -> fposix_socket::SynchronousDatagramSocketProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
-        let socket = socket_provider
+        let response = socket_provider
             .datagram_socket(A::DOMAIN, proto)
             .await
             .unwrap()
             .expect("Socket succeeds");
-        fposix_socket::SynchronousDatagramSocketProxy::new(
-            fasync::Channel::from_channel(socket.into_channel()).unwrap(),
-        )
+        match response {
+            fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(sock) => {
+                fposix_socket::SynchronousDatagramSocketProxy::new(
+                    fasync::Channel::from_channel(sock.into_channel()).unwrap(),
+                )
+            }
+            // TODO(https://fxrev.dev/99905): Implement Fast UDP sockets in Netstack3.
+            fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(sock) => {
+                let _: fidl::endpoints::ClientEnd<fposix_socket::DatagramSocketMarker> = sock;
+                panic!("expected SynchronousDatagramSocket, found DatagramSocket")
+            }
+        }
     }
 
     async fn get_socket_and_event<A: TestSockAddr>(
@@ -2855,14 +2864,20 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket_provider = test_stack.connect_socket_provider().unwrap();
-        let socket = socket_provider
+        let response = socket_provider
             .datagram_socket(domain, proto)
             .await
             .unwrap()
-            .expect("Socket call succeeds")
-            .into_proxy()
-            .unwrap();
-        let info = socket.describe().await.expect("Describe call succeeds");
+            .expect("Socket call succeeds");
+        let socket = match response {
+            fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(sock) => sock,
+            // TODO(https://fxrev.dev/99905): Implement Fast UDP sockets in Netstack3.
+            fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(sock) => {
+                let _: fidl::endpoints::ClientEnd<fposix_socket::DatagramSocketMarker> = sock;
+                panic!("expected SynchronousDatagramSocket, found DatagramSocket")
+            }
+        };
+        let info = socket.into_proxy().unwrap().describe().await.expect("Describe call succeeds");
         match info {
             fio::NodeInfo::SynchronousDatagramSocket(_) => (),
             info => panic!(
@@ -2909,14 +2924,20 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket_provider = test_stack.connect_socket_provider().unwrap();
-        let socket = socket_provider
+        let response = socket_provider
             .datagram_socket(domain, proto)
             .await
             .unwrap()
-            .expect("Socket call succeeds")
-            .into_proxy()
-            .unwrap();
-        let info = socket.get_info().await.expect("get_info call succeeds");
+            .expect("Socket call succeeds");
+        let socket = match response {
+            fposix_socket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(sock) => sock,
+            // TODO(https://fxrev.dev/99905): Implement Fast UDP sockets in Netstack3.
+            fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(sock) => {
+                let _: fidl::endpoints::ClientEnd<fposix_socket::DatagramSocketMarker> = sock;
+                panic!("expected SynchronousDatagramSocket, found DatagramSocket")
+            }
+        };
+        let info = socket.into_proxy().unwrap().get_info().await.expect("get_info call succeeds");
         assert_eq!(info, Ok((domain, proto)));
     }
 

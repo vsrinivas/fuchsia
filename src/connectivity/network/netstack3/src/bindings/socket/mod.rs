@@ -63,7 +63,7 @@ where
                 psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
                     responder_send!(responder, &mut Err(Errno::Eprotonosupport));
                 }
-                psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
+                psocket::ProviderRequest::DatagramSocketDeprecated { domain, proto, responder } => {
                     let mut response = (|| {
                         let (client, request_stream) = fidl::endpoints::create_request_stream()
                             .map_err(|_: fidl::Error| Errno::Enobufs)?;
@@ -75,6 +75,23 @@ where
                             SocketWorkerProperties {},
                         )?;
                         Ok(client)
+                    })();
+                    responder_send!(responder, &mut response);
+                }
+                psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
+                    let mut response = (|| {
+                        let (client, request_stream) = fidl::endpoints::create_request_stream()
+                            .map_err(|_: fidl::Error| Errno::Enobufs)?;
+                        let () = datagram::spawn_worker(
+                            domain,
+                            proto,
+                            ctx.clone(),
+                            request_stream,
+                            SocketWorkerProperties {},
+                        )?;
+                        Ok(psocket::ProviderDatagramSocketResponse::SynchronousDatagramSocket(
+                            client,
+                        ))
                     })();
                     responder_send!(responder, &mut response);
                 }

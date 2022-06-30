@@ -259,7 +259,7 @@ func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
 }
 
 // UpdateStack updates stack with the current route table.
-func (rt *RouteTable) UpdateStackLocked(stack *stack.Stack) {
+func (rt *RouteTable) UpdateStackLocked(stack *stack.Stack, onUpdateSucceeded func()) {
 	t := make([]tcpip.Route, 0, len(rt.routes))
 	for _, er := range rt.routes {
 		if er.Enabled {
@@ -269,14 +269,15 @@ func (rt *RouteTable) UpdateStackLocked(stack *stack.Stack) {
 	stack.SetRouteTable(t)
 
 	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "UpdateStack route table: %+v", t)
+	onUpdateSucceeded()
 }
 
 // UpdateStack updates stack with the current route table.
-func (rt *RouteTable) UpdateStack(stack *stack.Stack) {
+func (rt *RouteTable) UpdateStack(stack *stack.Stack, onUpdateSucceeded func()) {
 	rt.Lock()
 	defer rt.Unlock()
 
-	rt.UpdateStackLocked(stack)
+	rt.UpdateStackLocked(stack, onUpdateSucceeded)
 }
 
 // UpdateMetricByInterface changes the metric for all routes that track a

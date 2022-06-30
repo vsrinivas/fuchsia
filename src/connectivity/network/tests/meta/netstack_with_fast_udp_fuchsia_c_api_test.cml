@@ -5,6 +5,7 @@
     include: [ "//src/connectivity/network/tests/meta/netstack_with_fast_udp_socket_test.shard.cml" ],
     program: {
         binary: "test/netstack_fuchsia_c_api_test",
+        environ: [ "FAST_UDP=true" ],
     },
     use: [
         {

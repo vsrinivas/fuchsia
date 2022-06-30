@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <thread>
+#include <type_traits>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
@@ -124,12 +125,17 @@ static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfo& node_in
   return node_info.stream_socket().socket;
 }
 
+static const zx::socket& datagram_handle(const fuchsia_io::wire::NodeInfo& node_info) {
+  return node_info.datagram_socket().socket;
+}
+
 static const zx::eventpair& synchronous_datagram_handle(
     const fuchsia_io::wire::NodeInfo& node_info) {
   return node_info.synchronous_datagram_socket().event;
 }
 
-template <int Type, typename FidlProtocol, fuchsia_io::wire::NodeInfo::Tag Tag, typename HandleType,
+template <int Type, int NetworkProtocol, typename FidlProtocol, fuchsia_io::wire::NodeInfo::Tag Tag,
+          typename HandleType,
           const HandleType& (*GetHandle)(const fuchsia_io::wire::NodeInfo& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
@@ -138,6 +144,7 @@ struct SocketImpl {
   using Handle = HandleType;
 
   static int type() { return Type; }
+  static int network_protocol() { return NetworkProtocol; }
   static fuchsia_io::wire::NodeInfo::Tag tag() { return Tag; }
   static const Handle& handle(const fuchsia_io::wire::NodeInfo& node_info) {
     return GetHandle(node_info);
@@ -145,11 +152,44 @@ struct SocketImpl {
   static zx_signals_t peer_closed() { return PeerClosed; }
 };
 
+using StreamSocketImpl = SocketImpl<SOCK_STREAM, IPPROTO_IP, fuchsia_posix_socket::StreamSocket,
+                                    fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
+                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
+
+using SynchronousDatagramSocketImplIcmp =
+    SocketImpl<SOCK_DGRAM, IPPROTO_ICMP, fuchsia_posix_socket::SynchronousDatagramSocket,
+               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
+               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+
+using SynchronousDatagramSocketImplIp =
+    SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::SynchronousDatagramSocket,
+               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
+               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+
+using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::DatagramSocket,
+                                      fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket, zx::socket,
+                                      datagram_handle, ZX_SOCKET_PEER_CLOSED>;
+
 template <typename Impl>
 class SocketTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(AF_INET, Impl::type(), 0))) << strerror(errno);
+    constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+    if (std::getenv(kFastUdpEnvVar)) {
+      if (std::is_same<Impl, SynchronousDatagramSocketImplIp>::value) {
+        GTEST_SKIP()
+            << "SynchronousDatagramSocket protocol should not be used for SOCK_DGRAM sockets when "
+               "fast UDP is enabled.";
+      }
+    } else {
+      if (std::is_same<Impl, DatagramSocketImpl>::value) {
+        GTEST_SKIP()
+            << "DatagramSocket protocol should not be used for SOCK_DGRAM sockets when fast UDP is "
+               "not enabled.";
+      }
+    }
+    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(AF_INET, Impl::type(), Impl::network_protocol())))
+        << strerror(errno);
     addr_ = {
         .sin_family = AF_INET,
         .sin_addr =
@@ -173,27 +213,24 @@ class SocketTest : public testing::Test {
   struct sockaddr_in addr_;
 };
 
-using StreamSocketImpl = SocketImpl<SOCK_STREAM, fuchsia_posix_socket::StreamSocket,
-                                    fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
-                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
-
-using SynchronousDatagramSocketImpl =
-    SocketImpl<SOCK_DGRAM, fuchsia_posix_socket::SynchronousDatagramSocket,
-               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
-               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
-
 class SocketTestNames {
  public:
   template <typename T>
   static std::string GetName(int i) {
     if (std::is_same<T, StreamSocketImpl>())
       return "Stream" + testing::PrintToString(i);
-    if (std::is_same<T, SynchronousDatagramSocketImpl>())
-      return "SynchronousDatagram" + testing::PrintToString(i);
+    if (std::is_same<T, DatagramSocketImpl>())
+      return "Datagram" + testing::PrintToString(i);
+    if (std::is_same<T, SynchronousDatagramSocketImplIp>())
+      return "SynchronousDatagramIp" + testing::PrintToString(i);
+    if (std::is_same<T, SynchronousDatagramSocketImplIcmp>())
+      return "SynchronousDatagramIcmp" + testing::PrintToString(i);
   }
 };
 
-using SocketTypes = testing::Types<StreamSocketImpl, SynchronousDatagramSocketImpl>;
+using SocketTypes =
+    testing::Types<StreamSocketImpl, DatagramSocketImpl, SynchronousDatagramSocketImplIp,
+                   SynchronousDatagramSocketImplIcmp>;
 TYPED_TEST_SUITE(SocketTest, SocketTypes, SocketTestNames);
 
 TYPED_TEST(SocketTest, CloseResourcesOnClose) {

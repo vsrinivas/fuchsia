@@ -263,7 +263,6 @@ func Main() {
 	noOpaqueIID := false
 	flags.BoolVar(&noOpaqueIID, "no-opaque-iids", false, "disable opaque IIDs")
 
-	// TODO(https://fxbug.dev/80502): Enable fast UDP based on this flag.
 	fastUDP := false
 	flags.BoolVar(&fastUDP, "fast-udp", false, "enable Fast UDP")
 
@@ -410,7 +409,10 @@ func Main() {
 		stack:              stk,
 		stats:              stats{Stats: stk.Stats()},
 		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceTracker, f},
+		featureFlags:       featureFlags{enableFastUDP: fastUDP},
 	}
+
+	ns.resetDestinationCache()
 
 	nudDisp.ns = ns
 	ndpDisp.ns = ns

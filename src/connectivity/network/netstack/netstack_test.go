@@ -266,7 +266,7 @@ func TestEndpoint_Close(t *testing.T) {
 	}()
 	defer ep.Close()
 
-	eps, err := newEndpointWithSocket(ep, &wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns)
+	eps, err := newEndpointWithSocket(ep, &wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns, zx.SocketStream)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func createEP(t *testing.T, ns *Netstack, wq *waiter.Queue) *endpointWithSocket 
 		return ep
 	}()
 	t.Cleanup(ep.Close)
-	eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
+	eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns, zx.SocketStream)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestEndpointsMapKey(t *testing.T) {
 
 		// Set a test value to nextKey which is used to compute the endpoint key.
 		ns.endpoints.nextKey = key
-		eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns)
+		eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns, zx.SocketStream)
 		if err != nil {
 			t.Fatal(err)
 		}
