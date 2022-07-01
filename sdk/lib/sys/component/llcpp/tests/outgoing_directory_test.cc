@@ -528,10 +528,10 @@ TEST_F(OutgoingDirectoryTest, AddServiceFailsIfServiceHandlerEmpty) {
             ZX_ERR_INVALID_ARGS);
 }
 
-TEST_F(OutgoingDirectoryTest, AddNamedServiceFailsIfServiceNameIsEmpty) {
+TEST_F(OutgoingDirectoryTest, AddServiceFailsIfServiceNameIsEmpty) {
   EXPECT_EQ(GetOutgoingDirectory()
-                ->AddNamedService(CreateNonEmptyServiceHandler(), /*service=*/"",
-                                  /*instance=*/component::kDefaultInstance)
+                ->AddService(CreateNonEmptyServiceHandler(), /*service=*/"",
+                             /*instance=*/component::kDefaultInstance)
                 .status_value(),
             ZX_ERR_INVALID_ARGS);
 }
@@ -654,8 +654,8 @@ TEST_P(OutgoingDirectoryPathParameterizedFixture, BadServicePaths) {
 
   auto service_and_instance_names = GetParam();
   EXPECT_EQ(outgoing_directory
-                .AddNamedService(component::ServiceHandler(), service_and_instance_names.first,
-                                 service_and_instance_names.second)
+                .AddService(component::ServiceHandler(), service_and_instance_names.first,
+                            service_and_instance_names.second)
                 .status_value(),
             ZX_ERR_INVALID_ARGS);
 }

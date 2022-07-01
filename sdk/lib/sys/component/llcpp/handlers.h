@@ -23,17 +23,17 @@ template <typename Protocol>
 using TypedHandler = fit::function<void(fidl::ServerEnd<Protocol> request)>;
 
 // A handler for an instance of a FIDL Service.
-class ServiceHandler final : public fidl::ServiceHandlerInterface {
+class ServiceInstanceHandler final : public fidl::ServiceHandlerInterface {
  public:
-  ServiceHandler() = default;
+  ServiceInstanceHandler() = default;
 
   // Disable copying.
-  ServiceHandler(const ServiceHandler&) = delete;
-  ServiceHandler& operator=(const ServiceHandler&) = delete;
+  ServiceInstanceHandler(const ServiceInstanceHandler&) = delete;
+  ServiceInstanceHandler& operator=(const ServiceInstanceHandler&) = delete;
 
   // Enable moving.
-  ServiceHandler(ServiceHandler&&) = default;
-  ServiceHandler& operator=(ServiceHandler&&) = default;
+  ServiceInstanceHandler(ServiceInstanceHandler&&) = default;
+  ServiceInstanceHandler& operator=(ServiceInstanceHandler&&) = default;
 
  private:
   friend class OutgoingDirectory;
@@ -41,8 +41,8 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
   // Return all registered member handlers. Key contains member name. Value
   // contains |Connector| func.
   //
-  // Once taken, the service handler is no longer safe to use.
-  std::map<std::string, AnyHandler> GetMemberHandlers() { return std::move(handlers_); }
+  // Once taken, the `ServiceInstanceHandler` is no longer safe to use.
+  std::map<std::string, AnyHandler> TakeMemberHandlers() { return std::move(handlers_); }
 
   // Add a |member| to the instance, whose connection will be handled by |handler|.
   //
@@ -66,6 +66,10 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
 
   std::map<std::string, AnyHandler> handlers_ = {};
 };
+
+// Temporary alias until clients are migrated.
+// TODO(http://fxbug.dev/103207): Remove this.
+using ServiceHandler = ServiceInstanceHandler;
 
 }  // namespace component
 

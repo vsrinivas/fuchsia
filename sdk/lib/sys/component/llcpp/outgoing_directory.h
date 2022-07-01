@@ -31,7 +31,10 @@ namespace component {
 // to other components. For example the FIDL Protocol `fuchsia.foo.Bar` will be
 // hosted under the path `/svc/fuchsia.foo.Bar`.
 //
-// This class is thread-hostile.
+// This class is thread-hostile with respect to its interface. However, its
+// |async_dispatcher_t| may be multithreaded as long as it does not service
+// requests concurrently with any operations on the object's interface or its
+// destruction.
 //
 // # Simple usage
 //
@@ -48,12 +51,14 @@ namespace component {
 //
 // This class' API is semantically identical to the one found in
 // `//sdk/lib/sys/cpp`. This exists in order to offer equivalent facilities to
-// LLCPP (Low-level C++) FIDL bindings support. The other class is designed for
-// HLCPP( High-Level C++) FIDL bindings.
+// the new C++ bindings. The other class is designed for the older, HLCPP
+// (High-Level C++) FIDL bindings. It is expected that once
+// all clients of HLCPP are migrated to this unified bindings, that library will
+// be removed.
 class OutgoingDirectory final {
  public:
   // Creates an OutgoingDirectory which will serve requests when
-  // |Serve(zx::channel)| or |ServeFromStartupInfo()| is called.
+  // |Serve| or |ServeFromStartupInfo()| is called.
   //
   // |dispatcher| must not be nullptr. If it is, this method will panic.
   static OutgoingDirectory Create(async_dispatcher_t* dispatcher);
@@ -76,14 +81,16 @@ class OutgoingDirectory final {
   // |AddProtocol|.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
-  // channel.
+  // channel. Note that this method returns immediately and that the |dispatcher|
+  // provided to the constructor will be responsible for processing messages
+  // sent to the server endpoint.
   //
   // # Errors
   //
-  // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
+  // ZX_ERR_BAD_HANDLE: |directory_server_end| is not a valid handle.
   //
-  // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request);
+  // ZX_ERR_ACCESS_DENIED: |directory_server_end| has insufficient rights.
+  zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_server_end);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.
@@ -99,7 +106,8 @@ class OutgoingDirectory final {
   // ZX_ERR_BAD_HANDLE: the process did not receive a |PA_DIRECTORY_REQUEST|
   // startup handle or it was already taken.
   //
-  // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
+  // ZX_ERR_ACCESS_DENIED: The |PA_DIRECTORY_REQUEST| handle has insufficient
+  // rights.
   zx::status<> ServeFromStartupInfo();
 
   // Adds a FIDL Protocol instance.
@@ -107,7 +115,7 @@ class OutgoingDirectory final {
   // |impl| will be used to handle requests for this protocol.
   // |name| is used to determine where to host the protocol. This protocol will
   // be hosted under the path /svc/{name} where name is the discoverable name
-  // of the protocol.
+  // of the protocol by default.
   //
   // Note, if and when |RemoveProtocol| is called for the provided |name|, this
   // object will asynchronously close down the associated server end channel and
@@ -129,29 +137,6 @@ class OutgoingDirectory final {
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
     return AddProtocolAt(kServiceDirectory, impl, name);
-  }
-
-  // Same as above but allows overriding the parent directory in which the
-  // protocol will be hosted.
-  template <typename Protocol>
-  zx::status<> AddProtocolAt(cpp17::string_view path, fidl::WireServer<Protocol>* impl,
-                             cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    if (impl == nullptr || dispatcher_ == nullptr) {
-      return zx::make_status(ZX_ERR_INVALID_ARGS);
-    }
-
-    return AddProtocolAt<Protocol>(
-        path,
-        [=](fidl::ServerEnd<Protocol> request) {
-          fidl::ServerBindingRef<Protocol> server =
-              fidl::BindServer(dispatcher_, std::move(request), impl);
-
-          auto cb = [server = std::move(server)]() mutable { server.Unbind(); };
-          // We don't have to check for entry existing because the |AddProtocol|
-          // overload being invoked here will do that internally.
-          AppendUnbindConnectionCallback(name, std::move(cb));
-        },
-        name);
   }
 
   // Same as above but overloaded to support servers implementations speaking
@@ -201,6 +186,49 @@ class OutgoingDirectory final {
     return AddProtocolAt<Protocol>(kServiceDirectory, std::move(handler), name);
   }
 
+  // Same as above but is untyped. This method is generally discouraged but
+  // is made available if a generic handler needs to be provided.
+  zx::status<> AddProtocol(AnyHandler handler, cpp17::string_view name);
+
+  // [DEPRECATED] Use |AddProtocol| instead.
+  //
+  // TODO(http://fxbug.dev/103360): Remove this overload.
+  zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
+
+  // Same as above but allows overriding the parent directory in which the
+  // protocol will be hosted.
+  //
+  // |path| is used as the parent directory for the protocol, e.g. `svc`.
+  // |name| is the name under |path| at which the protocol will be hosted. By
+  // default, the FIDL protocol name, e.g. `fuchsia.logger.LogSink`, is used.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: An entry already exists for this protocol.
+  //
+  // ZX_ERR_INVALID_ARGS: |impl| is nullptr. |path| or |name| is an empty
+  // string.
+  template <typename Protocol>
+  zx::status<> AddProtocolAt(cpp17::string_view path, fidl::WireServer<Protocol>* impl,
+                             cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    if (impl == nullptr || dispatcher_ == nullptr) {
+      return zx::make_status(ZX_ERR_INVALID_ARGS);
+    }
+
+    return AddProtocolAt<Protocol>(
+        path,
+        [=, name = std::string(name)](fidl::ServerEnd<Protocol> request) {
+          fidl::ServerBindingRef<Protocol> server =
+              fidl::BindServer(dispatcher_, std::move(request), impl);
+
+          auto cb = [server = std::move(server)]() mutable { server.Unbind(); };
+          // We don't have to check for entry existing because the |AddProtocol|
+          // overload being invoked here will do that internally.
+          AppendUnbindConnectionCallback(name, std::move(cb));
+        },
+        name);
+  }
+
   template <typename Protocol>
   zx::status<> AddProtocolAt(cpp17::string_view path, TypedHandler<Protocol> handler,
                              cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
@@ -209,22 +237,26 @@ class OutgoingDirectory final {
       (void)handler(std::move(server_end));
     };
 
-    return AddNamedProtocolAt(path, name, std::move(bridge_func));
+    return AddProtocolAt(std::move(bridge_func), path, name);
   }
 
-  // Same as above but is untyped. This method is generally discouraged but
-  // is made available if a generic handler needs to be provided.
-  zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
+  // Same as |AddProtocol| but is untyped and allows the usage of setting the
+  // parent directory in which the protocol will be installed.
+  zx::status<> AddProtocolAt(AnyHandler handler, cpp17::string_view path, cpp17::string_view name);
 
-  zx::status<> AddNamedProtocolAt(cpp17::string_view path, cpp17::string_view name,
-                                  AnyHandler handler);
+  // [DEPRECATED] Use |AddProtocolAt| instead.
+  //
+  // TODO(http://fxbug.dev/103360): Remove this overload.
+  zx::status<> AddNamedProtocolAt(AnyHandler handler, cpp17::string_view path,
+                                  cpp17::string_view name);
 
   // Adds an instance of a FIDL Service.
   //
   // A |handler| is added to provide an |instance| of a service.
   //
   // The template type |Service| must be the generated type representing a FIDL Service.
-  // The generated class |Service::Handler| helps the caller populate a |ServiceHandler|.
+  // The generated class |Service::Handler| helps the caller populate a
+  // |ServiceInstanceHandler|.
   //
   // # Errors
   //
@@ -237,26 +269,19 @@ class OutgoingDirectory final {
   // See sample use cases in test case(s) located at
   // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
   template <typename Service>
-  zx::status<> AddService(ServiceHandler handler, cpp17::string_view instance = kDefaultInstance) {
+  zx::status<> AddService(ServiceInstanceHandler handler,
+                          cpp17::string_view instance = kDefaultInstance) {
     return AddNamedService(std::move(handler), Service::Name, instance);
   }
 
-  // Adds an instance of a FIDL Service.
+  // Same as above but is untyped.
+  zx::status<> AddService(ServiceInstanceHandler handler, cpp17::string_view service,
+                          cpp17::string_view instance = kDefaultInstance);
+
+  // [DEPRECATED] Use |AddService| instead.
   //
-  // A |handler| is added to provide an |instance| of a |service|.
-  //
-  // # Errors
-  //
-  // ZX_ERR_ALREADY_EXISTS: The instance already exists.
-  //
-  // ZX_ERR_INVALID_ARGS: |service| or |instance| is an empty string. Also,
-  // if |handler| is empty.
-  //
-  // # Example
-  //
-  // See sample use cases in test case(s) located at
-  // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
-  zx::status<> AddNamedService(ServiceHandler handler, cpp17::string_view service,
+  // TODO(http://fxbug.dev/103360): Remove this overload.
+  zx::status<> AddNamedService(ServiceInstanceHandler handler, cpp17::string_view service,
                                cpp17::string_view instance = kDefaultInstance);
 
   // Serve a subdirectory at the root of this outgoing directory.
@@ -275,7 +300,7 @@ class OutgoingDirectory final {
   zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                             cpp17::string_view directory_name);
 
-  // Removes a FIDL Protocol entry.
+  // Removes a FIDL Protocol entry with the path `/svc/{name}`.
   //
   // # Errors
   //
@@ -288,19 +313,43 @@ class OutgoingDirectory final {
   // ```
   template <typename Protocol>
   zx::status<> RemoveProtocol(cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return RemoveNamedProtocol(name);
+    return RemoveProtocol(name);
   }
 
   // Same as above but untyped.
+  zx::status<> RemoveProtocol(cpp17::string_view name);
+
+  // [DEPRECATED] Use |RemoveProtocol| instead.
+  //
+  // TODO(http://fxbug.dev/103360): Remove this overload.
   zx::status<> RemoveNamedProtocol(cpp17::string_view name);
 
+  // Removes a FIDL Protocol entry located in the provided |directory|.
+  // Unlike |RemoveProtocol| which looks for the protocol to remove in the
+  // path `/svc/{name}`, this method uses the directory name provided, e.g.
+  // `/{path}/{name}`.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_FOUND: The protocol entry was not found.
+  //
+  // # Example
+  //
+  // ```
+  // outgoing.RemoveProtocolAt<lib_example::MyProtocol>("diagnostics");
+  // ```
   template <typename Protocol>
   zx::status<> RemoveProtocolAt(
-      cpp17::string_view directory,
-      cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return RemoveNamedProtocolAt(directory, name);
+      cpp17::string_view path, cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    return RemoveProtocolAt(path, name);
   }
 
+  // Same as above but untyped.
+  zx::status<> RemoveProtocolAt(cpp17::string_view directory, cpp17::string_view name);
+
+  // [DEPRECATED] Use |RemoveProtocolAt| instead.
+  //
+  // TODO(http://fxbug.dev/103360): Remove this overload.
   zx::status<> RemoveNamedProtocolAt(cpp17::string_view directory, cpp17::string_view name);
 
   // Removes an instance of a FIDL Service.
@@ -316,14 +365,16 @@ class OutgoingDirectory final {
   // ```
   template <typename Service>
   zx::status<> RemoveService(cpp17::string_view instance = kDefaultInstance) {
-    return RemoveNamedService(Service::Name, instance);
+    return RemoveService(Service::Name, instance);
   }
 
-  // Removes an instance of a FIDL Service.
+  // Same as above but untyped.
+  zx::status<> RemoveService(cpp17::string_view service,
+                             cpp17::string_view instance = kDefaultInstance);
+
+  // [DEPRECATED] Use |RemoveService| instead.
   //
-  // # Errors
-  //
-  // ZX_ERR_NOT_FOUND: The instance was not found.
+  // TODO(http://fxbug.dev/103360): Remove this overload.
   zx::status<> RemoveNamedService(cpp17::string_view service,
                                   cpp17::string_view instance = kDefaultInstance);
 
@@ -355,7 +406,7 @@ class OutgoingDirectory final {
   // will close all active connections on the associated channel.
   using UnbindConnectionCallback = fit::callback<void()>;
 
-  void AppendUnbindConnectionCallback(cpp17::string_view name, UnbindConnectionCallback callback);
+  void AppendUnbindConnectionCallback(const std::string& name, UnbindConnectionCallback callback);
 
   void UnbindAllConnections(cpp17::string_view name);
 
@@ -367,7 +418,7 @@ class OutgoingDirectory final {
 
   // Mapping of all registered protocol handlers. Key represents a path to
   // the directory in which the protocol ought to be installed. For example,
-  // a path may look like "svc/fuchsia.FooService/some_instance".
+  // a path may look like `svc/fuchsia.FooService/some_instance`.
   // The value contains a map of each of the entry's handlers.
   //
   // For FIDL Protocols, entries will be stored under "svc" entry
