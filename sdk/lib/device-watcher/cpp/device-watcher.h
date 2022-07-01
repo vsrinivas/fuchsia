@@ -5,6 +5,7 @@
 #ifndef LIB_DEVICE_WATCHER_CPP_DEVICE_WATCHER_H_
 #define LIB_DEVICE_WATCHER_CPP_DEVICE_WATCHER_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
@@ -41,6 +42,14 @@ zx_status_t RecursiveWaitForFileReadOnly(const fbl::unique_fd& dir, const char* 
 // otherwise it will return ZX_ERR_NOT_SUPPORTED.
 zx_status_t RecursiveWaitForFileReadOnly(const char* path, fbl::unique_fd* out);
 
+// Invokes |callback| on each entry in the directory, returning immediately after all entries have
+// been processed. |callback| is passed the file name and a channel for the file's fuchsia.io.Node
+// protocol. If |callback| returns a status other than ZX_OK, iteration terminates immediately, and
+// the error status is returned. This function does not continue to watch the directory for newly
+// created files.
+using FileCallback = fit::function<zx_status_t(std::string_view, zx::channel)>;
+zx_status_t IterateDirectory(fbl::unique_fd fd, FileCallback callback);
+
 // DirWatcher can be used to detect when a file has been removed from the filesystem.
 //
 // Example usage:
@@ -66,6 +75,8 @@ class DirWatcher {
   zx_status_t WaitForRemoval(std::string_view filename, zx::duration timeout);
 
  private:
+  // A channel opened by a call to fuchsia.io.Directory.Watch, from which watch
+  // events can be read.
   zx::channel client_;
 };
 

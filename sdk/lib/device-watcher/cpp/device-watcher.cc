@@ -4,6 +4,7 @@
 
 #include "device-watcher.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -32,11 +33,15 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
+
   fdio_t* io = fdio_unsafe_fd_to_io(dir_fd.get());
   zx::unowned_channel channel{fdio_unsafe_borrow_channel(io)};
 
+  // Make a one-off call to fuchsia.io.Directory.Watch to open a channel from
+  // which watch events can be read.
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(channel))
                     ->Watch(fio::wire::WatchMask::kRemoved, 0, std::move(endpoints->server));
+
   fdio_unsafe_release(io);
   if (!result.ok()) {
     return result.status();
@@ -82,6 +87,51 @@ zx_status_t DirWatcher::WaitForRemoval(std::string_view filename, zx::duration t
     }
   }
   return ZX_ERR_NOT_FOUND;
+}
+
+__EXPORT
+zx_status_t IterateDirectory(fbl::unique_fd fd, FileCallback callback) {
+  struct dirent* entry;
+
+  DIR* dir = fdopendir(fd.get());
+  if (dir == nullptr) {
+    return ZX_ERR_IO;
+  }
+
+  fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+  zx::unowned_channel dir_channel{fdio_unsafe_borrow_channel(io)};
+
+  zx_status_t status = ZX_OK;
+  while ((entry = readdir(dir)) != nullptr) {
+    std::string filename(entry->d_name);
+    if (filename == "." || filename == "..") {
+      continue;
+    }
+
+    auto endpoints = fidl::CreateEndpoints<fio::Node>();
+    if (endpoints.is_error()) {
+      status = endpoints.status_value();
+      goto finish;
+    }
+
+    // Open a channel to the file.
+    status = fdio_open_at(dir_channel->get(), entry->d_name, 0,
+                          endpoints->server.TakeChannel().release());
+    if (status != ZX_OK) {
+      goto finish;
+    }
+
+    // Invoke the user-provided callback.
+    status = callback(filename, endpoints->client.TakeChannel());
+    if (status != ZX_OK) {
+      goto finish;
+    }
+  }
+
+finish:
+  fdio_unsafe_release(io);
+  closedir(dir);
+  return status;
 }
 
 // Waits for |file| to appear in |dir|, and opens it when it does.  Times out if
