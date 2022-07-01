@@ -157,7 +157,7 @@ TEST(Devfs, ExportWatcher_Export) {
     service_channel = std::move(server);
     loop.Quit();
   };
-  ASSERT_EQ(outgoing.AddNamedProtocol(std::move(handler), "test").status_value(), ZX_OK);
+  ASSERT_EQ(outgoing.AddProtocol(std::move(handler), "test").status_value(), ZX_OK);
 
   // Export the svc/test.
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();

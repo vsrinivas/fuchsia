@@ -186,7 +186,7 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
   // If the child goes out of scope, we should close the devfs connection.
   child->AddCallback(std::make_shared<fit::deferred_callback>(
       [this, name = std::string(child->name()), dev_node]() {
-        (void)outgoing_->RemoveNamedProtocol(name);
+        (void)outgoing_->RemoveProtocol(name);
         vfs_->CloseAllConnectionsForVnode(*dev_node, {});
         devfs_exports_->RemoveEntry(name);
       }));
