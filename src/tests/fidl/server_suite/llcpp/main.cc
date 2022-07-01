@@ -32,10 +32,9 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
   void Start(StartRequestView request, StartCompleter::Sync& completer) override {
     std::cout << "Runner.Start()" << std::endl;
 
-    target_server_ = std::make_unique<TargetServer>(std::move(request->reporter));
-
+    auto target_server = std::make_unique<TargetServer>(std::move(request->reporter));
     auto endpoints = fidl::CreateEndpoints<fidl_serversuite::Target>();
-    fidl::BindServer(dispatcher_, std::move(endpoints->server), target_server_.get(),
+    fidl::BindServer(dispatcher_, std::move(endpoints->server), std::move(target_server),
                      [](auto*, fidl::UnbindInfo info, auto) {
                        if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
                            !info.is_peer_closed()) {
@@ -53,7 +52,6 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
 
  private:
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<TargetServer> target_server_;
 };
 
 int main(int argc, const char** argv) {
