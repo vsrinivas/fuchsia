@@ -138,7 +138,7 @@ class InputReportDriver {
             .and_then([this]() -> fpromise::promise<void, zx_status_t> {
               child_ = compat::Child("InputReport", ZX_PROTOCOL_INPUTREPORT,
                                      parent_topo_path_ + "/InputReport", {});
-              auto status = outgoing_.AddNamedProtocol(
+              auto status = outgoing_.AddProtocol(
                   [this](zx::channel channel) {
                     fidl::BindServer<fidl::WireServer<fuchsia_input_report::InputDevice>>(
                         dispatcher_,
@@ -151,7 +151,7 @@ class InputReportDriver {
                     fpromise::error(status.error_value()));
               }
               child_->AddCallback(std::make_shared<fit::deferred_callback>([this]() {
-                auto status = outgoing_.RemoveNamedProtocol("InputReport");
+                auto status = outgoing_.RemoveProtocol("InputReport");
                 if (status.is_error()) {
                   FDF_LOG(WARNING, "Removing protocol failed with: %s", status.status_string());
                 }
