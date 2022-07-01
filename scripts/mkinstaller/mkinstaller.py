@@ -66,7 +66,7 @@ class ManifestImage:
 
 # This is the list of Fuchsia build images we write to the final image,
 # and the partition types they will have (passed to cgpt)
-IMAGES = [
+IMAGES_RECOVERY_INSTALLER = [
     # The recovery image for chromebook-x64.
     ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
 
@@ -88,6 +88,17 @@ IMAGES = [
 
     # Common partitions - installed everywhere.
     ManifestImage('storage-sparse', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
+]
+
+# This is the list of images for running recovery-eng, which offers userspace
+# fastboot.
+IMAGES_RECOVERY_FASTBOOT = [
+    # The recovery-eng image for chromebook-x64.
+    ManifestImage('recovery-eng.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
+
+    # The recovery-eng image and a bootloader for x64.
+    ManifestImage('recovery-eng', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
+    ManifestImage('fuchsia.esp', ['efi'], 'blk'),
 ]
 
 def ParseSize(size):
@@ -314,7 +325,7 @@ class Image:
     logging.info('Done.')
     self.file.close()
 
-def GetPartitions(build_dir, images_file):
+def GetPartitions(build_dir, images_file, target_images):
   """Get all partitions to be written to the output image.
 
   The list of partitions is currently determined by the IMAGES dict
@@ -341,7 +352,6 @@ def GetPartitions(build_dir, images_file):
 
   ret = []
   is_bootable = False
-  target_images = IMAGES
   for image in target_images:
     if image.unique_name() not in images:
       logging.debug("Skipping image that wasn't built: {}".format(image.unique_name()))
@@ -434,7 +444,9 @@ def Main(args):
   build_dir = args.build_dir
   if build_dir == '':
     build_dir = paths.FUCHSIA_BUILD_DIR
-  parts = GetPartitions(build_dir, args.images)
+
+  target_images = IMAGES_RECOVERY_FASTBOOT if args.recovery_fastboot else IMAGES_RECOVERY_INSTALLER
+  parts = GetPartitions(build_dir, args.images, target_images)
   if not parts:
     return 1
 
@@ -498,6 +510,10 @@ if __name__ == '__main__':
       action='store_true',
       help='DEPRECATED. Has no effect.'
   )
+  parser.add_argument(
+      '--recovery-fastboot',
+      action='store_true',
+      help='Create a bootable recovery-eng image with userspace fastboot.')
   parser.add_argument('FILE', help='Path to USB device or installer image')
   argv = parser.parse_args()
   level = logging.WARNING
