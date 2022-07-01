@@ -41,6 +41,9 @@ Intel  | Xe+           | ✔                  | ✔               |
 ### AMD Radeon RX 560
 ![AMD Radeon RX 560](docs/images/amd_rx560.png)
 
+### Intel Xe Graphics (TGL GT2)
+![Intel Xe Graphics (TGL GT2)](docs/images/intel_tglgt2.png)
+
 ### Intel HD Graphics 615
 ![Intel HD Graphics 615](docs/images/intel_hd615.png)
 
