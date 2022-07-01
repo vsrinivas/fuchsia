@@ -1,5 +1,6 @@
 {
     "platform": {
+        "build_type": "user",
         "additional_serial_log_tags": [
             "session-manager"
         ]
