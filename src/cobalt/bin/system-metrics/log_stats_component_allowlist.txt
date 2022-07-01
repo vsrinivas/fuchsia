@@ -7,7 +7,6 @@
 6 fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx
 7 fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx
 8 fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx
-9 fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm
 10 fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx
 11 fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx
 12 fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx

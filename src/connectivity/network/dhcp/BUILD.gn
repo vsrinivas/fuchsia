@@ -118,14 +118,6 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package("dhcpd") {
-  deps = [ ":component" ]
-}
-
-group("dhcp") {
-  deps = [ ":dhcpd" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":dhcp-tests" ]

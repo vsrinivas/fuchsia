@@ -39,7 +39,6 @@ group("all") {
     ":tiles",
     ":tracing",
     ":wlan_drivers",
-    "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/network/mdns/bundles:services",
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/connectivity/telephony/drivers",
