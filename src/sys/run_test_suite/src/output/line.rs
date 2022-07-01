@@ -31,32 +31,68 @@ impl<W: Write> Write for AnsiFilterWriter<W> {
         for (idx, byte) in bytes.iter().enumerate() {
             let mut found = FoundChars::Nothing;
             self.parser.advance(&mut found, *byte);
-            if let &FoundChars::Newline(_) = &found {
+            if let &FoundChars::PrintableChars('\n') = &found {
                 self.parser = Parser::new();
             }
 
             match found {
                 FoundChars::Nothing => (),
-                FoundChars::PrintableChars(num_bytes) | FoundChars::Newline(num_bytes) => {
+                FoundChars::PrintableChars(char::REPLACEMENT_CHARACTER) => {
+                    // replacement character needs to be handled specially since the invalid
+                    // bytes could be a different length than REPLACEMENT_CHARACTER.
                     match printable_range {
                         None => {
-                            printable_range = Some((idx + 1 - num_bytes, idx + 1));
+                            self.inner.write_all("�".as_bytes())?;
+                            return Ok(idx + 1);
                         }
-                        Some(mut range) if range.1 == idx + 1 - num_bytes => {
+                        Some(range) => {
+                            // in this case, we don't know where the last "good" processed
+                            // byte after the writable range is, so write the known good range.
+                            // Return the index after the good range so that anything after is
+                            // reprocessed and hits the None case on subsequent write.
+                            self.inner.write_all(&bytes[range.0..range.1])?;
+                            return Ok(range.1);
+                        }
+                    }
+                }
+                FoundChars::PrintableChars(character) => {
+                    let character_len = character.len_utf8();
+                    match printable_range.as_mut() {
+                        // Character length could exceed the number of bytes we've processed in
+                        // this write if part of a multibyte UTF8 character was processed in a
+                        // previous call to write. In this case, we have to regenerate the
+                        // chacter in memory so write only it and return immediately.
+                        None if character_len > idx + 1 => {
+                            let mut buf = [0u8; 4];
+                            character.encode_utf8(&mut buf);
+                            self.inner.write_all(&buf[..character_len])?;
+                            return Ok(idx + 1);
+                        }
+                        None => {
+                            printable_range = Some((idx + 1 - character_len, idx + 1));
+                        }
+                        Some(mut range) if range.1 == idx + 1 - character_len => {
                             range.1 = idx + 1;
                         }
-                        Some(_) => break,
+                        // We've passed over a section of non-printable characters and found a new
+                        // section of printable characters. We'll write the first printable range,
+                        // and return the number of bytes until just before the new set of
+                        // printable characters. The next write will essentially process the new
+                        // printable character again. Since we already know the new printable
+                        // character is a valid UTF8 character, reprocessing it should be fine.
+                        Some(range) => {
+                            self.inner.write_all(&bytes[range.0..range.1])?;
+                            return Ok(idx + 1 - character_len);
+                        }
                     }
                 }
             }
         }
-        match printable_range {
-            None => Ok(bytes.len()),
-            Some(range) => {
-                self.inner.write_all(&bytes[range.0..range.1])?;
-                Ok(range.1)
-            }
+        if let Some(range) = printable_range {
+            self.inner.write_all(&bytes[range.0..range.1])?;
         }
+        // If we reach this far, we have processed all the bytes.
+        Ok(bytes.len())
     }
 
     fn flush(&mut self) -> Result<(), Error> {
@@ -67,22 +103,19 @@ impl<W: Write> Write for AnsiFilterWriter<W> {
 /// An implementation of |Perform| that reports the characters found by the parser.
 enum FoundChars {
     Nothing,
-    PrintableChars(usize),
-    Newline(usize),
+    PrintableChars(char),
 }
 
-const PRINTABLE_COMMAND_CHARS: [u8; 2] = ['\r' as u8, '\t' as u8];
+const PRINTABLE_COMMAND_CHARS: [u8; 3] = ['\r' as u8, '\t' as u8, '\n' as u8];
 
 impl Perform for FoundChars {
     fn print(&mut self, c: char) {
-        *self = Self::PrintableChars(c.len_utf8());
+        *self = Self::PrintableChars(c);
     }
 
     fn execute(&mut self, code: u8) {
-        if code == b'\n' {
-            *self = Self::Newline(1);
-        } else if PRINTABLE_COMMAND_CHARS.contains(&code) {
-            *self = Self::PrintableChars(1);
+        if PRINTABLE_COMMAND_CHARS.contains(&code) {
+            *self = Self::PrintableChars(code.into());
         }
     }
     fn hook(&mut self, _: &[i64], _: &[u8], _: bool) {}
@@ -102,7 +135,7 @@ mod test {
     fn no_ansi_unaffected() {
         let cases = vec![
             "simple_case",
-            "newline\ncase",
+            "\twhitespace\ncase\r",
             "[INFO]: some log () <>",
             "1",
             "こんにちは",
@@ -145,6 +178,74 @@ mod test {
 
             drop(filter_writer);
             assert_eq!(expected, String::from_utf8(output).expect("Couldn't parse utf8"));
+        }
+    }
+
+    #[test]
+    fn ansi_partial_utf8_write() {
+        // Verify that if a multibyte UTF8 character gets split across two writes, the character
+        // is passed through.
+        let cases = vec![
+            "ß", // 2 byte character
+            "beforeßafter",
+            "ßafter",
+            "beforeßafter",
+            "￥", // 3 byte character
+            "before￥after",
+            "￥after",
+            "before￥",
+            "💝", // 4 byte character
+            "before💝after",
+            "💝after",
+            "before💝",
+        ];
+
+        for case in cases {
+            let bytes = case.as_bytes();
+            for split_point in 1..bytes.len() {
+                let mut output: Vec<u8> = vec![];
+                let mut filter_writer = AnsiFilterWriter::new(&mut output);
+
+                filter_writer.write_all(&bytes[..split_point]).expect("write slice");
+                filter_writer.write_all(&bytes[split_point..]).expect("write slice");
+                assert_eq!(
+                    output, bytes,
+                    "Failed on case {} split on byte {:?}",
+                    case, split_point
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn ansi_handle_invalid_utf8() {
+        // invalid bytes constructed according to rules in
+        // https://en.wikipedia.org/wiki/UTF-8#Encoding
+        const TWO_BYTE: [u8; 2] = [0xC2u8, 0xC2u8];
+        const THREE_BYTE: [u8; 3] = [0xE0u8, 0xA0u8, 0xC2u8];
+        const FOUR_BYTE: [u8; 4] = [0xF0u8, 0xA0u8, 0x82u8, 0xC2u8];
+
+        let cases = vec![
+            ([b"string".as_slice(), TWO_BYTE.as_slice()].concat(), "string�"),
+            ([b"string".as_slice(), THREE_BYTE.as_slice()].concat(), "string�"),
+            ([b"string".as_slice(), FOUR_BYTE.as_slice()].concat(), "string�"),
+            ([TWO_BYTE.as_slice(), b"string".as_slice()].concat(), "�string"),
+            ([THREE_BYTE.as_slice(), b"string".as_slice()].concat(), "�string"),
+            ([FOUR_BYTE.as_slice(), b"string".as_slice()].concat(), "�string"),
+        ];
+
+        for (bytes, expected) in cases {
+            let mut output: Vec<u8> = vec![];
+            let mut filter_writer = AnsiFilterWriter::new(&mut output);
+
+            filter_writer.write_all(&bytes).expect("write slice");
+            assert_eq!(
+                output,
+                expected.as_bytes(),
+                "Failed on case {:?}, expected string {}",
+                bytes,
+                expected
+            );
         }
     }
 

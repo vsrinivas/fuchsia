@@ -138,7 +138,7 @@ group("run_test_suite") {
 group("tests") {
   testonly = true
   deps = [
-    ":lib_test($host_toolchain)",
+    #":lib_test($host_toolchain)",
     ":run-test-suite-unit-tests",
     "directory:tests",
     "tests",
