@@ -849,8 +849,7 @@ impl CurrentTask {
 
             // TODO(tbodt): Check whether capability xattrs are set on the file, and grant/limit
             // capabilities accordingly.
-            state.creds.cap_permitted = state.creds.cap_inheritable;
-            state.creds.cap_effective = state.creds.cap_permitted;
+            state.creds.exec();
         }
 
         self.thread_group.signal_actions.reset_for_exec();

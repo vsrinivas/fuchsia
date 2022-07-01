@@ -156,6 +156,12 @@ impl Credentials {
     pub fn has_capability(&self, capability: Capabilities) -> bool {
         self.cap_effective.contains(capability)
     }
+
+    pub fn exec(&mut self) {
+        self.cap_permitted = self.cap_inheritable;
+        self.cap_effective = self.cap_permitted;
+        self.securebits.remove(SecureBits::KEEP_CAPS);
+    }
 }
 
 /// The owner and group of a file. Used as a parameter for functions that create files.
