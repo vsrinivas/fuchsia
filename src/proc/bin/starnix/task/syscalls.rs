@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tracing::info;
 use zerocopy::AsBytes;
 
-use crate::auth::Credentials;
+use crate::auth::{Credentials, SecureBits};
 use crate::execution::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::*;
@@ -448,6 +448,23 @@ pub fn sys_prctl(
         }
         PR_SET_CHILD_SUBREAPER => {
             current_task.thread_group.write().is_child_subreaper = arg2 != 0;
+            Ok(().into())
+        }
+        PR_GET_SECUREBITS => {
+            let value = current_task.read().creds.securebits.bits();
+            Ok(value.into())
+        }
+        PR_SET_SECUREBITS => {
+            // TODO(security): This does not yet respect locked flags.
+            if !current_task.read().creds.has_capability(CAP_SETPCAP) {
+                return error!(EPERM);
+            }
+
+            let securebits = SecureBits::from_bits(arg2 as u32).ok_or_else(|| {
+                not_implemented!(current_task, "PR_SET_SECUREBITS: bits 0x{:x}", arg2);
+                errno!(ENOSYS)
+            })?;
+            current_task.write().creds.securebits = securebits;
             Ok(().into())
         }
         _ => {

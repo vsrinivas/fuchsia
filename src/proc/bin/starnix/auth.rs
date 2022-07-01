@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::types::*;
+use bitflags::bitflags;
+
+use crate::types::{errno, error, gid_t, uapi, uid_t, Capabilities, Errno};
 
 #[derive(Clone)]
 pub struct Credentials {
@@ -51,6 +53,30 @@ pub struct Credentials {
     /// > Since Linux 2.6.25, this is a per-thread capability set. In older kernels, the capability
     /// > bounding set was a system wide attribute shared by all threads on the system.
     pub cap_bounding: Capabilities,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
+    /// > Starting with kernel 2.6.26, and with a kernel in which file capabilities are enabled,
+    /// > Linux implements a set of per-thread securebits flags that can be used to disable special
+    /// > handling of capabilities for UID 0 (root).
+    ///
+    /// > The securebits flags can be modified and retrieved using the prctl(2)
+    /// > PR_SET_SECUREBITS and PR_GET_SECUREBITS operations.  The CAP_SETPCAP capability is
+    /// > required to modify the flags.
+    pub securebits: SecureBits,
+}
+
+bitflags! {
+    pub struct SecureBits: u32 {
+        const KEEP_CAPS = 1 << uapi::SECURE_KEEP_CAPS;
+        const KEEP_CAPS_LOCKED = 1 <<  uapi::SECURE_KEEP_CAPS_LOCKED;
+        const NO_SETUID_FIXUP = 1 << uapi::SECURE_NO_SETUID_FIXUP;
+        const NO_SETUID_FIXUP_LOCKED = 1 << uapi::SECURE_NO_SETUID_FIXUP_LOCKED;
+        const NOROOT = 1 << uapi::SECURE_NOROOT;
+        const NOROOT_LOCKED = 1 << uapi::SECURE_NOROOT_LOCKED;
+        const NO_CAP_AMBIENT_RAISE = 1 << uapi::SECURE_NO_CAP_AMBIENT_RAISE;
+        const NO_CAP_AMBIENT_RAISE_LOCKED = 1 << uapi::SECURE_NO_CAP_AMBIENT_RAISE_LOCKED;
+    }
 }
 
 fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
@@ -84,6 +110,7 @@ impl Credentials {
             cap_effective: caps,
             cap_inheritable: caps,
             cap_bounding: Capabilities::all(),
+            securebits: SecureBits::empty(),
         }
     }
 

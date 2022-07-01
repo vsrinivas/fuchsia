@@ -5,10 +5,12 @@
 #include <sys/prctl.h>
 
 #include <gtest/gtest.h>
+#include <linux/securebits.h>
 
 #include "src/proc/tests/chromiumos/syscalls/test_helper.h"
 
 namespace {
+
 TEST(PrctlTest, SubReaperTest) {
   ForkHelper helper;
 
@@ -36,4 +38,18 @@ TEST(PrctlTest, SubReaperTest) {
     EXPECT_GT(wait(nullptr), 0);
   }
 }
+
+TEST(PrctlTest, SecureBits) {
+  ForkHelper helper;
+
+  helper.RunInForkedProcess([&] {
+    SAFE_SYSCALL(prctl(PR_SET_SECUREBITS, SECBIT_NOROOT));
+    ASSERT_EQ(SAFE_SYSCALL(prctl(PR_GET_SECUREBITS)), SECBIT_NOROOT);
+    SAFE_SYSCALL(prctl(PR_SET_SECUREBITS, SECBIT_KEEP_CAPS));
+    ASSERT_EQ(SAFE_SYSCALL(prctl(PR_GET_SECUREBITS)), SECBIT_KEEP_CAPS);
+  });
+
+  ASSERT_TRUE(helper.WaitForChildren());
+}
+
 }  // namespace
