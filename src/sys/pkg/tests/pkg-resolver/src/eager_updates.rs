@@ -88,7 +88,7 @@ async fn test_empty_eager_config() {
 
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
-    let package = env
+    let (package, _resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://test/{}", package_name).as_str())
         .await
         .expect("package to resolve without error");
@@ -138,7 +138,7 @@ async fn test_eager_resolve_package() {
         .build()
         .await;
 
-    let package = env
+    let (package, _resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://example.com/{}", pkg_name).as_str())
         .await
         .expect("package to resolve without error");
@@ -258,7 +258,8 @@ async fn test_cup_write() {
     assert_eq!(version, "1.2.3.4");
     assert_eq!(channel, "stable");
 
-    let package = env.resolve_package(&pkg_url.as_unpinned().to_string()).await.unwrap();
+    let (package, _resolved_context) =
+        env.resolve_package(&pkg_url.as_unpinned().to_string()).await.unwrap();
     // Verify the served package directory contains the exact expected contents.
     pkg.verify_contents(&package).await.unwrap();
 

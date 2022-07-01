@@ -46,7 +46,7 @@ async fn test_resolve_persisted_package_succeeds() {
 
     // Resolve the package and ensure it's the cached version.
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version");
 
     // Put a copy of the package with altered contents in the repo to make sure
@@ -68,7 +68,7 @@ async fn test_resolve_persisted_package_succeeds() {
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     // Try to resolve again, make sure we see the new version.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     repo_pkg.verify_contents(&package_dir).await.expect("to resolve the new version");
     assert!(cache_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -77,7 +77,7 @@ async fn test_resolve_persisted_package_succeeds() {
 
     // Try a final resolve. If the persisted repo config works, this must resolve the second
     // version of the package that we persisted from when the repo was live.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     repo_pkg.verify_contents(&package_dir).await.expect("to resolve the new version post-restart");
     assert!(cache_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -109,7 +109,7 @@ async fn test_resolve_empty_config_fails() {
 
     // Resolve the package and ensure it's the cached version.
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version");
 
     // Put a copy of the package with altered contents in the repo to make sure
@@ -132,7 +132,7 @@ async fn test_resolve_empty_config_fails() {
 
     // Try to resolve again. We expect to resolve the cached version because the pkg-resolver
     // configuration does not allow us to instantiate a persisted repository.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version again");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -141,7 +141,7 @@ async fn test_resolve_empty_config_fails() {
 
     // Try a final resolve. Because the config lists an empty string, this should result in
     // resolving to the cache_pkg.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to finally resolve the cached version");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -172,7 +172,7 @@ async fn test_resolve_dynamic_disabled_fails() {
 
     // Resolve the package and ensure it's the cached version.
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version");
 
     // Put a copy of the package with altered contents in the repo to make sure
@@ -203,7 +203,7 @@ async fn test_resolve_dynamic_disabled_fails() {
     // Because dynamic repositories cannot be created in this pkg-resolver configuration, we were
     // unable to install the repository configuration to persist the repo, and we expect to resolve
     // the cached package.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version again");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -211,7 +211,7 @@ async fn test_resolve_dynamic_disabled_fails() {
     env.restart_pkg_resolver().await;
 
     // Try a final resolve. This will again return the cached version.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to finally resolve the cached version");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -239,7 +239,7 @@ async fn test_resolve_no_config_fails() {
 
     // Resolve the package and ensure it's the cached version.
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version");
 
     // Put a copy of the package with altered contents in the repo to make sure
@@ -262,7 +262,7 @@ async fn test_resolve_no_config_fails() {
 
     // Try to resolve again. We expect to resolve the cached version because the pkg-resolver
     // configuration does not allow us to instantiate a persisted repository.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to resolve the cached version again");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
@@ -271,7 +271,7 @@ async fn test_resolve_no_config_fails() {
 
     // Try a final resolve. Because the config lists an empty string, this should result in
     // resolving to the cache_pkg.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     cache_pkg.verify_contents(&package_dir).await.expect("to finally resolve the cached version");
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 

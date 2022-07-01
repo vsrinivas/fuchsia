@@ -245,6 +245,9 @@ mod transitional {
             // The proxy call returned (outer result Ok), but it returned an Err (inner result)
             return Ok(Err(err));
         }
+        // TODO(fxbug.dev/100060): When package resolver implements
+        // ResolveWithContext, remove the following call to `fabricate...`
+        // and use the above `result` (and its context) instead.
         let result = fabricate_package_context(package_url.repository(), package_dir)
             .await
             .map_err(|err: anyhow::Error| {
@@ -450,7 +453,7 @@ mod tests {
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_resolution::ResolverMarker,
         fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-        fidl_fuchsia_pkg::{PackageResolverRequest, PackageResolverRequestStream},
+        fidl_fuchsia_pkg::{self as fpkg, PackageResolverRequest, PackageResolverRequestStream},
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
         fuchsia_component_test::{
@@ -631,7 +634,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -687,7 +690,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -737,7 +740,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -776,7 +779,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -850,7 +853,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -947,7 +950,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }
@@ -985,7 +988,7 @@ mod tests {
                             Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }

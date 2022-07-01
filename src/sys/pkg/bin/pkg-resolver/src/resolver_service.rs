@@ -21,8 +21,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
-        PackageResolverRequestStream,
+        self as fpkg, FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
+        PackageResolverRequestStream, ResolveError,
     },
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt::CobaltSender,
@@ -82,11 +82,13 @@ impl work_queue::TryMerge for ResolveQueueContext {
 /// repository if necessary and possible.
 #[async_trait]
 pub trait Resolver: std::fmt::Debug + Sync + Sized {
+    /// Resolves the given absolute package URL and returns the package
+    /// directory and a resolution context for resolving subpackages.
     async fn resolve(
         &self,
         url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
-    ) -> Result<PackageDirectory, pkg::ResolveError>;
+    ) -> Result<(PackageDirectory, pkg::ResolutionContext), pkg::ResolveError>;
 }
 
 // How the package directory was resolved.
@@ -125,7 +127,7 @@ impl Resolver for QueuedResolver {
         &self,
         pkg_url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
-    ) -> Result<PackageDirectory, pkg::ResolveError> {
+    ) -> Result<(PackageDirectory, pkg::ResolutionContext), pkg::ResolveError> {
         let trace_id = ftrace::Id::random();
         let guard = ftrace::async_enter!(
             trace_id, "app", "resolve",
@@ -156,7 +158,9 @@ impl Resolver for QueuedResolver {
                 },
             ),
         ]);
-        resolve_res.map(|pkg_with_source| pkg_with_source.into_package())
+        resolve_res.map(|pkg_with_source| {
+            (pkg_with_source.into_package(), pkg::ResolutionContext::new(vec![]))
+        })
     }
 }
 
@@ -357,7 +361,7 @@ pub struct MockResolver {
     queue: work_queue::WorkSender<
         AbsolutePackageUrl,
         (),
-        Result<PackageDirectory, Arc<GetPackageError>>,
+        Result<(PackageDirectory, pkg::ResolutionContext), Arc<GetPackageError>>,
     >,
 }
 
@@ -366,7 +370,9 @@ impl MockResolver {
     pub fn new<W, F>(callback: W) -> Self
     where
         W: Fn(AbsolutePackageUrl) -> F + Send + 'static,
-        F: Future<Output = Result<PackageDirectory, Arc<GetPackageError>>> + Send,
+        F: Future<
+                Output = Result<(PackageDirectory, pkg::ResolutionContext), Arc<GetPackageError>>,
+            > + Send,
     {
         let (package_fetch_queue, queue) =
             work_queue::work_queue(1, move |url, _: ()| callback(url));
@@ -382,7 +388,7 @@ impl Resolver for MockResolver {
         &self,
         url: AbsolutePackageUrl,
         _eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
-    ) -> Result<PackageDirectory, pkg::ResolveError> {
+    ) -> Result<(PackageDirectory, pkg::ResolutionContext), pkg::ResolveError> {
         let queued_fetch = self.queue.push(url, ());
         queued_fetch.await.expect("expected queue to be open").map_err(|e| e.to_resolve_error())
     }
@@ -437,6 +443,28 @@ pub async fn run_resolver_service(
                             )
                         },
                     )?;
+                    Ok(())
+                }
+
+                PackageResolverRequest::ResolveWithContext {
+                    package_url,
+                    context,
+                    dir: _,
+                    responder,
+                } => {
+                    fx_log_err!(
+                        "ResolveWithContext is not currently implemented by the resolver_service.
+                         Could not resolve {} with context {:?}",
+                        package_url,
+                        context,
+                    );
+                    responder.send(&mut Err(ResolveError::Internal)).with_context(|| {
+                        format!(
+                            "sending fuchsia.pkg/PackageResolver.ResolveWithContext response
+                                 for {} with context {:?}",
+                            package_url, context
+                        )
+                    })?;
                     Ok(())
                 }
 
@@ -706,14 +734,16 @@ async fn resolve_and_reopen(
     url: String,
     dir_request: ServerEnd<fio::DirectoryMarker>,
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
-) -> Result<(), pkg::ResolveError> {
+) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
     let pkg_url =
         AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
-    let pkg = package_resolver.resolve(pkg_url, eager_package_manager).await?;
-    pkg.reopen(dir_request).map_err(|e| {
+    let (pkg, resolution_context) =
+        package_resolver.resolve(pkg_url, eager_package_manager).await?;
+    let () = pkg.reopen(dir_request).map_err(|e| {
         fx_log_err!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
         pkg::ResolveError::Internal
-    })
+    })?;
+    Ok(resolution_context.into())
 }
 
 /// Run a service that only resolves registered font packages.
@@ -738,7 +768,8 @@ pub async fn run_font_resolver_service(
             )
             .await;
 
-            let response_legacy = response.clone().map_err(|s| s.to_resolve_status());
+            let response_legacy =
+                response.clone().map(|_resolution_context| ()).map_err(|s| s.to_resolve_status());
             cobalt_sender.log_event_count(
                 metrics::RESOLVE_METRIC_ID,
                 (
@@ -769,7 +800,7 @@ async fn resolve_font<'a>(
     package_url: String,
     directory_request: ServerEnd<fio::DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
-) -> Result<(), pkg::ResolveError> {
+) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
     let parsed_package_url = AbsolutePackageUrl::parse(&package_url)
         .map_err(|e| handle_bad_package_url_error(e, &package_url))?;
     let is_font_package = match &parsed_package_url {
@@ -787,7 +818,9 @@ async fn resolve_font<'a>(
         1,
     );
     if is_font_package {
-        resolve_and_reopen(&package_resolver, package_url, directory_request, None).await
+        let _resolution_context =
+            resolve_and_reopen(&package_resolver, package_url, directory_request, None).await?;
+        Ok(fpkg::ResolutionContext { bytes: vec![] })
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
         Err(pkg::ResolveError::PackageNotFound)
@@ -805,7 +838,7 @@ fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
 }
 
 fn resolve_result_to_resolve_duration_code<T>(
-    res: &Result<(), T>,
+    res: &Result<fpkg::ResolutionContext, T>,
 ) -> metrics::ResolveDurationMetricDimensionResult {
     match res {
         Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
@@ -814,10 +847,10 @@ fn resolve_result_to_resolve_duration_code<T>(
 }
 
 fn resolve_result_to_resolve_status_code(
-    result: &Result<(), pkg::ResolveError>,
+    result: &Result<fpkg::ResolutionContext, pkg::ResolveError>,
 ) -> metrics::ResolveStatusMetricDimensionResult {
     match *result {
-        Ok(()) => metrics::ResolveStatusMetricDimensionResult::Success,
+        Ok(_) => metrics::ResolveStatusMetricDimensionResult::Success,
         Err(pkg::ResolveError::Internal) => metrics::ResolveStatusMetricDimensionResult::Internal,
         Err(pkg::ResolveError::AccessDenied) => {
             metrics::ResolveStatusMetricDimensionResult::AccessDenied

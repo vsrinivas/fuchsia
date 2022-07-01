@@ -34,7 +34,15 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
   }
 
-  virtual void GetHash(fuchsia::pkg::PackageUrl package_url, GetHashCallback callback) override {
+  void ResolveWithContext(::std::string package_uri, fuchsia::pkg::ResolutionContext context,
+                          ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
+                          ResolveWithContextCallback callback) override {
+    // Not implemented
+    callback(fuchsia::pkg::PackageResolver_ResolveWithContext_Result::WithErr(
+        {fuchsia::pkg::ResolveError::INTERNAL}));
+  }
+
+  void GetHash(fuchsia::pkg::PackageUrl package_url, GetHashCallback callback) override {
     callback(fuchsia::pkg::PackageResolver_GetHash_Result::WithErr(ZX_ERR_UNAVAILABLE));
   }
 

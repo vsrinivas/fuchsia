@@ -7,7 +7,7 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        PackageResolverMarker, PackageResolverProxy, PackageResolverRequestStream,
+        self as fpkg, PackageResolverMarker, PackageResolverProxy, PackageResolverRequestStream,
         PackageResolverResolveResponder,
     },
     fuchsia_async as fasync,
@@ -255,6 +255,12 @@ impl MockResolverService {
                     dir,
                     responder,
                 } => self.handle_resolve(package_url, dir, responder).await?,
+                fidl_fuchsia_pkg::PackageResolverRequest::ResolveWithContext {
+                    package_url: _,
+                    context: _,
+                    dir: _,
+                    responder: _,
+                } => panic!("ResolveWithContext not implemented"),
                 fidl_fuchsia_pkg::PackageResolverRequest::GetHash {
                     package_url: _,
                     responder: _,
@@ -281,7 +287,7 @@ impl MockResolverService {
         ) {
             Expectation::ImmediateConstant(Ok(package)) => {
                 package.serve_on(dir);
-                responder.send(&mut Ok(()))?;
+                responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] }))?;
             }
             Expectation::ImmediateConstant(Err(error)) => {
                 responder.send(&mut Err(*error))?;
@@ -297,7 +303,7 @@ impl MockResolverService {
                 match expected_results.remove(0) {
                     Ok(package) => {
                         package.serve_on(dir);
-                        responder.send(&mut Ok(()))?;
+                        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] }))?;
                     }
                     Err(e) => {
                         responder.send(&mut Err(e))?;
@@ -394,7 +400,7 @@ impl ResolveHandler {
         let PendingResolve { responder, dir_request } = self.into_pending().await;
 
         pkg.serve_on(dir_request);
-        responder.send(&mut Ok(())).unwrap();
+        responder.send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] })).unwrap();
     }
 }
 
@@ -414,13 +420,14 @@ mod tests {
     fn do_resolve(
         proxy: &PackageResolverProxy,
         url: &str,
-    ) -> impl Future<Output = Result<fio::DirectoryProxy, ResolveError>> {
+    ) -> impl Future<Output = Result<(fio::DirectoryProxy, fpkg::ResolutionContext), ResolveError>>
+    {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
         let fut = proxy.resolve(url, package_dir_server_end);
 
         async move {
-            let () = fut.await.unwrap()?;
-            Ok(package_dir)
+            let resolve_context = fut.await.unwrap()?;
+            Ok((package_dir, resolve_context))
         }
     }
 
@@ -446,7 +453,7 @@ mod tests {
         // We should have no URLs resolved yet.
         assert_eq!(*resolved_urls.lock(), Vec::<String>::new());
 
-        let package_dir =
+        let (package_dir, _resolved_context) =
             do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await.unwrap();
 
         // Check that we can read from /meta (meta-as-file mode)
@@ -484,7 +491,7 @@ mod tests {
         let pkg = resolver.package("second", "fake merkle");
         handle_first.resolve(&pkg).await;
 
-        let first_pkg = first_fut.await.unwrap();
+        let (first_pkg, _resolved_context) = first_fut.await.unwrap();
         assert_eq!(read_file(&first_pkg, "meta").await, "fake merkle");
     }
 
@@ -505,7 +512,7 @@ mod tests {
         );
 
         // Second resolve should succeed and give us the expected package dir.
-        let package_dir =
+        let (package_dir, _resolved_context) =
             do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await.unwrap();
         let meta_contents = read_file(&package_dir, "meta").await;
         assert_eq!(meta_contents, "upd4t3");

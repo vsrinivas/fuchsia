@@ -47,7 +47,7 @@ async fn test_base_package_found() {
 
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the base version, not the repo version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
@@ -112,7 +112,7 @@ async fn test_base_package_with_variant_found() {
 
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}/0");
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version, not the repo version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
@@ -153,7 +153,7 @@ async fn test_base_package_with_merkle_pin() {
     // Merkle pin the request to the repo version.
     let pkg_url =
         format!("fuchsia-pkg://fuchsia.com/{pkg_name}?hash={}", repo_pkg.meta_far_merkle_root());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
 
     // Make sure we got the repo (pinned) version, not the static version.
     repo_pkg.verify_contents(&package_dir).await.unwrap();
@@ -186,7 +186,7 @@ async fn test_base_package_while_tuf_broken() {
     served_repository.stop().await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
 
@@ -209,7 +209,7 @@ async fn test_base_package_without_repo_configured() {
         .await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
 
@@ -256,13 +256,13 @@ async fn test_base_package_while_queue_full() {
     let resolves_fut =
         pkg_urls.into_iter().map(|url| Box::pin(env.resolve_package(&url))).collect::<Vec<_>>();
 
-    let (pkg_dir, i, _) = future::select_all(resolves_fut).await;
-
+    let (res, i, _) = future::select_all(resolves_fut).await;
     // Assert it's the base pinned package which got resolved.
     assert_eq!(i, 5);
 
     // Make sure we got the static version.
-    base_pkg.verify_contents(&pkg_dir.unwrap()).await.unwrap();
+    let (pkg_dir, _resolved_context) = res.unwrap();
+    base_pkg.verify_contents(&pkg_dir).await.unwrap();
 
     env.stop().await;
 }

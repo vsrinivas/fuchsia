@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverProxy,
-    fuchsia_url::AbsolutePackageUrl, futures::prelude::*, thiserror::Error,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_pkg::{self as fpkg, PackageResolverProxy},
+    fuchsia_url::AbsolutePackageUrl,
+    futures::prelude::*,
+    thiserror::Error,
     update_package::UpdatePackage,
 };
 
@@ -56,7 +59,8 @@ async fn resolve_package(
     let res = pkg_resolver.resolve(&url.to_string(), dir_server_end);
     let res = res.await.map_err(|e| ResolveError::Fidl(e, url.clone()))?;
 
-    let () = res.map_err(|raw| ResolveError::Error(raw.into(), url.clone()))?;
+    let _: fpkg::ResolutionContext =
+        res.map_err(|raw| ResolveError::Error(raw.into(), url.clone()))?;
 
     Ok(dir)
 }

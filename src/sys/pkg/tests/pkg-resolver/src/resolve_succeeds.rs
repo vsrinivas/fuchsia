@@ -59,7 +59,7 @@ async fn package_resolution() {
 
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
-    let package = env
+    let (package, _resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
         .await
         .expect("package to resolve without error");
@@ -116,7 +116,7 @@ async fn separate_blobs_url() {
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     // Verify package installation from the split repo succeeds.
-    let package = env
+    let (package, _resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://test/{}", pkg_name).as_str())
         .await
         .expect("package to resolve without error");
@@ -156,7 +156,7 @@ async fn verify_resolve_with_altered_env(
     alter_env(&env, &pkg);
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
 
     pkg.verify_contents(&package_dir).await.unwrap();
 
@@ -267,7 +267,8 @@ async fn pinned_merkle_resolution() {
     let pkg1_url_with_pkg2_merkle =
         format!("fuchsia-pkg://test/pinned-merkle-foo?hash={}", pkg2.meta_far_merkle_root());
 
-    let package_dir = env.resolve_package(&pkg1_url_with_pkg2_merkle).await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package(&pkg1_url_with_pkg2_merkle).await.unwrap();
     pkg2.verify_contents(&package_dir).await.unwrap();
 
     env.stop().await;
@@ -295,7 +296,7 @@ async fn variant_resolution() {
 
     let pkg_url = &"fuchsia-pkg://test/variant-foo/0";
 
-    let package_dir = env.resolve_package(pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(pkg_url).await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
     env.stop().await;
@@ -368,7 +369,8 @@ async fn retries() {
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
-    let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
@@ -437,9 +439,11 @@ async fn handles_429_responses() {
     let pkg2_fut = resolve_package(&proxy2, "fuchsia-pkg://test/rate-limit-content");
 
     // The packages should resolve successfully.
-    let (pkg1_dir, pkg2_dir) = join!(pkg1_fut, pkg2_fut);
-    pkg1.verify_contents(&pkg1_dir.unwrap()).await.unwrap();
-    pkg2.verify_contents(&pkg2_dir.unwrap()).await.unwrap();
+    let (pkg1_res, pkg2_res) = join!(pkg1_fut, pkg2_fut);
+    let (pkg1_dir, _resolved_context) = pkg1_res.unwrap();
+    let (pkg2_dir, _resolved_context) = pkg2_res.unwrap();
+    pkg1.verify_contents(&pkg1_dir).await.unwrap();
+    pkg2.verify_contents(&pkg2_dir).await.unwrap();
 
     // And the inspect data for the package resolver should indicate that it handled 429 responses.
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
@@ -507,12 +511,14 @@ async fn use_cached_package() {
 
     // package resolves as expected.
     fail_requests.unset();
-    let package_dir = env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
     // if no mirrors are accessible, the cached package is returned.
     fail_requests.set();
-    let package_dir = env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
     env.stop().await;
@@ -629,11 +635,11 @@ async fn test_concurrent_blob_writes() {
     send_shared_blob_body();
     let ((), ()) = futures::join!(
         async move {
-            let package1_dir = package1_resolution_fut.await.unwrap();
+            let (package1_dir, _resolved_context1) = package1_resolution_fut.await.unwrap();
             pkg1.verify_contents(&package1_dir).await.unwrap();
         },
         async move {
-            let package2_dir = package2_resolution_fut.await.unwrap();
+            let (package2_dir, _resolved_context2) = package2_resolution_fut.await.unwrap();
             pkg2.verify_contents(&package2_dir).await.unwrap();
         },
     );
@@ -726,8 +732,8 @@ async fn dedup_concurrent_content_blob_fetches() {
         req.unblock();
     }
 
-    let pkg1_dir = pkg1_fut.await.expect("package 1 to resolve");
-    let pkg2_dir = pkg2_fut.await.expect("package 2 to resolve");
+    let (pkg1_dir, _resolved_context) = pkg1_fut.await.expect("package 1 to resolve");
+    let (pkg2_dir, _resolved_context) = pkg2_fut.await.expect("package 2 to resolve");
 
     pkg1.verify_contents(&pkg1_dir).await.unwrap();
     pkg2.verify_contents(&pkg2_dir).await.unwrap();
@@ -760,7 +766,7 @@ async fn test_https_endpoint(pkg_name: &str, bind_addr: impl Into<IpAddr>) {
 
     env.register_repo(&served_repository).await;
 
-    let package = env
+    let (package, _resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://test/{}", pkg_name).as_str())
         .await
         .expect("package to resolve without error");
@@ -864,7 +870,7 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
         "fuchsia-pkg://test/merkle-pin-size?hash={}",
         pkg_16k_pinned.meta_far_merkle_root()
     );
-    let resolved_pkg =
+    let (resolved_pkg, _resolved_context) =
         env.resolve_package(&pinned_url).await.expect("package to resolve without error");
     pkg_16k_pinned.verify_contents(&resolved_pkg).await.unwrap();
 
@@ -897,7 +903,7 @@ async fn resolve_local_mirror() {
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
 
     pkg.verify_contents(&package_dir).await.unwrap();
     let mut repo_blobs = repo.list_blobs().unwrap();

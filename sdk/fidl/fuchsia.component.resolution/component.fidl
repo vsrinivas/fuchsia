@@ -58,6 +58,9 @@ type Component = resource table {
 // fuchsia.pkg implements subpackages, assuming fuchsia.pkg implements the
 // package context value as a much smaller lookup key (such as a package hash to
 // the package containing the subpackage map).
+//
+// ALSO, change the constant name's suffix from LENGTH to SIZE per FIDL style
+// guidelines.
 
 // Note the context length, in bytes, must be at least the size of
 // fuchsia.pkg.MAX_RESOLUTION_CONTEXT_LENGTH, plus the size required to

@@ -7,7 +7,7 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_pkg::PackageCacheMarker,
-    fuchsia_async as fasync,
+    fidl_fuchsia_pkg_ext as pkg, fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
@@ -209,8 +209,12 @@ pub mod for_tests {
             Ok(ResolverForTest { cache, resolver: Arc::new(resolver), _served_repo: served_repo })
         }
 
-        /// Resolve a package using the resolver, returning the root directory of the package.
-        pub async fn resolve_package(&self, url: &str) -> Result<fio::DirectoryProxy, Error> {
+        /// Resolve a package using the resolver, returning the root directory of the package,
+        /// and the context for resolving relative package URLs.
+        pub async fn resolve_package(
+            &self,
+            url: &str,
+        ) -> Result<(fio::DirectoryProxy, pkg::ResolutionContext), Error> {
             let resolver = self
                 .resolver
                 ._pkg_resolver
@@ -218,12 +222,12 @@ pub mod for_tests {
                 .context("getting resolver")?;
             let (package, package_remote) =
                 fidl::endpoints::create_proxy().context("creating package directory endpoints")?;
-            let () = resolver
+            let resolved_context = resolver
                 .resolve(url, package_remote)
                 .await
                 .unwrap()
                 .map_err(|e| anyhow!("Package resolver error: {:?}", e))?;
-            Ok(package)
+            Ok((package, resolved_context.into()))
         }
     }
 }
@@ -259,7 +263,7 @@ pub mod tests {
         let resolver = ResolverForTest::new(repo, TEST_REPO_URL.parse().unwrap(), None)
             .await
             .context("launching resolver")?;
-        let root_dir =
+        let (root_dir, _resolved_context) =
             resolver.resolve_package(&format!("{}/{}", TEST_REPO_URL, name)).await.unwrap();
 
         package.verify_contents(&root_dir).await.unwrap();
@@ -291,7 +295,7 @@ pub mod tests {
         )
         .await
         .context("launching resolver")?;
-        let root_dir =
+        let (root_dir, _resolved_context) =
             resolver.resolve_package(&format!("fuchsia-pkg://fuchsia.com/{}", name)).await.unwrap();
 
         package.verify_contents(&root_dir).await.unwrap();

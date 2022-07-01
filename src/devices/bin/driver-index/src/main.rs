@@ -740,7 +740,22 @@ mod tests {
                         let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
                         fuchsia_fs::node::connect_in_namespace("/pkg", flags, dir.into_channel())
                             .unwrap();
-                        responder.send(&mut Ok(())).context("error sending response")?;
+                        responder
+                            .send(&mut Ok(fidl_fuchsia_pkg::ResolutionContext { bytes: vec![] }))
+                            .context("error sending response")?;
+                    }
+                    fidl_fuchsia_pkg::PackageResolverRequest::ResolveWithContext {
+                        package_url: _,
+                        context: _,
+                        dir: _,
+                        responder,
+                    } => {
+                        log::error!(
+                            "ResolveWithContext is not currently implemented in driver-index"
+                        );
+                        responder
+                            .send(&mut Err(fidl_fuchsia_pkg::ResolveError::Internal))
+                            .context("error sending response")?;
                     }
                     fidl_fuchsia_pkg::PackageResolverRequest::GetHash {
                         package_url: _,

@@ -42,6 +42,7 @@
 #include <fbl/string_printf.h>
 #include <mock-boot-arguments/server.h>
 
+#include "lib/fidl/llcpp/vector_view.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -325,7 +326,14 @@ class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageRe
       return;
     }
 
-    completer.ReplySuccess();
+    auto resolution_context = fuchsia_pkg::wire::ResolutionContext({});
+    completer.ReplySuccess(resolution_context);
+  }
+
+  void ResolveWithContext(ResolveWithContextRequestView request,
+                          ResolveWithContextCompleter::Sync& completer) override {
+    FX_LOGF(ERROR, nullptr, "ResolveWithContext is not yet implemented in FakePackageResolver");
+    completer.ReplyError(fuchsia_pkg::wire::ResolveError::kInternal);
   }
 
   void GetHash(GetHashRequestView request, GetHashCompleter::Sync& completer) override {

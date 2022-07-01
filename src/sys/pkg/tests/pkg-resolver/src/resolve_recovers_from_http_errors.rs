@@ -53,7 +53,8 @@ async fn verify_resolve_fails_then_succeeds<H: HttpResponder>(
 
     // Disabling the custom responder allows the subsequent resolves to succeed.
     should_fail.unset();
-    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+    let (package_dir, _resolved_context) =
+        env.resolve_package(&pkg_url).await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     env.stop().await;

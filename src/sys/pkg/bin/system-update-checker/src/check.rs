@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_paver::{
         Asset, BootManagerMarker, Configuration, DataSinkMarker, PaverMarker, PaverProxy,
     },
-    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface},
+    fidl_fuchsia_pkg::{self as fpkg, PackageResolverMarker, PackageResolverProxyInterface},
     fidl_fuchsia_space as fidl_space,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_hash::Hash,
@@ -188,7 +188,7 @@ async fn latest_update_package_attempt(
     let update_package =
         channel_manager.get_target_channel_update_url().unwrap_or(UPDATE_PACKAGE_URL.to_owned());
     let fut = package_resolver.resolve(&update_package, dir_server_end);
-    let () = fut
+    let _: fpkg::ResolutionContext = fut
         .await
         .map_err(errors::UpdatePackage::ResolveFidl)?
         .map_err(|raw| errors::UpdatePackage::Resolve(raw.into()))?;
@@ -277,7 +277,8 @@ pub mod test_check_for_system_update_impl {
         fidl_fuchsia_io as fio,
         fidl_fuchsia_paver::Configuration,
         fidl_fuchsia_pkg::{
-            PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
+            PackageResolverGetHashResult, PackageResolverResolveResult,
+            PackageResolverResolveWithContextResult, PackageUrl,
         },
         fuchsia_async as fasync,
         futures::{future, TryFutureExt, TryStreamExt},
@@ -452,7 +453,18 @@ pub mod test_check_for_system_update_impl {
                 dir.into_channel(),
             )
             .unwrap();
-            future::ok(Ok(()))
+            future::ok(Ok(fpkg::ResolutionContext { bytes: vec![] }))
+        }
+
+        type ResolveWithContextResponseFut =
+            future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+        fn resolve_with_context(
+            &self,
+            _package_url: &str,
+            _context: &mut fpkg::ResolutionContext,
+            _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+        ) -> Self::ResolveWithContextResponseFut {
+            panic!("resolve_with_context not implemented");
         }
 
         type GetHashResponseFut = future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
@@ -562,6 +574,18 @@ pub mod test_check_for_system_update_impl {
             ) -> Self::ResolveResponseFut {
                 future::err(fidl::Error::Invalid)
             }
+
+            type ResolveWithContextResponseFut =
+                future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+            fn resolve_with_context(
+                &self,
+                _package_url: &str,
+                _context: &mut fpkg::ResolutionContext,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+            ) -> Self::ResolveWithContextResponseFut {
+                future::err(fidl::Error::Invalid)
+            }
+
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
             fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
@@ -631,8 +655,20 @@ pub mod test_check_for_system_update_impl {
                     dir.into_channel(),
                 )
                 .unwrap();
-                future::ok(Ok(()))
+                future::ok(Ok(fpkg::ResolutionContext { bytes: vec![] }))
             }
+
+            type ResolveWithContextResponseFut =
+                future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+            fn resolve_with_context(
+                &self,
+                _package_url: &str,
+                _context: &mut fpkg::ResolutionContext,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+            ) -> Self::ResolveWithContextResponseFut {
+                panic!("resolve_with_context not implemented");
+            }
+
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
             fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
@@ -679,6 +715,18 @@ pub mod test_check_for_system_update_impl {
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace))
             }
+
+            type ResolveWithContextResponseFut =
+                future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+            fn resolve_with_context(
+                &self,
+                _package_url: &str,
+                _context: &mut fpkg::ResolutionContext,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+            ) -> Self::ResolveWithContextResponseFut {
+                panic!("resolve_with_context not implemented");
+            }
+
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
             fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
@@ -725,6 +773,18 @@ pub mod test_check_for_system_update_impl {
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
             }
+
+            type ResolveWithContextResponseFut =
+                future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+            fn resolve_with_context(
+                &self,
+                _package_url: &str,
+                _context: &mut fpkg::ResolutionContext,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+            ) -> Self::ResolveWithContextResponseFut {
+                panic!("resolve_with_context not implemented");
+            }
+
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
             fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
@@ -763,8 +823,20 @@ pub mod test_check_for_system_update_impl {
                 _package_url: &str,
                 _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
-                future::ok(Ok(()))
+                future::ok(Ok(fpkg::ResolutionContext { bytes: vec![] }))
             }
+
+            type ResolveWithContextResponseFut =
+                future::Ready<Result<PackageResolverResolveWithContextResult, fidl::Error>>;
+            fn resolve_with_context(
+                &self,
+                _package_url: &str,
+                _context: &mut fpkg::ResolutionContext,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+            ) -> Self::ResolveWithContextResponseFut {
+                panic!("resolve_with_context not implemented");
+            }
+
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
             fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {

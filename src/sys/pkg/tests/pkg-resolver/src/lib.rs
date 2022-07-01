@@ -20,7 +20,7 @@ use {
         RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
     },
     fidl_fuchsia_pkg_ext::{
-        BlobId, CupData, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
+        self as pkg, BlobId, CupData, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
     },
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fidl_fuchsia_pkg_rewrite::{
@@ -950,7 +950,12 @@ impl<B: Blobfs> TestEnv<B> {
     pub fn resolve_package(
         &self,
         url: &str,
-    ) -> impl Future<Output = Result<fio::DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
+    ) -> impl Future<
+        Output = Result<
+            (fio::DirectoryProxy, pkg::ResolutionContext),
+            fidl_fuchsia_pkg::ResolveError,
+        >,
+    > {
         resolve_package(&self.proxies.resolver, url)
     }
 
@@ -1087,12 +1092,14 @@ pub async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
 pub fn resolve_package(
     resolver: &PackageResolverProxy,
     url: &str,
-) -> impl Future<Output = Result<fio::DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
+) -> impl Future<
+    Output = Result<(fio::DirectoryProxy, pkg::ResolutionContext), fidl_fuchsia_pkg::ResolveError>,
+> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let response_fut = resolver.resolve(url, package_server_end);
     async move {
-        let () = response_fut.await.unwrap()?;
-        Ok(package)
+        let resolved_context = response_fut.await.unwrap()?;
+        Ok((package, resolved_context.into()))
     }
 }
 

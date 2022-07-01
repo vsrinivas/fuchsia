@@ -74,7 +74,8 @@ async fn single_blob_resume_success() {
 
     let env = TestEnvBuilder::new().build().await;
     env.register_repo(&served_repository).await;
-    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+    let (package_dir, _resolved_context) =
+        env.resolve_package(&pkg_url).await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     env.assert_count_events(
@@ -140,7 +141,8 @@ async fn two_blob_resume_success() {
 
     let env = TestEnvBuilder::new().build().await;
     env.register_repo(&served_repository).await;
-    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+    let (package_dir, _resolved_context) =
+        env.resolve_package(&pkg_url).await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     env.assert_count_events(

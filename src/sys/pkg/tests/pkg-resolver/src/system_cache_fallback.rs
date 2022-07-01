@@ -59,7 +59,7 @@ async fn test_cache_fallback_succeeds_no_network() {
     // System cache fallback is only triggered for fuchsia.com repos.
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the cache version, not the repo version.
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
@@ -101,7 +101,7 @@ async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
 
     let pkg_url =
         format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, pkg.meta_far_merkle_root());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
     let hash = env.get_hash(pkg_url).await;
@@ -192,7 +192,7 @@ async fn test_cache_fallback_succeeds_no_targets() {
     // System cache fallback is only triggered for fuchsia.com repos.
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the cache version, not the repo version.
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
@@ -242,7 +242,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     let () = edit_transaction.commit().await.unwrap().unwrap();
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the cache version, not the repo version.
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
@@ -433,7 +433,7 @@ async fn test_blobfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packa
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     // Resolving and caching a small package should work fine.
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     small_pkg.verify_contents(&package_dir).await.unwrap();
 
     // Stop the running repository, fire up a new one with a very large package in it,
@@ -526,7 +526,7 @@ async fn test_resolve_falls_back_not_in_repo() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", cache_pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
 
     // Make sure we got the cache version
     cache_pkg.verify_contents(&package_dir).await.unwrap();
@@ -597,7 +597,7 @@ async fn test_resolve_prefers_repo() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    let (package_dir, _resolved_context) = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the repo version, not the cache version.
     repo_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(cache_pkg.verify_contents(&package_dir).await.is_err());

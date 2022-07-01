@@ -494,7 +494,8 @@ async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_failure<
 
     // Verify we can resolve the package with a broken MinFs, and that repo configs do not persist
     let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
-    let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(fail_count_fn(), num_failures_before_first_restart);
     env.restart_pkg_resolver().await;
@@ -506,7 +507,8 @@ async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_failure<
     // the failure count doesn't change.
     make_succeed_fn();
     let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
-    let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
+    let (package_dir, _resolved_context) =
+        env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(fail_count_fn(), num_failures_after_first_restart);
     env.restart_pkg_resolver().await;
@@ -543,7 +545,7 @@ async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rul
 
     // Verify we can resolve the package with a broken MinFs, and that rewrite rules do not
     // persist
-    let package_dir =
+    let (package_dir, _resolved_context) =
         env.resolve_package("fuchsia-pkg://should-be-rewritten/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(fail_count_fn(), num_failures_before_first_restart);
@@ -560,7 +562,7 @@ async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rul
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
     let () = edit_transaction.add(&mut rule.clone().into()).await.unwrap().unwrap();
     let () = edit_transaction.commit().await.unwrap().unwrap();
-    let package_dir =
+    let (package_dir, _resolved_context) =
         env.resolve_package("fuchsia-pkg://should-be-rewritten/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(fail_count_fn(), num_failures_after_first_restart);

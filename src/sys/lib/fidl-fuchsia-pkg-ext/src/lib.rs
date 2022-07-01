@@ -6,7 +6,7 @@
 //! bindings.
 
 mod types;
-pub use crate::types::{BlobId, BlobInfo, CupData};
+pub use crate::types::{BlobId, BlobInfo, CupData, ResolutionContext};
 
 mod repo;
 pub use crate::repo::{

@@ -9,7 +9,7 @@ use {
     eager_package_config::pkg_resolver::{EagerPackageConfig, EagerPackageConfigs},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{self as fpkg, CupRequest, CupRequestStream, GetInfoError, WriteError},
-    fidl_fuchsia_pkg_ext::{cache, BlobInfo, CupData, CupMissingField},
+    fidl_fuchsia_pkg_ext::{cache, BlobInfo, CupData, CupMissingField, ResolutionContext},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_err,
@@ -195,14 +195,14 @@ impl<T: Resolver> EagerPackageManager<T> {
     async fn resolve_pinned(
         package_resolver: &T,
         url: PinnedAbsolutePackageUrl,
-    ) -> Result<PackageDirectory, ResolvePinnedError> {
+    ) -> Result<(PackageDirectory, ResolutionContext), ResolvePinnedError> {
         let expected_hash = url.hash();
-        let pkg_dir = package_resolver.resolve(url.into(), None).await?;
+        let (pkg_dir, resolution_context) = package_resolver.resolve(url.into(), None).await?;
         let hash = pkg_dir.merkle_root().await?;
         if hash != expected_hash {
             return Err(ResolvePinnedError::HashMismatch(hash));
         }
-        Ok(pkg_dir)
+        Ok((pkg_dir, resolution_context))
     }
 
     async fn resolve_pinned_from_cache(
@@ -279,7 +279,8 @@ impl<T: Resolver> EagerPackageManager<T> {
         let package = packages
             .get_mut(pinned_url.as_unpinned())
             .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
-        let pkg_dir = Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
+        let (pkg_dir, _resolution_context) =
+            Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
         package.package_directory = Some(pkg_dir);
 
         let cup_handler = StandardCupv2Handler::new(&package.public_keys);
@@ -461,7 +462,7 @@ mod tests {
             BlobInfoIteratorRequest, NeededBlobsRequest, PackageCacheMarker, PackageCacheRequest,
             PackageCacheRequestStream,
         },
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_pkg_ext as pkg, fuchsia_async as fasync, fuchsia_zircon as zx,
         omaha_client::{
             cup_ecdsa::{
                 test_support::{
@@ -484,7 +485,7 @@ mod tests {
         let pkg_dir = PackageDirectory::open_from_namespace().unwrap();
         MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok(pkg_dir) }
+            async move { Ok((pkg_dir, pkg::ResolutionContext::new(vec![]))) }
         })
     }
 
@@ -537,7 +538,7 @@ mod tests {
         let pkg_dir = PackageDirectory::from_proxy(proxy);
         let package_resolver = MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok(pkg_dir) }
+            async move { Ok((pkg_dir, pkg::ResolutionContext::new(vec![]))) }
         });
         (package_resolver, dir)
     }

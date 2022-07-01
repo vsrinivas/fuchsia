@@ -46,21 +46,58 @@ type ResolveError = strict enum : int32 {
 /// repository administration tools.
 @discoverable
 protocol PackageResolver {
-    /// Populates or updates the cache of a package.
+    /// Populates or updates the cache of a package using an absolute package
+    /// URL.
     ///
-    /// Ensures that a package is on the local filesystem.
+    /// Ensures that a package, and any transitive subpackages, are on the local
+    /// filesystem.
     ///
-    /// + request `package_url` the package URL for a package. The following link describes
-    ///   the format, resource paths are not allowed:
+    /// + request `package_url` the absolute package URL for a package.  The
+    ///   following link describes the format:
     ///   https://fuchsia.dev/fuchsia-src/concepts/packages/package_url.
-    /// + request `dir` a request for a directory that will be resolved when the package has
-    ///   been successfully cached.
-    /// * error indicates failure. See `ResolveError` for values and error scenarios.
+    ///   Resource paths are not allowed.
+    /// + request `dir` a request for a directory that will be resolved when the
+    ///   package has been successfully cached.
+    /// + returns a `resolved_context`, which can be passed to
+    ///   `ResolveWithContext`, with a relative URL, to resolve a subpackage of
+    ///   this package.
+    /// * error indicates failure. See `ResolveError` for values and error
+    ///   scenarios.
     // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
     Resolve(resource struct {
         package_url string;
         dir server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error ResolveError;
+    }) -> (struct {
+        resolved_context ResolutionContext;
+    }) error ResolveError;
+
+    /// Populates or updates the cache of a package using either an absolute or
+    /// a relative package URL. If relative, the package will be resolved
+    /// relative to the supplied `context`.
+    ///
+    /// Ensures that a package is on the local filesystem.
+    ///
+    /// + request `package_url` the absolute or relative package URL for a
+    ///   package. If absolute, the `context` is ignored, and the behavior is
+    ///   identical to calling `Resolve()`. A relative `package_url` is a
+    ///   subpackage name.
+    /// + request `context` a `ResolutionContext` associated with a previously
+    ///   resolved package, for resolving subpackages relative to that package.
+    /// + request `dir` a request for a directory that will be resolved when the
+    ///   package has been successfully cached.
+    /// + returns a `resolved_context`, which can be passed to a subsequent call
+    ///   to `ResolveWithContext`, with a relative URL, to resolve a subpackage
+    ///   of this package or subpackage.
+    /// * error indicates failure. See `ResolveError` for values and error
+    ///   scenarios.
+    // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
+    ResolveWithContext(resource struct {
+        package_url string;
+        context ResolutionContext;
+        dir server_end:fuchsia.io.Directory;
+    }) -> (struct {
+        resolved_context ResolutionContext;
+    }) error ResolveError;
 
     /// Determines the hash of a package.
     ///

@@ -6,7 +6,7 @@ use anyhow::Context;
 use futures::TryStreamExt;
 use {
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::PackageResolverRequestStream,
+    fidl_fuchsia_pkg::{self as fpkg, PackageResolverRequestStream},
     fuchsia_url::{PackageVariant, UnpinnedAbsolutePackageUrl},
     futures::StreamExt,
 };
@@ -34,7 +34,20 @@ pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
                         flags,
                         dir.into_channel(),
                     )?;
-                    responder.send(&mut Ok(())).context("error sending response")?;
+                    responder
+                        .send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] }))
+                        .context("error sending response")?;
+                }
+                fidl_fuchsia_pkg::PackageResolverRequest::ResolveWithContext {
+                    package_url: _,
+                    context: _,
+                    dir: _,
+                    responder,
+                } => {
+                    // Not implemented for driver-index PackageResolver
+                    responder
+                        .send(&mut Err(fidl_fuchsia_pkg::ResolveError::Internal))
+                        .context("error sending response")?;
                 }
                 fidl_fuchsia_pkg::PackageResolverRequest::GetHash { package_url: _, responder } => {
                     responder

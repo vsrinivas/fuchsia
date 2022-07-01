@@ -33,3 +33,25 @@ type PackageIndexEntry = struct {
     package_url PackageUrl;
     meta_far_blob_id BlobId;
 };
+
+/// A package resolution context, used when resolving package URLs relative to
+/// another package.
+type ResolutionContext = struct {
+    bytes bytes:MAX_RESOLUTION_CONTEXT_SIZE;
+};
+
+// TODO(fxbug.dev/100050): Change this length to something smaller once
+// fuchsia.pkg implements subpackages, assuming fuchsia.pkg implements the
+// package context value as a much smaller lookup key (such as a package hash to
+// the package containing the subpackage map). Make a related change to
+// the component's MAX_RESOLUTION_CONTEXT_LENGTH (to be
+// renamed MAX_RESOLUTION_CONTEXT_SIZE) in
+// //sdk/fidl/fuchsia.component.resolution/resolver.fidl
+
+/// The maximum number of bytes for a `ResolutionContext`.
+///
+/// Note that this value must be less than or equal to
+/// `fuchsia.component.resolution::MAX_RESOLUTION_CONTEXT_LENGTH`, since the
+/// component resolver is expected to copy or contain the context provided by
+/// the package resolver.
+const MAX_RESOLUTION_CONTEXT_SIZE uint32 = 8192;
