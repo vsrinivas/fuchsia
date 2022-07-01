@@ -8,7 +8,6 @@ group("examples") {
   public_deps = [
     ":flatland-examples",
     "simplest_app",
-    "yuv_to_image_pipe",
   ]
 }
 

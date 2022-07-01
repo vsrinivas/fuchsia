@@ -23,7 +23,7 @@ This directory contains the following performance tests:
 
 *   `input_latency_benchmarks_test` - Tests the performance of
     end-to-end input latency, measured by tracing flow events, for minimal
-    Scenic clients (`simplest_app` and `yuv_to_image_pipe`).
+    Scenic clients (`simplest_app`).
 
 *   `kernel_boot_stats_test` - SL4F wrapper for a test that records the
     time taken by different parts of the kernel boot process.

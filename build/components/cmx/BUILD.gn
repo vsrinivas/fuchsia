@@ -643,7 +643,6 @@ group("cmx_allowlist") {
     "//src/ui/examples/flatland-display:flatland-display_manifest_compile",
     "//src/ui/examples/flatland-view-provider:flatland-view-provider-v1_manifest_compile",
     "//src/ui/examples/simplest_app:simplest_app_component_manifest_compile",
-    "//src/ui/examples/yuv_to_image_pipe:yuv_to_image_pipe_component_manifest_compile",
     "//src/ui/input/drivers/goldfish_sensor:goldfish-sensor-parser-fuzzer_component_manifest_compile",
     "//src/ui/scenic:component_manifest_compile",
     "//src/ui/scenic/lib/input/tests/fuzzers:input-fuzzer_component_manifest_compile",

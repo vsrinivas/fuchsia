@@ -217,12 +217,6 @@ There are some examples available:
   - **Build dependency:** `//src/ui/examples/simplest_app`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx`
 
-* **yuv_to_image_pipe**
-  - An application that updates the scene using an ImagePipe.
-  - **Source:** [`//src/ui/examples/yuv_to_image_pipe`](/src/ui/examples/yuv_to_image_pipe)
-  - **Build dependency:** `//src/ui/examples/yuv_to_image_pipe`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx`
-
 To run these applications, you need to include the following dependency in your `fx set`
 configuration:
 

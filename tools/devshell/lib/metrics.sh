@@ -114,7 +114,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell run"
     "shell run_simplest_app_benchmark.sh"
     "shell run_test_component"
-    "shell run_yuv_to_image_pipe_benchmark.sh"
     "shell run-test-component"
     "shell run-test-suite"
     "shell scp"

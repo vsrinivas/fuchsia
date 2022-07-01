@@ -82,9 +82,4 @@ void main() {
 
   _addTest('fuchsia.input_latency.simplest_app',
       '/bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx');
-  _addTest(
-      'fuchsia.input_latency.yuv_to_image_pipe',
-      '/bin/present_view '
-          'fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx '
-          '--NV12 --input_driven');
 }
