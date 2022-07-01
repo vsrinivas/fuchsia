@@ -2189,13 +2189,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         match source {
             RouteSource::Service(CapabilitySourceInterface::<
                 <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
-            >::Collection {
+            >::Aggregate {
                 capability: AggregateCapability::Service(name),
-                collection_name,
                 ..
             }) => {
                 assert_eq!(name, CapabilityName("foo".into()));
-                assert_eq!(collection_name, String::new(),);
             }
             _ => panic!("bad capability source"),
         };

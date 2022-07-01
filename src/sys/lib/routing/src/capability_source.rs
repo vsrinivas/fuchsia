@@ -70,6 +70,11 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
         collection_name: String,
         component: WeakComponentInstanceInterface<C>,
     },
+    Aggregate {
+        capability: AggregateCapability,
+        capability_provider: Box<dyn AggregateCapabilityProvider<C>>,
+        component: WeakComponentInstanceInterface<C>,
+    },
     FilteredService {
         capability: ComponentCapability,
         component: WeakComponentInstanceInterface<C>,
@@ -89,6 +94,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.can_be_in_namespace(),
             Self::Capability { .. } => true,
             Self::Collection { capability, .. } => capability.can_be_in_namespace(),
+            Self::Aggregate { capability, .. } => capability.can_be_in_namespace(),
             Self::FilteredService { capability, .. } => capability.can_be_in_namespace(),
         }
     }
@@ -101,6 +107,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.source_name(),
             Self::Capability { .. } => None,
             Self::Collection { capability, .. } => Some(capability.source_name()),
+            Self::Aggregate { capability, .. } => Some(capability.source_name()),
             Self::FilteredService { capability, .. } => capability.source_name(),
         }
     }
@@ -113,6 +120,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Namespace { capability, .. } => capability.type_name(),
             Self::Capability { source_capability, .. } => source_capability.type_name(),
             Self::Collection { capability, .. } => capability.type_name(),
+            Self::Aggregate { capability, .. } => capability.type_name(),
             Self::FilteredService { capability, .. } => capability.type_name(),
         }
     }
@@ -123,7 +131,8 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             | Self::Framework { component, .. }
             | Self::Capability { component, .. }
             | Self::FilteredService { component, .. }
-            | Self::Collection { component, .. } => {
+            | Self::Collection { component, .. }
+            | Self::Aggregate { component, .. } => {
                 WeakExtendedInstanceInterface::Component(component.clone())
             }
             Self::Builtin { top_instance, .. } | Self::Namespace { top_instance, .. } => {
@@ -145,6 +154,7 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
                 CapabilitySourceInterface::Framework { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Builtin { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Namespace { capability, .. } => capability.to_string(),
+                CapabilitySourceInterface::Aggregate { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Capability { source_capability, .. } =>
                     format!("{}", source_capability),
                 CapabilitySourceInterface::Collection {

@@ -321,6 +321,200 @@ impl CapabilityProvider for FilteredServiceProvider {
     }
 }
 
+/// Serves a Service directory that allows clients to list instances resulting from an aggregation of service offers
+/// and to open instances.
+///
+pub struct AggregateServiceDirectoryProvider {
+    /// Execution scope for requests to `dir`. This is the same scope
+    /// as the one in `collection_component`'s resolved state.
+    execution_scope: ExecutionScope,
+
+    /// The directory that contains entries for all service instances
+    /// across all of the aggregated source services.
+    dir: Arc<lazy::Lazy<AggregateServiceDirectory>>,
+}
+
+impl AggregateServiceDirectoryProvider {
+    pub async fn create(
+        target: WeakComponentInstance,
+        collection_component: &Arc<ComponentInstance>,
+        provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
+    ) -> Result<AggregateServiceDirectoryProvider, ModelError> {
+        let execution_scope =
+            collection_component.lock_resolved_state().await?.execution_scope().clone();
+        let dir = lazy::lazy(AggregateServiceDirectory {
+            target,
+            collection_component: collection_component.abs_moniker().clone(),
+            provider,
+        });
+        Ok(AggregateServiceDirectoryProvider { execution_scope, dir })
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for AggregateServiceDirectoryProvider {
+    async fn open(
+        self: Box<Self>,
+        _task_scope: TaskScope,
+        flags: fio::OpenFlags,
+        open_mode: u32,
+        relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<(), ModelError> {
+        let relative_path_utf8 = relative_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
+        let relative_path = if relative_path_utf8.is_empty() {
+            vfs::path::Path::dot()
+        } else {
+            vfs::path::Path::validate_and_split(relative_path_utf8)
+                .map_err(|_| ModelError::path_invalid(relative_path_utf8))?
+        };
+        self.dir.open(
+            self.execution_scope.clone(),
+            flags,
+            open_mode,
+            relative_path,
+            ServerEnd::new(channel::take_channel(server_end)),
+        );
+        Ok(())
+    }
+}
+
+/// A directory entry representing a service with multiple services as its source.
+/// This directory is hosted by component_manager on behalf of the component which offered multiple sources of
+/// the same service capability.
+///
+/// This directory can be accessed by components by opening `/svc/my.service/` in their
+/// incoming namespace when they have a `use my.service` declaration in their manifest, and the
+/// source of `my.service` is multiple services.
+struct AggregateServiceDirectory {
+    /// The original target of the capability route (the component that opened this directory).
+    target: WeakComponentInstance,
+    /// The moniker of the component hosting the collection.
+    collection_component: AbsoluteMoniker,
+    /// The provider that lists collection instances and performs routing to an instance.
+    provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
+}
+
+#[async_trait]
+impl lazy::LazyDirectory for AggregateServiceDirectory {
+    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
+        // Parse the entry name into its (component,instance) parts.
+        // In the case of non-comma separated entries, treat the component and
+        // instance name as the same.
+        let (component, instance) = name.split_once(',').unwrap_or((name, name));
+        Ok(Arc::new(ServiceInstanceDirectoryEntry {
+            component: component.to_string(),
+            instance: instance.to_string(),
+            target: self.target.clone(),
+            intermediate_component: self.collection_component.clone(),
+            provider: self.provider.clone(),
+        }))
+    }
+
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
+        mut sink: Box<dyn dirents_sink::Sink>,
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), zx::Status> {
+        let next_entry = match pos {
+            TraversalPosition::End => {
+                // Bail out early when there is no work to do.
+                // This method is always called at least once with TraversalPosition::End.
+                return Ok((TraversalPosition::End, sink.seal()));
+            }
+            TraversalPosition::Start => None,
+            TraversalPosition::Name(entry) => {
+                // All generated filenames are guaranteed to have the ',' separator.
+                entry.split_once(',').or(Some((entry.as_str(), entry.as_str())))
+            }
+            TraversalPosition::Index(_) => panic!("TraversalPosition::Index is never used"),
+        };
+
+        let target = self.target.upgrade().map_err(|e| e.as_zx_status())?;
+        let mut instances =
+            self.provider.list_instances().await.map_err(|_| zx::Status::INTERNAL)?;
+        if instances.is_empty() {
+            return Ok((TraversalPosition::End, sink.seal()));
+        }
+
+        // Sort to guarantee a stable iteration order.
+        instances.sort();
+
+        let (instances, mut next_instance) =
+            if let Some((next_component, next_instance)) = next_entry {
+                // Skip to the next entry. If the exact component is found, start there.
+                // Otherwise start at the next component and clear any assumptions about
+                // the next instance within that component.
+                match instances.binary_search_by(|i| i.as_str().cmp(next_component)) {
+                    Ok(idx) => (&instances[idx..], Some(next_instance)),
+                    Err(idx) => (&instances[idx..], None),
+                }
+            } else {
+                (&instances[0..], None)
+            };
+
+        for instance in instances {
+            if let Ok(source) = self.provider.route_instance(&instance).await {
+                let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                    .map_err(|_| zx::Status::INTERNAL)?;
+                if let Ok(()) = open_capability_at_source(OpenRequest {
+                    flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    open_mode: fio::MODE_TYPE_DIRECTORY,
+                    relative_path: PathBuf::new(),
+                    source,
+                    target: &target,
+                    server_chan: &mut server.into_channel(),
+                })
+                .await
+                {
+                    if let Ok(mut dirents) = fuchsia_fs::directory::readdir(&proxy).await {
+                        // Sort to guarantee a stable iteration order.
+                        dirents.sort();
+
+                        let dirents = if let Some(next_instance) = next_instance.take() {
+                            // Skip to the next entry. If the exact instance is found, start there.
+                            // Otherwise start at the next instance, assuming the missing one was removed.
+                            match dirents.binary_search_by(|e| e.name.as_str().cmp(next_instance)) {
+                                Ok(idx) | Err(idx) => &dirents[idx..],
+                            }
+                        } else {
+                            &dirents[0..]
+                        };
+
+                        for dirent in dirents {
+                            // Encode the (component,instance) tuple so that it can be represented in a single
+                            // path segment. If the component and instance name are identical ignore comma separation.
+                            // TODO(fxbug.dev/100985) Remove this entry name parsing scheme. Supporting component instance name
+                            // prefixes is no longer necessary.
+                            let entry_name = {
+                                if instance == &dirent.name {
+                                    instance.clone()
+                                } else {
+                                    format!("{},{}", &instance, &dirent.name)
+                                }
+                            };
+                            sink = match sink.append(
+                                &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
+                                &entry_name,
+                            ) {
+                                dirents_sink::AppendResult::Ok(sink) => sink,
+                                dirents_sink::AppendResult::Sealed(sealed) => {
+                                    // There is not enough space to return this entry. Record it as the next
+                                    // entry to start at for subsequent calls.
+                                    return Ok((TraversalPosition::Name(entry_name), sealed));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok((TraversalPosition::End, sink.seal()))
+    }
+}
+
 /// Serves a Service directory that allows clients to list instances in a collection
 /// and to open instances.
 ///

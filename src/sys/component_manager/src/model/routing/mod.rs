@@ -19,7 +19,7 @@ use {
             hooks::{Event, EventPayload},
             routing::{
                 providers::{DefaultComponentCapabilityProvider, NamespaceCapabilityProvider},
-                service::FilteredServiceProvider,
+                service::{AggregateServiceDirectoryProvider, FilteredServiceProvider},
             },
             storage,
         },
@@ -227,6 +227,14 @@ async fn get_default_provider(
                 _ => Ok(None),
             }
         }
+        CapabilitySource::Aggregate { capability_provider, component, .. } => Ok(Some(Box::new(
+            AggregateServiceDirectoryProvider::create(
+                target,
+                &component.upgrade()?,
+                capability_provider.clone(),
+            )
+            .await?,
+        ))),
         CapabilitySource::Framework { .. }
         | CapabilitySource::Capability { .. }
         | CapabilitySource::Builtin { .. }
@@ -312,6 +320,9 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
             }
             CapabilitySource::Collection { .. } => {
                 return Err(ModelError::unsupported("collections"));
+            }
+            CapabilitySource::Aggregate { .. } => {
+                return Err(ModelError::unsupported("aggregate capability"));
             }
         };
     }

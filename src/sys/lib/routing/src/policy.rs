@@ -182,7 +182,8 @@ impl GlobalPolicyChecker {
                     capability: source_capability.type_name(),
                 }
             }
-            CapabilitySourceInterface::Collection { capability, component, .. } => {
+            CapabilitySourceInterface::Collection { capability, component, .. }
+            | CapabilitySourceInterface::Aggregate { capability, component, .. } => {
                 CapabilityAllowlistKey {
                     source_moniker: ExtendedMoniker::ComponentInstance(
                         component.abs_moniker.clone(),

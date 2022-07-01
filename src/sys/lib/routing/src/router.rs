@@ -657,10 +657,9 @@ where
     );
     // TODO(fxbug.dev/71881) Make the Collection CapabilitySourceInterface type generic
     // for other types of aggregations.
-    Ok(CapabilitySourceInterface::<C>::Collection {
+    Ok(CapabilitySourceInterface::<C>::Aggregate {
         capability: AggregateCapability::Service(source_name),
         component: aggregation_component.as_weak(),
-        collection_name: "".to_string(),
         capability_provider: Box::new(AggregateServiceProvider::new(
             offer_service_decls,
             aggregation_component.as_weak(),
