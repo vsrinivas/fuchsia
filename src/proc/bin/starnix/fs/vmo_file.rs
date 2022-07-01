@@ -194,6 +194,7 @@ impl FileOps for VmoFileObject {
         _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         // Fake SEAL ioctl
+        // TODO(fxb/103801): Implements the operation.
         match request {
             F_ADD_SEALS | F_GET_SEALS => Ok(SUCCESS),
             _ => default_ioctl(current_task, request),
