@@ -50,8 +50,6 @@ TEST(PrctlTest, SecureBits) {
     SAFE_SYSCALL(prctl(PR_SET_SECUREBITS, SECBIT_KEEP_CAPS));
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_GET_SECUREBITS)), SECBIT_KEEP_CAPS);
   });
-
-  ASSERT_TRUE(helper.WaitForChildren());
 }
 
 TEST(PrctlTest, DropCapabilities) {
@@ -62,8 +60,6 @@ TEST(PrctlTest, DropCapabilities) {
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_DROP, CAP_DAC_OVERRIDE)), 0);
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_READ, CAP_DAC_OVERRIDE)), false);
   });
-
-  ASSERT_TRUE(helper.WaitForChildren());
 }
 
 }  // namespace
