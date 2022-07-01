@@ -1576,10 +1576,12 @@ TEST_F(DispatcherTest, IrqCancelOnShutdownCallbackOnlyOnce) {
                             [&] { task_complete.Signal(); }));
   ASSERT_OK(task_complete.Wait());
 
+  // This should remove the in-flight irq, unbind the irq and call the handler with ZX_ERR_CANCELED.
+  fdf_dispatcher_shutdown_async(fdf_dispatcher);
+
+  // We can now unblock the first dispatcher.
   complete_task.Signal();
 
-  // This should unbind the irq and call the handler with ZX_ERR_CANCELED.
-  fdf_dispatcher_shutdown_async(fdf_dispatcher);
   ASSERT_OK(shutdown_observer->WaitUntilShutdown());
   ASSERT_OK(irq_completion.Wait());
   fdf_dispatcher_destroy(fdf_dispatcher);
