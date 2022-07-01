@@ -61,6 +61,7 @@
                 "fuchsia.location.position.EmergencyProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.media.sounds.Player",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.metricslogger.test.MetricsLogger",
                 "fuchsia.net.interfaces.State",

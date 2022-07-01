@@ -128,6 +128,11 @@
             to: "#sl4f",
         },
         {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "#soundplayer",
+            to: "#sl4f",
+        },
+        {
             protocol: "fuchsia.metricslogger.test.MetricsLogger",
             from: "#metrics-logger",
             to: "#sl4f",

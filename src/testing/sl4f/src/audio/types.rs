@@ -11,6 +11,8 @@ pub enum AudioMethod {
     StartOutputSave,
     StopOutputSave,
     GetOutputAudio,
+
+    PlaySound,
 }
 
 impl std::str::FromStr for AudioMethod {
@@ -25,6 +27,7 @@ impl std::str::FromStr for AudioMethod {
             "StartOutputSave" => Ok(AudioMethod::StartOutputSave),
             "StopOutputSave" => Ok(AudioMethod::StopOutputSave),
             "GetOutputAudio" => Ok(AudioMethod::GetOutputAudio),
+            "PlaySound" => Ok(AudioMethod::PlaySound),
             _ => return Err(format_err!("invalid Audio Facade method: {}", method)),
         }
     }
