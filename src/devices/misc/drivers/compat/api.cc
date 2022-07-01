@@ -180,6 +180,12 @@ __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* 
   bool has_fragment =
       std::find(dev->fragments().begin(), dev->fragments().end(), name) != dev->fragments().end();
 
+  // TODO(fxbug.dev/103306): We don't actually have composite support yet, so if the
+  // device isn't a composite, just pretend we found it.
+  if (dev->fragments().empty()) {
+    has_fragment = true;
+  }
+
   // TODO(fxbug.dev/103734): Fix sysmem routing and remove this.
   if (!has_fragment && proto_id != ZX_PROTOCOL_SYSMEM) {
     return ZX_ERR_NOT_FOUND;
