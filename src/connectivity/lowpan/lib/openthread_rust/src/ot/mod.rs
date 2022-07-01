@@ -133,6 +133,9 @@ pub use joiner::*;
 mod trel;
 pub use trel::*;
 
+mod net_data;
+pub use net_data::*;
+
 /// Trait implemented by all OpenThread instances.
 pub trait InstanceInterface:
     Ip6
@@ -152,6 +155,7 @@ pub trait InstanceInterface:
     + Udp
     + Trel
     + BorderAgent
+    + NetData
 {
 }
 

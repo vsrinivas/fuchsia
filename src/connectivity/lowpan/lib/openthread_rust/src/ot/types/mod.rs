@@ -81,3 +81,19 @@ pub const NETIF_INDEX_UNSPECIFIED: NetifIndex = 0;
 
 /// Unspecified power
 pub const DECIBELS_UNSPECIFIED: Decibels = -128;
+
+/// The largest child ID supported by OpenThread, 511.
+pub const MAX_CHILD_ID: u16 = 0x1FF;
+
+/// The bit offset to the router ID in an RLOC16.
+pub const ROUTER_ID_OFFSET: usize = 9;
+
+/// Extracts the child ID from an RLOC16.
+pub fn rloc16_to_child_id(rloc16: u16) -> u16 {
+    rloc16 & MAX_CHILD_ID
+}
+
+/// Extracts the router ID from an RLOC16.
+pub fn rloc16_to_router_id(rloc16: u16) -> u8 {
+    (rloc16 >> ROUTER_ID_OFFSET) as u8
+}

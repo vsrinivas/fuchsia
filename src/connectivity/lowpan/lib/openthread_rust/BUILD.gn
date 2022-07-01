@@ -46,6 +46,7 @@ rustc_library("openthread") {
     "src/ot/link.rs",
     "src/ot/message.rs",
     "src/ot/mod.rs",
+    "src/ot/net_data.rs",
     "src/ot/otbox.rs",
     "src/ot/platform.rs",
     "src/ot/radio.rs",
