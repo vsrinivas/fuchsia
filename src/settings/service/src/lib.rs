@@ -182,7 +182,7 @@ impl ServiceConfiguration {
         .into();
 
         // Consolidate display type.
-        // TODO(fxbug.dev/76991): Remove this special handling once light sensor is its own FIDL
+        // TODO(fxbug.dev/82297): Remove this special handling once light sensor is its own FIDL
         // interface.
         if self.fidl_interfaces.is_superset(&display_subinterfaces) {
             self.fidl_interfaces = &self.fidl_interfaces - &display_subinterfaces;
