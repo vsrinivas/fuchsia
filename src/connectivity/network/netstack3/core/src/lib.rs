@@ -94,7 +94,7 @@ use net_types::{
 use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::{
-    context::{EventContext, RngContext, TimerContext},
+    context::{CounterContext, EventContext, RngContext, TimerContext},
     device::{DeviceLayerState, DeviceLayerTimerId},
     ip::{
         device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
@@ -202,8 +202,6 @@ impl StackStateBuilder {
             ipv4: self.ipv4.build(),
             ipv6: self.ipv6.build(),
             device: Default::default(),
-            #[cfg(test)]
-            test_counters: Default::default(),
         }
     }
 }
@@ -214,8 +212,6 @@ pub struct StackState<I: Instant> {
     ipv4: Ipv4State<I, DeviceId>,
     ipv6: Ipv6State<I, DeviceId>,
     device: DeviceLayerState<I>,
-    #[cfg(test)]
-    test_counters: core::cell::RefCell<testutil::TestCounters>,
 }
 
 impl<I: Instant> Default for StackState<I> {
@@ -253,7 +249,8 @@ impl<B: BufferMut, C: NonSyncContext + BufferNonSyncContextInner<B>> BufferNonSy
 
 /// The non-synchronized context for the stack.
 pub trait NonSyncContext:
-    BufferNonSyncContextInner<Buf<Vec<u8>>>
+    CounterContext
+    + BufferNonSyncContextInner<Buf<Vec<u8>>>
     + BufferNonSyncContextInner<EmptyBuf>
     + RngContext
     + TimerContext<TimerId>
@@ -270,7 +267,8 @@ pub trait NonSyncContext:
 {
 }
 impl<
-        C: BufferNonSyncContextInner<Buf<Vec<u8>>>
+        C: CounterContext
+            + BufferNonSyncContextInner<Buf<Vec<u8>>>
             + BufferNonSyncContextInner<EmptyBuf>
             + RngContext
             + TimerContext<TimerId>
@@ -416,7 +414,7 @@ pub fn handle_timer<NonSyncCtx: NonSyncContext>(
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {
-            increment_counter!(sync_ctx, "timer::nop");
+            ctx.increment_counter("timer::nop");
         }
     }
 }

@@ -884,14 +884,18 @@ pub trait UdpContext<I: IcmpIpExt> {
 }
 
 /// The non-synchronized context for UDP.
-pub trait UdpStateNonSyncContext<I: IpExt>: InstantContext + RngContext + UdpContext<I> {}
-impl<I: IpExt, C: InstantContext + RngContext + UdpContext<I>> UdpStateNonSyncContext<I> for C {}
+pub trait UdpStateNonSyncContext<I: IpExt>:
+    InstantContext + RngContext + UdpContext<I> + CounterContext
+{
+}
+impl<I: IpExt, C: InstantContext + RngContext + UdpContext<I> + CounterContext>
+    UdpStateNonSyncContext<I> for C
+{
+}
 
 /// An execution context for the UDP protocol which also provides access to state.
 pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
-    CounterContext
-    + TransportIpContext<I, C>
-    + StateContext<C, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
+    TransportIpContext<I, C> + StateContext<C, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
 {
     /// Requests that the specified device join the given multicast group.
     ///
@@ -1035,7 +1039,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> IpTransp
         mut udp_packet: &[u8],
         err: I::ErrorCode,
     ) {
-        sync_ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
+        ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
         trace!("UdpIpTransportContext::receive_icmp_error({:?})", err);
 
         let udp_packet =

@@ -153,11 +153,15 @@ pub(crate) trait ArpDeviceIdContext<D: ArpDevice> {
 
 /// The non-synchronized execution context for the ARP protocol.
 pub(crate) trait ArpNonSyncCtx<D: ArpDevice, P: PType, DeviceId>:
-    TimerContext<ArpTimerId<D, P, DeviceId>>
+    TimerContext<ArpTimerId<D, P, DeviceId>> + CounterContext
 {
 }
-impl<DeviceId, D: ArpDevice, P: PType, C: TimerContext<ArpTimerId<D, P, DeviceId>>>
-    ArpNonSyncCtx<D, P, DeviceId> for C
+impl<
+        DeviceId,
+        D: ArpDevice,
+        P: PType,
+        C: TimerContext<ArpTimerId<D, P, DeviceId>> + CounterContext,
+    > ArpNonSyncCtx<D, P, DeviceId> for C
 {
 }
 
@@ -166,7 +170,6 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, Self:
     ArpDeviceIdContext<D>
     + StateContext<C, ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
     + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
-    + CounterContext
 {
     /// Get a protocol address of this interface.
     ///
@@ -403,7 +406,7 @@ pub(crate) fn handle_packet<
             packet.sender_protocol_address(),
         ));
 
-        sync_ctx.increment_counter("arp::rx_gratuitous_resolve");
+        ctx.increment_counter("arp::rx_gratuitous_resolve");
         // Notify device layer:
         sync_ctx.address_resolved(
             ctx,
@@ -479,7 +482,7 @@ pub(crate) fn handle_packet<
             packet.sender_protocol_address(),
         ));
 
-        sync_ctx.increment_counter("arp::rx_resolve");
+        ctx.increment_counter("arp::rx_resolve");
         // Notify device layer:
         sync_ctx.address_resolved(
             ctx,
@@ -490,7 +493,7 @@ pub(crate) fn handle_packet<
     }
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = sync_ctx.get_hardware_addr(ctx, device_id);
-        sync_ctx.increment_counter("arp::rx_request");
+        ctx.increment_counter("arp::rx_request");
         // TODO(joshlf): Do something if send_frame returns an error?
         let _ = sync_ctx.send_frame(
             ctx,

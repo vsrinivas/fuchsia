@@ -179,20 +179,17 @@ where
 
 /// The non-synchronized execution context for NDP.
 pub(crate) trait NdpNonSyncContext<D: LinkDevice, DeviceId>:
-    TimerContext<NdpTimerId<D, DeviceId>>
+    TimerContext<NdpTimerId<D, DeviceId>> + CounterContext
 {
 }
-impl<DeviceId, D: LinkDevice, C: TimerContext<NdpTimerId<D, DeviceId>>>
+impl<DeviceId, D: LinkDevice, C: TimerContext<NdpTimerId<D, DeviceId>> + CounterContext>
     NdpNonSyncContext<D, DeviceId> for C
 {
 }
 
 /// The execution context for an NDP device.
 pub(crate) trait NdpContext<D: LinkDevice, C: NdpNonSyncContext<D, Self::DeviceId>>:
-    Sized
-    + DeviceIdContext<D>
-    + CounterContext
-    + StateContext<C, NdpState<D>, <Self as DeviceIdContext<D>>::DeviceId>
+    Sized + DeviceIdContext<D> + StateContext<C, NdpState<D>, <Self as DeviceIdContext<D>>::DeviceId>
 {
     /// Returns the NDP retransmission timer configured on the device.
     // TODO(https://fxbug.dev/72378): Remove this method once NUD operates in
@@ -478,7 +475,7 @@ fn handle_timer<D: LinkDevice, C: NdpNonSyncContext<D, SC::DeviceId>, SC: NdpCon
                     // unreachable state forever, remove the neighbor from the
                     // database:
                     ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
-                    sync_ctx.increment_counter("ndp::neighbor_solicitation_timer");
+                    ctx.increment_counter("ndp::neighbor_solicitation_timer");
 
                     sync_ctx.address_resolution_failed(ctx, id.device_id, &neighbor_addr);
                 }
@@ -934,7 +931,7 @@ pub(crate) fn receive_ndp_packet<
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC
             // 4861 section 6.1.2.
 
-            sync_ctx.increment_counter("ndp::rx_router_advertisement");
+            ctx.increment_counter("ndp::rx_router_advertisement");
 
             if sync_ctx.is_router_device(device_id) {
                 trace!("receive_ndp_packet: received NDP RA as a router, discarding NDP RA");
@@ -1059,7 +1056,7 @@ pub(crate) fn receive_ndp_packet<
             //
             // TODO(https://fxbub.dev/99830): Move all of NDP handling
             // to IP.
-            sync_ctx.increment_counter("ndp::rx_neighbor_solicitation");
+            ctx.increment_counter("ndp::rx_neighbor_solicitation");
 
             // If we have a source link layer address option, we take it and
             // save to our cache.
@@ -1120,7 +1117,7 @@ pub(crate) fn receive_ndp_packet<
                 }
             };
 
-            sync_ctx.increment_counter("ndp::rx_neighbor_advertisement");
+            ctx.increment_counter("ndp::rx_neighbor_advertisement");
 
             let ndp_state = sync_ctx.get_state_mut_with(device_id);
 
@@ -1507,7 +1504,7 @@ mod tests {
         }
         // Check that we hit the timeout after MAX_MULTICAST_SOLICIT.
         assert_eq!(
-            get_counter_val(&sync_ctx, "ndp::neighbor_solicitation_timer"),
+            get_counter_val(&non_sync_ctx, "ndp::neighbor_solicitation_timer"),
             1,
             "timeout counter at zero"
         );
@@ -1595,7 +1592,7 @@ mod tests {
         );
 
         assert_eq!(
-            get_counter_val(net.sync_ctx("remote"), "ndp::rx_neighbor_solicitation"),
+            get_counter_val(net.non_sync_ctx("remote"), "ndp::rx_neighbor_solicitation"),
             1,
             "remote received solicitation"
         );
@@ -1605,7 +1602,7 @@ mod tests {
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
         assert_eq!(
-            get_counter_val(net.sync_ctx("local"), "ndp::rx_neighbor_advertisement"),
+            get_counter_val(net.non_sync_ctx("local"), "ndp::rx_neighbor_advertisement"),
             1,
             "local received advertisement"
         );
@@ -1649,7 +1646,7 @@ mod tests {
         });
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
         assert_eq!(
-            get_counter_val(net.sync_ctx("remote"), "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
+            get_counter_val(net.non_sync_ctx("remote"), "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
             1
         );
 
@@ -2388,7 +2385,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_solicitation"), 0);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_solicitation"), 0);
     }
 
     #[test]
@@ -2423,7 +2420,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 0);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 0);
 
         // Test receiving NDP RA where source IP is a link local address (should
         // receive).
@@ -2441,7 +2438,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 1);
     }
 
     #[test]
@@ -2549,7 +2546,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut sync_ctx,
             device_id.try_into().expect("expected ethernet ID"),
@@ -2579,7 +2576,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 2);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut sync_ctx,
             device_id.try_into().expect("expected ethernet ID"),
@@ -2631,7 +2628,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 1);
         assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), hw_mtu);
 
         // Receive a new RA with an invalid MTU option (value is lower than IPv6
@@ -2649,7 +2646,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 2);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 2);
         assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), hw_mtu);
 
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min
@@ -2667,7 +2664,7 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 3);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 3);
         assert_eq!(
             crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device),
             Ipv6::MINIMUM_LINK_MTU.into()
@@ -3900,7 +3897,7 @@ mod tests {
         );
 
         // Verify that `conflicted_addr` was generated and rejected.
-        assert_eq!(get_counter_val(&mut sync_ctx, "generated_slaac_addr_exists"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "generated_slaac_addr_exists"), 1);
 
         // Should have gotten a new temporary IP.
         let temporary_slaac_addresses =

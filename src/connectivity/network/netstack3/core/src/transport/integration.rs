@@ -5,9 +5,7 @@
 use net_types::MulticastAddr;
 
 use crate::{
-    context::CounterContext,
-    context::NonTestCtxMarker,
-    context::StateContext,
+    context::{NonTestCtxMarker, StateContext},
     ip::{
         device::{IpDeviceContext, IpDeviceIpExt, IpDeviceNonSyncContext},
         gmp::GmpHandler,
@@ -19,8 +17,7 @@ use crate::{
 impl<
         I: IpExt + IpDeviceIpExt<C::Instant, SC::DeviceId>,
         C: UdpStateNonSyncContext<I> + IpDeviceNonSyncContext<I, SC::DeviceId>,
-        SC: CounterContext
-            + TransportIpContext<I, C>
+        SC: TransportIpContext<I, C>
             + StateContext<C, UdpState<I, SC::DeviceId>>
             + IpDeviceContext<I, C>
             + GmpHandler<I, C>

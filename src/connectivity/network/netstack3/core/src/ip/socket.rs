@@ -337,15 +337,15 @@ pub(super) struct IpSockRoute<I: Ip, D> {
 }
 
 /// The non-synchronized execution context for IP sockets.
-pub(super) trait IpSocketNonSyncContext: InstantContext {}
-impl<C: InstantContext> IpSocketNonSyncContext for C {}
+pub(super) trait IpSocketNonSyncContext: InstantContext + CounterContext {}
+impl<C: InstantContext + CounterContext> IpSocketNonSyncContext for C {}
 
 /// The context required in order to implement [`IpSocketHandler`].
 ///
 /// Blanket impls of `IpSocketHandler` are provided in terms of
 /// `IpSocketContext`.
 pub(super) trait IpSocketContext<I, C: IpSocketNonSyncContext>:
-    IpDeviceIdContext<I> + CounterContext
+    IpDeviceIdContext<I>
 where
     I: IpDeviceStateIpExt<C::Instant>,
 {
@@ -496,7 +496,7 @@ impl<
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
-        self.increment_counter("send_ipv4_packet");
+        ctx.increment_counter("send_ipv4_packet");
 
         send_ip_packet(self, ctx, ip_sock, body, mtu)
     }
@@ -516,7 +516,7 @@ impl<
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
-        self.increment_counter("send_ipv6_packet");
+        ctx.increment_counter("send_ipv6_packet");
 
         send_ip_packet(self, ctx, ip_sock, body, mtu)
     }
@@ -1543,10 +1543,10 @@ mod tests {
         assert_eq!(non_sync_ctx.frames_sent().len(), 0);
 
         #[ipv4]
-        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv4_packet"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 1);
 
         #[ipv6]
-        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv6_packet"), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 1);
     }
 
     #[ip_test]

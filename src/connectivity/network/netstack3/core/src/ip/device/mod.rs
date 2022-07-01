@@ -24,7 +24,9 @@ use packet::{BufferMut, EmptyBuf, Serializer};
 use packet_formats::utils::NonZeroDuration;
 
 use crate::{
-    context::{EventContext, InstantContext, RngContext, TimerContext, TimerHandler},
+    context::{
+        CounterContext, EventContext, InstantContext, RngContext, TimerContext, TimerHandler,
+    },
     error::{ExistsError, NotFoundError},
     ip::{
         device::{
@@ -253,13 +255,17 @@ pub enum IpDeviceEvent<DeviceId, I: Ip> {
 pub(crate) trait IpDeviceNonSyncContext<
     I: IpDeviceIpExt<<Self as InstantContext>::Instant, DeviceId>,
     DeviceId,
->: RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>>
+>:
+    RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>> + CounterContext
 {
 }
 impl<
         DeviceId,
         I: IpDeviceIpExt<<C as InstantContext>::Instant, DeviceId>,
-        C: RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>>,
+        C: RngContext
+            + TimerContext<I::Timer>
+            + EventContext<IpDeviceEvent<DeviceId, I>>
+            + CounterContext,
     > IpDeviceNonSyncContext<I, DeviceId> for C
 {
 }

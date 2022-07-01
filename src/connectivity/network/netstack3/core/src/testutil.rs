@@ -4,13 +4,7 @@
 
 //! Testing-related utilities.
 
-use alloc::{
-    borrow::ToOwned,
-    collections::HashMap,
-    string::{String, ToString},
-    vec,
-    vec::Vec,
-};
+use alloc::{borrow::ToOwned, collections::HashMap, vec, vec::Vec};
 use core::{fmt::Debug, time::Duration};
 
 use net_types::{
@@ -223,21 +217,6 @@ pub(crate) fn run_with_many_seeds<F: FnMut(u128)>(mut f: F) {
     }
 }
 
-#[derive(Default, Debug)]
-pub(crate) struct TestCounters {
-    data: HashMap<String, usize>,
-}
-
-impl TestCounters {
-    pub(crate) fn increment(&mut self, key: &str) {
-        *(self.data.entry(key.to_string()).or_insert(0)) += 1;
-    }
-
-    pub(crate) fn get(&self, key: &str) -> &usize {
-        self.data.get(key).unwrap_or(&0)
-    }
-}
-
 /// log::Log implementation that uses stdout.
 ///
 /// Useful when debugging tests.
@@ -273,8 +252,8 @@ pub(crate) fn set_logger_for_test() {
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &DummySyncCtx, key: &str) -> usize {
-    *ctx.state.test_counters.borrow().get(key)
+pub(crate) fn get_counter_val(ctx: &DummyNonSyncCtx, key: &str) -> usize {
+    ctx.counter_ctx().get_counter_val(key)
 }
 
 /// An extension trait for `Ip` providing test-related functionality.
@@ -872,28 +851,28 @@ mod tests {
         });
 
         // No timers fired before.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 0);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 0);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 0);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 0);
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 0);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 0);
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 1);
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 2);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 2);
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 2);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 2);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 2);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 2);
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 2);
         // Both timers have fired at the same time.
-        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 3);
-        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 3);
+        assert_eq!(get_counter_val(net.non_sync_ctx(1), "timer::nop"), 3);
+        assert_eq!(get_counter_val(net.non_sync_ctx(2), "timer::nop"), 3);
 
         assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
         // Check that current time on contexts tick together.
@@ -929,8 +908,8 @@ mod tests {
         });
 
         while !net.step(receive_frame_or_panic, handle_timer).is_idle()
-            && (get_counter_val(net.sync_ctx(1), "timer::nop") < 1
-                || get_counter_val(net.sync_ctx(2), "timer::nop") < 1)
+            && (get_counter_val(net.non_sync_ctx(1), "timer::nop") < 1
+                || get_counter_val(net.non_sync_ctx(2), "timer::nop") < 1)
         {}
         // Assert that we stopped before all times were fired, meaning we can
         // step again.
@@ -1017,13 +996,13 @@ mod tests {
             bob_echo_request: usize,
             alice_echo_response: usize,
         ) {
-            let alice = net.sync_ctx("alice");
+            let alice = net.non_sync_ctx("alice");
             assert_eq!(get_counter_val(alice, "timer::nop"), alice_nop);
             assert_eq!(get_counter_val(alice, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
                 alice_echo_response
             );
 
-            let bob = net.sync_ctx("bob");
+            let bob = net.non_sync_ctx("bob");
             assert_eq!(get_counter_val(bob, "timer::nop"), bob_nop);
             assert_eq!(get_counter_val(bob, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request"),
                 bob_echo_request

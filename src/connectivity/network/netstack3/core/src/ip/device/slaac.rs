@@ -194,24 +194,18 @@ fn update_slaac_addr_valid_until<I: Instant>(
 
 /// The non-synchronized execution context for SLAAC.
 pub(super) trait SlaacNonSyncContext<DeviceId>:
-    RngContext + TimerContext<SlaacTimerId<DeviceId>>
+    RngContext + TimerContext<SlaacTimerId<DeviceId>> + CounterContext
 {
 }
-impl<DeviceId, C: RngContext + TimerContext<SlaacTimerId<DeviceId>>> SlaacNonSyncContext<DeviceId>
-    for C
+impl<DeviceId, C: RngContext + TimerContext<SlaacTimerId<DeviceId>> + CounterContext>
+    SlaacNonSyncContext<DeviceId> for C
 {
 }
 
 /// The execution context for SLAAC.
-trait SlaacContext<C: SlaacNonSyncContext<Self::DeviceId>>:
-    SlaacStateContext<C> + CounterContext
-{
-}
+trait SlaacContext<C: SlaacNonSyncContext<Self::DeviceId>>: SlaacStateContext<C> {}
 
-impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacStateContext<C> + CounterContext>
-    SlaacContext<C> for SC
-{
-}
+impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacStateContext<C>> SlaacContext<C> for SC {}
 
 /// An implementation of SLAAC.
 pub(crate) trait SlaacHandler<C: InstantContext>: IpDeviceIdContext<Ipv6> {
@@ -1343,7 +1337,7 @@ fn add_slaac_addr_sub<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>>
                 // Try the next address.
                 //
                 // TODO(https://fxbug.dev/100003): Limit number of attempts.
-                sync_ctx.increment_counter("generated_slaac_addr_exists");
+                ctx.increment_counter("generated_slaac_addr_exists");
             }
             Ok(()) => break address,
         }

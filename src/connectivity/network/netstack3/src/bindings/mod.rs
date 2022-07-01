@@ -56,7 +56,7 @@ use timers::TimerDispatcher;
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
-    context::{EventContext, InstantContext, RngContext, TimerContext},
+    context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
     Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, TimerId,
@@ -241,6 +241,10 @@ impl InstantContext for BindingsNonSyncCtxImpl {
     fn now(&self) -> StackTime {
         StackTime(fasync::Time::now())
     }
+}
+
+impl CounterContext for BindingsNonSyncCtxImpl {
+    fn increment_counter(&mut self, _key: &'static str) {}
 }
 
 impl RngContext for BindingsNonSyncCtxImpl {

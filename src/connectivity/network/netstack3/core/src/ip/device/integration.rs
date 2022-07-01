@@ -21,7 +21,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::{CounterContext, FrameContext},
+    context::FrameContext,
     error::ExistsError,
     ip::{
         self,
@@ -68,7 +68,7 @@ pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 impl<
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + CounterContext,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C>,
     > SlaacStateContext<C> for SC
 {
     fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration {

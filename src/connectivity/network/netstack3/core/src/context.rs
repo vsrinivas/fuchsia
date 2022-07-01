@@ -310,20 +310,7 @@ pub trait FrameContext<C, B: BufferMut, Meta> {
 /// optimized out entirely by the compiler.
 pub trait CounterContext {
     /// Increment the counter with the given key.
-    fn increment_counter(&self, key: &'static str);
-}
-
-// Temporary blanket impl until we switch over entirely to the traits defined in
-// this module.
-impl<NonSyncCtx: NonSyncContext> CounterContext for SyncCtx<NonSyncCtx> {
-    // TODO(rheacock): This is tricky because it's used in test only macro
-    // code so the compiler thinks `key` is unused. Remove this when this is
-    // no longer a problem.
-    #[allow(unused)]
-    fn increment_counter(&self, key: &'static str) {
-        #[cfg(test)]
-        self.state.test_counters.borrow_mut().increment(key);
-    }
+    fn increment_counter(&mut self, key: &'static str);
 }
 
 /// A context for emitting events.
@@ -992,20 +979,25 @@ pub(crate) mod testutil {
     /// A dummy [`CounterContext`].
     #[derive(Default)]
     pub struct DummyCounterCtx {
-        counters: core::cell::RefCell<HashMap<&'static str, usize>>,
+        counters: HashMap<&'static str, usize>,
+    }
+
+    impl DummyCounterCtx {
+        pub(crate) fn get_counter_val(&self, key: &str) -> usize {
+            *self.counters.get(key).unwrap_or(&0)
+        }
     }
 
     impl CounterContext for DummyCounterCtx {
-        fn increment_counter(&self, key: &'static str) {
-            let mut counters = self.counters.borrow_mut();
-            let val = counters.entry(key).or_insert(0);
+        fn increment_counter(&mut self, key: &'static str) {
+            let val = self.counters.entry(key).or_insert(0);
             *val += 1;
         }
     }
 
-    impl<T: AsRef<DummyCounterCtx>> CounterContext for T {
-        fn increment_counter(&self, key: &'static str) {
-            self.as_ref().increment_counter(key);
+    impl<T: AsMut<DummyCounterCtx>> CounterContext for T {
+        fn increment_counter(&mut self, key: &'static str) {
+            self.as_mut().increment_counter(key);
         }
     }
 
@@ -1016,6 +1008,7 @@ pub(crate) mod testutil {
         timers: DummyTimerCtx<TimerId>,
         events: DummyEventCtx<Event>,
         frames: DummyFrameCtx<DeviceId>,
+        counters: DummyCounterCtx,
         state: State,
     }
 
@@ -1026,6 +1019,7 @@ pub(crate) mod testutil {
                 timers: DummyTimerCtx::default(),
                 events: DummyEventCtx::default(),
                 frames: DummyFrameCtx::default(),
+                counters: DummyCounterCtx::default(),
                 state: Default::default(),
             }
         }
@@ -1073,6 +1067,10 @@ pub(crate) mod testutil {
         pub(crate) fn state_mut(&mut self) -> &mut State {
             &mut self.state
         }
+
+        pub(crate) fn counter_ctx(&self) -> &DummyCounterCtx {
+            &self.counters
+        }
     }
 
     impl<TimerId, Event: Debug, State> RngContext for DummyNonSyncCtx<TimerId, Event, State> {
@@ -1090,6 +1088,12 @@ pub(crate) mod testutil {
     impl<Id, Event: Debug, State> AsRef<DummyInstantCtx> for DummyNonSyncCtx<Id, Event, State> {
         fn as_ref(&self) -> &DummyInstantCtx {
             self.timers.as_ref()
+        }
+    }
+
+    impl<Id, Event: Debug, State> AsMut<DummyCounterCtx> for DummyNonSyncCtx<Id, Event, State> {
+        fn as_mut(&mut self) -> &mut DummyCounterCtx {
+            &mut self.counters
         }
     }
 
@@ -1183,25 +1187,16 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsRef<DummyCounterCtx>
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
-    {
-        fn as_ref(&self) -> &DummyCounterCtx {
-            &self.sync_ctx.counters
-        }
-    }
-
     impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState: Default>
         DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
     {
         /// Constructs a `DummyCtx` with the given state and default
-        /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
+        /// `DummyTimerCtx`, and `DummyFrameCtx`.
         pub(crate) fn with_state(state: S) -> Self {
             DummyCtx {
                 sync_ctx: DummySyncCtx {
                     state,
                     frames: DummyFrameCtx::default(),
-                    counters: DummyCounterCtx::default(),
                     _devices_marker: PhantomData,
                 },
                 non_sync_ctx: DummyNonSyncCtx::default(),
@@ -1218,7 +1213,6 @@ pub(crate) mod testutil {
     pub(crate) struct DummySyncCtx<S, Meta, DeviceId> {
         state: S,
         frames: DummyFrameCtx<Meta>,
-        counters: DummyCounterCtx,
         _devices_marker: PhantomData<DeviceId>,
     }
 
@@ -1230,14 +1224,9 @@ pub(crate) mod testutil {
 
     impl<S, Meta, DeviceId> DummySyncCtx<S, Meta, DeviceId> {
         /// Constructs a `DummySyncCtx` with the given state and default
-        /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
+        /// `DummyTimerCtx`, and `DummyFrameCtx`.
         pub(crate) fn with_state(state: S) -> Self {
-            DummySyncCtx {
-                state,
-                frames: DummyFrameCtx::default(),
-                counters: DummyCounterCtx::default(),
-                _devices_marker: PhantomData,
-            }
+            DummySyncCtx { state, frames: DummyFrameCtx::default(), _devices_marker: PhantomData }
         }
 
         /// Get an immutable reference to the inner state.
@@ -1267,22 +1256,11 @@ pub(crate) mod testutil {
         pub(crate) fn take_frames(&mut self) -> Vec<(Meta, Vec<u8>)> {
             self.frames.take_frames()
         }
-
-        /// Get the value of the named counter.
-        pub(crate) fn get_counter(&self, ctr: &str) -> usize {
-            self.counters.counters.borrow().get(ctr).cloned().unwrap_or(0)
-        }
     }
 
     impl<S, Meta, DeviceId> AsMut<DummyFrameCtx<Meta>> for DummySyncCtx<S, Meta, DeviceId> {
         fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
-        }
-    }
-
-    impl<S, Meta, DeviceId> AsRef<DummyCounterCtx> for DummySyncCtx<S, Meta, DeviceId> {
-        fn as_ref(&self) -> &DummyCounterCtx {
-            &self.counters
         }
     }
 

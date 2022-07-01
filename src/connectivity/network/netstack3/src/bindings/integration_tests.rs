@@ -21,7 +21,7 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    context::{EventContext, InstantContext, RngContext, TimerContext},
+    context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
@@ -130,6 +130,12 @@ where
 {
     fn as_mut(&mut self) -> &mut T {
         self.ctx.as_mut()
+    }
+}
+
+impl CounterContext for TestNonSyncCtx {
+    fn increment_counter(&mut self, key: &'static str) {
+        self.ctx.increment_counter(key)
     }
 }
 

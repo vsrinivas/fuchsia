@@ -598,8 +598,11 @@ pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
 }
 
 /// The non-synchronized execution context shared by both ICMPv4 and ICMPv6.
-pub(crate) trait IcmpNonSyncCtx<I: IcmpIpExt>: InstantContext + IcmpContext<I> {}
-impl<I: IcmpIpExt, C: InstantContext + IcmpContext<I>> IcmpNonSyncCtx<I> for C {}
+pub(crate) trait IcmpNonSyncCtx<I: IcmpIpExt>:
+    InstantContext + IcmpContext<I> + CounterContext
+{
+}
+impl<I: IcmpIpExt, C: InstantContext + IcmpContext<I> + CounterContext> IcmpNonSyncCtx<I> for C {}
 
 /// The execution context shared by ICMP(v4) and ICMPv6 for the internal
 /// operations of the IP stack.
@@ -609,7 +612,6 @@ impl<I: IcmpIpExt, C: InstantContext + IcmpContext<I>> IcmpNonSyncCtx<I> for C {
 pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     IpSocketHandler<I, C>
     + IpDeviceIdContext<I>
-    + CounterContext
     + StateContext<
         C,
         IcmpState<I::Addr, C::Instant, IpSock<I, <Self as IpDeviceIdContext<I>>::DeviceId>>,
@@ -851,7 +853,7 @@ macro_rules! try_send_error {
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
         let state: &mut IcmpState<_, _, _> = $sync_ctx.get_state_mut();
         if state.error_send_bucket.try_take(&instant_ctx) {
-            $sync_ctx.increment_counter($counter_name);
+            $ctx.increment_counter($counter_name);
             $e
         } else {
             trace!("ip::icmp::try_send_error!: dropping rate-limited ICMP error message");
@@ -877,7 +879,7 @@ where
         mut original_body: &[u8],
         err: I::ErrorCode,
     ) {
-        sync_ctx.increment_counter("IcmpIpTransportContext::receive_icmp_error");
+        ctx.increment_counter("IcmpIpTransportContext::receive_icmp_error");
         trace!("IcmpIpTransportContext::receive_icmp_error({:?})", err);
 
         let echo_request = if let Ok(echo_request) =
@@ -905,7 +907,7 @@ where
             icmp_id: id,
         }) {
             let seq = echo_request.message().seq();
-            sync_ctx.increment_counter("IcmpContext::receive_icmp_error");
+            ctx.increment_counter("IcmpContext::receive_icmp_error");
             IcmpContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
         } else {
             trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
@@ -940,7 +942,7 @@ impl<
 
         match packet {
             Icmpv4Packet::EchoRequest(echo_request) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request");
 
                 if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
                     let req = *echo_request.message();
@@ -961,14 +963,14 @@ impl<
                 }
             }
             Icmpv4Packet::EchoReply(echo_reply) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received an EchoReply message");
                 let id = echo_reply.message().id();
                 let seq = echo_reply.message().seq();
                 receive_icmp_echo_reply(sync_ctx,ctx, src_ip, dst_ip, id, seq, buffer);
             }
             Icmpv4Packet::TimestampRequest(timestamp_request) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request");
                 if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
                     if StateContext::<_, Icmpv4State<_, _>>::get_state(sync_ctx).send_timestamp_reply {
                         trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Responding to Timestamp Request message");
@@ -1025,7 +1027,7 @@ impl<
                 debug!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received unsolicited Timestamp Reply message");
             }
             Icmpv4Packet::DestUnreachable(dest_unreachable) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::dest_unreachable");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::dest_unreachable");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received a Destination Unreachable message");
 
                 if dest_unreachable.code() == Icmpv4DestUnreachableCode::FragmentationRequired {
@@ -1097,7 +1099,7 @@ impl<
                 );
             }
             Icmpv4Packet::TimeExceeded(time_exceeded) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::time_exceeded");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::time_exceeded");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received a Time Exceeded message");
 
                 receive_icmpv4_error(
@@ -1110,7 +1112,7 @@ impl<
             }
             Icmpv4Packet::Redirect(_) => log_unimplemented!((), "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::redirect"),
             Icmpv4Packet::ParameterProblem(parameter_problem) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::parameter_problem");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::parameter_problem");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received a Parameter Problem message");
 
                 receive_icmpv4_error(
@@ -1359,7 +1361,7 @@ fn receive_ndp_packet<
                 Ipv6SourceAddr::Unspecified => return,
             };
 
-            sync_ctx.increment_counter("ndp::rx_router_advertisement");
+            ctx.increment_counter("ndp::rx_router_advertisement");
 
             // As per RFC 4861 section 6.3.4,
             //   The RetransTimer variable SHOULD be copied from the Retrans
@@ -1498,7 +1500,7 @@ impl<
 
         match packet {
             Icmpv6Packet::EchoRequest(echo_request) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request");
 
                 if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                     let req = *echo_request.message();
@@ -1526,7 +1528,7 @@ impl<
                 }
             }
             Icmpv6Packet::EchoReply(echo_reply) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_reply");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_reply");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received an EchoReply message");
                 // We don't allow creating echo sockets connected to the
                 // unspecified address, so it's OK to bail early here if the
@@ -1541,7 +1543,7 @@ impl<
                 receive_ndp_packet(sync_ctx, ctx, device, src_ip, dst_ip, packet)
             }
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
-                sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
+                ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received a Packet Too Big message");
                 if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                     // We are updating the path MTU from the destination address
@@ -1613,8 +1615,8 @@ impl<
 fn send_icmp_reply<
     I: crate::ip::IpExt,
     B: BufferMut,
-    C,
-    SC: BufferIpSocketHandler<I, C, B> + IpDeviceIdContext<I> + CounterContext,
+    C: BufferIcmpNonSyncCtx<I, B>,
+    SC: BufferIpSocketHandler<I, C, B> + IpDeviceIdContext<I>,
     S: Serializer<Buffer = B>,
     F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
 >(
@@ -1626,7 +1628,7 @@ fn send_icmp_reply<
     get_body_from_src_ip: F,
 ) -> Result<(), S> {
     trace!("send_icmp_reply({:?}, {}, {})", device, original_src_ip, original_dst_ip);
-    sync_ctx.increment_counter("send_icmp_reply");
+    ctx.increment_counter("send_icmp_reply");
     sync_ctx
         .send_oneshot_ip_packet(
             ctx,
@@ -1765,7 +1767,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_protocol_unreachable");
+    ctx.increment_counter("send_icmpv4_protocol_unreachable");
 
     send_icmpv4_dest_unreachable(
         sync_ctx,
@@ -1809,7 +1811,7 @@ pub(crate) fn send_icmpv6_protocol_unreachable<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv6_protocol_unreachable");
+    ctx.increment_counter("send_icmpv6_protocol_unreachable");
 
     send_icmpv6_parameter_problem(
         sync_ctx,
@@ -1863,7 +1865,7 @@ pub(crate) fn send_icmpv4_port_unreachable<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_port_unreachable");
+    ctx.increment_counter("send_icmpv4_port_unreachable");
 
     send_icmpv4_dest_unreachable(
         sync_ctx,
@@ -1905,7 +1907,7 @@ pub(crate) fn send_icmpv6_port_unreachable<
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     original_packet: B,
 ) {
-    sync_ctx.increment_counter("send_icmpv6_port_unreachable");
+    ctx.increment_counter("send_icmpv6_port_unreachable");
 
     send_icmpv6_dest_unreachable(
         sync_ctx,
@@ -1946,7 +1948,7 @@ pub(crate) fn send_icmpv4_net_unreachable<
     header_len: usize,
     fragment_type: Ipv4FragmentType,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_net_unreachable");
+    ctx.increment_counter("send_icmpv4_net_unreachable");
 
     // Check whether we MUST NOT send an ICMP error message
     // because the original packet was itself an ICMP error message.
@@ -1993,7 +1995,7 @@ pub(crate) fn send_icmpv6_net_unreachable<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv6_net_unreachable");
+    ctx.increment_counter("send_icmpv6_net_unreachable");
 
     // Check whether we MUST NOT send an ICMP error message
     // because the original packet was itself an ICMP error message.
@@ -2040,7 +2042,7 @@ pub(crate) fn send_icmpv4_ttl_expired<
     header_len: usize,
     fragment_type: Ipv4FragmentType,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_ttl_expired");
+    ctx.increment_counter("send_icmpv4_ttl_expired");
 
     // Check whether we MUST NOT send an ICMP error message because the original
     // packet was itself an ICMP error message.
@@ -2088,7 +2090,7 @@ pub(crate) fn send_icmpv6_ttl_expired<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv6_ttl_expired");
+    ctx.increment_counter("send_icmpv6_ttl_expired");
 
     // Check whether we MUST NOT send an ICMP error message because the
     // original packet was itself an ICMP error message.
@@ -2135,7 +2137,7 @@ pub(crate) fn send_icmpv6_packet_too_big<
     original_packet: B,
     header_len: usize,
 ) {
-    sync_ctx.increment_counter("send_icmpv6_packet_too_big");
+    ctx.increment_counter("send_icmpv6_packet_too_big");
     // Check whether we MUST NOT send an ICMP error message because the
     // original packet was itself an ICMP error message.
     if is_icmp_error_message::<Ipv6>(proto, &original_packet.as_ref()[header_len..]) {
@@ -2191,7 +2193,7 @@ pub(crate) fn send_icmpv4_parameter_problem<
     header_len: usize,
     fragment_type: Ipv4FragmentType,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_parameter_problem");
+    ctx.increment_counter("send_icmpv4_parameter_problem");
 
     send_icmpv4_error_message(
         sync_ctx,
@@ -2240,7 +2242,7 @@ pub(crate) fn send_icmpv6_parameter_problem<
     // a multicast address.
     assert!(!allow_dst_multicast || code == Icmpv6ParameterProblemCode::UnrecognizedIpv6Option);
 
-    sync_ctx.increment_counter("send_icmpv6_parameter_problem");
+    ctx.increment_counter("send_icmpv6_parameter_problem");
 
     send_icmpv6_error_message(
         sync_ctx,
@@ -2272,7 +2274,7 @@ fn send_icmpv4_dest_unreachable<
     header_len: usize,
     fragment_type: Ipv4FragmentType,
 ) {
-    sync_ctx.increment_counter("send_icmpv4_dest_unreachable");
+    ctx.increment_counter("send_icmpv4_dest_unreachable");
     send_icmpv4_error_message(
         sync_ctx,
         ctx,
@@ -3030,7 +3032,7 @@ mod tests {
         }
 
         for counter in assert_counters {
-            assert!(get_counter_val(&sync_ctx, counter) > 0, "counter at zero: {}", counter);
+            assert!(get_counter_val(&non_sync_ctx, counter) > 0, "counter at zero: {}", counter);
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
@@ -3650,14 +3652,14 @@ mod tests {
 
         assert_eq!(
             get_counter_val(
-                net.sync_ctx(LOCAL_CTX_NAME),
+                net.non_sync_ctx(LOCAL_CTX_NAME),
                 &format!("{}::echo_reply", recv_icmp_packet_name)
             ),
             1
         );
         assert_eq!(
             get_counter_val(
-                &net.context(ctx_name_receiving_req).sync_ctx,
+                net.non_sync_ctx(ctx_name_receiving_req),
                 &format!("{}::echo_request", recv_icmp_packet_name)
             ),
             1
@@ -3897,7 +3899,7 @@ mod tests {
                     original_body: &[u8],
                     err: <$ip as IcmpIpExt>::ErrorCode,
                 ) {
-                    self.increment_counter("InnerIcmpContext::receive_icmp_error");
+                    ctx.increment_counter("InnerIcmpContext::receive_icmp_error");
                     self.get_mut().inner.receive_icmp_error.push(err);
                     if original_proto == <$ip as packet_formats::icmp::IcmpIpExt>::ICMP_IP_PROTO {
                         <IcmpIpTransportContext as IpTransportContext<$ip, _, _>>::receive_icmp_error(
@@ -4122,7 +4124,12 @@ mod tests {
             .unwrap();
 
             for (ctr, count) in assert_counters {
-                assert_eq!(sync_ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
+                assert_eq!(
+                    non_sync_ctx.counter_ctx().get_counter_val(ctr),
+                    *count,
+                    "wrong count for counter {}",
+                    ctr
+                );
             }
             f(&ctx);
         }
@@ -4438,7 +4445,12 @@ mod tests {
             .unwrap();
 
             for (ctr, count) in assert_counters {
-                assert_eq!(sync_ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
+                assert_eq!(
+                    non_sync_ctx.counter_ctx().get_counter_val(ctr),
+                    *count,
+                    "wrong count for counter {}",
+                    ctr
+                );
             }
             f(&ctx);
         }
@@ -4846,25 +4858,34 @@ mod tests {
 
             for i in 0..ERRORS_PER_SECOND {
                 send(&mut ctx);
-                assert_eq!(ctx.sync_ctx.get_counter(counter_str), i as usize + 1);
+                assert_eq!(
+                    ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str),
+                    i as usize + 1
+                );
             }
 
-            assert_eq!(ctx.sync_ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
+            assert_eq!(
+                ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str),
+                ERRORS_PER_SECOND as usize
+            );
             send(&mut ctx);
-            assert_eq!(ctx.sync_ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
+            assert_eq!(
+                ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str),
+                ERRORS_PER_SECOND as usize
+            );
 
             // Test that, if we set a rate of 0, we are not able to send any
             // error messages regardless of how much time has elapsed.
 
             let mut ctx = with_errors_per_second(0);
             send(&mut ctx);
-            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
+            assert_eq!(ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str), 0);
             ctx.non_sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
-            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
+            assert_eq!(ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str), 0);
             ctx.non_sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
-            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
+            assert_eq!(ctx.non_sync_ctx.counter_ctx().get_counter_val(counter_str), 0);
         }
 
         fn with_errors_per_second_v4(errors_per_second: u64) -> Dummyv4Ctx {

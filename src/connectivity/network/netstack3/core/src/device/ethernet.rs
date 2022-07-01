@@ -378,7 +378,7 @@ pub(super) fn send_ip_frame<
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
-    sync_ctx.increment_counter("ethernet::send_ip_frame");
+    ctx.increment_counter("ethernet::send_ip_frame");
 
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
@@ -1187,7 +1187,7 @@ mod tests {
             IpVersion::V4 => "receive_ipv4_packet",
             IpVersion::V6 => "receive_ipv6_packet",
         };
-        assert_eq!(get_counter_val(&mut sync_ctx, counter), expected_received);
+        assert_eq!(get_counter_val(&non_sync_ctx, counter), expected_received);
     }
 
     // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
@@ -1264,7 +1264,7 @@ mod tests {
             }
         }
 
-        assert_eq!(get_counter_val(&mut sync_ctx, "ethernet::send_ip_frame"), expected_sent);
+        assert_eq!(get_counter_val(&non_sync_ctx, "ethernet::send_ip_frame"), expected_sent);
     }
 
     // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
@@ -1480,14 +1480,14 @@ mod tests {
             .expect("error setting promiscuous mode");
         crate::device::receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
+        assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Accept packet destined for this device if promiscuous mode is on.
         crate::device::set_promiscuous_mode(&mut sync_ctx, &mut non_sync_ctx, device, true)
             .expect("error setting promiscuous mode");
         crate::device::receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
+        assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         let buf = Buf::new(Vec::new(), ..)
             .encapsulate(I::PacketBuilder::new(
@@ -1512,14 +1512,14 @@ mod tests {
             .expect("error setting promiscuous mode");
         crate::device::receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
+        assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Accept packet not destined for this device if promiscuous mode is on.
         crate::device::set_promiscuous_mode(&mut sync_ctx, &mut non_sync_ctx, device, true)
             .expect("error setting promiscuous mode");
         crate::device::receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 3);
+        assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
     #[ip_test]
@@ -1627,7 +1627,7 @@ mod tests {
             buf,
         );
         assert_eq!(
-            get_counter_val(sync_ctx, dispatch_receive_ip_packet_name::<A::Version>()),
+            get_counter_val(non_sync_ctx, dispatch_receive_ip_packet_name::<A::Version>()),
             expected
         );
     }
@@ -1900,7 +1900,7 @@ mod tests {
         let addr_sub1 = AddrSubnet::new(ip1.get(), 64).unwrap();
         let addr_sub2 = AddrSubnet::new(ip2.get(), 64).unwrap();
 
-        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ip_packet"), 0);
 
         // Add ip1 to the device.
         //

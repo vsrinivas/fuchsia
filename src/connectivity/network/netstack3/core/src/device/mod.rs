@@ -79,8 +79,11 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 }
 
 /// The non-synchronized execution context for an IP device.
-pub(crate) trait IpLinkDeviceNonSyncContext<TimerId>: TimerContext<TimerId> {}
-impl<TimerId, C: TimerContext<TimerId>> IpLinkDeviceNonSyncContext<TimerId> for C {}
+pub(crate) trait IpLinkDeviceNonSyncContext<TimerId>:
+    TimerContext<TimerId> + CounterContext
+{
+}
+impl<TimerId, C: TimerContext<TimerId> + CounterContext> IpLinkDeviceNonSyncContext<TimerId> for C {}
 
 /// The context provided by the device layer to a particular IP device
 /// implementation.
@@ -89,7 +92,6 @@ impl<TimerId, C: TimerContext<TimerId>> IpLinkDeviceNonSyncContext<TimerId> for 
 /// the inherited traits.
 pub(crate) trait IpLinkDeviceContext<D: LinkDevice, C: IpLinkDeviceNonSyncContext<TimerId>, TimerId>:
     DeviceIdContext<D>
-    + CounterContext
     + StateContext<C, IpLinkDeviceState<C::Instant, D::State>, Self::DeviceId>
     + FrameContext<C, EmptyBuf, Self::DeviceId>
     + FrameContext<C, Buf<Vec<u8>>, Self::DeviceId>
@@ -102,7 +104,6 @@ impl<
         TimerId,
         SC: NonTestCtxMarker
             + DeviceIdContext<D>
-            + CounterContext
             + StateContext<C, IpLinkDeviceState<C::Instant, D::State>, Self::DeviceId>
             + FrameContext<C, EmptyBuf, Self::DeviceId>
             + FrameContext<C, Buf<Vec<u8>>, Self::DeviceId>,
