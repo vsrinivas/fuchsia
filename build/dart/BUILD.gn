@@ -111,7 +111,6 @@ group("tests") {
   deps = [
     ":gen_reference_docs_test($host_toolchain)",
     ":generate_dart_toc_test($host_toolchain)",
-    "tests",
   ]
 }
 
