@@ -55,10 +55,9 @@ async fn run_device_control(
     let worker = netdevice_worker::NetdeviceWorker::new(ns.ctx.clone(), device).await?;
     let handler = worker.new_handler();
     let worker_fut = worker.run().map_err(DeviceControlError::Worker);
-    let (stop_trigger, stop_fut) = futures::channel::oneshot::channel::<()>();
-    let stop_fut = stop_fut.map(|r| r.expect("closed all cancellation senders")).shared();
+    let stop_event = async_utils::event::Event::new();
     let control_stream = device_control
-        .take_until(stop_fut.clone())
+        .take_until(stop_event.wait_or_dropped())
         .map_err(DeviceControlError::Fidl)
         .try_filter_map(|req| match req {
             fnet_interfaces_admin::DeviceControlRequest::CreateInterface {
@@ -66,7 +65,14 @@ async fn run_device_control(
                 control,
                 options,
                 control_handle: _,
-            } => create_interface(port, control, options, &ns, &handler, &stop_fut),
+            } => create_interface(
+                port,
+                control,
+                options,
+                &ns,
+                &handler,
+                stop_event.wait_or_dropped(),
+            ),
             fnet_interfaces_admin::DeviceControlRequest::Detach { control_handle: _ } => {
                 todo!("https://fxbug.dev/100867 support detach");
             }
@@ -99,7 +105,7 @@ async fn run_device_control(
     };
 
     // Send a stop signal to all tasks.
-    stop_trigger.send(()).expect("receiver should not be gone");
+    assert!(stop_event.signal(), "event was already signaled");
     match &res {
         // Control stream has finished, don't need to drain it.
         Ok(()) | Err(DeviceControlError::Fidl(_)) => (),
@@ -131,11 +137,7 @@ async fn create_interface(
     options: fnet_interfaces_admin::Options,
     ns: &Netstack,
     handler: &netdevice_worker::DeviceHandler,
-    stop_fut: &(impl futures::Future<Output = ()>
-          + futures::future::FusedFuture
-          + Clone
-          + Send
-          + 'static),
+    stop_fut: async_utils::event::EventWaitResult,
 ) -> Result<Option<fuchsia_async::Task<()>>, DeviceControlError> {
     log::debug!("creating interface from {:?} with {:?}", port, options);
     let fnet_interfaces_admin::Options { name, metric: _, .. } = options;
@@ -143,7 +145,7 @@ async fn create_interface(
         Ok((binding_id, status_stream)) => Ok(Some(fasync::Task::spawn(run_interface_control(
             ns.ctx.clone(),
             binding_id,
-            stop_fut.clone(),
+            stop_fut,
             status_stream,
             control,
         )))),
@@ -202,12 +204,11 @@ async fn create_interface(
 }
 
 async fn run_interface_control<
-    F: Send + 'static + futures::Future<Output = ()> + futures::future::FusedFuture,
     S: futures::Stream<Item = netdevice_client::Result<netdevice_client::client::PortStatus>>,
 >(
     ctx: NetstackContext,
     id: BindingId,
-    cancel: F,
+    cancel: async_utils::event::EventWaitResult,
     status_stream: S,
     server_end: fidl::endpoints::ServerEnd<fnet_interfaces_admin::ControlMarker>,
 ) {
@@ -302,7 +303,7 @@ async fn run_interface_control<
     futures::pin_mut!(link_state_fut);
     let outcome = futures::select! {
         o = stream_fut => Outcome::StreamEnded(o),
-        () = cancel => Outcome::Cancelled,
+        o = cancel => {o.expect("event was orphaned"); Outcome::Cancelled},
         o = link_state_fut => Outcome::StateStreamEnded(o),
     };
     let remove_reason = match outcome {
