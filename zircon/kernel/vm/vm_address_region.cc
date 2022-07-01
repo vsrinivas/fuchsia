@@ -362,6 +362,10 @@ zx_status_t VmAddressRegion::DestroyLocked() {
 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
   Guard<Mutex> guard{aspace_->lock()};
+  return FindRegionLocked(addr);
+}
+
+fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
   if (state_ != LifeCycleState::ALIVE) {
     return nullptr;
   }

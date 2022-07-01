@@ -253,6 +253,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
                                         : ArchVmAspace::EnlargeOperation::No;
   }
 
+  fbl::RefPtr<VmAddressRegion> RootVmarLocked() TA_REQ(lock_);
+
   // internal page fault routine, friended to be only called by vmm_page_fault_handler
   zx_status_t PageFault(vaddr_t va, uint flags);
   friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);

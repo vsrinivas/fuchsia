@@ -68,6 +68,8 @@ class GuestPhysicalAddressSpace {
   GuestPhysicalAddressSpace(const GuestPhysicalAddressSpace&) = delete;
   GuestPhysicalAddressSpace& operator=(const GuestPhysicalAddressSpace&) = delete;
 
+  using ForPageFn = fit::inline_function<void(zx_paddr_t host_paddr), sizeof(void*) * 6>;
+
   size_t size() const { return guest_aspace_->size(); }
   zx_paddr_t arch_table_phys() const { return guest_aspace_->arch_aspace().arch_table_phys(); }
 #if ARCH_ARM64
@@ -78,10 +80,13 @@ class GuestPhysicalAddressSpace {
   bool IsMapped(zx_gpaddr_t guest_paddr) const;
   zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
   zx::status<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
+  zx::status<> ForPage(zx_gpaddr_t guest_paddr, ForPageFn apply);
   zx::status<> PageFault(zx_gpaddr_t guest_paddr);
   zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
 
  private:
+  fbl::RefPtr<VmMapping> FindMapping(zx_gpaddr_t guest_paddr) const TA_REQ(guest_aspace_->lock());
+
   fbl::RefPtr<VmAspace> guest_aspace_;
 };
 

@@ -519,6 +519,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // Find the child region that contains the given addr.  If addr is in a gap,
   // returns nullptr.  This is a non-recursive search.
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
+  fbl::RefPtr<VmAddressRegionOrMapping> FindRegionLocked(vaddr_t addr) TA_REQ(lock());
 
   enum class RangeOpType {
     Commit,
