@@ -8,7 +8,6 @@
 //! listening to requests immediately after creation.
 //!
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Context;
 use crate::agent::Payload;
 use crate::base::SettingType;
@@ -73,10 +72,6 @@ pub(crate) struct SettingTypeUsageInspectAgent {
 
     /// Mapping from SettingType key to api usage counts.
     api_call_counts: InspectWritableMap<SettingTypeUsageInspectInfo>,
-}
-
-impl DeviceStorageAccess for SettingTypeUsageInspectAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl SettingTypeUsageInspectAgent {

@@ -11,7 +11,6 @@ use fuchsia_inspect_derive::{Inspect, WithInspect};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Lifespan, Payload};
 use crate::base::{SettingInfo, SettingType};
 use crate::blueprint_definition;
@@ -76,10 +75,6 @@ struct SettingValuesInspectInfo {
 
     /// Milliseconds since Unix epoch that this setting's value was changed.
     timestamp: inspect::StringProperty,
-}
-
-impl DeviceStorageAccess for SettingValuesInspectAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl SettingValuesInspectAgent {

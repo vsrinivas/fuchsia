@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
 use crate::agent::BlueprintHandle;
-use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::sync::Arc;
 
 /// The flags used to control behavior of controllers.
 #[derive(PartialEq, Debug, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
@@ -66,50 +63,6 @@ pub enum AgentType {
     InspectSettingValues,
     /// Responsible for logging API usage counts to inspect.
     InspectSettingTypeUsage,
-}
-
-impl AgentType {
-    /// Return the storage keys needed for this particular agent.
-    pub async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
-    where
-        T: DeviceStorageFactory,
-    {
-        match self {
-            AgentType::CameraWatcher => {
-                storage_factory
-                    .initialize::<crate::agent::camera_watcher::CameraWatcherAgent>()
-                    .await
-            }
-            AgentType::Earcons => {
-                storage_factory.initialize::<crate::agent::earcons::agent::Agent>().await
-            }
-            AgentType::MediaButtons => {
-                storage_factory.initialize::<crate::agent::media_buttons::MediaButtonsAgent>().await
-            }
-            AgentType::Restore => {
-                storage_factory.initialize::<crate::agent::restore_agent::RestoreAgent>().await
-            }
-            AgentType::InspectSettingProxy => {
-                storage_factory
-                    .initialize::<crate::agent::inspect::setting_proxy::SettingProxyInspectAgent>()
-                    .await
-            }
-            AgentType::InspectSettingTypeUsage => storage_factory
-                .initialize::<crate::agent::inspect::usage_counts::SettingTypeUsageInspectAgent>()
-                .await,
-            AgentType::InspectPolicyValues => {
-                storage_factory
-                    .initialize::<crate::agent::inspect::policy_values::PolicyValuesInspectAgent>()
-                    .await
-            }
-            AgentType::InspectSettingValues => {
-                storage_factory
-                    .initialize::<crate::agent::inspect::setting_values::SettingValuesInspectAgent>(
-                    )
-                    .await
-            }
-        }
-    }
 }
 
 pub fn get_default_agent_types() -> HashSet<AgentType> {

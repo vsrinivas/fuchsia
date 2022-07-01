@@ -5,7 +5,6 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
@@ -61,10 +60,6 @@ impl PolicyValuesInspectInfo {
         info.timestamp.set(&timestamp);
         info
     }
-}
-
-impl DeviceStorageAccess for PolicyValuesInspectAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl PolicyValuesInspectAgent {

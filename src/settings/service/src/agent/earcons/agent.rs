@@ -4,7 +4,6 @@
 
 use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Context as AgentContext;
 use crate::agent::Lifespan;
 use crate::agent::Payload;
@@ -29,10 +28,6 @@ pub(crate) struct Agent {
     publisher: Publisher,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
     messenger: service::message::Messenger,
-}
-
-impl DeviceStorageAccess for Agent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 /// Params that are common to handlers of the earcons agent.

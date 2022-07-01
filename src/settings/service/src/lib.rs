@@ -465,13 +465,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             handler_factory.register(setting_type, handler);
         }
 
-        for agent_type in &agent_types {
-            agent_type
-                .initialize_storage(&self.storage_factory)
-                .await
-                .expect("unable to initialize storage for agent");
-        }
-
         let agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| agent_types.into_iter().map(agent_mapping_func).collect())

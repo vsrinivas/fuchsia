@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Payload;
 use crate::agent::{AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
@@ -36,10 +35,6 @@ pub(crate) struct MediaButtonsAgent {
 
     /// Settings to send media buttons events to.
     recipient_settings: HashSet<SettingType>,
-}
-
-impl DeviceStorageAccess for MediaButtonsAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl MediaButtonsAgent {

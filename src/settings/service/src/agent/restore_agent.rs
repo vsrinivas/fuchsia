@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Payload;
 use crate::agent::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
@@ -26,10 +25,6 @@ pub(crate) struct RestoreAgent {
     event_publisher: Publisher,
     available_components: HashSet<SettingType>,
     available_policies: HashSet<PolicyType>,
-}
-
-impl DeviceStorageAccess for RestoreAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl RestoreAgent {

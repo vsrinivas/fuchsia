@@ -10,7 +10,6 @@
 //!
 //! [SettingProxyInspectAgent]: inspect::SettingProxyInspectAgent
 
-use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Context;
 use crate::agent::Payload;
 use crate::base::{SettingInfo, SettingType};
@@ -155,10 +154,6 @@ pub(crate) struct SettingProxyInspectAgent {
     last_requests: InspectWritableMap<SettingTypeInspectInfo>,
     /// Response type accumulation info.
     response_counts: InspectWritableMap<SettingTypeResponseCountInfo>,
-}
-
-impl DeviceStorageAccess for SettingProxyInspectAgent {
-    const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
 impl SettingProxyInspectAgent {
