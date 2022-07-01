@@ -15,7 +15,8 @@ For the underlying implementation, see
 
 To integrate the service into a product target, add dependencies on
 `"//src/intl_time_zone_info_service:pkg"` and
-`"//src/intl/time_zone_info_service:core-shard"`. The latter will route `fuchsia.intl.TimeZones` to `#session-manager` in `core.cml`.
+`"//src/intl/time_zone_info_service:core-shard"`. The latter will route
+`fuchsia.intl.TimeZones` to `#session-manager` in `core.cml`.
 
 ### Alternative: intl_services
 
