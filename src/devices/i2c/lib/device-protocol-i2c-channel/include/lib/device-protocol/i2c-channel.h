@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
@@ -16,16 +15,29 @@
 
 namespace ddk {
 
-// TODO(fxbug.dev/96293): Merge I2cFidlChannel back into I2cChannel and delete I2cChannelBase once
-// all clients are using FIDL.
-class I2cChannelBase {
+class I2cChannel {
  public:
   struct StatusRetries {
     zx_status_t status;
     uint8_t retries;
   };
 
-  virtual ~I2cChannelBase() = default;
+  I2cChannel() = default;
+
+  I2cChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device> client)
+      : fidl_client_(std::move(client)) {}
+
+  I2cChannel(zx_device_t* parent) { ConnectFidl(parent, nullptr); }
+
+  I2cChannel(zx_device_t* parent, const char* fragment_name) { ConnectFidl(parent, fragment_name); }
+
+  I2cChannel(I2cChannel&& other) noexcept = default;
+  I2cChannel& operator=(I2cChannel&& other) noexcept = default;
+
+  I2cChannel(const I2cChannel& other) = delete;
+  I2cChannel& operator=(const I2cChannel& other) = delete;
+
+  ~I2cChannel() = default;
 
   // Performs typical i2c Read: writes device register address (1 byte) followed
   // by len reads into buf.
@@ -37,9 +49,6 @@ class I2cChannelBase {
   zx_status_t WriteSync(const uint8_t* buf, size_t len) {
     return WriteReadSync(buf, len, nullptr, 0);
   }
-
-  virtual zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
-                                    size_t rx_len) = 0;
 
   // ReadSync with retries, returns status and retry attempts.
   StatusRetries ReadSyncRetries(uint8_t addr, uint8_t* buf, size_t len, uint8_t retries,
@@ -65,25 +74,8 @@ class I2cChannelBase {
     }
     return {status, attempt};
   }
-};
 
-class I2cFidlChannel : public I2cChannelBase {
- public:
-  explicit I2cFidlChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device> client_end)
-      : fidl_client_(std::move(client_end)) {}
-
-  I2cFidlChannel(I2cFidlChannel&& other) noexcept = default;
-  I2cFidlChannel& operator=(I2cFidlChannel&& other) noexcept = default;
-
-  ~I2cFidlChannel() override = default;
-
-  fidl::WireResult<fuchsia_hardware_i2c::Device::Transfer> Transfer(
-      fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions) {
-    return fidl_client_->Transfer(transactions);
-  }
-
-  zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
-                            size_t rx_len) override {
+  zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf, size_t rx_len) {
     if (tx_len > fuchsia_hardware_i2c::wire::kMaxTransferSize ||
         rx_len > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
       return ZX_ERR_OUT_OF_RANGE;
@@ -207,80 +199,10 @@ class I2cFidlChannel : public I2cChannelBase {
     callback(cookie, ZX_OK, read_ops, read_count);
   }
 
- private:
-  fidl::WireSyncClient<fuchsia_hardware_i2c::Device> fidl_client_;
-};
-
-// TODO(fxbug.dev/96293): Remove Banjo support once all clients have been switched to FIDL.
-class I2cChannel : public I2cChannelBase {
- public:
-  I2cChannel() = default;
-
-  I2cChannel(const i2c_protocol_t* proto) : banjo_client_(proto) {}
-
-  I2cChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device> client)
-      : fidl_client_(std::move(client)) {}
-
-  I2cChannel(zx_device_t* parent) : banjo_client_(parent) { ConnectFidlIfNeeded(parent, nullptr); }
-
-  I2cChannel(zx_device_t* parent, const char* fragment_name)
-      : banjo_client_(parent, fragment_name) {
-    ConnectFidlIfNeeded(parent, fragment_name);
-  }
-
-  I2cChannel(I2cChannel&& other) noexcept = default;
-  I2cChannel& operator=(I2cChannel&& other) noexcept = default;
-
-  I2cChannel(const I2cChannel& other) = delete;
-  I2cChannel& operator=(const I2cChannel& other) = delete;
-
-  ~I2cChannel() override = default;
-
-  zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
-                            size_t rx_len) override {
-    if (banjo_client_.is_valid()) {
-      i2c_protocol_t proto;
-      banjo_client_.GetProto(&proto);
-      return i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
-    }
-    if (fidl_client_.has_value()) {
-      return fidl_client_->WriteReadSync(tx_buf, tx_len, rx_buf, rx_len);
-    }
-    ZX_ASSERT_MSG(false, "No Banjo or FIDL client is available");
-  }
-
-  void GetProto(i2c_protocol_t* proto) const {
-    ZX_ASSERT_MSG(banjo_client_.is_valid(), "No Banjo client is available");
-    banjo_client_.GetProto(proto);
-  }
-
-  bool is_valid() const { return banjo_client_.is_valid() || fidl_client_.has_value(); }
-
-  // Note: Currently Transact() calls to FIDL clients are synchronous.
-  // TODO(fxbug.dev/96293): Add support for async FIDL calls if needed.
-  void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                void* cookie) {
-    if (banjo_client_.is_valid()) {
-      banjo_client_.Transact(op_list, op_count, callback, cookie);
-    } else if (fidl_client_.has_value()) {
-      fidl_client_->Transact(op_list, op_count, callback, cookie);
-    } else {
-      ZX_ASSERT_MSG(false, "No Banjo or FIDL client is available");
-    }
-  }
-
-  zx_status_t GetMaxTransferSize(uint64_t* out_size) const {
-    ZX_ASSERT_MSG(!fidl_client_.has_value(),
-                  "GetMaxTransferSize() is not implemented for FIDL clients");
-    return banjo_client_.GetMaxTransferSize(out_size);
-  }
+  bool is_valid() const { return fidl_client_.is_valid(); }
 
  private:
-  void ConnectFidlIfNeeded(zx_device_t* parent, const char* fragment_name) {
-    if (banjo_client_.is_valid()) {
-      return;
-    }
-
+  void ConnectFidl(zx_device_t* parent, const char* fragment_name) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     if (endpoints.is_error()) {
       return;
@@ -301,11 +223,10 @@ class I2cChannel : public I2cChannelBase {
       return;
     }
 
-    fidl_client_.emplace(std::move(endpoints->client));
+    fidl_client_ = fidl::WireSyncClient(std::move(endpoints->client));
   }
 
-  I2cProtocolClient banjo_client_;
-  std::optional<I2cFidlChannel> fidl_client_;
+  fidl::WireSyncClient<fuchsia_hardware_i2c::Device> fidl_client_;
 };
 
 }  // namespace ddk

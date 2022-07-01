@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <zircon/errors.h>
@@ -40,14 +39,9 @@ class FlakyI2cDevice : public fake_i2c::FakeI2c {
   size_t count_ = 0;
 };
 
-class I2cDevice : public fake_i2c::FakeI2c {
+class I2cDevice : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
-  size_t banjo_count() const { return banjo_count_; }
-  size_t fidl_count() const { return fidl_count_; }
-
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
-    fidl_count_++;
-
     const fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions =
         request->transactions;
 
@@ -117,20 +111,7 @@ class I2cDevice : public fake_i2c::FakeI2c {
   void set_rx_data(std::vector<uint8_t> rx_data) { rx_data_ = std::move(rx_data); }
   const std::vector<bool>& stop() const { return stop_; }
 
- protected:
-  zx_status_t Transact(const uint8_t* write_buffer, size_t write_buffer_size, uint8_t* read_buffer,
-                       size_t* read_buffer_size) override {
-    banjo_count_++;
-
-    *read_buffer_size = rx_data_.size();
-    memcpy(read_buffer, rx_data_.data(), rx_data_.size());
-    tx_data_ = {write_buffer, write_buffer + write_buffer_size};
-    return ZX_OK;
-  }
-
  private:
-  size_t banjo_count_ = 0;
-  size_t fidl_count_ = 0;
   std::vector<uint8_t> tx_data_;
   std::vector<uint8_t> rx_data_;
   std::vector<bool> stop_;
@@ -138,7 +119,7 @@ class I2cDevice : public fake_i2c::FakeI2c {
 
 class I2cChannelTest : public zxtest::Test {
  public:
-  I2cChannelTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  I2cChannelTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override { loop_.StartThread(); }
 
@@ -221,7 +202,7 @@ TEST_F(I2cChannelTest, FidlRead) {
 
   const std::array<uint8_t, 4> expected_rx_data{0x12, 0x34, 0xab, 0xcd};
 
-  ddk::I2cFidlChannel client(std::move(endpoints->client));
+  ddk::I2cChannel client(std::move(endpoints->client));
   i2c_dev.set_rx_data({expected_rx_data.data(), expected_rx_data.data() + expected_rx_data.size()});
 
   uint8_t buf[4];
@@ -254,7 +235,7 @@ TEST_F(I2cChannelTest, FidlWrite) {
 
   const std::array<uint8_t, 4> expected_tx_data{0x0f, 0x1e, 0x2d, 0x3c};
 
-  ddk::I2cFidlChannel client(std::move(endpoints->client));
+  ddk::I2cChannel client(std::move(endpoints->client));
 
   EXPECT_OK(client.WriteSync(expected_tx_data.data(), expected_tx_data.size()));
   ASSERT_EQ(i2c_dev.tx_data().size(), expected_tx_data.size());
@@ -271,7 +252,7 @@ TEST_F(I2cChannelTest, FidlWriteRead) {
   const std::array<uint8_t, 4> expected_rx_data{0x12, 0x34, 0xab, 0xcd};
   const std::array<uint8_t, 4> expected_tx_data{0x0f, 0x1e, 0x2d, 0x3c};
 
-  ddk::I2cFidlChannel client(std::move(endpoints->client));
+  ddk::I2cChannel client(std::move(endpoints->client));
   i2c_dev.set_rx_data({expected_rx_data.data(), expected_rx_data.data() + expected_rx_data.size()});
 
   uint8_t buf[4];
@@ -400,9 +381,6 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {
   EXPECT_EQ(i2c_dev.tx_data()[0], 0x89);
   EXPECT_EQ(rx, 0xab);
 
-  EXPECT_EQ(i2c_dev.banjo_count(), 0);
-  EXPECT_EQ(i2c_dev.fidl_count(), 1);
-
   // Move the client and verify that the new one is functional.
   ddk::I2cChannel new_client = std::move(client);
 
@@ -411,9 +389,6 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {
   ASSERT_EQ(i2c_dev.tx_data().size(), 1);
   EXPECT_EQ(i2c_dev.tx_data()[0], 0x34);
   EXPECT_EQ(rx, 0x12);
-
-  EXPECT_EQ(i2c_dev.banjo_count(), 0);
-  EXPECT_EQ(i2c_dev.fidl_count(), 2);
 }
 
 TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
@@ -445,78 +420,4 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
   ASSERT_EQ(i2c_dev.tx_data().size(), 1);
   EXPECT_EQ(i2c_dev.tx_data()[0], 0x78);
   EXPECT_EQ(rx, 0x56);
-
-  EXPECT_EQ(i2c_dev.banjo_count(), 0);
-  EXPECT_EQ(i2c_dev.fidl_count(), 1);
-}
-
-TEST_F(I2cChannelTest, BanjoClientMethods) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  I2cDevice i2c_dev;
-  auto binding = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &i2c_dev);
-
-  auto parent = MockDevice::FakeRootParent();
-
-  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
-                          [this, &i2c_dev](zx::channel channel) {
-                            fidl::BindServer(
-                                loop_.dispatcher(),
-                                fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
-                                &i2c_dev);
-                            return ZX_OK;
-                          });
-
-  ddk::I2cChannel client(parent.get());
-  ASSERT_TRUE(client.is_valid());
-
-  const std::array<uint8_t, 4> expected_rx_data{0x12, 0x34, 0xab, 0xcd};
-  const std::array<uint8_t, 1> expected_tx_data{0xa5};
-
-  i2c_op_t ops[2] = {
-      {
-          .data_buffer = expected_tx_data.data(),
-          .data_size = expected_tx_data.size(),
-          .is_read = false,
-          .stop = false,
-      },
-      {
-          .data_buffer = nullptr,
-          .data_size = expected_rx_data.size(),
-          .is_read = true,
-          .stop = true,
-      },
-  };
-
-  i2c_dev.set_rx_data({expected_rx_data.data(), expected_rx_data.data() + expected_rx_data.size()});
-
-  struct I2cContext {
-    sync_completion_t completion = {};
-    zx_status_t status = ZX_ERR_INTERNAL;
-    uint8_t rx_data[4];
-  } context;
-
-  client.Transact(
-      ops, std::size(ops),
-      [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-        auto* i2c_context = reinterpret_cast<I2cContext*>(ctx);
-
-        ASSERT_EQ(op_count, 1);
-        ASSERT_TRUE(op_list[0].is_read);
-        ASSERT_EQ(op_list[0].data_size, 4);
-        memcpy(i2c_context->rx_data, op_list[0].data_buffer, 4);
-
-        i2c_context->status = status;
-        sync_completion_signal(&i2c_context->completion);
-      },
-      &context);
-
-  ASSERT_OK(sync_completion_wait(&context.completion, ZX_TIME_INFINITE));
-  EXPECT_OK(context.status);
-
-  ASSERT_EQ(i2c_dev.tx_data().size(), 1);
-  EXPECT_EQ(i2c_dev.tx_data()[0], 0xa5);
-
-  EXPECT_BYTES_EQ(context.rx_data, expected_rx_data.data(), sizeof(context.rx_data));
 }
