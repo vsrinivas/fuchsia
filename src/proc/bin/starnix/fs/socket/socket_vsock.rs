@@ -341,6 +341,8 @@ mod tests {
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use fidl::SocketOpts as ZirconSocketOpts;
+    use fuchsia_zircon::HandleBased;
+    use syncio::Zxio;
 
     #[::fuchsia::test]
     fn test_vsock_socket() {
@@ -438,5 +440,44 @@ mod tests {
         assert_eq!(XFER_SIZE, fs1.read(&mut buffer).unwrap());
         assert_eq!(XFER_SIZE, fs1.write(&buffer[..XFER_SIZE]).unwrap());
         let _ = thread.join();
+    }
+
+    #[::fuchsia::test]
+    fn test_vsock_poll() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let (client, server) = zx::Socket::create(zx::SocketOpts::empty()).expect("Socket::create");
+        let pipe = create_fuchsia_pipe(&current_task, client, OpenFlags::RDWR)
+            .expect("create_fuchsia_pipe");
+        let server_zxio = Zxio::create(server.into_handle()).expect("Zxio::create");
+        let socket_object = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+        downcast_socket_to_vsock(&socket_object).lock().state = VsockSocketState::Connected(pipe);
+        let socket = Socket::new_file(&current_task, socket_object, OpenFlags::RDWR);
+
+        assert_eq!(socket.query_events(&current_task), FdEvents::POLLOUT);
+
+        let epoll_object = EpollFileObject::new(&current_task);
+        let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
+        let event = EpollEvent { events: FdEvents::POLLIN.mask(), data: 0 };
+        epoll_file.add(&current_task, &socket, &epoll_object, event).expect("poll_file.add");
+
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert!(fds.is_empty());
+
+        assert_eq!(server_zxio.write(&[0]).expect("write"), 1);
+
+        assert_eq!(socket.query_events(&current_task), FdEvents::POLLOUT | FdEvents::POLLIN);
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert_eq!(fds.len(), 1);
+
+        assert_eq!(
+            socket.read(&current_task, &[UserBuffer { address, length: 64 }]).expect("read"),
+            1
+        );
+
+        assert_eq!(socket.query_events(&current_task), FdEvents::POLLOUT);
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert!(fds.is_empty());
     }
 }

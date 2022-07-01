@@ -1468,6 +1468,7 @@ fn poll(
         if poll_descriptor.fd < 0 {
             continue;
         }
+        poll_descriptor.revents = 0;
         let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
         let event = EpollEvent { events: poll_descriptor.events as u32, data: index as u64 };
         epoll_file.add(&current_task, &file, &file_object, event)?;

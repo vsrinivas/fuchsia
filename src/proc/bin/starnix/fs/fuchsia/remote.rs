@@ -604,4 +604,40 @@ mod test {
 
         Ok(())
     }
+
+    #[::fuchsia::test]
+    fn test_poll() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let (client, server) = zx::Socket::create(zx::SocketOpts::empty()).expect("Socket::create");
+        let pipe = create_fuchsia_pipe(&current_task, client, OpenFlags::RDWR)
+            .expect("create_fuchsia_pipe");
+        let server_zxio = Zxio::create(server.into_handle()).expect("Zxio::create");
+
+        assert_eq!(pipe.query_events(&current_task), FdEvents::POLLOUT);
+
+        let epoll_object = EpollFileObject::new(&current_task);
+        let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
+        let event = EpollEvent { events: FdEvents::POLLIN.mask(), data: 0 };
+        epoll_file.add(&current_task, &pipe, &epoll_object, event).expect("poll_file.add");
+
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert!(fds.is_empty());
+
+        assert_eq!(server_zxio.write(&[0]).expect("write"), 1);
+
+        assert_eq!(pipe.query_events(&current_task), FdEvents::POLLOUT | FdEvents::POLLIN);
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert_eq!(fds.len(), 1);
+
+        assert_eq!(
+            pipe.read(&current_task, &[UserBuffer { address, length: 64 }]).expect("read"),
+            1
+        );
+
+        assert_eq!(pipe.query_events(&current_task), FdEvents::POLLOUT);
+        let fds = epoll_file.wait(&current_task, 1, zx::Duration::from_millis(0)).expect("wait");
+        assert!(fds.is_empty());
+    }
 }

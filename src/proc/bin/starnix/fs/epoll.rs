@@ -429,10 +429,14 @@ impl FileOps for EpollFileObject {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fs::fuchsia::create_fuchsia_pipe;
     use crate::fs::pipe::new_pipe;
     use crate::fs::FdEvents;
+    use crate::mm::PAGE_SIZE;
     use crate::types::UserBuffer;
+    use fuchsia_zircon::HandleBased;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use syncio::Zxio;
 
     use crate::testing::*;
 
@@ -595,6 +599,77 @@ mod tests {
                 assert_eq!(EVENT_DATA, data);
             }
         }
+    }
+
+    #[::fuchsia::test]
+    fn test_multiple_events() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let (client1, server1) =
+            zx::Socket::create(zx::SocketOpts::empty()).expect("Socket::create");
+        let (client2, server2) =
+            zx::Socket::create(zx::SocketOpts::empty()).expect("Socket::create");
+        let pipe1 = create_fuchsia_pipe(&current_task, client1, OpenFlags::RDWR)
+            .expect("create_fuchsia_pipe");
+        let pipe2 = create_fuchsia_pipe(&current_task, client2, OpenFlags::RDWR)
+            .expect("create_fuchsia_pipe");
+        let server1_zxio = Zxio::create(server1.into_handle()).expect("Zxio::create");
+        let server2_zxio = Zxio::create(server2.into_handle()).expect("Zxio::create");
+
+        let poll = || {
+            let epoll_object = EpollFileObject::new(&current_task);
+            let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
+            epoll_file
+                .add(
+                    &current_task,
+                    &pipe1,
+                    &epoll_object,
+                    EpollEvent { events: FdEvents::POLLIN.mask(), data: 1 },
+                )
+                .expect("epoll_file.add");
+            epoll_file
+                .add(
+                    &current_task,
+                    &pipe2,
+                    &epoll_object,
+                    EpollEvent { events: FdEvents::POLLIN.mask(), data: 2 },
+                )
+                .expect("epoll_file.add");
+            epoll_file.wait(&current_task, 2, zx::Duration::from_millis(0)).expect("wait")
+        };
+
+        let fds = poll();
+        assert!(fds.is_empty());
+
+        assert_eq!(server1_zxio.write(&[0]).expect("write"), 1);
+
+        let fds = poll();
+        assert_eq!(fds.len(), 1);
+        assert_eq!(FdEvents::from(fds[0].events), FdEvents::POLLIN);
+        let data = fds[0].data;
+        assert_eq!(data, 1);
+        assert_eq!(
+            pipe1.read(&current_task, &[UserBuffer { address, length: 64 }]).expect("read"),
+            1
+        );
+
+        let fds = poll();
+        assert!(fds.is_empty());
+
+        assert_eq!(server2_zxio.write(&[0]).expect("write"), 1);
+
+        let fds = poll();
+        assert_eq!(fds.len(), 1);
+        assert_eq!(FdEvents::from(fds[0].events), FdEvents::POLLIN);
+        let data = fds[0].data;
+        assert_eq!(data, 2);
+        assert_eq!(
+            pipe2.read(&current_task, &[UserBuffer { address, length: 64 }]).expect("read"),
+            1
+        );
+
+        let fds = poll();
+        assert!(fds.is_empty());
     }
 
     #[::fuchsia::test]
