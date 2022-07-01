@@ -82,6 +82,7 @@ source_set("lib") {
     "//zircon/system/ulib/zxc",
   ]
 
+  defines = []
   if (linux_runner_volatile_block) {
     defines += [ "USE_VOLATILE_BLOCK" ]
   }
