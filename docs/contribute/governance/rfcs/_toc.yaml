@@ -356,6 +356,8 @@ toc:
     path: /docs/contribute/governance/rfcs/0170_remove_binary_images_from_the_update_package.md
   - title: "RFC-0171: Improved diagnostics routing"
     path: /docs/contribute/governance/rfcs/0171_improved_diagnostics_routing.md
+  - title: "RFC-0172: UI Activity Service"
+    path: /docs/contribute/governance/rfcs/0172_ui_activity_service.md
   - title: "RFC-0173: Structured Configuration in Component Framework APIs"
     path: /docs/contribute/governance/rfcs/0173_structured_config_cf_apis.md
   - title: "RFC-0174: Scale in Flatland"

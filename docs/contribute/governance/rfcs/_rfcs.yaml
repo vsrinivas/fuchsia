@@ -2219,6 +2219,19 @@
   submitted: '2022-05-19'
   reviewed: '2022-06-23'
 
+- name: 'RFC-0172'
+  title: 'UI Activity Service'
+  short_description: 'Proposal for a service for determining user input active or idle state and notifying clients.'
+  authors: ['carolineliu@google.com']
+  file: '0172_ui_activity_service.md'
+  area: ['HCI', 'UI']
+  issue: ['86773']
+  gerrit_change_id: ['686247']
+  status: 'Accepted'
+  reviewers: ['jsankey@google.com', 'neelsa@google.com', 'sanjay@google.com','quiche@google.com', 'wittrock@google.com']
+  submitted: '2022-06-02'
+  reviewed: '2022-06-30'
+
 - name: 'RFC-0173'
   title: 'Structured Configuration in Component Framework APIs'
   short_description: 'Define the publicly-facing implementation of basic Structured Configuration features.'
