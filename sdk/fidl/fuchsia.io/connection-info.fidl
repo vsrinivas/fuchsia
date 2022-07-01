@@ -98,8 +98,11 @@ type ConnectionInfo = resource table {
             1: buffer fuchsia.mem.Range;
         };
 
-        /// The object may be cast to the shared interface of devices.
-        @deprecated("devices will be services in the future")
+        /// The connection composes [`fuchsia.hardware.block.BlockAndNode`] OR
+        /// [`fuchsia.hardware.block.volume.VolumeAndNode`].
+        ///
+        /// TODO(https://fxbug.dev/103827): Document why this is needed or
+        /// remove it.
         5: device @generated_name("DeviceInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///

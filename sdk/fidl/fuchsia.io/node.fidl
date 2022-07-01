@@ -43,6 +43,12 @@ type NodeInfo = strict resource union {
         /// The number of bytes, starting at `offset`, which may be used to represent this file.
         length uint64;
     };
+
+    /// The connection composes [`fuchsia.hardware.block.BlockAndNode`] OR
+    /// [`fuchsia.hardware.block.volume.VolumeAndNode`].
+    ///
+    /// TODO(https://fxbug.dev/103827): Document why this is needed or remove
+    /// it.
     6: device resource struct {
         /// An optional event which transmits information about a device's state.
         ///
