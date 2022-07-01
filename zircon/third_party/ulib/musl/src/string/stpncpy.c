@@ -13,7 +13,7 @@ char* __stpncpy(char* restrict d, const char* restrict s, size_t n) {
   // This reads past the end of the string, which is usually OK since
   // it won't cross a page boundary.  But under ASan, even one byte
   // past the actual end is diagnosed.
-  if (!__has_feature(address_sanitizer) && ((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
+  if (STRICT_BYTE_ACCESS && ((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
     for (; ((uintptr_t)s & ALIGN) && n && (*d = *s); n--, s++, d++)
       ;
     if (!n || !*s)

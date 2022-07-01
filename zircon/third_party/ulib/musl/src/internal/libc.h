@@ -116,6 +116,9 @@ extern char** __environ;
 #define NO_ASAN
 #endif
 
+#define STRICT_BYTE_ACCESS \
+  (!__has_feature(address_sanitizer) && !__has_feature(hwaddress_sanitizer))
+
 __END_CDECLS
 
 #endif  // ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_LIBC_H_

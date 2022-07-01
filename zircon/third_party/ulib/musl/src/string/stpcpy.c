@@ -10,7 +10,7 @@
 #define HASZERO(x) (((x)-ONES) & ~(x)&HIGHS)
 
 char* __stpcpy(char* restrict d, const char* restrict s) {
-#if !__has_feature(address_sanitizer)
+#if STRICT_BYTE_ACCESS
   // This reads past the end of the string, which is usually OK since
   // it won't cross a page boundary.  But under ASan, even one byte
   // past the actual end is diagnosed.
