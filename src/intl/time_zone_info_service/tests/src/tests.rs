@@ -20,7 +20,7 @@ mod tests {
     };
 
     static SVC_URL: &str =
-        "fuchsia-pkg://fuchsia.com/time-zone-info-service-test#meta/time-zone-info-service.cmx";
+        "fuchsia-pkg://fuchsia.com/time-zone-info-service-test#meta/time-zone-info-service.cm";
 
     static TZ_NYC: &str = "America/New_York";
     static NANOS_PER_SECOND: i64 = 1_000_000_000;
@@ -30,8 +30,7 @@ mod tests {
         const MONIKER: &str = "tzinfo";
 
         let builder = RealmBuilder::new().await?;
-        let tzinfo =
-            builder.add_legacy_child(MONIKER, SVC_URL.to_string(), ChildOptions::new()).await?;
+        let tzinfo = builder.add_child(MONIKER, SVC_URL, ChildOptions::new()).await?;
         builder
             .add_route(
                 Route::new()

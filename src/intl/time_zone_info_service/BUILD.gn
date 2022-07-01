@@ -37,7 +37,7 @@ executable("bin") {
 
 fuchsia_component("component") {
   component_name = "time-zone-info-service"
-  manifest = "meta/time-zone-info-service.cmx"
+  manifest = "meta/time-zone-info-service.cml"
   deps = [ ":bin" ]
 }
 
@@ -49,6 +49,11 @@ fuchsia_package("pkg") {
   ]
 }
 
-core_shard("core-shard") {
+core_shard("time-zone-info-service-core-shard") {
   shard_file = "meta/time-zone-info-service.core_shard.cml"
+}
+
+# Alias
+group("core-shard") {
+  deps = [ ":time-zone-info-service-core-shard" ]
 }

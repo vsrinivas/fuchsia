@@ -1,6 +1,29 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TODO(fxbug.dev/90443): Complete migration.
-{}
+{
+    children: [
+        {
+            name: "time-zone-info-service",
+            url: "fuchsia-pkg://fuchsia.com/time-zone-info-service#meta/time-zone-info-service.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.intl.TimeZones",
+            from: "#time-zone-info-service",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.intl.TimeZones",
+            from: "#time-zone-info-service",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#time-zone-info-service",
+        },
+    ],
+}

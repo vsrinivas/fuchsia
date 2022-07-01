@@ -2,15 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-
-group("config") {
-  testonly = true
-  deps = [ ":sysmgr" ]
-}
-
-config_data("sysmgr") {
-  for_pkg = "sysmgr"
-  outputs = [ "time-zone-info-service.config" ]
-  sources = [ "sysmgr_config.json" ]
+# Temporary alias.
+# TODO(fxbug.dev/90443): Remove after migrating out-of-tree dependents to
+# use "//src/intl/time_zone_info_service:core-shard" directly.
+group("sysmgr") {
+  deps = [ "//src/intl/time_zone_info_service:core-shard" ]
 }

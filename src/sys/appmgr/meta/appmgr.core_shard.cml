@@ -37,7 +37,6 @@
                 "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.intl.TimeZones",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Discovery",
@@ -412,7 +411,6 @@
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.intl.TimeZones",
                 "fuchsia.sys.Launcher",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",

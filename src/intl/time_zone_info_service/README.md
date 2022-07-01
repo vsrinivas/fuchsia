@@ -13,7 +13,12 @@ For the underlying implementation, see
 
 ## Usage
 
-To integrate the service into a product target, add a dependency on
-`"//src/intl/time_zone_info_service:pkg"`. That target will also pull in the
-`sysmgr` configuration needed to map `fuchsia.intl.TimeZones` to this service
-component.
+To integrate the service into a product target, add dependencies on
+`"//src/intl_time_zone_info_service:pkg"` and
+`"//src/intl/time_zone_info_service:core-shard"`. The latter will route `fuchsia.intl.TimeZones` to `#session-manager` in `core.cml`.
+
+### Alternative: intl_services
+
+On space-constrained devices, consider using the `intl_services` component,
+which exposes several different protocols from a single component containing a
+single executable. See [`//src/intl/intl_services`](../intl_services/).
