@@ -5,10 +5,12 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V2_COMPOSITE_ASSEMBLER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_V2_COMPOSITE_ASSEMBLER_H_
 
+#include <fidl/fuchsia.device.composite/cpp/fidl.h>
 #include <fidl/fuchsia.device.manager/cpp/fidl.h>
 
 #include "src/devices/bin/driver_manager/binding.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace dfv2 {
 
@@ -26,7 +28,7 @@ class CompositeDeviceFragment {
   bool BindNode(std::shared_ptr<Node> node);
 
   std::shared_ptr<Node> bound_node() { return bound_node_.lock(); }
-  std::string_view name() { return name_; }
+  std::string_view name() const { return name_; }
 
  private:
   std::string name_;
@@ -72,11 +74,12 @@ class CompositeDeviceAssembler {
 };
 
 // This class manages all of the `CompositeDeviceAssemblers` that exist.
-class CompositeDeviceManager {
+class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::DeprecatedCompositeCreator> {
  public:
   // Create a CompositeDeviceManager. `binder` is unowned and must outlive the
   // manager class.
-  CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher);
+  CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher,
+                         fit::function<void()> rebind_callback);
 
   zx_status_t AddCompositeDevice(std::string name,
                                  fuchsia_device_manager::CompositeDeviceDescriptor descriptor);
@@ -86,9 +89,25 @@ class CompositeDeviceManager {
   // a composite device, then there is no need to bind it to a driver.
   bool BindNode(std::shared_ptr<Node> node);
 
+  // Publish capabilities to the outgoing directory.
+  // CompositeDeviceManager must outlive `svc_dir` because it will be used
+  // in callbacks when other components connect to the capabilities.
+  zx::status<> Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+
  private:
+  void AddCompositeDevice(AddCompositeDeviceRequest& request,
+                          AddCompositeDeviceCompleter::Sync& completer) override;
+
+  void RebindNodes();
+
   DriverBinder* binder_;
   async_dispatcher_t* dispatcher_;
+  fit::function<void()> rebind_callback_;
+
+  // A list of nodes that have been bound to composite devices.
+  // In DFv1 a node can be bound to multiple composite devices, so we keep
+  // these around for rebinding.
+  std::list<std::weak_ptr<Node>> nodes_;
   std::vector<std::unique_ptr<CompositeDeviceAssembler>> assemblers_;
 };
 

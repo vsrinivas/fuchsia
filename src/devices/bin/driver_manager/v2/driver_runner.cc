@@ -157,7 +157,9 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
-      root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)) {
+      root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)),
+      composite_device_manager_(this, dispatcher,
+                                [this]() { this->TryBindAllOrphansUntracked(); }) {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
@@ -216,7 +218,13 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
     LOGF(ERROR, "Failed to add directory entry '%s': %s",
          fidl::DiscoverableProtocolName<frunner::ComponentRunner>, zx_status_get_string(status));
   }
-  return zx::make_status(status);
+
+  auto composite_publish = composite_device_manager_.Publish(svc_dir);
+  if (composite_publish.is_error()) {
+    return composite_publish.take_error();
+  }
+
+  return zx::ok();
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
@@ -384,6 +392,11 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 }
 
 void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) {
+  // Check the DFv1 composites first, and don't bind to others if they match.
+  if (composite_device_manager_.BindNode(node.shared_from_this())) {
+    return;
+  }
+
   auto match_callback = [this, weak_node = node.weak_from_this(), result_tracker](
                             fidl::WireUnownedResult<fdi::DriverIndex::MatchDriver>& result) {
     auto shared_node = weak_node.lock();

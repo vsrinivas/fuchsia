@@ -5,6 +5,7 @@
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 
 #include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace dfv2 {
 
@@ -129,6 +130,14 @@ zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::
     assembler->properties_.push_back(property.Build());
   }
 
+  // Add the composite value.
+  {
+    auto property = fuchsia_driver_framework::wire::NodeProperty::Builder(assembler->arena_);
+    property.key(fuchsia_driver_framework::wire::NodePropertyKey::WithIntValue(BIND_COMPOSITE));
+    property.value(fuchsia_driver_framework::wire::NodePropertyValue::WithIntValue(1));
+    assembler->properties_.push_back(property.Build());
+  }
+
   // Make the primary fragment first.
   auto fragment =
       CompositeDeviceFragment::Create(descriptor.fragments()[descriptor.primary_fragment_index()]);
@@ -198,8 +207,9 @@ void CompositeDeviceAssembler::TryToAssemble() {
   binder_->Bind(*node.value(), nullptr);
 }
 
-CompositeDeviceManager::CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher)
-    : binder_(binder), dispatcher_(dispatcher) {}
+CompositeDeviceManager::CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher,
+                                               fit::function<void()> rebind_callback)
+    : binder_(binder), dispatcher_(dispatcher), rebind_callback_(std::move(rebind_callback)) {}
 
 zx_status_t CompositeDeviceManager::AddCompositeDevice(
     std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor) {
@@ -209,16 +219,59 @@ zx_status_t CompositeDeviceManager::AddCompositeDevice(
     return assembler.error_value();
   }
   assemblers_.push_back(std::move(assembler.value()));
+
+  RebindNodes();
   return ZX_OK;
 }
 
+void CompositeDeviceManager::RebindNodes() {
+  // Take our composite nodes and run them through the device groups again.
+  std::list<std::weak_ptr<Node>> nodes = std::move(nodes_);
+  for (auto& weak_node : nodes) {
+    auto node = weak_node.lock();
+    if (!node) {
+      continue;
+    }
+    BindNode(node);
+  }
+
+  rebind_callback_();
+}
+
 bool CompositeDeviceManager::BindNode(std::shared_ptr<Node> node) {
+  bool did_match = false;
   for (auto& assembler : assemblers_) {
     if (assembler->BindNode(node)) {
-      return true;
+      // We do not break here because DFv1 composites allow for MULTIBIND.
+      // For example, the sysmem fragment can match multiple composite devices.
+      // To support that, nodes can bind to multiple composite devices.
+      did_match = true;
     }
   }
-  return false;
+
+  if (did_match) {
+    nodes_.push_back(node->weak_from_this());
+  }
+  return did_match;
+}
+
+zx::status<> CompositeDeviceManager::Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
+  const auto service =
+      [this](fidl::ServerEnd<fuchsia_device_composite::DeprecatedCompositeCreator> request) {
+        fidl::BindServer<fidl::Server<fuchsia_device_composite::DeprecatedCompositeCreator>>(
+            dispatcher_, std::move(request), this);
+        return ZX_OK;
+      };
+  zx_status_t status = svc_dir->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_device_composite::DeprecatedCompositeCreator>,
+      fbl::MakeRefCounted<fs::Service>(service));
+  return zx::make_status(status);
+}
+
+void CompositeDeviceManager::AddCompositeDevice(AddCompositeDeviceRequest& request,
+                                                AddCompositeDeviceCompleter::Sync& completer) {
+  zx_status_t status = AddCompositeDevice(request.name(), request.args());
+  completer.Reply(zx::make_status(status));
 }
 
 }  // namespace dfv2

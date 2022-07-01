@@ -23,6 +23,7 @@
 
 #include <fbl/intrusive_double_list.h>
 
+#include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 #include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
@@ -95,6 +96,8 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   fidl::WireClient<fuchsia_driver_index::DriverIndex> driver_index_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
+
+  CompositeDeviceManager composite_device_manager_;
 
   std::unordered_map<zx_koid_t, Node&> driver_args_;
   std::unordered_multimap<DriverUrl, CompositeArgs> composite_args_;

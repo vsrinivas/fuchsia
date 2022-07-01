@@ -11,6 +11,7 @@
         },
         {
             protocol: [
+                "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",
@@ -78,6 +79,7 @@
         },
         {
             protocol: [
+                "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",

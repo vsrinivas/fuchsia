@@ -30,7 +30,7 @@ TEST_F(CompositeAssemblerTest, EmptyManager) {
   TestBinder binder([](auto& node) {});
   auto node =
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
   ASSERT_FALSE(manager.BindNode(node));
 }
 
@@ -38,7 +38,7 @@ TEST_F(CompositeAssemblerTest, NoMatches) {
   TestBinder binder([](auto& node) {});
   auto node =
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -58,7 +58,7 @@ TEST_F(CompositeAssemblerTest, MatchButDontCreate) {
   TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
   auto node =
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -89,7 +89,7 @@ TEST_F(CompositeAssemblerTest, CreateSingleParentComposite) {
   TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
   auto node =
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -114,9 +114,12 @@ TEST_F(CompositeAssemblerTest, CreateSingleParentComposite) {
   ASSERT_EQ(kCompositeName, child->name());
   ASSERT_EQ(1ul, child->parents().size());
 
-  ASSERT_EQ(1ul, child->properties().size());
+  ASSERT_EQ(2ul, child->properties().size());
   ASSERT_EQ(kPropId, child->properties()[0].key().int_value());
   ASSERT_EQ(kPropValue, child->properties()[0].value().int_value());
+
+  ASSERT_EQ(static_cast<uint32_t>(BIND_COMPOSITE), child->properties()[1].key().int_value());
+  ASSERT_EQ(1ul, child->properties()[1].value().int_value());
 
   // Check that our node no longer matches now that the composite has been created.
   ASSERT_FALSE(manager.BindNode(node));
@@ -129,7 +132,7 @@ TEST_F(CompositeAssemblerTest, CreateTwoParentComposite) {
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
   auto node2 =
       std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   // Create two fragments
@@ -160,9 +163,12 @@ TEST_F(CompositeAssemblerTest, CreateTwoParentComposite) {
   ASSERT_EQ(kCompositeName, child->name());
   ASSERT_EQ(2ul, child->parents().size());
 
-  ASSERT_EQ(1ul, child->properties().size());
+  ASSERT_EQ(2ul, child->properties().size());
   ASSERT_EQ(kPropId, child->properties()[0].key().int_value());
   ASSERT_EQ(kPropValue, child->properties()[0].value().int_value());
+
+  ASSERT_EQ(static_cast<uint32_t>(BIND_COMPOSITE), child->properties()[1].key().int_value());
+  ASSERT_EQ(1ul, child->properties()[1].value().int_value());
 
   // Check that our node no longer matches now that the composite has been created.
   ASSERT_FALSE(manager.BindNode(node));
@@ -175,7 +181,7 @@ TEST_F(CompositeAssemblerTest, NodeRemovesCorrectly) {
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
   auto node2 =
       std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   // Create two fragments
@@ -225,7 +231,7 @@ TEST_F(CompositeAssemblerTest, TwoSingleParentComposite) {
   TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
   auto node =
       std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -245,18 +251,63 @@ TEST_F(CompositeAssemblerTest, TwoSingleParentComposite) {
 
   ASSERT_TRUE(manager.BindNode(node));
 
-  // Check that we created a child node.
+  // Check that both parents were created.
   ASSERT_TRUE(bind_was_called);
-  ASSERT_EQ(1ul, node->children().size());
+  ASSERT_EQ(2ul, node->children().size());
+
   auto child = node->children().front();
   ASSERT_EQ(kCompositeName, child->name());
   ASSERT_EQ(1ul, child->parents().size());
-
   ASSERT_EQ(kPropId, child->properties()[0].key().int_value());
   ASSERT_EQ(kPropValue, child->properties()[0].value().int_value());
 
   // Match to the second composite device.
+  child = node->children().back();
+  ASSERT_EQ(kCompositeName2, child->name());
+  ASSERT_EQ(1ul, child->parents().size());
+
+  // Check that our node no longer matches now that both composites have been created.
+  ASSERT_FALSE(manager.BindNode(node));
+}
+
+// Check that adding a composite after a node has already matched works.
+TEST_F(CompositeAssemblerTest, AddCompositeAfterNode) {
+  bool bind_was_called = false;
+  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node =
+      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+
+  fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
+  fuchsia_device_manager::DeviceFragment fragment;
+  fragment.name() = kFragmentName;
+  fragment.parts().emplace_back();
+  fragment.parts()[0].match_program().emplace_back();
+  fragment.parts()[0].match_program()[0] = fuchsia_device_manager::BindInstruction BI_MATCH();
+  descriptor.fragments().push_back(fragment);
+
+  descriptor.props().emplace_back();
+  descriptor.props()[0].id() = kPropId;
+  descriptor.props()[0].value() = kPropValue;
+
+  // Create two composite device assemblers.
+  manager.AddCompositeDevice(std::string(kCompositeName), descriptor);
+
+  // Bind our node.
   ASSERT_TRUE(manager.BindNode(node));
+  ASSERT_TRUE(bind_was_called);
+  ASSERT_EQ(1ul, node->children().size());
+
+  auto child = node->children().front();
+  ASSERT_EQ(kCompositeName, child->name());
+  ASSERT_EQ(1ul, child->parents().size());
+  ASSERT_EQ(kPropId, child->properties()[0].key().int_value());
+  ASSERT_EQ(kPropValue, child->properties()[0].value().int_value());
+
+  // Add a new composite device. The Manager should check already bound nodes,
+  // so it should create a new composite device immediately,
+  manager.AddCompositeDevice(std::string(kCompositeName2), descriptor);
+
   ASSERT_EQ(2ul, node->children().size());
   child = node->children().back();
   ASSERT_EQ(kCompositeName2, child->name());

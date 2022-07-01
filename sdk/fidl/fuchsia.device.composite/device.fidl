@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.device.composite;
+
+using fuchsia.device.manager;
+using zx;
+
+// This protocol is used by DFv1 drivers to add composite devices.
+// Newer drivers should use DeviceGroups.
+@discoverable
+protocol DeprecatedCompositeCreator {
+    AddCompositeDevice(struct {
+        name string:MAX;
+        args fuchsia.device.manager.CompositeDeviceDescriptor;
+    }) -> (struct {}) error zx.status;
+};
