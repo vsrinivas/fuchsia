@@ -9,7 +9,10 @@ import("//src/lib/fostr/build/fostr_fidl.gni")
 group("tests") {
   testonly = true
 
-  deps = [ ":component_cpp_tests" ]
+  deps = [
+    ":component_cpp_outgoing_directory_tests",
+    ":component_cpp_testing_realm_builder_tests",
+  ]
 }
 
 source_set("test_utils") {
@@ -67,10 +70,9 @@ executable("echo_service_server_bin") {
   sources = [ "echo_service_server.cc" ]
 
   deps = [
-    "//examples/fidl/fuchsia.examples",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/service/cpp",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -227,7 +229,7 @@ fuchsia_unittest_component("internal_test") {
   deps = [ ":internal_test_bin" ]
 }
 
-fuchsia_test_package("component_cpp_tests") {
+fuchsia_test_package("component_cpp_testing_realm_builder_tests") {
   test_components = [
     ":realm_builder_test",
     ":internal_test",
@@ -240,4 +242,65 @@ fuchsia_test_package("component_cpp_tests") {
     ":echo_service_server",
     ":pre_populated_realm",
   ]
+}
+
+executable("cpp_outgoing_directory_test_bin") {
+  testonly = true
+
+  sources = [ "outgoing_directory_test.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/sys/component/cpp",
+    "//src/lib/fidl/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+executable("cpp_outgoing_directory_integration_test_bin") {
+  testonly = true
+
+  sources = [ "outgoing_directory_integration_test.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+fuchsia_component("cpp_echo_service_server") {
+  testonly = true
+  deps = [ ":echo_service_server_bin" ]
+  manifest = "meta/cpp_echo_service_server.cml"
+}
+
+fuchsia_component("outgoing_directory_test") {
+  testonly = true
+  deps = [ ":cpp_outgoing_directory_test_bin" ]
+  manifest = "meta/outgoing_directory_test.cml"
+}
+
+fuchsia_component("outgoing_directory_integration_test") {
+  testonly = true
+  deps = [ ":cpp_outgoing_directory_integration_test_bin" ]
+  manifest = "meta/outgoing_directory_integration_test.cml"
+}
+
+fuchsia_test_package("component_cpp_outgoing_directory_tests") {
+  test_components = [
+    ":outgoing_directory_test",
+    ":outgoing_directory_integration_test",
+  ]
+  deps = [ ":cpp_echo_service_server" ]
 }

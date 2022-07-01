@@ -46,10 +46,10 @@ using namespace component_testing;
 namespace fdecl = fuchsia::component::decl;
 
 constexpr char kEchoServerUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cm";
+    "fuchsia-pkg://fuchsia.com/component_cpp_testing_realm_builder_tests#meta/echo_server.cm";
 constexpr char kEchoServerScUrl[] = "#meta/echo_server_sc.cm";
 constexpr char kEchoServerLegacyUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cmx";
+    "fuchsia-pkg://fuchsia.com/component_cpp_testing_realm_builder_tests#meta/echo_server.cmx";
 constexpr char kEchoServerRelativeUrl[] = "#meta/echo_server.cm";
 constexpr char kEchoServiceServerUrl[] = "#meta/echo_service_server.cm";
 
