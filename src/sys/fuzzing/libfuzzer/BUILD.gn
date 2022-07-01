@@ -38,7 +38,7 @@ source_set("libfuzzer") {
 }
 
 test("unittests_bin") {
-  output_name = "component_fuzzing_libfuzzer_unittests"
+  output_name = "libfuzzer_unittests"
   visibility = [ ":*" ]
   testonly = true
   sources = [ "runner-unittest.cc" ]
@@ -55,7 +55,7 @@ test("unittests_bin") {
 }
 
 test("error_unittests_bin") {
-  output_name = "component_fuzzing_libfuzzer_error_unittests"
+  output_name = "libfuzzer_error_unittests"
   visibility = [ ":*" ]
   testonly = true
   sources = [ "process-unittest.cc" ]
@@ -106,12 +106,12 @@ fuchsia_component("error-unittests") {
 }
 
 fuchsia_test_package("default-tests") {
-  package_name = "component-fuzzing-libfuzzer-tests"
+  package_name = "libfuzzer-tests"
   test_components = [ ":test-realm" ]
 }
 
 fuchsia_test_package("error-tests") {
-  package_name = "component-fuzzing-libfuzzer-error-tests"
+  package_name = "libfuzzer-error-tests"
 
   # Some tests involve handling intentional crashes.
   test_specs = {

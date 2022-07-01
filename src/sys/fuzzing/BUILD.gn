@@ -14,9 +14,9 @@ group("tests") {
   testonly = true
   deps = [
     "common:tests",
-    "framework:tests",
     "libfuzzer:tests",
     "manager:tests",
+    "realmfuzzer:tests",
     "registry:tests",
   ]
 }

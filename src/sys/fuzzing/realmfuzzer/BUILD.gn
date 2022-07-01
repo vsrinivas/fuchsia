@@ -1,0 +1,71 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fatal-unittests-pkg",
+    ":unittests-pkg",
+    "tests",
+  ]
+}
+
+# This package contains "normal" unit tests.
+
+test("unittests-bin") {
+  output_name = "realmfuzzer_unittests"
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [
+    "adapters:unittests",
+    "engine:unittests",
+    "target:unittests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_test_component("unittests") {
+  manifest = "meta/unittests.cml"
+  deps = [
+    ":unittests-bin",
+    "testing/data:corpus",
+  ]
+}
+
+fuchsia_test_package("unittests-pkg") {
+  package_name = "realmfuzzer-unittests"
+  test_components = [ ":unittests" ]
+}
+
+# This package contains unit tests that produce fatal error messages.
+
+test("fatal-unittests-bin") {
+  output_name = "realmfuzzer_fatal_unittests"
+  visibility = [ "../*" ]
+  testonly = true
+  deps = [
+    "engine:fatal-unittests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_test_component("fatal-unittests") {
+  manifest = "meta/fatal-unittests.cml"
+  deps = [ ":fatal-unittests-bin" ]
+}
+
+fuchsia_test_package("fatal-unittests-pkg") {
+  package_name = "realmfuzzer-fatal-unittests"
+
+  # Some tests involve handling intentional crashes.
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
+  test_components = [ ":fatal-unittests" ]
+}

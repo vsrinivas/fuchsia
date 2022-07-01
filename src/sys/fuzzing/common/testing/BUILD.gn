@@ -51,7 +51,7 @@ source_set("sanitizer") {
 
 # A standalone fuzzer that uses a fake runner.
 executable("fuzzer") {
-  output_name = "component_fuzzing_test_fuzzer"
+  output_name = "fake_fuzzer_for_testing"
   testonly = true
   sources = [ "engine-main.cc" ]
   deps = [

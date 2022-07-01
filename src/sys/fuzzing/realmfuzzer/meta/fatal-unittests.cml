@@ -5,14 +5,12 @@
     include: [
         "//sdk/lib/inspect/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
-        "//src/sys/test_runners/tmp_storage.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/libfuzzer_unittests",
+        binary: "test/realmfuzzer_fatal_unittests",
     },
     use: [
-        { protocol: "test.fuzzer.Relay" },
         { protocol: "fuchsia.process.Launcher" },
     ],
 }

@@ -9,10 +9,10 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/libfuzzer_unittests",
+        binary: "test/realmfuzzer_unittests",
+        args: [ "data/corpus" ],
     },
     use: [
-        { protocol: "test.fuzzer.Relay" },
         { protocol: "fuchsia.process.Launcher" },
     ],
 }

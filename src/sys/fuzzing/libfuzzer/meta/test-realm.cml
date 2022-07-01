@@ -5,11 +5,11 @@
     children: [
         {
             name: "unittests",
-            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-libfuzzer-tests#meta/unittests.cm",
+            url: "#meta/unittests.cm",
         },
         {
             name: "relay",
-            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-libfuzzer-tests#meta/test-relay.cm",
+            url: "#meta/test-relay.cm",
         },
     ],
     offer: [

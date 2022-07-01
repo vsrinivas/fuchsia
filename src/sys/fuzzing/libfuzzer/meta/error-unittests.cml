@@ -9,7 +9,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/component_fuzzing_libfuzzer_error_unittests",
+        binary: "test/libfuzzer_error_unittests",
     },
     use: [
         { protocol: "test.fuzzer.Relay" },

@@ -84,7 +84,7 @@ source_set("runner-fatal-unittests") {
 }
 
 test("unittests_bin") {
-  output_name = "component_fuzzing_common_unittests"
+  output_name = "fuzzing_common_unittests"
   visibility = [ ":*" ]
   testonly = true
   sources = [
@@ -115,6 +115,6 @@ fuchsia_component("unittests") {
 }
 
 fuchsia_test_package("tests") {
-  package_name = "component-fuzzing-common-tests"
+  package_name = "fuzzing-common-tests"
   test_components = [ ":unittests" ]
 }

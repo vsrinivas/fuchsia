@@ -44,7 +44,7 @@ class RegistryIntegrationTest : public AsyncTest {
     ASSERT_EQ(context_->Connect(handle.NewRequest()), ZX_OK);
     std::vector<zx::channel> channels;
     channels.emplace_back(handle.TakeChannel());
-    ASSERT_EQ(StartProcess("component_fuzzing_test_fuzzer", std::move(channels), &process_), ZX_OK);
+    ASSERT_EQ(StartProcess("fake_fuzzer_for_testing", std::move(channels), &process_), ZX_OK);
   }
 
   // Promises to connect the |controller| once a fuzzer is registered.
