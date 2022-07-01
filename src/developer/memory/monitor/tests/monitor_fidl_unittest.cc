@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <fuchsia/hardware/ram/metrics/cpp/fidl_test_base.h>
+#include <fuchsia/metrics/cpp/fidl_test_base.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -11,8 +11,9 @@
 #include <future>
 
 #include <gtest/gtest.h>
-#include <src/cobalt/bin/testing/fake_logger.h>
+#include <src/cobalt/bin/testing/stub_metric_event_logger.h>
 
+#include "lib/fpromise/result.h"
 #include "src/developer/memory/monitor/monitor.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -113,19 +114,13 @@ class FakeRamDevice : public fuchsia::hardware::ram::metrics::testing::Device_Te
   fidl::Binding<fuchsia::hardware::ram::metrics::Device> binding_{this};
 };
 
-class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
+class MockLogger : public ::fuchsia::metrics::testing::MetricEventLogger_TestBase {
  public:
-  void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
-                       LogCobaltEventsCallback callback) override {
+  void LogMetricEvents(std::vector<fuchsia::metrics::MetricEvent> events,
+                       LogMetricEventsCallback callback) override {
     num_calls_++;
     num_events_ += events.size();
-    callback(fuchsia::cobalt::Status::OK);
-  }
-  void LogEvent(uint32_t metric_id, uint32_t event_code,
-                LogCobaltEventsCallback callback) override {
-    num_calls_++;
-    num_events_ += 1;
-    callback(fuchsia::cobalt::Status::OK);
+    callback(fpromise::ok());
   }
   void NotImplemented_(const std::string& name) override {
     ASSERT_TRUE(false) << name << " is not implemented";
@@ -138,18 +133,18 @@ class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
   int num_events_ = 0;
 };
 
-class MockLoggerFactory : public ::fuchsia::cobalt::testing::LoggerFactory_TestBase {
+class MockLoggerFactory : public ::fuchsia::metrics::testing::MetricEventLoggerFactory_TestBase {
  public:
   MockLogger* logger() { return logger_.get(); }
   uint32_t received_project_id() { return received_project_id_; }
 
-  void CreateLoggerFromProjectId(uint32_t project_id,
-                                 ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-                                 CreateLoggerFromProjectIdCallback callback) override {
-    received_project_id_ = project_id;
+  void CreateMetricEventLogger(fuchsia::metrics::ProjectSpec project_spec,
+                               ::fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> logger,
+                               CreateMetricEventLoggerCallback callback) override {
+    received_project_id_ = project_spec.project_id();
     logger_.reset(new MockLogger());
     logger_bindings_.AddBinding(logger_.get(), std::move(logger));
-    callback(fuchsia::cobalt::Status::OK);
+    callback(fpromise::ok());
   }
 
   void NotImplemented_(const std::string& name) override {
@@ -159,7 +154,7 @@ class MockLoggerFactory : public ::fuchsia::cobalt::testing::LoggerFactory_TestB
  private:
   uint32_t received_project_id_;
   std::unique_ptr<MockLogger> logger_;
-  fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
+  fidl::BindingSet<fuchsia::metrics::MetricEventLogger> logger_bindings_;
 };
 
 class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
@@ -204,7 +199,7 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
     // The Monitor will make asynchronous calls to the MockLogger*s that are also running in this
     // class/tests thread. So the call to the Monitor needs to be made on a different thread, such
     // that the MockLogger*s running on the main thread can respond to those calls.
-    std::future<void /*fuchsia::cobalt::Logger_Sync**/> result =
+    std::future<void /*fuchsia::metrics::MetricEventLogger_Sync**/> result =
         std::async([this]() { monitor_->CreateMetrics({}); });
     while (result.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready) {
       // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.
@@ -219,7 +214,7 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
   FakeRamDevice fake_device_;
   fidl::Binding<fuchsia::hardware::ram::metrics::Device> ram_binding_;
   std::unique_ptr<MockLoggerFactory> logger_factory_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
+  fidl::BindingSet<fuchsia::metrics::MetricEventLoggerFactory> factory_bindings_;
 };
 
 TEST_F(MemoryBandwidthInspectTest, MemoryBandwidth) {

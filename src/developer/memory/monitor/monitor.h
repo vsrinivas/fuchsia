@@ -87,7 +87,7 @@ class Monitor : public fuchsia::memory::Monitor {
   zx_handle_t root_;
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  fuchsia::cobalt::LoggerSyncPtr cobalt_logger_;
+  fuchsia::metrics::MetricEventLoggerSyncPtr metric_event_logger_;
   fidl::BindingSet<fuchsia::memory::Monitor> bindings_;
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;

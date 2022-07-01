@@ -4,55 +4,49 @@
             "event_codes": [
                 1
             ],
-            "metric_id": 4,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:free_at_high_water_mark",
-            "use_legacy_cobalt": true
+            "metric_id": 104,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:free_at_high_water_mark"
         },
         {
             "event_codes": [
                 1
             ],
-            "metric_id": 5,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:used_size",
-            "use_legacy_cobalt": true
+            "metric_id": 105,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:used_size"
         },
         {
             "event_codes": [
                 2
             ],
-            "metric_id": 4,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:free_at_high_water_mark",
-            "use_legacy_cobalt": true
+            "metric_id": 104,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:free_at_high_water_mark"
         },
         {
             "event_codes": [
                 2
             ],
-            "metric_id": 5,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:used_size",
-            "use_legacy_cobalt": true
+            "metric_id": 105,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:used_size"
         },
         {
             "event_codes": [
                 3
             ],
-            "metric_id": 4,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:free_at_high_water_mark",
-            "use_legacy_cobalt": true
+            "metric_id": 104,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:free_at_high_water_mark"
         },
         {
             "event_codes": [
                 3
             ],
-            "metric_id": 5,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:used_size",
-            "use_legacy_cobalt": true
+            "metric_id": 105,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:used_size"
         }
     ],
     "poll_rate_sec": 600,

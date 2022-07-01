@@ -32,7 +32,7 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: "fuchsia.cobalt.LoggerFactory",
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
             from: "#cobalt",
             to: "#memory_monitor",
         },

@@ -10,7 +10,7 @@
 #include <zircon/time.h>
 
 #include <gtest/gtest.h>
-#include <src/cobalt/bin/testing/fake_logger.h>
+#include <src/cobalt/bin/testing/stub_metric_event_logger.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
@@ -18,42 +18,43 @@
 
 using namespace memory;
 
-using cobalt_registry::MemoryMetricDimensionBucket;
-using fuchsia::cobalt::EventPayload;
+using cobalt_registry::MemoryMigratedMetricDimensionBucket;
 
 namespace monitor {
 namespace {
 const std::vector<BucketMatch> kBucketMatches = {
-    {"ZBI Buffer", ".*", "uncompressed-bootfs", MemoryMetricDimensionBucket::ZbiBuffer},
+    {"ZBI Buffer", ".*", "uncompressed-bootfs", MemoryMigratedMetricDimensionBucket::ZbiBuffer},
     // Memory used with the GPU or display hardware.
     {"Graphics", ".*",
      "magma_create_buffer|Mali "
      ".*|Magma.*|ImagePipe2Surface.*|GFXBufferCollection.*|ScenicImageMemory|Display.*|"
      "CompactImage.*|GFX Device Memory.*",
-     MemoryMetricDimensionBucket::Graphics},
+     MemoryMigratedMetricDimensionBucket::Graphics},
     // Unused protected pool memory.
     {"ProtectedPool", "driver_host:.*", "SysmemAmlogicProtectedPool",
-     MemoryMetricDimensionBucket::ProtectedPool},
+     MemoryMigratedMetricDimensionBucket::ProtectedPool},
     // Unused contiguous pool memory.
     {"ContiguousPool", "driver_host:.*", "SysmemContiguousPool",
-     MemoryMetricDimensionBucket::ContiguousPool},
-    {"Fshost", "fshost.cm", ".*", MemoryMetricDimensionBucket::Fshost},
-    {"Minfs", ".*minfs", ".*", MemoryMetricDimensionBucket::Minfs},
-    {"BlobfsInactive", ".*blobfs", "inactive-blob-.*", MemoryMetricDimensionBucket::BlobfsInactive},
-    {"Blobfs", ".*blobfs", ".*", MemoryMetricDimensionBucket::Blobfs},
-    {"FlutterApps", "io\\.flutter\\..*", "dart.*", MemoryMetricDimensionBucket::FlutterApps},
-    {"Flutter", "io\\.flutter\\..*", ".*", MemoryMetricDimensionBucket::Flutter},
-    {"Web", "web_engine_exe:.*", ".*", MemoryMetricDimensionBucket::Web},
-    {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*", MemoryMetricDimensionBucket::Kronk},
-    {"Scenic", "scenic.cmx", ".*", MemoryMetricDimensionBucket::Scenic},
-    {"Amlogic", "driver_host:pdev:05:00:f", ".*", MemoryMetricDimensionBucket::Amlogic},
-    {"Netstack", "netstack.cmx", ".*", MemoryMetricDimensionBucket::Netstack},
-    {"Pkgfs", "pkgfs", ".*", MemoryMetricDimensionBucket::Pkgfs},
-    {"Cast", "cast_agent.cmx", ".*", MemoryMetricDimensionBucket::Cast},
-    {"Archivist", "archivist.cm", ".*", MemoryMetricDimensionBucket::Archivist},
-    {"Cobalt", "cobalt.cm", ".*", MemoryMetricDimensionBucket::Cobalt},
-    {"Audio", "audio_core.cmx", ".*", MemoryMetricDimensionBucket::Audio},
-    {"Context", "context_provider.cmx", ".*", MemoryMetricDimensionBucket::Context},
+     MemoryMigratedMetricDimensionBucket::ContiguousPool},
+    {"Fshost", "fshost.cm", ".*", MemoryMigratedMetricDimensionBucket::Fshost},
+    {"Minfs", ".*minfs", ".*", MemoryMigratedMetricDimensionBucket::Minfs},
+    {"BlobfsInactive", ".*blobfs", "inactive-blob-.*",
+     MemoryMigratedMetricDimensionBucket::BlobfsInactive},
+    {"Blobfs", ".*blobfs", ".*", MemoryMigratedMetricDimensionBucket::Blobfs},
+    {"FlutterApps", "io\\.flutter\\..*", "dart.*",
+     MemoryMigratedMetricDimensionBucket::FlutterApps},
+    {"Flutter", "io\\.flutter\\..*", ".*", MemoryMigratedMetricDimensionBucket::Flutter},
+    {"Web", "web_engine_exe:.*", ".*", MemoryMigratedMetricDimensionBucket::Web},
+    {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*", MemoryMigratedMetricDimensionBucket::Kronk},
+    {"Scenic", "scenic.cmx", ".*", MemoryMigratedMetricDimensionBucket::Scenic},
+    {"Amlogic", "driver_host:pdev:05:00:f", ".*", MemoryMigratedMetricDimensionBucket::Amlogic},
+    {"Netstack", "netstack.cmx", ".*", MemoryMigratedMetricDimensionBucket::Netstack},
+    {"Pkgfs", "pkgfs", ".*", MemoryMigratedMetricDimensionBucket::Pkgfs},
+    {"Cast", "cast_agent.cmx", ".*", MemoryMigratedMetricDimensionBucket::Cast},
+    {"Archivist", "archivist.cm", ".*", MemoryMigratedMetricDimensionBucket::Archivist},
+    {"Cobalt", "cobalt.cm", ".*", MemoryMigratedMetricDimensionBucket::Cobalt},
+    {"Audio", "audio_core.cmx", ".*", MemoryMigratedMetricDimensionBucket::Audio},
+    {"Context", "context_provider.cmx", ".*", MemoryMigratedMetricDimensionBucket::Context},
 };
 
 class MetricsUnitTest : public gtest::RealLoopFixture {
@@ -139,7 +140,7 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
 
 TEST_F(MetricsUnitTest, Inspect) {
   CaptureSupplier cs(Template());
-  cobalt::FakeLogger_Sync logger;
+  cobalt::StubMetricEventLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
   Metrics m(
       kBucketMatches, zx::min(5), dispatcher(), &inspector, &logger,
@@ -170,7 +171,7 @@ TEST_F(MetricsUnitTest, Inspect) {
 
 TEST_F(MetricsUnitTest, All) {
   CaptureSupplier cs(Template());
-  cobalt::FakeLogger_Sync logger;
+  cobalt::StubMetricEventLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
   Metrics m(
       kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
@@ -182,132 +183,133 @@ TEST_F(MetricsUnitTest, All) {
   // memory_leak metric: 10
   // = 44
   EXPECT_EQ(44U, logger.logged_events().size());
-  using Breakdown = cobalt_registry::MemoryGeneralBreakdownMetricDimensionGeneralBreakdown;
-  using Breakdown2 = cobalt_registry::MemoryLeakMetricDimensionGeneralBreakdown;
-  for (const auto& cobalt_event : logger.logged_events()) {
-    EXPECT_EQ(EventPayload::Tag::kMemoryBytesUsed, cobalt_event.payload.Which());
-    switch (cobalt_event.metric_id) {
-      case cobalt_registry::kMemoryMetricId:
-        ASSERT_EQ(1u, cobalt_event.event_codes.size());
-        switch (cobalt_event.event_codes[0]) {
-          case MemoryMetricDimensionBucket::ZbiBuffer:
-            EXPECT_EQ(1u, cobalt_event.payload.memory_bytes_used());
+  using Breakdown = cobalt_registry::MemoryGeneralBreakdownMigratedMetricDimensionGeneralBreakdown;
+  using Breakdown2 = cobalt_registry::MemoryLeakMigratedMetricDimensionGeneralBreakdown;
+  for (const auto& metric_event : logger.logged_events()) {
+    EXPECT_EQ(fuchsia::metrics::MetricEventPayload::Tag::kIntegerValue,
+              metric_event.payload.Which());
+    switch (metric_event.metric_id) {
+      case cobalt_registry::kMemoryMigratedMetricId:
+        ASSERT_EQ(1u, metric_event.event_codes.size());
+        switch (metric_event.event_codes[0]) {
+          case MemoryMigratedMetricDimensionBucket::ZbiBuffer:
+            EXPECT_EQ(1u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Graphics:
-            EXPECT_EQ(2u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Graphics:
+            EXPECT_EQ(2u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::ProtectedPool:
-            EXPECT_EQ(3u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::ProtectedPool:
+            EXPECT_EQ(3u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::ContiguousPool:
-            EXPECT_EQ(4u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::ContiguousPool:
+            EXPECT_EQ(4u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Fshost:
-            EXPECT_EQ(5u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Fshost:
+            EXPECT_EQ(5u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Minfs:
-            EXPECT_EQ(6u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Minfs:
+            EXPECT_EQ(6u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Blobfs:
-            EXPECT_EQ(7u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Blobfs:
+            EXPECT_EQ(7u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::FlutterApps:
-            EXPECT_EQ(8u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::FlutterApps:
+            EXPECT_EQ(8u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Flutter:
-            EXPECT_EQ(9u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Flutter:
+            EXPECT_EQ(9u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Web:
-            EXPECT_EQ(21u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Web:
+            EXPECT_EQ(21u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Kronk:
-            EXPECT_EQ(12u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Kronk:
+            EXPECT_EQ(12u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Scenic:
-            EXPECT_EQ(13u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Scenic:
+            EXPECT_EQ(13u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Amlogic:
-            EXPECT_EQ(14u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Amlogic:
+            EXPECT_EQ(14u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Netstack:
-            EXPECT_EQ(15u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Netstack:
+            EXPECT_EQ(15u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Pkgfs:
-            EXPECT_EQ(16u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Pkgfs:
+            EXPECT_EQ(16u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Cast:
-            EXPECT_EQ(17u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Cast:
+            EXPECT_EQ(17u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Archivist:
-            EXPECT_EQ(18u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Archivist:
+            EXPECT_EQ(18u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Cobalt:
-            EXPECT_EQ(19u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Cobalt:
+            EXPECT_EQ(19u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Audio:
-            EXPECT_EQ(20u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Audio:
+            EXPECT_EQ(20u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Context:
-            EXPECT_EQ(21u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Context:
+            EXPECT_EQ(21u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Undigested:
-            EXPECT_EQ(22, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Undigested:
+            EXPECT_EQ(22, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Orphaned:
+          case MemoryMigratedMetricDimensionBucket::Orphaned:
             // 900 kmem.vmo - (1 + 2 + 3 + ... + 22) vmo digested in buckets = 647
-            EXPECT_EQ(647, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(647, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Kernel:
+          case MemoryMigratedMetricDimensionBucket::Kernel:
             // 60 wired + 200 total_heap + 60 mmu_overhead + 10 ipc + 20 other = 350
-            EXPECT_EQ(350u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(350u, metric_event.payload.integer_value());
             break;
-          case MemoryMetricDimensionBucket::Free:
-            EXPECT_EQ(800u, cobalt_event.payload.memory_bytes_used());
+          case MemoryMigratedMetricDimensionBucket::Free:
+            EXPECT_EQ(800u, metric_event.payload.integer_value());
             break;
           default:
             ADD_FAILURE();
             break;
         }
         break;
-      case cobalt_registry::kMemoryGeneralBreakdownMetricId:
-        ASSERT_EQ(1u, cobalt_event.event_codes.size());
-        switch (cobalt_event.event_codes[0]) {
+      case cobalt_registry::kMemoryGeneralBreakdownMigratedMetricId:
+        ASSERT_EQ(1u, metric_event.event_codes.size());
+        switch (metric_event.event_codes[0]) {
           case Breakdown::TotalBytes:
-            EXPECT_EQ(2000u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(2000u, metric_event.payload.integer_value());
             break;
           case Breakdown::UsedBytes:
-            EXPECT_EQ(1200u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(1200u, metric_event.payload.integer_value());
             break;
           case Breakdown::VmoBytes:
-            EXPECT_EQ(900u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(900u, metric_event.payload.integer_value());
             break;
           case Breakdown::FreeBytes:
-            EXPECT_EQ(800u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(800u, metric_event.payload.integer_value());
             break;
           default:
-            EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() <= 200);
+            EXPECT_TRUE(metric_event.payload.integer_value() <= 200);
             break;
         }
         break;
-      case cobalt_registry::kMemoryLeakMetricId:
-        ASSERT_EQ(2u, cobalt_event.event_codes.size());
-        ASSERT_EQ(cobalt_registry::MemoryLeakMetricDimensionTimeSinceBoot::UpSixHours,
-                  cobalt_event.event_codes[1]);
-        switch (cobalt_event.event_codes[0]) {
+      case cobalt_registry::kMemoryLeakMigratedMetricId:
+        ASSERT_EQ(2u, metric_event.event_codes.size());
+        ASSERT_EQ(cobalt_registry::MemoryLeakMigratedMetricDimensionTimeSinceBoot::UpSixHours,
+                  metric_event.event_codes[1]);
+        switch (metric_event.event_codes[0]) {
           case Breakdown2::TotalBytes:
-            EXPECT_EQ(2000u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(2000u, metric_event.payload.integer_value());
             break;
           case Breakdown2::UsedBytes:
-            EXPECT_EQ(1200u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(1200u, metric_event.payload.integer_value());
             break;
           case Breakdown2::VmoBytes:
-            EXPECT_EQ(900u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(900u, metric_event.payload.integer_value());
             break;
           case Breakdown2::FreeBytes:
-            EXPECT_EQ(800u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(800u, metric_event.payload.integer_value());
             break;
           default:
-            EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() <= 200);
+            EXPECT_TRUE(metric_event.payload.integer_value() <= 200);
             break;
         }
         break;
@@ -338,7 +340,7 @@ TEST_F(MetricsUnitTest, One) {
               {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
           },
   }});
-  cobalt::FakeLogger_Sync logger;
+  cobalt::StubMetricEventLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
   Metrics m(
       kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
@@ -373,7 +375,7 @@ TEST_F(MetricsUnitTest, Undigested) {
               {.koid = 2, .name = "test", .vmos = {2}},
           },
   }});
-  cobalt::FakeLogger_Sync logger;
+  cobalt::StubMetricEventLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
   Metrics m(
       kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,

@@ -14,10 +14,10 @@
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]

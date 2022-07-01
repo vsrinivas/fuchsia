@@ -26,11 +26,13 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <utility>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
 
 #include "fuchsia/mem/cpp/fidl.h"
+#include "lib/fpromise/result.h"
 #include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"
@@ -237,25 +239,29 @@ void Monitor::SetRamDevice(fuchsia::hardware::ram::metrics::DevicePtr ptr) {
 }
 
 void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_matches) {
-  // Connect to the cobalt fidl service provided by the environment.
-  fuchsia::cobalt::LoggerFactorySyncPtr factory;
+  // Connect to the metrics fidl service provided by the environment.
+  fuchsia::metrics::MetricEventLoggerFactorySyncPtr factory;
   component_context_->svc()->Connect(factory.NewRequest());
   if (!factory) {
-    FX_LOGS(ERROR) << "Unable to get cobalt.LoggerFactory.";
+    FX_LOGS(ERROR) << "Unable to get metrics.MetricEventLoggerFactory.";
     return;
   }
-  // Create a Cobalt Logger. The ID name is the one we specified in the
+  // Create a Metric Event Logger. The ID name is the one we specified in the
   // Cobalt metrics registry.
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, cobalt_logger_.NewRequest(),
-                                     &status);
-  if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Unable to get cobalt.Logger from factory.";
+  fuchsia::metrics::ProjectSpec project_spec;
+  project_spec.set_customer_id(cobalt_registry::kCustomerId);
+  project_spec.set_project_id(cobalt_registry::kProjectId);
+  fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result result =
+      fpromise::error(fuchsia::metrics::Error::INTERNAL_ERROR);
+  factory->CreateMetricEventLogger(std::move(project_spec), metric_event_logger_.NewRequest(),
+                                   &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "Unable to get metrics.Logger from factory.";
     return;
   }
 
   metrics_ = std::make_unique<Metrics>(
-      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_, cobalt_logger_.get(),
+      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_, metric_event_logger_.get(),
       [this](Capture* c) { return GetCapture(c); },
       [this](const Capture& c, Digest* d) { GetDigest(c, d); });
 }
