@@ -172,18 +172,10 @@ pub(super) trait SlaacStateContext<C: SlaacNonSyncContext<Self::DeviceId>>:
 ///
 /// May panic if `addr` is not an address configured via SLAAC on
 /// `device_id`.
-fn update_slaac_addr_valid_until<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacStateContext<C>>(
-    sync_ctx: &mut SC,
-    device_id: SC::DeviceId,
-    addr: &UnicastAddr<Ipv6Addr>,
-    valid_until: Lifetime<C::Instant>,
+fn update_slaac_addr_valid_until<I: Instant>(
+    slaac_config: &mut SlaacConfig<I>,
+    valid_until: Lifetime<I>,
 ) {
-    let slaac_config = sync_ctx
-        .iter_slaac_addrs_mut(device_id)
-        .find_map(|SlaacAddressEntryMut { addr_sub, config, deprecated: _ }| {
-            (addr_sub.addr() == *addr).then(|| config)
-        })
-        .expect("address is not configured via SLAAC on this device");
     match slaac_config {
         SlaacConfig::Static { valid_until: v } => *v = valid_until,
         SlaacConfig::Temporary(TemporarySlaacConfig {
@@ -274,23 +266,40 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
             return;
         }
 
+        let mut seen_static = false;
+        let mut seen_temporary = false;
+
         let now = ctx.now();
-        let existing_subnet_slaac_addrs: Vec<_> =
-            self.iter_slaac_addrs(device_id).filter(|a| a.addr_sub.subnet() == subnet).collect();
+        let config = self.get_config(device_id);
+        let dad_transmits = self.dad_transmits(device_id);
+        let retrans_timer = self.retrans_timer(device_id);
 
         // Apply the update to each existing address, static or temporary, for the
         // prefix.
-        for entry in existing_subnet_slaac_addrs.iter() {
+        for entry in self.iter_slaac_addrs_mut(device_id).filter(|a| a.addr_sub.subnet() == subnet)
+        {
             let addr_sub = entry.addr_sub;
             let addr = addr_sub.addr();
             let slaac_config = &entry.config;
+            let slaac_type = SlaacType::from(&**slaac_config);
 
             trace!(
-            "receive_ndp_packet: already have a {:?} SLAAC address {:?} configured on device {:?}",
-            SlaacType::from(slaac_config),
-            addr_sub,
-            device_id
-        );
+                "receive_ndp_packet: already have a {:?} SLAAC address {:?} configured on device {:?}",
+                slaac_type,
+                addr_sub,
+                device_id
+            );
+
+            // Mark the SLAAC address type as existing so we know not to
+            // generate an address for the type later.
+            //
+            // Note that SLAAC addresses are never invalidated/removed in
+            // response to a prefix update and addresses types never change
+            // after the address is added.
+            match slaac_type {
+                SlaacType::Static => seen_static = true,
+                SlaacType::Temporary => seen_temporary = true,
+            }
 
             /// Encapsulates a lifetime bound and where it came from.
             #[derive(Copy, Clone)]
@@ -328,7 +337,7 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                     let SlaacConfiguration {
                         enable_stable_addresses: _,
                         temporary_address_configuration,
-                    } = self.get_config(device_id);
+                    } = config;
                     let (valid_for, preferred_for, entry_valid_until) =
                         match temporary_address_configuration {
                             // Since it's possible to change NDP configuration for a
@@ -397,11 +406,10 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                         };
 
                     let preferred_for_and_regen_at = preferred_for.map(|preferred_for| {
-                        let dad_transmits = self.dad_transmits(device_id);
                         let SlaacConfiguration {
                             enable_stable_addresses: _,
                             temporary_address_configuration,
-                        } = self.get_config(device_id);
+                        } = config;
 
                         let regen_at = temporary_address_configuration.and_then(
                             |TemporarySlaacAddressConfiguration {
@@ -412,7 +420,7 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                              }| {
                                 let regen_advance = regen_advance(
                                     temp_idgen_retries,
-                                    self.retrans_timer(device_id),
+                                    retrans_timer,
                                     dad_transmits.map_or(0, NonZeroU8::get),
                                 )
                                 .get();
@@ -455,13 +463,6 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
             // Preferred Lifetime in the received advertisement.
 
             // Update the preferred lifetime for this address.
-            //
-            // Must not have reached this point if the address was not already
-            // assigned to a device.
-            let entry = self
-                .iter_slaac_addrs_mut(device_id)
-                .find(|a| a.addr_sub == entry.addr_sub)
-                .unwrap();
             match preferred_for_and_regen_at {
                 None => {
                     if !*entry.deprecated {
@@ -576,12 +577,8 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                         trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
 
                         // Set the valid lifetime for this address.
-                        update_slaac_addr_valid_until(
-                            self,
-                            device_id,
-                            &addr,
-                            Lifetime::Finite(valid_until),
-                        );
+
+                        update_slaac_addr_valid_until(entry.config, Lifetime::Finite(valid_until));
 
                         let _: Option<C::Instant> = ctx.schedule_timer_instant(
                             valid_until,
@@ -590,7 +587,7 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                     }
                     NonZeroNdpLifetime::Infinite => {
                         // Set the valid lifetime for this address.
-                        update_slaac_addr_valid_until(self, device_id, &addr, Lifetime::Infinite);
+                        update_slaac_addr_valid_until(entry.config, Lifetime::Infinite);
 
                         let _: Option<C::Instant> = ctx.cancel_timer(
                             SlaacTimerId::new_invalidate_slaac_address(device_id, addr).into(),
@@ -621,33 +618,34 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
                 return;
             }
         };
-        let address_types_to_add =
-            IntoIterator::into_iter([SlaacType::Static, SlaacType::Temporary]).filter(
-                |slaac_type| {
-                    let mut of_same_slaac_type = existing_subnet_slaac_addrs.iter().filter(|a| {
-                        match a.config {
-                            SlaacConfig::Static { valid_until: _ } => {
-                                // From RFC 4862 Section 5.5.3.d: "If the prefix advertised
-                                // is not equal to the prefix of an address configured by
-                                // stateless autoconfiguration already in the list of
-                                // addresses associated with the interface (where 'equal'
-                                // means the two prefix lengths are the same and the first
-                                // prefix- length bits of the prefixes are identical), and
-                                // if the Valid Lifetime is not 0, form an address [...]"
-                                *slaac_type == SlaacType::Static
-                            }
-                            SlaacConfig::Temporary(_) => {
-                                // From RFC 8981 Section 3.4.3: "If the host has not
-                                // configured any temporary address for the corresponding
-                                // prefix, the host SHOULD create a new temporary address
-                                // for such prefix."
-                                *slaac_type == SlaacType::Temporary
-                            }
-                        }
-                    });
-                    // Add addresses only if there are none already present.
-                    of_same_slaac_type.next() == None
-                },
+
+        let address_types_to_add = (!seen_static)
+            .then(|| {
+                // As per RFC 4862 Section 5.5.3.d,
+                //
+                //
+                //   If the prefix advertised is not equal to the prefix of an
+                //   address configured by stateless autoconfiguration already
+                //   in the list of addresses associated with the interface
+                //   (where 'equal' means the two prefix lengths are the same
+                //   and the first prefix- length bits of the prefixes are
+                //   identical), and if the Valid Lifetime is not 0, form an
+                //   address [...].
+                SlaacType::Static
+            })
+            .into_iter()
+            .chain(
+                (!seen_temporary)
+                    .then(|| {
+                        // As per RFC 8981 Section 3.4.3,
+                        //
+                        //   If the host has not configured any temporary
+                        //   address for the corresponding prefix, the host
+                        //   SHOULD create a new temporary address for such
+                        //   prefix.
+                        SlaacType::Temporary
+                    })
+                    .into_iter(),
             );
 
         for slaac_type in address_types_to_add {
