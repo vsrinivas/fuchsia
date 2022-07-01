@@ -1968,11 +1968,6 @@
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.DATAGRAM_SOCKET",
-        "value": "512"
-    },
-    {
-        "kind": "bits/member",
         "name": "fuchsia.io/NodeProtocols.DEVICE",
         "value": "268435456"
     },
@@ -1993,28 +1988,8 @@
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.PACKET_SOCKET",
-        "value": "256"
-    },
-    {
-        "kind": "bits/member",
         "name": "fuchsia.io/NodeProtocols.PIPE",
         "value": "16"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.RAW_SOCKET",
-        "value": "128"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.STREAM_SOCKET",
-        "value": "64"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET",
-        "value": "32"
     },
     {
         "kind": "bits/member",

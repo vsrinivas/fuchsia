@@ -130,19 +130,12 @@ class DirentIteratorImpl {
         return ZXIO_NODE_PROTOCOL_DIRECTORY;
       case DT_FIFO:
         return ZXIO_NODE_PROTOCOL_PIPE;
-      case DT_LNK:
-        // Not supported.
-        return ZXIO_NODE_PROTOCOL_NONE;
       case DT_REG:
         return ZXIO_NODE_PROTOCOL_FILE;
+      case DT_LNK:
+        // Not supported.
       case DT_SOCK:
-        // TODO(jamesr): Switch to Directory2/Enumerate and remove this code.
-        //
-        // This points to the POSIX dirent data structure used by the io1
-        // directory enumeration protocol not being sufficient to fully describe
-        // the protocol(s) understood on a node. The io2 enumeration API lists
-        // the protocols understood by each node.
-        return ZXIO_NODE_PROTOCOL_STREAM_SOCKET;
+        // Not supported.
       default:
         return ZXIO_NODE_PROTOCOL_NONE;
     }
@@ -227,13 +220,11 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFLNK:
       // Symbolic links are not supported on Fuchsia.
+    case S_IFSOCK:
+      // Named pipes are not supported on Fuchsia.
+    default:
       // A reasonable fallback is to keep the protocols unchanged,
       // i.e. same as getting a protocol we do not understand.
-      return ZXIO_NODE_PROTOCOL_NONE;
-    case S_IFSOCK:
-      // TODO(jamesr): Could also be datagram or raw. How important is this?
-      return ZXIO_NODE_PROTOCOL_STREAM_SOCKET;
-    default:
       return ZXIO_NODE_PROTOCOL_NONE;
   }
 }
@@ -253,18 +244,6 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   }
   if (protocols & ZXIO_NODE_PROTOCOL_PIPE) {
     return S_IFIFO;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_STREAM_SOCKET) {
-    return S_IFSOCK;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET) {
-    return S_IFSOCK;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET) {
-    return S_IFSOCK;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_RAW_SOCKET) {
-    return S_IFSOCK;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     return S_IFBLK;

@@ -44,26 +44,6 @@ type NodeProtocols = strict bits : uint64 {
     /// The connection will speak the [`Pipe`] protocol.
     PIPE = 0x10;
 
-    /// The datagram socket representation of a node.
-    /// The connection will speak the [`fuchsia.posix.socket/SynchronousDatagramSocket`] protocol.
-    SYNCHRONOUS_DATAGRAM_SOCKET = 0x20;
-
-    /// The stream socket representation of a node.
-    /// The connection will speak the [`fuchsia.posix.socket/StreamSocket`] protocol.
-    STREAM_SOCKET = 0x40;
-
-    /// The raw socket representation of a node.
-    /// The connection will speak the [`fuchsia.posix.socket.raw/Socket`] protocol.
-    RAW_SOCKET = 0x80;
-
-    /// The packet socket representation of a node.
-    /// The connection will speak the [`fuchsia.posix.socket.packet/Socket`] protocol.
-    PACKET_SOCKET = 0x100;
-
-    /// The datagram socket representation of a node.
-    /// The connection will speak the [`fuchsia.posix.socket/DatagramSocket`] protocol.
-    DATAGRAM_SOCKET = 0x200;
-
     @deprecated("devices will be services in the future")
     DEVICE = 0x10000000;
 
