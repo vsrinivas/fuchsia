@@ -8,8 +8,11 @@
 
 use core::{num::NonZeroU8, time::Duration};
 
-use net_types::ip::Ipv6;
-use packet::{EmptyBuf, InnerPacketBuilder as _, Serializer};
+use net_types::{
+    ip::{Ipv6, Ipv6Addr},
+    UnicastAddr,
+};
+use packet::{EitherSerializer, EmptyBuf, InnerPacketBuilder as _, Serializer};
 use packet_formats::icmp::ndp::{
     options::NdpOptionBuilder, OptionSequenceBuilder, RouterSolicitation,
 };
@@ -68,12 +71,18 @@ pub(super) trait Ipv6DeviceRsContext<C>: IpDeviceIdContext<Ipv6> {
 /// The IP layer context provided to RS.
 pub(super) trait Ipv6LayerRsContext<C>: IpDeviceIdContext<Ipv6> {
     /// Sends an NDP Router Solicitation to the local-link.
-    fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
+    ///
+    /// The callback is called with a source address suitable for an outgoing
+    /// router solicitation message and returns the message body.
+    fn send_rs_packet<
+        S: Serializer<Buffer = EmptyBuf>,
+        F: FnOnce(Option<UnicastAddr<Ipv6Addr>>) -> S,
+    >(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
         message: RouterSolicitation,
-        body: S,
+        body: F,
     ) -> Result<(), S>;
 }
 
@@ -148,15 +157,30 @@ fn do_router_solicitation<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>>(
 
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically.
-    let _: Result<(), _> = sync_ctx.send_rs_packet(
-        ctx,
-        device_id,
-        RouterSolicitation::default(),
-        OptionSequenceBuilder::new(
-            src_ll.as_ref().map(AsRef::as_ref).map(NdpOptionBuilder::SourceLinkLayerAddress).iter(),
-        )
-        .into_serializer(),
-    );
+    let _: Result<(), _> =
+        sync_ctx.send_rs_packet(ctx, device_id, RouterSolicitation::default(), |src_ip| {
+            // As per RFC 4861 section 4.1,
+            //
+            //   Valid Options:
+            //
+            //      Source link-layer address The link-layer address of the
+            //                     sender, if known. MUST NOT be included if the
+            //                     Source Address is the unspecified address.
+            //                     Otherwise, it SHOULD be included on link
+            //                     layers that have addresses.
+            src_ip.map_or(EitherSerializer::A(EmptyBuf), |UnicastAddr { .. }| {
+                EitherSerializer::B(
+                    OptionSequenceBuilder::new(
+                        src_ll
+                            .as_ref()
+                            .map(AsRef::as_ref)
+                            .into_iter()
+                            .map(NdpOptionBuilder::SourceLinkLayerAddress),
+                    )
+                    .into_serializer(),
+                )
+            })
+        });
 
     let remaining = sync_ctx.get_router_soliciations_remaining_mut(device_id);
     *remaining = NonZeroU8::new(
@@ -178,7 +202,7 @@ fn do_router_solicitation<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>>(
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
+    use net_declare::net_ip_v6;
     use packet_formats::icmp::ndp::{options::NdpOption, Options};
     use test_case::test_case;
 
@@ -194,6 +218,7 @@ mod tests {
     struct MockRsContext<'a> {
         max_router_solicitations: Option<NonZeroU8>,
         router_soliciations_remaining: Option<NonZeroU8>,
+        source_address: Option<UnicastAddr<Ipv6Addr>>,
         link_layer_bytes: Option<&'a [u8]>,
     }
 
@@ -210,6 +235,7 @@ mod tests {
             let MockRsContext {
                 max_router_solicitations,
                 router_soliciations_remaining: _,
+                source_address: _,
                 link_layer_bytes: _,
             } = self.get_ref();
             *max_router_solicitations
@@ -222,6 +248,7 @@ mod tests {
             let MockRsContext {
                 max_router_solicitations: _,
                 router_soliciations_remaining,
+                source_address: _,
                 link_layer_bytes: _,
             } = self.get_mut();
             router_soliciations_remaining
@@ -231,6 +258,7 @@ mod tests {
             let MockRsContext {
                 max_router_solicitations: _,
                 router_soliciations_remaining: _,
+                source_address: _,
                 link_layer_bytes,
             } = self.get_ref();
             *link_layer_bytes
@@ -238,14 +266,23 @@ mod tests {
     }
 
     impl<'a> Ipv6LayerRsContext<MockNonSyncCtx> for MockCtx<'a> {
-        fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
+        fn send_rs_packet<
+            S: Serializer<Buffer = EmptyBuf>,
+            F: FnOnce(Option<UnicastAddr<Ipv6Addr>>) -> S,
+        >(
             &mut self,
             ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             message: RouterSolicitation,
-            body: S,
+            body: F,
         ) -> Result<(), S> {
-            self.send_frame(ctx, RsMessageMeta { message }, body)
+            let MockRsContext {
+                max_router_solicitations: _,
+                router_soliciations_remaining: _,
+                source_address,
+                link_layer_bytes: _,
+            } = self.get_ref();
+            self.send_frame(ctx, RsMessageMeta { message }, body(*source_address))
         }
     }
 
@@ -257,6 +294,7 @@ mod tests {
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(1),
                 router_soliciations_remaining: None,
+                source_address: None,
                 link_layer_bytes: None,
             }));
         RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, DummyDeviceId);
@@ -272,24 +310,50 @@ mod tests {
         assert_eq!(sync_ctx.frames(), &[][..]);
     }
 
-    #[test_case(0, None; "disabled")]
-    #[test_case(1, None; "once_without_source_link_layer_option")]
-    #[test_case(1, Some((&[1, 2, 3, 4, 5, 6], 0)); "once_with_mac_address_source_link_layer_option")]
-    #[test_case(1, Some((&[1, 2, 3, 4, 5], 1)); "once_with_short_address_source_link_layer_option")]
-    #[test_case(1, Some((&[1, 2, 3, 4, 5, 6, 7], 7)); "once_with_long_address_source_link_layer_option")]
+    const SOURCE_ADDRESS: UnicastAddr<Ipv6Addr> =
+        unsafe { UnicastAddr::new_unchecked(net_ip_v6!("fe80::1")) };
+
+    #[test_case(0, None, None, None; "disabled")]
+    #[test_case(1, None, None, None; "once_without_source_address_or_link_layer_option")]
+    #[test_case(
+        1,
+        Some(SOURCE_ADDRESS),
+        None,
+        None; "once_with_source_address_and_without_link_layer_option")]
+    #[test_case(
+        1,
+        None,
+        Some(&[1, 2, 3, 4, 5, 6]),
+        None; "once_without_source_address_and_with_mac_address_source_link_layer_option")]
+    #[test_case(
+        1,
+        Some(SOURCE_ADDRESS),
+        Some(&[1, 2, 3, 4, 5, 6]),
+        Some(&[1, 2, 3, 4, 5, 6]); "once_with_source_address_and_mac_address_source_link_layer_option")]
+    #[test_case(
+        1,
+        Some(SOURCE_ADDRESS),
+        Some(&[1, 2, 3, 4, 5]),
+        Some(&[1, 2, 3, 4, 5, 0]); "once_with_source_address_and_short_address_source_link_layer_option")]
+    #[test_case(
+        1,
+        Some(SOURCE_ADDRESS),
+        Some(&[1, 2, 3, 4, 5, 6, 7]),
+        Some(&[
+            1, 2, 3, 4, 5, 6, 7,
+            0, 0, 0, 0, 0, 0, 0,
+        ]); "once_with_source_address_and_long_address_source_link_layer_option")]
     fn perform_router_solicitation(
         max_router_solicitations: u8,
-        link_layer_bytes: Option<(&[u8], u8)>,
+        source_address: Option<UnicastAddr<Ipv6Addr>>,
+        link_layer_bytes: Option<&[u8]>,
+        expected_sll_bytes: Option<&[u8]>,
     ) {
-        // NDP options have lengths in 8 byte increments so the option may be
-        // padded if the address does not fit cleanly in the option.
-        let (link_layer_bytes, expected_pad_bytes) =
-            link_layer_bytes.map_or((None, 0), |(a, b)| (Some(a), b));
-
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(max_router_solicitations),
                 router_soliciations_remaining: None,
+                source_address,
                 link_layer_bytes,
             }));
         RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, DummyDeviceId);
@@ -320,21 +384,7 @@ mod tests {
                 o => panic!("unexpected NDP option = {:?}", o),
             });
 
-            match (sll_bytes, link_layer_bytes) {
-                (Some(sll_bytes), Some(link_layer_bytes)) => {
-                    assert_eq!(&sll_bytes[..link_layer_bytes.len()], link_layer_bytes);
-                    assert_eq!(
-                        sll_bytes[link_layer_bytes.len()..],
-                        vec![0; expected_pad_bytes.into()]
-                    );
-                }
-                (None, None) => {}
-                (sll_bytes, link_layer_bytes) => panic!(
-                    "got sll_bytes = {:?}, want = {:?} with {} padding bytes",
-                    sll_bytes, link_layer_bytes, expected_pad_bytes
-                ),
-            }
-
+            assert_eq!(sll_bytes, expected_sll_bytes);
             duration = RTR_SOLICITATION_INTERVAL;
         }
 

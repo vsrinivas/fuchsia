@@ -1648,6 +1648,33 @@ impl<B: GrowBuffer + ShrinkBuffer> Serializer for B {
     }
 }
 
+/// Either of two serializers.
+///
+/// An `EitherSerializer` wraps one of two different serializer types.
+pub enum EitherSerializer<A, B> {
+    A(A),
+    B(B),
+}
+
+impl<A: Serializer, B: Serializer<Buffer = A::Buffer>> Serializer for EitherSerializer<A, B> {
+    type Buffer = A::Buffer;
+
+    fn serialize<TB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, TB>>(
+        self,
+        outer: PB,
+        provider: P,
+    ) -> Result<TB, (SerializeError<P::Error>, Self)> {
+        match self {
+            EitherSerializer::A(s) => {
+                s.serialize(outer, provider).map_err(|(err, s)| (err, EitherSerializer::A(s)))
+            }
+            EitherSerializer::B(s) => {
+                s.serialize(outer, provider).map_err(|(err, s)| (err, EitherSerializer::B(s)))
+            }
+        }
+    }
+}
+
 /// The direction a buffer's body should be truncated from to force
 /// it to fit within a MTU.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

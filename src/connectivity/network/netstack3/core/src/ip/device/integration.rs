@@ -374,26 +374,29 @@ impl<
         SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf> + device::Ipv6DeviceContext<C>,
     > Ipv6LayerRsContext<C> for SC
 {
-    fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
+    fn send_rs_packet<
+        S: Serializer<Buffer = EmptyBuf>,
+        F: FnOnce(Option<UnicastAddr<Ipv6Addr>>) -> S,
+    >(
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
         message: RouterSolicitation,
-        body: S,
+        body: F,
     ) -> Result<(), S> {
         let dst_ip = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
+        let src_ip = crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
+            dst_ip,
+            device_id,
+            get_ipv6_device_state(self, device_id).iter_addrs().map(move |a| (a, device_id)),
+        );
         send_ndp_packet(
             self,
             ctx,
             device_id,
-            crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
-                dst_ip,
-                device_id,
-                get_ipv6_device_state(self, device_id).iter_addrs().map(move |a| (a, device_id)),
-            )
-            .map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
+            src_ip.map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
             dst_ip,
-            body,
+            body(src_ip),
             IcmpUnusedCode,
             message,
         )
