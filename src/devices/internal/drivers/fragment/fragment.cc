@@ -238,80 +238,6 @@ zx_status_t Fragment::RpcHdmi(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-void Fragment::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
-                                   size_t op_count) {
-  auto* ctx = static_cast<I2cTransactContext*>(cookie);
-  ctx->result = status;
-  if (status == ZX_OK && ctx->read_buf && ctx->read_length) {
-    memcpy(ctx->read_buf, op_list[0].data_buffer, ctx->read_length);
-  }
-
-  sync_completion_signal(&ctx->completion);
-}
-
-zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                             uint32_t* out_resp_size, zx::handle* req_handles,
-                             uint32_t req_handle_count, zx::handle* resp_handles,
-                             uint32_t* resp_handle_count) {
-  TRACE_DURATION("i2c", "I2c FragmentProxy RpcI2c");
-  if (!i2c_client_.proto_client().is_valid()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  auto* req = reinterpret_cast<const I2cProxyRequest*>(req_buf);
-  if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
-    return ZX_ERR_INTERNAL;
-  }
-  auto* resp = reinterpret_cast<I2cProxyResponse*>(resp_buf);
-  *out_resp_size = sizeof(*resp);
-  TRACE_FLOW_END("i2c", "I2c FragmentProxy I2cTransact Flow", req->trace_id);
-
-  switch (req->op) {
-    case I2cOp::TRANSACT: {
-      i2c_op_t i2c_ops[I2C_MAX_RW_OPS];
-      auto* rpc_ops = reinterpret_cast<const I2cProxyOp*>(&req[1]);
-      auto op_count = req->op_count;
-      if (op_count > std::size(i2c_ops)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
-      auto* write_buf = reinterpret_cast<const uint8_t*>(&rpc_ops[op_count]);
-      size_t read_length = 0;
-
-      for (size_t i = 0; i < op_count; i++) {
-        if (rpc_ops[i].is_read) {
-          i2c_ops[i].data_buffer = nullptr;
-          read_length += rpc_ops[i].length;
-        } else {
-          i2c_ops[i].data_buffer = write_buf;
-          write_buf += rpc_ops[i].length;
-        }
-        i2c_ops[i].data_size = rpc_ops[i].length;
-        i2c_ops[i].is_read = rpc_ops[i].is_read;
-        i2c_ops[i].stop = rpc_ops[i].stop;
-      }
-
-      I2cTransactContext ctx = {};
-      ctx.read_buf = &resp[1];
-      ctx.read_length = read_length;
-
-      i2c_client_.proto_client().Transact(i2c_ops, op_count, I2cTransactCallback, &ctx);
-      auto status = sync_completion_wait(&ctx.completion, ZX_TIME_INFINITE);
-      if (status == ZX_OK) {
-        status = ctx.result;
-      }
-      if (status == ZX_OK) {
-        *out_resp_size = static_cast<uint32_t>(sizeof(*resp) + read_length);
-      }
-      return status;
-    }
-    case I2cOp::GET_MAX_TRANSFER_SIZE:
-      return i2c_client_.proto_client().GetMaxTransferSize(&resp->size);
-    default:
-      zxlogf(ERROR, "%s: unknown I2C op %u", __func__, static_cast<uint32_t>(req->op));
-      return ZX_ERR_INTERNAL;
-  }
-}
-
 zx_status_t Fragment::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                               uint32_t* out_resp_size, zx::handle* req_handles,
                               uint32_t req_handle_count, zx::handle* resp_handles,
@@ -840,10 +766,6 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
       status = RpcHdmi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
       break;
-    case ZX_PROTOCOL_I2C:
-      status = RpcI2c(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
-                      resp_handles, &resp_handle_count);
-      break;
     case ZX_PROTOCOL_PDEV:
       status = RpcPdev(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
@@ -959,13 +881,6 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       hdmi_client_.proto_client().GetProto(static_cast<hdmi_protocol_t*>(out_protocol));
-      return ZX_OK;
-    }
-    case ZX_PROTOCOL_I2C: {
-      if (!i2c_client_.proto_client().is_valid()) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      i2c_client_.proto_client().GetProto(static_cast<i2c_protocol_t*>(out_protocol));
       return ZX_OK;
     }
     case ZX_PROTOCOL_CODEC: {

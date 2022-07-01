@@ -300,31 +300,6 @@ struct EthBoardProxyRequest {
   EthBoardOp op;
 };
 
-// ZX_PROTOCOL_I2C proxy support.
-enum class I2cOp {
-  TRANSACT,
-  GET_MAX_TRANSFER_SIZE,
-};
-
-struct I2cProxyRequest {
-  ProxyRequest header;
-  I2cOp op;
-  size_t op_count;
-  uint32_t flags;
-  uint64_t trace_id;
-};
-
-struct I2cProxyResponse {
-  ProxyResponse header;
-  size_t size;
-};
-
-struct I2cProxyOp {
-  size_t length;
-  bool is_read;
-  bool stop;
-};
-
 enum class SpiOp {
   TRANSMIT,
   RECEIVE,
