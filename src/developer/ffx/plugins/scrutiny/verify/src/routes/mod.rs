@@ -11,6 +11,7 @@ use {
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::verify::CapabilityRouteResults,
+    scrutiny_utils::path::join_and_canonicalize,
     serde_json,
     std::{collections::HashSet, fs, io::Read, path::PathBuf},
 };
@@ -25,26 +26,41 @@ struct Query {
     component_tree_config_path: Option<PathBuf>,
 }
 
-impl From<Command> for Query {
-    fn from(cmd: Command) -> Self {
+impl From<&Command> for Query {
+    fn from(cmd: &Command) -> Self {
         // argh(default = "vec![...]") does not work due to failed trait bound:
         // FromStr on Vec<_>. Apply default when vec is empty.
         let capability_types = if cmd.capability_type.len() > 0 {
-            cmd.capability_type
+            cmd.capability_type.clone()
         } else {
             default_capability_types()
         }
         .into_iter()
         .map(|capability_type| capability_type.into())
         .collect();
+        let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
+        let blobfs_paths = cmd
+            .blobfs
+            .iter()
+            .map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs))
+            .collect();
+        let allowlist_paths = cmd
+            .allowlist
+            .iter()
+            .map(|allowlist| join_and_canonicalize(&cmd.build_path, allowlist))
+            .collect();
+        let component_tree_config_path =
+            cmd.component_tree_config.as_ref().map(|component_tree_config| {
+                join_and_canonicalize(&cmd.build_path, &component_tree_config)
+            });
         Query {
             capability_types,
-            response_level: cmd.response_level.into(),
-            build_path: cmd.build_path,
-            update_package_path: cmd.update,
-            blobfs_paths: cmd.blobfs,
-            allowlist_paths: cmd.allowlist,
-            component_tree_config_path: cmd.component_tree_config,
+            response_level: cmd.response_level.clone().into(),
+            build_path: cmd.build_path.clone(),
+            update_package_path,
+            blobfs_paths,
+            allowlist_paths,
+            component_tree_config_path,
         }
     }
 }
@@ -70,7 +86,7 @@ fn load_allowlist(allowlist_paths: &Vec<PathBuf>) -> Result<Box<dyn AllowlistFil
     Err(err.unwrap())
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     let query: Query = cmd.into();
     let mut config = Config::run_command_with_plugins(
         CommandBuilder::new("verify.capability_routes")

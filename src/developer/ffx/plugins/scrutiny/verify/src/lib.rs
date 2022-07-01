@@ -6,7 +6,8 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_core::ffx_plugin,
     ffx_scrutiny_verify_args::{Command, SubCommand},
-    std::{fs, io::Write},
+    scrutiny_utils::path::relativize_path,
+    std::{fs, io::Write, path::PathBuf},
 };
 
 mod bootfs;
@@ -22,7 +23,7 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         bail!("Cannot specify --depfile without --stamp");
     }
 
-    let deps_set = match cmd.subcommand {
+    let deps_set = match &cmd.subcommand {
         SubCommand::Bootfs(cmd) => bootfs::verify(cmd).await,
         SubCommand::ComponentResolvers(cmd) => component_resolvers::verify(cmd).await,
         SubCommand::KernelCmdline(cmd) => kernel_cmdline::verify(cmd).await,
@@ -44,11 +45,24 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         })?;
         let mut depfile = fs::File::create(depfile_path).context("failed to create depfile")?;
 
-        let deps = deps_set
+        // Convert any absolute paths into paths relative to `build_path` to satisfy depfile format
+        // requirements.
+        let default_build_path = PathBuf::from(String::from("."));
+        let build_path = match &cmd.subcommand {
+            SubCommand::Bootfs(_) | SubCommand::KernelCmdline(_) => &default_build_path,
+            SubCommand::ComponentResolvers(subcommand) => &subcommand.build_path,
+            SubCommand::RouteSources(subcommand) => &subcommand.build_path,
+            SubCommand::Routes(subcommand) => &subcommand.build_path,
+            SubCommand::StaticPkgs(subcommand) => &subcommand.build_path,
+        };
+        let relative_dep_paths: Vec<PathBuf> =
+            deps_set.into_iter().map(|dep_path| relativize_path(build_path, dep_path)).collect();
+
+        let deps = relative_dep_paths
             .iter()
-            .map(|path_buf| {
-                path_buf.to_str().ok_or_else(|| {
-                    anyhow!("Failed to convert path for depfile to string: {:?}", path_buf)
+            .map(|dep_path| {
+                dep_path.to_str().ok_or_else(|| {
+                    anyhow!("Failed to convert path for depfile to string: {:?}", dep_path)
                 })
             })
             .collect::<Result<Vec<&str>>>()?;

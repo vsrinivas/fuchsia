@@ -8,6 +8,7 @@ use {
     scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::verify::{RouteSourceError, VerifyRouteSourcesResults},
+    scrutiny_utils::path::join_and_canonicalize,
     serde_json,
     std::{
         collections::{HashMap, HashSet},
@@ -23,20 +24,28 @@ struct Query {
     config_path: String,
 }
 
-impl TryFrom<Command> for Query {
+impl TryFrom<&Command> for Query {
     type Error = Error;
-    fn try_from(cmd: Command) -> Result<Self, Self::Error> {
-        let config_path = cmd.config.to_str().ok_or_else(|| {
+    fn try_from(cmd: &Command) -> Result<Self, Self::Error> {
+        let config_path_buf = join_and_canonicalize(&cmd.build_path, &cmd.config);
+        let config_path = config_path_buf.to_str().ok_or_else(|| {
             anyhow!(
                 "Route sources configuration file path {:?} cannot be converted to string for passing to scrutiny",
                 cmd.config
             )
         })?;
+        let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
+        let blobfs_paths = cmd
+            .blobfs
+            .iter()
+            .map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs))
+            .collect();
+        let config_path = config_path.to_string();
         Ok(Query {
-            build_path: cmd.build_path,
-            update_package_path: cmd.update,
-            blobfs_paths: cmd.blobfs,
-            config_path: config_path.to_string(),
+            build_path: cmd.build_path.clone(),
+            update_package_path,
+            blobfs_paths,
+            config_path,
         })
     }
 }
@@ -93,7 +102,7 @@ fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
     Ok(route_sources_results.deps)
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     let query = cmd.try_into()?;
     let deps = verify_route_sources(query)?;
     Ok(deps)

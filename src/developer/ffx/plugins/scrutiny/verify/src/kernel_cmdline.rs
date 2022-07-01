@@ -74,18 +74,18 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Resul
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
     deps.insert(cmd.zbi.clone());
 
-    let query = Query { zbi_path: cmd.zbi };
-    for golden_file_path in cmd.golden.into_iter() {
-        verify_kernel_cmdline(&query, &golden_file_path)?;
+    let query = Query { zbi_path: cmd.zbi.clone() };
+    for golden_file_path in cmd.golden.iter() {
+        verify_kernel_cmdline(&query, golden_file_path)?;
 
-        deps.insert(golden_file_path);
+        deps.insert(golden_file_path.clone());
     }
 
     Ok(deps)

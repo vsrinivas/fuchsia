@@ -11,6 +11,7 @@ use {
     scrutiny_utils::{
         artifact::{ArtifactReader, FileArtifactReader},
         golden::{CompareResult, GoldenFile},
+        path::join_and_canonicalize,
     },
     std::{collections::HashSet, path::PathBuf},
 };
@@ -96,16 +97,19 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
-    let query = Query {
-        build_path: cmd.build_path,
-        update_package_path: cmd.update,
-        blobfs_paths: cmd.blobfs,
-    };
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+    let build_path = cmd.build_path.clone();
+    let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
+    let blobfs_paths =
+        cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
+    let query = Query { build_path, update_package_path, blobfs_paths };
     let mut deps = HashSet::new();
 
-    for golden_file_path in cmd.golden.into_iter() {
-        deps.extend(verify_static_pkgs(&query, golden_file_path)?);
+    for golden_file_path in cmd.golden.iter() {
+        deps.extend(verify_static_pkgs(
+            &query,
+            join_and_canonicalize(&cmd.build_path, golden_file_path),
+        )?);
     }
 
     Ok(deps)

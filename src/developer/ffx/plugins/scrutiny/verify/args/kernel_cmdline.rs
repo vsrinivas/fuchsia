@@ -12,18 +12,19 @@ use {
 #[argh(
     subcommand,
     name = "kernel-cmdline",
-    description = "Verifies that kernel commandline arguments match golden files.",
-    example = "To verify kernel cmdline arguments on your current build:
+    description = "Verifies that kernel cmdline arguments match golden files.",
+    example = r#"To verify kernel cmdline arguments on your current build:
 
-        $ ffx scrutiny verify kernel-cmdline \
-            --zbi path/to/image.zbi \
-            --golden path/to/golden"
+    $ ffx scrutiny verify kernel-cmdline \
+        --zbi $(fx get-build-dir)/obj/build/images/fuchsia/fuchsia/fuchsia.zbi \
+        --golden path/to/golden"#
 )]
 pub struct Command {
-    /// path to ZBI image file that contains bootfs.
+    /// absolute or working directory-relative path to ZBI image file that contains bootfs.
     #[argh(option)]
     pub zbi: PathBuf,
-    /// path(s) to golden files to compare against during verification.
+    /// absolute or working directory-relative path(s) to golden files to compare against during
+    /// verification.
     #[argh(option)]
     pub golden: Vec<PathBuf>,
 }

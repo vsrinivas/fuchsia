@@ -91,13 +91,13 @@ if (is_host) {
     ]
 
     test_deps = [
+      "//src/lib/fuchsia",
       "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:tempfile",
     ]
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/lib/fuchsia",
       "//src/security/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]
@@ -112,6 +112,7 @@ if (is_host) {
       "src/key_value.rs",
       "src/lib.rs",
       "src/package.rs",
+      "src/path.rs",
       "src/url.rs",
       "src/usage.rs",
       "src/zbi.rs",

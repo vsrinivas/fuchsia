@@ -21,7 +21,7 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
@@ -44,9 +44,9 @@ pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
     let bootfs_files: Vec<String> = serde_json::from_str(&scrutiny_output)
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
-    for golden_file_path in cmd.golden.into_iter() {
+    for golden_file_path in cmd.golden.iter() {
         let golden_file =
-            GoldenFile::open(&golden_file_path).context("Failed to open the golden file")?;
+            GoldenFile::open(golden_file_path).context("Failed to open the golden file")?;
         match golden_file.compare(bootfs_files.clone()) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {
@@ -65,7 +65,7 @@ pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
             }
         }?;
 
-        deps.insert(golden_file_path);
+        deps.insert(golden_file_path.clone());
     }
 
     Ok(deps)

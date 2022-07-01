@@ -7,6 +7,7 @@ use {
     ffx_scrutiny_verify_args::component_resolvers::Command,
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
+    scrutiny_utils::path::join_and_canonicalize,
     serde::{Deserialize, Serialize},
     std::{collections::HashSet, fs, path::PathBuf},
 };
@@ -139,16 +140,19 @@ fn verify_component_resolvers(
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
-    let allowlist_path = cmd.allowlist.clone();
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+    let allowlist_path = join_and_canonicalize(&cmd.build_path, &cmd.allowlist);
+    let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
+    let blobfs_paths =
+        cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
     let scrutiny = ScrutinyQueryComponentResolvers {
-        build_path: cmd.build_path,
-        update_package_path: cmd.update,
-        blobfs_paths: cmd.blobfs,
+        build_path: cmd.build_path.clone(),
+        update_package_path,
+        blobfs_paths,
     };
 
     let allowlist: AllowList = serde_json5::from_str(
-        &fs::read_to_string(&cmd.allowlist).context("Failed to read allowlist")?,
+        &fs::read_to_string(&allowlist_path).context("Failed to read allowlist")?,
     )
     .context("Failed to deserialize allowlist")?;
 
