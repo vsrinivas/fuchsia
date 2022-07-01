@@ -55,9 +55,16 @@ impl Capabilities {
     pub fn from_abi_v3(u32s: (u32, u32)) -> Self {
         Self { mask: u32s.0 as u64 | ((u32s.1 as u64) << 32) }
     }
+}
 
-    pub fn from(mask: u64) -> Self {
-        Self { mask }
+impl std::convert::TryFrom<u64> for Capabilities {
+    type Error = Errno;
+
+    fn try_from(capability_num: u64) -> Result<Self, Self::Error> {
+        match 1u64.checked_shl(capability_num as u32) {
+            Some(mask) => Ok(Self { mask }),
+            _ => error!(EINVAL),
+        }
     }
 }
 
@@ -213,5 +220,13 @@ mod tests {
         let mut capabilities = CAP_BLOCK_SUSPEND | CAP_AUDIT_READ;
         capabilities.remove(CAP_AUDIT_READ);
         assert_eq!(capabilities, CAP_BLOCK_SUSPEND);
+    }
+
+    #[::fuchsia::test]
+    fn test_try_from() {
+        let capabilities = CAP_BLOCK_SUSPEND;
+        assert_eq!(Capabilities::try_from(CAP_BLOCK_SUSPEND), Ok(capabilities));
+
+        assert_eq!(Capabilities::try_from(200000), Err(EINVAL));
     }
 }

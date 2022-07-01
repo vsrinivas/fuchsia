@@ -470,17 +470,16 @@ pub fn sys_prctl(
         PR_CAPBSET_READ => {
             // TODO(security): We don't currently validate capabilities, but this should return an
             // error if the checked capability is invalid.
-            let has_cap = current_task.read().creds.cap_bounding.contains(Capabilities::from(arg2));
+            let has_cap =
+                current_task.read().creds.cap_bounding.contains(Capabilities::try_from(arg2)?);
             Ok(has_cap.into())
         }
         PR_CAPBSET_DROP => {
-            // TODO(security): We don't currently validate capabilities, but this should return an
-            // error if the set capability is invalid.
             if !current_task.read().creds.has_capability(CAP_SETPCAP) {
                 return error!(EPERM);
             }
 
-            current_task.write().creds.cap_bounding.remove(Capabilities::from(arg2));
+            current_task.write().creds.cap_bounding.remove(Capabilities::try_from(arg2)?);
             Ok(().into())
         }
         _ => {
