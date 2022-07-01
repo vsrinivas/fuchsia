@@ -9,8 +9,10 @@
 
 namespace driver_runtime {
 class Dispatcher;
+class DispatcherCoordinator;
 }  // namespace driver_runtime
 
+/// TODO(fxbug.dev/102881): rename to thread_context.
 namespace driver_context {
 
 // Adds |driver| to the thread's current call stack.
@@ -33,6 +35,9 @@ bool IsDriverInCallStack(const void* driver);
 
 // Returns whether the thread's current call stack is empty.
 bool IsCallStackEmpty();
+
+// Notifies |coordinator| of the thread wakeup for irq garbage collection.
+void OnThreadWakeup(driver_runtime::DispatcherCoordinator& coordinator);
 
 }  // namespace driver_context
 

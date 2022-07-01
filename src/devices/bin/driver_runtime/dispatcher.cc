@@ -88,6 +88,11 @@ const async_ops_t g_dispatcher_ops = {
 
 }  // namespace
 
+DispatcherCoordinator& GetDispatcherCoordinator() {
+  static DispatcherCoordinator shared_loop;
+  return shared_loop;
+}
+
 Dispatcher::AsyncWait::AsyncWait(async_wait_t* original_wait, Dispatcher& dispatcher)
     : async_wait_t{{ASYNC_STATE_INIT},
                    &Dispatcher::AsyncWait::Handler,
@@ -159,6 +164,7 @@ bool Dispatcher::AsyncWait::Cancel() {
 void Dispatcher::AsyncWait::Handler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                                     zx_status_t status, const zx_packet_signal_t* signal) {
   static_cast<AsyncWait*>(wait)->OnSignal(dispatcher, status, signal);
+  driver_context::OnThreadWakeup(GetDispatcherCoordinator());
 }
 
 void Dispatcher::AsyncWait::OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
@@ -172,9 +178,92 @@ void Dispatcher::AsyncWait::OnSignal(async_dispatcher_t* async_dispatcher, zx_st
   dispatcher->QueueWait(this, status);
 }
 
-DispatcherCoordinator& GetDispatcherCoordinator() {
-  static DispatcherCoordinator shared_loop;
-  return shared_loop;
+Dispatcher::AsyncIrq::AsyncIrq(async_irq_t* original_irq, Dispatcher& dispatcher)
+    : async_irq_t{{ASYNC_STATE_INIT}, &Dispatcher::AsyncIrq::Handler, original_irq->object},
+      original_irq_(original_irq) {
+  // Store a pointer to our IRQ wrapper, so |UnbindIrq| can back map from the user's IRQ object.
+  original_irq_->state.reserved[0] = reinterpret_cast<uintptr_t>(this);
+}
+
+Dispatcher::AsyncIrq::~AsyncIrq() {
+  // This shouldn't destruct until after the irq has been unbound, either by the user or
+  // |ShutdownAsync|.
+  ZX_ASSERT(dispatcher_ == nullptr);
+}
+
+// static
+zx_status_t Dispatcher::AsyncIrq::Bind(std::unique_ptr<AsyncIrq> irq, Dispatcher& dispatcher) {
+  // The AsyncIrq will hold the dispatcher reference until the irq is unbound.
+  irq->SetDispatcherRef(fbl::RefPtr(&dispatcher));
+
+  auto* irq_ref = irq.get();
+  dispatcher.AddIrqLocked(std::move(irq));
+
+  zx_status_t status = async_bind_irq(dispatcher.process_shared_dispatcher_, irq_ref);
+  if (status != ZX_OK) {
+    ZX_ASSERT(dispatcher.RemoveIrqLocked(irq_ref) != nullptr);
+    irq->SetDispatcherRef(nullptr);
+    return status;
+  }
+  return ZX_OK;
+}
+
+bool Dispatcher::AsyncIrq::Unbind() {
+  auto dispatcher = GetDispatcherRef();
+  if (!dispatcher) {
+    return false;
+  }
+  auto status = async_unbind_irq(dispatcher->process_shared_dispatcher_, this);
+  if (status != ZX_OK) {
+    return false;
+  }
+  SetDispatcherRef(nullptr);
+  original_irq_->state.reserved[0] = 0;
+  return true;
+}
+
+std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::AsyncIrq::CreateCallbackRequest(
+    Dispatcher& dispatcher) {
+  auto async_dispatcher = dispatcher.GetAsyncDispatcher();
+
+  // TODO(fxbug.dev/102092): We should consider something more efficient than creating a callback
+  // request each time the irq is triggered. This is complex due to an AsyncIrq not having a 1:1
+  // mapping to interrupt callbacks, and we cannot easily return ownership of a |CallbackRequest|
+  // after dispatching it. See fxbug.dev/102092 for a longer explanation.
+  auto callback_request =
+      std::make_unique<driver_runtime::CallbackRequest>(CallbackRequest::RequestType::kIrq);
+  driver_runtime::Callback callback =
+      [this, async_dispatcher](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
+                               fdf_status_t status) {
+        // We should not clear the reserved state, as this AsyncIrq object is still bound for
+        // future interrupts.
+        original_irq_->handler(async_dispatcher, original_irq_, status, &interrupt_packet_);
+      };
+  callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(&dispatcher), std::move(callback),
+                                this);
+  return callback_request;
+}
+
+// static
+void Dispatcher::AsyncIrq::Handler(async_dispatcher_t* dispatcher, async_irq_t* irq,
+                                   zx_status_t status, const zx_packet_interrupt_t* packet) {
+  static_cast<AsyncIrq*>(irq)->OnSignal(dispatcher, status, packet);
+  driver_context::OnThreadWakeup(GetDispatcherCoordinator());
+}
+
+void Dispatcher::AsyncIrq::OnSignal(async_dispatcher_t* global_dispatcher, zx_status_t status,
+                                    const zx_packet_interrupt_t* packet) {
+  fbl::RefPtr<Dispatcher> dispatcher = GetDispatcherRef();
+  // This may be cleared if the irq has already been unbound, but this irq packet was already pulled
+  // from the port. If so, we should not deliver the irq to the user.
+  if (!dispatcher) {
+    return;
+  }
+  interrupt_packet_ = *packet;
+
+  // We do not hold the irq lock before calling |QueueIrq|, as it would cause
+  // incorrect lock ordering.
+  dispatcher->QueueIrq(this, status);
 }
 
 Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls,
@@ -225,6 +314,7 @@ fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, const char* scheduler
       std::move(event),
       [self](std::unique_ptr<EventWaiter> event_waiter, fbl::RefPtr<Dispatcher> dispatcher_ref) {
         self->DispatchCallbacks(std::move(event_waiter), std::move(dispatcher_ref));
+        driver_context::OnThreadWakeup(GetDispatcherCoordinator());
       });
   dispatcher->event_waiter_ = event_waiter.get();
   zx_status_t status = EventWaiter::BeginWaitWithRef(std::move(event_waiter), dispatcher);
@@ -315,6 +405,10 @@ void Dispatcher::ShutdownAsync() {
       }
     }
 
+    // It's easier to handle |irqs_| in |CompleteShutdown|, so unbinding will only
+    // ever happen on a thread at once. If the irq gets triggered in the meanwhile,
+    // |QueueIrq| will return early.
+
     timer_.Cancel();
     shutdown_queue_.splice(shutdown_queue_.end(), delayed_tasks_);
 
@@ -346,6 +440,7 @@ void Dispatcher::ShutdownAsync() {
 }
 
 void Dispatcher::CompleteShutdown() {
+  fbl::DoublyLinkedList<std::unique_ptr<AsyncIrq>> unbound_irqs;
   {
     fbl::AutoLock lock(&callback_lock_);
 
@@ -361,6 +456,32 @@ void Dispatcher::CompleteShutdown() {
       ZX_ASSERT(event_waiter_->Cancel() != nullptr);
       event_waiter_ = nullptr;
     }
+
+    unbound_irqs = std::move(irqs_);
+    for (auto& irq : unbound_irqs) {
+      // It's possible that a callback request may be queued for a triggered irq.
+      // We should only queue an additional cancellation callback if one does not
+      // already exist.
+      auto iter =
+          shutdown_queue_.find_if([operation = &irq](const CallbackRequest& callback_request) {
+            return callback_request.holds_async_operation(operation);
+          });
+      if (iter == shutdown_queue_.end()) {
+        auto callback_request = irq.CreateCallbackRequest(*this);
+        shutdown_queue_.push_back(std::move(callback_request));
+      }
+      // If the irq is still in the list, unbinding shouldn't fail.
+      // The only case would be if the async loop is also shutting down,
+      // but we shouldn't do that before all the driver dispatchers have completed shutdown.
+      ZX_ASSERT_MSG(irq.Unbind(), "Dispatcher::ShutdownAsync failed to unbind irq");
+    }
+  }
+
+  for (auto irq = unbound_irqs.pop_front(); irq; irq = unbound_irqs.pop_front()) {
+    // Though the irq has been unbound, it's possible that another |process_shared_dispatcher|
+    // thread has already pulled an irq packet from the port and may attempt to call the irq
+    // handler. Delay destroying our irq wrapper for a bit in case this race condition happens.
+    GetDispatcherCoordinator().CacheUnboundIrq(std::move(irq));
   }
 
   // We remove one item at a time from the shutdown queue, in case someone
@@ -435,8 +556,9 @@ zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
     }
   }
 
-  // Second try to cancel it from the  callback queue.
-  auto callback_request = CancelAsyncOperation(wait);
+  // Second try to cancel it from the callback queue.
+  fbl::AutoLock lock(&callback_lock_);
+  auto callback_request = CancelAsyncOperationLocked(wait);
   return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
@@ -514,6 +636,7 @@ void Dispatcher::CheckDelayedTasks() {
 void Dispatcher::Timer::Handler() {
   current_deadline_ = zx::time::infinite();
   dispatcher_->CheckDelayedTasks();
+  driver_context::OnThreadWakeup(GetDispatcherCoordinator());
 }
 
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
@@ -552,7 +675,8 @@ zx_status_t Dispatcher::PostTask(async_task_t* task) {
 }
 
 zx_status_t Dispatcher::CancelTask(async_task_t* task) {
-  auto callback_request = CancelAsyncOperation(task);
+  fbl::AutoLock lock(&callback_lock_);
+  auto callback_request = CancelAsyncOperationLocked(task);
   return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
@@ -565,15 +689,53 @@ zx_status_t Dispatcher::QueuePacket(async_receiver_t* receiver, const zx_packet_
 }
 
 zx_status_t Dispatcher::BindIrq(async_irq_t* irq) {
+  if (unsynchronized()) {
+    // TODO(fxbug.dev/101913): support interrupts on unsynchronized dispatchers.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   fbl::AutoLock lock(&callback_lock_);
   if (!IsRunningLocked()) {
     return ZX_ERR_BAD_STATE;
   }
-  return async_bind_irq(process_shared_dispatcher_, irq);
+  auto async_irq = std::make_unique<AsyncIrq>(irq, *this);
+  return AsyncIrq::Bind(std::move(async_irq), *this);
 }
 
 zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
-  return async_unbind_irq(process_shared_dispatcher_, irq);
+  if (unsynchronized()) {
+    // TODO(fxbug.dev/101913): support interrupts on unsynchronized dispatchers.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto* async_irq = reinterpret_cast<AsyncIrq*>(irq->state.reserved[0]);
+  if (!async_irq) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  // Check that the irq is unbound from the same dispatcher it was bound to.
+  auto cur_dispatcher = driver_context::GetCurrentDispatcher();
+  if (!cur_dispatcher || (cur_dispatcher != async_irq->GetDispatcherRef().get())) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  std::unique_ptr<AsyncIrq> unbound_irq;
+  {
+    // The |callback_lock_| must be held across clearing the |dispatcher_ref_| in
+    // the irq, and removing any queued callback request for the irq.
+    fbl::AutoLock lock(&callback_lock_);
+    if (!async_irq->Unbind()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    unbound_irq = RemoveIrqLocked(async_irq);
+    ZX_ASSERT(unbound_irq != nullptr);
+    // If the irq has been triggered, there may be a callback request queued.
+    CancelAsyncOperationLocked(async_irq);
+  }
+  // Though the irq has been unbound, it's possible that another |process_shared_dispatcher|
+  // thread has already pulled an irq packet from the port and may attempt to call the irq
+  // handler. Delay destroying our irq wrapper for a bit in case this race condition happens.
+  GetDispatcherCoordinator().CacheUnboundIrq(std::move(unbound_irq));
+  return ZX_OK;
 }
 
 std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWithoutQueueing(
@@ -610,14 +772,18 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
     // Finding the callback request may fail if the request was cancelled in the meanwhile.
     // This is possible if the channel was about to queue the registered callback (in response
     // to a channel write or a peer channel closing), but the client cancelled the callback.
-    if (!request->InContainer()) {
+    //
+    // Calling |request->InContainer| may crash if the callback request was destructed between
+    // when we called |RegisterCallbackWithoutQueueing| and now.
+    // TODO(fxbug.dev/102771): if we change CallbackRequests to use RefPtrs, we should be
+    // able to switch this back to an |InContainer| check.
+    callback_request =
+        registered_callbacks_.erase_if([request](const CallbackRequest& callback_request) {
+          return &callback_request == request;
+        });
+    if (!callback_request) {
       return;
     }
-
-    callback_request = registered_callbacks_.erase(*request);
-    // The callback request should only be removed if queued, or on shutting down,
-    // which we checked earlier.
-    ZX_ASSERT(callback_request != nullptr);
     callback_request->SetCallbackReason(callback_reason);
 
     // Synchronous dispatchers do not allow parallel callbacks.
@@ -690,6 +856,41 @@ void Dispatcher::QueueWait(Dispatcher::AsyncWait* wait, zx_status_t status) {
   }
 }
 
+void Dispatcher::AddIrqLocked(std::unique_ptr<Dispatcher::AsyncIrq> irq) {
+  ZX_DEBUG_ASSERT(!irq->InContainer());
+  irqs_.push_back(std::move(irq));
+}
+
+std::unique_ptr<Dispatcher::AsyncIrq> Dispatcher::RemoveIrqLocked(Dispatcher::AsyncIrq* irq) {
+  ZX_DEBUG_ASSERT(irq->InContainer());
+  return irqs_.erase(*irq);
+}
+
+void Dispatcher::QueueIrq(AsyncIrq* irq, zx_status_t status) {
+  auto callback_request = irq->CreateCallbackRequest(*this);
+  CallbackRequest* callback_ptr = callback_request.get();
+
+  {
+    fbl::AutoLock al(&callback_lock_);
+
+    // If the dispatcher is shutting down, we will not deliver any more irqs to the user.
+    // |CompleteShutdown| will call the irq handler with |ZX_ERR_CANCELED|.
+    if (!IsRunningLocked()) {
+      return;
+    }
+    if (!irq->GetDispatcherRef()) {
+      // It's possible that the irq was unbound before we acquired the |callback_lock_|.
+      return;
+    }
+    // Unbinding only happens while the |callback_lock_| is held, so we don't
+    // need to hold the irq lock while we register this callback request.
+    registered_callbacks_.push_back(std::move(callback_request));
+  }
+  // If the irq is unbound before calling this, it will remove the callback request from
+  // |registered_callbacks_|.
+  QueueRegisteredCallback(callback_ptr, status);
+}
+
 std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& request_to_cancel) {
   fbl::AutoLock lock(&callback_lock_);
 
@@ -712,9 +913,14 @@ bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
   return true;
 }
 
-std::unique_ptr<CallbackRequest> Dispatcher::CancelAsyncOperation(void* operation) {
-  fbl::AutoLock lock(&callback_lock_);
-  auto iter = callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
+std::unique_ptr<CallbackRequest> Dispatcher::CancelAsyncOperationLocked(void* operation) {
+  auto iter = registered_callbacks_.erase_if([operation](const CallbackRequest& callback_request) {
+    return callback_request.holds_async_operation(operation);
+  });
+  if (iter) {
+    return iter;
+  }
+  iter = callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
     return callback_request.holds_async_operation(operation);
   });
   if (iter) {
@@ -1109,6 +1315,36 @@ void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
   }
 }
 
+// static
+void DispatcherCoordinator::CacheUnboundIrq(std::unique_ptr<Dispatcher::AsyncIrq> irq) {
+  DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
+
+  fbl::AutoLock lock(&(coordinator.lock_));
+  coordinator.cached_irqs_.AddIrq(std::move(irq));
+}
+
+// static
+void DispatcherCoordinator::OnThreadWakeup(uint32_t thread_irq_generation_id,
+                                           uint32_t* out_cur_irq_generation_id) {
+  DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
+
+  // Check if we have already tracked this thread wakeup for the current generation of irqs.
+  // |cur_generatiom_id| is atomic - we do not acquire the lock here to avoid unnecessary lock
+  // contention per thread wakeup. If the generation id changes in the meanwhile, the next wakeuup
+  // of this thread can handle that.
+  if (thread_irq_generation_id == coordinator.cached_irqs_.cur_generation_id()) {
+    // Generation id should stay the same.
+    *out_cur_irq_generation_id = thread_irq_generation_id;
+    return;
+  }
+
+  fbl::AutoLock lock(&(coordinator.lock_));
+  // We should set this first, as |cached_irqs_.NewThreadWakeup| may increment the generation id
+  // if it clears the current generation.
+  *out_cur_irq_generation_id = coordinator.cached_irqs_.cur_generation_id();
+  coordinator.cached_irqs_.NewThreadWakeup(coordinator.number_threads_);
+}
+
 zx_status_t DispatcherCoordinator::AddThread() {
   fbl::AutoLock lock(&lock_);
   dispatcher_threads_needed_++;
@@ -1143,6 +1379,36 @@ void DispatcherCoordinator::Reset() {
   dispatcher_threads_needed_ = 1;
 
   loop_.StartThread("fdf-dispatcher-thread-0");
+}
+
+void DispatcherCoordinator::CachedIrqs::AddIrq(std::unique_ptr<Dispatcher::AsyncIrq> irq) {
+  // Check if we are tracking a new generation of irqs.
+  if (cur_generation_.is_empty()) {
+    IncrementGenerationId();
+  }
+  // We should only add to the current generation of cached irqs if no thread has woken up yet.
+  if (threads_wakeup_count_ == 0) {
+    cur_generation_.push_back(std::move(irq));
+  } else {
+    next_generation_.push_back(std::move(irq));
+  }
+}
+
+void DispatcherCoordinator::CachedIrqs::NewThreadWakeup(uint32_t total_number_threads) {
+  threads_wakeup_count_++;
+  // If all threads have woken up since the current generation of cached irqs was populated,
+  // we can be sure that no threads have a pending irq packet that correspond to these unbound irqs.
+  if (threads_wakeup_count_ < total_number_threads) {
+    return;
+  }
+  // Drop the current generation of irqs, and begin tracking thread wakeups for the next generation.
+  cur_generation_ = std::move(next_generation_);
+  // If the next generation already has irqs, we need to increment the generation counter
+  // so that thread wakeups will be tracked.
+  if (cur_generation_.size() > 0) {
+    IncrementGenerationId();
+  }
+  threads_wakeup_count_ = 0;
 }
 
 }  // namespace driver_runtime

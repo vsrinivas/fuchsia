@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/async/irq.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -40,6 +41,54 @@ class Dispatcher : public async_dispatcher_t,
 
  public:
   using ThreadAdder = fit::callback<zx_status_t()>;
+
+  // Indirect irq object which is used to ensure irqs are tracked and synchronize irqs on
+  // SYNCHRONIZED dispatchers.
+  // Public so it can be referenced by the DispatcherCoordinator.
+  class AsyncIrq : public async_irq_t, public fbl::DoublyLinkedListable<std::unique_ptr<AsyncIrq>> {
+   public:
+    AsyncIrq(async_irq_t* original_irq, Dispatcher& dispatcher);
+    ~AsyncIrq();
+
+    static zx_status_t Bind(std::unique_ptr<AsyncIrq> irq, Dispatcher& dispatcher)
+        __TA_REQUIRES(&dispatcher.callback_lock_);
+    bool Unbind();
+
+    static void Handler(async_dispatcher_t* dispatcher, async_irq_t* irq, zx_status_t status,
+                        const zx_packet_interrupt_t* packet);
+    void OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
+                  const zx_packet_interrupt_t* packet);
+
+    // Returns a callback request representing the triggered irq.
+    std::unique_ptr<driver_runtime::CallbackRequest> CreateCallbackRequest(Dispatcher& dispatcher);
+
+    fbl::RefPtr<Dispatcher> GetDispatcherRef() {
+      fbl::AutoLock lock(&lock_);
+      return dispatcher_;
+    }
+
+   private:
+    void SetDispatcherRef(fbl::RefPtr<Dispatcher> dispatcher) {
+      fbl::AutoLock lock(&lock_);
+      dispatcher_ = std::move(dispatcher);
+    }
+    // Unlike async::Wait, we cannot store the dispatcher_ref as a std::atomic<Dispatcher*>.
+    //
+    // Since the |OnSignal| handler may be called many times, it copies the dispatcher reference,
+    // rather than taking ownership of it. While |OnSignal| is accessing |dispatcher_|,
+    // another thread could be attempting to unbind the dispatcher, so with an atomic raw pointer,
+    // is is possible that the dispatcher has been destructed between when we access |dispatcher_|
+    // and when we try to convert it back to a RefPtr.
+    //
+    // If |lock_| needs to be acquired at the same time as the dispatcher's |callback_lock_|,
+    // you must acquire |callback_lock_| first.
+    fbl::Mutex lock_;
+    fbl::RefPtr<Dispatcher> dispatcher_ __TA_GUARDED(&lock_);
+
+    async_irq_t* original_irq_;
+
+    zx_packet_interrupt_t interrupt_packet_ = {};
+  };
 
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
@@ -125,6 +174,14 @@ class Dispatcher : public async_dispatcher_t,
   // Moves wait from |waits_| queue onto |registered_callbacks_| and signals that it can be called.
   void QueueWait(AsyncWait* wait, zx_status_t status);
 
+  // Adds irq to |irqs_|.
+  void AddIrqLocked(std::unique_ptr<AsyncIrq> irq) __TA_REQUIRES(&callback_lock_);
+  // Removes irq from |irqs_| and triggers idle check.
+  std::unique_ptr<AsyncIrq> RemoveIrqLocked(AsyncIrq* irq) __TA_REQUIRES(&callback_lock_);
+  // Creates a new callback request for |irq|, queues it onto |registered_callbacks_| and signals
+  // that it can be called.
+  void QueueIrq(AsyncIrq* irq, zx_status_t status);
+
   // Removes the callback matching |callback_request| from the queue and returns it.
   // May return nullptr if no such callback is found.
   std::unique_ptr<CallbackRequest> CancelCallback(CallbackRequest& callback_request);
@@ -136,8 +193,8 @@ class Dispatcher : public async_dispatcher_t,
 
   // Removes the callback that manages the async dispatcher |operation| and returns it.
   // May return nullptr if no such callback is found.
-  std::unique_ptr<CallbackRequest> CancelAsyncOperation(void* operation)
-      __TA_EXCLUDES(&callback_lock_);
+  std::unique_ptr<CallbackRequest> CancelAsyncOperationLocked(void* operation)
+      __TA_REQUIRES(&callback_lock_);
 
   // Returns true if the dispatcher has no active threads or queued requests.
   // This does not include unsignaled waits, or tasks which have been scheduled
@@ -278,8 +335,6 @@ class Dispatcher : public async_dispatcher_t,
     static void Handler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
-    void SetupCallback(Dispatcher& dispatcher, const zx_packet_signal_t* signal);
-
     void OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
                   const zx_packet_signal_t* signal);
 
@@ -415,6 +470,12 @@ class Dispatcher : public async_dispatcher_t,
   fbl::TaggedDoublyLinkedList<std::unique_ptr<AsyncWait>, AsyncWaitTag> waits_
       __TA_GUARDED(&callback_lock_);
 
+  // Irqs which are bound to the dispatcher. A new callback request is added to
+  // the |registered_callbacks_| queue when an interrupt is triggered.
+  // They are tracked so that they may be canceled during |Destroy| prior to calling
+  // |CompleteDestroy|.
+  fbl::DoublyLinkedList<std::unique_ptr<AsyncIrq>> irqs_ __TA_GUARDED(&callback_lock_);
+
   Timer timer_ __TA_GUARDED(&callback_lock_);
 
   // Tasks which should move into callback_queue as soon as they are ready.
@@ -466,7 +527,17 @@ class DispatcherCoordinator {
   // Notifies the dispatcher coordinator that a dispatcher has completed shutdown.
   void NotifyShutdown(driver_runtime::Dispatcher& dispatcher);
   void RemoveDispatcher(Dispatcher& dispatcher);
-
+  // Stores |irq| which has been unbound.
+  // This is avoid destroying the irq wrapper immediately after unbinding, as it's possible
+  // another process dispatcher thread has already pulled an irq packet from the port
+  // and may attempt to call the irq handler.
+  static void CacheUnboundIrq(std::unique_ptr<driver_runtime::Dispatcher::AsyncIrq> irq);
+  // Notifies the coordinator that the current thread has woken up. This will check if there is
+  // cached irq garbage collection to do.
+  // |thread_irq_generation_id| is the generation id seen by the thread at its last wakeup.
+  // |out_cur_irq_generation_id| is the generation id to update the thread to.
+  static void OnThreadWakeup(uint32_t thread_irq_generation_id,
+                             uint32_t* out_cur_irq_generation_id);
   zx_status_t AddThread();
 
   // Resets back down to 1 thread.
@@ -556,6 +627,53 @@ class DispatcherCoordinator {
     fdf_internal_driver_shutdown_observer_t* shutdown_observer_ = nullptr;
   };
 
+  // This stores irqs to avoid destroying them immediately after unbinding.
+  // Even though unbinding an irq will clear all irq packets on a port,
+  // it's possible another process dispatcher thread has already pulled an irq packet
+  // from the port and may attempt to call the irq handler.
+  //
+  // It is safe to destroy a cached irq once we can determine that all threads
+  // have woken up at least once since the irq was unbound.
+  class CachedIrqs {
+   public:
+    // Adds an unbound irq to the cached irqs.
+    void AddIrq(std::unique_ptr<Dispatcher::AsyncIrq> irq) __TA_REQUIRES(&lock_);
+    // Updates the thread tracking and checks whether to garbage collect the current generation of
+    // irqs.
+    void NewThreadWakeup(uint32_t total_threads) __TA_REQUIRES(&lock_);
+
+    // The coordinator can compare the current generation id to a thread's stored generation id to
+    // see if the thread wakeup has not yet been tracked, in which case |NewThreadWakeup| should be
+    // called.
+    uint32_t cur_generation_id() { return cur_generation_id_.load(); }
+
+   private:
+    using List = fbl::DoublyLinkedList<std::unique_ptr<Dispatcher::AsyncIrq>, fbl::DefaultObjectTag,
+                                       fbl::SizeOrder::Constant>;
+
+    void IncrementGenerationId() __TA_REQUIRES(&lock_) {
+      if (cur_generation_id_.fetch_add(1) == UINT32_MAX) {
+        // |fetch_add| returns the value before adding. Avoid using 0 for a new generation id,
+        // since new threads may be spawned with default generation id 0.
+        cur_generation_id_++;
+      }
+    }
+
+    // The current generation of cached irqs to be garbage collected once all threads wakeup.
+    List cur_generation_ __TA_GUARDED(&lock_);
+    // These are the irqs that were unbound after we already tracked a thread wakeup for the
+    // current generation.
+    List next_generation_ __TA_GUARDED(&lock_);
+
+    // The number of threads that have woken up since the irqs in the |cur_generation_| list was
+    // populated.
+    uint32_t threads_wakeup_count_ __TA_GUARDED(&lock_) = 0;
+
+    // This is not locked for reads, so that threads do not need to deal with lock contention if
+    // there are no cached irqs.
+    std::atomic<uint32_t> cur_generation_id_ = 0;
+  };
+
   // Make sure this destructs after |loop_|. This is as dispatchers will remove themselves
   // from this list on shutdown.
   fbl::Mutex lock_;
@@ -569,6 +687,9 @@ class DispatcherCoordinator {
   // Tracks the number of dispatchers which have sync calls allowed. We will only spawn additional
   // threads if this number exceeds |number_threads_|.
   uint32_t dispatcher_threads_needed_ __TA_GUARDED(&lock_) = 1;
+
+  // Stores unbound irqs which will be garbage collected at a later time.
+  CachedIrqs cached_irqs_;
 
   async_loop_config_t config_;
   async::Loop loop_;

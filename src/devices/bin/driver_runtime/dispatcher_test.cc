@@ -30,7 +30,7 @@
 
 class DispatcherTest : public RuntimeTestCase {
  public:
-  DispatcherTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  DispatcherTest() : config_(MakeConfig()), loop_(&config_) {}
 
   void SetUp() override;
   void TearDown() override;
@@ -61,12 +61,19 @@ class DispatcherTest : public RuntimeTestCase {
                                      libsync::Completion* entered_callback,
                                      libsync::Completion* complete_blocking_read);
 
+  static constexpr async_loop_config_t MakeConfig() {
+    async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
+    config.irq_support = true;
+    return config;
+  }
+
   fdf_handle_t local_ch_;
   fdf_handle_t remote_ch_;
 
   fdf_handle_t local_ch2_;
   fdf_handle_t remote_ch2_;
 
+  async_loop_config_t config_;
   async::Loop loop_;
   std::vector<fdf_dispatcher_t*> dispatchers_;
   std::vector<std::unique_ptr<DispatcherShutdownObserver>> observers_;
@@ -1422,7 +1429,79 @@ TEST_F(DispatcherTest, WaitSynchronized) {
   ASSERT_OK(sync_completion_wait(&completion1, ZX_TIME_INFINITE));
 }
 
+// Tests an irq can be bound and multiple callbacks received.
 TEST_F(DispatcherTest, Irq) {
+  static constexpr uint32_t kNumCallbacks = 10;
+
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  libsync::Completion irq_signal;
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) {
+                   irq_object.ack();
+                   ASSERT_EQ(irq_arg, &irq);
+                   ASSERT_EQ(ZX_OK, status);
+                   irq_signal.Signal();
+                 });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, irq.Begin(dispatcher));
+
+  for (uint32_t i = 0; i < kNumCallbacks; i++) {
+    irq_object.trigger(0, zx::time());
+    ASSERT_OK(irq_signal.Wait());
+    irq_signal.Reset();
+  }
+
+  // Must unbind irq from dispatcher thread.
+  libsync::Completion unbind_complete;
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    ASSERT_OK(irq.Cancel());
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, irq.Cancel());
+    unbind_complete.Signal();
+  }));
+  ASSERT_OK(unbind_complete.Wait());
+}
+
+// Tests that the client will stop receiving callbacks after unbinding the irq.
+TEST_F(DispatcherTest, UnbindIrq) {
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) { ASSERT_FALSE(true); });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+
+  // Must unbind irq from dispatcher thread.
+  libsync::Completion unbind_complete;
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    ASSERT_OK(irq.Cancel());
+    unbind_complete.Signal();
+  }));
+  ASSERT_OK(unbind_complete.Wait());
+
+  // The irq has been unbound, so this should not call the handler.
+  irq_object.trigger(0, zx::time());
+}
+
+// Tests that we get cancellation callbacks for irqs that are still bound when shutting down.
+TEST_F(DispatcherTest, IrqCancelOnShutdown) {
   libsync::Completion completion;
   auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) { completion.Signal(); };
 
@@ -1438,27 +1517,403 @@ TEST_F(DispatcherTest, Irq) {
   zx::interrupt irq_object;
   ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
 
-  async::Irq irq;
-  irq.set_object(irq_object.get());
-
-  libsync::Completion irq_signal;
-  irq.set_handler([&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
-                      const zx_packet_interrupt_t* interrupt) {
-    irq_signal.Signal();
-    ASSERT_EQ(irq_arg, &irq);
-    ASSERT_EQ(ZX_OK, status);
-  });
+  libsync::Completion irq_completion;
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) {
+                   ASSERT_EQ(ZX_ERR_CANCELED, status);
+                   irq_completion.Signal();
+                 });
   ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, irq.Begin(dispatcher));
 
+  // This should unbind the irq and call the handler with ZX_ERR_CANCELED.
+  fdf_dispatcher->ShutdownAsync();
+  ASSERT_OK(irq_completion.Wait());
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
+}
+
+// Tests that we get one cancellation callback per irq that is still bound when shutting down.
+TEST_F(DispatcherTest, IrqCancelOnShutdownCallbackOnlyOnce) {
+  auto shutdown_observer = std::make_unique<DispatcherShutdownObserver>();
+  driver_runtime::Dispatcher* runtime_dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(0, "", 0, CreateFakeDriver(), &loop_,
+                                                              shutdown_observer->fdf_observer(),
+                                                              &runtime_dispatcher));
+  fdf_dispatcher_t* fdf_dispatcher = static_cast<fdf_dispatcher_t*>(runtime_dispatcher);
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  // Create a second dispatcher which allows sync calls to force multiple threads.
+  fdf_dispatcher_t* fdf_dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role",
+                                           CreateFakeDriver(), &fdf_dispatcher2));
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  libsync::Completion irq_completion;
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) {
+                   ASSERT_FALSE(irq_completion.signaled());  // Make sure it is only called once.
+                   ASSERT_EQ(ZX_ERR_CANCELED, status);
+                   irq_completion.Signal();
+                 });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+
+  // Block the sync dispatcher thread with a task.
+  libsync::Completion complete_task;
+  ASSERT_OK(async::PostTask(dispatcher, [&] { ASSERT_OK(complete_task.Wait()); }));
+
+  // Trigger the irq to queue a callback request.
   irq_object.trigger(0, zx::time());
-  ASSERT_OK(irq_signal.Wait());
 
-  ASSERT_OK(irq.Cancel());
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, irq.Cancel());
+  // Make sure the callback request has already been queued by the second global dispatcher thread,
+  // by queueing a task after the trigger and waiting for the task's completion.
+  libsync::Completion task_complete;
+  ASSERT_OK(async::PostTask(fdf_dispatcher_get_async_dispatcher(fdf_dispatcher2),
+                            [&] { task_complete.Signal(); }));
+  ASSERT_OK(task_complete.Wait());
+
+  complete_task.Signal();
+
+  // This should unbind the irq and call the handler with ZX_ERR_CANCELED.
+  fdf_dispatcher_shutdown_async(fdf_dispatcher);
+  ASSERT_OK(shutdown_observer->WaitUntilShutdown());
+  ASSERT_OK(irq_completion.Wait());
+  fdf_dispatcher_destroy(fdf_dispatcher);
+}
+
+// Tests that an irq can be unbound after a dispatcher begins shutting down.
+TEST_F(DispatcherTest, UnbindIrqAfterDispatcherShutdown) {
+  libsync::Completion completion;
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) { completion.Signal(); };
+
+  driver_context::PushDriver(CreateFakeDriver());
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto fdf_dispatcher = fdf::Dispatcher::Create(0, destructed_handler);
+  ASSERT_FALSE(fdf_dispatcher.is_error());
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher->async_dispatcher();
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) { ASSERT_TRUE(false); });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    fdf_dispatcher->ShutdownAsync();
+    ASSERT_OK(irq.Cancel());
+  }));
+
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
+}
+
+// Tests that when using a SYNCHRONIZED dispatcher, irqs are not delivered in parallel.
+TEST_F(DispatcherTest, IrqSynchronized) {
+  // Create a dispatcher that we will bind 2 irqs to.
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  // Create a second dispatcher which allows sync calls to force multiple threads.
+  fdf_dispatcher_t* fdf_dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role",
+                                           CreateFakeDriver(), &fdf_dispatcher2));
+
+  zx::interrupt irq_object1;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object1));
+  zx::interrupt irq_object2;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object2));
+
+  // We will bind 2 irqs to one dispatcher, and trigger them both. The irq handlers will block
+  // until a task posted to another dispatcher completes. If the irqs callbacks happen
+  // in parallel, the task will not be able to run, and the test will hang.
+  libsync::Completion task_completion;
+  libsync::Completion irq_completion1, irq_completion2;
+
+  async::Irq irq1(irq_object1.get(), 0,
+                  [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                      const zx_packet_interrupt_t* interrupt) {
+                    ASSERT_OK(task_completion.Wait());
+                    irq_object1.ack();
+                    ASSERT_EQ(irq_arg, &irq1);
+                    ASSERT_EQ(ZX_OK, status);
+                    irq_completion1.Signal();
+                  });
+  ASSERT_EQ(ZX_OK, irq1.Begin(dispatcher));
+
+  async::Irq irq2(irq_object2.get(), 0,
+                  [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                      const zx_packet_interrupt_t* interrupt) {
+                    ASSERT_OK(task_completion.Wait());
+                    irq_object2.ack();
+                    ASSERT_EQ(irq_arg, &irq2);
+                    ASSERT_EQ(ZX_OK, status);
+                    irq_completion2.Signal();
+                  });
+  ASSERT_EQ(ZX_OK, irq2.Begin(dispatcher));
+
+  // While the order of these triggers are serialized, the order in which the triggers are observed
+  // by the async_irqs is not. As a result either of the above async_irqs may trigger first. If the
+  // irqs are not synchronized, both irq handlers will run and block.
+  irq_object1.trigger(0, zx::time());
+  irq_object2.trigger(0, zx::time());
+
+  // Unblock the irq handler.
+  ASSERT_OK(async::PostTask(fdf_dispatcher_get_async_dispatcher(fdf_dispatcher2),
+                            [&] { task_completion.Signal(); }));
+  ASSERT_OK(task_completion.Wait());
+
+  // The order of observing these completions does not matter.
+  ASSERT_OK(irq_completion2.Wait());
+  ASSERT_OK(irq_completion1.Wait());
+
+  // Must unbind irqs from dispatcher thread.
+  libsync::Completion unbind_complete;
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    ASSERT_OK(irq1.Cancel());
+    ASSERT_OK(irq2.Cancel());
+    unbind_complete.Signal();
+  }));
+  ASSERT_OK(unbind_complete.Wait());
+}
+
+TEST_F(DispatcherTest, UnbindIrqRemovesPacketFromPort) {
+  libsync::Completion completion;
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) { completion.Signal(); };
+
+  driver_context::PushDriver(CreateFakeDriver());
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto fdf_dispatcher = fdf::Dispatcher::Create(0, destructed_handler);
+  ASSERT_FALSE(fdf_dispatcher.is_error());
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher->async_dispatcher();
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) { ASSERT_TRUE(false); });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+
+  libsync::Completion task_complete;
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    // The irq handler should not be called yet since the dispatcher thread is blocked.
+    irq_object.trigger(0, zx::time());
+    // This should remove the pending irq packet from the port.
+    ASSERT_OK(irq.Cancel());
+    task_complete.Signal();
+  }));
+  ASSERT_OK(task_complete.Wait());
 
   fdf_dispatcher->ShutdownAsync();
   ASSERT_OK(completion.Wait(zx::time::infinite()));
+}
+
+TEST_F(DispatcherTest, UnbindIrqRemovesQueuedIrqs) {
+  // Create a dispatcher that we will bind 2 irqs to.
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  // Create a second dispatcher which allows sync calls to force multiple threads.
+  fdf_dispatcher_t* fdf_dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role",
+                                           CreateFakeDriver(), &fdf_dispatcher2));
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) { ASSERT_FALSE(true); });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+
+  // Block the dispatcher thread.
+  libsync::Completion task_started;
+  libsync::Completion complete_task;
+  libsync::Completion task_complete;
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    task_started.Signal();
+    // We will cancel the irq once the test has confirmed that the irq |OnSignal| has happened.
+    ASSERT_OK(complete_task.Wait());
+    ASSERT_OK(irq.Cancel());
+    task_complete.Signal();
+  }));
+  ASSERT_OK(task_started.Wait());
+
+  irq_object.trigger(0, zx::time());
+
+  // Make sure the irq |OnSignal| has happened on the other |process_shared_dispatcher| thread.
+  // Since there are only 2 threads, and 1 is blocked by the task, the other must have already
+  // processed the irq.
+  libsync::Completion task2_completion;
+  ASSERT_OK(async::PostTask(fdf_dispatcher_get_async_dispatcher(fdf_dispatcher2),
+                            [&] { task2_completion.Signal(); }));
+  ASSERT_OK(task2_completion.Wait());
+
+  complete_task.Signal();
+  ASSERT_OK(task_complete.Wait());
+
+  // The task unbound the irq, so any queued irq callback request should be cancelled.
+  // If not, the irq handler will be called and assert.
+}
+
+namespace driver_runtime {
+extern DispatcherCoordinator& GetDispatcherCoordinator();
+}
+
+// Tests the potential race condition that occurs when an irq is unbound
+// but the port has just read the irq packet from the port.
+TEST_F(DispatcherTest, UnbindIrqImmediatelyAfterTriggering) {
+  static constexpr uint32_t kNumIrqs = 3000;
+  static constexpr uint32_t kNumThreads = 10;
+
+  // TODO(fxbug.dev/102878): this can be replaced by |fdf_internal::DriverShutdown| once it works
+  // properly.
+  libsync::Completion shutdown_completion;
+  std::atomic_int num_destructed = 0;
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) {
+    // |fetch_add| returns the value before incrementing.
+    if (num_destructed.fetch_add(1) == kNumThreads - 1) {
+      shutdown_completion.Signal();
+    }
+  };
+
+  auto driver = CreateFakeDriver();
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto fdf_dispatcher = fdf::Dispatcher::Create(0, destructed_handler);
+  ASSERT_FALSE(fdf_dispatcher.is_error());
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher->async_dispatcher();
+  ASSERT_NOT_NULL(dispatcher);
+
+  // Create a bunch of blocking dispatchers to force new threads.
+  fdf::Dispatcher unused_dispatchers[kNumThreads - 1];
+  {
+    for (uint32_t i = 0; i < kNumThreads - 1; i++) {
+      auto fdf_dispatcher =
+          fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, destructed_handler);
+      ASSERT_FALSE(fdf_dispatcher.is_error());
+      unused_dispatchers[i] = *std::move(fdf_dispatcher);
+    }
+  }
+
+  // Create and unbind a bunch of irqs.
+  zx::interrupt irqs[kNumIrqs] = {};
+  for (uint32_t i = 0; i < kNumIrqs; i++) {
+    // Must unbind irq from dispatcher thread.
+    libsync::Completion unbind_complete;
+    ASSERT_OK(async::PostTask(dispatcher, [&] {
+      ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irqs[i]));
+
+      async::Irq irq(
+          irqs[i].get(), 0,
+          [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+              const zx_packet_interrupt_t* interrupt) { ASSERT_FALSE(true); });
+      ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+      // This queues the irq packet on the port, which may be read by another thread.
+      irqs[i].trigger(0, zx::time());
+      ASSERT_OK(irq.Cancel());
+      unbind_complete.Signal();
+    }));
+    ASSERT_OK(unbind_complete.Wait());
+  }
+
+  fdf_dispatcher->ShutdownAsync();
+  for (uint32_t i = 0; i < kNumThreads - 1; i++) {
+    unused_dispatchers[i].ShutdownAsync();
+  }
+  ASSERT_OK(shutdown_completion.Wait());
+
+  fdf_dispatcher->reset();
+  for (uint32_t i = 0; i < kNumThreads - 1; i++) {
+    unused_dispatchers[i].reset();
+  }
+
+  // Reset the number of threads to 1.
+  driver_runtime::GetDispatcherCoordinator().Reset();
+}
+
+// Tests that binding irqs to an unsynchronized dispatcher is not allowed.
+TEST_F(DispatcherTest, IrqUnsynchronized) {
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
+                                           CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq(irq_object.get(), 0,
+                 [&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) { ASSERT_TRUE(false); });
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, irq.Begin(dispatcher));
+}
+
+void IrqNotCalledHandler(async_dispatcher_t* async, async_irq_t* irq, zx_status_t status,
+                         const zx_packet_interrupt_t* packet) {
+  ASSERT_TRUE(status == ZX_ERR_CANCELED);
+}
+
+// Tests that you cannot unbind an irq from a different dispatcher from which it was bound to.
+TEST_F(DispatcherTest, UnbindIrqFromWrongDispatcher) {
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+  ASSERT_NOT_NULL(dispatcher);
+
+  fdf_dispatcher_t* fdf_dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher2));
+
+  async_dispatcher_t* dispatcher2 = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher2);
+  ASSERT_NOT_NULL(dispatcher2);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  // Use the C API, as the C++ async::Irq will clear the dispatcher on the first call to Cancel.
+  async_irq_t irq = {{ASYNC_STATE_INIT}, &IrqNotCalledHandler, irq_object.get()};
+
+  ASSERT_OK(async_bind_irq(dispatcher, &irq));
+
+  libsync::Completion task_complete;
+  ASSERT_OK(async::PostTask(dispatcher2, [&] {
+    // Cancel the irq from a different dispatcher it was bound to.
+    ASSERT_EQ(ZX_ERR_BAD_STATE, async_unbind_irq(dispatcher, &irq));
+    task_complete.Signal();
+  }));
+  ASSERT_OK(task_complete.Wait());
+
+  task_complete.Reset();
+  ASSERT_OK(async::PostTask(dispatcher, [&] {
+    ASSERT_EQ(ZX_OK, async_unbind_irq(dispatcher, &irq));
+    task_complete.Signal();
+  }));
+  ASSERT_OK(task_complete.Wait());
 }
 
 //
@@ -2196,10 +2651,6 @@ TEST_F(DispatcherTest, CreateDispatcherOnNonRuntimeThreadFails) {
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_NE(ZX_OK,
             fdf_dispatcher::Create(0, "scheduler_role", 0, observer.fdf_observer(), &dispatcher));
-}
-
-namespace driver_runtime {
-extern DispatcherCoordinator& GetDispatcherCoordinator();
 }
 
 // Tests that we don't spawn more threads than we need.

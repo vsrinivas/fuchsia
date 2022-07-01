@@ -8,6 +8,7 @@
 
 #include <vector>
 
+#include "src/devices/bin/driver_runtime/dispatcher.h"
 #include "src/devices/lib/log/log.h"
 
 namespace {
@@ -18,6 +19,8 @@ struct Entry {
 };
 
 static thread_local std::vector<Entry> g_driver_call_stack;
+// The latest generation seen by this thread.
+static thread_local uint32_t g_cached_irqs_generation = 0;
 
 }  // namespace
 
@@ -55,5 +58,11 @@ bool IsDriverInCallStack(const void* driver) {
 }
 
 bool IsCallStackEmpty() { return g_driver_call_stack.empty(); }
+
+void OnThreadWakeup(driver_runtime::DispatcherCoordinator& coordinator) {
+  uint32_t new_irq_generation_id;
+  coordinator.OnThreadWakeup(g_cached_irqs_generation, &new_irq_generation_id);
+  g_cached_irqs_generation = new_irq_generation_id;
+}
 
 }  // namespace driver_context

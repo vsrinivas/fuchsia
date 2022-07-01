@@ -29,6 +29,7 @@ class CallbackRequest
                                        fbl::NodeOptions::AllowRemoveFromContainer> {
  public:
   enum class RequestType {
+    kIrq,
     kTask,
     kOther,
   };

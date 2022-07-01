@@ -405,6 +405,9 @@ void Nvme::DdkUnbind(ddk::UnbindTxn txn) {
     // We need to do this because otherwise the async::Executor might still be running a task on
     // the dispatcher, which would hold a reference to the executor (that's been destroyed).
     executor_.reset();
+    // TODO(fxb/103753): Currently the runtime dispatcher expects the interrupt to be cancelled from
+    // the synchronized dispatcher thread.
+    irq_handler_.Cancel();
     txn.Reply();
   });
 }
