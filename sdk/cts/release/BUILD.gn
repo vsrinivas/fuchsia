@@ -14,6 +14,14 @@ group("tests") {
 
 compatibility_test_suite("canary_tests") {
   path = "//prebuilt/cts/canary/$host_platform/cts"
+
+  # TODO(https://fxbug.dev/103694) re-enable this once fxr/695223 rolls to canary
+  disabled_tests = [
+    {
+      archive_name = "fuchsia-element-tests"
+      component_name = "fuchsia-element-test.cm"
+    },
+  ]
 }
 
 compatibility_test_suite("current_milestone_tests") {
