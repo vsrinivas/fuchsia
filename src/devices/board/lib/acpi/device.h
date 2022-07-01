@@ -19,6 +19,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "lib/ddk/device.h"
 #include "src/devices/board/lib/acpi/device-args.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/manager.h"
@@ -175,9 +176,12 @@ class Device : public DeviceType,
 
   zx_status_t InitializePowerManagement();
   zx::status<PowerStateInfo> GetInfoForState(uint8_t d_state);
+  zx_status_t ConfigureInitialPowerState();
   zx_status_t CallPsxMethod(const PowerStateInfo& state);
+  zx_status_t Resume(const PowerStateInfo& requested_state_info);
+  zx_status_t Suspend(const PowerStateInfo& requested_state_info);
 
-  PowerStateInfo* GetPowerState(uint8_t d_state) {
+  PowerStateInfo* GetPowerStateInfo(uint8_t d_state) {
     auto power_state = supported_power_states_.find(d_state);
     if (power_state == supported_power_states_.end()) {
       return nullptr;
@@ -203,7 +207,7 @@ class Device : public DeviceType,
   bool can_use_global_lock_ = false;
 
   std::unordered_map<uint8_t, PowerStateInfo> supported_power_states_;
-  uint8_t current_power_state_;
+  uint8_t current_power_state_ = DEV_POWER_STATE_D3COLD;
 
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;

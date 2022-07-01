@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include <fbl/auto_lock.h>
@@ -195,23 +196,14 @@ void Device::DdkInit(ddk::InitTxn txn) {
   // Initial transition to D state 0.
   // Skip turning on Atlas camera unless enabled.
   if ((name_ != "acpi-CAM0" && name_ != "acpi-NVM0") || atlas_camera_enabled) {
-    if (PowerStateInfo* state = GetPowerState(DEV_POWER_STATE_D0)) {
-      result = manager_->ReferencePowerResources(state->power_resources);
-      if (result) {
-        zxlogf(ERROR, "Failed to turn on power resources required for D0 for ACPI device: %s",
-               zx_status_get_string(result));
-        txn.Reply(result);
+    if (GetPowerStateInfo(DEV_POWER_STATE_D0)) {
+      PowerStateTransitionResponse result = TransitionToPowerState(DEV_POWER_STATE_D0);
+      if (result.status != ZX_OK) {
+        zxlogf(ERROR, "Error transitioning ACPI device to D0 in Init: %s",
+               zx_status_get_string(result.status));
+        txn.Reply(result.status);
         return;
       }
-
-      result = CallPsxMethod(*state);
-      if (result) {
-        zxlogf(ERROR, "Failed to call _PS0 for ACPI device: %s", zx_status_get_string(result));
-        txn.Reply(result);
-        return;
-      }
-
-      current_power_state_ = DEV_POWER_STATE_D0;
     }
   }
 
@@ -388,6 +380,9 @@ zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
   std::string method_name = "_PR" + std::to_string(d_state);
   auto prx = acpi_->EvaluateObject(acpi_handle_, method_name.c_str(), std::nullopt);
   if (prx.is_ok()) {
+    // Whether the status of power resources implies that the device is in this state.
+    bool all_resources_on = true;
+
     for (size_t i = 0; i < prx->Package.Count; i++) {
       ACPI_OBJECT power_resource_reference = prx->Package.Elements[i];
       const PowerResource* power_resource =
@@ -400,7 +395,15 @@ zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
 
       if (power_resource) {
         power_resources.push_back(power_resource);
+        if (!power_resource->is_on()) {
+          all_resources_on = false;
+        }
       }
+    }
+
+    // Save the shallowest power state that power resources imply to be on.
+    if (all_resources_on && current_power_state_ > d_state) {
+      current_power_state_ = d_state;
     }
   }
 
@@ -434,6 +437,45 @@ zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
   return zx::ok(power_state_info);
 }
 
+zx_status_t Device::ConfigureInitialPowerState() {
+  if (supported_power_states_.empty()) {
+    return ZX_OK;
+  }
+
+  auto psc = acpi_->EvaluateObject(acpi_handle_, "_PSC", std::nullopt);
+  if (psc.is_ok()) {
+    // This overrides any power state earlier implied by power resource status.
+    current_power_state_ = static_cast<uint8_t>(psc->Integer.Value);
+  }
+
+  if (current_power_state_ == DEV_POWER_STATE_D3COLD &&
+      !GetPowerStateInfo(DEV_POWER_STATE_D3COLD)) {
+    current_power_state_ = DEV_POWER_STATE_D3HOT;
+  }
+
+  PowerStateInfo* current_power_state_info = GetPowerStateInfo(current_power_state_);
+  ZX_ASSERT_MSG(current_power_state_info, "ACPI device initial state is not a supported state");
+
+  zx_status_t result = manager_->ReferencePowerResources(current_power_state_info->power_resources);
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "Failed to reference initial power resources for ACPI device: %s",
+           zx_status_get_string(result));
+    return result;
+  }
+
+  if (psc.is_error() && current_power_state_ == DEV_POWER_STATE_D0) {
+    // We inferred the power state to be D0 from power resources so we may still need to call _PS0.
+    result = CallPsxMethod(*current_power_state_info);
+    if (result != ZX_OK) {
+      zxlogf(ERROR, "Failed initial call to _PS0 for ACPI device: %s",
+             zx_status_get_string(result));
+      return result;
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Device::InitializePowerManagement() {
   for (uint8_t d_state = DEV_POWER_STATE_D0; d_state <= DEV_POWER_STATE_D3HOT; ++d_state) {
     zx::status<PowerStateInfo> power_state_info = GetInfoForState(d_state);
@@ -448,6 +490,22 @@ zx_status_t Device::InitializePowerManagement() {
     }
   }
 
+  // If power resources are provided for D3hot, D3cold is supported.
+  if (PowerStateInfo* d3hot_state = GetPowerStateInfo(DEV_POWER_STATE_D3HOT)) {
+    if (!d3hot_state->power_resources.empty()) {
+      PowerStateInfo d3cold_state{.d_state = DEV_POWER_STATE_D3COLD,
+                                  .supported_s_states{0, 1, 2, 3, 4}};
+      supported_power_states_.insert({DEV_POWER_STATE_D3COLD, d3cold_state});
+    }
+  }
+
+  // If D0 is supported, D3hot must be supported.
+  if (GetPowerStateInfo(DEV_POWER_STATE_D0) && !GetPowerStateInfo(DEV_POWER_STATE_D3HOT)) {
+    PowerStateInfo d3hot_state{.d_state = DEV_POWER_STATE_D3HOT,
+                               .supported_s_states{0, 1, 2, 3, 4}};
+    supported_power_states_.insert({DEV_POWER_STATE_D3HOT, d3hot_state});
+  }
+
   // Call _SxD methods to figure out valid D state to S state mapping.
   // This removes any mappings which were valid according to power resource system_levels but are
   // invalid according to the _SxD methods.
@@ -457,11 +515,16 @@ zx_status_t Device::InitializePowerManagement() {
     if (sxd.is_ok()) {
       for (uint8_t d_state = DEV_POWER_STATE_D0; d_state < static_cast<uint8_t>(sxd->Integer.Value);
            ++d_state) {
-        if (PowerStateInfo* power_state = GetPowerState(d_state)) {
+        if (PowerStateInfo* power_state = GetPowerStateInfo(d_state)) {
           power_state->supported_s_states.erase(s_state);
         }
       }
     }
+  }
+
+  zx_status_t result = ConfigureInitialPowerState();
+  if (result != ZX_OK) {
+    return result;
   }
 
   return ZX_OK;
@@ -478,14 +541,121 @@ std::unordered_map<uint8_t, DevicePowerState> Device::GetSupportedPowerStates() 
   return states;
 }
 
+zx_status_t Device::Resume(const PowerStateInfo& requested_state_info) {
+  PowerStateInfo* current_state_info = GetPowerStateInfo(current_power_state_);
+
+  zx_status_t status = manager_->ReferencePowerResources(requested_state_info.power_resources);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to reference power resources for ACPI device: %s",
+           zx_status_get_string(status));
+    return status;
+  }
+
+  status = manager_->DereferencePowerResources(current_state_info->power_resources);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to dereference power resources for ACPI device: %s",
+           zx_status_get_string(status));
+    goto undo2;
+  }
+
+  status = CallPsxMethod(requested_state_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to call PSx method for ACPI device: %s", zx_status_get_string(status));
+    goto undo1;
+  }
+
+  return ZX_OK;
+
+undo1:
+  manager_->ReferencePowerResources(current_state_info->power_resources);
+undo2:
+  manager_->DereferencePowerResources(requested_state_info.power_resources);
+  return status;
+}
+
+zx_status_t Device::Suspend(const PowerStateInfo& requested_state_info) {
+  PowerStateInfo* current_state_info = GetPowerStateInfo(current_power_state_);
+  zx_status_t status;
+  bool called_psx_method = false;
+
+  // When transitioning from D3hot to D3cold, we've already called _PS3 so skip it.
+  if (current_power_state_ != DEV_POWER_STATE_D3HOT ||
+      requested_state_info.d_state != DEV_POWER_STATE_D3COLD) {
+    called_psx_method = true;
+    // When transitioning from D0 to D3cold, we need to call _PS3.
+    if (current_power_state_ == DEV_POWER_STATE_D0 &&
+        requested_state_info.d_state == DEV_POWER_STATE_D3COLD) {
+      status = CallPsxMethod(*GetPowerStateInfo(DEV_POWER_STATE_D3HOT));
+    } else {
+      status = CallPsxMethod(requested_state_info);
+    }
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to call PSx method for ACPI device: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  status = manager_->ReferencePowerResources(requested_state_info.power_resources);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to reference power resources for ACPI device: %s",
+           zx_status_get_string(status));
+    goto undo2;
+  }
+
+  status = manager_->DereferencePowerResources(current_state_info->power_resources);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to dereference power resources for ACPI device: %s",
+           zx_status_get_string(status));
+    goto undo1;
+  }
+
+  return ZX_OK;
+
+undo1:
+  manager_->DereferencePowerResources(requested_state_info.power_resources);
+undo2:
+  if (called_psx_method) {
+    CallPsxMethod(*current_state_info);
+  }
+  return status;
+}
+
 PowerStateTransitionResponse Device::TransitionToPowerState(uint8_t requested_state) {
-  PowerStateInfo* state = GetPowerState(requested_state);
-  if (state == nullptr) {
+  if (current_power_state_ == requested_state) {
+    return PowerStateTransitionResponse(ZX_OK, current_power_state_);
+  }
+
+  PowerStateInfo* requested_state_info = GetPowerStateInfo(requested_state);
+  if (requested_state_info == nullptr) {
+    zxlogf(ERROR, "Tried to transition an ACPI device to an unsupported power state.");
     return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, current_power_state_);
   }
 
-  // TODO(fxbug.dev/81684): implement.
-  return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, current_power_state_);
+  // Cannot transition between non-D0 states.
+  if (current_power_state_ != DEV_POWER_STATE_D0 && requested_state != DEV_POWER_STATE_D0) {
+    // Unless transitioning from D3hot to D3cold.
+    if (current_power_state_ != DEV_POWER_STATE_D3HOT ||
+        requested_state != DEV_POWER_STATE_D3COLD) {
+      zxlogf(ERROR, "Cannot transition an ACPI device from state %d to %d.", current_power_state_,
+             requested_state);
+      return PowerStateTransitionResponse(ZX_ERR_NOT_SUPPORTED, current_power_state_);
+    }
+  }
+
+  zx_status_t status;
+  if (requested_state == DEV_POWER_STATE_D0) {
+    status = Resume(*requested_state_info);
+  } else {
+    status = Suspend(*requested_state_info);
+  }
+
+  if (status != ZX_OK) {
+    return PowerStateTransitionResponse(status, current_power_state_);
+  }
+
+  current_power_state_ = requested_state;
+  return PowerStateTransitionResponse(ZX_OK, current_power_state_);
 }
 
 zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,

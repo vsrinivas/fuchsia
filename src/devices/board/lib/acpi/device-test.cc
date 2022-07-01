@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <zircon/errors.h>
 
 #include <cstdint>
 #include <memory>
@@ -154,27 +155,28 @@ class AcpiDeviceTest : public zxtest::Test {
     ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(mock_root_.get()));
   }
 
-  void HandOffToDdk(std::unique_ptr<acpi::Device> device) {
-    ASSERT_OK(device
+  zx_device_t* HandOffToDdk(std::unique_ptr<acpi::Device> device) {
+    EXPECT_OK(device
                   ->AddDevice("test-acpi-device", cpp20::span<zx_device_prop_t>(),
                               cpp20::span<zx_device_str_prop_t>(), 0)
                   .status_value());
 
     // Give mock_ddk ownership of the device.
-    dev_ = device.release()->zxdev();
-    dev_->InitOp();
-    dev_->WaitUntilInitReplyCalled(zx::time::infinite());
+    zx_device_t* dev = device.release()->zxdev();
+    dev->InitOp();
+    dev->WaitUntilInitReplyCalled(zx::time::infinite());
+    return dev;
   }
 
   void SetUpFidlServer(std::unique_ptr<acpi::Device> device) {
-    HandOffToDdk(std::move(device));
+    zx_device_t* dev = HandOffToDdk(std::move(device));
 
     // Bind FIDL device.
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
     ASSERT_OK(endpoints.status_value());
 
     fidl::BindServer(manager_.fidl_dispatcher(), std::move(endpoints->server),
-                     dev_->GetDeviceContext<acpi::Device>());
+                     dev->GetDeviceContext<acpi::Device>());
     fidl_client_.Bind(std::move(endpoints->client));
   }
 
@@ -196,7 +198,6 @@ class AcpiDeviceTest : public zxtest::Test {
   acpi::FuchsiaManager manager_;
   acpi::test::MockAcpi acpi_;
   NullIommuManager iommu_;
-  zx_device_t* dev_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> fidl_client_;
 };
 
@@ -483,8 +484,8 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementNoSupportedStates) {
 
   auto device = std::make_unique<acpi::Device>(Args(hnd));
 
-  HandOffToDdk(std::move(device));
-  acpi::Device* acpi_device = dev_->GetDeviceContext<acpi::Device>();
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
 
   std::unordered_map<uint8_t, acpi::DevicePowerState> states =
       acpi_device->GetSupportedPowerStates();
@@ -571,12 +572,12 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResources) {
 
   auto device = std::make_unique<acpi::Device>(Args(hnd));
 
-  HandOffToDdk(std::move(device));
-  acpi::Device* acpi_device = dev_->GetDeviceContext<acpi::Device>();
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
 
   std::unordered_map<uint8_t, acpi::DevicePowerState> states =
       acpi_device->GetSupportedPowerStates();
-  ASSERT_EQ(states.size(), 4);
+  ASSERT_EQ(states.size(), 5);
   ASSERT_EQ(states.find(DEV_POWER_STATE_D0)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D1)->second.supported_s_states,
@@ -585,8 +586,12 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResources) {
             std::unordered_set<uint8_t>({0, 1, 2}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
+  // Power resources are declared for D3HOT, so D3COLD is supported.
+  ASSERT_EQ(states.find(DEV_POWER_STATE_D3COLD)->second.supported_s_states,
+            std::unordered_set<uint8_t>({0, 1, 2, 3, 4}));
 
-  // Make sure only the power resources required for D0 were turned on.
+  // Test that the device was initially transitioned to D0 by making sure only the power resources
+  // required for D0 were turned on.
   ASSERT_EQ(mock_power_device1->sta(), 1);
   ASSERT_EQ(mock_power_device2->sta(), 1);
   ASSERT_EQ(mock_power_device3->sta(), 0);
@@ -686,15 +691,33 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResourceOrder) {
 
   auto device = std::make_unique<acpi::Device>(Args(hnd));
 
-  HandOffToDdk(std::move(device));
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
 
-  // Make sure the power resources required for D0 were turned on.
+  // Test that the device was initially transitioned to D0 by making sure the power resources
+  // required for D0 were turned on.
   ASSERT_EQ(mock_power_device1->sta(), 1);
   ASSERT_EQ(mock_power_device2->sta(), 1);
   ASSERT_EQ(mock_power_device3->sta(), 1);
 
-  // TODO(fxbug.dev/81684): suspend the device to make sure power resources are turned off in the
-  // right order.
+  // Suspend the device to make sure power resources are turned off in the right order.
+  acpi::PowerStateTransitionResponse result =
+      acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+  // Make sure the power resources were turned off.
+  ASSERT_EQ(mock_power_device1->sta(), 0);
+  ASSERT_EQ(mock_power_device2->sta(), 0);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+
+  // Resume the device again to make sure power resources are turned on in the right order.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  // Make sure the power resources were turned on.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
 }
 
 TEST_F(AcpiDeviceTest, TestInitializePowerManagementPsxMethods) {
@@ -761,8 +784,8 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPsxMethods) {
 
   auto device = std::make_unique<acpi::Device>(Args(hnd));
 
-  HandOffToDdk(std::move(device));
-  acpi::Device* acpi_device = dev_->GetDeviceContext<acpi::Device>();
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
 
   std::unordered_map<uint8_t, acpi::DevicePowerState> states =
       acpi_device->GetSupportedPowerStates();
@@ -773,9 +796,11 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPsxMethods) {
             std::unordered_set<uint8_t>({0, 1}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D2)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
+  // Power resources are not declared for D3HOT, so D3COLD is not supported.
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3, 4}));
 
+  // Test that the device was initially transitioned to D0.
   ASSERT_TRUE(ps0_called);
   ASSERT_FALSE(ps1_called);
   ASSERT_FALSE(ps2_called);
@@ -860,19 +885,498 @@ TEST_F(AcpiDeviceTest, TestInitializePowerManagementPowerResourcesAndPsxMethods)
 
   auto device = std::make_unique<acpi::Device>(Args(hnd));
 
-  HandOffToDdk(std::move(device));
-  acpi::Device* acpi_device = dev_->GetDeviceContext<acpi::Device>();
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
 
   std::unordered_map<uint8_t, acpi::DevicePowerState> states =
       acpi_device->GetSupportedPowerStates();
-  ASSERT_EQ(states.size(), 2);
+  ASSERT_EQ(states.size(), 3);
   ASSERT_EQ(states.find(DEV_POWER_STATE_D0)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 2}));
   ASSERT_EQ(states.find(DEV_POWER_STATE_D3HOT)->second.supported_s_states,
             std::unordered_set<uint8_t>({0, 1, 2, 3}));
+  // Power resources are declared for D3HOT, so D3COLD is supported.
+  ASSERT_EQ(states.find(DEV_POWER_STATE_D3COLD)->second.supported_s_states,
+            std::unordered_set<uint8_t>({0, 1, 2, 3, 4}));
 
+  // Test that the device was initially transitioned to D0.
   ASSERT_TRUE(ps0_called);
   ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+}
+
+TEST_F(AcpiDeviceTest, TestTransitioningBetweenPowerStates) {
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 0, 0);
+  ACPI_HANDLE power_resource_handle2 = AddPowerResource("POW2", 0, 0);
+  ACPI_HANDLE power_resource_handle3 = AddPowerResource("POW3", 0, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  acpi::test::Device* mock_power_device2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
+  acpi::test::Device* mock_power_device3 = acpi_.GetDeviceRoot()->FindByPath("\\POW3");
+
+  // Turn the power resources for D0 on initially.
+  mock_power_device1->SetSta(1);
+  mock_power_device2->SetSta(1);
+  mock_power_device3->SetSta(1);
+
+  bool power_resource1_on_called = false;
+  mock_power_device1->AddMethodCallback("_ON", [mock_power_device1, &power_resource1_on_called](
+                                                   const std::optional<std::vector<ACPI_OBJECT>>&) {
+    power_resource1_on_called = true;
+    mock_power_device1->SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  bool power_resource2_on_called = false;
+  mock_power_device2->AddMethodCallback("_ON", [mock_power_device2, &power_resource2_on_called](
+                                                   const std::optional<std::vector<ACPI_OBJECT>>&) {
+    power_resource2_on_called = true;
+    mock_power_device2->SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  bool power_resource3_on_called = false;
+  mock_power_device3->AddMethodCallback("_ON", [mock_power_device3, &power_resource3_on_called](
+                                                   const std::optional<std::vector<ACPI_OBJECT>>&) {
+    power_resource3_on_called = true;
+    mock_power_device3->SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+
+  test_dev->AddMethodCallback(
+      "_PR0", [power_resource_handle1, power_resource_handle2,
+               power_resource_handle3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 3> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle2}},
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle3}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  test_dev->AddMethodCallback("_PR1", [power_resource_handle1, power_resource_handle2](
+                                          const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev->AddMethodCallback(
+      "_PR3", [power_resource_handle1](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 1> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  bool ps0_called = false;
+  test_dev->AddMethodCallback("_PS0",
+                              [&ps0_called, mock_power_device1, mock_power_device2,
+                               mock_power_device3](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                // Make sure power resources were turned on BEFORE calling PS0.
+                                EXPECT_EQ(mock_power_device1->sta(), 1);
+                                EXPECT_EQ(mock_power_device2->sta(), 1);
+                                EXPECT_EQ(mock_power_device3->sta(), 1);
+                                ps0_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
+
+  bool ps1_called = false;
+  test_dev->AddMethodCallback("_PS1",
+                              [&ps1_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps1_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
+
+  bool ps3_called = false;
+  test_dev->AddMethodCallback("_PS3",
+                              [&ps3_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps3_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
+
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
+
+  zx_device_t* dev = HandOffToDdk(std::move(device));
+  acpi::Device* acpi_device = dev->GetDeviceContext<acpi::Device>();
+
+  std::unordered_map<uint8_t, acpi::DevicePowerState> states =
+      acpi_device->GetSupportedPowerStates();
+  ASSERT_EQ(states.size(), 4);
+  ASSERT_EQ(states.count(DEV_POWER_STATE_D0), 1);
+  ASSERT_EQ(states.count(DEV_POWER_STATE_D1), 1);
+  ASSERT_EQ(states.count(DEV_POWER_STATE_D3HOT), 1);
+  // Power resources are declared for D3HOT, so D3COLD is supported.
+  ASSERT_EQ(states.count(DEV_POWER_STATE_D3COLD), 1);
+
+  // _PS0 should be called even though the device is inferred from power resources to be in D0
+  // initially.
+  ASSERT_TRUE(ps0_called);
+  ps0_called = false;
+  ASSERT_FALSE(ps1_called);
+  ASSERT_FALSE(ps3_called);
+  // _ON should be called for D0 power resources even though they start on.
+  ASSERT_TRUE(power_resource1_on_called);
+  ASSERT_TRUE(power_resource2_on_called);
+  ASSERT_TRUE(power_resource3_on_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
+
+  acpi::PowerStateTransitionResponse result =
+      acpi_device->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  // Nothing should happen, the device was already in D0.
+  ASSERT_FALSE(ps0_called);
+  ASSERT_FALSE(ps1_called);
+  ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
+
+  // D2 is not a supported state.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D2);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D1);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D1);
+  ASSERT_FALSE(ps0_called);
+  ASSERT_TRUE(ps1_called);
+  ps1_called = false;
+  ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+
+  // Can't transition from D1 to D3hot.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3HOT);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D1);
+
+  // Can't transition from D1 to D3cold.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D1);
+
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  ASSERT_TRUE(ps0_called);
+  ps0_called = false;
+  ASSERT_FALSE(ps1_called);
+  ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
+
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3HOT);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3HOT);
+  ASSERT_FALSE(ps0_called);
+  ASSERT_FALSE(ps1_called);
+  ASSERT_TRUE(ps3_called);
+  ps3_called = false;
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 0);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+
+  // Can't transition from D3hot to D1.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D1);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3HOT);
+
+  // Transition from D3hot to D3cold.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+  ASSERT_FALSE(ps0_called);
+  ASSERT_FALSE(ps1_called);
+  // PS3 was already called in the transition to D3hot.
+  ASSERT_FALSE(ps3_called);
+  // No power resources are on.
+  ASSERT_EQ(mock_power_device1->sta(), 0);
+  ASSERT_EQ(mock_power_device2->sta(), 0);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+
+  // Can't transition from D3cold to D1.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D1);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+
+  // Can't transition from D3cold to D3hot.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3HOT);
+  ASSERT_STATUS(result.status, ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  ASSERT_TRUE(ps0_called);
+  ps0_called = false;
+  ASSERT_FALSE(ps1_called);
+  ASSERT_FALSE(ps3_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+  ASSERT_EQ(mock_power_device3->sta(), 1);
+
+  // Transition all the way from D0 to D3cold.
+  result = acpi_device->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+  ASSERT_FALSE(ps0_called);
+  ASSERT_FALSE(ps1_called);
+  ASSERT_TRUE(ps3_called);
+  ps3_called = false;
+  ASSERT_EQ(mock_power_device1->sta(), 0);
+  ASSERT_EQ(mock_power_device2->sta(), 0);
+  ASSERT_EQ(mock_power_device3->sta(), 0);
+}
+
+TEST_F(AcpiDeviceTest, TestPscMethod) {
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 0, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+
+  // Turn the power resources for D0 on initially.
+  mock_power_device1->SetSta(1);
+
+  bool power_resource1_on_called = false;
+  mock_power_device1->AddMethodCallback("_ON", [mock_power_device1, &power_resource1_on_called](
+                                                   const std::optional<std::vector<ACPI_OBJECT>>&) {
+    power_resource1_on_called = true;
+    mock_power_device1->SetSta(1);
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+  });
+
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+
+  test_dev->AddMethodCallback(
+      "_PR0", [power_resource_handle1](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 1> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  test_dev->AddMethodCallback(
+      "_PR3", [power_resource_handle1](const std::optional<std::vector<ACPI_OBJECT>>&) {
+        static std::array<ACPI_OBJECT, 1> power_resources{
+            ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                      .ActualType = ACPI_TYPE_POWER,
+                                      .Handle = power_resource_handle1}}};
+
+        ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+        retval->Package.Type = ACPI_TYPE_PACKAGE;
+        retval->Package.Count = power_resources.size();
+        retval->Package.Elements = power_resources.data();
+        return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+      });
+
+  bool ps0_called = false;
+  test_dev->AddMethodCallback("_PS0",
+                              [&ps0_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps0_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
+
+  bool ps3_called = false;
+  test_dev->AddMethodCallback("_PS3",
+                              [&ps3_called](const std::optional<std::vector<ACPI_OBJECT>>&) {
+                                ps3_called = true;
+                                return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>());
+                              });
+
+  test_dev->AddMethodCallback("_PSC", [](const std::optional<std::vector<ACPI_OBJECT>>&) {
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Integer.Type = ACPI_TYPE_INTEGER;
+    // The device starts at D0.
+    retval->Integer.Value = 0;
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
+
+  HandOffToDdk(std::move(device));
+
+  // _PS0 should not be called as _PSC explicitly states that the device starts at D0.
+  ASSERT_FALSE(ps0_called);
+  ASSERT_FALSE(ps3_called);
+  // _ON should be called for D0 power resources even though they start on.
+  ASSERT_TRUE(power_resource1_on_called);
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+}
+
+TEST_F(AcpiDeviceTest, TestSharedPowerResources) {
+  ACPI_HANDLE power_resource_handle1 = AddPowerResource("POW1", 0, 0);
+  ACPI_HANDLE power_resource_handle2 = AddPowerResource("POW2", 0, 0);
+  acpi::test::Device* mock_power_device1 = acpi_.GetDeviceRoot()->FindByPath("\\POW1");
+  acpi::test::Device* mock_power_device2 = acpi_.GetDeviceRoot()->FindByPath("\\POW2");
+
+  auto test_dev1 = std::make_unique<acpi::test::Device>("TST1");
+  auto test_dev2 = std::make_unique<acpi::test::Device>("TST2");
+
+  test_dev1->AddMethodCallback("_PR0", [power_resource_handle1, power_resource_handle2](
+                                           const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev2->AddMethodCallback("_PR0", [power_resource_handle1, power_resource_handle2](
+                                           const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev1->AddMethodCallback("_PR3", [power_resource_handle1, power_resource_handle2](
+                                           const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  test_dev2->AddMethodCallback("_PR3", [power_resource_handle1, power_resource_handle2](
+                                           const std::optional<std::vector<ACPI_OBJECT>>&) {
+    static std::array<ACPI_OBJECT, 2> power_resources{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle1}},
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_POWER,
+                                  .Handle = power_resource_handle2}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = power_resources.size();
+    retval->Package.Elements = power_resources.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi::test::Device* hnd = test_dev1.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev1));
+  auto device1 = std::make_unique<acpi::Device>(Args(hnd));
+  zx_device_t* dev1 = HandOffToDdk(std::move(device1));
+  acpi::Device* acpi_device1 = dev1->GetDeviceContext<acpi::Device>();
+
+  // The power resources should now be on with just one device initialized.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+
+  hnd = test_dev2.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev2));
+  auto device2 = std::make_unique<acpi::Device>(Args(hnd));
+  zx_device_t* dev2 = HandOffToDdk(std::move(device2));
+  acpi::Device* acpi_device2 = dev2->GetDeviceContext<acpi::Device>();
+
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+
+  acpi::PowerStateTransitionResponse result =
+      acpi_device1->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+  // TST2 is still using these power resources.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+
+  result = acpi_device2->TransitionToPowerState(DEV_POWER_STATE_D3HOT);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3HOT);
+  // TST2 is still using these power resources.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+
+  result = acpi_device2->TransitionToPowerState(DEV_POWER_STATE_D3COLD);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D3COLD);
+  // Now no device is using the power resources.
+  ASSERT_EQ(mock_power_device1->sta(), 0);
+  ASSERT_EQ(mock_power_device2->sta(), 0);
+
+  result = acpi_device1->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  // TST1 is using these power resources now.
+  ASSERT_EQ(mock_power_device1->sta(), 1);
+  ASSERT_EQ(mock_power_device2->sta(), 1);
+
+  result = acpi_device2->TransitionToPowerState(DEV_POWER_STATE_D0);
+  ASSERT_OK(result.status);
+  ASSERT_EQ(result.out_state, DEV_POWER_STATE_D0);
+  // TST1 and TST2 are using these power resources now.
   ASSERT_EQ(mock_power_device1->sta(), 1);
   ASSERT_EQ(mock_power_device2->sta(), 1);
 }
