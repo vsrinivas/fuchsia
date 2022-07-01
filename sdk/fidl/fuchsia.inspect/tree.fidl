@@ -9,6 +9,7 @@ using fuchsia.mem;
 const MAX_TREE_NAME_LENGTH uint64 = 2040;
 
 /// Maximum number of children returned by a single read of the tree name iterator.
+@available(removed=9)
 const MAX_TREE_NAME_LIST_SIZE uint64 = 64;
 
 alias TreeName = string:MAX_TREE_NAME_LENGTH;
@@ -25,6 +26,16 @@ protocol TreeNameIterator {
     ///
     /// Returns an empty vector and closes the channel when no more names are present.
     /// Implementors may eagerly close the channel after sending the last batch.
+    @available(added=9)
+    GetNext() -> (struct {
+        name vector<TreeName>:MAX;
+    });
+
+    /// Get the next batch of names.
+    ///
+    /// Returns an empty vector and closes the channel when no more names are present.
+    /// Implementors may eagerly close the channel after sending the last batch.
+    @available(removed=9)
     GetNext() -> (struct {
         name vector<TreeName>:MAX_TREE_NAME_LIST_SIZE;
     });

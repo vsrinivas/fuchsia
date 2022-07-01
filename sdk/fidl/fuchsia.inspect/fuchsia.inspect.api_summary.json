@@ -6,12 +6,6 @@
         "value": "2040"
     },
     {
-        "declaration": "uint64",
-        "kind": "const",
-        "name": "fuchsia.inspect/MAX_TREE_NAME_LIST_SIZE",
-        "value": "64"
-    },
-    {
         "declaration": "() -> (fuchsia.inspect/TreeContent content)",
         "kind": "protocol/member",
         "name": "fuchsia.inspect/Tree.GetContent"
@@ -41,7 +35,7 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "() -> (vector<string:2040>:64 name)",
+        "declaration": "() -> (vector<string:2040> name)",
         "kind": "protocol/member",
         "name": "fuchsia.inspect/TreeNameIterator.GetNext"
     },
