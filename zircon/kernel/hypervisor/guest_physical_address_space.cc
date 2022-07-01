@@ -132,10 +132,9 @@ zx::status<> GuestPhysicalAddressSpace::ForPage(zx_gpaddr_t guest_paddr, ForPage
 }
 
 zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
-  // TOOD(fxb/94078): Enforce no other locks are held here since we may wait on the page request.
   __UNINITIALIZED LazyPageRequest page_request;
 
-  zx_status_t status = ZX_OK;
+  zx_status_t status;
   do {
     {
       Guard<Mutex> guard(guest_aspace_->lock());
@@ -179,32 +178,32 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
   if (begin > end || !InRange(begin, mapping_len, size())) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(begin);
-  if (!region) {
-    return zx::error(ZX_ERR_NOT_FOUND);
-  }
-  fbl::RefPtr<VmMapping> guest_mapping = region->as_vm_mapping();
-  if (!guest_mapping) {
-    return zx::error(ZX_ERR_WRONG_TYPE);
-  }
-  const uint64_t intra_mapping_offset = begin - guest_mapping->base();
-  if (!InRange(intra_mapping_offset, mapping_len, guest_mapping->size())) {
-    // The address range is not contained within a single mapping.
-    return zx::error(ZX_ERR_OUT_OF_RANGE);
-  }
 
+  uint64_t intra_mapping_offset;
   uint64_t mapping_object_offset;
+  fbl::RefPtr<VmObject> vmo;
   {
-    Guard<Mutex> guard{guest_mapping->lock()};
+    Guard<Mutex> guard(guest_aspace_->lock());
+    fbl::RefPtr<VmMapping> guest_mapping = FindMapping(begin);
+    if (!guest_mapping) {
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+    intra_mapping_offset = begin - guest_mapping->base();
+    if (!InRange(intra_mapping_offset, mapping_len, guest_mapping->size())) {
+      // The address range is not contained within a single mapping.
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+    AssertHeld(guest_mapping->lock_ref());
     mapping_object_offset = guest_mapping->object_offset_locked();
+    vmo = guest_mapping->vmo_locked();
   }
 
   fbl::RefPtr<VmMapping> host_mapping;
   zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
       /* mapping_offset */ 0, mapping_len,
       /* align_pow2 */ false,
-      /* vmar_flags */ 0, guest_mapping->vmo(), mapping_object_offset + intra_mapping_offset,
-      kGuestMmuFlags, name, &host_mapping);
+      /* vmar_flags */ 0, vmo, mapping_object_offset + intra_mapping_offset, kGuestMmuFlags, name,
+      &host_mapping);
   if (status != ZX_OK) {
     return zx::error(status);
   }
