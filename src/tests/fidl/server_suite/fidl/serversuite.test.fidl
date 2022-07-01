@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.serversuite;
+
+// The Runner coordinates test activity and is shared by multiple tests.
+@discoverable
+protocol Runner {
+    // Create a Target to run tests against.
+    Start(resource struct {
+        reporter client_end:Reporter;
+    }) -> (resource struct {
+        target client_end:Target;
+    });
+
+    // A two-way function to test that the Runner is still responding.
+    CheckAlive() -> ();
+};
+
+// The Target is the server under test.
+protocol Target {
+    OneWayNoPayload();
+};
+
+// The Reporter sends results of the test to the test harness.
+protocol Reporter {
+    ReceivedOneWayNoPayload();
+};

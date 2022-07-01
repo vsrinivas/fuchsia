@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "server_suite_under_test_llcpp"
+  sources = [ "main.cc" ]
+  deps = [
+    "//sdk/lib/sys/component/llcpp",
+    "//src/tests/fidl/server_suite/fidl:fidl.serversuite_llcpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("llcpp_server") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("harness_llcpp") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_llcpp.cml"
+  deps = [ "//src/tests/fidl/server_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-server-suite-llcpp-test") {
+  test_components = [ ":harness_llcpp" ]
+  deps = [ ":llcpp_server" ]
+}
+
+group("llcpp") {
+  testonly = true
+  deps = [ ":fidl-server-suite-llcpp-test" ]
+}

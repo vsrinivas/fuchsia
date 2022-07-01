@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("server_suite_under_test_rust") {
+  output_name = "server_suite_under_test_rust"
+  sources = [ "src/main.rs" ]
+  edition = "2021"
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/tests/fidl/server_suite/fidl:fidl.serversuite-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("rust_server") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  deps = [ ":server_suite_under_test_rust" ]
+}
+
+fuchsia_component("harness_rust") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_rust.cml"
+  deps = [ "//src/tests/fidl/server_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-server-suite-rust-test") {
+  test_components = [ ":harness_rust" ]
+  deps = [ ":rust_server" ]
+}
+
+group("rust") {
+  testonly = true
+  deps = [ ":fidl-server-suite-rust-test" ]
+}
