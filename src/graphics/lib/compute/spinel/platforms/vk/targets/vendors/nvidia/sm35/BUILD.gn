@@ -9,11 +9,9 @@ import("//src/graphics/lib/compute/spinel/platforms/vk/" +
 # Target: NVIDIA / sm35
 #
 spinel_vk_target_resource("spinel_vk_nvidia_sm35_resource") {
-  skip_spirv_opt = true  # fxb/98943
   radix_sort_vk_target_u64_outputs = "//src/graphics/lib/compute/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:radix_sort_vk_nvidia_sm35_u64_outputs"
 }
 
 spinel_vk_target_linkable("spinel_vk_nvidia_sm35_linkable") {
-  skip_spirv_opt = true  # fxb/98943
   radix_sort_vk_target_u64_outputs = "//src/graphics/lib/compute/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:radix_sort_vk_nvidia_sm35_u64_outputs"
 }
