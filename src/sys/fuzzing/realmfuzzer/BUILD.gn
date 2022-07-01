@@ -10,7 +10,9 @@ group("tests") {
   deps = [
     ":fatal-unittests-pkg",
     ":unittests-pkg",
-    "tests",
+
+    # TODO(fxdev.bug/103781): Disabled due to flake. Investigate, resolve, and re-enable.
+    # "tests",
   ]
 }
 
