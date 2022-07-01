@@ -249,6 +249,7 @@ sdk_molecule("host_tools") {
   cross_compiled = [
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
     "//tools/cmc:cmc_sdk",
+    "//tools/configc:configc_sdk",
     "//tools/fvdl:fvdl_sdk",
     "//tools/sdk-tools/fconfig:fconfig_sdk",
     "//tools/sdk-tools/fpublish:fpublish_sdk",

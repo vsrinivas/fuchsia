@@ -191,6 +191,7 @@ sdk://tools/arm64/blobfs-compression
 sdk://tools/arm64/blobfs_do_not_depend
 sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
+sdk://tools/arm64/configc
 sdk://tools/arm64/device-finder
 sdk://tools/arm64/far
 sdk://tools/arm64/fconfig
@@ -229,6 +230,7 @@ sdk://tools/x64/blobfs-compression
 sdk://tools/x64/blobfs_do_not_depend
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
+sdk://tools/x64/configc
 sdk://tools/x64/device-finder
 sdk://tools/x64/far
 sdk://tools/x64/fconfig
