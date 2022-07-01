@@ -6,6 +6,7 @@
 use super::debug::*;
 use super::iface::*;
 use crate::prelude_internal::*;
+use std::collections::{HashMap, HashSet};
 
 use crate::spinel::Subnet;
 use anyhow::Error;
@@ -37,6 +38,7 @@ pub struct TunNetworkInterface {
     control: fnetifext::admin::Control,
     control_sync: Mutex<fnetifadmin::ControlSynchronousProxy>,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
+    routes: Mutex<HashMap<fnet::Subnet, HashSet<std::net::Ipv6Addr>>>,
     mcast_socket: UdpSocket,
     id: u64,
 }
@@ -150,6 +152,7 @@ impl TunNetworkInterface {
             control_sync,
             stack_sync,
             mcast_socket,
+            routes: Mutex::new(HashMap::new()),
             id,
         })
     }
@@ -252,50 +255,74 @@ impl NetworkInterface for TunNetworkInterface {
             server_end,
         )?;
 
-        let mut forwarding_entry = fnetstack::ForwardingEntry {
-            subnet: fnetext::apply_subnet_mask(fnet::Subnet {
-                addr: fnetext::IpAddress(addr.addr.into()).into(),
-                prefix_len: addr.prefix_len,
-            }),
-            device_id: self.id,
-            next_hop: None,
-            metric: 0,
-        };
-        self.stack_sync
-            .lock()
-            .add_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)?
-            .expect("add_forwarding_entry");
+        let subnet = fnetext::apply_subnet_mask(device_addr);
+
+        let mut routes = self.routes.lock();
 
         fx_log_info!("TunNetworkInterface: Successfully added address {:?}", addr);
+
+        if let Some(addresses) = routes.get_mut(&subnet) {
+            addresses.insert(addr.addr);
+        } else {
+            let mut forwarding_entry = fnetstack::ForwardingEntry {
+                subnet,
+                device_id: self.id,
+                next_hop: None,
+                metric: 0,
+            };
+            self.stack_sync
+                .lock()
+                .add_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)?
+                .expect("add_forwarding_entry");
+            routes.insert(subnet, HashSet::from([addr.addr]));
+            fx_log_info!("TunNetworkInterface: Successfully added forwarding entry for {:?}", addr);
+        }
+
         Ok(())
     }
 
     fn remove_address(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Removing Address: {:?}", addr);
+
         let mut device_addr = fnet::Subnet {
             addr: fnetext::IpAddress(addr.addr.into()).into(),
             prefix_len: addr.prefix_len,
         };
-        let mut forwarding_entry = fnetstack::ForwardingEntry {
-            subnet: fnetext::apply_subnet_mask(fnet::Subnet {
-                addr: fnetext::IpAddress(addr.addr.into()).into(),
-                prefix_len: addr.prefix_len,
-            }),
-            device_id: self.id,
-            next_hop: None,
-            metric: 0,
-        };
-
-        self.stack_sync
-            .lock()
-            .del_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)
-            .squash_result()?;
 
         self.control_sync
             .lock()
             .remove_address(&mut device_addr, zx::Time::INFINITE)?
             .expect("control_sync.remove_address");
+
+        let subnet = fnetext::apply_subnet_mask(device_addr);
+
         fx_log_info!("TunNetworkInterface: Successfully removed address {:?}", addr);
+
+        let mut routes = self.routes.lock();
+
+        if let Some(addresses) = routes.get_mut(&subnet) {
+            addresses.remove(&addr.addr);
+            if addresses.is_empty() {
+                routes.remove(&subnet);
+
+                let mut forwarding_entry = fnetstack::ForwardingEntry {
+                    subnet,
+                    device_id: self.id,
+                    next_hop: None,
+                    metric: 0,
+                };
+
+                self.stack_sync
+                    .lock()
+                    .del_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)
+                    .squash_result()?;
+                fx_log_info!(
+                    "TunNetworkInterface: Successfully removed forwarding entry for {:?}",
+                    addr
+                );
+            }
+        }
+
         Ok(())
     }
 
