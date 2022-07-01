@@ -39,3 +39,5 @@ toc:
 - heading: Issues
 - title: "Report an issue"
   path: /docs/contribute/report-issue.md
+- title: "Report a security issue"
+  path: /docs/contribute/report-security-issue.md
