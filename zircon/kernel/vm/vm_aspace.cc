@@ -252,10 +252,7 @@ VmAspace::~VmAspace() {
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
   Guard<Mutex> guard{&lock_};
-  if (root_vmar_) {
-    return fbl::RefPtr<VmAddressRegion>(root_vmar_);
-  }
-  return nullptr;
+  return root_vmar_;
 }
 
 zx_status_t VmAspace::Destroy() {
