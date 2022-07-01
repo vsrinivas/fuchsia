@@ -185,17 +185,6 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_file_init(storage, node.TakeChannel().release(), event.release(),
                             stream.release());
     }
-    case fio::wire::NodeInfo::Tag::kPipe: {
-      fio::wire::PipeObject& pipe = info.pipe();
-      zx::socket socket = std::move(pipe.socket);
-      zx_info_socket_t socket_info;
-      zx_status_t status =
-          socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr, nullptr);
-      if (status != ZX_OK) {
-        return status;
-      }
-      return zxio_pipe_init(storage, std::move(socket), socket_info);
-    }
     case fio::wire::NodeInfo::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }

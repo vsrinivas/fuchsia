@@ -258,50 +258,6 @@ TEST(CreateWithInfo, File) {
   file_control_loop.Shutdown();
 }
 
-TEST(CreateWithInfo, Pipe) {
-  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(node_ends.status_value());
-  auto [node_client, node_server] = std::move(node_ends.value());
-
-  zx::socket socket0, socket1;
-  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
-  auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
-
-  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
-    if (type != ZXIO_OBJECT_TYPE_PIPE) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    *out_storage = new zxio_storage_t;
-    *out_context = *out_storage;
-    return ZX_OK;
-  };
-
-  void* context = nullptr;
-  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
-  ASSERT_NE(context, nullptr);
-
-  // The socket in node_info should be consumed by zxio.
-  EXPECT_FALSE(node_info.pipe().socket.is_valid());
-
-  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
-  zxio_t* zxio = &(storage->io);
-
-  // Send some data through the kernel socket object and read it through zxio to
-  // sanity check that the pipe is functional.
-  int32_t data = 0x1a2a3a4a;
-  size_t actual = 0u;
-  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
-  EXPECT_EQ(actual, sizeof(data));
-
-  int32_t buffer = 0;
-  ASSERT_OK(zxio_read(zxio, &buffer, sizeof(buffer), 0u, &actual));
-  EXPECT_EQ(actual, sizeof(buffer));
-  EXPECT_EQ(buffer, data);
-
-  ASSERT_OK(zxio_close(zxio));
-}
-
 class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node> {
  public:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {

@@ -1617,8 +1617,6 @@ struct dirent* readdir(DIR* dir) {
         return DT_REG;
       if (protocols & ZXIO_NODE_PROTOCOL_MEMORY)
         return DT_REG;
-      if (protocols & ZXIO_NODE_PROTOCOL_PIPE)
-        return DT_FIFO;
       if (protocols & ZXIO_NODE_PROTOCOL_DEVICE)
         return DT_BLK;
       if (protocols & ZXIO_NODE_PROTOCOL_TTY)

@@ -32,10 +32,7 @@ type NodeInfo = strict resource union {
     /// The connection composes [`Directory`].
     3: directory @generated_name("DirectoryObject") struct {};
 
-    /// The connection composes [`Pipe`].
-    4: pipe @generated_name("PipeObject") resource struct {
-        socket zx.handle:SOCKET;
-    };
+    4: reserved;
 
     /// The connection composes [`File`]. Its implementation is backed by a VMO.
     5: vmofile resource struct {

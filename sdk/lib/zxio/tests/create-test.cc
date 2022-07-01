@@ -373,36 +373,6 @@ TEST_F(CreateFileWithOnOpenTest, File) {
   ASSERT_OK(zxio_close(zxio()));
 }
 
-TEST_F(CreateTest, Pipe) {
-  zx::socket socket0, socket1;
-  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  node_server().set_describe_function(
-      [socket0 = std::move(socket0)](DescribeRequestView request,
-                                     DescribeCompleter::Sync& completer) mutable {
-        completer.Reply(fuchsia_io::wire::NodeInfo::WithPipe({
-            .socket = std::move(socket0),
-        }));
-      });
-
-  StartServerThread();
-
-  ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
-
-  // Send some data through the kernel socket object and read it through zxio to
-  // sanity check that the pipe is functional.
-  int32_t data = 0x1a2a3a4a;
-  size_t actual = 0u;
-  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
-  EXPECT_EQ(actual, sizeof(data));
-
-  int32_t buffer = 0;
-  ASSERT_OK(zxio_read(zxio(), &buffer, sizeof(buffer), 0u, &actual));
-  EXPECT_EQ(actual, sizeof(buffer));
-  EXPECT_EQ(buffer, data);
-
-  ASSERT_OK(zxio_close(zxio()));
-}
-
 TEST(CreateWithTypeTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
@@ -453,32 +423,6 @@ TEST(CreateWithTypeWrapperTest, Pipe) {
   EXPECT_EQ(buffer, data);
 
   ASSERT_OK(zxio_close(zxio));
-}
-
-TEST_F(CreateWithOnOpenTest, Pipe) {
-  zx::socket socket0, socket1;
-  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithPipe({
-      .socket = std::move(socket0),
-  }));
-
-  ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
-
-  StartServerThread();
-
-  // Send some data through the kernel socket object and read it through zxio to
-  // sanity check that the pipe is functional.
-  int32_t data = 0x1a2a3a4a;
-  size_t actual = 0u;
-  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
-  EXPECT_EQ(actual, sizeof(data));
-
-  int32_t buffer = 0;
-  ASSERT_OK(zxio_read(zxio(), &buffer, sizeof(buffer), 0u, &actual));
-  EXPECT_EQ(actual, sizeof(buffer));
-  EXPECT_EQ(buffer, data);
-
-  ASSERT_OK(zxio_close(zxio()));
 }
 
 TEST_F(CreateTest, Service) {

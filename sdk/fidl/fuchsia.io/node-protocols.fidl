@@ -40,10 +40,6 @@ type NodeProtocols = strict bits : uint64 {
     /// representing the contents of the file.
     MEMORY = 0x8;
 
-    /// The pipe representation of a node.
-    /// The connection will speak the [`Pipe`] protocol.
-    PIPE = 0x10;
-
     @deprecated("devices will be services in the future")
     DEVICE = 0x10000000;
 

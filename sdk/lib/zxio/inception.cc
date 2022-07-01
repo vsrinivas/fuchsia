@@ -64,9 +64,6 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
     case fio::wire::NodeInfo::Tag::kFile:
       type = ZXIO_OBJECT_TYPE_FILE;
       break;
-    case fio::wire::NodeInfo::Tag::kPipe:
-      type = ZXIO_OBJECT_TYPE_PIPE;
-      break;
     case fio::wire::NodeInfo::Tag::kService:
       type = ZXIO_OBJECT_TYPE_SERVICE;
       break;

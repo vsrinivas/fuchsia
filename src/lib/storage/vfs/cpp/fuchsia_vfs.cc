@@ -400,7 +400,6 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                                                                      protocol, *options);
         return ZX_OK;
       case VnodeProtocol::kConnector:
-      case VnodeProtocol::kPipe:
         connection =
             std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol, *options);
         return ZX_OK;

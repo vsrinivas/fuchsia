@@ -1921,11 +1921,6 @@
         "name": "fuchsia.io/NodeInfo.packet_socket"
     },
     {
-        "declaration": "fuchsia.io/PipeObject",
-        "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.pipe"
-    },
-    {
         "declaration": "fuchsia.io/RawSocket",
         "kind": "union/member",
         "name": "fuchsia.io/NodeInfo.raw_socket"
@@ -1985,11 +1980,6 @@
         "kind": "bits/member",
         "name": "fuchsia.io/NodeProtocols.MEMORY",
         "value": "8"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.PIPE",
-        "value": "16"
     },
     {
         "kind": "bits/member",
@@ -2188,26 +2178,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:SOCKET",
-        "kind": "table/member",
-        "name": "fuchsia.io/PipeInfo.socket"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/PipeInfo",
-        "resourceness": "resource"
-    },
-    {
-        "declaration": "zx/handle:SOCKET",
-        "kind": "struct/member",
-        "name": "fuchsia.io/PipeObject.socket"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/PipeObject",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "fuchsia.io/Operations",
         "kind": "const",
         "name": "fuchsia.io/RW_STAR_DIR",
@@ -2279,11 +2249,6 @@
         "declaration": "fuchsia.io/PacketSocketInfo",
         "kind": "union/member",
         "name": "fuchsia.io/Representation.packet_socket"
-    },
-    {
-        "declaration": "fuchsia.io/PipeInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.pipe"
     },
     {
         "declaration": "fuchsia.io/RawSocketInfo",

@@ -128,10 +128,10 @@ class DirentIteratorImpl {
         return ZXIO_NODE_PROTOCOL_TTY;
       case DT_DIR:
         return ZXIO_NODE_PROTOCOL_DIRECTORY;
-      case DT_FIFO:
-        return ZXIO_NODE_PROTOCOL_PIPE;
       case DT_REG:
         return ZXIO_NODE_PROTOCOL_FILE;
+      case DT_FIFO:
+        // Not supported.
       case DT_LNK:
         // Not supported.
       case DT_SOCK:
@@ -212,16 +212,16 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       return ZXIO_NODE_PROTOCOL_DEVICE;
     case S_IFREG:
       return ZXIO_NODE_PROTOCOL_FILE;
-    case S_IFIFO:
-      return ZXIO_NODE_PROTOCOL_PIPE;
+    case fuchsia_io::wire::kModeTypeService:
       // fuchsia::io has mode type service which breaks stat.
       // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
-    case fuchsia_io::wire::kModeTypeService:
       return ZXIO_NODE_PROTOCOL_FILE;
+    case S_IFIFO:
+      // Named pipes are not supported on Fuchsia.
     case S_IFLNK:
       // Symbolic links are not supported on Fuchsia.
     case S_IFSOCK:
-      // Named pipes are not supported on Fuchsia.
+      // Named sockets are not supported on Fuchsia.
     default:
       // A reasonable fallback is to keep the protocols unchanged,
       // i.e. same as getting a protocol we do not understand.
@@ -241,9 +241,6 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   }
   if (protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
     return S_IFREG;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_PIPE) {
-    return S_IFIFO;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     return S_IFBLK;

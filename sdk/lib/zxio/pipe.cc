@@ -37,7 +37,6 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
 
   ops.attr_get = [](zxio_t* io, zxio_node_attributes_t* out_attr) {
     zxio_node_attributes_t attr = {};
-    ZXIO_NODE_ATTR_SET(attr, protocols, ZXIO_NODE_PROTOCOL_PIPE);
     ZXIO_NODE_ATTR_SET(
         attr, abilities,
         ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_WRITE_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);

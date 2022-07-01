@@ -127,7 +127,6 @@ enum class VnodeProtocol : uint32_t {
   kConnector = 1,
   kFile,
   kDirectory,
-  kPipe,
   kMemory,
   kDevice,
   kTty,
@@ -401,10 +400,6 @@ class VnodeRepresentation {
 
   struct Directory {};
 
-  struct Pipe {
-    zx::socket socket = {};
-  };
-
   struct Memory {
     zx::vmo vmo = {};
     uint64_t offset = {};
@@ -461,10 +456,6 @@ class VnodeRepresentation {
 
   bool is_directory() const { return std::holds_alternative<Directory>(variants_); }
 
-  Pipe& pipe() { return std::get<Pipe>(variants_); }
-
-  bool is_pipe() const { return std::holds_alternative<Pipe>(variants_); }
-
   Memory& memory() { return std::get<Memory>(variants_); }
 
   bool is_memory() const { return std::holds_alternative<Memory>(variants_); }
@@ -494,8 +485,8 @@ class VnodeRepresentation {
   bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
 
  private:
-  using Variants = std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device,
-                                Tty, SynchronousDatagramSocket, StreamSocket, DatagramSocket>;
+  using Variants = std::variant<std::monostate, Connector, File, Directory, Memory, Device, Tty,
+                                SynchronousDatagramSocket, StreamSocket, DatagramSocket>;
 
   Variants variants_ = {};
 };

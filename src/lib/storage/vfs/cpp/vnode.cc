@@ -87,9 +87,6 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
     case VnodeProtocol::kDirectory:
       ZX_DEBUG_ASSERT(info->is_directory());
       break;
-    case VnodeProtocol::kPipe:
-      ZX_DEBUG_ASSERT(info->is_pipe());
-      break;
     case VnodeProtocol::kMemory:
       ZX_DEBUG_ASSERT(info->is_memory());
       break;

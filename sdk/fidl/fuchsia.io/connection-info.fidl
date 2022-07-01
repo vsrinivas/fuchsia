@@ -98,23 +98,9 @@ type ConnectionInfo = resource table {
             1: buffer fuchsia.mem.Range;
         };
 
-        /// The pipe representation of a node.
-        /// A pipe is a data streaming interface, commonly used for standard in/out.
-        /// There is no universal requirement as to if it is uni- or bi-directional.
-        /// The selection of this variant in [`Representation`] implies that the
-        /// connection speaks the [`Pipe`] protocol.
-        ///
-        /// See [`NodeProtocols.PIPE`].
-        5: pipe @generated_name("PipeInfo") resource table {
-            /// The backing socket transport for the pipe.
-            /// The rights on this socket should correspond to the rights on the
-            /// node connection.
-            1: socket zx.handle:SOCKET;
-        };
-
         /// The object may be cast to the shared interface of devices.
         @deprecated("devices will be services in the future")
-        6: device @generated_name("DeviceInfo") resource table {
+        5: device @generated_name("DeviceInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///
             /// The [`DeviceSignal`] values may be observed on this event.
@@ -123,7 +109,7 @@ type ConnectionInfo = resource table {
 
         /// The object may be cast to a Tty interface.
         @deprecated("tty functionalities may be covered by a tty service")
-        7: tty @generated_name("TtyInfo") resource table {
+        6: tty @generated_name("TtyInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///
             /// The [`DeviceSignal`] values may be observed on this event.
@@ -133,7 +119,7 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/SynchronousDatagramSocket`].
         ///
         /// See [`NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET`].
-        8: synchronous_datagram_socket
+        7: synchronous_datagram_socket
                 @generated_name("SynchronousDatagramSocketInfo")
                 resource table {
             1: event zx.handle:EVENTPAIR;
@@ -142,7 +128,7 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
         ///
         /// See [`NodeProtocols.DATAGRAM_SOCKET`].
-        9: datagram_socket @generated_name("DatagramSocketInfo") resource table {
+        8: datagram_socket @generated_name("DatagramSocketInfo") resource table {
             /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
             1: socket zx.handle:SOCKET;
             /// Size of the buffer used to receive Tx metadata.
@@ -154,21 +140,21 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
         ///
         /// See [`NodeProtocols.STREAM_SOCKET`].
-       10: stream_socket @generated_name("StreamSocketInfo") resource table {
+        9: stream_socket @generated_name("StreamSocketInfo") resource table {
             1: socket zx.handle:SOCKET;
         };
 
         /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
         ///
         /// See [`NodeProtocols.RAW_SOCKET`].
-       11: raw_socket @generated_name("RawSocketInfo") resource table {
+       10: raw_socket @generated_name("RawSocketInfo") resource table {
             1: event zx.handle:EVENTPAIR;
         };
 
         /// The connection composes [`fuchsia.posix.socket.packet/Socket`].
         ///
         /// See [`NodeProtocols.PACKET_SOCKET`].
-       12: packet_socket @generated_name("PacketSocketInfo") resource table {
+       11: packet_socket @generated_name("PacketSocketInfo") resource table {
             /// See [`fuchsia.posix.socket.packet.Socket`] for details.
             1: event zx.handle:EVENTPAIR;
         };
