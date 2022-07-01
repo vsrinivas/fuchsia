@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/msd_intel_gen_integration_tests",
+    },
+    use: [
+        {
+            // For /dev/class/gpu, /dev/class/gpu-performance-counters, and /dev/pci-00:02.0/intel_i915/intel-gpu-core
+            directory: "dev",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
+        { protocol: "fuchsia.tracing.provider.Registry" },
+    ],
+    facets: {
+        "fuchsia.test": { type: "devices" },
+    },
+}

@@ -39,7 +39,7 @@ fuchsia_test_package("msd_intel_gen_nonhardware_tests") {
 
 fuchsia_test_component("msd_intel_gen_integration_tests_component") {
   deps = [ "integration:msd_intel_gen_integration_tests" ]
-  manifest = "meta/msd_intel_gen_integration_tests.cmx"
+  manifest = "meta/msd_intel_gen_integration_tests.cml"
 }
 
 fuchsia_test_package("msd_intel_gen_integration_tests") {
