@@ -6,14 +6,10 @@ use {
     crate::services,
     anyhow::anyhow,
     anyhow::{Context, Error},
-    fidl_fuchsia_virtualization::{
-        GuestConfig, GuestMarker, GuestProxy, ManagerMarker, RealmMarker, RealmProxy,
-    },
+    fidl_fuchsia_virtualization::{GuestConfig, GuestMarker, GuestProxy},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, sys},
     fuchsia_zircon_status as zx_status,
-    futures::TryFutureExt,
     lazy_static::lazy_static,
     std::convert::TryFrom,
 };
@@ -52,58 +48,20 @@ pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
 
 pub struct GuestLaunch {
     guest: GuestProxy,
-    _realm: RealmProxy,
 }
 
 impl GuestLaunch {
     pub async fn new(guest_type: arguments::GuestType, config: GuestConfig) -> Result<Self, Error> {
-        let guest_name = guest_type.to_string();
-
         let (guest, guest_server_end) =
             fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
-
-        let (realm, realm_server_end) = fidl::endpoints::create_proxy::<RealmMarker>()
-            .context("Failed to create Realm proxy")?;
-
-        let guest_url = guest_type.package_url();
-        println!("Starting {} with package {}", guest_name, guest_url);
-        // Take a package, connect to a Manager, create a Guest Realm,
-        // launch the package, return guest proxy on success
-        // as we need a reference to both the manager and the realm,
-        // we can't use services.rs in this instance
-
-        let manager = connect_to_protocol::<ManagerMarker>()
-            .context("Failed to connect to manager service")?;
-
-        manager
-            .create(Some(&guest_name), realm_server_end)
-            .context("Failed to connect Realm to Manager")?;
-
-        let _guest_cid = realm
-            .launch_instance(guest_url, None, config, guest_server_end)
-            .map_err(Error::new)
-            .await?;
-
-        Ok(GuestLaunch { guest: guest, _realm: realm })
-    }
-
-    pub async fn new_cfv2(
-        guest_type: arguments::GuestType,
-        config: GuestConfig,
-    ) -> Result<Self, Error> {
-        let (guest, guest_server_end) =
-            fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
-
-        let (_realm, _realm_server_end) = fidl::endpoints::create_proxy::<RealmMarker>()
-            .context("Failed to create Realm proxy")?;
 
         println!("Starting {}", guest_type.to_string());
-        let manager = services::connect_to_manager_cfv2(guest_type)?;
+        let manager = services::connect_to_manager(guest_type)?;
         manager
             .launch_guest(config, guest_server_end)
             .await?
             .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
-        Ok(GuestLaunch { guest, _realm })
+        Ok(GuestLaunch { guest })
     }
 
     pub async fn run(&self) -> Result<(), Error> {
@@ -162,10 +120,9 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn launch_invalid_serial_returns_error() {
-        let (realm_proxy, _realm_stream) = create_proxy_and_stream::<RealmMarker>().unwrap();
         let (guest_proxy, mut guest_stream) = create_proxy_and_stream::<GuestMarker>().unwrap();
 
-        let guest = GuestLaunch { guest: guest_proxy, _realm: realm_proxy };
+        let guest = GuestLaunch { guest: guest_proxy };
 
         let server = async move {
             let serial_responder = guest_stream
@@ -187,10 +144,9 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn launch_invalid_console_returns_error() {
-        let (realm_proxy, _realm_stream) = create_proxy_and_stream::<RealmMarker>().unwrap();
         let (guest_proxy, mut guest_stream) = create_proxy_and_stream::<GuestMarker>().unwrap();
 
-        let guest = GuestLaunch { guest: guest_proxy, _realm: realm_proxy };
+        let guest = GuestLaunch { guest: guest_proxy };
         let (serial_launch_sock, _serial_server_sock) =
             zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 

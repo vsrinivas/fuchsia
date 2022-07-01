@@ -13,20 +13,10 @@ use {
     futures::TryStreamExt,
 };
 
-pub async fn connect_to_vsock_endpoint(env_id: u32) -> Result<HostVsockEndpointProxy, Error> {
-    let realm = services::connect_to_env(env_id)?;
-    let (vsock_endpoint, vsock_server_end) =
-        fidl::endpoints::create_proxy::<HostVsockEndpointMarker>()
-            .context("failed to make vsock endpoint")?;
-
-    realm.get_host_vsock_endpoint(vsock_server_end)?;
-    Ok(vsock_endpoint)
-}
-
-pub async fn connect_to_vsock_endpoint_cfv2(
+pub async fn connect_to_vsock_endpoint(
     guest_type: arguments::GuestType,
 ) -> Result<HostVsockEndpointProxy, Error> {
-    let guest_manager = services::connect_to_manager_cfv2(guest_type)?;
+    let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
     if guest_info.guest_status == GuestStatus::Started {
         let (vsock_endpoint, vsock_server_end) =

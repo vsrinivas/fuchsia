@@ -40,13 +40,6 @@ impl fmt::Display for GuestType {
 }
 
 impl GuestType {
-    pub fn package_url(&self) -> &str {
-        match *self {
-            GuestType::Debian => "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx",
-            GuestType::Termina => "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx",
-            GuestType::Zircon => "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx",
-        }
-    }
     pub fn guest_manager_interface(&self) -> &str {
         match *self {
             GuestType::Zircon => "fuchsia.virtualization.ZirconGuestManager",
@@ -78,15 +71,9 @@ pub enum SubCommands {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Modify the size of a memory balloon. Usage: guest balloon env-id cid num-pages
+/// Modify the size of a memory balloon. Usage: guest balloon guest-type num-pages
 #[argh(subcommand, name = "balloon")]
 pub struct BalloonArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    pub env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    pub cid: Option<u32>,
     #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,
@@ -96,30 +83,18 @@ pub struct BalloonArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// See the stats of a guest's memory balloon. Usage: guest balloon-stats env-id cid
+/// See the stats of a guest's memory balloon. Usage: guest balloon-stats guest-type
 #[argh(subcommand, name = "balloon-stats")]
 pub struct BalloonStatsArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    pub env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    pub cid: Option<u32>,
     #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Access the serial output for a guest. Usage: guest serial env-id cid
+/// Access the serial output for a guest. Usage: guest serial guest-type
 #[argh(subcommand, name = "serial")]
 pub struct SerialArgs {
-    #[argh(option)]
-    /// environment id where guest lives.
-    pub env_id: Option<u32>,
-    #[argh(option)]
-    /// context id of guest.
-    pub cid: Option<u32>,
     #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,
@@ -131,13 +106,10 @@ pub struct SerialArgs {
 pub struct ListArgs {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create a socat connection on the specified port. Usage: guest socat env-id port
+/// Create a socat connection on the specified port. Usage: guest socat guest-type port
 #[argh(subcommand, name = "socat")]
 pub struct SocatArgs {
     #[argh(option)]
-    /// environment id where guest lives.
-    pub env_id: Option<u32>,
-    #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,
     #[argh(option)]
@@ -146,13 +118,10 @@ pub struct SocatArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Listen through socat on the specified port. Usage: guest socat-listen env-id host-port
+/// Listen through socat on the specified port. Usage: guest socat-listen guest-type host-port
 #[argh(subcommand, name = "socat-listen")]
 pub struct SocatListenArgs {
     #[argh(option)]
-    /// environment id of host.
-    pub env_id: Option<u32>,
-    #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,
     #[argh(option)]
@@ -161,15 +130,9 @@ pub struct SocatListenArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [env_id [cid [port]]] [--args <arg>]
+/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [guest-type[port]] [--args <arg>]
 #[argh(subcommand, name = "vsh")]
 pub struct VshArgs {
-    #[argh(option)]
-    /// optional environment id of host.
-    pub env_id: Option<u32>,
-    #[argh(option)]
-    /// optional context id of vsh to connect to.
-    pub cid: Option<u32>,
     #[argh(option)]
     /// positional port of a vsh socket to connect to.
     pub port: Option<u32>,

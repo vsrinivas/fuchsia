@@ -4,12 +4,9 @@
 use {
     crate::arguments::GuestType,
     anyhow::{anyhow, Context, Error},
-    fidl_fuchsia_virtualization::{
-        GuestManagerMarker, GuestManagerProxy, GuestMarker, GuestProxy, ManagerMarker,
-        ManagerProxy, RealmMarker, RealmProxy,
-    },
+    fidl_fuchsia_virtualization::{GuestManagerMarker, GuestManagerProxy, GuestMarker, GuestProxy},
     fuchsia_async::{self as fasync},
-    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
+    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_status as zx_status,
     std::os::unix::{io::AsRawFd, io::FromRawFd, prelude::RawFd},
@@ -100,13 +97,7 @@ pub unsafe fn get_evented_stdin() -> fasync::net::EventedFd<std::fs::File> {
     fasync::net::EventedFd::new(std::fs::File::from_raw_fd(std::io::stdin().as_raw_fd())).unwrap()
 }
 
-pub fn connect_to_manager() -> Result<ManagerProxy, Error> {
-    let manager =
-        connect_to_protocol::<ManagerMarker>().context("Failed to connect to manager service")?;
-    Ok(manager)
-}
-
-pub fn connect_to_manager_cfv2(
+pub fn connect_to_manager(
     guest_type: crate::arguments::GuestType,
 ) -> Result<GuestManagerProxy, Error> {
     let manager = connect_to_protocol_at_path::<GuestManagerMarker>(
@@ -116,33 +107,8 @@ pub fn connect_to_manager_cfv2(
     Ok(manager)
 }
 
-pub fn connect_to_env(env_id: u32) -> Result<RealmProxy, Error> {
-    let manager = connect_to_manager()?;
-    let (realm, realm_server_end) =
-        fidl::endpoints::create_proxy::<RealmMarker>().context("Failed to create Realm proxy")?;
-
-    // Connect the realm created to the env specified
-    manager
-        .connect(env_id, realm_server_end)
-        .context("Failed to connect to provided environment")?;
-
-    Ok(realm)
-}
-
-pub fn connect_to_guest(env_id: u32, cid: u32) -> Result<GuestProxy, Error> {
-    let realm = connect_to_env(env_id)?;
-    let (guest, guest_server_end) =
-        fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
-
-    realm
-        .connect_to_instance(cid, guest_server_end)
-        .context("Could not connect to specified guest instance")?;
-
-    Ok(guest)
-}
-
-pub async fn connect_to_guest_cfv2(guest_type: GuestType) -> Result<GuestProxy, Error> {
-    let guest_manager = connect_to_manager_cfv2(guest_type)?;
+pub async fn connect_to_guest(guest_type: GuestType) -> Result<GuestProxy, Error> {
+    let guest_manager = connect_to_manager(guest_type)?;
     let (guest, guest_server_end) =
         fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
     guest_manager

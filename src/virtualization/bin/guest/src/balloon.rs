@@ -25,25 +25,9 @@ const VIRTIO_BALLOON_S_HTLB_PGALLOC: u16 = 8; // HugeTLB page allocations
 const VIRTIO_BALLOON_S_HTLB_PGFAIL: u16 = 9; // HugeTLB page allocation failures
 
 pub async fn connect_to_balloon_controller(
-    env_id: u32,
-    cid: u32,
-) -> Result<BalloonControllerProxy, Error> {
-    let realm = services::connect_to_env(env_id)?;
-
-    let (balloon_controller, balloon_server_end) =
-        fidl::endpoints::create_proxy::<BalloonControllerMarker>()
-            .context("failed to make balloon controller")?;
-
-    // Wire up the controller we made to the realm created (that has the memory we want)
-    realm.connect_to_balloon(cid, balloon_server_end).context("Failed to connect to given cid")?;
-
-    Ok(balloon_controller)
-}
-
-pub async fn connect_to_balloon_controller_cfv2(
     guest_type: arguments::GuestType,
 ) -> Result<BalloonControllerProxy, Error> {
-    let guest_manager = services::connect_to_manager_cfv2(guest_type)?;
+    let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
     if guest_info.guest_status == GuestStatus::Started {
         let (balloon_controller, balloon_server_end) =
@@ -52,7 +36,7 @@ pub async fn connect_to_balloon_controller_cfv2(
         // Wire up the controller we made to the relevant guest manager (that has the memory we want)
         guest_manager
             .connect_to_balloon(balloon_server_end)
-            .context("Failed to connect to given cid")?;
+            .context("Failed to connect to given guest type")?;
         Ok(balloon_controller)
     } else {
         Err(anyhow!(zx_status::Status::NOT_CONNECTED))
