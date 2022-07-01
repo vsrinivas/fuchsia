@@ -78,11 +78,6 @@ zx::status<> OutgoingDirectory::AddProtocol(AnyHandler handler, cpp17::string_vi
   return AddProtocolAt(std::move(handler), kServiceDirectory, name);
 }
 
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::AddNamedProtocol(AnyHandler handler, cpp17::string_view name) {
-  return AddProtocol(std::move(handler), name);
-}
-
 zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_view path,
                                               cpp17::string_view name) {
   // More thorough path validation is done in |svc_add_service|.
@@ -111,12 +106,6 @@ zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
   directory_handlers[protocol_entry] = std::move(context);
 
   return zx::make_status(status);
-}
-
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::AddNamedProtocolAt(AnyHandler handler, cpp17::string_view path,
-                                                   cpp17::string_view name) {
-  return AddProtocolAt(std::move(handler), path, name);
 }
 
 zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
@@ -158,19 +147,8 @@ zx::status<> OutgoingDirectory::AddService(ServiceHandler handler, cpp17::string
   return zx::ok();
 }
 
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::string_view service,
-                                                cpp17::string_view instance) {
-  return AddService(std::move(handler), service, instance);
-}
-
 zx::status<> OutgoingDirectory::RemoveProtocol(cpp17::string_view name) {
   return RemoveProtocolAt(kServiceDirectory, name);
-}
-
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::RemoveNamedProtocol(cpp17::string_view name) {
-  return RemoveProtocol(name);
 }
 
 zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
@@ -205,12 +183,6 @@ zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
   return zx::ok();
 }
 
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::RemoveNamedProtocolAt(cpp17::string_view directory,
-                                                      cpp17::string_view name) {
-  return RemoveProtocolAt(directory, name);
-}
-
 zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
                                               cpp17::string_view instance) {
   std::string path = MakePath(service, instance);
@@ -228,12 +200,6 @@ zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
   registered_handlers_.erase(path);
 
   return zx::make_status(status);
-}
-
-// TODO(http://fxbug.dev/103360): Remove this overload.
-zx::status<> OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
-                                                   cpp17::string_view instance) {
-  return RemoveService(service, instance);
 }
 
 zx::status<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_name) {

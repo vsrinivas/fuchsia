@@ -190,11 +190,6 @@ class OutgoingDirectory final {
   // is made available if a generic handler needs to be provided.
   zx::status<> AddProtocol(AnyHandler handler, cpp17::string_view name);
 
-  // [DEPRECATED] Use |AddProtocol| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
-
   // Same as above but allows overriding the parent directory in which the
   // protocol will be hosted.
   //
@@ -244,12 +239,6 @@ class OutgoingDirectory final {
   // parent directory in which the protocol will be installed.
   zx::status<> AddProtocolAt(AnyHandler handler, cpp17::string_view path, cpp17::string_view name);
 
-  // [DEPRECATED] Use |AddProtocolAt| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> AddNamedProtocolAt(AnyHandler handler, cpp17::string_view path,
-                                  cpp17::string_view name);
-
   // Adds an instance of a FIDL Service.
   //
   // A |handler| is added to provide an |instance| of a service.
@@ -271,18 +260,12 @@ class OutgoingDirectory final {
   template <typename Service>
   zx::status<> AddService(ServiceInstanceHandler handler,
                           cpp17::string_view instance = kDefaultInstance) {
-    return AddNamedService(std::move(handler), Service::Name, instance);
+    return AddService(std::move(handler), Service::Name, instance);
   }
 
   // Same as above but is untyped.
   zx::status<> AddService(ServiceInstanceHandler handler, cpp17::string_view service,
                           cpp17::string_view instance = kDefaultInstance);
-
-  // [DEPRECATED] Use |AddService| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> AddNamedService(ServiceInstanceHandler handler, cpp17::string_view service,
-                               cpp17::string_view instance = kDefaultInstance);
 
   // Serve a subdirectory at the root of this outgoing directory.
   //
@@ -319,11 +302,6 @@ class OutgoingDirectory final {
   // Same as above but untyped.
   zx::status<> RemoveProtocol(cpp17::string_view name);
 
-  // [DEPRECATED] Use |RemoveProtocol| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> RemoveNamedProtocol(cpp17::string_view name);
-
   // Removes a FIDL Protocol entry located in the provided |directory|.
   // Unlike |RemoveProtocol| which looks for the protocol to remove in the
   // path `/svc/{name}`, this method uses the directory name provided, e.g.
@@ -347,11 +325,6 @@ class OutgoingDirectory final {
   // Same as above but untyped.
   zx::status<> RemoveProtocolAt(cpp17::string_view directory, cpp17::string_view name);
 
-  // [DEPRECATED] Use |RemoveProtocolAt| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> RemoveNamedProtocolAt(cpp17::string_view directory, cpp17::string_view name);
-
   // Removes an instance of a FIDL Service.
   //
   // # Errors
@@ -371,12 +344,6 @@ class OutgoingDirectory final {
   // Same as above but untyped.
   zx::status<> RemoveService(cpp17::string_view service,
                              cpp17::string_view instance = kDefaultInstance);
-
-  // [DEPRECATED] Use |RemoveService| instead.
-  //
-  // TODO(http://fxbug.dev/103360): Remove this overload.
-  zx::status<> RemoveNamedService(cpp17::string_view service,
-                                  cpp17::string_view instance = kDefaultInstance);
 
   // Removes the subdirectory on the provided |directory_name|.
   //
