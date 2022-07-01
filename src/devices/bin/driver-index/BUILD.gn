@@ -60,7 +60,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/device_group.rs",
+    "src/device_group_manager.rs",
     "src/main.rs",
     "src/match_common.rs",
     "src/package_resolver.rs",

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::device_group::DeviceGroup,
+    crate::device_group_manager::DeviceGroupManager,
     crate::match_common::node_to_device_property,
     crate::resolved_driver::{load_driver, DriverPackageType, ResolvedDriver},
     anyhow::{self, Context},
@@ -27,7 +27,7 @@ use {
     },
 };
 
-mod device_group;
+mod device_group_manager;
 mod match_common;
 mod package_resolver;
 mod resolved_driver;
@@ -115,9 +115,9 @@ struct Indexer {
     // but will eventually resolve when base packages are available.
     base_repo: RefCell<BaseRepo>,
 
-    // Contains the device groups. This is wrapped in a RefCell since the
+    // Manages the device groups. This is wrapped in a RefCell since the
     // device groups are added after the driver index server has started.
-    device_groups: RefCell<HashMap<String, DeviceGroup>>,
+    device_group_manager: RefCell<DeviceGroupManager>,
 
     // Whether /system is required. Used to determine if the indexer should
     // return fallback drivers that match.
@@ -134,7 +134,7 @@ impl Indexer {
         Indexer {
             boot_repo,
             base_repo: RefCell::new(base_repo),
-            device_groups: RefCell::new(HashMap::new()),
+            device_group_manager: RefCell::new(DeviceGroupManager::new()),
             require_system,
             ephemeral_drivers: RefCell::new(HashMap::new()),
         }
@@ -202,9 +202,12 @@ impl Indexer {
                     None
                 }
             })
-            .chain(self.device_groups.borrow().iter().filter_map(|(_, group)| {
-                group.matches(&properties).map(|matched| (false, matched))
-            }))
+            .chain(
+                self.device_group_manager
+                    .borrow()
+                    .match_device_group_nodes(&properties)
+                    .map(|matched| (false, matched)),
+            )
             .partition(|(fallback, _)| *fallback);
 
         match (non_fallback.len(), fallback.len()) {
@@ -257,12 +260,7 @@ impl Indexer {
             .chain(fallback_base_drivers)
             .filter_map(|driver| driver.matches(&properties).ok())
             .filter_map(|d| d)
-            .chain(
-                self.device_groups
-                    .borrow()
-                    .iter()
-                    .filter_map(|(_, driver)| driver.matches(&properties)),
-            )
+            .chain(self.device_group_manager.borrow().match_device_group_nodes(&properties))
             .collect())
     }
 
@@ -271,15 +269,8 @@ impl Indexer {
         topological_path: String,
         nodes: Vec<fdf::DeviceGroupNode>,
     ) -> fdi::DriverIndexAddDeviceGroupResult {
-        let mut device_groups = self.device_groups.borrow_mut();
-
-        if device_groups.contains_key(&topological_path) {
-            return Err(Status::ALREADY_EXISTS.into_raw());
-        }
-
-        device_groups
-            .insert(topological_path.clone(), DeviceGroup::create(topological_path, nodes)?);
-        Ok(())
+        let mut device_group_manager = self.device_group_manager.borrow_mut();
+        device_group_manager.add_device_group(topological_path, nodes)
     }
 
     fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
