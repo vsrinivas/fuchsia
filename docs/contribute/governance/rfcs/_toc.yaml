@@ -358,3 +358,6 @@ toc:
     path: /docs/contribute/governance/rfcs/0171_improved_diagnostics_routing.md
   - title: "RFC-0173: Structured Configuration in Component Framework APIs"
     path: /docs/contribute/governance/rfcs/0173_structured_config_cf_apis.md
+  - title: "RFC-0174: Scale in Flatland"
+    path: /docs/contribute/governance/rfcs/0174_scale_in_flatland.md
+

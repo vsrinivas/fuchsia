@@ -2232,3 +2232,16 @@
   consulted: ['hjfreyer@google.com', 'xbhatnag@google.com', 'aaronwood@google.com', 'mcgrathr@google.com', 'shayba@google.com']
   submitted: '2022-04-11'
   reviewed: '2022-06-30'
+
+- name: 'RFC-0174'
+  title: 'Scale in Flatland'
+  short_description: 'Define how graphical scaling operations are handled in Flatland.'
+  authors: ['emircan@google.com']
+  file: '0174_scale_in_flatland.md'
+  area: ['UI']
+  issue: ['99312']
+  gerrit_change_id: ['686572']
+  status: 'Accepted'
+  reviewers: ['dworsham@google.com', 'jaeheon@google.com', 'jjosh@google.com', 'lucasradaelli@google.com', 'neelsa@google.com', 'quiche@google.com']
+  submitted: '2022-06-02'
+  reviewed: '2022-07-01'
