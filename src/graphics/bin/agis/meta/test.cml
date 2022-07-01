@@ -30,6 +30,10 @@
             from: "#agis",
         },
         {
+            protocol: [ "fuchsia.gpu.agis.Listener" ],
+            from: "#agis",
+        },
+        {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#netstack-debug",
         },

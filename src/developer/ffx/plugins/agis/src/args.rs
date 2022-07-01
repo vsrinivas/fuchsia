@@ -16,7 +16,6 @@ pub struct AgisCommand {
 #[argh(subcommand)]
 pub enum Operation {
     Register(RegisterOp),
-    Unregister(UnregisterOp),
     Vtcs(VtcsOp),
 }
 
@@ -31,12 +30,6 @@ pub struct RegisterOp {
 
     #[argh(positional, description = "process name")]
     pub process_name: String,
-}
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "unregister", description = "unregister a process from AGIS")]
-pub struct UnregisterOp {
-    #[argh(positional, description = "id")]
-    pub id: u64,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]

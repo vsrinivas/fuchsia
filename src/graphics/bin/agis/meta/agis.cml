@@ -18,6 +18,7 @@
     capabilities: [
         { protocol: "fuchsia.gpu.agis.ComponentRegistry" },
         { protocol: "fuchsia.gpu.agis.Observer" },
+        { protocol: "fuchsia.gpu.agis.Listener" },
     ],
     use: [
         {
@@ -48,6 +49,11 @@
         },
         {
             protocol: "fuchsia.gpu.agis.Observer",
+            from: "self",
+            to: "parent",
+        },
+        {
+            protocol: "fuchsia.gpu.agis.Listener",
             from: "self",
             to: "parent",
         },

@@ -7,27 +7,33 @@ library fuchsia.gpu.agis;
 
 using zx;
 
+/// Client supplied id.
+alias ClientId = uint64;
+
+/// Agis internally generated id.
+alias GlobalId = uint32;
+
 /// AGIS provides FIDL services that facilitate Vulkan command tracing.
 /// It acts as an intermediary between gapii, the Android GPU Inspector
 /// interposing shared library and Vulkan layer, and the host Android GPU
-/// Inspector application.
+/// Inspector (AGI) application.
 ///
-/// Vtc == Vulkan Traceable Component
+/// Vulkan Traceable Component (vtc)
 type Vtc = resource table {
-    1: process_koid zx.koid;
-    2: process_name string:zx.MAX_NAME_LEN;
-    3: agi_socket zx.handle:SOCKET;
+    1: global_id GlobalId;
+    2: process_koid zx.koid;
+    3: process_name string:zx.MAX_NAME_LEN;
 };
 
 /// Max vtcs that may be registered.
 /// ZX_CHANNEL_MAX_MESSAGE_BYTES = 64KiB.  At an approximate message size
-/// of 50B, rounding up to 64B, we easily fit 512 vtcs in a message
+/// of 50B, rounding up to 64B, we easily fit 128 vtcs in a message
 /// with ample headroom for message size growth.
 ///
 /// The number of vtcs is determined by developers, rather than users.
 /// The typical expected vtc count is 1 considering a developer
 /// performing Vulkan tracing on 1 component at a time.
-const MAX_VTCS uint32 = 512;
+const MAX_VTCS uint32 = 128;
 
 type Error = flexible enum {
     NOT_FOUND = 1;
@@ -36,38 +42,57 @@ type Error = flexible enum {
     INTERNAL_ERROR = 4;
 };
 
-/// The AGIS ComponentRegistry protocol allows traceable components to register as
-/// Vulkan traceable.
+/// The AGIS ComponentRegistry protocol allows traceable Fuchsia components to register
+/// as Vulkan traceable.
 @discoverable
 protocol ComponentRegistry {
-    /// Register a process as traceable and retrieve its bound socket.
-    /// For AGI, gapii will be the only client of this Register interface.
+    /// Register a process as traceable.
     Register(struct {
-        /// Client assigned unique ID for the vtc.
-        id uint64;
+        /// Client assigned ID for the vtc.
+        id ClientId;
 
         /// Process koid.
         process_koid zx.koid;
 
         /// Must match ZX_PROP_NAME of the kernel object.
         process_name string:zx.MAX_NAME_LEN;
-    }) -> (resource struct {
-        gapii_socket zx.handle:SOCKET;
-    }) error Error;
-
-    /// Remove an entry from the registry.
-    Unregister(struct {
-        id uint64;
     }) -> (struct {}) error Error;
+
+    // Unregister |global_id| from the registry.
+    Unregister(struct {
+        id ClientId;
+    }) -> (struct {}) error Error;
+
+    /// Hanging get to retrieve the Vulkan endpoint of the ffx/vulkan Zircon
+    /// socket pair.  This get is first satisfied when a client
+    /// (e.g. the AGI application) calls Listener::Listen() on the same |global_id|.
+    GetVulkanSocket(struct {
+        id ClientId;
+    }) -> (resource struct {
+        socket zx.handle:<SOCKET, optional>;
+    }) error Error;
 };
 
-/// The AGIS Observer protocol provides the interface to retrieve registered
-/// Vulkan Traceable Components.
+/// The AGIS Observer protocol provides the interface to retrieve the full list of
+/// registered Vulkan Traceable Components (vtcs).
 @discoverable
 protocol Observer {
     /// Retrieve registered components.
     /// For AGI, gapis will be the only client of this Vtcs interface.
     Vtcs() -> (resource struct {
         vtcs vector<Vtc>:MAX_VTCS;
+    }) error Error;
+};
+
+/// The AGIS Listener protocol provides the interface to initiate listening
+/// to a Vulkan Traceable Component.  Retrieves the ffx socket endpoint of the
+/// ffx/vulkan socket pair.
+@discoverable
+protocol Listener {
+    /// Initiate listening to the provided |vtc|.
+    Listen(struct {
+        global_id GlobalId;
+    }) -> (resource struct {
+        socket zx.handle:SOCKET;
     }) error Error;
 };
