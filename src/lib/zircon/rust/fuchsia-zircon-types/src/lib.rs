@@ -1062,7 +1062,7 @@ pub struct zx_vcpu_state_t {
     pub sp: u64,
     // Contains only the user-controllable upper 4-bits (NZCV).
     pub cpsr: u32,
-    _padding1: [PadByte; 4],
+    pub _padding1: [PadByte; 4],
 }
 
 #[cfg(target_arch = "aarch64")]
