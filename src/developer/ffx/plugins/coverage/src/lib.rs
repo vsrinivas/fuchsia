@@ -39,7 +39,7 @@ pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
         None => global_symbol_index_path()?,
     };
     let bin_files = find_binaries(
-        &SymbolIndex::load(&symbol_index_path)?,
+        &SymbolIndex::load_aggregate(&symbol_index_path)?,
         &llvm_profdata_bin,
         &profraws,
         show_binary_id,
