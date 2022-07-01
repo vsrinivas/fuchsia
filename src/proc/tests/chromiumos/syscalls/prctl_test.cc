@@ -5,6 +5,8 @@
 #include <sys/prctl.h>
 
 #include <gtest/gtest.h>
+#include <linux/capability.h>
+#include <linux/prctl.h>
 #include <linux/securebits.h>
 
 #include "src/proc/tests/chromiumos/syscalls/test_helper.h"
@@ -47,6 +49,18 @@ TEST(PrctlTest, SecureBits) {
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_GET_SECUREBITS)), SECBIT_NOROOT);
     SAFE_SYSCALL(prctl(PR_SET_SECUREBITS, SECBIT_KEEP_CAPS));
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_GET_SECUREBITS)), SECBIT_KEEP_CAPS);
+  });
+
+  ASSERT_TRUE(helper.WaitForChildren());
+}
+
+TEST(PrctlTest, DropCapabilities) {
+  ForkHelper helper;
+
+  helper.RunInForkedProcess([&] {
+    ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_READ, CAP_DAC_OVERRIDE)), true);
+    ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_DROP, CAP_DAC_OVERRIDE)), 0);
+    ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_READ, CAP_DAC_OVERRIDE)), false);
   });
 
   ASSERT_TRUE(helper.WaitForChildren());
