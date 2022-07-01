@@ -4333,7 +4333,7 @@ Whether wayland protocol logging should be enabled
 
 **Current value (from the default):** `false`
 
-From //src/proc/bin/starnix/BUILD.gn:12
+From //src/proc/bin/starnix/BUILD.gn:13
 
 ### target_cpu
 
