@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     derive_builder::Builder,
-    fuchsia_async::{self as fasync, net::TcpListener},
+    fuchsia_async as fasync,
     fuchsia_merkle::Hash,
     futures::prelude::*,
     hyper::{
@@ -17,6 +17,7 @@ use {
     },
     omaha_client::cup_ecdsa::PublicKeyId,
     parking_lot::Mutex,
+    serde::Deserialize,
     serde_json::json,
     sha2::{Digest, Sha256},
     std::{
@@ -29,7 +30,7 @@ use {
     url::Url,
 };
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize)]
 pub enum OmahaResponse {
     NoUpdate,
     Update,
@@ -37,7 +38,7 @@ pub enum OmahaResponse {
     InvalidURL,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ResponseAndMetadata {
     pub response: OmahaResponse,
     pub merkle: Hash,
@@ -97,7 +98,7 @@ fn make_default_responses_by_appid() -> ResponseMap {
     ResponseMap::from([("integration-test-appid".to_string(), ResponseAndMetadata::default())])
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Deserialize)]
 pub enum UpdateCheckAssertion {
     UpdatesEnabled,
     UpdatesDisabled,
@@ -132,11 +133,12 @@ impl OmahaServer {
     }
 
     /// Spawn the server on the current executor, returning the address of the server.
+    #[cfg(target_os = "fuchsia")]
     pub fn start(arc_server: Arc<Mutex<OmahaServer>>) -> Result<String, Error> {
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
 
         let (connections, addr) = {
-            let listener = TcpListener::bind(&addr)?;
+            let listener = fasync::net::TcpListener::bind(&addr)?;
             let local_addr = listener.local_addr()?;
             (
                 listener
@@ -205,7 +207,7 @@ fn make_etag(
     ))
 }
 
-async fn handle_omaha_request(
+pub async fn handle_omaha_request(
     req: Request<Body>,
     omaha_server: &Mutex<OmahaServer>,
 ) -> Result<Response<Body>, Error> {

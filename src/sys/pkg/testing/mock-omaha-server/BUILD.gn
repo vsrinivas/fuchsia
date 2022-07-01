@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("mock-omaha-server") {
@@ -30,7 +31,7 @@ rustc_library("mock-omaha-server") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_unittest_package("mock-omaha-server-tests") {
+fuchsia_unittest_package("mock-omaha-server-lib-tests") {
   manifest = "meta/mock-omaha-server-lib-test.cml"
   deps = [
     ":mock-omaha-server_test",
@@ -44,7 +45,37 @@ fuchsia_unittest_package("mock-omaha-server-tests") {
   }
 }
 
+if (is_host) {
+  rustc_binary("bin") {
+    output_name = "mock-omaha-server"
+    edition = "2021"
+
+    deps = [
+      ":mock-omaha-server",
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-hyper",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-net",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:hyper",
+      "//third_party/rust_crates:parking_lot",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tokio",
+    ]
+
+    inputs = [ "src/testing_keys/test_private_key.pem" ]
+
+    sources = [ "src/main.rs" ]
+  }
+}
+
+group("bin-host") {
+  public_deps = [ ":bin($host_toolchain)" ]
+}
+
 group("tests") {
   testonly = true
-  public_deps = [ ":mock-omaha-server-tests" ]
+  public_deps = [ ":mock-omaha-server-lib-tests" ]
 }
