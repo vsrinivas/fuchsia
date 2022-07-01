@@ -429,13 +429,6 @@ impl VmoFileConnection {
                 let result = self.handle_read_at(offset, count).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
-            fio::FileRequest::WriteDeprecated { data, responder } => {
-                let (status, count) = match self.handle_write(&data).await {
-                    Ok(count) => (zx::Status::OK, count),
-                    Err(status) => (status, 0),
-                };
-                responder.send(status.into_raw(), count)?;
-            }
             fio::FileRequest::Write { data, responder } => {
                 let result = self.handle_write(&data).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;

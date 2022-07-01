@@ -281,15 +281,6 @@ impl<T: 'static + File> FileConnection<T> {
                 let result = self.handle_read_at(offset, count).await;
                 let () = responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
-            fio::FileRequest::WriteDeprecated { data, responder } => {
-                fuchsia_trace::duration!("storage", "File::WriteDeprecated", "bytes" => data.len() as u64);
-                let result = self.handle_write(&data).await;
-                let (status, actual) = match result {
-                    Ok(actual) => (zx::Status::OK, actual),
-                    Err(status) => (status, 0),
-                };
-                responder.send(status.into_raw(), actual)?;
-            }
             fio::FileRequest::Write { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
                 let result = self.handle_write(&data).await;

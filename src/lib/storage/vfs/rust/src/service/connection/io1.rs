@@ -196,9 +196,6 @@ impl Connection {
             fio::FileRequest::ReadAt { offset: _, count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            fio::FileRequest::WriteDeprecated { data: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
-            }
             fio::FileRequest::Write { data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }

@@ -14,9 +14,14 @@ const MAX_TRANSFER_SIZE uint64 = 8192;
 /// The byte vector type used for read/write operations.
 alias Transfer = bytes:MAX_TRANSFER_SIZE;
 
+protocol File {
+    compose File2;
+};
+
 /// A [`Node2`] which contains a sequence of bytes of definite
 /// length.
 protocol File2 {
+    compose Node1;
     compose Node2;
     compose AdvisoryLocking;
 

@@ -135,7 +135,7 @@ func (*Service) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	}, nil
 }
 
-func (*Service) SetAttr(_ fidl.Context, flags io.NodeAttributeFlags, attributes io.NodeAttributes) (int32, error) {
+func (*Service) SetAttr(fidl.Context, io.NodeAttributeFlags, io.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -153,11 +153,11 @@ func (*Service) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*Service) SetFlags(_ fidl.Context, flags io.OpenFlags) (int32, error) {
+func (*Service) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*Service) QueryFilesystem(_ fidl.Context) (int32, *io.FilesystemInfo, error) {
+func (*Service) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
@@ -287,7 +287,7 @@ func (*directoryState) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	}, nil
 }
 
-func (*directoryState) SetAttr(_ fidl.Context, flags io.NodeAttributeFlags, attributes io.NodeAttributes) (int32, error) {
+func (*directoryState) SetAttr(fidl.Context, io.NodeAttributeFlags, io.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -338,7 +338,7 @@ func (*directoryState) AddInotifyFilter(ctx fidl.Context, path string, filters i
 	return nil
 }
 
-func (*directoryState) Unlink(_ fidl.Context, name string, _ io.UnlinkOptions) (io.Directory2UnlinkResult, error) {
+func (*directoryState) Unlink(fidl.Context, string, io.UnlinkOptions) (io.Directory2UnlinkResult, error) {
 	return io.Directory2UnlinkResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
@@ -408,15 +408,15 @@ func (*directoryState) GetToken(fidl.Context) (int32, zx.Handle, error) {
 	return int32(zx.ErrNotSupported), zx.HandleInvalid, nil
 }
 
-func (*directoryState) Rename(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (io.Directory2RenameResult, error) {
+func (*directoryState) Rename(fidl.Context, string, zx.Event, string) (io.Directory2RenameResult, error) {
 	return io.Directory2RenameResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*directoryState) Link(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
+func (*directoryState) Link(fidl.Context, string, zx.Handle, string) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*directoryState) Watch(_ fidl.Context, mask io.WatchMask, options uint32, watcher io.DirectoryWatcherWithCtxInterfaceRequest) (int32, error) {
+func (*directoryState) Watch(_ fidl.Context, _ io.WatchMask, _ uint32, watcher io.DirectoryWatcherWithCtxInterfaceRequest) (int32, error) {
 	if err := watcher.Close(); err != nil {
 		logError(err)
 	}
@@ -607,7 +607,7 @@ func (fState *fileState) GetAttr(fidl.Context) (int32, io.NodeAttributes, error)
 	}, nil
 }
 
-func (*fileState) SetAttr(_ fidl.Context, flags io.NodeAttributeFlags, attributes io.NodeAttributes) (int32, error) {
+func (*fileState) SetAttr(fidl.Context, io.NodeAttributeFlags, io.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -651,15 +651,11 @@ func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io
 	}), nil
 }
 
-func (*fileState) WriteDeprecated(_ fidl.Context, data []uint8) (int32, uint64, error) {
-	return int32(zx.ErrNotSupported), 0, nil
-}
-
-func (*fileState) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, error) {
+func (*fileState) Write(fidl.Context, []uint8) (io.File2WriteResult, error) {
 	return io.File2WriteResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAtResult, error) {
+func (*fileState) WriteAt(fidl.Context, []uint8, uint64) (io.File2WriteAtResult, error) {
 	return io.File2WriteAtResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
@@ -671,7 +667,7 @@ func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64
 		}), err
 }
 
-func (*fileState) Resize(_ fidl.Context, length uint64) (io.File2ResizeResult, error) {
+func (*fileState) Resize(fidl.Context, uint64) (io.File2ResizeResult, error) {
 	return io.File2ResizeResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
@@ -679,11 +675,11 @@ func (*fileState) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) SetFlags(_ fidl.Context, flags io.OpenFlags) (int32, error) {
+func (*fileState) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*fileState) QueryFilesystem(_ fidl.Context) (int32, *io.FilesystemInfo, error) {
+func (*fileState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
@@ -691,6 +687,6 @@ func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.
 	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
 }
 
-func (*fileState) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
+func (*fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
 	return io.File2GetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }

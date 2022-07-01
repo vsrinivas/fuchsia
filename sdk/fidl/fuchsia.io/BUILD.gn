@@ -13,7 +13,6 @@ fidl("fuchsia.io") {
     "connection-options.fidl",
     "directory.fidl",
     "directory2.fidl",
-    "file.fidl",
     "file2.fidl",
     "inotify.fidl",
     "io.fidl",
