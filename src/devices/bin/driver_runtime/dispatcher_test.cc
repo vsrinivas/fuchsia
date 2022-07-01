@@ -2280,6 +2280,49 @@ TEST_F(DispatcherTest, GetCurrentDispatcher) {
   fdf_internal_wait_until_dispatcher_idle(dispatcher2);
 }
 
+TEST_F(DispatcherTest, GetCurrentDispatcherShutdownCallback) {
+  libsync::Completion shutdown_completion;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) mutable {
+    ASSERT_EQ(shutdown_dispatcher, fdf_dispatcher_get_current_dispatcher());
+    shutdown_completion.Signal();
+  };
+
+  fdf::Dispatcher dispatcher;
+
+  {
+    driver_context::PushDriver(CreateFakeDriver());
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+    auto dispatcher_with_status = fdf::Dispatcher::Create(0, shutdown_handler);
+    ASSERT_FALSE(dispatcher_with_status.is_error());
+    dispatcher = *std::move(dispatcher_with_status);
+  }
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  async::WaitOnce wait(event.get(), ZX_USER_SIGNAL_0);
+
+  // Registered, but not yet signaled.
+  async_dispatcher_t* async_dispatcher = dispatcher.async_dispatcher();
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  libsync::Completion wait_complete;
+  ASSERT_OK(wait.Begin(async_dispatcher, [&wait_complete, event = std::move(event)](
+                                             async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                             zx_status_t status, const zx_packet_signal_t* signal) {
+    ASSERT_STATUS(status, ZX_ERR_CANCELED);
+    ASSERT_EQ(dispatcher, fdf_dispatcher_get_current_dispatcher());
+    wait_complete.Signal();
+  }));
+
+  // Shutdown the dispatcher, which should schedule cancellation of the channel read.
+  dispatcher.ShutdownAsync();
+
+  ASSERT_OK(wait_complete.Wait(zx::time::infinite()));
+  ASSERT_OK(shutdown_completion.Wait());
+}
+
 TEST_F(DispatcherTest, HasQueuedTasks) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));

@@ -484,6 +484,10 @@ void Dispatcher::CompleteShutdown() {
     GetDispatcherCoordinator().CacheUnboundIrq(std::move(irq));
   }
 
+  // We want |fdf_dispatcher_get_current_dispatcher| to work in cancellation and shutdown callbacks.
+  driver_context::PushDriver(owner_, this);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
   // We remove one item at a time from the shutdown queue, in case someone
   // tries to cancel a wait (which has not been canceled yet) from within a
   // canceled callback. We don't use fbl::AutoLock as we want to be able to
