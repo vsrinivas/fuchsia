@@ -2218,3 +2218,17 @@
   reviewers: ['crjohns@google.com', 'geb@google.com', 'hjfreyer@google.com', 'shayba@google.com', 'zarvox@google.com']
   submitted: '2022-05-19'
   reviewed: '2022-06-23'
+
+- name: 'RFC-0173'
+  title: 'Structured Configuration in Component Framework APIs'
+  short_description: 'Define the publicly-facing implementation of basic Structured Configuration features.'
+  authors: ['adamperry@google.com']
+  file: '0173_structured_config_cf_apis.md'
+  area: ['Component Framework']
+  issue: ['95372']
+  gerrit_change_id: ['668417']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'jsankey@google.com']
+  consulted: ['hjfreyer@google.com', 'xbhatnag@google.com', 'aaronwood@google.com', 'mcgrathr@google.com', 'shayba@google.com']
+  submitted: '2022-04-11'
+  reviewed: '2022-06-30'
