@@ -131,11 +131,9 @@ void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
 void GuestManager::Get(GetCallback callback) {
   // This function is called by VMM as part of its main() to configure itself
   //
-  // fuchsia::virtualization::GuestConfigProvider::Get is expected to be called only once per
-  // LaunchGuest
-  // TODO(fxbug.dev/72386) Restructure VMM's Guest to have an explicit Start and Stop function
-  // once CFv1 codepath no longer being used This will remove the need for the
-  // fuchsia::virtualization::GuestConfigProvider and allow GuestManager::LaunchGuest simply
-  // connect to VMM's Guest protocol and call start
+  // GuestConfigProvider::Get is expected to be called only once per LaunchGuest
+  // TODO(fxbug.dev/103621) Restructure VMM's Guest to have an explicit Start and Stop function.
+  // This will remove the need for the fuchsia::virtualization::GuestConfigProvider.
+  //  GuestManager::LaunchGuest could simply connect to VMM's Guest protocol and call Start
   callback(std::move(guest_config_));
 }

@@ -25,10 +25,6 @@ config("guest_test_util") {
 guest_packages = [
   "//src/virtualization/bin/vmm",
   "//src/virtualization/packages",
-
-  # TODO(fxbug.dev/72386)
-  # Remove once audio test framework is migrated to RealmBuilder and virtio sound tests is using Cfv2
-  "//src/virtualization/bin",
 ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
