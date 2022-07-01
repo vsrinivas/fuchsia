@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include "src/devices/bin/driver_playground/src/playground.h"
 #include "src/devices/lib/log/log.h"

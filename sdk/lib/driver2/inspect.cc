@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/driver2/inspect.h>
 #include <lib/fidl/llcpp/channel.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <memory>
 

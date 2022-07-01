@@ -7,7 +7,7 @@
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/record_cpp.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

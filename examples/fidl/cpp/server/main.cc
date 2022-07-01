@@ -8,7 +8,7 @@
 
 // [START includes]
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
 // [END includes]
 

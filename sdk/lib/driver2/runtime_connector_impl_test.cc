@@ -5,7 +5,7 @@
 #include <lib/driver2/runtime.h>
 #include <lib/driver2/runtime_connector_impl.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <set>
 

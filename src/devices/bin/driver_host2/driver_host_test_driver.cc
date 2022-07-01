@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 namespace fdf = fuchsia_driver_framework;
 namespace ftest = fuchsia_driverhost_test;

@@ -12,7 +12,7 @@
 #include <queue>
 #include <type_traits>
 
-#include <sdk/lib/sys/component/llcpp/outgoing_directory.h>
+#include <sdk/lib/sys/component/cpp/outgoing_directory.h>
 
 #include "fidl/test.protocol/cpp/natural_types.h"
 #include "lib/async/cpp/task.h"

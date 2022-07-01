@@ -10,7 +10,7 @@
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/start_args.h>
 #include <lib/driver2/structured_logger.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>
 
 namespace fdf2 = fuchsia_driver_framework;

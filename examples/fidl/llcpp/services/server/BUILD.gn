@@ -13,7 +13,7 @@ executable("bin") {
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/stdcompat",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

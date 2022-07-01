@@ -181,7 +181,7 @@ This new code requires the following additional dependencies:
 
 * `"//zircon/system/ulib/async-loop:async-loop-cpp"`: This library contains the
   asynchronous event loop code.
-* `"//sdk/lib/sys/component/llcpp"`: This library is used to publish
+* `"//sdk/lib/sys/component/cpp"`: This library is used to publish
   capabilities, e.g. protocols, to the component's outgoing directory.
 * `"//sdk/lib/syslog/cpp"`: This library is used to log messages.
 

@@ -12,7 +12,7 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/result.h>
 #include <lib/fpromise/scope.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 

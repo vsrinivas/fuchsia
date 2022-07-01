@@ -27,7 +27,7 @@ fuchsia_driver("receiver_driver") {
     ":test.structuredconfig.receiver.shim_llcpp",
     "//sdk/lib/driver2:inspect",
     "//sdk/lib/driver2:llcpp",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/devices/lib/driver:driver_runtime",

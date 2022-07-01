@@ -10,7 +10,7 @@
 #include <lib/driver2/record.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 

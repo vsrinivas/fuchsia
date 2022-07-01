@@ -8,7 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
 #include <lib/svc/outgoing.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <zxtest/zxtest.h>
 

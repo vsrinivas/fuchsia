@@ -39,7 +39,7 @@ source_set("inspect") {
   ]
 
   public_deps = [
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",
   ]
@@ -102,7 +102,7 @@ executable("llcpp_test") {
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//src/diagnostics/lib/cpp-log-decoder:lib",
     "//src/lib/diagnostics/accessor2logger",

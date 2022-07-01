@@ -23,7 +23,7 @@ test("service-llcpp-test") {
   deps = [
     ":fidl.service.test_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

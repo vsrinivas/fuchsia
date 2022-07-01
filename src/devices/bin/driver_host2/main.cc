@@ -8,7 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdf/internal.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>

@@ -20,7 +20,7 @@ fuchsia_driver("driver") {
   sources = [ "test_root.cc" ]
   deps = [
     ":bind",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver",
     "//src/devices/tests/composite-driver-v1:fuchsia.composite.test_llcpp",
     "//src/lib/ddktl",

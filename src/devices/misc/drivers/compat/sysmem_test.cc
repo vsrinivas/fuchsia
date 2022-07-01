@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/driver2/logger.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>

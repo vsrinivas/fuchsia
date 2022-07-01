@@ -11,8 +11,8 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/sys/component/llcpp/handlers.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/handlers.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
 #include <iostream>

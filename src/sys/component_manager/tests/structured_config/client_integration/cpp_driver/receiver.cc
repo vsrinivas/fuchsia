@@ -14,8 +14,8 @@
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
-#include <lib/sys/component/llcpp/handlers.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/handlers.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <zircon/assert.h>

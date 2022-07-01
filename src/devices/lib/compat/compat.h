@@ -14,7 +14,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/service/llcpp/service_handler.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <unordered_map>
 #include <unordered_set>
