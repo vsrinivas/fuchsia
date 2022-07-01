@@ -374,10 +374,10 @@ impl TestEnvBuilder {
             .await
             .unwrap();
         for (k, v) in self.omaha_client_config_bool_overrides {
-            builder.replace_config_value_bool(&omaha_client_service, &k, v).await.unwrap();
+            builder.set_config_value_bool(&omaha_client_service, &k, v).await.unwrap();
         }
         for (k, v) in self.omaha_client_config_uint16_overrides {
-            builder.replace_config_value_uint16(&omaha_client_service, &k, v).await.unwrap();
+            builder.set_config_value_uint16(&omaha_client_service, &k, v).await.unwrap();
         }
 
         let system_update_committer = builder

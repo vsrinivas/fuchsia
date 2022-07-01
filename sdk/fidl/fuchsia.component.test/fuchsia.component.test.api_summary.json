@@ -246,14 +246,14 @@
         "name": "fuchsia.component.test/Realm.ReplaceComponentDecl"
     },
     {
-        "declaration": "(string:100 name,string:64 key,fuchsia.component.config/ValueSpec value) -> (fuchsia.component.test/Realm_ReplaceConfigValue_Result result)",
-        "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.ReplaceConfigValue"
-    },
-    {
         "declaration": "(fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceRealmDecl_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.component.test/Realm.ReplaceRealmDecl"
+    },
+    {
+        "declaration": "(string:100 name,string:64 key,fuchsia.component.config/ValueSpec value) -> (fuchsia.component.test/Realm_SetConfigValue_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.component.test/Realm.SetConfigValue"
     },
     {
         "kind": "protocol",
@@ -624,25 +624,6 @@
     },
     {
         "kind": "struct",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Response"
-    },
-    {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
-        "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.err"
-    },
-    {
-        "declaration": "fuchsia.component.test/Realm_ReplaceConfigValue_Response",
-        "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct",
         "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Response"
     },
     {
@@ -658,6 +639,25 @@
     {
         "kind": "union",
         "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.test/Realm_SetConfigValue_Response"
+    },
+    {
+        "declaration": "fuchsia.component.test/RealmBuilderError",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_SetConfigValue_Result.err"
+    },
+    {
+        "declaration": "fuchsia.component.test/Realm_SetConfigValue_Response",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_SetConfigValue_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.test/Realm_SetConfigValue_Result",
         "strictness": "strict"
     },
     {

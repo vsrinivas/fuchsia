@@ -100,11 +100,11 @@ impl TestEnv {
             Config::ScryptOnly => (true, false),
         };
         builder
-            .replace_config_value_bool(&password_authenticator, "allow_scrypt", allow_scrypt)
+            .set_config_value_bool(&password_authenticator, "allow_scrypt", allow_scrypt)
             .await
             .unwrap();
         builder
-            .replace_config_value_bool(&password_authenticator, "allow_pinweaver", allow_pinweaver)
+            .set_config_value_bool(&password_authenticator, "allow_pinweaver", allow_pinweaver)
             .await
             .unwrap();
         builder

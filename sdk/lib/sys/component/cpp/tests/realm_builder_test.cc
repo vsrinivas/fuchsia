@@ -92,39 +92,32 @@ TEST_F(RealmBuilderTest, StructuredConfig) {
                 "hello][1,0,][1,2,][2,3,][3,4,][4,5,][-1,-2,][-2,-3,][-3,-4,][-4,-5,][foo,bar,]"));
 }
 
-TEST_F(RealmBuilderTest, ReplaceConfigValue) {
+TEST_F(RealmBuilderTest, SetConfigValue) {
   static constexpr char kEchoServerSc[] = "echo_server_sc";
 
   auto realm_builder = RealmBuilder::Create();
   realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_flag", ConfigValue::Bool(true));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_uint8", ConfigValue::Uint8(1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_uint16", ConfigValue::Uint16(1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_uint32", ConfigValue::Uint32(1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_uint64", ConfigValue::Uint64(1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_int8", ConfigValue::Int8(-1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_int16", ConfigValue::Int16(-1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_int32", ConfigValue::Int32(-1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_int64", ConfigValue::Int64(-1));
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_string", "foo");
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_flag",
-                                   std::vector<bool>{false, true});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_uint8", std::vector<uint8_t>{1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_uint16",
-                                   std::vector<uint16_t>{1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_uint32",
-                                   std::vector<uint32_t>{1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_uint64",
-                                   std::vector<uint64_t>{1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_int8", std::vector<int8_t>{-1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_int16",
-                                   std::vector<int16_t>{-1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_int32",
-                                   std::vector<int32_t>{-1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_int64",
-                                   std::vector<int64_t>{-1, 1});
-  realm_builder.ReplaceConfigValue(kEchoServerSc, "my_vector_of_string",
-                                   std::vector<std::string>{"bar", "foo"});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_flag", ConfigValue::Bool(true));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint8", ConfigValue::Uint8(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint16", ConfigValue::Uint16(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint32", ConfigValue::Uint32(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint64", ConfigValue::Uint64(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int8", ConfigValue::Int8(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int16", ConfigValue::Int16(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int32", ConfigValue::Int32(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int64", ConfigValue::Int64(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_string", "foo");
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_flag", std::vector<bool>{false, true});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_uint8", std::vector<uint8_t>{1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_uint16", std::vector<uint16_t>{1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_uint32", std::vector<uint32_t>{1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_uint64", std::vector<uint64_t>{1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_int8", std::vector<int8_t>{-1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_int16", std::vector<int16_t>{-1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_int32", std::vector<int32_t>{-1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_int64", std::vector<int64_t>{-1, 1});
+  realm_builder.SetConfigValue(kEchoServerSc, "my_vector_of_string",
+                               std::vector<std::string>{"bar", "foo"});
   realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
                                .source = ChildRef{kEchoServerSc},
                                .targets = {ParentRef()}});
@@ -140,13 +133,13 @@ TEST_F(RealmBuilderTest, ReplaceConfigValue) {
                                       "[1,1,][-1,1,][-1,1,][-1,1,][-1,1,][bar,foo,]"));
 }
 
-TEST_F(RealmBuilderTest, ReplaceConfigValueFails) {
+TEST_F(RealmBuilderTest, SetConfigValueFails) {
   ASSERT_DEATH(
       {
         static constexpr char kEchoServer[] = "echo_server";
         auto realm_builder = RealmBuilder::Create();
         realm_builder.AddChild(kEchoServer, kEchoServerRelativeUrl);
-        realm_builder.ReplaceConfigValue(kEchoServer, "my_flag", ConfigValue::Bool(true));
+        realm_builder.SetConfigValue(kEchoServer, "my_flag", ConfigValue::Bool(true));
       },
       "");
   ASSERT_DEATH(
@@ -154,7 +147,7 @@ TEST_F(RealmBuilderTest, ReplaceConfigValueFails) {
         static constexpr char kEchoServerSc[] = "echo_server_sc";
         auto realm_builder = RealmBuilder::Create();
         realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
-        realm_builder.ReplaceConfigValue(kEchoServerSc, "doesnt_exist", ConfigValue::Bool(true));
+        realm_builder.SetConfigValue(kEchoServerSc, "doesnt_exist", ConfigValue::Bool(true));
       },
       "");
   ASSERT_DEATH(
@@ -162,7 +155,7 @@ TEST_F(RealmBuilderTest, ReplaceConfigValueFails) {
         static constexpr char kEchoServerSc[] = "echo_server_sc";
         auto realm_builder = RealmBuilder::Create();
         realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
-        realm_builder.ReplaceConfigValue(kEchoServerSc, "my_string", ConfigValue::Bool(true));
+        realm_builder.SetConfigValue(kEchoServerSc, "my_string", ConfigValue::Bool(true));
       },
       "");
   ASSERT_DEATH(
@@ -170,7 +163,7 @@ TEST_F(RealmBuilderTest, ReplaceConfigValueFails) {
         static constexpr char kEchoServerSc[] = "echo_server_sc";
         auto realm_builder = RealmBuilder::Create();
         realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
-        realm_builder.ReplaceConfigValue(kEchoServerSc, "my_string", "abccdefghijklmnop");
+        realm_builder.SetConfigValue(kEchoServerSc, "my_string", "abccdefghijklmnop");
       },
       "");
   ASSERT_DEATH(
@@ -178,9 +171,8 @@ TEST_F(RealmBuilderTest, ReplaceConfigValueFails) {
         static constexpr char kEchoServerSc[] = "echo_server_sc";
         auto realm_builder = RealmBuilder::Create();
         realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
-        realm_builder.ReplaceConfigValue(
-            kEchoServerSc, "my_string",
-            std::vector<std::string>{"abcdefghijklmnopqrstuvwxyz", "abc"});
+        realm_builder.SetConfigValue(kEchoServerSc, "my_string",
+                                     std::vector<std::string>{"abcdefghijklmnopqrstuvwxyz", "abc"});
       },
       "");
 }

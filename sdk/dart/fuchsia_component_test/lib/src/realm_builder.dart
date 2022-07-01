@@ -819,23 +819,23 @@ class SubRealmBuilder {
   }
 
   /// Replaces a value of a given configuration field
-  Future<void> replaceConfigValue(
+  Future<void> setConfigValue(
     ChildRef childRef,
     String key,
     fconfig.ValueSpec value,
   ) {
     childRef.checkScope(realmPath);
-    return realmProxy.replaceConfigValue(childRef.name, key, value);
+    return realmProxy.setConfigValue(childRef.name, key, value);
   }
 
   /// Replaces a boolean value of a given configuration field
-  Future<void> replaceConfigValueBool(
+  Future<void> setConfigValueBool(
     ChildRef childRef,
     String key,
     // ignore: avoid_positional_boolean_parameters
     bool value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withBool(value)),
@@ -843,12 +843,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint8 value of a given configuration field
-  Future<void> replaceConfigValueUint8(
+  Future<void> setConfigValueUint8(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withUint8(value)),
@@ -856,12 +856,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint16 value of a given configuration field
-  Future<void> replaceConfigValueUint16(
+  Future<void> setConfigValueUint16(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withUint16(value)),
@@ -869,12 +869,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint32 value of a given configuration field
-  Future<void> replaceConfigValueUint32(
+  Future<void> setConfigValueUint32(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withUint32(value)),
@@ -882,12 +882,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint64 value of a given configuration field
-  Future<void> replaceConfigValueUint64(
+  Future<void> setConfigValueUint64(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withUint64(value)),
@@ -895,12 +895,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int8 value of a given configuration field
-  Future<void> replaceConfigValueInt8(
+  Future<void> setConfigValueInt8(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withInt8(value)),
@@ -908,12 +908,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int16 value of a given configuration field
-  Future<void> replaceConfigValueInt16(
+  Future<void> setConfigValueInt16(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withInt16(value)),
@@ -921,12 +921,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int32 value of a given configuration field
-  Future<void> replaceConfigValueInt32(
+  Future<void> setConfigValueInt32(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withInt32(value)),
@@ -934,12 +934,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int64 value of a given configuration field
-  Future<void> replaceConfigValueInt64(
+  Future<void> setConfigValueInt64(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withInt64(value)),
@@ -947,12 +947,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a string value of a given configuration field
-  Future<void> replaceConfigValueString(
+  Future<void> setConfigValueString(
     ChildRef childRef,
     String key,
     String value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _singleValue(fconfig.SingleValue.withString$(value)),
@@ -960,12 +960,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a boolean vector value of a given configuration field
-  Future<void> replaceConfigValueBoolVector(
+  Future<void> setConfigValueBoolVector(
     ChildRef childRef,
     String key,
     List<bool> value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withBoolVector(value)),
@@ -973,12 +973,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint8 vector value of a given configuration field
-  Future<void> replaceConfigValueUint8Vector(
+  Future<void> setConfigValueUint8Vector(
     ChildRef childRef,
     String key,
     Uint8List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withUint8Vector(value)),
@@ -986,12 +986,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint16 vector value of a given configuration field
-  Future<void> replaceConfigValueUint16Vector(
+  Future<void> setConfigValueUint16Vector(
     ChildRef childRef,
     String key,
     Uint16List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withUint16Vector(value)),
@@ -999,12 +999,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint32 vector value of a given configuration field
-  Future<void> replaceConfigValueUint32Vector(
+  Future<void> setConfigValueUint32Vector(
     ChildRef childRef,
     String key,
     Uint32List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withUint32Vector(value)),
@@ -1012,12 +1012,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a uint64 vector value of a given configuration field
-  Future<void> replaceConfigValueUint64Vector(
+  Future<void> setConfigValueUint64Vector(
     ChildRef childRef,
     String key,
     Uint64List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withUint64Vector(value)),
@@ -1025,12 +1025,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int8 vector value of a given configuration field
-  Future<void> replaceConfigValueInt8Vector(
+  Future<void> setConfigValueInt8Vector(
     ChildRef childRef,
     String key,
     Int8List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withInt8Vector(value)),
@@ -1038,12 +1038,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int16 vector value of a given configuration field
-  Future<void> replaceConfigValueInt16Vector(
+  Future<void> setConfigValueInt16Vector(
     ChildRef childRef,
     String key,
     Int16List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withInt16Vector(value)),
@@ -1051,12 +1051,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int32 vector value of a given configuration field
-  Future<void> replaceConfigValueInt32Vector(
+  Future<void> setConfigValueInt32Vector(
     ChildRef childRef,
     String key,
     Int32List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withInt32Vector(value)),
@@ -1064,12 +1064,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a int64 vector value of a given configuration field
-  Future<void> replaceConfigValueInt64Vector(
+  Future<void> setConfigValueInt64Vector(
     ChildRef childRef,
     String key,
     Int64List value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withInt64Vector(value)),
@@ -1077,12 +1077,12 @@ class SubRealmBuilder {
   }
 
   /// Replaces a string vector value of a given configuration field
-  Future<void> replaceConfigValueStringVector(
+  Future<void> setConfigValueStringVector(
     ChildRef childRef,
     String key,
     List<String> value,
   ) {
-    return replaceConfigValue(
+    return setConfigValue(
       childRef,
       key,
       _vectorValue(fconfig.VectorValue.withStringVector(value)),
@@ -1272,193 +1272,193 @@ class RealmBuilder {
   }
 
   /// Replaces a value of a given configuration field
-  Future<void> replaceConfigValue(
+  Future<void> setConfigValue(
     ChildRef childRef,
     String key,
     fconfig.ValueSpec value,
   ) {
-    return rootRealm.replaceConfigValue(childRef, key, value);
+    return rootRealm.setConfigValue(childRef, key, value);
   }
 
   /// Replaces a boolean value of a given configuration field
-  Future<void> replaceConfigValueBool(
+  Future<void> setConfigValueBool(
     ChildRef childRef,
     String key,
     // ignore: avoid_positional_boolean_parameters
     bool value,
   ) {
-    return rootRealm.replaceConfigValueBool(childRef, key, value);
+    return rootRealm.setConfigValueBool(childRef, key, value);
   }
 
   /// Replaces a uint8 value of a given configuration field
-  Future<void> replaceConfigValueUint8(
+  Future<void> setConfigValueUint8(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueUint8(childRef, key, value);
+    return rootRealm.setConfigValueUint8(childRef, key, value);
   }
 
   /// Replaces a uint16 value of a given configuration field
-  Future<void> replaceConfigValueUint16(
+  Future<void> setConfigValueUint16(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueUint16(childRef, key, value);
+    return rootRealm.setConfigValueUint16(childRef, key, value);
   }
 
   /// Replaces a uint32 value of a given configuration field
-  Future<void> replaceConfigValueUint32(
+  Future<void> setConfigValueUint32(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueUint32(childRef, key, value);
+    return rootRealm.setConfigValueUint32(childRef, key, value);
   }
 
   /// Replaces a uint64 value of a given configuration field
-  Future<void> replaceConfigValueUint64(
+  Future<void> setConfigValueUint64(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueUint64(childRef, key, value);
+    return rootRealm.setConfigValueUint64(childRef, key, value);
   }
 
   /// Replaces a int8 value of a given configuration field
-  Future<void> replaceConfigValueInt8(
+  Future<void> setConfigValueInt8(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueInt8(childRef, key, value);
+    return rootRealm.setConfigValueInt8(childRef, key, value);
   }
 
   /// Replaces a int16 value of a given configuration field
-  Future<void> replaceConfigValueInt16(
+  Future<void> setConfigValueInt16(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueInt16(childRef, key, value);
+    return rootRealm.setConfigValueInt16(childRef, key, value);
   }
 
   /// Replaces a int32 value of a given configuration field
-  Future<void> replaceConfigValueInt32(
+  Future<void> setConfigValueInt32(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueInt32(childRef, key, value);
+    return rootRealm.setConfigValueInt32(childRef, key, value);
   }
 
   /// Replaces a int64 value of a given configuration field
-  Future<void> replaceConfigValueInt64(
+  Future<void> setConfigValueInt64(
     ChildRef childRef,
     String key,
     int value,
   ) {
-    return rootRealm.replaceConfigValueInt64(childRef, key, value);
+    return rootRealm.setConfigValueInt64(childRef, key, value);
   }
 
   /// Replaces a string value of a given configuration field
-  Future<void> replaceConfigValueString(
+  Future<void> setConfigValueString(
     ChildRef childRef,
     String key,
     String value,
   ) {
-    return rootRealm.replaceConfigValueString(childRef, key, value);
+    return rootRealm.setConfigValueString(childRef, key, value);
   }
 
   /// Replaces a boolean vector value of a given configuration field
-  Future<void> replaceConfigValueBoolVector(
+  Future<void> setConfigValueBoolVector(
     ChildRef childRef,
     String key,
     List<bool> value,
   ) {
-    return rootRealm.replaceConfigValueBoolVector(childRef, key, value);
+    return rootRealm.setConfigValueBoolVector(childRef, key, value);
   }
 
   /// Replaces a uint8 vector value of a given configuration field
-  Future<void> replaceConfigValueUint8Vector(
+  Future<void> setConfigValueUint8Vector(
     ChildRef childRef,
     String key,
     Uint8List value,
   ) {
-    return rootRealm.replaceConfigValueUint8Vector(childRef, key, value);
+    return rootRealm.setConfigValueUint8Vector(childRef, key, value);
   }
 
   /// Replaces a uint16 vector value of a given configuration field
-  Future<void> replaceConfigValueUint16Vector(
+  Future<void> setConfigValueUint16Vector(
     ChildRef childRef,
     String key,
     Uint16List value,
   ) {
-    return rootRealm.replaceConfigValueUint16Vector(childRef, key, value);
+    return rootRealm.setConfigValueUint16Vector(childRef, key, value);
   }
 
   /// Replaces a uint32 vector value of a given configuration field
-  Future<void> replaceConfigValueUint32Vector(
+  Future<void> setConfigValueUint32Vector(
     ChildRef childRef,
     String key,
     Uint32List value,
   ) {
-    return rootRealm.replaceConfigValueUint32Vector(childRef, key, value);
+    return rootRealm.setConfigValueUint32Vector(childRef, key, value);
   }
 
   /// Replaces a uint64 vector value of a given configuration field
-  Future<void> replaceConfigValueUint64Vector(
+  Future<void> setConfigValueUint64Vector(
     ChildRef childRef,
     String key,
     Uint64List value,
   ) {
-    return rootRealm.replaceConfigValueUint64Vector(childRef, key, value);
+    return rootRealm.setConfigValueUint64Vector(childRef, key, value);
   }
 
   /// Replaces a int8 vector value of a given configuration field
-  Future<void> replaceConfigValueInt8Vector(
+  Future<void> setConfigValueInt8Vector(
     ChildRef childRef,
     String key,
     Int8List value,
   ) {
-    return rootRealm.replaceConfigValueInt8Vector(childRef, key, value);
+    return rootRealm.setConfigValueInt8Vector(childRef, key, value);
   }
 
   /// Replaces a int16 vector value of a given configuration field
-  Future<void> replaceConfigValueInt16Vector(
+  Future<void> setConfigValueInt16Vector(
     ChildRef childRef,
     String key,
     Int16List value,
   ) {
-    return rootRealm.replaceConfigValueInt16Vector(childRef, key, value);
+    return rootRealm.setConfigValueInt16Vector(childRef, key, value);
   }
 
   /// Replaces a int32 vector value of a given configuration field
-  Future<void> replaceConfigValueInt32Vector(
+  Future<void> setConfigValueInt32Vector(
     ChildRef childRef,
     String key,
     Int32List value,
   ) {
-    return rootRealm.replaceConfigValueInt32Vector(childRef, key, value);
+    return rootRealm.setConfigValueInt32Vector(childRef, key, value);
   }
 
   /// Replaces a int64 vector value of a given configuration field
-  Future<void> replaceConfigValueInt64Vector(
+  Future<void> setConfigValueInt64Vector(
     ChildRef childRef,
     String key,
     Int64List value,
   ) {
-    return rootRealm.replaceConfigValueInt64Vector(childRef, key, value);
+    return rootRealm.setConfigValueInt64Vector(childRef, key, value);
   }
 
   /// Replaces a string vector value of a given configuration field
-  Future<void> replaceConfigValueStringVector(
+  Future<void> setConfigValueStringVector(
     ChildRef childRef,
     String key,
     List<String> value,
   ) {
-    return rootRealm.replaceConfigValueStringVector(childRef, key, value);
+    return rootRealm.setConfigValueStringVector(childRef, key, value);
   }
 
   /// Adds a route between components within the realm

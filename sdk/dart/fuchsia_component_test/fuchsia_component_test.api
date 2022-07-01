@@ -1884,7 +1884,43 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValue": {
+            "replaceRealmDecl": {
+              "SimpleFormalParameterImpl": {
+                "decl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "decl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fdecl.Component"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "replaceRealmDecl",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "rootRealm": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "rootRealm",
+              "returnType": "SubRealmBuilder",
+              "type": "MethodDeclarationImpl"
+            },
+            "setConfigValue": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -1934,11 +1970,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValue",
+              "name": "setConfigValue",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueBool": {
+            "setConfigValueBool": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -1988,11 +2024,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueBool",
+              "name": "setConfigValueBool",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueBoolVector": {
+            "setConfigValueBoolVector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2042,11 +2078,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueBoolVector",
+              "name": "setConfigValueBoolVector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt16": {
+            "setConfigValueInt16": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2096,11 +2132,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt16",
+              "name": "setConfigValueInt16",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt16Vector": {
+            "setConfigValueInt16Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2150,11 +2186,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt16Vector",
+              "name": "setConfigValueInt16Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt32": {
+            "setConfigValueInt32": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2204,11 +2240,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt32",
+              "name": "setConfigValueInt32",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt32Vector": {
+            "setConfigValueInt32Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2258,11 +2294,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt32Vector",
+              "name": "setConfigValueInt32Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt64": {
+            "setConfigValueInt64": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2312,11 +2348,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt64",
+              "name": "setConfigValueInt64",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt64Vector": {
+            "setConfigValueInt64Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2366,11 +2402,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt64Vector",
+              "name": "setConfigValueInt64Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt8": {
+            "setConfigValueInt8": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2420,11 +2456,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt8",
+              "name": "setConfigValueInt8",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt8Vector": {
+            "setConfigValueInt8Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2474,11 +2510,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt8Vector",
+              "name": "setConfigValueInt8Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueString": {
+            "setConfigValueString": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2528,11 +2564,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueString",
+              "name": "setConfigValueString",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueStringVector": {
+            "setConfigValueStringVector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2582,11 +2618,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueStringVector",
+              "name": "setConfigValueStringVector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint16": {
+            "setConfigValueUint16": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2636,11 +2672,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint16",
+              "name": "setConfigValueUint16",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint16Vector": {
+            "setConfigValueUint16Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2690,11 +2726,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint16Vector",
+              "name": "setConfigValueUint16Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint32": {
+            "setConfigValueUint32": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2744,11 +2780,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint32",
+              "name": "setConfigValueUint32",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint32Vector": {
+            "setConfigValueUint32Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2798,11 +2834,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint32Vector",
+              "name": "setConfigValueUint32Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint64": {
+            "setConfigValueUint64": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2852,11 +2888,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint64",
+              "name": "setConfigValueUint64",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint64Vector": {
+            "setConfigValueUint64Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2906,11 +2942,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint64Vector",
+              "name": "setConfigValueUint64Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint8": {
+            "setConfigValueUint8": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -2960,11 +2996,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint8",
+              "name": "setConfigValueUint8",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint8Vector": {
+            "setConfigValueUint8Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -3014,44 +3050,8 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint8Vector",
+              "name": "setConfigValueUint8Vector",
               "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            },
-            "replaceRealmDecl": {
-              "SimpleFormalParameterImpl": {
-                "decl": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "decl",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "fdecl.Component"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "replaceRealmDecl",
-              "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            },
-            "rootRealm": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "rootRealm",
-              "returnType": "SubRealmBuilder",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -4676,7 +4676,33 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValue": {
+            "replaceRealmDecl": {
+              "SimpleFormalParameterImpl": {
+                "decl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "decl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fdecl.Component"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "replaceRealmDecl",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "setConfigValue": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4726,11 +4752,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValue",
+              "name": "setConfigValue",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueBool": {
+            "setConfigValueBool": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4780,11 +4806,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueBool",
+              "name": "setConfigValueBool",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueBoolVector": {
+            "setConfigValueBoolVector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4834,11 +4860,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueBoolVector",
+              "name": "setConfigValueBoolVector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt16": {
+            "setConfigValueInt16": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4888,11 +4914,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt16",
+              "name": "setConfigValueInt16",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt16Vector": {
+            "setConfigValueInt16Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4942,11 +4968,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt16Vector",
+              "name": "setConfigValueInt16Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt32": {
+            "setConfigValueInt32": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -4996,11 +5022,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt32",
+              "name": "setConfigValueInt32",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt32Vector": {
+            "setConfigValueInt32Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5050,11 +5076,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt32Vector",
+              "name": "setConfigValueInt32Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt64": {
+            "setConfigValueInt64": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5104,11 +5130,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt64",
+              "name": "setConfigValueInt64",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt64Vector": {
+            "setConfigValueInt64Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5158,11 +5184,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt64Vector",
+              "name": "setConfigValueInt64Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt8": {
+            "setConfigValueInt8": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5212,11 +5238,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt8",
+              "name": "setConfigValueInt8",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueInt8Vector": {
+            "setConfigValueInt8Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5266,11 +5292,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueInt8Vector",
+              "name": "setConfigValueInt8Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueString": {
+            "setConfigValueString": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5320,11 +5346,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueString",
+              "name": "setConfigValueString",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueStringVector": {
+            "setConfigValueStringVector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5374,11 +5400,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueStringVector",
+              "name": "setConfigValueStringVector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint16": {
+            "setConfigValueUint16": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5428,11 +5454,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint16",
+              "name": "setConfigValueUint16",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint16Vector": {
+            "setConfigValueUint16Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5482,11 +5508,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint16Vector",
+              "name": "setConfigValueUint16Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint32": {
+            "setConfigValueUint32": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5536,11 +5562,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint32",
+              "name": "setConfigValueUint32",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint32Vector": {
+            "setConfigValueUint32Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5590,11 +5616,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint32Vector",
+              "name": "setConfigValueUint32Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint64": {
+            "setConfigValueUint64": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5644,11 +5670,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint64",
+              "name": "setConfigValueUint64",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint64Vector": {
+            "setConfigValueUint64Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5698,11 +5724,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint64Vector",
+              "name": "setConfigValueUint64Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint8": {
+            "setConfigValueUint8": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5752,11 +5778,11 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint8",
+              "name": "setConfigValueUint8",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "replaceConfigValueUint8Vector": {
+            "setConfigValueUint8Vector": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
                   "isConst": false,
@@ -5806,33 +5832,7 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "replaceConfigValueUint8Vector",
-              "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            },
-            "replaceRealmDecl": {
-              "SimpleFormalParameterImpl": {
-                "decl": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "decl",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "fdecl.Component"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "replaceRealmDecl",
+              "name": "setConfigValueUint8Vector",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             }

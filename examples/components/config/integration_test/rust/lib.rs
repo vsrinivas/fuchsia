@@ -44,10 +44,7 @@ async fn run_test(url: &str, name: &str, replace_config_value: bool) {
 
     let expected_greeting = if replace_config_value {
         // [START config_replace]
-        builder
-            .replace_config_value_string(&config_component, "greeting", "Fuchsia")
-            .await
-            .unwrap();
+        builder.set_config_value_string(&config_component, "greeting", "Fuchsia").await.unwrap();
         // [END config_replace]
         "Fuchsia"
     } else {

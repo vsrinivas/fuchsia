@@ -591,7 +591,7 @@ void main() {
         );
 
         // NOTE: Important! This test updates the default configuration values
-        // in the successful calls to `replaceConfigValue...()` below (after the
+        // in the successful calls to `setConfigValue...()` below (after the
         // try/catch blocks).
         //
         // If this test was changed to run the EchoClient without first
@@ -617,8 +617,7 @@ void main() {
         // fail to replace a config field in a component that doesn't have a config schema
         var caught = false;
         try {
-          await builder.replaceConfigValueBool(
-              localEchoServer, 'echo_bool', false);
+          await builder.setConfigValueBool(localEchoServer, 'echo_bool', false);
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.noConfigSchema);
           caught = true;
@@ -629,7 +628,7 @@ void main() {
         // fail to replace a field that doesn't exist
         caught = false;
         try {
-          await builder.replaceConfigValueString(
+          await builder.setConfigValueString(
               v2EchoClientStructuredConfig, 'doesnt_exist', 'test');
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.noSuchConfigField);
@@ -641,7 +640,7 @@ void main() {
         // fail to replace a field with the wrong type
         caught = false;
         try {
-          await builder.replaceConfigValueString(
+          await builder.setConfigValueString(
               v2EchoClientStructuredConfig, 'echo_bool', 'test');
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
@@ -654,7 +653,7 @@ void main() {
         final longString = 'F' * 20;
         caught = false;
         try {
-          await builder.replaceConfigValueString(
+          await builder.setConfigValueString(
               v2EchoClientStructuredConfig, 'echo_string', longString);
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
@@ -666,7 +665,7 @@ void main() {
         // fail to replace a vector whose string element violates max_len
         caught = false;
         try {
-          await builder.replaceConfigValueStringVector(
+          await builder.setConfigValueStringVector(
               v2EchoClientStructuredConfig, 'echo_string_vector', [longString]);
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
@@ -678,7 +677,7 @@ void main() {
         // fail to replace a vector that violates max_count
         caught = false;
         try {
-          await builder.replaceConfigValueStringVector(
+          await builder.setConfigValueStringVector(
             v2EchoClientStructuredConfig,
             'echo_string_vector',
             ['a', 'b', 'c', 'd'],
@@ -691,15 +690,13 @@ void main() {
         }
 
         // succeed at replacing all fields with proper constraints
-        await builder.replaceConfigValueString(
+        await builder.setConfigValueString(
             v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
-        await builder.replaceConfigValueStringVector(
-            v2EchoClientStructuredConfig,
-            'echo_string_vector',
-            ['Hey', 'Folks']);
-        await builder.replaceConfigValueBool(
+        await builder.setConfigValueStringVector(v2EchoClientStructuredConfig,
+            'echo_string_vector', ['Hey', 'Folks']);
+        await builder.setConfigValueBool(
             v2EchoClientStructuredConfig, 'echo_bool', true);
-        await builder.replaceConfigValueUint64(
+        await builder.setConfigValueUint64(
             v2EchoClientStructuredConfig, 'echo_num', 42);
 
         // Route logging to children
