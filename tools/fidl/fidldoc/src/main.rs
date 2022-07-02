@@ -58,6 +58,9 @@ struct Opt {
     #[argh(option, short = 'o', default = "\"/tmp/fidldoc/\".to_string()")]
     /// set the output folder
     out: String,
+    #[argh(switch, short = 'm')]
+    /// merge generated files into output folder (don't delete anything existing)
+    merge: bool,
     #[argh(option, short = 'p', default = "\"/\".to_string()")]
     /// set the base URL path for the generated docs
     path: String,
@@ -118,7 +121,7 @@ fn run(opt: Opt) -> Result<(), Error> {
     let fidl_config = read_fidldoc_config(&fidl_config_file)
         .with_context(|| format!("Error parsing {}", &fidl_config_file.display()))?;
 
-    create_output_dir(&output_path)
+    create_output_dir(opt.merge, &output_path)
         .with_context(|| format!("Unable to create output directory {}", output_path.display()))?;
 
     // Parse input files to get declarations, package set and fidl json map
@@ -334,8 +337,16 @@ fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
     "".to_string()
 }
 
-fn create_output_dir(path: &PathBuf) -> Result<(), Error> {
+fn create_output_dir(merge_into: bool, path: &PathBuf) -> Result<(), Error> {
     if path.exists() {
+        if merge_into {
+            info!(
+                "Directory {} already exists and we're merging into it, skipping creation",
+                path.display()
+            );
+            return Ok(());
+        }
+
         info!("Directory {} already exists", path.display());
         // Clear out the output folder
         fs::remove_dir_all(path)
@@ -516,7 +527,7 @@ mod test {
         let file_path = dir_path.join("temp.txt");
         File::create(file_path).expect("Unable to create temp file");
 
-        create_output_dir(&dir_path).expect("create_output_dir failed");
+        create_output_dir(false, &dir_path).expect("create_output_dir failed");
         assert!(dir_path.exists());
         assert!(dir_path.is_dir());
 

@@ -5,7 +5,7 @@
 use anyhow::{Context as _, Error};
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
 use log::info;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -97,8 +97,8 @@ pub struct SyscallTemplate<'a> {
     output_path: PathBuf,
 }
 
-impl SyscallTemplate<'_> {
-    pub fn new(output_path: &PathBuf) -> SyscallTemplate<'_> {
+impl<'a> SyscallTemplate<'a> {
+    pub fn new(output_path: &PathBuf) -> SyscallTemplate<'a> {
         // Handlebars
         let mut handlebars = Handlebars::new();
 
@@ -133,16 +133,23 @@ impl SyscallTemplate<'_> {
         SyscallTemplate { handlebars: handlebars, output_path: output_path.to_path_buf() }
     }
 
-    fn render_syscall(&self, fidl_json: &Value) -> Result<(), Error> {
+    fn render_syscall(&self, root_json: &Value, syscall_json: &Value) -> Result<(), Error> {
         let method_name =
-            fidl_json["name"].as_str().ok_or_else(|| RenderError::new("Invalid name"))?;
+            syscall_json["name"].as_str().ok_or_else(|| RenderError::new("Invalid name"))?;
         info!("Rendering {}", method_name);
 
         let output_path = self.output_path.join(method_name.to_string() + &".md".to_string());
         let mut output_file = File::create(&output_path)
             .with_context(|| format!("Can't create file {}", output_path.display()))?;
 
-        let content = render_template(&self.handlebars, "syscall".to_string(), &fidl_json)
+        // Construct the JSON context to send to the template. It contains the global config and the
+        // current syscall to render.
+        let template_json = json!({
+            "config": root_json["config"],
+            "syscall": syscall_json,
+        });
+
+        let content = render_template(&self.handlebars, "syscall".to_string(), &template_json)
             .with_context(|| format!("Can't render syscall {}", method_name))?;
         output_file.write_all(content.as_bytes())?;
         Ok(())
@@ -173,7 +180,7 @@ impl FidldocTemplate for SyscallTemplate<'_> {
                 }
 
                 if !has_prohibited {
-                    self.render_syscall(method)?;
+                    self.render_syscall(fidl_json, method)?;
                 }
             }
         }

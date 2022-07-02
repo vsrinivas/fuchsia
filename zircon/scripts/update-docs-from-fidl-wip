@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+"""
+This tool generates the syscall reference in docs/reference/syscalls/*.md from
+the comments in the syscall .fidl files in //zircon/vdso.
+
+It is not run automatically as part of the build for now (to allow confirmation
+of what it does). So it should be run manually after updating //zircon/vdso and
+doing a build.
+
+It uses the current "fx" directory for the location of the fidldoc host tool as
+well as the intermediate zx.fidl.json file. You should not need to specify any
+arguments.
+
+Example:
+
+  zircon/scripts/update-docs-from-fidl
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+SYSCALLS_FIDL_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, os.pardir,
+                                                  'vdso'))
+
+ZX_JSON_BUILD_RELATIVE = os.path.join('gen', 'zircon', 'vdso', 'zx.fidl.json')
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--docroot',
+                        default=os.path.normpath(
+                            os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
+                                         'docs', 'reference', 'syscalls')),
+                        help='root of syscalls/ to be updated')
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    build_dir = subprocess.check_output(['fx', 'get-build-dir']).strip().decode('utf8')
+    zx_json_path = os.path.normpath(os.path.join(build_dir, ZX_JSON_BUILD_RELATIVE))
+
+    print("""Generating docs with configuration:
+  • Build directory (from "fx"): %s
+  • Syscall FIDL IR file: %s
+  • Output directory: %s
+""" % (build_dir, zx_json_path, args.docroot))
+
+    # Ensure the JSON input file is up-to-date.
+    print('Building %s...' % ZX_JSON_BUILD_RELATIVE);
+    subprocess.check_call(['fx', 'build', ZX_JSON_BUILD_RELATIVE])
+
+    # Find the fidldoc configuration file.
+    config_path = os.path.normpath(os.path.join(SYSCALLS_FIDL_DIR, "fidldoc.config.json"))
+
+    # Run fidldoc to update the markdown.
+    subprocess.check_call(
+        [
+            'fx', '--dir=%s' % (build_dir),
+            'fidldoc',
+            zx_json_path,
+            '-m',  # Merge into output (don't erase README, etc.)
+            '-t', 'syscall',  # Select syscall template.
+            '-c', config_path,
+            '-o', args.docroot,
+        ])
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

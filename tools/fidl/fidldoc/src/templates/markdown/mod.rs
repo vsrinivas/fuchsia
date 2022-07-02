@@ -18,8 +18,8 @@ pub struct MarkdownTemplate<'a> {
     output_path: PathBuf,
 }
 
-impl MarkdownTemplate<'_> {
-    pub fn new(output_path: &PathBuf) -> MarkdownTemplate<'_> {
+impl<'a> MarkdownTemplate<'a> {
+    pub fn new(output_path: &PathBuf) -> MarkdownTemplate<'a> {
         // Handlebars
         let mut handlebars = Handlebars::new();
 
