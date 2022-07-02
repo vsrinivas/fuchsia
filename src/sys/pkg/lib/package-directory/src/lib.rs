@@ -25,6 +25,9 @@ pub use vfs::execution_scope::ExecutionScope;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("the meta.far was not found")]
+    MissingMetaFar,
+
     #[error("while opening the meta.far")]
     OpenMetaFar(#[source] fuchsia_fs::node::OpenError),
 
@@ -43,17 +46,16 @@ pub enum Error {
 
 impl Error {
     fn to_zx_status(&self) -> zx::Status {
-        use fuchsia_fs::node::OpenError;
-
-        // TODO(fxbug.dev/86995) Align this mapping with pkgfs.
+        use {fuchsia_fs::node::OpenError, Error::*};
         match self {
-            Error::OpenMetaFar(OpenError::OpenError(s)) => *s,
-            Error::OpenMetaFar(_) => zx::Status::INTERNAL,
-            Error::ArchiveReader(fuchsia_archive::Error::Read(_)) => zx::Status::NOT_FOUND,
-            Error::ArchiveReader(_)
-            | Error::ReadMetaContents(_)
-            | Error::DeserializeMetaContents(_) => zx::Status::INVALID_ARGS,
-            Error::FileDirectoryCollision { .. } => zx::Status::INVALID_ARGS,
+            MissingMetaFar => zx::Status::NOT_FOUND,
+            OpenMetaFar(OpenError::OpenError(s)) => *s,
+            OpenMetaFar(_) => zx::Status::INTERNAL,
+            ArchiveReader(fuchsia_archive::Error::Read(_)) => zx::Status::IO,
+            ArchiveReader(_) | ReadMetaContents(_) | DeserializeMetaContents(_) => {
+                zx::Status::INVALID_ARGS
+            }
+            FileDirectoryCollision { .. } => zx::Status::INVALID_ARGS,
         }
     }
 }
@@ -359,10 +361,7 @@ mod tests {
                 server_end.into_channel().into(),
             )
             .await,
-            // RootDir opens the meta.far without requesting an OnOpen event, which improves
-            // latency, but results in a less-than-ideal error (a PEER_CLOSED while reading from
-            // the meta.far).
-            Err(Error::ArchiveReader(_))
+            Err(Error::MissingMetaFar)
         );
 
         assert_eq!(node_into_on_open_status(proxy).await, Some(zx::Status::NOT_FOUND));

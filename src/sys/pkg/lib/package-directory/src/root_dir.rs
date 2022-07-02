@@ -21,6 +21,7 @@ use {
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
+    futures::stream::StreamExt as _,
     std::{collections::HashMap, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
@@ -50,13 +51,27 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
     /// Loads the package metadata given by `hash` from `non_meta_storage`, returning an object
     /// representing the package, backed by `non_meta_storage`.
     pub async fn new(non_meta_storage: S, hash: fuchsia_hash::Hash) -> Result<Self, Error> {
-        let meta_far =
-            open_for_read_no_describe(&non_meta_storage, &hash).map_err(Error::OpenMetaFar)?;
+        let meta_far = open_for_read(&non_meta_storage, &hash, fio::OpenFlags::DESCRIBE)
+            .map_err(Error::OpenMetaFar)?;
 
-        let reader = fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far));
-        let mut async_reader = AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(reader))
-            .await
-            .map_err(Error::ArchiveReader)?;
+        let mut async_reader = match AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(
+            fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far)),
+        ))
+        .await
+        {
+            Ok(async_reader) => async_reader,
+            Err(e) => {
+                if matches!(
+                    meta_far.take_event_stream().next().await,
+                    Some(Ok(fio::FileEvent::OnOpen_{s, ..}))
+                        if s == zx::Status::NOT_FOUND.into_raw()
+                ) {
+                    return Err(Error::MissingMetaFar);
+                }
+                return Err(Error::ArchiveReader(e));
+            }
+        };
+
         let reader_list = async_reader.list();
 
         let mut meta_files = HashMap::with_capacity(reader_list.size_hint().0);
@@ -93,7 +108,7 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
     /// https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
     pub async fn read_file(&self, path: &str) -> Result<Vec<u8>, ReadFileError> {
         if let Some(hash) = self.non_meta_files.get(path) {
-            let blob = open_for_read_no_describe(&self.non_meta_storage, hash)
+            let blob = open_for_read(&self.non_meta_storage, hash, fio::OpenFlags::empty())
                 .map_err(ReadFileError::Open)?;
             return fuchsia_fs::file::read(&blob).await.map_err(ReadFileError::Read);
         }
@@ -350,16 +365,18 @@ fn open_meta_as_file(flags: fio::OpenFlags, mode: u32) -> bool {
     open_as_file || !open_as_dir
 }
 
-// Open a non-meta file by hash with flags of OPEN_RIGHT_READABLE and return the proxy.
-fn open_for_read_no_describe(
+// Open a non-meta file by hash with flags of `OPEN_RIGHT_READABLE | additional_flags` and return
+// the proxy.
+fn open_for_read(
     non_meta_storage: &impl crate::NonMetaStorage,
     blob: &fuchsia_hash::Hash,
+    additional_flags: fio::OpenFlags,
 ) -> Result<fio::FileProxy, fuchsia_fs::node::OpenError> {
     let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()
         .map_err(fuchsia_fs::node::OpenError::CreateProxy)?;
     let () = non_meta_storage.open(
         blob,
-        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE | additional_flags,
         0,
         server_end.into_channel().into(),
     )?;
@@ -374,7 +391,6 @@ mod tests {
         assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, Proxy as _},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        futures::stream::StreamExt as _,
         pretty_assertions::assert_eq,
         std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
@@ -404,6 +420,15 @@ mod tests {
             let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
             (Self { _blobfs_fake: blobfs_fake }, root_dir)
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_missing_meta_far_error() {
+        let (_blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        assert_matches!(
+            RootDir::new(blobfs_client, [0; 32].into()).await,
+            Err(Error::MissingMetaFar)
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
