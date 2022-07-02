@@ -1086,7 +1086,7 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   image."
   see_also: ["<a href=\"/docs/glossary#package\">Package</a>",
              "<a href=\"/docs/glossary#product-owner\">Product owner</a>"]
-  related_guides: ["<a href=\"docs/development/build/build_system/bringup.md\">Bringup Product Definition</a>"]
+  related_guides: ["<a href=\"/docs/development/build/build_system/bringup.md\">Bringup Product Definition</a>"]
   area: ["System"]
 
 - term: "Product bundle"
