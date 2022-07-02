@@ -679,6 +679,7 @@ if (is_kernel) {
   group("tests") {
     testonly = true
     deps = [
+      "arch/$zircon_cpu/user-copy:tests",
       "dev/coresight/tests($host_toolchain)",
       "lib/acpi_lite:tests",
       "lib/arch/test:tests",
@@ -692,14 +693,7 @@ if (is_kernel) {
     ]
 
     if (current_cpu == "x64") {
-      deps += [
-        "arch/x86/user-copy:tests",
-        "lib/libc/string/arch/x86:tests",
-      ]
-    }
-
-    if (current_cpu == "arm64") {
-      deps += [ "arch/arm64/user-copy:tests" ]
+      deps += [ "lib/libc/string/arch/x86:tests" ]
     }
 
     # TODO(fxbug.dev/27083): This dependency is conditional because when built
