@@ -9,7 +9,6 @@ source_set("process") {
     "process_debug.cc",
   ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/zx",

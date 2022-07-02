@@ -6,7 +6,6 @@ source_set("handle-transfer") {
   testonly = true
   sources = [ "handle-transfer.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

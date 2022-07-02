@@ -5,20 +5,19 @@
 #include "helpers.h"
 
 #include <lib/boot-options/boot-options.h>
-#include <lib/standalone-test/standalone.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
 
-extern "C" __WEAK zx_handle_t get_root_resource(void);
-
 namespace vmo_test {
 
 zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   // We cannot create any physical VMOs without the root resource.
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     return zx::error_status(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -38,9 +37,9 @@ zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   // considered a test error.
 
   RamReservation ram;
-  const BootOptions& boot_options = StandaloneGetBootOptions();
-  EXPECT_TRUE(boot_options.test_ram_reserve);
-  ram = *boot_options.test_ram_reserve;
+  const BootOptions* boot_options = maybe_standalone::GetBootOptions();
+  EXPECT_TRUE(boot_options->test_ram_reserve);
+  ram = *boot_options->test_ram_reserve;
   EXPECT_TRUE(ram.paddr.has_value());
   if (!ram.paddr) {
     return zx::error_status(ZX_ERR_NO_RESOURCES);
@@ -55,8 +54,7 @@ zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   }
 
   // Go ahead and create the VMO itself.
-  zx::unowned_resource root_res(get_root_resource());
-  zx_status_t res = zx::vmo::create_physical(*root_res, ret.addr, ret.size, &ret.vmo);
+  zx_status_t res = zx::vmo::create_physical(*root_resource, ret.addr, ret.size, &ret.vmo);
   EXPECT_OK(res);
   if (res != ZX_OK) {
     return zx::error_status(res);

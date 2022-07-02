@@ -7,7 +7,6 @@ source_set("c11-mutex") {
   configs += [ "//build/config:all_source" ]
   sources = [ "mutex.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]

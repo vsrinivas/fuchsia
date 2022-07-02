@@ -6,7 +6,6 @@ source_set("stack") {
   testonly = true
   sources = [ "stack-test.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/zxtest",
   ]

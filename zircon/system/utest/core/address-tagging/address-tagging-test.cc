@@ -13,12 +13,13 @@
 #include <zircon/features.h>
 #include <zircon/hw/debug/arm64.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/threads.h>
 
 #include <algorithm>
 
 #include <mini-process/mini-process.h>
-#include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -112,7 +113,10 @@ void CatchCrash(crash_function_t crash_function, uintptr_t arg1,
 
   // Wait for the exception channel to be readable. This will happen when
   // thread crashes and triggers the exception.
-  tu_channel_wait_readable(exception_channel.get());
+  zx_signals_t pending;
+  ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                       zx::time::infinite(), &pending));
+  ZX_ASSERT_MSG(pending & ZX_CHANNEL_READABLE, "exception channel peer closed");
 
   // Get the FAR from the exception report.
   ASSERT_OK(crash_thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, report, sizeof(*report), nullptr,

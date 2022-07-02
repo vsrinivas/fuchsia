@@ -6,7 +6,6 @@ source_set("syscall-generation") {
   testonly = true
   sources = [ "syscall-generation.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/zxtest",
   ]

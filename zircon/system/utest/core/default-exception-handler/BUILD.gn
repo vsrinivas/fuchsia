@@ -6,7 +6,6 @@ source_set("default-exception-handler") {
   testonly = true
   sources = [ "default-exception-handler.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

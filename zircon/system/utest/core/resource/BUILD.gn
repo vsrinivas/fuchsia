@@ -6,7 +6,7 @@ source_set("resource") {
   testonly = true
   sources = [ "resource.cc" ]
   deps = [
-    "//sdk/lib/fdio",
+    "//src/zircon/testing/standalone-test",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -5,8 +5,5 @@
 source_set("object-child") {
   testonly = true
   sources = [ "object-child.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

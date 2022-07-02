@@ -6,7 +6,6 @@ source_set("sync-condition") {
   testonly = true
   sources = [ "condition.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]

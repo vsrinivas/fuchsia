@@ -6,8 +6,5 @@ source_set("c11-condvar") {
   testonly = true
   configs += [ "//build/config:all_source" ]
   sources = [ "condvar.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

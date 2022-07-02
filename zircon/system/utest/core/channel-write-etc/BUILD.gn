@@ -6,7 +6,6 @@ source_set("channel-write-etc") {
   testonly = true
   sources = [ "write_etc.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mini-process",

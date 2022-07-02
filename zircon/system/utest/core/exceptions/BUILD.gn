@@ -8,7 +8,6 @@ source_set("exceptions") {
   deps = [
     "//zircon/kernel/lib/arch",
     "//zircon/system/ulib/elf-psabi",
-    "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

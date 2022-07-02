@@ -9,7 +9,6 @@ source_set("channel") {
     "channel.cc",
   ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mini-process",

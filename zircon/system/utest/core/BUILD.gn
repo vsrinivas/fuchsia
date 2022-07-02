@@ -81,7 +81,7 @@ bootfs_only = [
 ]
 
 # These tests need to run in the unified core-tests binary because
-# they either call get_root_resource() or they need to run in a job
+# they either call standalone::Get*Resource() or they need to run in a job
 # tree without any exception handler.
 unified_only = [
   "kernel-unittests",
@@ -171,22 +171,21 @@ if (is_fuchsia) {
   # some of the tests require the root resource handle or no system
   # services whatsoever.
   zbi_test_executable("core-tests-standalone") {
-    configs += [ "//build/config:all_source" ]
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-    deps = all_bootfs_tests + unified_only
+    # Prevent default injections of configs and deps we don't want.
+    configs -= [ "//build/config/fuchsia:fdio_config" ]
+    disable_syslog_backend = true
+    assert_no_deps = [
+      "//sdk/lib/fdio/*",
+      "//sdk/lib/syslog/*",
+    ]
+
     sources = [ "test-main-with-filter.cc" ]
-    deps += [
-      "//sdk/lib/stdcompat",
+    deps = [
       "//src/zircon/testing/standalone-test",
-      "//zircon/kernel/lib/boot-options",
-      "//zircon/system/ulib/lazy_init",
-      "//zircon/system/ulib/zbitl",
-      "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxtest",
     ]
+
+    deps += all_bootfs_tests + unified_only
   }
 }
 

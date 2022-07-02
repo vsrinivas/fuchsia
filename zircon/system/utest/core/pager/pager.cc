@@ -4,6 +4,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fzl/memory-probe.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/port.h>
@@ -21,10 +22,6 @@
 
 #include "test_thread.h"
 #include "userpager.h"
-
-__BEGIN_CDECLS
-__WEAK extern zx_handle_t get_root_resource(void);
-__END_CDECLS
 
 namespace pager_tests {
 
@@ -1678,15 +1675,14 @@ TEST(Pager, InvalidPagerSupplyPages) {
   ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, 0, aux_vmo.get(), 1),
             ZX_ERR_INVALID_ARGS);
 
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  if (&get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (root_resource->is_valid()) {
     // unsupported aux vmo type
     zx::vmo physical_vmo;
     // We're not actually going to do anything with this vmo, and since the
     // kernel doesn't do any checks with the address if you're using the
     // root resource, just use addr 0.
-    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-    ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, zx_system_get_page_size(),
+    ASSERT_EQ(zx_vmo_create_physical(root_resource->get(), 0, zx_system_get_page_size(),
                                      physical_vmo.reset_and_get_address()),
               ZX_OK);
     ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, zx_system_get_page_size(),
@@ -1703,7 +1699,7 @@ TEST(Pager, InvalidPagerSupplyPages) {
     kViolationCount,
   };
   for (uint32_t i = 0; i < kViolationCount; i++) {
-    if (i == kHasPinned && !&get_root_resource) {
+    if (i == kHasPinned && !root_resource->is_valid()) {
       continue;
     }
 
@@ -1743,11 +1739,8 @@ TEST(Pager, InvalidPagerSupplyPages) {
     zx::bti bti;
     zx::pmt pmt;
     if (i == kHasPinned) {
-      // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-      zx::unowned_resource root_res(get_root_resource());
       zx_iommu_desc_dummy_t desc;
-      // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-      ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+      ASSERT_EQ(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                                 iommu.reset_and_get_address()),
                 ZX_OK);
       ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
@@ -2326,8 +2319,9 @@ TEST(Pager, WritingZeroFork) {
   // zero scanner to run, since the zero fork queue looks close enough to the pager backed queue
   // that most things will 'just work'.
   constexpr char k_command[] = "scanner reclaim_all";
-  if (!&get_root_resource ||
-      zx_debug_send_command(get_root_resource(), k_command, strlen(k_command)) != ZX_OK) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid() ||
+      zx_debug_send_command(root_resource->get(), k_command, strlen(k_command)) != ZX_OK) {
     // Failed to manually force the zero scanner to run, fall back to sleeping for a moment and hope
     // it runs.
     zx::nanosleep(zx::deadline_after(zx::sec(1)));
@@ -2341,8 +2335,8 @@ TEST(Pager, WritingZeroFork) {
 // Test that if we resize a vmo while it is waiting on a page to fullfill the commit for a pin
 // request that neither the resize nor the pin cause a crash and fail gracefully.
 TEST(Pager, ResizeBlockedPin) {
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  if (!&get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
@@ -2357,9 +2351,8 @@ TEST(Pager, ResizeBlockedPin) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
-  zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+  ASSERT_EQ(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()),
             ZX_OK);
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
@@ -2781,8 +2774,8 @@ TEST(Pager, EvictionHintDontNeed) {
   uint64_t offset, length;
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  if (!&get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
@@ -2791,7 +2784,7 @@ TEST(Pager, EvictionHintDontNeed) {
   // DONT_NEED.
   constexpr char k_command_reclaim[] = "scanner reclaim 1 only_old";
   ASSERT_OK(
-      zx_debug_send_command(get_root_resource(), k_command_reclaim, strlen(k_command_reclaim)));
+      zx_debug_send_command(root_resource->get(), k_command_reclaim, strlen(k_command_reclaim)));
 
   // Eviction is asynchronous. Poll in a loop until we see the committed page count drop. In case
   // we're left polling forever, the external test timeout will kick in.

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
@@ -17,28 +18,14 @@
 
 #include <zxtest/zxtest.h>
 
-extern "C" zx_handle_t get_root_resource(void);
-extern "C" zx_handle_t get_mmio_root_resource(void);
-extern "C" zx_handle_t get_system_root_resource(void);
-
 static const size_t mmio_test_size = (zx_system_get_page_size() * 4);
 static uint64_t mmio_test_base;
 
-const zx::unowned_resource root() {
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  static zx_handle_t root = get_root_resource();
-  return zx::unowned_resource(root);
-}
+const zx::unowned_resource root() { return standalone::GetRootResource(); }
 
-const zx::unowned_resource mmio_root() {
-  static zx_handle_t mmio_root = get_mmio_root_resource();
-  return zx::unowned_resource(mmio_root);
-}
+const zx::unowned_resource mmio_root() { return standalone::GetMmioRootResource(); }
 
-const zx::unowned_resource system_root() {
-  static zx_handle_t system_root = get_system_root_resource();
-  return zx::unowned_resource(system_root);
-}
+const zx::unowned_resource system_root() { return standalone::GetSystemRootResource(); }
 
 // Physical memory is reserved during boot and its location varies based on
 // system and architecture. What this 'test' does is scan MMIO space looking

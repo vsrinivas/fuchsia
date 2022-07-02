@@ -6,7 +6,6 @@ source_set("fpu") {
   testonly = true
   sources = [ "fpu_basic.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

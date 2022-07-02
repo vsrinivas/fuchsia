@@ -9,7 +9,6 @@ source_set("address-tagging") {
     "//zircon/kernel/lib/arch",
     "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/mini-process",
-    "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]

@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/memory-probe.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
@@ -47,8 +48,6 @@ bool IsQemuTcg() {
 #endif
 
 #include "helpers.h"
-
-extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
 
@@ -584,15 +583,14 @@ TEST(VmoTestCase, Info) {
   EXPECT_EQ(info.cache_policy, ZX_CACHE_POLICY_UNCACHED, "vm_info_test: info_vmo.cache_policy");
   EXPECT_EQ(info.handle_rights, basic_info.rights, "vm_info_test: info_vmo.handle_rights");
 
-  if (get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (root_resource->is_valid()) {
     zx::iommu iommu;
     zx::bti bti;
     auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-    zx::unowned_resource root_res(get_root_resource());
     zx_iommu_desc_dummy_t desc;
-    EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+    EXPECT_EQ(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                               iommu.reset_and_get_address()),
               ZX_OK);
     bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::Info");
@@ -1522,19 +1520,18 @@ TEST(VmoTestCase, ResizeHazard) {
 }
 
 TEST(VmoTestCase, CompressedContiguous) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
-
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::CompressedContiguous");
 
   zx_info_bti_t bti_info;
@@ -1566,19 +1563,18 @@ TEST(VmoTestCase, CompressedContiguous) {
 }
 
 TEST(VmoTestCase, UncachedContiguous) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
-
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::UncachedContiguous");
 
   const uint64_t kSize = zx_system_get_page_size() * 4;
@@ -1615,21 +1611,20 @@ TEST(VmoTestCase, UncachedContiguous) {
 //    operations which do not fit in a target child-slice, but _would_ fit within
 //    the main parent VMO.  See bug 53547 for details.
 TEST(VmoTestCase, PinTests) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
 
   constexpr size_t kTestPages = 6;
 
-  zx::unowned_resource root_res(get_root_resource());
-
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::PinTests");
 
   enum class VmoFlavor { Normal, Contig, Physical };

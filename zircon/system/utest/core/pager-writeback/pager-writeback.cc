@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <zircon/syscalls-next.h>
@@ -13,10 +14,6 @@
 
 #include "test_thread.h"
 #include "userpager.h"
-
-__BEGIN_CDECLS
-__WEAK extern zx_handle_t get_root_resource(void);
-__END_CDECLS
 
 namespace pager_tests {
 
@@ -4431,8 +4428,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedVmoWrite, 0) {
 
 // Tests that a VMO is not marked modified on a failed resize.
 TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedResize, ZX_VMO_RESIZABLE) {
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  if (!&get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
@@ -4456,9 +4453,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedResize, ZX_VMO_RESIZABLE) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
-  zx::unowned_resource root_res(get_root_resource());
   zx_iommu_desc_dummy_t desc;
-  ASSERT_OK(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+  ASSERT_OK(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
                             iommu.reset_and_get_address()));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
   zx_paddr_t addr;

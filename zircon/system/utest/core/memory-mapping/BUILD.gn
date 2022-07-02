@@ -5,8 +5,5 @@
 source_set("memory-mapping") {
   testonly = true
   sources = [ "memory-mapping.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

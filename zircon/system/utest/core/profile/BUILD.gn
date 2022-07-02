@@ -6,7 +6,7 @@ source_set("profile") {
   testonly = true
   sources = [ "profile.cc" ]
   deps = [
-    "//sdk/lib/fdio",
+    "//src/zircon/testing/standalone-test",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

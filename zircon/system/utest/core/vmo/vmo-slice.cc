@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <lib/fit/defer.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/vmo.h>
@@ -13,8 +14,6 @@
 #include <zxtest/zxtest.h>
 
 #include "helpers.h"
-
-extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
 
@@ -212,21 +211,21 @@ TEST(VmoSliceTestCase, ZeroSized) {
 }
 
 TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
   const size_t size = zx_system_get_page_size();
 
   zx::vmo parent_contig_vmo;
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::iommu iommu;
   zx::bti bti;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "ChildSliceOfContiguousParentIsContiguous");
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
@@ -241,7 +240,8 @@ TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
 }
 
 TEST(VmoSliceTestCase, ParentContiguousVmoStaysPinnedWithoutHandle) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
@@ -251,14 +251,13 @@ TEST(VmoSliceTestCase, ParentContiguousVmoStaysPinnedWithoutHandle) {
   const size_t size = kPageCount * zx_system_get_page_size();
 
   zx::vmo parent_contig_vmo;
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::iommu iommu;
   zx::bti bti;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti =
       vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "ParentContiguousVmoStaysPinnedWithoutHandle");
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
@@ -270,8 +269,7 @@ TEST(VmoSliceTestCase, ParentContiguousVmoStaysPinnedWithoutHandle) {
 
   // Create child slice.
   zx::vmo child;
-  ASSERT_OK(
-      parent_contig_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, size, &child));
+  ASSERT_OK(parent_contig_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, size, &child));
 
   parent_contig_vmo.reset();
 
@@ -410,21 +408,21 @@ TEST(VmoSliceTestCase, CowPageSourceThroughSlices) {
 }
 
 TEST(VmoSliceTestCase, RoundUpSizePhysical) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
   const size_t size = zx_system_get_page_size();
 
   zx::vmo parent_contig_vmo;
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "RoundUpSizePhysical");
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
@@ -463,12 +461,11 @@ TEST(VmoSliceTestCase, NotCoWType) {
 }
 
 TEST(VmoSliceTestCase, Pin) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
-
-  zx::unowned_resource root_res(get_root_resource());
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -480,7 +477,7 @@ TEST(VmoSliceTestCase, Pin) {
   zx_iommu_desc_dummy_t desc;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoSliceTestCase::Pin");
 
   // Pin the slice, this should block decommits in the parent.

@@ -11,24 +11,49 @@ import("//build/cpp/library_headers.gni")
 library_headers("headers") {
   testonly = true
   headers = [ "lib/standalone-test/standalone.h" ]
-  public_deps = [
-    "//zircon/kernel/lib/boot-options",
-    "//zircon/system/ulib/zx",
-  ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 static_library("standalone-test") {
   testonly = true
   sources = [
-    "standalone-init.cc",
     "standalone-io.cc",
     "standalone-options.cc",
   ]
-  public_deps = [ ":headers" ]
+  public_deps = [
+    ":headers",
+    ":init",
+  ]
   deps = [
     "//zircon/kernel/lib/boot-options",
-    "//zircon/system/ulib/lazy_init",
     "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zx",
   ]
+}
+
+# This is a separate source-set that's forced into dependents' links via
+# public_deps so that it's eagerly linked in.
+source_set("init") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "standalone-init.cc" ]
+  deps = [
+    ":headers",
+    "//zircon/system/ulib/lazy_init",
+    "//zircon/system/ulib/zx",
+  ]
+
+  public_configs = [ ":init.config" ]
+}
+
+# The __libc_extensions_init symbol is a weak undefined reference in libc.so.
+# However, we link against an IFS stub that has elided undefined symbols.  So
+# the linker doesn't know that __libc_extensions_init is meaningful to export
+# from the executable, even though it's marked for export.  The switch tells
+# it explicitly that this symbol must be exported.
+config("init.config") {
+  visibility = [ ":*" ]
+
+  ldflags = [ "-Wl,--export-dynamic-symbol=__libc_extensions_init" ]
 }

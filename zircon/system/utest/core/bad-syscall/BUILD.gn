@@ -13,7 +13,7 @@ source_set("bad-syscall") {
   ]
   include_dirs = [ "//zircon/kernel/arch/$zircon_cpu/include" ]
   deps = [
-    "//sdk/lib/fdio",
+    "//src/zircon/testing/standalone-test",
     "//zircon/system/ulib/syscalls-headers",
     "//zircon/system/ulib/zxtest",
   ]

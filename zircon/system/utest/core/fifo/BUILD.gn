@@ -6,7 +6,6 @@ source_set("fifo") {
   testonly = true
   sources = [ "fifo.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

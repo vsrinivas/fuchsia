@@ -6,6 +6,7 @@
 #include <lib/standalone-test/standalone.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -15,18 +16,22 @@
 #include <string>
 #include <string_view>
 
+namespace standalone {
 namespace {
 
 zx::resource root_resource, mmio_root_resource, system_root_resource;
 
-constexpr std::string_view kStandaloneMsg =
+constexpr std::string_view kMissingRootResource =
     "*** standalone-test must run directly from userboot ***\n";
+
+constexpr std::string_view kStartupMessage =
+    "*** Running standalone test directly from userboot ***\n";
 
 lazy_init::LazyInit<std::map<std::string, zx::vmo>> gVmos;
 
 }  // namespace
 
-zx::unowned_vmo StandaloneGetVmo(const std::string& name) {
+zx::unowned_vmo GetVmo(const std::string& name) {
   auto it = gVmos->find(name);
   if (it == gVmos->end()) {
     return {};
@@ -34,9 +39,27 @@ zx::unowned_vmo StandaloneGetVmo(const std::string& name) {
   return zx::unowned_vmo{it->second};
 }
 
-extern "C" {
+zx::unowned_resource GetRootResource() {
+  ZX_ASSERT_MSG(root_resource, "standalone test didn't receive root resource");
+  return root_resource.borrow();
+}
 
-__EXPORT void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
+zx::unowned_resource GetMmioRootResource() {
+  ZX_ASSERT_MSG(mmio_root_resource, "standalone test didn't receive MMIO root resource");
+  return mmio_root_resource.borrow();
+}
+
+zx::unowned_resource GetSystemRootResource() {
+  ZX_ASSERT_MSG(system_root_resource, "standalone test didn't receive system root resource");
+  return system_root_resource.borrow();
+}
+
+// This overrides a weak definition in libc, replacing the hook that's
+// ordinarily defined by fdio.  The retain attribute makes sure that linker
+// doesn't decide it can elide this definition and let libc use its weak one.
+extern "C" [[gnu::retain]] __EXPORT void __libc_extensions_init(uint32_t count,
+                                                                zx_handle_t handle[],
+                                                                uint32_t info[]) {
   gVmos.Initialize();
 
   for (unsigned n = 0; n < count; n++) {
@@ -80,17 +103,13 @@ __EXPORT void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint3
   }
 
   if (!root_resource.is_valid()) {
-    zx_debug_write(kStandaloneMsg.data(), kStandaloneMsg.size());
+    zx_debug_write(kMissingRootResource.data(), kMissingRootResource.size());
     __builtin_trap();
-  } else {
-    StandaloneInitIo(zx::unowned_resource{root_resource});
   }
+
+  // Eagerly write a message. This ensures that every standalone test links
+  // in the standalone-io code that overrides functions like write from libc.
+  LogWrite(kStartupMessage);
 }
 
-__EXPORT zx_handle_t get_root_resource(void) { return root_resource.get(); }
-
-__EXPORT zx_handle_t get_mmio_root_resource(void) { return mmio_root_resource.get(); }
-
-__EXPORT zx_handle_t get_system_root_resource(void) { return system_root_resource.get(); }
-
-}  // extern "C"
+}  // namespace standalone

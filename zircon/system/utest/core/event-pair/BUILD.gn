@@ -5,8 +5,5 @@
 source_set("event-pair") {
   testonly = true
   sources = [ "event-pair.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

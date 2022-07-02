@@ -6,7 +6,7 @@ source_set("system-cpu") {
   testonly = true
   sources = [ "performance_info.cc" ]
   deps = [
-    "//sdk/lib/fdio",
+    "//src/zircon/testing/standalone-test",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",

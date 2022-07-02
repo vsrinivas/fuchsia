@@ -6,7 +6,6 @@ source_set("system-event") {
   testonly = true
   sources = [ "mempressure.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

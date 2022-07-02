@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <lib/fit/defer.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/vmar.h>
@@ -14,8 +15,6 @@
 #include <zxtest/zxtest.h>
 
 #include "helpers.h"
-
-extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace vmo_test {
 
@@ -100,18 +99,18 @@ TEST(VmoZeroTestCase, DecommitMiddle) {
 }
 
 TEST(VmoZeroTestCase, Contiguous) {
-  if (!get_root_resource) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
     printf("Root resource not available, skipping\n");
     return;
   }
 
-  zx::unowned_resource root_res(get_root_resource());
   zx::iommu iommu;
   zx::bti bti;
   auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  EXPECT_OK(zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoZero Contiguous");
 
   zx::vmo vmo;

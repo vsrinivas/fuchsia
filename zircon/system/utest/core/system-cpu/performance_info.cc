@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/profile.h>
@@ -23,10 +24,6 @@
 #include <vector>
 
 #include <zxtest/zxtest.h>
-
-extern "C" zx_handle_t get_root_resource(void);
-extern "C" zx_handle_t get_system_root_resource(void);
-extern "C" zx_handle_t get_mmio_root_resource(void);
 
 namespace {
 
@@ -57,10 +54,9 @@ zx::status<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
 }
 
 zx::status<size_t> GetCpuCount() {
-  static zx::resource root_resource{get_root_resource()};
   size_t actual, available;
   const zx_status_t status =
-      root_resource.get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
+      standalone::GetRootResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -68,11 +64,10 @@ zx::status<size_t> GetCpuCount() {
 }
 
 zx::status<zx::resource> GetSystemCpuResource() {
-  static zx::resource system_root_resource{get_system_root_resource()};
   zx::resource system_cpu_resource;
   const zx_status_t status =
-      zx::resource::create(system_root_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_CPU_BASE, 1,
-                           nullptr, 0, &system_cpu_resource);
+      zx::resource::create(*standalone::GetSystemRootResource(), ZX_RSRC_KIND_SYSTEM,
+                           ZX_RSRC_SYSTEM_CPU_BASE, 1, nullptr, 0, &system_cpu_resource);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -80,11 +75,10 @@ zx::status<zx::resource> GetSystemCpuResource() {
 }
 
 zx::status<zx::resource> GetSystemInfoResource() {
-  static zx::resource system_root_resource{get_system_root_resource()};
   zx::resource system_info_resource;
   const zx_status_t status =
-      zx::resource::create(system_root_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1,
-                           nullptr, 0, &system_info_resource);
+      zx::resource::create(*standalone::GetSystemRootResource(), ZX_RSRC_KIND_SYSTEM,
+                           ZX_RSRC_SYSTEM_INFO_BASE, 1, nullptr, 0, &system_info_resource);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -92,8 +86,7 @@ zx::status<zx::resource> GetSystemInfoResource() {
 }
 
 zx::status<zx::unowned_resource> GetMmioResource() {
-  static zx::resource mmio_resource{get_mmio_root_resource()};
-  return zx::ok(mmio_resource.borrow());
+  return zx::ok(standalone::GetMmioRootResource());
 }
 
 template <typename Callable>

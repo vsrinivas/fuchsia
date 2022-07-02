@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/job.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -13,8 +14,6 @@
 #include <thread>
 
 #include <zxtest/zxtest.h>
-
-extern "C" zx_handle_t get_root_resource(void);
 
 namespace profile {
 namespace {
@@ -48,8 +47,8 @@ zx_profile_info_t MakeCpuMaskProfile(uint64_t mask) {
 
 size_t GetCpuCount() {
   size_t actual, available;
-  zx::unowned_handle root_resource(get_root_resource());
-  zx_status_t status = root_resource->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
+  zx_status_t status =
+      standalone::GetRootResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
   ZX_ASSERT(status == ZX_OK);
   return available;
 }

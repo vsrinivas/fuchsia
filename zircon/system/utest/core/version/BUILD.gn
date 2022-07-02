@@ -7,7 +7,6 @@ source_set("version") {
   sources = [ "version-test.cc" ]
   deps = [
     ":cxx14",
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/zxtest",
   ]
 }

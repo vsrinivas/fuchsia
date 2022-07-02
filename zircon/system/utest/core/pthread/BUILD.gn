@@ -10,8 +10,5 @@ source_set("pthread") {
   ]
 
   cflags_c = [ "-Wgnu-empty-initializer" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

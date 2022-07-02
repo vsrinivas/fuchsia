@@ -7,7 +7,6 @@ source_set("sync-mutex") {
   configs += [ "//build/config:all_source" ]
   sources = [ "mutex.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/job.h>
 #include <lib/zx/pager.h>
@@ -17,22 +18,16 @@
 namespace object_info_test {
 namespace {
 
-extern "C" __WEAK zx_handle_t get_root_resource();
-
 class KernelStatsGetInfoTest : public zxtest::Test {
  public:
   void SetUp() override {
-    if (!get_root_resource) {
-      return;
-    }
-
-    root_resource_ = zx::unowned_resource(get_root_resource());
+    root_resource_ = maybe_standalone::GetRootResource();
     num_cpus_ = zx_system_get_num_cpus();
   }
 
  protected:
   uint32_t num_cpus_ = 0;
-  zx::unowned_resource root_resource_ = zx::unowned_resource(ZX_HANDLE_INVALID);
+  zx::unowned_resource root_resource_;
 };
 
 TEST_F(KernelStatsGetInfoTest, KmemStats) {

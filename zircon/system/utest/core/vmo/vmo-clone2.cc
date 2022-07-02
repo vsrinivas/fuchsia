@@ -4,6 +4,7 @@
 
 #include <elf.h>
 #include <lib/fit/defer.h>
+#include <lib/maybe-standalone-test/maybe-standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
@@ -22,8 +23,6 @@
 
 #include "helpers.h"
 
-extern "C" __WEAK zx_handle_t get_root_resource(void);
-
 namespace vmo_test {
 
 // Some tests below rely on sampling the memory statistics and having only the
@@ -34,9 +33,8 @@ namespace vmo_test {
 class VmoClone2TestCase : public zxtest::Test {
  public:
   static void SetUpTestSuite() {
-    if (get_root_resource) {
-      root_resource_ = zx::unowned_resource{get_root_resource()};
-      ASSERT_TRUE(root_resource_->is_valid());
+    root_resource_ = maybe_standalone::GetRootResource();
+    if (root_resource_->is_valid()) {
       ASSERT_EQ(dl_iterate_phdr(&DlIterpatePhdrCallback, nullptr), 0);
     }
   }

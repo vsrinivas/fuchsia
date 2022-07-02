@@ -8,7 +8,7 @@ source_set("pager-writeback") {
   testonly = true
   sources = [ "pager-writeback.cc" ]
   deps = [
-    "//sdk/lib/fdio",
+    "//src/zircon/testing/maybe-standalone-test",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",

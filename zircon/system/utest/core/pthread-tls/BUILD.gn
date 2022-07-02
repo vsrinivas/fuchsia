@@ -5,8 +5,5 @@
 source_set("pthread-tls") {
   testonly = true
   sources = [ "tls-test.c" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

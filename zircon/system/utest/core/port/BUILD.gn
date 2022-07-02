@@ -6,7 +6,6 @@ source_set("port") {
   testonly = true
   sources = [ "ports.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/zxtest",

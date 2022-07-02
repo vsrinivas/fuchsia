@@ -7,7 +7,6 @@ source_set("futex") {
   configs += [ "//build/config:all_source" ]
   sources = [ "futex.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

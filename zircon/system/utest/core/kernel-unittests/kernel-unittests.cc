@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/standalone-test/standalone.h>
 #include <zircon/syscalls.h>
 
 #include <string_view>
 
 #include <zxtest/zxtest.h>
 
-extern "C" zx_handle_t get_root_resource(void);
-
 namespace {
 
 zx_status_t DebugCommand(std::string_view command) {
-  return zx_debug_send_command(get_root_resource(), command.data(), command.size());
+  return zx_debug_send_command(standalone::GetRootResource()->get(), command.data(),
+                               command.size());
 }
 
 // Ask the kernel to run its unit tests.

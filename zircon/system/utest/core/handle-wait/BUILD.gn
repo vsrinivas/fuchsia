@@ -5,8 +5,5 @@
 source_set("handle-wait") {
   testonly = true
   sources = [ "handle-wait.c" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

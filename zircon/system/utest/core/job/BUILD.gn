@@ -6,7 +6,6 @@ source_set("job") {
   testonly = true
   sources = [ "jobs.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/zx",

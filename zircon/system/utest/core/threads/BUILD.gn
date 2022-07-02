@@ -10,7 +10,6 @@ source_set("threads") {
   ]
   deps = [
     ":thread-functions",
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-exceptions",

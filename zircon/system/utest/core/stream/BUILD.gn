@@ -6,7 +6,6 @@ source_set("stream") {
   testonly = true
   sources = [ "stream.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

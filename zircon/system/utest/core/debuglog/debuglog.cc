@@ -4,18 +4,17 @@
 
 // Tests for the debuglog.
 
+#include <lib/standalone-test/standalone.h>
 #include <zircon/syscalls/log.h>
 
 #include <zxtest/zxtest.h>
-
-// This is provided by utest/core/main.c
-extern "C" __WEAK zx_handle_t get_root_resource();
 
 namespace {
 
 TEST(DebugLogTest, WriteRead) {
   zx_handle_t log_handle = 0;
-  ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
+  ASSERT_OK(
+      zx_debuglog_create(standalone::GetRootResource()->get(), ZX_LOG_FLAG_READABLE, &log_handle));
 
   // Ensure something is written.
   static const char kTestMsg[] = "Debuglog test message.\n";
@@ -41,10 +40,12 @@ TEST(DebugLogTest, InvalidOptions) {
   zx_handle_t log_handle = 0;
 
   // Ensure giving invalid options returns an error.
-  EXPECT_EQ(zx_debuglog_create(get_root_resource(), 1, &log_handle), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(zx_debuglog_create(standalone::GetRootResource()->get(), 1, &log_handle),
+            ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(log_handle, 0);
 
-  EXPECT_EQ(zx_debuglog_create(get_root_resource(), 1 | ZX_LOG_FLAG_READABLE, &log_handle),
+  EXPECT_EQ(zx_debuglog_create(standalone::GetRootResource()->get(), 1 | ZX_LOG_FLAG_READABLE,
+                               &log_handle),
             ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(log_handle, 0);
 }
@@ -53,7 +54,8 @@ TEST(DebugLogTest, InvalidHandleAllowedOnlyForWrite) {
   zx_handle_t log_handle = 0;
 
   // Requesting a read-write handle with a valid root resource should work
-  ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
+  ASSERT_OK(
+      zx_debuglog_create(standalone::GetRootResource()->get(), ZX_LOG_FLAG_READABLE, &log_handle));
   ASSERT_OK(zx_handle_close(log_handle));
   log_handle = ZX_HANDLE_INVALID;
 
@@ -73,7 +75,8 @@ TEST(DebugLogTest, InvalidHandleAllowedOnlyForWrite) {
 
 TEST(DebugLogTest, MaxMessageSize) {
   zx_handle_t log_handle = ZX_HANDLE_INVALID;
-  ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
+  ASSERT_OK(
+      zx_debuglog_create(standalone::GetRootResource()->get(), ZX_LOG_FLAG_READABLE, &log_handle));
 
   // msg is too large and should be truncated.
   char msg[ZX_LOG_RECORD_DATA_MAX + 1];

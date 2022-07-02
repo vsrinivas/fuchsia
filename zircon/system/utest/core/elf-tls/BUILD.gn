@@ -6,8 +6,5 @@ source_set("elf-tls") {
   testonly = true
   configs += [ "//build/config:all_source" ]
   sources = [ "tls.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

@@ -6,7 +6,6 @@ source_set("channel-call-etc") {
   testonly = true
   sources = [ "call_etc.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mini-process",

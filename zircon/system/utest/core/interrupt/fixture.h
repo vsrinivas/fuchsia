@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_UTEST_CORE_INTERRUPT_FIXTURE_H_
+#define ZIRCON_SYSTEM_UTEST_CORE_INTERRUPT_FIXTURE_H_
+
+#include <lib/standalone-test/standalone.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/msi.h>
@@ -13,13 +17,12 @@
 
 namespace {
 
-extern "C" zx_handle_t get_root_resource(void);
-
 class RootResourceFixture : public zxtest::Test {
  public:
   void SetUp() override {
+    root_resource_ = standalone::GetRootResource();
+
     zx_iommu_desc_dummy_t desc = {};
-    root_resource_ = zx::unowned_resource(get_root_resource());
     ASSERT_OK(
         zx::iommu::create(*root_resource_, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu_));
     ASSERT_OK(zx::bti::create(iommu_, 0, 0xdeadbeef, &bti_));
@@ -37,3 +40,5 @@ class RootResourceFixture : public zxtest::Test {
 };
 
 }  // namespace
+
+#endif  // ZIRCON_SYSTEM_UTEST_CORE_INTERRUPT_FIXTURE_H_

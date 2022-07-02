@@ -14,9 +14,9 @@ int main() {
   int argc = 1;
   const char* argv[4] = {"core-tests", nullptr, nullptr, nullptr};
 
-  StandaloneOption filter = {"--gtest_filter="};
-  StandaloneOption repeat = {"--gtest_repeat="};
-  StandaloneGetOptions({filter, repeat});
+  standalone::Option filter = {"--gtest_filter="};
+  standalone::Option repeat = {"--gtest_repeat="};
+  standalone::GetOptions({filter, repeat});
 
   if (!filter.option.empty()) {
     argv[argc++] = filter.option.c_str();

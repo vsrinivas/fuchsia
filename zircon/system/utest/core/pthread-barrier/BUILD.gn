@@ -5,8 +5,5 @@
 source_set("pthread-barrier") {
   testonly = true
   sources = [ "barrier.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/zxtest",
-  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }
