@@ -476,10 +476,14 @@ TEST(GlobalImageDataTest, ImageMetadataColorTest) {
 
   // Set the uberstruct image color values.
   auto uber_struct = std::make_unique<UberStruct>();
-  std::array<float, 4> color_a = {0.5, 0, 0.75, 1.0};
-  std::array<float, 4> color_b = {1.0, 0.6, 0.4, 1.0};
-  uber_struct->images[{1, 0}] = {.multiply_color = color_a};
-  uber_struct->images[{1, 1}] = {.multiply_color = color_b};
+  std::array<float, 4> color_a = {0.5, 0.2, 0.75, 0.8};
+  std::array<float, 4> color_b = {0.9, 0.6, 0.4, 0.3};
+
+  // Explicitly make sure identifier is invalid id to simulate SolidFill rects.
+  uber_struct->images[{1, 0}] = {.identifier = allocation::kInvalidImageId,
+                                 .multiply_color = color_a};
+  uber_struct->images[{1, 1}] = {.identifier = allocation::kInvalidImageId,
+                                 .multiply_color = color_b};
   uber_structs[1] = std::move(uber_struct);
 
   // These are the color values we expect to get back from |ComputeGlobalImageData|.

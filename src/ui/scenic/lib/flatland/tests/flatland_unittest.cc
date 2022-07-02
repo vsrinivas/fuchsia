@@ -4018,6 +4018,14 @@ TEST_F(FlatlandTest, CreateFilledRectErrorTest) {
       flatland->SetSolidFill(kId2, {1, 0, 0, 1}, {20, 30});
       PRESENT(flatland, true);
     }
+
+    // Try various values and make sure present still returns true.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->CreateFilledRect(kId2);
+      flatland->SetSolidFill(kId2, {0.7, 0.3, 0.9, 0.4}, {20, 30});
+      PRESENT(flatland, true);
+    }
   }
 
   // Test ReleaseFilledRect function

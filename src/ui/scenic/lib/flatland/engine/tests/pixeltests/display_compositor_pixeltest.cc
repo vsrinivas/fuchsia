@@ -501,9 +501,10 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangle
   }
 
   // Get a raw pointer for the texture's vmo and make it green. Green is chosen because it has
-  // the same bit offset in both RGBA and BGRA pixel formats.
+  // the same bit offset in both RGBA and BGRA pixel formats. The display controller system is
+  // also little-endian, so the BGRA values will be packed in an uint32_t as ARGB.
   const uint32_t num_pixels = kTextureWidth * kTextureHeight;
-  uint32_t col = (255U << 24) | (255U << 8);
+  uint32_t col = /*A*/ (255U << 24) | /*G*/ (51U << 8);
   std::vector<uint32_t> write_values;
   write_values.assign(num_pixels, col);
   switch (GetParam()) {
@@ -521,9 +522,10 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangle
       FX_NOTREACHED();
   }
 
-  // Import the texture to the engine.
+  // Import the texture to the engine. Set green to 0.2, which when converted to an
+  // unnormalized uint8 value in the range [0,255] will be 51U.
   auto image_metadata = ImageMetadata{.identifier = allocation::kInvalidImageId,
-                                      .multiply_color = {0, 1, 0, 1},
+                                      .multiply_color = {0, 0.2f, 0, 1},
                                       .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
 
   // We cannot send to display because it is not supported in allocations.
