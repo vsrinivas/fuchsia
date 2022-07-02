@@ -15,15 +15,6 @@
 
 namespace media_audio {
 
-namespace {
-
-// Enable to emit trace events containing the position state.
-// TODO(fxbug.dev/87651): Move this constant to a common location if needed during audio core
-// `media::audio::Mixer` migration.
-constexpr bool kTracePositionEvents = false;
-
-}  // namespace
-
 PositionManager::PositionManager(int32_t source_channel_count, int32_t dest_channel_count,
                                  int64_t frac_positive_length, int64_t frac_negative_length)
     : source_channel_count_(source_channel_count),
@@ -109,7 +100,7 @@ void PositionManager::DisplayUpdate() const {
 
 void PositionManager::SetDestValues(float* dest_ptr, int64_t dest_frame_count,
                                     int64_t* dest_offset_ptr) {
-  if (kTracePositionEvents) {
+  if constexpr (kTracePositionEvents) {
     TRACE_DURATION("audio", __func__, "dest_frame_count", dest_frame_count, "dest_offset",
                    *dest_offset_ptr);
   }
@@ -123,7 +114,7 @@ void PositionManager::SetDestValues(float* dest_ptr, int64_t dest_frame_count,
 
 void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t source_frame_count,
                                       Fixed* source_offset_ptr) {
-  if (kTracePositionEvents) {
+  if constexpr (kTracePositionEvents) {
     TRACE_DURATION("audio", __func__, "source_frame_count", source_frame_count, "source_offset",
                    source_offset_ptr->Integral().Floor(), "source_offset.frac",
                    source_offset_ptr->Fraction().raw_value());
@@ -140,7 +131,7 @@ void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t sourc
 
 void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t rate_modulo,
                                     uint64_t denominator, uint64_t* source_pos_mod) {
-  if (kTracePositionEvents) {
+  if constexpr (kTracePositionEvents) {
     TRACE_DURATION("audio", __func__, "step_size",
                    Fixed::FromRaw(frac_step_size).Integral().Floor(), "step_size.frac",
                    Fixed::FromRaw(frac_step_size).Fraction().raw_value(), "rate_modulo",

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/lib/processing/point_sampler.h"
 
+#include <lib/trace/event.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -38,8 +40,11 @@ class PointSamplerImpl : public PointSampler {
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterLength),
                      Fixed::FromRaw(kFracNegativeFilterLength)) {}
 
-  // Processes `source` into `dest` with `gain`.
+  void EagerlyPrepare() final {}
+
   void Process(Source source, Dest dest, Gain gain, bool accumulate) final {
+    TRACE_DURATION("audio", "PointSampler::Process");
+
     switch (gain.type) {
       case GainType::kSilent:
         if (accumulate) {
@@ -75,16 +80,6 @@ class PointSamplerImpl : public PointSampler {
   }
 
  private:
-  // As an optimization, we work with raw fixed-point values internally although we pass `Fixed`
-  // types through our public interfaces.
-  static int64_t Ceiling(int64_t frac_position) {
-    return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
-  }
-
-  static int64_t Floor(int64_t frac_position) {
-    return frac_position >> Fixed::Format::FractionalBits;
-  }
-
   // Processes `source` into `dest` with gain `Type`.
   template <GainType Type, bool Accumulate>
   static void ProcessWith(const Source& source, const Dest& dest, const Gain& gain) {
@@ -105,12 +100,13 @@ class PointSamplerImpl : public PointSampler {
     }
 
     // Process destination frames.
-    const int64_t frames_to_process = std::min(Ceiling(source_frac_end - source_frac_offset),
-                                               dest.frame_count - dest_frame_offset);
+    const int64_t frames_to_process =
+        std::min(Sampler::Ceiling(source_frac_end - source_frac_offset),
+                 dest.frame_count - dest_frame_offset);
 
     if constexpr (Type != GainType::kSilent) {
       const auto* source_frame = &static_cast<const SourceSampleType*>(
-          source.samples)[Floor(source_frac_offset + kFracPositiveFilterLength - 1) *
+          source.samples)[Sampler::Floor(source_frac_offset + kFracPositiveFilterLength - 1) *
                           SourceChannelCount];
       float* dest_frame = &dest.samples[dest_frame_offset * DestChannelCount];
 
@@ -222,6 +218,8 @@ std::shared_ptr<Sampler> CreateWith(int64_t source_channel_count, int64_t dest_c
 
 std::shared_ptr<Sampler> PointSampler::Create(const Format& source_format,
                                               const Format& dest_format) {
+  TRACE_DURATION("audio", "PointSampler::Create");
+
   if (source_format.frames_per_second() != dest_format.frames_per_second()) {
     FX_LOGS(WARNING) << "PointSampler source frame rate " << source_format.frames_per_second()
                      << " must be equal to dest frame rate " << dest_format.frames_per_second();

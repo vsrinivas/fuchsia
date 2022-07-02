@@ -72,11 +72,11 @@ class Sampler {
   // Gain to be applied to the processed destination data.
   struct Gain {
     // Gain type.
-    GainType type;
+    GainType type = GainType::kUnity;
 
     union {
       // Constant gain scale. This will be valid iff the gain `type != GainType::kRamping`.
-      float scale;
+      float scale = kUnityGainScale;
       // Pointer to the array of gain scale ramp, where each value represents the gain scale for
       // each destination frame. The length of this ramp must match the destination frame count.
       // This will be valid iff the gain `type == GainType::kRamping`.
@@ -86,6 +86,11 @@ class Sampler {
 
   // Default destructor.
   virtual ~Sampler() = default;
+
+  // Eagerly precomputes any needed data. If not called, that data will be lazily computed on the
+  // first call to `Process`.
+  // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
+  virtual void EagerlyPrepare() = 0;
 
   // Processes `source` into `dest` with `gain`.
   virtual void Process(Source source, Dest dest, Gain gain, bool accumulate) = 0;
@@ -99,6 +104,16 @@ class Sampler {
  protected:
   Sampler(Fixed pos_filter_length, Fixed neg_filter_length)
       : pos_filter_length_(pos_filter_length), neg_filter_length_(neg_filter_length) {}
+
+  // Ceils `frac_position` in frames.
+  static constexpr int64_t Ceiling(int64_t frac_position) {
+    return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
+  }
+
+  // Floors `frac_position` in frames.
+  static constexpr int64_t Floor(int64_t frac_position) {
+    return frac_position >> Fixed::Format::FractionalBits;
+  }
 
  private:
   const Fixed pos_filter_length_;

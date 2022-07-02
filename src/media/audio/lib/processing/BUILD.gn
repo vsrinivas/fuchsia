@@ -48,6 +48,8 @@ source_set("sampler") {
     "position_manager.cc",
     "position_manager.h",
     "sampler.h",
+    "sinc_sampler.cc",
+    "sinc_sampler.h",
   ]
 
   deps = [
@@ -128,6 +130,7 @@ executable("unittest-bin") {
     "point_sampler_unittest.cc",
     "position_manager_unittest.cc",
     "sampler_unittest.cc",
+    "sinc_sampler_unittest.cc",
   ]
 
   deps = [
