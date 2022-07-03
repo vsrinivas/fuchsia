@@ -352,8 +352,6 @@ group("cmx_allowlist") {
     "//src/lib/ui/carnelian:textgrid-rs_v1_manifest_compile",
     "//src/lib/ui/fuchsia-framebuffer:fb_box_rs_component_manifest_compile",
     "//src/lib/utf_conversion:utf_conversion_fuzzer_component_manifest_compile",
-    "//src/lib/vulkan/tests:compact-image-tests_component_manifest_compile",
-    "//src/lib/vulkan/tests:image-pipe-swapchain-tests_component_manifest_compile",
     "//src/media/audio/audio_core:audio_core_fuzzer_component_manifest_compile",
     "//src/media/audio/audio_core/tools/output_pipeline_benchmark:audio-pipeline-benchmark-empty-pipeline_component_manifest_compile",
     "//src/media/audio/drivers/intel-hda/controller:nhlt-fuzzer_component_manifest_compile",

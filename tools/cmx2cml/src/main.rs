@@ -274,6 +274,7 @@ const KNOWN_INCLUDES: &[&str] = &[
     GUNIT_RUNNER_SHARD,
     RUST_TEST_RUNNER_SHARD,
     SYSTEM_TEST_SHARD,
+    VULKAN_TEST_APP_SHARD,
 ];
 
 const SYSLOG_SHARD: &str = "syslog/client.shard.cml";
@@ -283,3 +284,4 @@ const GTEST_RUNNER_SHARD: &str = "//src/sys/test_runners/gtest/default.shard.cml
 const GUNIT_RUNNER_SHARD: &str = "//src/sys/test_runners/gunit/default.shard.cml";
 const RUST_TEST_RUNNER_SHARD: &str = "//src/sys/test_runners/rust/default.shard.cml";
 const SYSTEM_TEST_SHARD: &str = "//src/sys/test_manager/system-test.shard.cml";
+const VULKAN_TEST_APP_SHARD: &str = "//src/lib/vulkan/test-application.shard.cml";

@@ -16,7 +16,7 @@ group("tests") {
 }
 
 fuchsia_unittest_package("compact-image-tests") {
-  manifest = "meta/compact-image-tests.cmx"
+  manifest = "meta/compact-image-tests.cml"
   deps = [
     ":test_compact_image",
     "//src/lib/vulkan/compact_image:compact_image_layer",
@@ -41,7 +41,7 @@ test("test_compact_image") {
 }
 
 fuchsia_unittest_package("image-pipe-swapchain-tests") {
-  manifest = "meta/image-pipe-swapchain-tests.cmx"
+  manifest = "meta/image-pipe-swapchain-tests.cml"
   deps = [
     ":test_image_pipe_swapchain",
     "//src/lib/vulkan/swapchain:image_pipe_swapchain_copy_layer",
