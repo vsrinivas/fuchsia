@@ -46,18 +46,8 @@ fuchsia_component("battery_manager") {
   deps = [ ":bin" ]
 }
 
-# TODO: Remove this component after SL4F is migrated to CML
-fuchsia_component("battery_manager_legacy") {
-  component_name = "battery_manager"
-  manifest = "meta/battery_manager.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_package("battery-manager") {
-  deps = [
-    ":battery_manager",
-    ":battery_manager_legacy",
-  ]
+  deps = [ ":battery_manager" ]
 }
 
 fuchsia_component("battery_manager_bin_test") {
