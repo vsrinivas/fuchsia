@@ -21,16 +21,10 @@ rustc_staticlib("disk_extractor") {
   ]
 }
 
-fuchsia_component("c-lib-test-component") {
-  manifest = "meta/c-lib-unit-tests.cmx"
-
+fuchsia_unittest_package("disk-extractor-c-lib-unit-test") {
   deps = [
     ":disk_extractor_test",
     "//src/storage/extractor:disk_extractor_lib",
+    "//src/sys/test_runners:tmp_storage",
   ]
-  testonly = true
-}
-
-fuchsia_test_package("disk-extractor-c-lib-unit-test") {
-  test_components = [ ":c-lib-test-component" ]
 }
