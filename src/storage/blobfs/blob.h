@@ -176,8 +176,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   BlobState state() const __TA_REQUIRES_SHARED(mutex_) { return state_; }
 
   // After writing the blob, marks the blob as readable.
-  [[nodiscard]] zx_status_t MarkReadable(CompressionAlgorithm compression_algorithm)
-      __TA_REQUIRES(mutex_);
+  [[nodiscard]] zx_status_t MarkReadable() __TA_REQUIRES(mutex_);
 
   // Puts a blob into an error state and removes it from the cache so that a client may immediately
   // have another attempt if required.
@@ -294,20 +293,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   SyncingState syncing_state_ __TA_GUARDED(mutex_) = SyncingState::kDataIncomplete;
 
   uint32_t map_index_ __TA_GUARDED(mutex_) = 0;
-
-  // There are some cases where we can't read data into the paged vmo as the kernel requests:
-  //
-  //  - When accumulating data being written to the blob.
-  //  - After writing the complete data but before closing it. (We do not currently support
-  //    reading from the blob in this state.)
-  //
-  // In these cases, this VMO holds the data. It can be copied into the paged_vmo() as
-  // requested by the kernel. We can't just prepopulate the paged_vmo() because writing into it will
-  // attempt to page it in, reentering us. We could use the pager ops to supply data, but we can't
-  // depend on the kernel never to flush these so need to have another copy.
-  //
-  // This value is only used when !IsPagerBacked().
-  zx::vmo unpaged_backing_data_ __TA_GUARDED(mutex_);
 
   zx::event readable_event_ __TA_GUARDED(mutex_);
 

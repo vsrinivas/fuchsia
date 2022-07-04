@@ -77,9 +77,6 @@ struct Blob::WriteInfo {
 
   std::optional<BlobCompressor> compressor;
 
-  // Target compressed size for this blob indicates the possible on-disk compressed size in bytes.
-  std::optional<uint64_t> target_compression_size_;
-
   // The fused write error.  Once writing has failed, we return the same error on subsequent
   // writes in case a higher layer dropped the error and returned a short write instead.
   zx_status_t write_error = ZX_OK;
@@ -97,10 +94,7 @@ struct Blob::WriteInfo {
   // The old blob that this write is replacing.
   fbl::RefPtr<Blob> old_blob;
 
-  // Sets the target_compression_size_ field.
-  void SetTargetCompressionSize(uint64_t size) {
-    target_compression_size_ = std::make_optional(size);
-  }
+  zx::vmo buffer;
 };
 
 zx_status_t Blob::VerifyNullBlob() const {
@@ -119,9 +113,8 @@ uint64_t Blob::SizeData() const {
   return 0;
 }
 
-Blob::Blob(Blobfs* bs, const digest::Digest& digest) : CacheNode(bs->vfs(), digest), blobfs_(bs) {
-  write_info_ = std::make_unique<WriteInfo>();
-}
+Blob::Blob(Blobfs* bs, const digest::Digest& digest)
+    : CacheNode(bs->vfs(), digest), blobfs_(bs), write_info_(std::make_unique<WriteInfo>()) {}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(bs->vfs(), digest::Digest(inode.merkle_root_hash)),
@@ -130,9 +123,7 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
       blob_size_(inode.blob_size),
-      block_count_(inode.block_count) {
-  write_info_ = std::make_unique<WriteInfo>();
-}
+      block_count_(inode.block_count) {}
 
 zx_status_t Blob::WriteNullBlob() {
   ZX_DEBUG_ASSERT(blob_size_ == 0);
@@ -150,7 +141,7 @@ zx_status_t Blob::WriteNullBlob() {
   transaction.Commit(*blobfs_->GetJournal(), {},
                      [blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
 
-  return MarkReadable(CompressionAlgorithm::kUncompressed);
+  return MarkReadable();
 }
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
@@ -162,15 +153,6 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   std::lock_guard lock(mutex_);
   if (state() != BlobState::kEmpty) {
     return ZX_ERR_BAD_STATE;
-  }
-
-  // Fail early if target_compression_size is set is not sane.
-  if (write_info_->target_compression_size_.has_value() &&
-      (write_info_->target_compression_size_.value() == 0 ||
-       (write_info_->target_compression_size_.value()) == std::numeric_limits<uint64_t>::max())) {
-    FX_LOGS(ERROR) << "Target compressed size is invalid: "
-                   << write_info_->target_compression_size_.value();
-    return ZX_ERR_INVALID_ARGS;
   }
 
   blob_size_ = size_data;
@@ -274,9 +256,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
 }
 
 bool Blob::IsDataLoaded() const {
-  // Data is served out of the paged_vmo() when paged and the unpaged_backing_data_ when not, so
-  // either indicates validity.
-  return paged_vmo().is_valid() || unpaged_backing_data_.is_valid();
+  // Data is served out of the paged_vmo().
+  return paged_vmo().is_valid();
 }
 
 zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
@@ -366,8 +347,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len,
     }
   } else {
     // In the uncompressed case, the backing vmo should have been set up to write into already.
-    ZX_ASSERT(unpaged_backing_data_.is_valid());
-    if (zx_status_t status = unpaged_backing_data_.write(data, offset, to_write); status != ZX_OK) {
+    ZX_ASSERT(write_info_->buffer.is_valid());
+    if (zx_status_t status = write_info_->buffer.write(data, offset, to_write); status != ZX_OK) {
       FX_LOGS(ERROR) << "VMO write failed: " << zx_status_get_string(status);
       return status;
     }
@@ -460,9 +441,9 @@ zx_status_t Blob::Commit() {
     }
   } else {
     // The data comes from the data buffer.
-    ZX_ASSERT(unpaged_backing_data_.is_valid());
+    ZX_ASSERT(write_info_->buffer.is_valid());
     uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
-    if (zx_status_t status = data_mapping.Map(unpaged_backing_data_, 0, block_aligned_size);
+    if (zx_status_t status = data_mapping.Map(write_info_->buffer, 0, block_aligned_size);
         status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to map blob VMO: " << zx_status_get_string(status);
       return status;
@@ -514,7 +495,7 @@ zx_status_t Blob::Commit() {
   // Discard things we don't need any more. This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
   data_mapping.Unmap();
-  unpaged_backing_data_.reset();
+  write_info_->buffer.reset();
 
   // FreePagedVmo() will return the reference that keeps this object alive on behalf of the paging
   // system so we can free it outside the lock. However, when a Blob is being written it can't be
@@ -560,7 +541,7 @@ zx_status_t Blob::Commit() {
 
   blobfs_->GetMetrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size,
                                            ticker.End(), generation_time);
-  return MarkReadable(compression_algorithm);
+  return MarkReadable();
 }
 
 zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
@@ -600,7 +581,7 @@ zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
       });
 }
 
-zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
+zx_status_t Blob::MarkReadable() {
   if (readable_event_.is_valid()) {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
@@ -799,7 +780,7 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
     return ZX_OK;
 
   uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
-  if (zx_status_t status = zx::vmo::create(block_aligned_size, 0, &unpaged_backing_data_);
+  if (zx_status_t status = zx::vmo::create(block_aligned_size, 0, &write_info_->buffer);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create data vmo: " << zx_status_get_string(status);
     return status;
@@ -905,7 +886,6 @@ void Blob::ActivateLowMemory() {
 
     pager_reference = FreePagedVmo();
 
-    unpaged_backing_data_.reset();
     loader_info_ = LoaderInfo();  // Release the verifiers and associated Merkle data.
   }
   // When the pager_reference goes out of scope here, it could delete |this|.
@@ -993,11 +973,6 @@ zx_status_t Blob::Truncate(size_t len) {
   return blobfs_->node_operations().truncate.Track([&] {
     return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
   });
-}
-
-void Blob::SetTargetCompressionSize(uint64_t size) {
-  std::lock_guard lock(mutex_);
-  write_info_.get()->SetTargetCompressionSize(size);
 }
 
 #ifdef __Fuchsia__
