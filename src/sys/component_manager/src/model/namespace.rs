@@ -308,6 +308,7 @@ impl IncomingNamespace {
                     OpenOptions::Storage(OpenStorageOptions {
                         flags,
                         open_mode: fio::MODE_TYPE_DIRECTORY,
+                        relative_path: ".".into(),
                         server_chan: &mut server_end,
                     }),
                 ),

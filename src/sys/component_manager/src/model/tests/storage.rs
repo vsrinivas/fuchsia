@@ -666,6 +666,7 @@ async fn use_restricted_storage_open_failure() {
         OpenOptions::Storage(OpenStorageOptions {
             flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_DIRECTORY,
+            relative_path: ".".into(),
             server_chan: &mut server_end,
         }),
     )
@@ -702,6 +703,7 @@ async fn use_restricted_storage_open_failure() {
         OpenOptions::Storage(OpenStorageOptions {
             flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_DIRECTORY,
+            relative_path: ".".into(),
             server_chan: &mut server_end,
         }),
     )
@@ -710,6 +712,123 @@ async fn use_restricted_storage_open_failure() {
         result,
         Err(ModelError::RoutingError { err: RoutingError::ComponentNotInIdIndex { moniker: _ } })
     ));
+}
+
+///   component manager's namespace
+///    |
+///   provider (provides storage capability, restricted to component ID index)
+///    |
+///   parent_consumer (in component ID index)
+///
+/// Test that a component can open a subdirectory of a storage successfully
+#[fuchsia::test]
+async fn open_storage_subdirectory() {
+    let parent_consumer_instance_id = Some(gen_instance_id(&mut rand::thread_rng()));
+    let component_id_index_path = make_index_file(component_id_index::Index {
+        instances: vec![component_id_index::InstanceIdEntry {
+            instance_id: parent_consumer_instance_id.clone(),
+            appmgr_moniker: None,
+            moniker: Some(AbsoluteMoniker::parse_str("/consumer").unwrap()),
+        }],
+        ..component_id_index::Index::default()
+    })
+    .unwrap();
+    let components = vec![
+        (
+            "provider",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .storage(StorageDecl {
+                    name: "cache".into(),
+                    backing_dir: "data".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    target: OfferTarget::static_child("consumer".to_string()),
+                    source_name: "cache".into(),
+                    target_name: "cache".into(),
+                    availability: Availability::Required,
+                }))
+                .add_lazy_child("consumer")
+                .build(),
+        ),
+        (
+            "consumer",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "cache".into(),
+                    target_path: "/storage".try_into().unwrap(),
+                    availability: Availability::Required,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("provider", components)
+        .set_component_id_index_path(component_id_index_path.path().to_str().unwrap().to_string())
+        .build()
+        .await;
+
+    let consumer_moniker = AbsoluteMoniker::parse_str("/consumer").unwrap();
+    let (consumer_instance, _) = test
+        .start_and_get_instance(&consumer_moniker, StartReason::Eager, false)
+        .await
+        .expect("could not resolve state");
+
+    // `consumer` should be able to open its storage at the root dir
+    let (root_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let mut server_end = server_end.into_channel();
+    route_and_open_capability(
+        RouteRequest::UseStorage(UseStorageDecl {
+            source_name: "cache".into(),
+            target_path: "/storage".try_into().unwrap(),
+            availability: cm_rust::Availability::Required,
+        }),
+        &consumer_instance,
+        OpenOptions::Storage(OpenStorageOptions {
+            flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            open_mode: fio::MODE_TYPE_DIRECTORY,
+            relative_path: ".".into(),
+            server_chan: &mut server_end,
+        }),
+    )
+    .await
+    .expect("Unable to route.  oh no!!");
+
+    // Create the subdirectories we will open later
+    let bar_dir = fuchsia_fs::create_sub_directories(&root_dir, &PathBuf::from("foo/bar")).unwrap();
+    let entries = fuchsia_fs::directory::readdir(&bar_dir).await.unwrap();
+    assert!(entries.is_empty());
+
+    // `consumer` should be able to open its storage at "foo/bar"
+    let (bar_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let mut server_end = server_end.into_channel();
+    route_and_open_capability(
+        RouteRequest::UseStorage(UseStorageDecl {
+            source_name: "cache".into(),
+            target_path: "/storage".try_into().unwrap(),
+            availability: cm_rust::Availability::Required,
+        }),
+        &consumer_instance,
+        OpenOptions::Storage(OpenStorageOptions {
+            flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            open_mode: fio::MODE_TYPE_DIRECTORY,
+            relative_path: "foo/bar".into(),
+            server_chan: &mut server_end,
+        }),
+    )
+    .await
+    .expect("Unable to route.  oh no!!");
+
+    let entries = fuchsia_fs::directory::readdir(&bar_dir).await.unwrap();
+    assert!(entries.is_empty());
 }
 
 ///   a

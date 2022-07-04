@@ -68,9 +68,12 @@ impl<'a> OpenOptions<'a> {
                 relative_path,
                 server_chan,
             })),
-            RouteRequest::UseStorage(_) => {
-                Ok(Self::Storage(OpenStorageOptions { flags, open_mode, server_chan }))
-            }
+            RouteRequest::UseStorage(_) => Ok(Self::Storage(OpenStorageOptions {
+                flags,
+                open_mode,
+                relative_path,
+                server_chan,
+            })),
             _ => Err(ModelError::unsupported("capability cannot be installed in a namespace")),
         }
     }
@@ -112,6 +115,7 @@ pub struct OpenServiceOptions<'a> {
 pub struct OpenStorageOptions<'a> {
     pub flags: fio::OpenFlags,
     pub open_mode: u32,
+    pub relative_path: String,
     pub server_chan: &'a mut zx::Channel,
 }
 

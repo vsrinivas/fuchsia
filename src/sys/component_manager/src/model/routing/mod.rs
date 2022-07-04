@@ -414,7 +414,13 @@ async fn open_storage_capability(
     let dir_source = source.storage_provider.clone();
     let relative_moniker_2 = relative_moniker.clone();
     match options {
-        OpenOptions::Storage(OpenStorageOptions { flags, open_mode, server_chan, .. }) => {
+        OpenOptions::Storage(OpenStorageOptions {
+            flags,
+            open_mode,
+            relative_path,
+            server_chan,
+            ..
+        }) => {
             let storage_dir_proxy = storage::open_isolated_storage(
                 source,
                 target.persistent_storage,
@@ -424,11 +430,17 @@ async fn open_storage_capability(
             .await
             .map_err(|e| ModelError::from(e))?;
 
-            // Open the storage with the provided flags, mode and server_chan.
-            // We don't clone the directory because we can't specify the mode that way.
+            // Open the storage with the provided flags, mode, relative_path and server_chan.
+            // We don't clone the directory because we can't specify the mode or path that way.
             let server_chan = channel::take_channel(server_chan);
-            storage_dir_proxy.open(flags, open_mode, ".", ServerEnd::new(server_chan)).map_err(
-                |e| {
+
+            // If there is no relative path, assume it is the current directory. We use "."
+            // because `fuchsia.io/Directory.Open` does not accept empty paths.
+            let relative_path = if relative_path.is_empty() { "." } else { &relative_path };
+
+            storage_dir_proxy
+                .open(flags, open_mode, relative_path, ServerEnd::new(server_chan))
+                .map_err(|e| {
                     let moniker = match &dir_source {
                         Some(r) => InstancedExtendedMoniker::ComponentInstance(
                             r.instanced_moniker().clone(),
@@ -441,8 +453,7 @@ async fn open_storage_capability(
                         "",
                         e,
                     ))
-                },
-            )?;
+                })?;
             return Ok(());
         }
         _ => unreachable!("expected OpenStorageOptions"),
