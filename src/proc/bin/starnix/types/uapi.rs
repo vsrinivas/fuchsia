@@ -110,6 +110,7 @@ pub const SIG_ERR: UserAddress = UserAddress::from(u64::MAX);
 pub const AF_UNSPEC: uapi::__kernel_sa_family_t = 0;
 pub const AF_UNIX: uapi::__kernel_sa_family_t = 1;
 pub const AF_INET: uapi::__kernel_sa_family_t = 2;
+pub const AF_NETLINK: uapi::__kernel_sa_family_t = 16;
 pub const AF_INET6: uapi::__kernel_sa_family_t = 10;
 pub const AF_VSOCK: uapi::__kernel_sa_family_t = 40;
 

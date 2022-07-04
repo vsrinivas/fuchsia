@@ -56,6 +56,9 @@ pub enum SocketDomain {
 
     /// An AF_INET socket (currently stubbed out)
     Inet,
+
+    /// An IF_NETLINK socket (currently stubbed out).
+    Netlink,
 }
 
 impl SocketDomain {
@@ -66,6 +69,7 @@ impl SocketDomain {
             // Conflate AF_INET and AF_INET6 while they are both stubbed
             AF_INET => Some(SocketDomain::Inet),
             AF_INET6 => Some(SocketDomain::Inet),
+            AF_NETLINK => Some(SocketDomain::Netlink),
 
             _ => None,
         }
@@ -122,6 +126,9 @@ pub enum SocketAddress {
 
     /// No address for Inet sockets while stubbed
     Inet(u32),
+
+    /// No address for netlink sockets while stubbed.
+    Netlink(u32),
 }
 
 pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
@@ -132,6 +139,7 @@ impl SocketAddress {
             SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
             SocketDomain::Vsock => SocketAddress::Vsock(0xffff),
             SocketDomain::Inet => SocketAddress::Inet(0),
+            SocketDomain::Netlink => SocketAddress::Netlink(0),
         }
     }
 
@@ -141,6 +149,7 @@ impl SocketAddress {
             SocketAddress::Unix(_) => domain == SocketDomain::Unix,
             SocketAddress::Vsock(_) => domain == SocketDomain::Vsock,
             SocketAddress::Inet(_) => domain == SocketDomain::Inet,
+            SocketAddress::Netlink(_) => domain == SocketDomain::Netlink,
         }
     }
 
@@ -168,6 +177,10 @@ impl SocketAddress {
             }
             SocketAddress::Inet(_) => {
                 not_implemented!("?", "SocketAddress::to_bytes is stubbed for Inet");
+                vec![]
+            }
+            SocketAddress::Netlink(_) => {
+                not_implemented!("?", "SocketAddress::to_bytes is stubbed for Netlink");
                 vec![]
             }
         }

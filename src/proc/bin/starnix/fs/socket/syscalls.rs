@@ -198,6 +198,9 @@ pub fn sys_bind(
         SocketAddress::Inet(_) => {
             socket.bind(SocketAddress::default_for_domain(SocketDomain::Inet))?
         }
+        SocketAddress::Netlink(_) => {
+            socket.bind(SocketAddress::default_for_domain(SocketDomain::Netlink))?
+        }
     }
 
     Ok(())
@@ -286,6 +289,7 @@ pub fn sys_connect(
         // Connect not available for AF_VSOCK
         SocketAddress::Vsock(_) => return error!(ENOSYS),
         SocketAddress::Inet(_) => return error!(ENOSYS),
+        SocketAddress::Netlink(_) => return error!(ENOSYS),
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
