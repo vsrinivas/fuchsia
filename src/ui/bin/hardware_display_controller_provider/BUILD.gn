@@ -39,12 +39,6 @@ fuchsia_package("fake-hardware-display-controller-provider") {
   ]
 }
 
-fuchsia_component("hardware-display-controller-provider-cmv1-component") {
-  manifest = "meta/real_hdcp.cmx"
-  component_name = "hdcp"
-  deps = [ "real:bin" ]
-}
-
 fuchsia_component("hardware-display-controller-provider-cmv2-component") {
   manifest = "meta/real_hdcp.cml"
   component_name = "hdcp"
@@ -52,8 +46,5 @@ fuchsia_component("hardware-display-controller-provider-cmv2-component") {
 }
 
 fuchsia_package("hardware-display-controller-provider") {
-  deps = [
-    ":hardware-display-controller-provider-cmv1-component",
-    ":hardware-display-controller-provider-cmv2-component",
-  ]
+  deps = [ ":hardware-display-controller-provider-cmv2-component" ]
 }
