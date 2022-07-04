@@ -239,8 +239,7 @@ pub fn sys_membarrier(
     flags: u32,
     cpu_id: i32,
 ) -> Result<u32, Errno> {
-    // Minimal implementation of membarrier that only handle queries, and return that it doesn't
-    // support any other command.
+    // TODO(fxbug.dev/103867): This membarrier implementation does not do any real work.
     not_implemented!(
         current_task,
         "membarrier: cmd: 0x{:x}, flags: 0x{:x}, cpu_id: 0x{:x}",
@@ -248,10 +247,10 @@ pub fn sys_membarrier(
         flags,
         cpu_id
     );
-    if cmd == uapi::membarrier_cmd_MEMBARRIER_CMD_QUERY {
-        Ok(0)
-    } else {
-        error!(EINVAL)
+    match cmd {
+        uapi::membarrier_cmd_MEMBARRIER_CMD_QUERY => Ok(0),
+        uapi::membarrier_cmd_MEMBARRIER_CMD_PRIVATE_EXPEDITED_RSEQ => Ok(0),
+        _ => error!(EINVAL),
     }
 }
 
