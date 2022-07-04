@@ -9,14 +9,12 @@ use {
     security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 
-const COMPONENT_MANAGER_URL: &str = "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/cm_for_test.cmx";
-const ROOT_URL: &str = "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/test_root.cm";
-const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
+const COMPONENT_MANAGER_URL: &str = "#meta/cm_for_test.cm";
+const ROOT_URL: &str = "#meta/test_root.cm";
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_restricted_capability_allowed() -> Result<(), Error> {
-    let (_test, realm, _event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (_test, realm, _event_stream) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let access_controller =
@@ -28,8 +26,7 @@ async fn verify_restricted_capability_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_restrited_capability_disallowed() -> Result<(), Error> {
-    let (_test, realm, _event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (_test, realm, _event_stream) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
     let child_name = "policy_denied";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let access_controller =
@@ -41,8 +38,7 @@ async fn verify_restrited_capability_disallowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_unrestricted_capability_allowed() -> Result<(), Error> {
-    let (_test, realm, _event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (_test, realm, _event_stream) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
     let child_name = "policy_not_violated";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let access_controller =

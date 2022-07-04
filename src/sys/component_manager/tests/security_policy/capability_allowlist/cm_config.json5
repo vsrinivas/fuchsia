@@ -1,36 +1,62 @@
 {
     debug: true,
+    maintain_utc_clock: false,
+    use_builtin_process_launcher: false,
+    num_threads: 2,
     security_policy: {
         capability_policy: [
             {
-                source_moniker: "/policy_service",
+                source_moniker: "/root/policy_service",
                 source: "component",
                 source_name: "test.policy.Restricted",
                 capability: "protocol",
-                target_monikers: ["/policy_allowed"]
+                target_monikers: [
+                    "/root/policy_allowed",
+                ],
             },
             {
-                source_moniker: "/dir_service",
+                source_moniker: "/root/dir_service",
                 source: "component",
                 source_name: "restricted",
                 capability: "directory",
-                target_monikers: ["/policy_allowed"]
-            }
-        ]
+                target_monikers: [
+                    "/root/policy_allowed",
+                ],
+            },
+        ],
     },
+    out_dir_contents: "hub",
+    namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
     builtin_capabilities: [
         {
             protocol: [
                 "fuchsia.sys2.CrashIntrospect",
                 "fuchsia.sys2.EventSource",
-                "fuchsia.sys2.SystemController",
-                "fuchsia.sys2.WorkSchedulerControl",
             ],
         },
         {
             runner: "elf",
         },
+        {
+            runner: "realm_builder",
+        },
+        {
+            resolver: "realm_builder_resolver",
+        },
+        {
+            event: "directory_ready",
+        },
     ],
     builtin_pkg_resolver: "appmgr_bridge",
-    out_dir_contents: "hub",
+    realm_builder_resolver_and_runner: "namespace",
+    log_all_events: true,
 }

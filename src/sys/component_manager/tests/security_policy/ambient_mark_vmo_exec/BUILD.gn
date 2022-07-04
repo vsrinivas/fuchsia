@@ -77,23 +77,14 @@ fuchsia_component("protected_ops_no_request") {
   manifest = "meta/protected_ops_no_request.cml"
 }
 
-# This test needs a slightly customized version of component_manager.cmx that includes
-# deprecated-ambient-replace-as-executable, so that the test ELF runner can actually grant the
-# job policy we're testing. The config file `cm_config` can only be loaded from the same package.
-fuchsia_component("cm_for_test") {
-  testonly = true
-  deps = [ "//src/sys/component_manager:bin" ]
-  manifest = "meta/cm_for_test.cmx"
-}
-
 fuchsia_unittest_package("security-policy-vmex-integration-test") {
-  manifest = "meta/security-policy-vmex-integration-test.cmx"
+  manifest = "meta/security-policy-vmex-integration-test.cml"
   deps = [
     ":cm_config",
-    ":cm_for_test",
     ":protected_ops",
     ":protected_ops_no_request",
     ":security_policy_vmex_integration_test_bin",
     ":test_root",
+    "//src/sys/component_manager/tests/security_policy:cm_for_test",
   ]
 }

@@ -13,17 +13,20 @@ use {
     security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 
-const COMPONENT_MANAGER_URL: &str = "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/component_manager.cmx";
-const ROOT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/test_root.cm";
-const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
+const COMPONENT_MANAGER_URL: &str = "#meta/cm_for_test.cm";
+const ROOT_URL: &str = "#meta/test_root.cm";
 
 const COMPONENT_MANAGER_DEATH_TIMEOUT: i64 = 5;
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
-    let (mut test, realm, _event) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
+
+    let event_source = EventSource::new().unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
+        .await
+        .context("failed to subscribe to EventSource")?;
 
     let child_name = "policy_not_requested";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -44,23 +47,30 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
     let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
         COMPONENT_MANAGER_DEATH_TIMEOUT,
     )));
-    match select(timer, test.component_manager_app.wait()).await {
-        Either::Left(((), _)) => return Ok(()),
-        Either::Right((Ok(exit_status), _)) => {
-            if exit_status.exited() {
-                panic!("unexpected termination of component_manager");
-            } else {
-                panic!("unexpected message on realm channel");
-            }
+
+    let moniker = format!("./realm_builder:{}/component_manager", test.root.child_name());
+
+    let wait_for_cm_exit = Box::pin(async move {
+        EventMatcher::ok().moniker(&moniker).wait::<Stopped>(&mut event_stream).await.unwrap();
+    });
+
+    match select(timer, wait_for_cm_exit).await {
+        Either::Left(_) => return Ok(()),
+        Either::Right(_) => {
+            panic!("unexpected exit of component manager")
         }
-        Either::Right((Err(e), _)) => return Err(e.into()),
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
-    let (mut test, realm, _event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
+
+    let event_source = EventSource::new().unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
+        .await
+        .context("failed to subscribe to EventSource")?;
 
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -83,23 +93,30 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
     let timer = fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
         COMPONENT_MANAGER_DEATH_TIMEOUT,
     )));
-    match select(timer, test.component_manager_app.wait()).await {
-        Either::Left(((), _)) => return Ok(()),
-        Either::Right((Ok(exit_status), _)) => {
-            if exit_status.exited() {
-                panic!("unexpected termination of component_manager");
-            } else {
-                panic!("unexpected message on realm channel");
-            }
+
+    let moniker = format!("./realm_builder:{}/component_manager", test.root.child_name());
+
+    let wait_for_cm_exit = Box::pin(async move {
+        EventMatcher::ok().moniker(&moniker).wait::<Stopped>(&mut event_stream).await.unwrap();
+    });
+
+    match select(timer, wait_for_cm_exit).await {
+        Either::Left(_) => return Ok(()),
+        Either::Right(_) => {
+            panic!("unexpected exit of component manager")
         }
-        Either::Right((Err(e), _)) => return Err(e.into()),
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_allowed() -> Result<(), Error> {
-    let (mut test, realm, _event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
+
+    let event_source = EventSource::new().unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
+        .await
+        .context("failed to subscribe to EventSource")?;
 
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -116,8 +133,9 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
         .context("failed to wait for exposed dir handle to become readable")?;
 
     // component_manager should be killed too as a result of the critical marking.
-    let exit_status = test.component_manager_app.wait().await?;
-    assert!(exit_status.exited(), "component_manager failed to exit: {:?}", exit_status.reason());
+    let moniker = format!("./realm_builder:{}/component_manager", test.root.child_name());
+
+    EventMatcher::ok().moniker(&moniker).wait::<Stopped>(&mut event_stream).await.unwrap();
 
     Ok(())
 }
@@ -125,7 +143,7 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_denied() -> Result<(), Error> {
     let (_test, realm, mut event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
 
     let child_name = "policy_denied";
     let exposed_dir =
@@ -133,7 +151,7 @@ async fn verify_main_process_critical_denied() -> Result<(), Error> {
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
         .context("failed to connect to fuchsia.component.Binder of child")?;
 
-    let mut matcher = EventMatcher::ok().moniker(format!("./{}", child_name));
+    let mut matcher = EventMatcher::ok().moniker(format!("./root/{}", child_name));
     matcher.expect_match::<Started>(&mut event_stream).await;
     matcher.expect_match::<Stopped>(&mut event_stream).await;
 

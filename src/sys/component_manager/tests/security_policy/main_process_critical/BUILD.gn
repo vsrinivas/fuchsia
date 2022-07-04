@@ -76,20 +76,14 @@ fuchsia_component("exit_on_command_no_request") {
   manifest = "meta/exit_on_command_no_request.cml"
 }
 
-fuchsia_component("component_manager") {
-  testonly = true
-  deps = [ "//src/sys/component_manager:bin" ]
-  manifest = "meta/cm_for_test.cmx"
-}
-
 fuchsia_unittest_package("security-policy-critical-integration-test") {
-  manifest = "meta/security-policy-critical-integration-test.cmx"
+  manifest = "meta/security-policy-critical-integration-test.cml"
   deps = [
     ":cm_config",
-    ":component_manager",
     ":exit_on_command",
     ":exit_on_command_no_request",
     ":security_policy_critical_integration_test_bin",
     ":test_root",
+    "//src/sys/component_manager/tests/security_policy:cm_for_test",
   ]
 }

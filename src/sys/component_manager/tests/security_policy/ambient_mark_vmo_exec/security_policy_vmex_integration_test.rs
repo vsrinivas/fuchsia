@@ -12,16 +12,12 @@ use {
     security_policy_test_util::{open_exposed_dir, start_policy_test},
 };
 
-const CM_URL: &str =
-    "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/cm_for_test.cmx";
-const ROOT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/test_root.cm";
-const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
+const CM_URL: &str = "#meta/cm_for_test.cm";
+const ROOT_URL: &str = "#meta/test_root.cm";
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {
-    let (_test, realm, _event_stream) =
-        start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (_test, realm, _event_stream) = start_policy_test(CM_URL, ROOT_URL).await?;
 
     let child_name = "policy_not_requested";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -38,9 +34,7 @@ async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
-    let (_test, realm, _event_stream) =
-        start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
-
+    let (_test, realm, _event_stream) = start_policy_test(CM_URL, ROOT_URL).await?;
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
     let ops =
@@ -64,8 +58,7 @@ async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_ambient_vmex_denied() -> Result<(), Error> {
-    let (_test, realm, mut event_stream) =
-        start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
+    let (_test, realm, mut event_stream) = start_policy_test(CM_URL, ROOT_URL).await?;
 
     // This security policy is enforced inside the ELF runner. The component will fail to launch
     // because of the denial, but the connection to fuchsia.component/Binder
@@ -77,7 +70,7 @@ async fn verify_ambient_vmex_denied() -> Result<(), Error> {
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
         .context("failed to connect to fuchsia.component.Binder of child")?;
 
-    let mut matcher = EventMatcher::ok().moniker(format!("./{}", child_name));
+    let mut matcher = EventMatcher::ok().moniker(format!("./root/{}", child_name));
     matcher.expect_match::<Started>(&mut event_stream).await;
     matcher.expect_match::<Stopped>(&mut event_stream).await;
 

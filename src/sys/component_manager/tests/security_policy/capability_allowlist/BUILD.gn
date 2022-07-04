@@ -91,12 +91,6 @@ component_config("cm_config") {
   sources = [ "cm_config.json5" ]
 }
 
-fuchsia_component("cm_for_test") {
-  testonly = true
-  deps = [ "//src/sys/component_manager:bin" ]
-  manifest = "meta/cm_for_test.cmx"
-}
-
 fuchsia_component("test_root") {
   testonly = true
   manifest = "meta/test_root.cml"
@@ -122,14 +116,14 @@ fuchsia_component("cap_getter") {
 
 fuchsia_unittest_package(
     "security-policy-capability-allowlist-integration-test") {
-  manifest = "meta/security-policy-capability-allowlist-integration-test.cmx"
+  manifest = "meta/security-policy-capability-allowlist-integration-test.cml"
   deps = [
     ":cap_getter",
     ":cm_config",
-    ":cm_for_test",
     ":dir_service",
     ":policy_service",
     ":security_policy_capability_allowlist_integration_test_bin",
     ":test_root",
+    "//src/sys/component_manager/tests/security_policy:cm_for_test",
   ]
 }
