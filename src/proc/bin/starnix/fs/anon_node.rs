@@ -9,7 +9,11 @@ use crate::types::*;
 pub struct Anon;
 
 impl FsNodeOps for Anon {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         error!(ENOSYS)
     }
 }

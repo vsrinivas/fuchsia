@@ -21,7 +21,11 @@ use crate::types::*;
 
 pub struct DmaBufNode {}
 impl FsNodeOps for DmaBufNode {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         DmaBufFile::new()
     }
 }

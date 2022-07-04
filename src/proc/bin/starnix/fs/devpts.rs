@@ -495,9 +495,9 @@ mod tests {
         flags: OpenFlags,
     ) -> Result<FileHandle, Errno> {
         let component = fs.root().component_lookup(task, name)?;
-        Ok(FileObject::new_anonymous(
+        Ok(FileObject::new(
             component.node.open(task, flags)?,
-            component.node.clone(),
+            NamespaceNode::new_anonymous(component.clone()),
             flags,
         ))
     }

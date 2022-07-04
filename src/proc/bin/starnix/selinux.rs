@@ -60,15 +60,15 @@ where
     F: Fn() -> Result<O, Errno>,
     O: FileOps,
 {
-    open: F,
+    create_file_ops: F,
 }
 impl<F, O> SeLinuxNode<F, O>
 where
     F: Fn() -> Result<O, Errno> + Send + Sync,
     O: FileOps + 'static,
 {
-    pub fn new(open: F) -> SeLinuxNode<F, O> {
-        Self { open }
+    pub fn new(create_file_ops: F) -> SeLinuxNode<F, O> {
+        Self { create_file_ops }
     }
 }
 impl<F, O> FsNodeOps for SeLinuxNode<F, O>
@@ -76,8 +76,12 @@ where
     F: Fn() -> Result<O, Errno> + Send + Sync + 'static,
     O: FileOps + 'static,
 {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new((self.open)()?))
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new((self.create_file_ops)()?))
     }
 
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {

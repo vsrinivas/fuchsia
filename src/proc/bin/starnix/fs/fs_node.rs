@@ -172,11 +172,11 @@ pub enum XattrOp {
 }
 
 pub trait FsNodeOps: Send + Sync + AsAny {
-    /// Open a FileObject for this node.
+    /// Build the `FileOps` for the file associated to this node.
     ///
     /// The returned FileOps will be used to create a FileObject, which might
     /// be assigned an FdNumber.
-    fn open(&self, node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno>;
+    fn create_file_ops(&self, node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno>;
 
     /// Find an existing child node and populate the child parameter. Return the node.
     ///
@@ -290,7 +290,7 @@ pub trait FsNodeOps: Send + Sync + AsAny {
 /// You must implement [`FsNodeOps::readlink`].
 macro_rules! fs_node_impl_symlink {
     () => {
-        fn open(
+        fn create_file_ops(
             &self,
             _node: &crate::fs::FsNode,
             _flags: crate::types::OpenFlags,
@@ -343,7 +343,11 @@ pub(crate) use fs_node_impl_xattr_delegate;
 pub struct SpecialNode;
 
 impl FsNodeOps for SpecialNode {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         unreachable!("Special nodes cannot be opened.");
     }
 }
@@ -406,11 +410,6 @@ impl FsNode {
 
     fn ops(&self) -> &dyn FsNodeOps {
         &*self.ops.as_ref()
-    }
-
-    /// Open a new anonymous FileHandle to the current node.
-    pub fn open_anonymous(self: &FsNodeHandle, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new_anonymous(self.ops().open(self, flags)?, self.clone(), flags))
     }
 
     /// Returns the `FsNode`'s `FsNodeOps` as a `&T`, or `None` if the downcast fails.
@@ -498,6 +497,10 @@ impl FsNode {
         }
     }
 
+    pub fn create_file_ops(&self, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        self.ops().create_file_ops(self, flags)
+    }
+
     pub fn open(
         &self,
         current_task: &CurrentTask,
@@ -530,7 +533,7 @@ impl FsNode {
             FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
             // UNIX domain sockets can't be opened.
             FileMode::IFSOCK => error!(ENXIO),
-            _ => self.ops().open(self, flags),
+            _ => self.create_file_ops(flags),
         }
     }
 

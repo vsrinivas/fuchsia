@@ -65,7 +65,11 @@ struct StaticDirectory {
 }
 
 impl FsNodeOps for Arc<StaticDirectory> {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(self.clone()))
     }
 
@@ -144,7 +148,11 @@ pub fn dynamic_directory<D: DirectoryDelegate>(fs: &Arc<FileSystem>, d: D) -> Ar
 struct DynamicDirectory<D>(D);
 
 impl<D: DirectoryDelegate> FsNodeOps for Arc<DynamicDirectory<D>> {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(self.clone()))
     }
 

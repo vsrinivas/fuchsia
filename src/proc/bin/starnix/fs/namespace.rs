@@ -319,8 +319,8 @@ impl NamespaceNode {
     /// Create a namespace node that is not mounted in a namespace.
     ///
     /// The returned node does not have a name.
-    pub fn new_anonymous(node: FsNodeHandle) -> Self {
-        Self { mount: None, entry: DirEntry::new(node, None, FsString::new()) }
+    pub fn new_anonymous(dir_entry: DirEntryHandle) -> Self {
+        Self { mount: None, entry: dir_entry }
     }
 
     /// Create a FileObject corresponding to this namespace node.

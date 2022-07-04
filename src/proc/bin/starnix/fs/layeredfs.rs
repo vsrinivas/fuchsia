@@ -40,11 +40,10 @@ pub struct LayeredFsRootNodeOps {
 impl FileSystemOps for Arc<LayeredFs> {}
 
 impl FsNodeOps for Arc<LayeredFs> {
-    fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        let root_node = &self.base_fs.root().node;
+    fn create_file_ops(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(LayeredFsRootNodeOps {
             fs: self.clone(),
-            root_file: root_node.open_anonymous(flags)?,
+            root_file: self.base_fs.root().open_anonymous(flags)?,
         }))
     }
 

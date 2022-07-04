@@ -14,7 +14,11 @@ use crate::types::*;
 // MS_RDONLY (at which point MemoryDirectory would be a better name for it).
 pub struct ROMemoryDirectory;
 impl FsNodeOps for ROMemoryDirectory {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(MemoryDirectoryFile::new()))
     }
 

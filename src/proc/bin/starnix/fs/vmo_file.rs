@@ -37,7 +37,11 @@ impl VmoFileNode {
 impl FsNodeOps for VmoFileNode {
     fs_node_impl_xattr_delegate!(self, self.xattrs);
 
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
     }
 

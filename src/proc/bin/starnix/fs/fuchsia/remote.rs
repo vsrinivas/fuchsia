@@ -134,7 +134,7 @@ fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
 }
 
 impl FsNodeOps for RemoteNode {
-    fn open(&self, node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(&self, node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         let zxio = (&*self.zxio).clone().map_err(|status| from_status_like_fdio!(status))?;
         if node.is_dir() {
             return Ok(Box::new(RemoteDirectoryObject::new(zxio)));

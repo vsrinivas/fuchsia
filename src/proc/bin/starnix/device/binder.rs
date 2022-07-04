@@ -2581,7 +2581,7 @@ pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fs::FdFlags;
+    use crate::fs::{DirEntry, FdFlags};
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
@@ -4817,7 +4817,9 @@ mod tests {
                 VMO_LENGTH,
                 zx::VmarFlags::PERM_READ,
                 MappingOptions::empty(),
-                NamespaceNode::new_anonymous(Arc::new(FsNode::new_root(PlaceholderFsNodeOps))),
+                NamespaceNode::new_anonymous(DirEntry::new_unrooted(Arc::new(FsNode::new_root(
+                    PlaceholderFsNodeOps,
+                )))),
             )
             .expect("mmap");
     }

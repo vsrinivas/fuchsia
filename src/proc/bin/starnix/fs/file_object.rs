@@ -553,13 +553,18 @@ pub type FileHandle = Arc<FileObject>;
 impl FileObject {
     /// Create a FileObject that is not mounted in a namespace.
     ///
+    /// In particular, this will create a new unrooted entries. This should not be used on
+    /// file system with persistent entries, as the created entry will be out of sync with the one
+    /// from the file system.
+    ///
     /// The returned FileObject does not have a name.
     pub fn new_anonymous(
         ops: Box<dyn FileOps>,
         node: FsNodeHandle,
         flags: OpenFlags,
     ) -> FileHandle {
-        Self::new(ops, NamespaceNode::new_anonymous(node), flags)
+        assert!(!node.fs().permanent_entries);
+        Self::new(ops, NamespaceNode::new_anonymous(DirEntry::new_unrooted(node)), flags)
     }
 
     /// Create a FileObject with an associated NamespaceNode.

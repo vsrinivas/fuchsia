@@ -23,7 +23,7 @@ pub struct FileSystem {
     /// cache of the backing storage. An example is tmpfs: the DirEntry tree *is* the backing
     /// storage, as opposed to ext4, which uses the DirEntry tree as a cache and removes unused
     /// nodes from it.
-    permanent_entries: bool,
+    pub permanent_entries: bool,
 
     /// A file-system global mutex to serialize rename operations.
     ///

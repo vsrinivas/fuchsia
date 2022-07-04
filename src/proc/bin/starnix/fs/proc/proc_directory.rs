@@ -51,7 +51,11 @@ impl ProcDirectory {
 }
 
 impl FsNodeOps for Arc<ProcDirectory> {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(self.clone()))
     }
 

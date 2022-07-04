@@ -84,6 +84,20 @@ impl DirEntry {
         })
     }
 
+    /// Returns a new DirEntry for the given `node` without parent. The entry has no local name.
+    pub fn new_unrooted(node: FsNodeHandle) -> DirEntryHandle {
+        Self::new(node, None, FsString::new())
+    }
+
+    /// Returns a file handle to this entry, associated with an anonymous namespace.
+    pub fn open_anonymous(self: &DirEntryHandle, flags: OpenFlags) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new(
+            self.node.create_file_ops(flags)?,
+            NamespaceNode::new_anonymous(self.clone()),
+            flags,
+        ))
+    }
+
     /// Register that a filesystem is mounted on the directory.
     pub fn register_mount(&self) {
         self.state.write().mount_count += 1;

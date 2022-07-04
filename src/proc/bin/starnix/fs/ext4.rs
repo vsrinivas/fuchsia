@@ -63,7 +63,11 @@ struct ExtDirectory {
 }
 
 impl FsNodeOps for ExtDirectory {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(ExtDirFileObject { inner: self.inner.clone() }))
     }
 
@@ -119,7 +123,11 @@ impl ExtFile {
 }
 
 impl FsNodeOps for ExtFile {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         let vmo = self.vmo.get_or_try_init(|| {
             let bytes =
                 self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;

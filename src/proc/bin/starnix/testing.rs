@@ -198,7 +198,11 @@ pub fn check_unmapped(current_task: &CurrentTask, addr: UserAddress) {
 pub struct PlaceholderFsNodeOps;
 
 impl FsNodeOps for PlaceholderFsNodeOps {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         panic!("should not be called")
     }
 }
