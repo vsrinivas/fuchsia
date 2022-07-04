@@ -56,6 +56,16 @@ pub struct Credentials {
 
     /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
     ///
+    /// > This is a set of capabilities that are preserved across an execve(2) of a program that is
+    /// > not privileged.  The ambient capability set obeys the invariant that no capability can
+    /// > ever be ambient if it is not both permitted and inheritable.
+    ///
+    /// > Executing a program that changes UID or GID due to the set-user-ID or set-group-ID bits
+    /// > or executing a program that has any file capabilities set will clear the ambient set.
+    pub cap_ambient: Capabilities,
+
+    /// From https://man7.org/linux/man-pages/man7/capabilities.7.html
+    ///
     /// > Starting with kernel 2.6.26, and with a kernel in which file capabilities are enabled,
     /// > Linux implements a set of per-thread securebits flags that can be used to disable special
     /// > handling of capabilities for UID 0 (root).
@@ -110,6 +120,7 @@ impl Credentials {
             cap_effective: caps,
             cap_inheritable: caps,
             cap_bounding: Capabilities::all(),
+            cap_ambient: Capabilities::empty(),
             securebits: SecureBits::empty(),
         }
     }
@@ -158,8 +169,18 @@ impl Credentials {
     }
 
     pub fn exec(&mut self) {
-        self.cap_permitted = self.cap_inheritable;
+        // > Ambient capabilities are added to the permitted set and assigned to the effective set
+        // > when execve(2) is called.
+        // https://man7.org/linux/man-pages/man7/capabilities.7.html
+
+        // TODO(security): This should take file capabilities into account.
+        // (inheritable & file.inheritable) | (file.permitted & bounding) | ambient
+        self.cap_permitted = self.cap_inheritable | self.cap_ambient;
+
+        // TODO(security): This should take file capabilities into account.
+        // if file.effective { permitted | ambient } else { 0 }
         self.cap_effective = self.cap_permitted;
+
         self.securebits.remove(SecureBits::KEEP_CAPS);
     }
 }

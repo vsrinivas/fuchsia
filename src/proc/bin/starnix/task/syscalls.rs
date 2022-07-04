@@ -468,8 +468,6 @@ pub fn sys_prctl(
             Ok(().into())
         }
         PR_CAPBSET_READ => {
-            // TODO(security): We don't currently validate capabilities, but this should return an
-            // error if the checked capability is invalid.
             let has_cap =
                 current_task.read().creds.cap_bounding.contains(Capabilities::try_from(arg2)?);
             Ok(has_cap.into())
@@ -481,6 +479,52 @@ pub fn sys_prctl(
 
             current_task.write().creds.cap_bounding.remove(Capabilities::try_from(arg2)?);
             Ok(().into())
+        }
+        PR_CAP_AMBIENT => {
+            let operation = arg2 as u32;
+            let capability_arg = Capabilities::try_from(arg3)?;
+            if arg4 != 0 || arg5 != 0 {
+                return error!(EINVAL);
+            }
+
+            // TODO(security): We don't currently validate capabilities, but this should return an
+            // error if the capability_arg is invalid.
+            match operation {
+                PR_CAP_AMBIENT_RAISE => {
+                    let mut task_state = current_task.write();
+                    let credentials = &mut task_state.creds;
+                    if !(credentials.cap_permitted.contains(capability_arg)
+                        && credentials.cap_inheritable.contains(capability_arg))
+                    {
+                        return error!(EPERM);
+                    }
+                    if credentials.securebits.contains(SecureBits::NO_CAP_AMBIENT_RAISE)
+                        || credentials.securebits.contains(SecureBits::NO_CAP_AMBIENT_RAISE_LOCKED)
+                    {
+                        return error!(EPERM);
+                    }
+
+                    credentials.cap_ambient.insert(capability_arg);
+                    Ok(().into())
+                }
+                PR_CAP_AMBIENT_LOWER => {
+                    current_task.write().creds.cap_ambient.remove(capability_arg);
+                    Ok(().into())
+                }
+                PR_CAP_AMBIENT_IS_SET => {
+                    let has_cap = current_task.read().creds.cap_ambient.contains(capability_arg);
+                    Ok(has_cap.into())
+                }
+                PR_CAP_AMBIENT_CLEAR_ALL => {
+                    if arg3 != 0 {
+                        return error!(EINVAL);
+                    }
+
+                    current_task.write().creds.cap_ambient = Capabilities::empty();
+                    Ok(().into())
+                }
+                _ => error!(EINVAL),
+            }
         }
         _ => {
             not_implemented!(current_task, "prctl: Unknown option: 0x{:x}", option);
