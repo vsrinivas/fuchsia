@@ -10,16 +10,32 @@
 ##########################################
 
 import("//build/sdk/sdk_host_tool.gni")
+import("//build/testing/host_test.gni")
+
+source_set("blobfs_creator") {
+  visibility = [ "./*" ]
+  sources = [
+    "blobfs_creator.cc",
+    "blobfs_creator.h",
+  ]
+  public_deps = [
+    "//src/lib/digest",
+    "//src/storage/blobfs",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fs-host",
+  ]
+  deps = [
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/bitmap",
+  ]
+}
 
 executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/lib/fit",
-    "//src/lib/digest",
+    ":blobfs_creator",
     "//src/storage/blobfs",
-    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fs-host",
   ]
 
   if (!is_fuchsia) {
@@ -47,4 +63,31 @@ sdk_host_tool("blobfs_sdk") {
   output_name = "blobfs"
   sdk_name = "blobfs_do_not_depend"
   deps = [ ":blobfs" ]
+}
+
+if (is_host) {
+  executable("compressed_export_test_bin") {
+    testonly = true
+    sources = [ "compressed_export_test.cc" ]
+    deps = [
+      ":blobfs_creator",
+      "//src/lib/chunked-compression",
+      "//src/lib/fxl/test:gtest_main",
+      "//src/lib/json_parser",
+      "//third_party/googletest:gtest",
+      "//third_party/rapidjson",
+      "//zircon/system/ulib/fbl",
+    ]
+  }
+
+  host_test("compressed_export_test") {
+    binary_path = "$root_out_dir/compressed_export_test_bin"
+
+    deps = [ ":compressed_export_test_bin" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":compressed_export_test($host_toolchain)" ]
 }

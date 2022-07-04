@@ -14,6 +14,8 @@
 
 namespace blobfs {
 
+constexpr const char kChunkedFileExtension[] = "zstd_chunked";
+
 // Unique identifiers for each |Compressor|/|Decompressor| strategy.
 enum class CompressionAlgorithm {
   kUncompressed = 0,

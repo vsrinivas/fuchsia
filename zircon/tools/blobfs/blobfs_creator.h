@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_BLOBFS_BLOBFS_H_
-#define ZIRCON_TOOLS_BLOBFS_BLOBFS_H_
+#ifndef ZIRCON_TOOLS_BLOBFS_BLOBFS_CREATOR_H_
+#define ZIRCON_TOOLS_BLOBFS_BLOBFS_CREATOR_H_
 
 #include <lib/fit/defer.h>
 
+#include <map>
 #include <vector>
 
 #include <fbl/array.h>
@@ -34,6 +35,9 @@ class BlobfsCreator : public FsCreator {
   zx_status_t ProcessManifestLine(FILE* manifest, const char* dir_path) override;
   zx_status_t ProcessCustom(int argc, char** argv, uint8_t* processed) override;
 
+  // Generate BlobInfo for a given blob path.
+  zx::status<blobfs::BlobInfo> ProcessBlobToBlobInfo(const std::filesystem::path& path);
+
   // Calculates merkle trees for the processed blobs, and determines
   // the total size of the underlying storage necessary to contain them.
   zx_status_t CalculateRequiredSize(off_t* out) override;
@@ -46,24 +50,24 @@ class BlobfsCreator : public FsCreator {
   zx_status_t UsedSize() override;
   zx_status_t Add() override;
 
-  // A comparison function used to quickly compare BlobInfo.
-  struct DigestCompare {
-    inline bool operator()(const blobfs::BlobInfo& lhs, const blobfs::BlobInfo& rhs) const {
-      return lhs.GetDigest() < rhs.GetDigest();
-    }
-  };
-
   // List of all blobs to be copied into blobfs.
   std::vector<std::filesystem::path> blob_list_;
 
+  // Guard for synchronizing the multithreaded file and compression operations.
+  std::mutex blob_info_lock_;
+
   // A list of Blob Information for blobs in |blob_list_|.
-  std::vector<blobfs::BlobInfo> blob_info_list_;
+  std::map<digest::Digest, blobfs::BlobInfo> blob_info_list_ __TA_GUARDED(blob_info_lock_);
 
   // The format blobfs should use to store blobs.
   blobfs::BlobLayoutFormat blob_layout_format_ = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+
+  // When adding blobs, will generate a compressed version of the blob in the internal format at the
+  // specified prefix.
+  std::string compressed_copy_prefix_;
 
   // The number of inodes required in the resultant blobfs image.
   uint64_t required_inodes_ = 0;
 };
 
-#endif  // ZIRCON_TOOLS_BLOBFS_BLOBFS_H_
+#endif  // ZIRCON_TOOLS_BLOBFS_BLOBFS_CREATOR_H_

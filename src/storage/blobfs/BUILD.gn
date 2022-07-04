@@ -30,7 +30,7 @@ static_library("blobfs") {
     "//zircon/system/ulib/fvm-host",
     "//zircon/system/utest/blobfs-bench",
     "//zircon/system/utest/fvm",
-    "//zircon/tools/blobfs",
+    "//zircon/tools/blobfs:*",
   ]
   public = [
     "blob_layout.h",
