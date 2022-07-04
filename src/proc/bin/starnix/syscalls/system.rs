@@ -170,6 +170,12 @@ pub fn sys_time(
     Ok(time)
 }
 
+pub fn sys_sched_yield(_current_task: &CurrentTask) -> Result<(), Errno> {
+    // SAFEFTY: This is unsafe because it is a syscall. zx_thread_legacy_yield is always safe.
+    let status = unsafe { zx::sys::zx_thread_legacy_yield(0) };
+    zx::Status::ok(status).map_err(|status| from_status_like_fdio!(status))
+}
+
 pub fn sys_unknown(ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN process: {:?}, syscall({}): {}", ctx, syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
