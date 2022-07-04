@@ -89,8 +89,8 @@ impl FileOps for LayeredFsRootNodeOps {
 
         struct DirentSinkWrapper<'a> {
             sink: &'a mut dyn DirentSink,
+            mappings: &'a BTreeMap<FsString, FileSystemHandle>,
             offset: &'a mut off_t,
-            mappings_count: off_t,
         }
 
         impl<'a> DirentSink for DirentSinkWrapper<'a> {
@@ -101,7 +101,14 @@ impl FileOps for LayeredFsRootNodeOps {
                 entry_type: DirectoryEntryType,
                 name: &FsStr,
             ) -> Result<(), Errno> {
-                self.sink.add(inode_num, offset + self.mappings_count, entry_type, name)?;
+                if !self.mappings.contains_key(name) {
+                    self.sink.add(
+                        inode_num,
+                        offset + (self.mappings.len() as off_t),
+                        entry_type,
+                        name,
+                    )?;
+                }
                 *self.offset = offset;
                 Ok(())
             }
@@ -114,12 +121,75 @@ impl FileOps for LayeredFsRootNodeOps {
         }
 
         let mut root_file_offset = self.root_file.offset.lock();
-        let mut wrapper = DirentSinkWrapper {
-            sink,
-            offset: &mut root_file_offset,
-            mappings_count: self.fs.mappings.len() as off_t,
-        };
+        let mut wrapper =
+            DirentSinkWrapper { sink, mappings: &self.fs.mappings, offset: &mut root_file_offset };
 
         self.root_file.readdir(current_task, &mut wrapper)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::fs::tmpfs::TmpFs;
+    use crate::testing::*;
+
+    fn get_root_entry_names(current_task: &CurrentTask, fs: &FileSystem) -> Vec<Vec<u8>> {
+        struct DirentNameCapturer {
+            pub names: Vec<Vec<u8>>,
+            offset: off_t,
+        }
+        impl DirentSink for DirentNameCapturer {
+            fn add(
+                &mut self,
+                _inode_num: ino_t,
+                offset: off_t,
+                _entry_type: DirectoryEntryType,
+                name: &FsStr,
+            ) -> Result<(), Errno> {
+                self.names.push(name.to_vec());
+                self.offset = offset;
+                Ok(())
+            }
+            fn offset(&self) -> off_t {
+                self.offset
+            }
+            fn actual(&self) -> usize {
+                self.offset as usize
+            }
+        }
+        let mut sink = DirentNameCapturer { names: vec![], offset: 0 };
+        fs.root()
+            .open_anonymous(OpenFlags::RDONLY)
+            .expect("open")
+            .readdir(current_task, &mut sink)
+            .expect("readdir");
+        std::mem::take(&mut sink.names)
+    }
+
+    #[::fuchsia::test]
+    fn test_remove_duplicates() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let base = TmpFs::new();
+        base.root().create_dir(b"d1").expect("create_dir");
+        base.root().create_dir(b"d2").expect("create_dir");
+        let base_entries = get_root_entry_names(&current_task, &base);
+        assert_eq!(base_entries.len(), 4);
+        assert!(base_entries.contains(&b".".to_vec()));
+        assert!(base_entries.contains(&b"..".to_vec()));
+        assert!(base_entries.contains(&b"d1".to_vec()));
+        assert!(base_entries.contains(&b"d2".to_vec()));
+
+        let layered_fs = LayeredFs::new(
+            base,
+            BTreeMap::from([(b"d1".to_vec(), TmpFs::new()), (b"d3".to_vec(), TmpFs::new())]),
+        );
+        let layered_fs_entries = get_root_entry_names(&current_task, &layered_fs);
+        assert_eq!(layered_fs_entries.len(), 5);
+        assert!(layered_fs_entries.contains(&b".".to_vec()));
+        assert!(layered_fs_entries.contains(&b"..".to_vec()));
+        assert!(layered_fs_entries.contains(&b"d1".to_vec()));
+        assert!(layered_fs_entries.contains(&b"d2".to_vec()));
+        assert!(layered_fs_entries.contains(&b"d3".to_vec()));
     }
 }
