@@ -732,8 +732,12 @@ impl RealmBuilder {
         Ok(RealmInstance { root, local_component_runner_task: Some(local_component_runner_task) })
     }
 
-    /// Launches a nested component manager which will run the created realm (along with any local
-    /// components in the realm). This component manager _must_ be referenced by a relative URL.
+    /// Initializes the created realm under an instance of component manager, specified by the
+    /// given relative URL. Returns the realm containing component manager.
+    ///
+    /// This function should be used to modify the component manager realm. Otherwise, to directly
+    /// build the created realm under an instance of component manager, use
+    /// `build_in_nested_component_manager()`.
     ///
     /// Note that any routes with a source of `parent` in the root realm will need to also be used
     /// in component manager's manifest and listed as a namespace capability in its config.
@@ -741,15 +745,15 @@ impl RealmBuilder {
     /// Note that any routes with a target of `parent` from the root realm will result in exposing
     /// the capability to component manager, which is rather useless by itself. Component manager
     /// does expose the hub though, which could be traversed to find an exposed capability.
-    pub async fn build_in_nested_component_manager(
+    pub async fn with_nested_component_manager(
         self,
         component_manager_relative_url: &str,
-    ) -> Result<RealmInstance, Error> {
+    ) -> Result<(RealmBuilder, fasync::Task<()>), Error> {
         if *self.root_realm.has_legacy_children.lock().await {
             return Err(Error::LegacyChildrenUnsupportedInNestedComponentManager);
         }
         let collection_name = self.collection_name.clone();
-        let (root_url, local_component_runner_task) = self.initialize().await?;
+        let (root_url, nested_local_component_runner_task) = self.initialize().await?;
 
         // We now have a root URL we could create in a collection, but instead we want to launch a
         // component manager and give that component manager this root URL. That flag is set with
@@ -763,7 +767,7 @@ impl RealmBuilder {
         // Note this presumes that component manager is pointed to a config with the following line:
         //
         //     realm_builder_resolver_and_runner: "namespace",
-        let component_manager_realm = RealmBuilder::new().await?;
+        let component_manager_realm = RealmBuilder::new_with_collection(collection_name).await?;
         component_manager_realm
             .add_child(
                 "component_manager",
@@ -820,13 +824,31 @@ impl RealmBuilder {
                     .to(Ref::parent()),
             )
             .await?;
+        Ok((component_manager_realm, nested_local_component_runner_task))
+    }
 
-        let (component_manager_url, _) = component_manager_realm.initialize().await?;
-        let root = ScopedInstance::new(collection_name, component_manager_url)
-            .await
-            .map_err(Error::FailedToCreateChild)?;
-        root.connect_to_binder().map_err(Error::FailedToBind)?;
-        Ok(RealmInstance { root, local_component_runner_task: Some(local_component_runner_task) })
+    /// Launches a nested component manager which will run the created realm (along with any local
+    /// components in the realm). This component manager _must_ be referenced by a relative URL.
+    ///
+    /// Note that any routes with a source of `parent` in the root realm will need to also be used
+    /// in component manager's manifest and listed as a namespace capability in its config.
+    ///
+    /// Note that any routes with a target of `parent` from the root realm will result in exposing
+    /// the capability to component manager, which is rather useless by itself. Component manager
+    /// does expose the hub though, which could be traversed to find an exposed capability.
+    pub async fn build_in_nested_component_manager(
+        self,
+        component_manager_relative_url: &str,
+    ) -> Result<RealmInstance, Error> {
+        let (component_manager_realm, nested_local_component_runner_task) =
+            self.with_nested_component_manager(component_manager_relative_url).await?;
+        let mut cm_instance = component_manager_realm.build().await?;
+
+        // There are no local components alongside the nested component manager.
+        // Replace that task with task of the nested local components.
+        cm_instance.local_component_runner_task.replace(nested_local_component_runner_task);
+
+        Ok(cm_instance)
     }
 
     // Note: the RealmBuilder functions below this line all forward to the implementations in

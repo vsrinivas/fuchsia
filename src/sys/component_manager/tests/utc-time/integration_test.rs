@@ -9,8 +9,10 @@ use component_events::{
 };
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon as zx;
-use test_utils_lib::opaque_test::OpaqueTestBuilder;
+use fidl_fuchsia_sys2 as fsys;
+use fuchsia_component::server::ServiceFs;
+use fuchsia_component_test::*;
+use futures::{future::BoxFuture, FutureExt, StreamExt};
 use tracing::*;
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_static,
@@ -20,8 +22,9 @@ use vfs::{
 // This value must be kept consistent with the value in maintainer.rs
 const EXPECTED_BACKSTOP_TIME_SEC_STR: &str = "1589910459";
 
-#[fuchsia::test(logging_minimum_severity = "warn")]
-async fn builtin_time_service_and_clock_routed() {
+fn mock_boot_handles(
+    handles: LocalComponentHandles,
+) -> BoxFuture<'static, Result<(), anyhow::Error>> {
     // Construct a pseudo-directory to mock the component manager's configured
     // backstop time.
     let dir = pseudo_directory! {
@@ -33,7 +36,9 @@ async fn builtin_time_service_and_clock_routed() {
         },
     };
 
-    let (client, server) = zx::Channel::create().expect("failed to create channel pair");
+    let (client, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let server = server.into_channel();
+
     let scope = ExecutionScope::new();
     dir.open(
         scope,
@@ -42,30 +47,74 @@ async fn builtin_time_service_and_clock_routed() {
         vfs::path::Path::dot(),
         ServerEnd::new(server),
     );
+    async move {
+        let mut fs = ServiceFs::new();
+        fs.add_remote("boot", client);
+        fs.serve_connection(handles.outgoing_dir.into_channel()).expect("serve mock ServiceFs");
+        fs.collect::<()>().await;
+        Ok(())
+    }
+    .boxed()
+}
 
-    // Start a component_manager as a v1 component, with the extra `--maintain-utc-clock` flag.
-    debug!("starting component_manager");
-    let test = OpaqueTestBuilder::new("fuchsia-pkg://fuchsia.com/utc-time-tests#meta/realm.cm")
-        .component_manager_url(
-            "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/component_manager.cmx",
+#[fuchsia::test(logging_minimum_severity = "warn")]
+async fn builtin_time_service_and_clock_routed() {
+    // Define the realm inside component manager.
+    let builder = RealmBuilder::new().await.unwrap();
+    let realm =
+        builder.add_child("realm", "#meta/realm.cm", ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&realm),
         )
-        .config("/pkg/data/cm_config")
-        .add_dir_handle("/boot", client.into())
-        .build()
         .await
-        .expect("failed to start the OpaqueTest");
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.time.Maintenance"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
+        .await
+        .unwrap();
 
-    let event_source = test
-        .connect_to_event_source()
+    let (component_manager_realm, _task) =
+        builder.with_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+
+    // Define a mock component that serves the `/boot` directory to component manager
+    let mock_boot = component_manager_realm
+        .add_local_child("mock_boot", mock_boot_handles, ChildOptions::new())
         .await
-        .expect("failed to connect to the EventSource protocol");
+        .unwrap();
+    component_manager_realm
+        .add_route(
+            Route::new()
+                .capability(
+                    Capability::directory("boot").path("/boot").rights(fio::Operations::all()),
+                )
+                .from(&mock_boot)
+                .to(Ref::child("component_manager")),
+        )
+        .await
+        .unwrap();
+
+    let instance = component_manager_realm.build().await.unwrap();
+
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
 
     let event_stream =
         event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     // Unblock the component_manager.
     debug!("starting component tree");
-    test.start_component_tree().await.unwrap();
+    instance.start_component_tree().await.unwrap();
 
     // Wait for both components to exit cleanly.
     // The child components do several assertions on UTC time properties.
@@ -73,8 +122,12 @@ async fn builtin_time_service_and_clock_routed() {
     EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().stop(Some(ExitStatusMatcher::Clean)).moniker("./time_client"),
-                EventMatcher::ok().stop(Some(ExitStatusMatcher::Clean)).moniker("./maintainer"),
+                EventMatcher::ok()
+                    .stop(Some(ExitStatusMatcher::Clean))
+                    .moniker("./realm/time_client"),
+                EventMatcher::ok()
+                    .stop(Some(ExitStatusMatcher::Clean))
+                    .moniker("./realm/maintainer"),
             ],
             Ordering::Unordered,
         )
