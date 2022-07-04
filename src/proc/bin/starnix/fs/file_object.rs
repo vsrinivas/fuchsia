@@ -201,11 +201,11 @@ pub trait FileOps: Send + Sync + AsAny {
     fn fcntl(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _cmd: u32,
-        _arg: u64,
+        current_task: &CurrentTask,
+        cmd: u32,
+        arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        error!(EINVAL)
+        default_fcntl(current_task, cmd, arg)
     }
 }
 
@@ -429,6 +429,15 @@ pub(crate) use fileops_impl_seekless;
 pub fn default_ioctl(current_task: &CurrentTask, request: u32) -> Result<SyscallResult, Errno> {
     not_implemented!(current_task, "ioctl: request=0x{:x}", request);
     error!(ENOTTY)
+}
+
+pub fn default_fcntl(
+    current_task: &CurrentTask,
+    cmd: u32,
+    _arg: u64,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!(current_task, "fcntl: command={} not implemented", cmd);
+    error!(EINVAL)
 }
 
 pub struct OPathOps {}

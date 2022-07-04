@@ -190,18 +190,18 @@ impl FileOps for VmoFileObject {
         VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)
     }
 
-    fn ioctl(
+    fn fcntl(
         &self,
         _file: &FileObject,
         current_task: &CurrentTask,
-        request: u32,
-        _user_addr: UserAddress,
+        cmd: u32,
+        arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        // Fake SEAL ioctl
-        // TODO(fxb/103801): Implements the operation.
-        match request {
+        match cmd {
+            // Fake SEAL ioctl
+            // TODO(fxb/103801): Implements the operation.
             F_ADD_SEALS | F_GET_SEALS => Ok(SUCCESS),
-            _ => default_ioctl(current_task, request),
+            _ => default_fcntl(current_task, cmd, arg),
         }
     }
 }
