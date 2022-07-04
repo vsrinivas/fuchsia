@@ -48,19 +48,9 @@ rustc_binary("display_png") {
   sources = [ "display-png.rs" ]
 }
 
-fuchsia_package_with_single_component("display-detect") {
-  manifest = "meta/display-detect.cmx"
-  deps = [ ":display_detect" ]
-}
-
-fuchsia_package_with_single_component("display-png") {
-  manifest = "meta/display-png.cmx"
-  deps = [ ":display_png" ]
-}
-
-group("display-factory-test") {
+fuchsia_shell_package("display-factory-test") {
   deps = [
-    ":display-detect",
-    ":display-png",
+    ":display_detect",
+    ":display_png",
   ]
 }

@@ -22,19 +22,17 @@
 
 ## About files
 
-Since `display_png` is a [sandboxed binary](https://fuchsia.dev/fuchsia-src/concepts/framework/sandboxing?hl=en), its view of the file system differs from that of the Fuchsia console.
+`display_png` reads files from the target device's file system.
+You will need to copy a file to the target as follows:
 
-In the [manifest for `display_png`](https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests) the `isolated-persistent-storage` feature is enabled, so one can copy a file into the isolated persistent storage of display_png as follows:
+    fx cp [host image path] "[target image path]"
 
-    fx cp [host image path] "/data/r/sys/fuchsia.com:display-png:0#meta:display-png.cmx/"
-
-Note that display-png has to be run at least once before the isolated persistent storage is visible to `fx cp`.
-
-Also note that the quoting of the target path is needed for zsh but might not be needed for your shell.
+Note that the quoting of the target path is needed for zsh but might not be needed for your shell.
 
 If you are using an SDK, rather than building Fuchsia from source, check your SDK documentation for how to copy files to an attached device.
 
-Once the file is copied, invoking `display_png` via `fx shell` or somesuch should display a png
+Once the file is copied, invoking `display_png` via `fx shell` should display a png:
 
-    run -d display_png --file [file name]
-
+```
+$ fx shell display_png --file [file name]
+```
