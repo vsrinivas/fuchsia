@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys/prctl.h>
+#include <sys/syscall.h>
 
 #include <gtest/gtest.h>
 #include <linux/capability.h>
@@ -59,6 +60,37 @@ TEST(PrctlTest, DropCapabilities) {
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_READ, CAP_DAC_OVERRIDE)), true);
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_DROP, CAP_DAC_OVERRIDE)), 0);
     ASSERT_EQ(SAFE_SYSCALL(prctl(PR_CAPBSET_READ, CAP_DAC_OVERRIDE)), false);
+  });
+}
+
+TEST(PrctlTest, CapGet) {
+  ForkHelper helper;
+
+  __user_cap_header_struct header;
+  memset(&header, 0, sizeof(header));
+  header.version = _LINUX_CAPABILITY_VERSION_3;
+  __user_cap_data_struct caps[_LINUX_CAPABILITY_U32S_3];
+  ASSERT_EQ(syscall(SYS_capget, &header, &caps), 0);
+
+  pid_t parent_pid = getpid();
+
+  helper.RunInForkedProcess([&parent_pid] {
+    __user_cap_header_struct header;
+    memset(&header, 0, sizeof(header));
+    header.version = _LINUX_CAPABILITY_VERSION_3;
+    header.pid = parent_pid;
+    __user_cap_data_struct caps[_LINUX_CAPABILITY_U32S_3];
+    ASSERT_EQ(syscall(SYS_capget, &header, &caps), 0);
+
+    header.pid = 0;
+    ASSERT_EQ(syscall(SYS_capset, &header, &caps), 0);
+
+    pid_t child_pid = getpid();
+    header.pid = child_pid;
+    ASSERT_EQ(syscall(SYS_capset, &header, &caps), 0);
+
+    header.pid = parent_pid;
+    ASSERT_EQ(syscall(SYS_capset, &header, &caps), -1);
   });
 }
 

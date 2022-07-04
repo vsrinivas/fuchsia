@@ -676,18 +676,6 @@ pub fn sys_futex(
     Ok(())
 }
 
-fn cap_header_version(
-    current_task: &CurrentTask,
-    user_header: UserRef<__user_cap_header_struct>,
-) -> Result<u32, Errno> {
-    let header = current_task.mm.read_object(user_header)?;
-    if header.pid != 0 && header.pid != current_task.id {
-        not_implemented!(current_task, "Cap header version only implemented for current task.");
-        return error!(EINVAL);
-    }
-    Ok(header.version)
-}
-
 pub fn sys_capget(
     current_task: &CurrentTask,
     user_header: UserRef<__user_cap_header_struct>,
@@ -701,11 +689,18 @@ pub fn sys_capget(
         return Ok(());
     }
 
+    let header = current_task.mm.read_object(user_header)?;
+    let target_task: Arc<Task> = match header.pid {
+        0 => current_task.task_arc_clone(),
+        pid => current_task.get_task(pid).ok_or(errno!(EINVAL))?,
+    };
+
     let (permitted, effective, inheritable) = {
-        let creds = &current_task.read().creds;
+        let creds = &target_task.read().creds;
         (creds.cap_permitted, creds.cap_effective, creds.cap_inheritable)
     };
-    match cap_header_version(current_task, user_header)? {
+
+    match header.version {
         _LINUX_CAPABILITY_VERSION_3 => {
             // Return 64 bit capabilities as two sets of 32 bit capabilities, little endian
             let (permitted, effective, inheritable) =
@@ -734,24 +729,30 @@ pub fn sys_capset(
     user_header: UserRef<__user_cap_header_struct>,
     user_data: UserRef<__user_cap_data_struct>,
 ) -> Result<(), Errno> {
-    let (new_permitted, new_effective, new_inheritable) =
-        match cap_header_version(current_task, user_header)? {
-            _LINUX_CAPABILITY_VERSION_3 => {
-                let mut data: [__user_cap_data_struct; 2] = Default::default();
-                current_task.mm.read_objects(user_data, &mut data)?;
-                (
-                    Capabilities::from_abi_v3((data[0].permitted, data[1].permitted)),
-                    Capabilities::from_abi_v3((data[0].effective, data[1].effective)),
-                    Capabilities::from_abi_v3((data[0].inheritable, data[1].inheritable)),
-                )
-            }
-            _ => return error!(EINVAL),
-        };
+    let header = current_task.mm.read_object(user_header)?;
+    let target_task: Arc<Task> = match header.pid {
+        0 => current_task.task_arc_clone(),
+        pid if pid == current_task.id => current_task.task_arc_clone(),
+        _pid => return error!(EINVAL),
+    };
+
+    let (new_permitted, new_effective, new_inheritable) = match header.version {
+        _LINUX_CAPABILITY_VERSION_3 => {
+            let mut data: [__user_cap_data_struct; 2] = Default::default();
+            current_task.mm.read_objects(user_data, &mut data)?;
+            (
+                Capabilities::from_abi_v3((data[0].permitted, data[1].permitted)),
+                Capabilities::from_abi_v3((data[0].effective, data[1].effective)),
+                Capabilities::from_abi_v3((data[0].inheritable, data[1].inheritable)),
+            )
+        }
+        _ => return error!(EINVAL),
+    };
 
     // Permission checks. Copied out of TLPI section 39.7.
     {
-        let creds = &current_task.read().creds;
-        strace!(current_task, "Capabilities({{permitted={:?} from {:?}, effective={:?} from {:?}, inheritable={:?} from {:?}}}, bounding={:?})", new_permitted, creds.cap_permitted, new_effective, creds.cap_effective, new_inheritable, creds.cap_inheritable, creds.cap_bounding);
+        let creds = &target_task.read().creds;
+        strace!(target_task, "Capabilities({{permitted={:?} from {:?}, effective={:?} from {:?}, inheritable={:?} from {:?}}}, bounding={:?})", new_permitted, creds.cap_permitted, new_effective, creds.cap_effective, new_inheritable, creds.cap_inheritable, creds.cap_bounding);
         if !creds.has_capability(CAP_SETPCAP)
             && !creds.cap_inheritable.union(creds.cap_permitted).contains(new_inheritable)
         {
@@ -769,7 +770,7 @@ pub fn sys_capset(
         }
     }
 
-    let creds = &mut current_task.write().creds;
+    let creds = &mut target_task.write().creds;
     creds.cap_permitted = new_permitted;
     creds.cap_effective = new_effective;
     creds.cap_inheritable = new_inheritable;
