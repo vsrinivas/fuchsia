@@ -113,7 +113,7 @@ impl FileOps for Arc<ProcDirectory> {
         // Adjust the offset to account for the other nodes in the directory.
         let adjusted_offset = (sink.offset() - pid_offset as i64) as usize;
         // Sort the pids, to keep the traversal order consistent.
-        let mut pids = current_task.thread_group.kernel.pids.read().task_ids();
+        let mut pids = current_task.thread_group.kernel.pids.read().process_ids();
         pids.sort();
 
         // The adjusted offset is used to figure out which task directories are to be listed.

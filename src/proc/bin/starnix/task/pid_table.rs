@@ -95,8 +95,11 @@ impl PidTable {
         entry.process_group = None;
     }
 
-    /// Returns the task ids for all the currently running tasks.
-    pub fn task_ids(&self) -> Vec<pid_t> {
-        self.table.iter().flat_map(|(pid, entry)| entry.task.as_ref().and(Some(*pid))).collect()
+    /// Returns the process ids for all the currently running processes.
+    pub fn process_ids(&self) -> Vec<pid_t> {
+        self.table
+            .iter()
+            .flat_map(|(pid, entry)| entry.process_group.as_ref().and(Some(*pid)))
+            .collect()
     }
 }
