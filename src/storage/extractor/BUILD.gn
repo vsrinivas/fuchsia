@@ -38,7 +38,7 @@ rustc_library("disk_extractor_lib") {
 
 fuchsia_unittest_package("disk-extractor-lib-tests") {
   deps = [ ":disk_extractor_lib_test" ]
-  manifest = "meta/disk-extractor-lib-unit-tests.cmx"
+  manifest = "meta/disk-extractor-lib-unit-tests.cml"
 }
 
 group("tools") {
