@@ -131,7 +131,7 @@ impl SocketOps for NetlinkSocket {
         _user_opt: UserBuffer,
     ) -> Result<(), Errno> {
         not_implemented!("?", "NetlinkSocket::setsockopt is stubbed");
-        error!(ENOPROTOOPT)
+        Ok(())
     }
 
     fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {

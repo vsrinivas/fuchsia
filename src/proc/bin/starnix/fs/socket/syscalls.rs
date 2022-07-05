@@ -117,6 +117,7 @@ fn parse_socket_address(
         }
         // TODO replace this with the parsed address when AF_INET is implemented
         AF_INET | AF_INET6 => SocketAddress::default_for_domain(SocketDomain::Inet),
+        AF_NETLINK => SocketAddress::default_for_domain(SocketDomain::Netlink),
         _ => SocketAddress::Unspecified,
     };
     Ok(address)
