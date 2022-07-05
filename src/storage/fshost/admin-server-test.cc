@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <sys/stat.h>
@@ -45,9 +46,15 @@ TEST_F(AdminServerTest, MountAndUnmount) {
 
   std::string device_path = ram_disk_or->path();
 
-  const std::string fshost_hub_path =
-      "/hub/children/" + FshostComponentCollection() + ":" + FshostComponentName();
-  const std::string fshost_svc_path = fshost_hub_path + "/exec/out/svc/fuchsia.fshost.Admin";
+  constexpr const char* kFshostBindPath = "/fshost";
+  constexpr const char* kFshostSvcPath = "/fshost/fuchsia.fshost.Admin";
+  {
+    // Bind Fshost's exposed directory into the namespace so the mount/umount binaries can reference
+    // it.
+    fdio_ns_t* ns = nullptr;
+    ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns, kFshostBindPath, exposed_dir().client_end().channel().get()), ZX_OK);
+  }
 
   // Use the mount and umount binaries so that we get a full end-to-end test.
   constexpr const char* kMountBinPath = "/pkg/bin/mount";
@@ -56,7 +63,7 @@ TEST_F(AdminServerTest, MountAndUnmount) {
 
   zx::process mount_process;
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kMountBinPath,
-                       (const char*[]){kMountBinPath, "--fshost-path", fshost_svc_path.c_str(),
+                       (const char*[]){kMountBinPath, "--fshost-path", kFshostSvcPath,
                                        device_path.c_str(), kMountPath, nullptr},
                        mount_process.reset_and_get_address()),
             ZX_OK);
@@ -65,18 +72,18 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   Join(mount_process, &return_code);
   ASSERT_EQ(return_code, 0);
 
-  const std::string file_path = fshost_hub_path + "/exec/out/mnt/test/hello";
+  const std::string file_path = std::string(kFshostBindPath) + "/mnt/test/hello";
   fbl::unique_fd fd(open(file_path.c_str(), O_RDWR | O_CREAT, 0666));
   ASSERT_TRUE(fd);
   ASSERT_EQ(write(fd.get(), "hello", 5), 5);
   fd.reset();
 
   // Check GetDevicePath.
-  const std::string root = fshost_hub_path + "/exec/out/mnt/test/";
+  const std::string root = std::string(kFshostBindPath) + "/mnt/test/";
   struct statvfs buf;
   ASSERT_EQ(statvfs(root.c_str(), &buf), 0);
 
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_svc_path.c_str());
+  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
   ASSERT_EQ(fshost_or.status_value(), ZX_OK);
 
   auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
@@ -87,8 +94,8 @@ TEST_F(AdminServerTest, MountAndUnmount) {
 
   zx::process umount_process;
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kUmountBinPath,
-                       (const char*[]){kUmountBinPath, "--fshost-path", fshost_svc_path.c_str(),
-                                       kMountPath, nullptr},
+                       (const char*[]){kUmountBinPath, "--fshost-path", kFshostSvcPath, kMountPath,
+                                       nullptr},
                        umount_process.reset_and_get_address()),
             ZX_OK);
 
@@ -100,7 +107,7 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   ASSERT_EQ(stat(file_path.c_str(), &stat_buf), -1);
 
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kMountBinPath,
-                       (const char*[]){kMountBinPath, "--fshost-path", fshost_svc_path.c_str(),
+                       (const char*[]){kMountBinPath, "--fshost-path", kFshostSvcPath,
                                        device_path.c_str(), kMountPath, nullptr},
                        mount_process.reset_and_get_address()),
             ZX_OK);
@@ -116,8 +123,8 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   ASSERT_EQ(memcmp(buffer, "hello", 5), 0);
 
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kUmountBinPath,
-                       (const char*[]){kUmountBinPath, "--fshost-path", fshost_svc_path.c_str(),
-                                       kMountPath, nullptr},
+                       (const char*[]){kUmountBinPath, "--fshost-path", kFshostSvcPath, kMountPath,
+                                       nullptr},
                        umount_process.reset_and_get_address()),
             ZX_OK);
 
@@ -131,9 +138,15 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   constexpr uint32_t kSliceSize = 32'768;
   constexpr size_t kDeviceSize = static_cast<const size_t>(kBlockCount) * kBlockSize;
 
-  const std::string fshost_hub_path =
-      "/hub/children/" + FshostComponentCollection() + ":" + FshostComponentName();
-  const std::string fshost_svc_path = fshost_hub_path + "/exec/out/svc/fuchsia.fshost.Admin";
+  constexpr const char* kFshostBindPath = "/fshost";
+  constexpr const char* kFshostSvcPath = "/fshost/fuchsia.fshost.Admin";
+  {
+    // Bind Fshost's exposed directory into the namespace so the mount/umount binaries can reference
+    // it.
+    fdio_ns_t* ns = nullptr;
+    ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns, kFshostBindPath, exposed_dir().client_end().channel().get()), ZX_OK);
+  }
 
   PauseWatcher();  // Pause whilst we create a ramdisk.
 
@@ -169,7 +182,7 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   struct statvfs buf;
   ASSERT_EQ(fstatvfs(fd.get(), &buf), 0);
 
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_svc_path.c_str());
+  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
   ASSERT_EQ(fshost_or.status_value(), ZX_OK);
 
   // The device path is registered in fshost *after* the mount point shows up so this is racy.  It's

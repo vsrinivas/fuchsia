@@ -36,12 +36,6 @@
             protocol: "fuchsia.feedback.testing.FakeCrashReporterQuerier",
             from: "#fake-crash-reporter",
         },
-        {
-            directory: "hub",
-            from: "framework",
-            rights: [ "rw*" ],
-            path: "/hub",
-        },
     ],
     offer: [
         {
