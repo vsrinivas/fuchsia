@@ -606,7 +606,7 @@ impl FsNode {
         }
         let mode_flags = if creds.euid == node_uid {
             (mode & 0o700) >> 6
-        } else if creds.groups.contains(&node_gid) {
+        } else if creds.is_in_group(node_gid) {
             (mode & 0o070) >> 3
         } else {
             (mode & 0o007) >> 0
@@ -733,6 +733,7 @@ impl Drop for FsNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::Credentials;
     use crate::testing::*;
 
     #[::fuchsia::test]
@@ -827,5 +828,71 @@ mod tests {
         assert_eq!(operation3.is_unlock(), true);
         assert_eq!(operation3.is_lock_exclusive(), false);
         assert_eq!(operation3.is_blocking(), true);
+    }
+
+    #[::fuchsia::test]
+    fn test_check_access() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mut creds = Credentials::with_ids(1, 2);
+        creds.groups = vec![3, 4];
+        current_task.write().creds = creds;
+
+        // Create a node.
+        let node = &current_task
+            .fs
+            .root()
+            .create_node(&current_task, b"foo", FileMode::IFREG, DeviceType::NONE)
+            .expect("create_node")
+            .entry
+            .node;
+        let check_access = |uid: uid_t, gid: gid_t, perm: u32, access: Access| {
+            {
+                let mut info = node.info_write();
+                info.mode = mode!(IFREG, perm);
+                info.uid = uid;
+                info.gid = gid;
+            }
+            node.check_access(&current_task, access)
+        };
+
+        assert_eq!(check_access(0, 0, 0o700, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o700, Access::READ), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o700, Access::WRITE), Err(EACCES));
+
+        assert_eq!(check_access(0, 0, 0o070, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o070, Access::READ), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o070, Access::WRITE), Err(EACCES));
+
+        assert_eq!(check_access(0, 0, 0o007, Access::EXEC), Ok(()));
+        assert_eq!(check_access(0, 0, 0o007, Access::READ), Ok(()));
+        assert_eq!(check_access(0, 0, 0o007, Access::WRITE), Ok(()));
+
+        assert_eq!(check_access(1, 0, 0o700, Access::EXEC), Ok(()));
+        assert_eq!(check_access(1, 0, 0o700, Access::READ), Ok(()));
+        assert_eq!(check_access(1, 0, 0o700, Access::WRITE), Ok(()));
+
+        assert_eq!(check_access(1, 0, 0o100, Access::EXEC), Ok(()));
+        assert_eq!(check_access(1, 0, 0o100, Access::READ), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o100, Access::WRITE), Err(EACCES));
+
+        assert_eq!(check_access(1, 0, 0o200, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o200, Access::READ), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o200, Access::WRITE), Ok(()));
+
+        assert_eq!(check_access(1, 0, 0o400, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o400, Access::READ), Ok(()));
+        assert_eq!(check_access(1, 0, 0o400, Access::WRITE), Err(EACCES));
+
+        assert_eq!(check_access(0, 2, 0o700, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(0, 2, 0o700, Access::READ), Err(EACCES));
+        assert_eq!(check_access(0, 2, 0o700, Access::WRITE), Err(EACCES));
+
+        assert_eq!(check_access(0, 2, 0o070, Access::EXEC), Ok(()));
+        assert_eq!(check_access(0, 2, 0o070, Access::READ), Ok(()));
+        assert_eq!(check_access(0, 2, 0o070, Access::WRITE), Ok(()));
+
+        assert_eq!(check_access(0, 3, 0o070, Access::EXEC), Ok(()));
+        assert_eq!(check_access(0, 3, 0o070, Access::READ), Ok(()));
+        assert_eq!(check_access(0, 3, 0o070, Access::WRITE), Ok(()));
     }
 }

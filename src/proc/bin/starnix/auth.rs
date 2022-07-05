@@ -6,7 +6,7 @@ use bitflags::bitflags;
 
 use crate::types::{errno, error, gid_t, uapi, uid_t, Capabilities, Errno};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Credentials {
     pub uid: uid_t,
     pub gid: gid_t,
@@ -161,6 +161,10 @@ impl Credentials {
 
     pub fn is_superuser(&self) -> bool {
         self.euid == 0
+    }
+
+    pub fn is_in_group(&self, gid: gid_t) -> bool {
+        self.egid == gid || self.groups.contains(&gid)
     }
 
     /// Returns whether or not the task has the given `capability`.
