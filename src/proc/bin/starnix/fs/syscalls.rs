@@ -1562,6 +1562,17 @@ pub fn sys_fdatasync(current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Er
     Ok(())
 }
 
+pub fn sys_fallocate(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    mode: u32,
+    offset: off_t,
+    len: off_t,
+) -> Result<(), Errno> {
+    not_implemented!(current_task, "fallocate({}, {}, {}, {})", fd, mode, offset, len);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
