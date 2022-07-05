@@ -696,14 +696,6 @@ impl ComponentInstance {
                     .collect()
             });
             let dynamic_offers = dynamic_offers.transpose()?;
-
-            match collection_decl.durability {
-                fdecl::Durability::Transient => {}
-                fdecl::Durability::SingleRun => {}
-                fdecl::Durability::Persistent => {
-                    return Err(ModelError::unsupported("Persistent durability"));
-                }
-            };
             (
                 state
                     .add_child(
@@ -825,9 +817,8 @@ impl ComponentInstance {
             self.stop_children(shut_down, is_recursive).await?;
         }
 
-        // When the component is stopped, any child instances in transient collections must be
-        // destroyed.
-        self.destroy_non_persistent_children().await?;
+        // When the component is stopped, any child instances in collections must be destroyed.
+        self.destroy_dynamic_children().await?;
         if was_running {
             let event = Event::new(self, Ok(EventPayload::Stopped { status: stop_result }));
             self.hooks.dispatch(&event).await?;
@@ -863,7 +854,6 @@ impl ComponentInstance {
                 .iter()
                 .filter_map(|c| match c.durability {
                     fdecl::Durability::SingleRun => Some(c.name.clone()),
-                    fdecl::Durability::Persistent => None,
                     fdecl::Durability::Transient => None,
                 })
                 .collect();
@@ -959,10 +949,9 @@ impl ComponentInstance {
         Ok(())
     }
 
-    /// Registers actions to destroy all children of this instance that live in non-persistent
-    /// collections.
-    async fn destroy_non_persistent_children(self: &Arc<Self>) -> Result<(), ModelError> {
-        let (transient_colls, moniker_incarnations) = {
+    /// Registers actions to destroy all dynamic children of collections belonging to this instance.
+    async fn destroy_dynamic_children(self: &Arc<Self>) -> Result<(), ModelError> {
+        let moniker_incarnations: Vec<_> = {
             let state = self.lock_state().await;
             let state = match *state {
                 InstanceState::Resolved(ref s) => s,
@@ -971,29 +960,14 @@ impl ComponentInstance {
                     return Ok(());
                 }
             };
-            let transient_colls: HashSet<_> = state
-                .decl()
-                .collections
-                .iter()
-                .filter_map(|c| match c.durability {
-                    fdecl::Durability::Transient => Some(c.name.clone()),
-                    fdecl::Durability::Persistent => None,
-                    fdecl::Durability::SingleRun => Some(c.name.clone()),
-                })
-                .collect();
-            let moniker_incarnations: Vec<_> =
-                state.children().map(|(k, c)| (k.clone(), c.incarnation_id())).collect();
-            (transient_colls, moniker_incarnations)
+            state.children().map(|(k, c)| (k.clone(), c.incarnation_id())).collect()
         };
         let mut futures = vec![];
+        // Destroy all children that belong to a collection.
         for (m, id) in moniker_incarnations {
-            // Delete a child if its collection is in the set of transient collections created
-            // above.
-            if let Some(coll) = m.collection() {
-                if transient_colls.contains(coll) {
-                    let nf = ActionSet::register(self.clone(), DestroyChildAction::new(m, id));
-                    futures.push(nf);
-                }
+            if m.collection().is_some() {
+                let nf = ActionSet::register(self.clone(), DestroyChildAction::new(m, id));
+                futures.push(nf);
             }
         }
         join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))

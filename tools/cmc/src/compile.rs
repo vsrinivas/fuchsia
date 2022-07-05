@@ -653,7 +653,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                     {
                         "name": "tests",
@@ -671,7 +671,7 @@ mod tests {
                 collections: Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         allowed_offers: None,
                         allow_long_names: None,
                         ..fdecl::Collection::EMPTY

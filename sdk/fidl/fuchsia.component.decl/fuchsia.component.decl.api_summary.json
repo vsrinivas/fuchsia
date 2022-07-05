@@ -444,11 +444,6 @@
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.decl/Durability.PERSISTENT",
-        "value": "1"
-    },
-    {
-        "kind": "enum/member",
         "name": "fuchsia.component.decl/Durability.SINGLE_RUN",
         "value": "3"
     },

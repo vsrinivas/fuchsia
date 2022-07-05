@@ -612,7 +612,7 @@ mod tests {
                         .add_collection(
                             CollectionDeclBuilder::new()
                                 .name("pcoll")
-                                .durability(fdecl::Durability::Persistent)
+                                .durability(fdecl::Durability::Transient)
                                 .allow_long_names(true)
                                 .build(),
                         )
@@ -744,20 +744,6 @@ mod tests {
         }
 
         // Unsupported.
-        {
-            let mut collection_ref = fdecl::CollectionRef { name: "pcoll".to_string() };
-            let err = test
-                .realm_proxy
-                .create_child(
-                    &mut collection_ref,
-                    child_decl("a"),
-                    fcomponent::CreateChildArgs::EMPTY,
-                )
-                .await
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fcomponent::Error::Unsupported);
-        }
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
             let child_decl = fdecl::Child {

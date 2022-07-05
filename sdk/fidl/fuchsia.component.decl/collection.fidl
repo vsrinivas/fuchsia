@@ -50,7 +50,8 @@ type Collection = table {
 
 /// The durability of component instances created in a collection.
 type Durability = strict enum {
-    /// An instance exists until either it or its parent is destroyed.
+    // Durability::Persistent is removed because it is unsupported.
+    @available(removed=9)
     PERSISTENT = 1;
     /// An instance exists until either its parent instance is stopped
     /// or it is explicitly destroyed.

@@ -448,7 +448,7 @@ mod tests {
             "collections": [
                 {
                     "name": "modular",
-                    "durability": "persistent",
+                    "durability": "transient",
                 },
             ],
             "capabilities": [

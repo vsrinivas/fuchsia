@@ -396,7 +396,7 @@ fn main() {
         let collections = vec![
             Collection {
                 name: Some("modular".to_string()),
-                durability: Some(Durability::Persistent),
+                durability: Some(Durability::Transient),
                 environment: None,
                 allowed_offers: None,
                 allow_long_names: None,
@@ -405,7 +405,7 @@ fn main() {
             },
             Collection {
                 name: Some("explicit_static".to_string()),
-                durability: Some(Durability::Persistent),
+                durability: Some(Durability::Transient),
                 environment: None,
                 allowed_offers: Some(AllowedOffers::StaticOnly),
                 allow_long_names: None,
@@ -414,7 +414,7 @@ fn main() {
             },
             Collection {
                 name: Some("explicit_dynamic".to_string()),
-                durability: Some(Durability::Persistent),
+                durability: Some(Durability::Transient),
                 environment: None,
                 allowed_offers: Some(AllowedOffers::StaticAndDynamic),
                 allow_long_names: None,
@@ -423,7 +423,7 @@ fn main() {
             },
             Collection {
                 name: Some("long_child_names".to_string()),
-                durability: Some(Durability::Persistent),
+                durability: Some(Durability::Transient),
                 environment: None,
                 allowed_offers: None,
                 allow_long_names: Some(true),
@@ -432,7 +432,7 @@ fn main() {
             },
             Collection {
                 name: Some("persistent_storage".to_string()),
-                durability: Some(Durability::Persistent),
+                durability: Some(Durability::Transient),
                 environment: None,
                 allowed_offers: None,
                 allow_long_names: None,

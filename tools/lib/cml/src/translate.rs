@@ -1915,7 +1915,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                 ],
             }
@@ -2110,7 +2110,7 @@ mod tests {
                 collections:Some(vec![
                     fdecl::Collection{
                         name:Some("modular".to_string()),
-                        durability:Some(fdecl::Durability::Persistent),
+                        durability:Some(fdecl::Durability::Transient),
                         ..fdecl::Collection::EMPTY
                     },
                 ]),
@@ -2624,7 +2624,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                 ],
                 "capabilities": [
@@ -3109,7 +3109,7 @@ mod tests {
                 collections: Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         environment: None,
                         allowed_offers: None,
                         ..fdecl::Collection::EMPTY
@@ -3192,7 +3192,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "single_run",
                     },
                     {
                         "name": "tests",
@@ -3211,7 +3211,7 @@ mod tests {
                 collections: Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::SingleRun),
                         environment: None,
                         allowed_offers: None,
                         ..fdecl::Collection::EMPTY
@@ -3637,7 +3637,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                 ],
                 "capabilities": [
@@ -3830,7 +3830,7 @@ mod tests {
                 collections: Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         environment: None,
                         allowed_offers: None,
                         ..fdecl::Collection::EMPTY

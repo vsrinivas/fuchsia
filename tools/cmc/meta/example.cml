@@ -23,21 +23,21 @@
     collections: [
         {
             name: "modular",
-            durability: "persistent",
+            durability: "transient",
         },
         {
             name: "explicit_static",
-            durability: "persistent",
+            durability: "transient",
             allowed_offers: "static_only",
         },
         {
             name: "explicit_dynamic",
-            durability: "persistent",
+            durability: "transient",
             allowed_offers: "static_and_dynamic",
         },
         {
             name: "long_child_names",
-            durability: "persistent",
+            durability: "transient",
             allow_long_names: true,
         },
     ],

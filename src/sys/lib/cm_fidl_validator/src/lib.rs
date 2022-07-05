@@ -6327,7 +6327,7 @@ mod tests {
                 decl.collections = Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
                         allow_long_names: None,
@@ -6514,7 +6514,7 @@ mod tests {
                 decl.collections = Some(vec![
                     fdecl::Collection{
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                         allow_long_names: None,
@@ -6867,7 +6867,7 @@ mod tests {
                 decl.collections = Some(vec![
                     fdecl::Collection {
                         name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Persistent),
+                        durability: Some(fdecl::Durability::Transient),
                         environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                         allow_long_names: None,
@@ -7996,7 +7996,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.collections = Some(vec![fdecl::Collection{
                     name: Some("^bad".to_string()),
-                    durability: Some(fdecl::Durability::Persistent),
+                    durability: Some(fdecl::Durability::Transient),
                     environment: None,
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                     allow_long_names: None,

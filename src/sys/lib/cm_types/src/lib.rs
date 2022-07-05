@@ -565,13 +565,12 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Durability {
-    Persistent,
     Transient,
     /// An instance is started on creation and exists until it stops.
     SingleRun,
 }
 
-symmetrical_enums!(Durability, fdecl::Durability, Persistent, Transient, SingleRun);
+symmetrical_enums!(Durability, fdecl::Durability, Transient, SingleRun);
 
 /// A component instance's startup mode. See [`StartupMode`].
 ///

@@ -2964,7 +2964,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                 ],
                 "capabilities": [
@@ -4048,11 +4048,11 @@ mod tests {
             json!({
                 "collections": [
                     {
-                        "name": "modular",
-                        "durability": "persistent"
+                        "name": "test_single_run_coll",
+                        "durability": "single_run"
                     },
                     {
-                        "name": "tests",
+                        "name": "test_transient_coll",
                         "durability": "transient"
                     },
                 ]
@@ -4069,16 +4069,16 @@ mod tests {
            json!({
                "collections": [
                     {
-                        "name": "modular",
-                        "durability": "persistent"
+                        "name": "duplicate",
+                        "durability": "single_run"
                     },
                     {
-                        "name": "modular",
+                        "name": "duplicate",
                         "durability": "transient"
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"modular\" is defined twice, once in \"collections\" and once in \"collections\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"duplicate\" is defined twice, once in \"collections\" and once in \"collections\""
         ),
         test_cml_collections_bad_durability(
             json!({
@@ -4089,7 +4089,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected one of `persistent`, `transient`, `single_run`"
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected `transient` or `single_run`"
         ),
 
         // capabilities
@@ -5381,7 +5381,7 @@ mod tests {
                 "collections": [
                     {
                         "name": "modular",
-                        "durability": "persistent",
+                        "durability": "transient",
                     },
                 ],
                 "capabilities": [

@@ -2571,7 +2571,7 @@ mod tests {
                 collections: Some(vec![
                      fdecl::Collection {
                          name: Some("modular".to_string()),
-                         durability: Some(fdecl::Durability::Persistent),
+                         durability: Some(fdecl::Durability::Transient),
                          environment: None,
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                          allow_long_names: Some(true),
@@ -2924,7 +2924,7 @@ mod tests {
                     collections: vec![
                         CollectionDecl {
                             name: "modular".to_string(),
-                            durability: fdecl::Durability::Persistent,
+                            durability: fdecl::Durability::Transient,
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: true,
@@ -3189,7 +3189,7 @@ mod tests {
                 collections: Some(vec![
                      fdecl::Collection {
                          name: Some("modular".to_string()),
-                         durability: Some(fdecl::Durability::Persistent),
+                         durability: Some(fdecl::Durability::Transient),
                          environment: None,
                          allowed_offers: None,
                          allow_long_names: None,
@@ -3246,7 +3246,7 @@ mod tests {
                     collections: vec![
                         CollectionDecl {
                             name: "modular".to_string(),
-                            durability: fdecl::Durability::Persistent,
+                            durability: fdecl::Durability::Transient,
                             environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: false,
