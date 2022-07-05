@@ -446,17 +446,17 @@ impl Realm {
                         }
                     }
                 }
-                ftest::RealmRequest::SetConfigValue { name, key, value, responder } => {
+                ftest::RealmRequest::ReplaceConfigValue { name, key, value, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
                         responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
-                    match self.set_config_value(name, key, value).await {
+                    match self.replace_config_value(name, key, value).await {
                         Ok(()) => {
                             responder.send(&mut Ok(()))?;
                         }
                         Err(err) => {
-                            warn!(method = "Realm.SetConfigValue", message = %err);
+                            warn!(method = "Realm.ReplaceConfigValue", message = %err);
                             responder.send(&mut Err(err.into()))?;
                         }
                     }
@@ -622,7 +622,7 @@ impl Realm {
         self.realm_node.replace_decl_with_untrusted(component_decl).await
     }
 
-    async fn set_config_value(
+    async fn replace_config_value(
         &self,
         name: String,
         key: String,

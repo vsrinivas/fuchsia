@@ -200,7 +200,7 @@ class DirectoryContents {
 // # Example
 //
 // ```
-// realm_builder.SetConfigValue(echo_server, "echo_string", ConfigValue::String("Hi!"));
+// realm_builder.ReplaceConfigValue(echo_server, "echo_string", ConfigValue::String("Hi!"));
 // ```
 class ConfigValue {
  public:

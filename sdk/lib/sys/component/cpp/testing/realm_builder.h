@@ -151,7 +151,7 @@ class Realm final {
                                 DirectoryContents directory);
 
   /// Replaces the value of a given configuration field
-  Realm& SetConfigValue(const std::string& name, const std::string& key, ConfigValue value);
+  Realm& ReplaceConfigValue(const std::string& name, const std::string& key, ConfigValue value);
 
   /// Updates the Component decl of the given child.
   void ReplaceComponentDecl(const std::string& child_name,
@@ -229,7 +229,8 @@ class RealmBuilder final {
                                        DirectoryContents directory);
 
   /// Replaces the value of a given configuration field for the root realm.
-  RealmBuilder& SetConfigValue(const std::string& name, const std::string& key, ConfigValue value);
+  RealmBuilder& ReplaceConfigValue(const std::string& name, const std::string& key,
+                                   ConfigValue value);
 
   /// Updates the Component decl of the given child of the root realm.
   void ReplaceComponentDecl(const std::string& child_name,

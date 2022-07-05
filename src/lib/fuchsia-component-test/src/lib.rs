@@ -941,213 +941,213 @@ impl RealmBuilder {
     }
 
     /// Replaces a value of a given configuration field
-    pub async fn set_config_value(
+    pub async fn replace_config_value(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: cm_rust::ValueSpec,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value(name, key, value).await
+        self.root_realm.replace_config_value(name, key, value).await
     }
 
     /// Replaces a boolean value of a given configuration field
-    pub async fn set_config_value_bool(
+    pub async fn replace_config_value_bool(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: bool,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_bool(name, key, value).await
+        self.root_realm.replace_config_value_bool(name, key, value).await
     }
 
     /// Replaces a uint8 value of a given configuration field
-    pub async fn set_config_value_uint8(
+    pub async fn replace_config_value_uint8(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: u8,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint8(name, key, value).await
+        self.root_realm.replace_config_value_uint8(name, key, value).await
     }
 
     /// Replaces a uint16 value of a given configuration field
-    pub async fn set_config_value_uint16(
+    pub async fn replace_config_value_uint16(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: u16,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint16(name, key, value).await
+        self.root_realm.replace_config_value_uint16(name, key, value).await
     }
 
     /// Replaces a uint32 value of a given configuration field
-    pub async fn set_config_value_uint32(
+    pub async fn replace_config_value_uint32(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: u32,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint32(name, key, value).await
+        self.root_realm.replace_config_value_uint32(name, key, value).await
     }
 
     /// Replaces a uint64 value of a given configuration field
-    pub async fn set_config_value_uint64(
+    pub async fn replace_config_value_uint64(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: u64,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint64(name, key, value).await
+        self.root_realm.replace_config_value_uint64(name, key, value).await
     }
 
     /// Replaces a int8 value of a given configuration field
-    pub async fn set_config_value_int8(
+    pub async fn replace_config_value_int8(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: i8,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int8(name, key, value).await
+        self.root_realm.replace_config_value_int8(name, key, value).await
     }
 
     /// Replaces a int16 value of a given configuration field
-    pub async fn set_config_value_int16(
+    pub async fn replace_config_value_int16(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: i16,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int16(name, key, value).await
+        self.root_realm.replace_config_value_int16(name, key, value).await
     }
 
     /// Replaces a int32 value of a given configuration field
-    pub async fn set_config_value_int32(
+    pub async fn replace_config_value_int32(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: i32,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int32(name, key, value).await
+        self.root_realm.replace_config_value_int32(name, key, value).await
     }
 
     /// Replaces a int64 value of a given configuration field
-    pub async fn set_config_value_int64(
+    pub async fn replace_config_value_int64(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: i64,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int64(name, key, value).await
+        self.root_realm.replace_config_value_int64(name, key, value).await
     }
 
     /// Replaces a string value of a given configuration field
-    pub async fn set_config_value_string(
+    pub async fn replace_config_value_string(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl ToString,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_string(name, key, value).await
+        self.root_realm.replace_config_value_string(name, key, value).await
     }
 
     /// Replaces a boolean vector value of a given configuration field
-    pub async fn set_config_value_bool_vector(
+    pub async fn replace_config_value_bool_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = bool>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_bool_vector(name, key, value).await
+        self.root_realm.replace_config_value_bool_vector(name, key, value).await
     }
 
     /// Replaces a uint8 vector value of a given configuration field
-    pub async fn set_config_value_uint8_vector(
+    pub async fn replace_config_value_uint8_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = u8>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint8_vector(name, key, value).await
+        self.root_realm.replace_config_value_uint8_vector(name, key, value).await
     }
 
     /// Replaces a uint16 vector value of a given configuration field
-    pub async fn set_config_value_uint16_vector(
+    pub async fn replace_config_value_uint16_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = u16>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint16_vector(name, key, value).await
+        self.root_realm.replace_config_value_uint16_vector(name, key, value).await
     }
 
     /// Replaces a uint32 vector value of a given configuration field
-    pub async fn set_config_value_uint32_vector(
+    pub async fn replace_config_value_uint32_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = u32>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint32_vector(name, key, value).await
+        self.root_realm.replace_config_value_uint32_vector(name, key, value).await
     }
 
     /// Replaces a uint64 vector value of a given configuration field
-    pub async fn set_config_value_uint64_vector(
+    pub async fn replace_config_value_uint64_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = u64>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_uint64_vector(name, key, value).await
+        self.root_realm.replace_config_value_uint64_vector(name, key, value).await
     }
 
     /// Replaces a int8 vector value of a given configuration field
-    pub async fn set_config_value_int8_vector(
+    pub async fn replace_config_value_int8_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = i8>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int8_vector(name, key, value).await
+        self.root_realm.replace_config_value_int8_vector(name, key, value).await
     }
 
     /// Replaces a int16 vector value of a given configuration field
-    pub async fn set_config_value_int16_vector(
+    pub async fn replace_config_value_int16_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = i16>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int16_vector(name, key, value).await
+        self.root_realm.replace_config_value_int16_vector(name, key, value).await
     }
 
     /// Replaces a int32 vector value of a given configuration field
-    pub async fn set_config_value_int32_vector(
+    pub async fn replace_config_value_int32_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = i32>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int32_vector(name, key, value).await
+        self.root_realm.replace_config_value_int32_vector(name, key, value).await
     }
 
     /// Replaces a int64 vector value of a given configuration field
-    pub async fn set_config_value_int64_vector(
+    pub async fn replace_config_value_int64_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = i64>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_int64_vector(name, key, value).await
+        self.root_realm.replace_config_value_int64_vector(name, key, value).await
     }
 
     /// Replaces a string vector value of a given configuration field
-    pub async fn set_config_value_string_vector(
+    pub async fn replace_config_value_string_vector(
         &self,
         name: impl Into<ChildRef>,
         key: &str,
         value: impl IntoIterator<Item = impl ToString>,
     ) -> Result<(), Error> {
-        self.root_realm.set_config_value_string_vector(name, key, value).await
+        self.root_realm.replace_config_value_string_vector(name, key, value).await
     }
 
     /// Creates and routes a read-only directory capability to the given targets. The directory
@@ -1301,7 +1301,7 @@ impl SubRealmBuilder {
     }
 
     /// Replaces a value of a given configuration field
-    pub async fn set_config_value(
+    pub async fn replace_config_value(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1310,13 +1310,13 @@ impl SubRealmBuilder {
         let child_ref: ChildRef = child_ref.into();
         child_ref.check_scope(&self.realm_path)?;
         self.realm_proxy
-            .set_config_value(&child_ref.name, key, value.native_into_fidl())
+            .replace_config_value(&child_ref.name, key, value.native_into_fidl())
             .await?
             .map_err(Into::into)
     }
 
     /// Replaces a boolean value of a given configuration field
-    pub async fn set_config_value_bool(
+    pub async fn replace_config_value_bool(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1324,11 +1324,11 @@ impl SubRealmBuilder {
     ) -> Result<(), Error> {
         let value =
             cm_rust::ValueSpec { value: cm_rust::Value::Single(cm_rust::SingleValue::Bool(value)) };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint8 value of a given configuration field
-    pub async fn set_config_value_uint8(
+    pub async fn replace_config_value_uint8(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1337,11 +1337,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Uint8(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint16 value of a given configuration field
-    pub async fn set_config_value_uint16(
+    pub async fn replace_config_value_uint16(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1350,11 +1350,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Uint16(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint32 value of a given configuration field
-    pub async fn set_config_value_uint32(
+    pub async fn replace_config_value_uint32(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1363,11 +1363,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Uint32(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint64 value of a given configuration field
-    pub async fn set_config_value_uint64(
+    pub async fn replace_config_value_uint64(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1376,11 +1376,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Uint64(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int8 value of a given configuration field
-    pub async fn set_config_value_int8(
+    pub async fn replace_config_value_int8(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1388,11 +1388,11 @@ impl SubRealmBuilder {
     ) -> Result<(), Error> {
         let value =
             cm_rust::ValueSpec { value: cm_rust::Value::Single(cm_rust::SingleValue::Int8(value)) };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int16 value of a given configuration field
-    pub async fn set_config_value_int16(
+    pub async fn replace_config_value_int16(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1401,11 +1401,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Int16(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int32 value of a given configuration field
-    pub async fn set_config_value_int32(
+    pub async fn replace_config_value_int32(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1414,11 +1414,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Int32(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int64 value of a given configuration field
-    pub async fn set_config_value_int64(
+    pub async fn replace_config_value_int64(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1427,11 +1427,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::Int64(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a string value of a given configuration field
-    pub async fn set_config_value_string(
+    pub async fn replace_config_value_string(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1440,11 +1440,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Single(cm_rust::SingleValue::String(value.to_string())),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a boolean vector value of a given configuration field
-    pub async fn set_config_value_bool_vector(
+    pub async fn replace_config_value_bool_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1454,11 +1454,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::BoolVector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint8 vector value of a given configuration field
-    pub async fn set_config_value_uint8_vector(
+    pub async fn replace_config_value_uint8_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1468,11 +1468,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Uint8Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint16 vector value of a given configuration field
-    pub async fn set_config_value_uint16_vector(
+    pub async fn replace_config_value_uint16_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1482,11 +1482,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Uint16Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint32 vector value of a given configuration field
-    pub async fn set_config_value_uint32_vector(
+    pub async fn replace_config_value_uint32_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1496,11 +1496,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Uint32Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a uint64 vector value of a given configuration field
-    pub async fn set_config_value_uint64_vector(
+    pub async fn replace_config_value_uint64_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1510,11 +1510,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Uint64Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int8 vector value of a given configuration field
-    pub async fn set_config_value_int8_vector(
+    pub async fn replace_config_value_int8_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1524,11 +1524,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Int8Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int16 vector value of a given configuration field
-    pub async fn set_config_value_int16_vector(
+    pub async fn replace_config_value_int16_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1538,11 +1538,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Int16Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int32 vector value of a given configuration field
-    pub async fn set_config_value_int32_vector(
+    pub async fn replace_config_value_int32_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1552,11 +1552,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Int32Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a int64 vector value of a given configuration field
-    pub async fn set_config_value_int64_vector(
+    pub async fn replace_config_value_int64_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1566,11 +1566,11 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::Int64Vector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Replaces a string vector value of a given configuration field
-    pub async fn set_config_value_string_vector(
+    pub async fn replace_config_value_string_vector(
         &self,
         child_ref: impl Into<ChildRef>,
         key: &str,
@@ -1580,7 +1580,7 @@ impl SubRealmBuilder {
         let value = cm_rust::ValueSpec {
             value: cm_rust::Value::Vector(cm_rust::VectorValue::StringVector(value)),
         };
-        self.set_config_value(child_ref, key, value).await
+        self.replace_config_value(child_ref, key, value).await
     }
 
     /// Adds a route between components within the realm
@@ -2438,7 +2438,7 @@ mod tests {
             name: String,
             to: Vec<fdecl::Ref>,
         },
-        SetConfigValue {
+        ReplaceConfigValue {
             name: String,
             key: String,
             value: fconfig::ValueSpec,
@@ -2549,9 +2549,9 @@ mod tests {
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    ftest::RealmRequest::SetConfigValue { responder, name, key, value } => {
+                    ftest::RealmRequest::ReplaceConfigValue { responder, name, key, value } => {
                         report_requests
-                            .send(ServerRequest::SetConfigValue { name, key, value })
+                            .send(ServerRequest::ReplaceConfigValue { name, key, value })
                             .await
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();
@@ -2806,15 +2806,19 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn set_config_value() {
+    async fn replace_config_value() {
         let (builder, _server_task, mut receive_server_requests) =
             new_realm_builder_and_server_task();
         let child_a = builder.add_child("a", "test://a", ChildOptions::new()).await.unwrap();
-        builder.set_config_value_bool(&child_a, "test_bool", false).await.unwrap();
-        builder.set_config_value_int16(&child_a, "test_int16", -2).await.unwrap();
-        builder.set_config_value_string(&child_a, "test_string", "test").await.unwrap();
+        builder.replace_config_value_bool(&child_a, "test_bool", false).await.unwrap();
+        builder.replace_config_value_int16(&child_a, "test_int16", -2).await.unwrap();
+        builder.replace_config_value_string(&child_a, "test_string", "test").await.unwrap();
         builder
-            .set_config_value_string_vector(&child_a, "test_string_vector", ["hello", "fuchsia"])
+            .replace_config_value_string_vector(
+                &child_a,
+                "test_string_vector",
+                ["hello", "fuchsia"],
+            )
             .await
             .unwrap();
 
@@ -2826,28 +2830,28 @@ mod tests {
 
         assert_matches!(
             receive_server_requests.next().await,
-            Some(ServerRequest::SetConfigValue { name, key, value: fconfig::ValueSpec {
+            Some(ServerRequest::ReplaceConfigValue { name, key, value: fconfig::ValueSpec {
                 value: Some(fconfig::Value::Single(fconfig::SingleValue::Bool(boolean))), ..
             }}) if &name == "a" && &key == "test_bool" && boolean == false
         );
 
         assert_matches!(
             receive_server_requests.next().await,
-            Some(ServerRequest::SetConfigValue { name, key, value: fconfig::ValueSpec {
+            Some(ServerRequest::ReplaceConfigValue { name, key, value: fconfig::ValueSpec {
                 value: Some(fconfig::Value::Single(fconfig::SingleValue::Int16(int16))), ..
             }}) if &name == "a" && &key == "test_int16" && int16 == -2
         );
 
         assert_matches!(
             receive_server_requests.next().await,
-            Some(ServerRequest::SetConfigValue { name, key, value: fconfig::ValueSpec {
+            Some(ServerRequest::ReplaceConfigValue { name, key, value: fconfig::ValueSpec {
                 value: Some(fconfig::Value::Single(fconfig::SingleValue::String(string))), ..
             }}) if &name == "a" && &key == "test_string" && &string == "test"
         );
 
         assert_matches!(
             receive_server_requests.next().await,
-            Some(ServerRequest::SetConfigValue { name, key, value: fconfig::ValueSpec {
+            Some(ServerRequest::ReplaceConfigValue { name, key, value: fconfig::ValueSpec {
                 value: Some(fconfig::Value::Vector(fconfig::VectorValue::StringVector(string_vector))), ..
             }}) if &name == "a" && &key == "test_string_vector" && string_vector == vec!["hello", "fuchsia"]
         );

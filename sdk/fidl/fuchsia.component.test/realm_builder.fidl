@@ -531,23 +531,15 @@ protocol Realm {
         directory_contents DirectoryContents;
     }) -> (struct {}) error RealmBuilderError;
 
-    @available(removed=9)
-    ReplaceConfigValue(struct {
-        name fuchsia.component.name;
-        key fuchsia.component.decl.ConfigKey;
-        value fuchsia.component.config.ValueSpec;
-    }) -> (struct {}) error RealmBuilderError;
-
-    /// Sets the configuration value for a field specified by `key`.
-    /// The component specified must have a config schema with this field.
+    /// Replaces the configuration value for a field specified by `key`.
+    /// The component specified should have a config schema with this field.
     /// The value must conform to all constraints as defined by the schema.
     ///
     /// Errors:
     /// - `NO_CONFIG_SCHEMA`: component does not have a config schema
     /// - `NO_SUCH_CONFIG_FIELD`: `key` could not be found in component's config schema
     /// - `CONFIG_VALUE_INVALID`: `value` does not meet config schema constraints
-    @available(added=9)
-    SetConfigValue(struct {
+    ReplaceConfigValue(struct {
         /// The name of the component whose config value is being replaced.
         name fuchsia.component.name;
 

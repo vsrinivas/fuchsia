@@ -52,7 +52,7 @@ class IntegrationTest : public gtest::RealLoopFixture {
 
     if (replace_config_value) {
       // [START config_replace]
-      realm_builder.SetConfigValue(name, "greeting", "Fuchsia");
+      realm_builder.ReplaceConfigValue(name, "greeting", "Fuchsia");
       // [END config_replace]
     }
 
