@@ -39,6 +39,7 @@ fn static_directory_builder_with_common_task_entries<'a>(
         .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
         .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
         .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
+        .add_node_entry(b"comm", CommFile::new(fs, task.clone()))
         .add_node_entry(b"attr", attr_directory(fs))
 }
 
@@ -240,6 +241,57 @@ impl FileOps for CmdlineFile {
             for arg in &argv {
                 sink.write(arg.as_bytes_with_nul());
             }
+            Ok(None)
+        };
+        seq.read_at(current_task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(ENOSYS)
+    }
+}
+
+/// `CommFile` implements the `FsNodeOps` for a `proc/<pid>/comm` file.
+pub struct CommFile {
+    /// The task from which the `CommFile` fetches the command line parameters.
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<()>>,
+}
+
+impl CommFile {
+    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(
+            SimpleFileNode::new(move || {
+                Ok(CommFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+            }),
+            mode!(IFREG, 0o444),
+            FsCred::root(),
+        )
+    }
+}
+
+impl FileOps for CommFile {
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let comm = self.task.command();
+        let mut seq = self.seq.lock();
+        let iter = move |_cursor, sink: &mut SeqFileBuf| {
+            sink.write(comm.as_bytes());
+            sink.write(b"\n");
             Ok(None)
         };
         seq.read_at(current_task, iter, offset, data)
