@@ -18,14 +18,14 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: '#camera_device_watcher',
         },
         {
             protocol: "fuchsia.camera3.DeviceWatcher",
             from: "#camera_device_watcher",
-            to: [ "#session-manager" ],
+            to: "#session-manager",
         },
         {
             directory: "dev",
@@ -35,7 +35,9 @@
             subdir: "class/camera",
         },
         {
-            protocol: [ "fuchsia.sys.Launcher" ],
+            // TODO(fxb/92885) migrate camera_device.cmx to components v2
+            // and remove this v1 dependency
+            protocol: "fuchsia.sys.Launcher",
             from: "self",
             to: "#camera_device_watcher",
             dependency: "weak_for_migration",
