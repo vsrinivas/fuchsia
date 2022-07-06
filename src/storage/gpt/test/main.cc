@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
       snprintf(gDevPath, sizeof(gDevPath), "%s", argv[i + 1]);
       gUseRamDisk = false;
     } else if (!strcmp(argv[i], "-s") && (i + 1 < argc)) {
-      gRandSeed = static_cast<unsigned int>(strtoul(argv[i + 1], NULL, 0));
+      gRandSeed = static_cast<unsigned int>(strtoul(argv[i + 1], nullptr, 0));
     }
     // Ignore options that we don't recognize so that they are passed
     // through to zxtest. Similarly, zxtest ignores options that it

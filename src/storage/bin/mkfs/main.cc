@@ -53,9 +53,9 @@ int usage(void) {
 int parse_args(int argc, char** argv, fs_management::MkfsOptions* options,
                fs_management::DiskFormat* df, char** devicepath) {
   static const struct option cmds[] = {
-      {"help", no_argument, NULL, 'h'},
-      {"verbose", no_argument, NULL, 'v'},
-      {"fvm_data_slices", required_argument, NULL, 's'},
+      {"help", no_argument, nullptr, 'h'},
+      {"verbose", no_argument, nullptr, 'v'},
+      {"fvm_data_slices", required_argument, nullptr, 's'},
       {0, 0, 0, 0},
   };
 
@@ -68,7 +68,7 @@ int parse_args(int argc, char** argv, fs_management::MkfsOptions* options,
         options->verbose = true;
         break;
       case 's':
-        options->fvm_data_slices = safemath::checked_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        options->fvm_data_slices = safemath::checked_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         if (options->fvm_data_slices == 0) {
           fprintf(stderr, "Invalid Args: %s\n", strerror(errno));
           return usage();

@@ -70,7 +70,7 @@ zx_status_t MapFileForWriting(const fbl::unique_fd& fd, const char* file, size_t
 
   void* data = nullptr;
   if (write_size > 0) {
-    data = mmap(NULL, write_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+    data = mmap(nullptr, write_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
     if (data == MAP_FAILED) {
       fprintf(stderr, "mmap failed: %s\n", strerror(errno));
       return ZX_ERR_NO_MEMORY;

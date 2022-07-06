@@ -36,10 +36,10 @@ int main(int argc, char** argv) {
   std::string fshost_path(fshost::kHubAdminServicePath);
   while (1) {
     static struct option opts[] = {
-        {"help", no_argument, NULL, 'h'},
-        {"verbose", no_argument, NULL, 'v'},
-        {"fshost-path", required_argument, NULL, 'p'},
-        {NULL, 0, NULL, 0},
+        {"help", no_argument, nullptr, 'h'},
+        {"verbose", no_argument, nullptr, 'v'},
+        {"fshost-path", required_argument, nullptr, 'p'},
+        {nullptr, 0, nullptr, 0},
     };
     int opt_index;
     int c = getopt_long(argc, argv, "v", opts, &opt_index);

@@ -35,9 +35,9 @@ int parse_args(int argc, char** argv, fidl::AnyArena& arena,
                std::string* mount_name, std::string& fshost_path) {
   while (1) {
     static struct option opts[] = {
-        {"readonly", no_argument, NULL, 'r'},          {"verbose", no_argument, NULL, 'v'},
-        {"compression", required_argument, NULL, 'c'}, {"help", no_argument, NULL, 'h'},
-        {"fshost-path", required_argument, NULL, 'p'}, {NULL, 0, NULL, 0},
+        {"readonly", no_argument, nullptr, 'r'},          {"verbose", no_argument, nullptr, 'v'},
+        {"compression", required_argument, nullptr, 'c'}, {"help", no_argument, nullptr, 'h'},
+        {"fshost-path", required_argument, nullptr, 'p'}, {nullptr, 0, nullptr, 0},
     };
     int opt_index;
     int c = getopt_long(argc, argv, "rmvc:h", opts, &opt_index);

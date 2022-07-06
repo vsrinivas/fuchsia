@@ -69,9 +69,9 @@ zx::status<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* d
 
 void ParseCommandLineArguments(int argc, char** argv, StorageMetricOptions* options) {
   static const struct option opts[] = {
-      {"clear", optional_argument, NULL, 'c'},
-      {"help", no_argument, NULL, 'h'},
-      {0, 0, 0, 0},
+      {"clear", optional_argument, nullptr, 'c'},
+      {"help", no_argument, nullptr, 'h'},
+      {nullptr, no_argument, nullptr, 0},
   };
   for (int opt; (opt = getopt_long(argc, argv, "c::e::h", opts, nullptr)) != -1;) {
     switch (opt) {

@@ -185,7 +185,7 @@ zx_status_t SparseReader::SetupLZ4() {
 
   // Run decompress once to find out how much data we should read for the next decompress run
   // Since we are not yet decompressing any actual data, the dst_buffer is null
-  to_read_ = LZ4F_decompress(dctx_, nullptr, &dst_sz, inbuf, &src_sz, NULL);
+  to_read_ = LZ4F_decompress(dctx_, nullptr, &dst_sz, inbuf, &src_sz, nullptr);
   if (LZ4F_isError(to_read_)) {
     fprintf(stderr, "SparseReader: could not decompress header: %s\n", LZ4F_getErrorName(to_read_));
     return ZX_ERR_INTERNAL;
@@ -272,7 +272,7 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
       while (in_.offset() < to_read_) {
         size_t dst_sz = out_.capacity() - out_.size();
         next = LZ4F_decompress(dctx_, out_.get() + out_.size(), &dst_sz, in_.get() + in_.offset(),
-                               &src_sz, NULL);
+                               &src_sz, nullptr);
         if (LZ4F_isError(next)) {
           fprintf(stderr, "could not decompress input: %s\n", LZ4F_getErrorName(next));
           return -1;

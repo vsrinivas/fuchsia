@@ -140,7 +140,7 @@ TEST_P(TruncateLargeHostFilesystemTest, Large) {
   // Fill a test buffer with data
   std::vector<uint8_t> buf(GetParam().buf_size);
 
-  unsigned seed = static_cast<unsigned>(time(0));
+  unsigned seed = static_cast<unsigned>(time(nullptr));
   std::cerr << "Truncate test using seed: " << seed << std::endl;
   srand(seed);
   for (unsigned n = 0; n < GetParam().buf_size; ++n) {
