@@ -372,7 +372,7 @@ fpromise::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry
     return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
-  if (result.value() == false) {
+  if (!result.value()) {
     return fpromise::error(ZX_ERR_NOT_FOUND);
   }
 
@@ -560,7 +560,7 @@ zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer, uint64_t block_cou
     if (result.is_error()) {
       return result.error();
     }
-    if (result.value() == false) {
+    if (!result.value()) {
       continue;
     }
 
@@ -612,7 +612,7 @@ zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size,
     if (result.is_error()) {
       return result.error();
     }
-    if (result.value() == false) {
+    if (!result.value()) {
       continue;
     }
     partitions_[i] = &ptable_[i];

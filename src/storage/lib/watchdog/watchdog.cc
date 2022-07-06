@@ -98,7 +98,7 @@ zx::status<> Watchdog::Track(OperationTracker* tracker) {
 
   auto ret = healthy_operations_.insert(
       std::pair<OperationTrackerId, OperationTracker*>(tracker->GetId(), tracker));
-  if (ret.second == false) {
+  if (!ret.second) {
     return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
   return zx::ok();
