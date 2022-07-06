@@ -64,6 +64,10 @@ legacy_base_package_labels += [
   # needed in core.gni for tests that use the core image.
   "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/settings/service:setui_service",
+
+  # TODO(fxbug.dev/102389): delete sysmgr
+  "//src/sys/sysmgr",
+  "//src/sys/sysmgr:services_config",
 ]
 
 # Tools to control the pkg subsystem are in the base package set by default
