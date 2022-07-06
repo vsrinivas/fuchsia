@@ -67,9 +67,9 @@
         },
         {
             protocol: "fuchsia.storage.ext4.Server",
-            from: "self",
+            from: "#fuchsia_storage_ext4_server",
             to: "#factory_store_providers",
-            dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             protocol: [

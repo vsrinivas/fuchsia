@@ -48,7 +48,6 @@
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.stash.SecureStore",
-                "fuchsia.storage.ext4.Server",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.Launcher",
