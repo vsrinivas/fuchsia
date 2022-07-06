@@ -198,19 +198,28 @@
             ],
         },
         {
+            // Allow networking from programs running in the console.
             protocol: [
-                // Allow networking from programs running in the console.
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
-
-                // Allow launching / managing guests from the console.
+            ],
+            from: "parent",
+            to: "#console-launcher",
+        },
+        {
+            // Allow launching / managing guests from the console.
+            protocol: [
                 "fuchsia.virtualization.DebianGuestManager",
                 "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",
             ],
-            from: "parent",
+            from: "#core",
             to: "#console-launcher",
+
+            // Virtualization is not present in all configurations.
+            // See: fxbug.dev/103301
+            source_availability: "unknown",
         },
         {
             protocol: [
