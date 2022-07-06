@@ -7,6 +7,7 @@ use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;
+use std::sync::Arc;
 use zerocopy::AsBytes;
 
 /// The version of selinux_status_t this kernel implements.
@@ -48,6 +49,7 @@ impl SeLinuxFs {
                 )?,
                 mode!(IFREG, 0o444),
             )
+            .add_node_entry(b"class", dynamic_directory(&fs, SeLinuxClassDirectoryDelegate))
             .build_root();
 
         Ok(fs)
@@ -174,6 +176,24 @@ impl SeLinuxFile for SeCheckReqProt {
         let checkreqprot = parse_int(&data)?;
         not_implemented!(current_task, "selinux checkreqprot: {}", checkreqprot);
         Ok(())
+    }
+}
+
+struct SeLinuxClassDirectoryDelegate;
+
+impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        Ok(vec![])
+    }
+
+    fn lookup(&self, fs: &Arc<FileSystem>, _name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        Ok(StaticDirectoryBuilder::new(&fs)
+            .add_entry(b"index", ByteVecFile::new(b"0\n".to_vec()), mode!(IFREG, 0o444))
+            .add_node_entry(
+                b"perms",
+                StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555)).build(),
+            )
+            .build())
     }
 }
 
