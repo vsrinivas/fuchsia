@@ -268,8 +268,8 @@ void PerformFree(Allocator* allocator, const fbl::Array<size_t>& indices) {
 
   {
     AllocatorReservation reservation(allocator);
-    for (size_t i = 0; i < indices.size(); i++) {
-      allocator->Free(&reservation, indices[i]);
+    for (size_t index : indices) {
+      allocator->Free(&reservation, index);
     }
     FakeTransaction transaction;
     reservation.Commit(&transaction);

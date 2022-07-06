@@ -128,16 +128,16 @@ void ForceFragmentation(Allocator* allocator, size_t blocks) {
 // Save the extents within |in| in a non-reserved vector |out|.
 void CopyExtents(const std::vector<ReservedExtent>& in, std::vector<Extent>* out) {
   out->reserve(in.size());
-  for (size_t i = 0; i < in.size(); i++) {
-    out->push_back(in[i].extent());
+  for (const ReservedExtent& extent : in) {
+    out->push_back(extent.extent());
   }
 }
 
 // Save the nodes within |in| in a non-reserved vector |out|.
 void CopyNodes(const std::vector<ReservedNode>& in, std::vector<uint32_t>* out) {
   out->reserve(in.size());
-  for (size_t i = 0; i < in.size(); i++) {
-    out->push_back(in[i].index());
+  for (const ReservedNode& node : in) {
+    out->push_back(node.index());
   }
 }
 

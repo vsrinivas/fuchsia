@@ -78,8 +78,8 @@ zx_status_t CheckSuperblock(const Superblock* info) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  for (uint32_t i = 0; i < kFactoryfsReserved; i++) {
-    if (info->reserved[i]) {
+  for (uint32_t reserved_chunk : info->reserved) {
+    if (reserved_chunk) {
       FX_LOGS(ERROR) << "reserved bits are not zeroed out correctly";
       DumpSuperblock(*info);
       return ZX_ERR_IO_DATA_INTEGRITY;

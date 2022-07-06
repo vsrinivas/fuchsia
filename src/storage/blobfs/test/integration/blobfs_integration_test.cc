@@ -358,10 +358,10 @@ TEST_P(BlobfsIntegrationTest, ReadDirectory) {
   ASSERT_EQ(readdir(dir), nullptr) << "Expected blobfs to start empty";
 
   // Fill a directory with entries.
-  for (size_t i = 0; i < kMaxEntries; i++) {
-    info[i] = GenerateRandomBlob(fs().mount_path(), kBlobSize);
+  for (std::unique_ptr<BlobInfo>& entry : info) {
+    entry = GenerateRandomBlob(fs().mount_path(), kBlobSize);
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info[i], &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*entry, &fd));
   }
 
   // Check that we see the expected number of entries
@@ -378,13 +378,13 @@ TEST_P(BlobfsIntegrationTest, ReadDirectory) {
   // along.
   while ((dir_entry = readdir(dir)) != nullptr) {
     bool found = false;
-    for (size_t i = 0; i < kMaxEntries; i++) {
-      if ((info[i]->size_data != 0) &&
-          strcmp(strrchr(info[i]->path, '/') + 1, dir_entry->d_name) == 0) {
-        ASSERT_EQ(0, unlink(info[i]->path));
+    for (const std::unique_ptr<BlobInfo>& entry : info) {
+      if ((entry->size_data != 0) &&
+          strcmp(strrchr(entry->path, '/') + 1, dir_entry->d_name) == 0) {
+        ASSERT_EQ(0, unlink(entry->path));
         // It's a bit hacky, but we set 'size_data' to zero
         // to identify the entry has been unlinked.
-        info[i]->size_data = 0;
+        entry->size_data = 0;
         found = true;
         break;
       }

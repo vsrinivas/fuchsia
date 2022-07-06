@@ -94,9 +94,8 @@ Status Worker::Rw(bool do_read) {
   // fill our content buffer if it's empty
   if (off == 0) {
     std::uniform_int_distribution<uint64_t> dist;
-    for (unsigned n = 0; n < (kBufSize / sizeof(uint64_t)); n++) {
-      buffer_.u64[n] = dist(data_random_);
-    }
+    std::generate(std::begin(buffer_.u64), std::end(buffer_.u64),
+                  [&] { return dist(data_random_); });
   }
 
   // data in buffer available to write

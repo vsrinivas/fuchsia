@@ -99,13 +99,13 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
   ASSERT_FALSE(iter.Done());
 
   uint32_t blocks_seen = 0;
-  for (size_t i = 0; i < extents.size(); i++) {
+  for (const ReservedExtent& extent : extents) {
     ASSERT_FALSE(iter.Done());
     uint32_t actual_length;
     uint64_t actual_start;
     ASSERT_EQ(iter.Next(1, &actual_length, &actual_start), ZX_OK);
     ASSERT_EQ(1ul, actual_length);
-    ASSERT_EQ(extents[i].extent().Start(), actual_start);
+    ASSERT_EQ(extent.extent().Start(), actual_start);
     blocks_seen += actual_length;
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
   }

@@ -78,8 +78,8 @@ class RandomOpTest : public FilesystemTest {
   RandomOpTest() {
     AddRandomOperations();
 
-    for (size_t n = 0; n < std::size(kWork); n++) {
-      NewWorker(kWork[n].name, kWork[n].size);
+    for (const auto& work_info : kWork) {
+      NewWorker(work_info.name, work_info.size);
     }
   }
 
@@ -409,8 +409,8 @@ class RandomOpTest : public FilesystemTest {
 
   // create a weighted list of operations for each thread
   void AddRandomOperations() {
-    for (size_t i = 0; i < std::size(kOperations); ++i) {
-      operations_.insert(operations_.end(), kOperations[i].weight, kOperations[i]);
+    for (const RandomOp& op : kOperations) {
+      operations_.insert(operations_.end(), op.weight, op);
     }
   }
 

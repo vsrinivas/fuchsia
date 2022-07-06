@@ -272,9 +272,9 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
   const char* command = argv[0];
 
   // Validate command
-  for (unsigned i = 0; i < sizeof(kCmds) / sizeof(kCmds[0]); i++) {
-    if (!strcmp(command, kCmds[i].name)) {
-      *func = kCmds[i].func;
+  for (const auto& cmd : kCmds) {
+    if (!strcmp(command, cmd.name)) {
+      *func = cmd.func;
     }
   }
 

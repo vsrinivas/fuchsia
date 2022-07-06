@@ -280,10 +280,10 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
   size_t node_index = 0;
   cache.ForAllOpenNodes([&open_nodes, &node_index](fbl::RefPtr<CacheNode> node) {
     ZX_ASSERT(node_index < std::size(open_nodes));
-    for (size_t i = 0; i < std::size(open_nodes); i++) {
+    for (fbl::RefPtr<TestNode>& open_node : open_nodes) {
       // We should be able to find this node in the set of open nodes -- but only once.
-      if (open_nodes[i] && open_nodes[i].get() == node.get()) {
-        open_nodes[i] = nullptr;
+      if (open_node && open_node.get() == node.get()) {
+        open_node = nullptr;
         node_index++;
         return ZX_OK;
       }

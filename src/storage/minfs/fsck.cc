@@ -446,8 +446,8 @@ std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo blo
 
 zx::status<> MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   FX_LOGS(DEBUG) << "Direct blocks: ";
-  for (unsigned n = 0; n < kMinfsDirect; n++) {
-    FX_LOGS(DEBUG) << " " << inode->dnum[n] << ",";
+  for (const blk_t& dnum : inode->dnum) {
+    FX_LOGS(DEBUG) << " " << dnum << ",";
   }
   FX_LOGS(DEBUG) << " ...";
 

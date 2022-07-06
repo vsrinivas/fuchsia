@@ -142,8 +142,8 @@ TEST_P(PersistWithDataTest, ReadsReturnWrittenDataAfterRemount) {
   EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
   // Delete all files
-  for (size_t i = 0; i < std::size(files); i++) {
-    ASSERT_EQ(unlink(files[i].c_str()), 0);
+  for (const std::string& file : files) {
+    ASSERT_EQ(unlink(file.c_str()), 0);
   }
 
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);

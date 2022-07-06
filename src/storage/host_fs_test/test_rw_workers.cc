@@ -129,9 +129,7 @@ int WorkerRw(Worker* w, bool do_read) {
   // fill our content buffer if it's empty
   if (off == 0) {
     std::uniform_int_distribution<uint64_t> distribution;
-    for (unsigned n = 0; n < kBufSize / sizeof(uint64_t); ++n) {
-      w->u64[n] = distribution(w->rdata);
-    }
+    std::generate(std::begin(w->u64), std::end(w->u64), [&] { return distribution(w->rdata); });
   }
 
   // data in buffer available to write

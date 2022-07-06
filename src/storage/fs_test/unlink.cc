@@ -26,12 +26,13 @@ using UnlinkTest = FilesystemTest;
 TEST_P(UnlinkTest, Simple) {
   const std::string paths[] = {GetPath("abc"), GetPath("def"), GetPath("ghi"), GetPath("jkl"),
                                GetPath("mnopqrstuvxyz")};
-  for (size_t i = 0; i < std::size(paths); i++) {
-    fbl::unique_fd fd(open(paths[i].c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  for (const std::string& path : paths) {
+    fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
     ASSERT_TRUE(fd);
   }
-  for (size_t i = 0; i < std::size(paths); i++) {
-    ASSERT_EQ(unlink(paths[i].c_str()), 0);
+
+  for (const std::string& path : paths) {
+    ASSERT_EQ(unlink(path.c_str()), 0);
   }
 }
 

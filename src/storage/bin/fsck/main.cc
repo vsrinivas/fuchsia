@@ -24,19 +24,19 @@ namespace {
 struct {
   const char* name;
   fs_management::DiskFormat df;
-} FILESYSTEMS[] = {{"blobfs", fs_management::kDiskFormatBlobfs},
-                   {"minfs", fs_management::kDiskFormatMinfs},
-                   {"fat", fs_management::kDiskFormatFat},
-                   {"factoryfs", fs_management::kDiskFormatFactoryfs},
-                   {"f2fs", fs_management::kDiskFormatF2fs},
-                   {"fxfs", fs_management::kDiskFormatFxfs}};
+} kSupportedFilesystems[] = {{"blobfs", fs_management::kDiskFormatBlobfs},
+                             {"minfs", fs_management::kDiskFormatMinfs},
+                             {"fat", fs_management::kDiskFormatFat},
+                             {"factoryfs", fs_management::kDiskFormatFactoryfs},
+                             {"f2fs", fs_management::kDiskFormatF2fs},
+                             {"fxfs", fs_management::kDiskFormatFxfs}};
 
 int usage(void) {
   fprintf(stderr, "usage: fsck [ <option>* ] devicepath filesystem\n");
   fprintf(stderr, " -v  : Verbose mode\n");
   fprintf(stderr, " values for 'filesystem' include:\n");
-  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
-    fprintf(stderr, "  '%s'\n", FILESYSTEMS[i].name);
+  for (const auto& fs : kSupportedFilesystems) {
+    fprintf(stderr, "  '%s'\n", fs.name);
   }
   return -1;
 }
@@ -58,9 +58,9 @@ int parse_args(int argc, char** argv, fs_management::FsckOptions* options,
   }
 
   *devicepath = argv[1];
-  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
-    if (!strcmp(FILESYSTEMS[i].name, argv[2])) {
-      *df = FILESYSTEMS[i].df;
+  for (const auto& fs : kSupportedFilesystems) {
+    if (!strcmp(fs.name, argv[2])) {
+      *df = fs.df;
       break;
     }
   }

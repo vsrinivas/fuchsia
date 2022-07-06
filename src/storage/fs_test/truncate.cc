@@ -120,8 +120,7 @@ TEST_P(SparseTruncateTest, PartialBlockSparse) {
       kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks + kBlockSize,
   };
 
-  for (size_t i = 0; i < std::size(write_offsets); i++) {
-    off_t write_off = write_offsets[i];
+  for (off_t write_off : write_offsets) {
     fbl::unique_fd fd(
         open(GetPath("truncate-sparse").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);

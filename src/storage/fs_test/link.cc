@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <array>
 #include <optional>
 #include <random>
 #include <vector>
@@ -34,11 +36,9 @@ TEST_P(HardLinkTest, Basic) {
   // Make a file, fill it with content
   int fd = open(old_path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
   ASSERT_GT(fd, 0);
-  uint8_t buf[100];
-  for (size_t i = 0; i < sizeof(buf); i++) {
-    buf[i] = (uint8_t)rand();
-  }
-  ASSERT_EQ(write(fd, buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
+  std::array<uint8_t, 100> buf;
+  std::generate(buf.begin(), buf.end(), rand);
+  ASSERT_EQ(write(fd, buf.data(), buf.size()), static_cast<ssize_t>(buf.size()));
   ASSERT_NO_FATAL_FAILURE(CheckFileContents(fd, buf));
   ASSERT_NO_FATAL_FAILURE(CheckLinkCount(old_path, 1));
 
@@ -218,11 +218,9 @@ TEST_P(HardLinkTest, AcrossDirectories) {
   // Make a file, fill it with content
   int fd = open(old_path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
   ASSERT_GT(fd, 0);
-  uint8_t buf[100];
-  for (size_t i = 0; i < sizeof(buf); i++) {
-    buf[i] = (uint8_t)rand();
-  }
-  ASSERT_EQ(write(fd, buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
+  std::array<uint8_t, 100> buf;
+  std::generate(buf.begin(), buf.end(), rand);
+  ASSERT_EQ(write(fd, buf.data(), buf.size()), static_cast<ssize_t>(buf.size()));
   ASSERT_NO_FATAL_FAILURE(CheckFileContents(fd, buf));
 
   ASSERT_EQ(link(old_path.c_str(), new_path.c_str()), 0);

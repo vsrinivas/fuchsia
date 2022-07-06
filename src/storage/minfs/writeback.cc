@@ -101,11 +101,11 @@ void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer
 }
 
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {
-  for (size_t i = 0; i < pinned_vnodes_.size(); i++) {
-    if (pinned_vnodes_[i].get() == vnode.get()) {
-      // Already pinned
-      return;
-    }
+  if (auto it = std::find_if(pinned_vnodes_.begin(), pinned_vnodes_.end(),
+                             [&](const auto& pinned) { return pinned.get() == vnode.get(); });
+      it != pinned_vnodes_.end()) {
+    // Already pinned
+    return;
   }
 
   pinned_vnodes_.push_back(std::move(vnode));

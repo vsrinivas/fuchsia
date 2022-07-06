@@ -516,16 +516,16 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 // later.
 zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::unique_fd& fvm_fd,
                                fbl::Array<PartitionInfo>* parts) {
-  for (size_t p = 0; p < parts->size(); p++) {
-    fvm::ExtentDescriptor ext = GetExtent((*parts)[p].pd, 0);
+  for (PartitionInfo& part_info : *parts) {
+    fvm::ExtentDescriptor ext = GetExtent(part_info.pd, 0);
     alloc_req_t alloc = {};
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
-    alloc.flags = (*parts)[p].active ? 0 : volume::wire::kAllocatePartitionFlagInactive;
+    alloc.flags = part_info.active ? 0 : volume::wire::kAllocatePartitionFlagInactive;
     alloc.slice_count = ext.slice_count;
-    memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
+    memcpy(&alloc.type, part_info.pd->type, sizeof(alloc.type));
     memcpy(&alloc.guid, uuid::Uuid::Generate().bytes(), uuid::kUuidSize);
-    memcpy(&alloc.name, (*parts)[p].pd->name, sizeof(alloc.name));
+    memcpy(&alloc.name, part_info.pd->name, sizeof(alloc.name));
     LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
     if (auto fd_or =
             fs_management::FvmAllocatePartitionWithDevfs(devfs_root.get(), fvm_fd.get(), &alloc);
@@ -533,13 +533,13 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
       ERROR("Couldn't allocate partition\n");
       return ZX_ERR_NO_SPACE;
     } else {
-      (*parts)[p].new_part = *std::move(fd_or);
+      part_info.new_part = *std::move(fd_or);
     }
 
     // Add filter drivers.
-    if (((*parts)[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
+    if ((part_info.pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
       LOG("Creating zxcrypt volume\n");
-      zx_status_t status = ZxcryptCreate(&(*parts)[p]);
+      zx_status_t status = ZxcryptCreate(&part_info);
       if (status != ZX_OK) {
         return status;
       }
@@ -547,12 +547,12 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
 
     // The 0th index extent is allocated alongside the partition, so we
     // begin indexing from the 1st extent here.
-    for (size_t e = 1; e < (*parts)[p].pd->extent_count; e++) {
-      ext = GetExtent((*parts)[p].pd, e);
+    for (size_t e = 1; e < part_info.pd->extent_count; e++) {
+      ext = GetExtent(part_info.pd, e);
       uint64_t offset = ext.slice_start;
       uint64_t length = ext.slice_count;
 
-      fdio_cpp::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
+      fdio_cpp::UnownedFdioCaller partition_connection(part_info.new_part.get());
       auto result =
           fidl::WireCall<volume::Volume>(partition_connection.channel())->Extend(offset, length);
       auto status = result.ok() ? result.value().status : result.status();
@@ -785,8 +785,8 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     LOG("Done flushing partition %zu\n", p);
   }
 
-  for (size_t p = 0; p < parts.size(); p++) {
-    fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+  for (const PartitionInfo& part_info : parts) {
+    fdio_cpp::UnownedFdioCaller partition_connection(part_info.new_part.get());
     // Upgrade the old partition (currently active) to the new partition (currently
     // inactive) so the new partition persists.
     auto result =

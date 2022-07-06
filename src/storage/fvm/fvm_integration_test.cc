@@ -1675,8 +1675,8 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
     i = (i + 1) % kNumVParts;
   }
 
-  for (size_t i = 0; i < kNumVParts; i++) {
-    ASSERT_EQ(close(vparts[i].fd.release()), 0);
+  for (vdata_t& vpart : vparts) {
+    ASSERT_EQ(close(vpart.fd.release()), 0);
   }
 
   ASSERT_EQ(close(fd.release()), 0);
