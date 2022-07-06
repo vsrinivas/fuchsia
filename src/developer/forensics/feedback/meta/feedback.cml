@@ -44,8 +44,11 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.update.channelcontrol.ChannelControl",
             ],
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            availability: "optional",
         },
         {
             directory: "boot",
