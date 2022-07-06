@@ -16,11 +16,18 @@ impl FileSystemOps for SysFs {
 impl SysFs {
     fn new() -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(SysFs);
-        fs.set_root(ROMemoryDirectory);
-        let root = fs.root();
-        let dir_fs = root.add_node_ops(b"fs", mode!(IFDIR, 0o755), ROMemoryDirectory)?;
-        let _fs_selinux =
-            dir_fs.add_node_ops(b"selinux", mode!(IFDIR, 0o755), ROMemoryDirectory)?;
+        StaticDirectoryBuilder::new(&fs)
+            .add_node_entry(
+                b"fs",
+                StaticDirectoryBuilder::new(&fs)
+                    .set_mode(mode!(IFDIR, 0o755))
+                    .add_node_entry(
+                        b"selinux",
+                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
+                    )
+                    .build(),
+            )
+            .build_root();
         Ok(fs)
     }
 }

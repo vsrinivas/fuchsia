@@ -10,28 +10,6 @@ use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 
-// TODO: It should be possible to replace all uses of ROMemoryDirectory with TmpfsDirectory +
-// MS_RDONLY (at which point MemoryDirectory would be a better name for it).
-pub struct ROMemoryDirectory;
-impl FsNodeOps for ROMemoryDirectory {
-    fn create_file_ops(
-        &self,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(MemoryDirectoryFile::new()))
-    }
-
-    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        error!(ENOENT)
-    }
-
-    fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
-        // TODO: use MS_RDONLY instead
-        error!(ENOSYS)
-    }
-}
-
 pub struct MemoryDirectoryFile {
     /// The current position for readdir.
     ///

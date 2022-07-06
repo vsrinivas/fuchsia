@@ -179,7 +179,7 @@ impl DirEntry {
     ///
     /// If the entry already exists, create_node_fn is not called, and EEXIST is
     /// returned.
-    fn create_entry<F>(
+    pub fn create_entry<F>(
         self: &DirEntryHandle,
         name: &FsStr,
         create_node_fn: F,

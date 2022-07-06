@@ -4,11 +4,13 @@
 
 #![allow(non_upper_case_globals)]
 
+use crate::auth::FsCred;
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
     FdEvents, FdNumber, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode,
-    FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode, WaitAsyncOptions,
+    FsNodeHandle, FsStr, NamespaceNode, SeekOrigin, SpecialNode, StaticDirectoryBuilder,
+    WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
@@ -2557,23 +2559,37 @@ const BINDERS: &[&'static FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 impl BinderFs {
     pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(BinderFs(()));
-        fs.set_root(ROMemoryDirectory);
-        for binder in BINDERS {
-            BinderFs::add_binder(kernel, &fs, &binder)?;
+        let mut builder = StaticDirectoryBuilder::new(&fs);
+
+        for (name, node) in Self::get_binder_nodes(kernel, &fs)?.into_iter() {
+            builder = builder.add_node_entry(name, node);
         }
+        builder.build_root();
         Ok(fs)
     }
 
-    fn add_binder(kernel: &Kernel, fs: &FileSystemHandle, name: &FsStr) -> Result<(), Errno> {
-        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
-        fs.root().add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
-        Ok(())
+    fn get_binder_nodes(
+        kernel: &Kernel,
+        fs: &FileSystemHandle,
+    ) -> Result<BTreeMap<&'static FsStr, FsNodeHandle>, Errno> {
+        let mut nodes = BTreeMap::new();
+        for binder in BINDERS {
+            let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
+            let node = fs.create_node_with_ops(SpecialNode, mode!(IFCHR, 0o600), FsCred::root());
+            {
+                let mut info = node.info_write();
+                info.rdev = dev;
+            }
+            nodes.insert(*binder, node);
+        }
+        Ok(nodes)
     }
 }
 
 pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
-    for binder in BINDERS {
-        BinderFs::add_binder(kernel, dev_tmp_fs(kernel), binder)?;
+    let fs = dev_tmp_fs(kernel);
+    for (name, node) in BinderFs::get_binder_nodes(kernel, fs)?.into_iter() {
+        fs.root().create_entry(name, || Ok(node))?;
     }
     Ok(())
 }

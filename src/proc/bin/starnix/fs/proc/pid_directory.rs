@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use crate::auth::FsCred;
-use crate::fs::{proc::directory::*, *};
+use crate::fs::*;
 use crate::lock::Mutex;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
