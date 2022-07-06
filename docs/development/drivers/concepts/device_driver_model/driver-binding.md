@@ -181,25 +181,23 @@ An example composite bind rule file can be found at
 [//tools/bindc/examples/composite-gizmo.bind](/tools/bindc/examples/composite-gizmo.bind).
 
 ```
-using fuchsia.usb;
+composite gizmo_sysmem;
 
-composite gizmo_example;
+using fuchsia.platform;
+using fuchsia.sysmem;
+using fuchsia.tee;
 
-primary node "gizmo_usb" {
-  fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
+primary node "sysmem" {
+  fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
 }
 
-node "audio" {
-  if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
-    fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.AUDIO;
-  } else if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK {
-    accept fuchsia.BIND_USB_CLASS {
-      fuchsia.usb.BIND_USB_CLASS.COMM,
-      fuchsia.usb.BIND_USB_CLASS.VIDEO,
-    }
+node "tee" {
+  if fuchsia.BIND_PROTOCOL == fuchsia.tee.BIND_PROTOCOL.DEVICE {
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
+  } else {
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.QEMU;
   }
 }
-
 ```
 
 The grammar for composite bind is:
