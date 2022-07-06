@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::new::list::{get_all_instances, Instance, InstanceState},
+    component_hub::list::{get_all_instances, Instance, InstanceState},
     ffx_component_graph_args::{ComponentGraphCommand, GraphOrientation},
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,

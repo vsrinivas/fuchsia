@@ -4,43 +4,53 @@
 
 use {
     anyhow::{format_err, Context, Result},
-    component_hub::{io::Directory, show::find_components},
+    component_hub::show::find_instances,
     errors::ffx_error,
+    ffx_component_show::create_table,
     ffx_core::ffx_plugin,
     ffx_session_show_args::SessionShowCommand,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon_status::Status,
 };
 
-const DETAILS_FAILURE: &str = "\
-Could not get session information from the target.
-
-This may be because there are no running sessions, or because the target is
-using a product configuration that does not support the session framework.";
+const DETAILS_FAILURE: &str = "Could not get session information from the target. This may be
+because there are no running sessions, or because the target is using a product configuration
+that does not support the session framework.";
 
 #[ffx_plugin()]
 async fn show(rcs_proxy: rc::RemoteControlProxy, _cmd: SessionShowCommand) -> Result<()> {
-    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("creating hub root proxy")?;
+    let (explorer_proxy, explorer_server) =
+        fidl::endpoints::create_proxy::<fsys::RealmExplorerMarker>()
+            .context("creating explorer proxy")?;
+    let (query_proxy, query_server) = fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
+        .context("creating query proxy")?;
     rcs_proxy
-        .open_hub(dir_server)
+        .root_realm_explorer(explorer_server)
         .await?
         .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening hub")?;
-    let hub_dir = Directory::from_proxy(root);
-    let components = find_components("session:session".to_string(), hub_dir)
-        .await
-        .map_err(|e| ffx_error!("{}\n\nError was: {}", DETAILS_FAILURE, e))?;
+        .context("opening realm explorer")?;
+    rcs_proxy
+        .root_realm_query(query_server)
+        .await?
+        .map_err(|i| Status::ok(i).unwrap_err())
+        .context("opening realm query")?;
 
-    if components.is_empty() {
+    let instances = find_instances("session:session".to_string(), &explorer_proxy, &query_proxy)
+        .await
+        .map_err(|e| ffx_error!("Error: {}. {}", e, DETAILS_FAILURE))?;
+
+    if instances.is_empty() {
         return Err(format_err!(
-            "{}\n\nNo components found matching filter `session:session`",
+            "No instances found matching filter `session:session`. {}",
             DETAILS_FAILURE
         ));
     }
 
-    for component in components {
-        println!("{}", component);
+    for instance in instances {
+        let table = create_table(instance);
+        table.printstd();
+        println!("");
     }
+
     Ok(())
 }

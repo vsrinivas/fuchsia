@@ -1,16 +1,16 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     crate::io::Directory,
-    ansi_term::Color,
-    anyhow::{format_err, Context, Result},
+    crate::list::{get_all_instances, Instance as ListInstance},
+    anyhow::{bail, format_err, Context, Result},
+    cm_rust::{ExposeDecl, ExposeDeclCommon, FidlIntoNative, UseDecl},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_async::TimeoutExt,
-    futures::future::{join, join_all, BoxFuture},
-    futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
-    routing::component_id_index::ComponentInstanceId,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
 
 #[cfg(feature = "serde")]
@@ -26,197 +26,56 @@ use serde::{Deserialize, Serialize};
 // TODO(http://fxbug.dev/99927): Get network latency info from ffx to choose a better timeout.
 static DIR_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
-macro_rules! pretty_print {
-    ( $f: expr, $title: expr, $value: expr ) => {
-        writeln!($f, "{:>22}: {}", $title, $value)
-    };
-}
+/// Uses the fuchsia.sys2.RealmExplorer and fuchsia.sys2.RealmQuery protocols to find all CMX/CML
+/// components whose component name, ID or URL contains |query| as a substring.
+pub async fn find_instances(
+    query: String,
+    explorer_proxy: &fsys::RealmExplorerProxy,
+    query_proxy: &fsys::RealmQueryProxy,
+) -> Result<Vec<Instance>> {
+    let list_instances = get_all_instances(explorer_proxy, query_proxy, None).await?;
+    let list_instances: Vec<ListInstance> = list_instances
+        .into_iter()
+        .filter(|i| {
+            let url_match = i.url.as_ref().map_or(false, |url| url.contains(&query));
+            let moniker_match = i.moniker.to_string().contains(&query);
+            let id_match = i.instance_id.as_ref().map_or(false, |id| id.contains(&query));
+            url_match || moniker_match || id_match
+        })
+        .collect();
 
-macro_rules! pretty_print_list {
-    ( $f: expr, $title: expr, $list: expr ) => {
-        if !$list.is_empty() {
-            writeln!($f, "{:>22}: {}", $title, &$list[0])?;
-            for item in &$list[1..] {
-                writeln!($f, "{:>22}  {}", " ", item)?;
+    let mut instances = vec![];
+
+    for list_instance in list_instances {
+        if !list_instance.is_cmx {
+            // Get the detailed information for the CML instance
+            let moniker_str = format!(".{}", list_instance.moniker.to_string());
+            match query_proxy.get_instance_info(&moniker_str).await? {
+                Ok((info, resolved)) => {
+                    let instance = Instance::parse(info, resolved).await?;
+                    instances.push(instance);
+                }
+                Err(fcomponent::Error::InstanceNotFound) => {
+                    bail!(
+                        "Instance {} was destroyed before its information could be obtained",
+                        list_instance.moniker
+                    );
+                }
+                Err(e) => {
+                    bail!(
+                        "Could not get detailed information for {} from Hub: {:?}",
+                        list_instance.moniker,
+                        e
+                    );
+                }
             }
-        }
-    };
-}
-
-async fn does_url_match_query(query: &str, hub_dir: &Directory) -> bool {
-    let url = hub_dir.read_file("url").await.expect("Could not read component URL");
-    url.contains(query)
-}
-
-// Given a v2 hub directory, collect components whose component name or URL contains |query| as a
-// substring. This function is recursive and will find matching CMX and CML components.
-pub async fn find_components(query: String, hub_dir: Directory) -> Result<Vec<Component>> {
-    find_components_internal(query, String::new(), AbsoluteMoniker::root(), hub_dir).await
-}
-
-fn find_components_internal(
-    query: String,
-    name: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<Component>>> {
-    async move {
-        let mut futures = vec![];
-        let children_dir = hub_dir.open_dir_readable("children")?;
-
-        for child_dir in children_dir.entries().await? {
-            let child_hub_dir = children_dir.open_dir_readable(&child_dir)?;
-            let child_name = child_hub_dir.read_file("moniker").await?;
-            let child_moniker = ChildMoniker::parse(&child_name)?;
-            let child_moniker = moniker.child(child_moniker);
-            let child_future =
-                find_components_internal(query.clone(), child_name, child_moniker, child_hub_dir);
-            futures.push(child_future);
-        }
-
-        if name == "appmgr" {
-            let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
-            let appmgr_future = find_cmx_realms(query.clone(), moniker.clone(), realm_dir);
-            futures.push(appmgr_future);
-        }
-
-        let results = join_all(futures).await;
-        let mut matching_components = vec![];
-        for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
-        }
-
-        let should_include =
-            moniker.to_string().contains(&query) || does_url_match_query(&query, &hub_dir).await;
-        if should_include {
-            let component = Component::parse(moniker, &hub_dir).await?;
-            matching_components.push(component);
-        }
-
-        Ok(matching_components)
-    }
-    .boxed()
-}
-
-// Given a v1 realm directory, collect components whose URL matches the given |query|.
-// |moniker| corresponds to the moniker of the current realm.
-fn find_cmx_realms(
-    query: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<Component>>> {
-    async move {
-        let c_dir = hub_dir.open_dir_readable("c")?;
-        let c_future = find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir);
-
-        let r_dir = hub_dir.open_dir_readable("r")?;
-        let r_future = find_cmx_realms_in_r_dir(query, moniker, r_dir);
-
-        let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
-
-        let mut matching_components_c = matching_components_c?;
-        let mut matching_components_r = matching_components_r?;
-
-        matching_components_c.append(&mut matching_components_r);
-
-        Ok(matching_components_c)
-    }
-    .boxed()
-}
-
-// Given a v1 component directory, collect components whose URL matches the given |query|.
-// |moniker| corresponds to the moniker of the current component.
-fn find_cmx_components(
-    query: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<Component>>> {
-    async move {
-        let mut matching_components = vec![];
-
-        // Component runners can have a `c` dir with child components
-        if hub_dir.exists("c").await? {
-            let c_dir = hub_dir.open_dir_readable("c")?;
-            let mut child_components =
-                find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir).await?;
-            matching_components.append(&mut child_components);
-        }
-
-        let should_include =
-            moniker.to_string().contains(&query) || does_url_match_query(&query, &hub_dir).await;
-        if should_include {
-            let component = Component::parse_cmx(moniker, hub_dir).await?;
-            matching_components.push(component);
-        }
-
-        Ok(matching_components)
-    }
-    .boxed()
-}
-
-async fn find_cmx_components_in_c_dir(
-    query: String,
-    moniker: AbsoluteMoniker,
-    c_dir: Directory,
-) -> Result<Vec<Component>> {
-    // Get all CMX child components
-    let child_component_names = c_dir.entries().await?;
-    let mut future_children = vec![];
-    for child_component_name in child_component_names {
-        let child_moniker = ChildMoniker::parse(&child_component_name)?;
-        let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
-        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
-        for hub_dir in hub_dirs {
-            let future_child = find_cmx_components(query.clone(), child_moniker.clone(), hub_dir);
-            future_children.push(future_child);
+        } else if let Some(hub_dir) = list_instance.hub_dir {
+            let instance = Instance::parse_cmx(list_instance.moniker, hub_dir).await?;
+            instances.push(instance);
         }
     }
 
-    let results = join_all(future_children).await;
-    let mut flattened_components = vec![];
-    for result in results {
-        let mut components = result?;
-        flattened_components.append(&mut components);
-    }
-    Ok(flattened_components)
-}
-
-async fn find_cmx_realms_in_r_dir(
-    query: String,
-    moniker: AbsoluteMoniker,
-    r_dir: Directory,
-) -> Result<Vec<Component>> {
-    // Get all CMX child realms
-    let mut future_realms = vec![];
-    for child_realm_name in r_dir.entries().await? {
-        let child_moniker = ChildMoniker::parse(&child_realm_name)?;
-        let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = r_dir.open_dir_readable(&child_realm_name)?;
-        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
-        for hub_dir in hub_dirs {
-            let future_realm = find_cmx_realms(query.clone(), child_moniker.clone(), hub_dir);
-            future_realms.push(future_realm);
-        }
-    }
-    let results = join_all(future_realms).await;
-    let mut flattened_components = vec![];
-    for result in results {
-        let mut components = result?;
-        flattened_components.append(&mut components);
-    }
-    Ok(flattened_components)
-}
-
-async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
-    // Recurse on the job_ids
-    let mut dirs = vec![];
-    for job_id in job_ids_dir.entries().await? {
-        let dir = job_ids_dir.open_dir_readable(&job_id)?;
-        dirs.push(dir);
-    }
-    Ok(dirs)
+    Ok(instances)
 }
 
 // Get all entries in a capabilities directory. If there is a "svc" directory, traverse it and
@@ -236,20 +95,6 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
 
     entries.sort_unstable();
     Ok(entries)
-}
-
-// Get all key-value pairs in a config directory.
-async fn get_config_fields(config_dir: Directory) -> Result<Vec<ConfigField>> {
-    let mut entries = config_dir.entries().await?;
-    entries.sort_unstable();
-
-    let mut config = vec![];
-    for key in entries {
-        let value = config_dir.read_file(&key).await?;
-        config.push(ConfigField { key, value })
-    }
-
-    Ok(config)
 }
 
 /// Additional information about components that are using the ELF runner
@@ -307,37 +152,20 @@ impl ElfRuntime {
     }
 }
 
-impl std::fmt::Display for ElfRuntime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(utc_estimate) = &self.process_start_time_utc_estimate {
-            pretty_print!(f, "Running since", utc_estimate)?;
-        } else if let Some(ticks) = &self.process_start_time {
-            pretty_print!(f, "Running for", format!("{} ticks", ticks))?;
-        }
-
-        pretty_print!(f, "Job ID", self.job_id)?;
-
-        if let Some(process_id) = &self.process_id {
-            pretty_print!(f, "Process ID", process_id)?;
-        }
-
-        Ok(())
-    }
-}
-
-/// Additional information about components that are running
+/// Additional information about components that are running.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
-pub struct Execution {
+pub struct Started {
     pub elf_runtime: Option<ElfRuntime>,
     pub outgoing_capabilities: Option<Vec<String>>,
-    pub start_reason: Option<String>,
+    pub start_reason: String,
 }
 
-impl Execution {
-    async fn parse(exec_dir: Directory) -> Result<Self> {
-        let elf_runtime = if exec_dir.exists("runtime").await? {
-            let runtime_dir = exec_dir.open_dir_readable("runtime")?;
+impl Started {
+    async fn parse(started: Box<fsys::StartedState>) -> Result<Self> {
+        let elf_runtime = if let Some(runtime_dir) = started.runtime_dir {
+            let runtime_dir = runtime_dir.into_proxy()?;
+            let runtime_dir = Directory::from_proxy(runtime_dir);
 
             // Some runners may not serve the runtime directory, so attempting to get the entries
             // may fail. This is normal and should be treated as no ELF runtime.
@@ -357,21 +185,18 @@ impl Execution {
             None
         };
 
-        let outgoing_capabilities = if exec_dir.exists("out").await? {
-            let out_dir = exec_dir.open_dir_readable("out")?;
+        let outgoing_capabilities = if let Some(out_dir) = started.out_dir {
+            let out_dir = out_dir.into_proxy()?;
+            let out_dir = Directory::from_proxy(out_dir);
             get_capabilities(out_dir)
                 .on_timeout(DIR_TIMEOUT, || Err(format_err!("timeout occurred opening `out` dir")))
                 .await
                 .ok()
         } else {
-            // The directory doesn't exist. This is probably because
-            // there is no runtime on the component.
             None
         };
 
-        let start_reason = Some(exec_dir.read_file("start_reason").await?);
-
-        Ok(Self { elf_runtime, outgoing_capabilities, start_reason })
+        Ok(Self { elf_runtime, outgoing_capabilities, start_reason: started.start_reason })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -389,60 +214,58 @@ impl Execution {
             None
         };
 
-        Ok(Self { elf_runtime, outgoing_capabilities, start_reason: None })
+        let start_reason = "Unknown start reason".to_string();
+
+        Ok(Self { elf_runtime, outgoing_capabilities, start_reason })
     }
 }
 
-impl std::fmt::Display for Execution {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(start_reason) = &self.start_reason {
-            pretty_print!(f, "Start reason", start_reason)?;
-        }
-
-        if let Some(runtime) = &self.elf_runtime {
-            write!(f, "{}", runtime)?;
-        }
-
-        if let Some(outgoing_capabilities) = &self.outgoing_capabilities {
-            pretty_print_list!(f, "Outgoing Capabilities", outgoing_capabilities);
-        }
-
-        Ok(())
-    }
-}
-
-/// A single configuration key-value pair
+/// A single structured configuration key-value pair.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(PartialEq, Debug)]
 pub struct ConfigField {
     pub key: String,
     pub value: String,
 }
 
-/// Additional information about components that are resolved
+/// Additional information about components that are resolved.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Resolved {
     pub incoming_capabilities: Vec<String>,
     pub exposed_capabilities: Vec<String>,
     pub merkle_root: Option<String>,
-    pub instance_id: Option<ComponentInstanceId>,
-    pub config: Vec<ConfigField>,
+    pub config: Option<Vec<ConfigField>>,
+    pub started: Option<Started>,
 }
 
 impl Resolved {
-    async fn parse(resolved_dir: Directory) -> Result<Self> {
+    async fn parse(resolved: Box<fsys::ResolvedState>) -> Result<Self> {
         let incoming_capabilities = {
-            let use_dir = resolved_dir.open_dir_readable("use")?;
-            get_capabilities(use_dir).await?
+            let mut capabilities = vec![];
+            for capability in resolved.uses {
+                let use_decl: UseDecl = capability.fidl_into_native();
+                if let Some(path) = use_decl.path() {
+                    let path = path.to_string();
+                    capabilities.push(path);
+                }
+            }
+            capabilities
         };
 
         let exposed_capabilities = {
-            let expose_dir = resolved_dir.open_dir_readable("expose")?;
-            get_capabilities(expose_dir).await?
+            let mut capabilities = vec![];
+            for capability in resolved.exposes {
+                let expose_decl: ExposeDecl = capability.fidl_into_native();
+                let name = expose_decl.target_name();
+                let name = name.to_string();
+                capabilities.push(name);
+            }
+            capabilities
         };
 
-        let use_dir = resolved_dir.open_dir_readable("use")?;
-        let merkle_root = if use_dir.exists("pkg").await? {
-            let pkg_dir = use_dir.open_dir_readable("pkg")?;
+        let merkle_root = if let Some(pkg_dir) = resolved.pkg_dir {
+            let pkg_dir = pkg_dir.into_proxy()?;
+            let pkg_dir = Directory::from_proxy(pkg_dir);
             if pkg_dir.exists("meta").await? {
                 pkg_dir.read_file("meta").await.ok()
             } else {
@@ -452,16 +275,31 @@ impl Resolved {
             None
         };
 
-        let instance_id = resolved_dir.read_file("instance_id").await.ok();
-
-        let config = if resolved_dir.exists("config").await? {
-            let config_dir = resolved_dir.open_dir_readable("config")?;
-            get_config_fields(config_dir).await?
+        let started = if let Some(started) = resolved.started {
+            Some(Started::parse(started).await?)
         } else {
-            vec![]
+            None
         };
 
-        Ok(Self { incoming_capabilities, exposed_capabilities, merkle_root, instance_id, config })
+        let config = if let Some(config) = resolved.config {
+            let fields = config
+                .fields
+                .iter()
+                .map(|f| {
+                    let value = match &f.value {
+                        fconfig::Value::Vector(v) => format!("{:#?}", v),
+                        fconfig::Value::Single(v) => format!("{:?}", v),
+                        _ => "Unknown".to_string(),
+                    };
+                    ConfigField { key: f.key.clone(), value }
+                })
+                .collect();
+            Some(fields)
+        } else {
+            None
+        };
+
+        Ok(Self { incoming_capabilities, exposed_capabilities, merkle_root, started, config })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -482,978 +320,406 @@ impl Resolved {
             None
         };
 
+        let started = Some(Started::parse_cmx(hub_dir).await?);
+
         Ok(Self {
             incoming_capabilities,
             exposed_capabilities: vec![],
             merkle_root,
-            instance_id: None,
-            config: vec![],
+            config: None,
+            started,
         })
-    }
-}
-
-impl std::fmt::Display for Resolved {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(instance_id) = &self.instance_id {
-            pretty_print!(f, "Instance ID", instance_id)?;
-        }
-        pretty_print_list!(f, "Incoming Capabilities", self.incoming_capabilities);
-        pretty_print_list!(f, "Exposed Capabilities", self.exposed_capabilities);
-
-        if let Some(merkle_root) = &self.merkle_root {
-            pretty_print!(f, "Merkle root", merkle_root)?;
-        }
-
-        if !self.config.is_empty() {
-            let max_len = self.config.iter().map(|f| f.key.len()).max().unwrap();
-
-            let first_field = &self.config[0];
-            writeln!(
-                f,
-                "{:>22}: {:width$} -> {}",
-                "Configuration",
-                first_field.key,
-                first_field.value,
-                width = max_len
-            )?;
-            for field in &self.config[1..] {
-                writeln!(
-                    f,
-                    "{:>22}  {:width$} -> {}",
-                    " ",
-                    field.key,
-                    field.value,
-                    width = max_len
-                )?;
-            }
-        }
-        Ok(())
     }
 }
 
 /// Basic information about a component for the `show` command.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-pub struct Component {
+pub struct Instance {
     pub moniker: AbsoluteMoniker,
     pub url: String,
-    pub component_type: String,
-    pub execution: Option<Execution>,
+    pub is_cmx: bool,
+    pub instance_id: Option<String>,
     pub resolved: Option<Resolved>,
 }
 
-impl Component {
-    async fn parse(moniker: AbsoluteMoniker, hub_dir: &Directory) -> Result<Component> {
-        let resolved = if hub_dir.exists("resolved").await? {
-            let resolved_dir = hub_dir.open_dir_readable("resolved")?;
-            Some(Resolved::parse(resolved_dir).await?)
+impl Instance {
+    async fn parse(
+        info: fsys::InstanceInfo,
+        resolved: Option<Box<fsys::ResolvedState>>,
+    ) -> Result<Instance> {
+        let resolved = if let Some(resolved) = resolved {
+            Some(Resolved::parse(resolved).await?)
         } else {
             None
         };
 
-        let execution = if hub_dir.exists("exec").await? {
-            let exec_dir = hub_dir.open_dir_readable("exec")?;
-            Some(Execution::parse(exec_dir).await?)
-        } else {
-            None
-        };
+        let mut moniker = RelativeMoniker::parse(&info.moniker)?;
+        assert!(moniker.up_path().is_empty());
+        let path = moniker.down_path_mut().drain(..).collect();
+        let moniker = AbsoluteMoniker::new(path);
 
-        let (url, component_type) =
-            futures::join!(hub_dir.read_file("url"), hub_dir.read_file("component_type"),);
-
-        let url = url?;
-        let component_type = format!("CML {} component", component_type?);
-
-        Ok(Component { moniker, url, component_type, execution, resolved })
+        Ok(Instance {
+            moniker,
+            url: info.url,
+            is_cmx: false,
+            instance_id: info.instance_id,
+            resolved,
+        })
     }
 
-    async fn parse_cmx(moniker: AbsoluteMoniker, hub_dir: Directory) -> Result<Component> {
+    pub async fn parse_cmx(moniker: AbsoluteMoniker, hub_dir: Directory) -> Result<Instance> {
         let resolved = Some(Resolved::parse_cmx(&hub_dir).await?);
-        let execution = Some(Execution::parse_cmx(&hub_dir).await?);
 
         let url = hub_dir.read_file("url").await?;
-        let component_type = "CMX component".to_string();
 
-        Ok(Component { moniker, url, component_type, execution, resolved })
-    }
-}
-
-impl std::fmt::Display for Component {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        pretty_print!(f, "Moniker", self.moniker)?;
-        pretty_print!(f, "URL", self.url)?;
-        pretty_print!(f, "Type", self.component_type)?;
-
-        if let Some(resolved) = &self.resolved {
-            pretty_print!(f, "Component State", Color::Green.paint("Resolved"))?;
-            write!(f, "{}", resolved)?;
-        } else {
-            pretty_print!(f, "Component State", Color::Red.paint("Unresolved"))?;
-        }
-
-        if let Some(execution) = &self.execution {
-            pretty_print!(f, "Execution State", Color::Green.paint("Running"))?;
-            write!(f, "{}", execution)?;
-        } else {
-            pretty_print!(f, "Execution State", Color::Red.paint("Stopped"))?;
-        }
-
-        Ok(())
+        Ok(Instance { moniker, url, is_cmx: true, instance_id: None, resolved })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {std::fs, tempfile::TempDir};
+    use fidl::endpoints::*;
+    use fidl_fuchsia_component_decl as fdecl;
+    use fidl_fuchsia_io as fio;
+    use fuchsia_async::Task;
+    use futures::StreamExt;
+    use std::collections::HashMap;
+    use std::fs;
+    use tempfile::TempDir;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cml_find_by_name() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- stash
-        //          |- children
-        //          |- component_type
-        //          |- url
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let stash = root.join("children/stash");
-            fs::create_dir(&stash).unwrap();
-            fs::create_dir(stash.join("children")).unwrap();
-            fs::write(stash.join("component_type"), "static").unwrap();
-            fs::write(stash.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
-            fs::write(stash.join("moniker"), "stash").unwrap();
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.moniker, vec!["stash"].into());
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
-        assert_eq!(component.component_type, "CML static component");
-        assert!(component.resolved.is_none());
-        assert!(component.execution.is_none());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cml_find_by_url() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- abcd
-        //          |- children
-        //          |- component_type
-        //          |- url
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let stash = root.join("children/abcd");
-            fs::create_dir(&stash).unwrap();
-            fs::create_dir(stash.join("children")).unwrap();
-            fs::write(stash.join("component_type"), "static").unwrap();
-            fs::write(stash.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
-            fs::write(stash.join("moniker"), "abcd").unwrap();
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.moniker, vec!["abcd"].into());
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
-        assert_eq!(component.component_type, "CML static component");
-        assert!(component.resolved.is_none());
-        assert!(component.execution.is_none());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn nested_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- abcd
-        //          |- children
-        //             |- efgh
-        //                |- children
-        //                |- component_type
-        //                |- url
-        //          |- component_type
-        //          |- url
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let abcd = root.join("children/abcd");
-            fs::create_dir(&abcd).unwrap();
-            fs::create_dir(abcd.join("children")).unwrap();
-            fs::write(abcd.join("component_type"), "static").unwrap();
-            fs::write(abcd.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
-            fs::write(abcd.join("moniker"), "abcd").unwrap();
-
-            {
-                let efgh = abcd.join("children/efgh");
-                fs::create_dir(&efgh).unwrap();
-                fs::create_dir(efgh.join("children")).unwrap();
-                fs::write(efgh.join("component_type"), "static").unwrap();
-                fs::write(efgh.join("url"), "fuchsia-pkg://fuchsia.com/efgh#meta/efgh.cm").unwrap();
-                fs::write(efgh.join("moniker"), "efgh").unwrap();
+    pub fn serve_realm_explorer(instances: Vec<fsys::InstanceInfo>) -> fsys::RealmExplorerProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmExplorerMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let fsys::RealmExplorerRequest::GetAllInstanceInfos { responder } =
+                    stream.next().await.unwrap().unwrap();
+                let iterator = serve_instance_iterator(instances.clone());
+                responder.send(&mut Ok(iterator)).unwrap();
             }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("efgh".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.moniker, vec!["abcd", "efgh"].into());
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/efgh#meta/efgh.cm");
-        assert_eq!(component.component_type, "CML static component");
-        assert!(component.resolved.is_none());
-        assert!(component.execution.is_none());
+        })
+        .detach();
+        client
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn multiple_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- stash_1
-        //          |- children
-        //          |- component_type
-        //          |- url
-        //       |- stash_2
-        //          |- children
-        //          |- component_type
-        //          |- url
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let stash_1 = root.join("children/stash_1");
-            fs::create_dir(&stash_1).unwrap();
-            fs::create_dir(stash_1.join("children")).unwrap();
-            fs::write(stash_1.join("component_type"), "static").unwrap();
-            fs::write(stash_1.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
-            fs::write(stash_1.join("moniker"), "stash_1").unwrap();
-        }
-
-        {
-            let stash_2 = root.join("children/stash_2");
-            fs::create_dir(&stash_2).unwrap();
-            fs::create_dir(stash_2.join("children")).unwrap();
-            fs::write(stash_2.join("component_type"), "static").unwrap();
-            fs::write(stash_2.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
-            fs::write(stash_2.join("moniker"), "stash_2").unwrap();
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 2);
-        let component_1 = &components[0];
-        assert_eq!(component_1.moniker, vec!["stash_1"].into());
-        assert_eq!(component_1.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
-        assert_eq!(component_1.component_type, "CML static component");
-        assert!(component_1.resolved.is_none());
-        assert!(component_1.execution.is_none());
-
-        let component_2 = &components[1];
-        assert_eq!(component_2.moniker, vec!["stash_2"].into());
-        assert_eq!(component_2.url, "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm");
-        assert_eq!(component_2.component_type, "CML static component");
-        assert!(component_2.resolved.is_none());
-        assert!(component_2.execution.is_none());
+    pub fn serve_instance_iterator(
+        instances: Vec<fsys::InstanceInfo>,
+    ) -> ClientEnd<fsys::InstanceInfoIteratorMarker> {
+        let (client, mut stream) =
+            create_request_stream::<fsys::InstanceInfoIteratorMarker>().unwrap();
+        Task::spawn(async move {
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut instances.clone().iter_mut()).unwrap();
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut std::iter::empty()).unwrap();
+        })
+        .detach();
+        client
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn resolved_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        // |- component_type
-        // |- url
-        // |- resolved
-        //    |- use
-        //       |- dev
-        //    |- expose
-        //       |- minfs
-        //    |- config
-        //       |- verbosity
-        //    |- instance_id
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
-        fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
-        fs::create_dir_all(root.join("resolved/config")).unwrap();
-        fs::write(root.join("resolved/instance_id"), "abc").unwrap();
-        fs::write(root.join("resolved/config/verbosity"), "Single(Text(\"DEBUG\"))").unwrap();
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
-
-        assert!(component.resolved.is_some());
-        let resolved = component.resolved.as_ref().unwrap();
-
-        assert_eq!(resolved.config.len(), 1);
-        let field = &resolved.config[0];
-        assert_eq!(field.key, "verbosity");
-        assert_eq!(field.value, "Single(Text(\"DEBUG\"))");
-
-        let instance_id = &resolved.instance_id;
-        assert_eq!(instance_id, &Some("abc".to_string()));
-
-        let incoming_capabilities = &resolved.incoming_capabilities;
-        assert_eq!(incoming_capabilities.len(), 1);
-
-        let incoming_capability = &incoming_capabilities[0];
-        assert_eq!(incoming_capability, "dev");
-
-        let exposed_capabilities = &resolved.exposed_capabilities;
-        assert_eq!(exposed_capabilities.len(), 1);
-
-        let exposed_capability = &exposed_capabilities[0];
-        assert_eq!(exposed_capability, "minfs");
-
-        assert!(component.execution.is_none());
+    pub fn serve_realm_query(
+        mut instances: HashMap<String, (fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>)>,
+    ) -> fsys::RealmQueryProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmQueryMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
+                    stream.next().await.unwrap().unwrap();
+                let response = instances.remove(&moniker).unwrap();
+                responder.send(&mut Ok(response)).unwrap();
+            }
+        })
+        .detach();
+        client
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn resolved_cml_without_instance_id_and_config() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    pub fn create_pkg_dir() -> (TempDir, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
 
-        // Create the following structure
-        // .
-        // |- children
-        // |- component_type
-        // |- url
-        // |- resolved
-        //    |- use
-        //       |- dev
-        //    |- expose
-        //       |- minfs
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
-        fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
+        fs::write(root.join("meta"), "1234").unwrap();
 
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
-
-        assert!(component.resolved.is_some());
-        let resolved = component.resolved.as_ref().unwrap();
-
-        assert!(resolved.config.is_empty());
-
-        let instance_id = &resolved.instance_id;
-        assert!(instance_id.is_none());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn full_execution_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        // |- component_type
-        // |- url
-        // |- exec
-        //    |- start_reason
-        //    |- out
-        //       |- minfs
-        //    |- runtime
-        //       |- elf
-        //          |- job_id
-        //          |- process_id
-        //          |- process_start_time
-        //          |- process_start_time_utc_estimate
-        // |- resolved
-        //    |- expose
-        //    |- use
-        //       |- pkg
-        //          |- meta
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
-        fs::create_dir_all(root.join("resolved/expose")).unwrap();
-        fs::create_dir_all(root.join("resolved/use/pkg")).unwrap();
-        fs::create_dir_all(root.join("exec/out/minfs")).unwrap();
-        fs::create_dir_all(root.join("exec/runtime/elf")).unwrap();
-
-        fs::write(root.join("exec/start_reason"), "Instance is the root").unwrap();
-        fs::write(root.join("resolved/use/pkg/meta"), "1234").unwrap();
-
-        fs::write(root.join("exec/runtime/elf/job_id"), "5454").unwrap();
-
-        fs::write(root.join("exec/runtime/elf/process_id"), "9898").unwrap();
-
-        fs::write(root.join("exec/runtime/elf/process_start_time"), "101010101010").unwrap();
-
-        fs::write(
-            root.join("exec/runtime/elf/process_start_time_utc_estimate"),
-            "Mon 12 Jul 2021 03:53:33 PM UTC",
+        let root = root.display().to_string();
+        let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::node::connect_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server.into_channel(),
         )
         .unwrap();
+        (temp_dir, client)
+    }
 
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
+    pub fn create_out_dir() -> (TempDir, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
 
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
+        fs::create_dir(root.join("diagnostics")).unwrap();
 
-        assert!(component.execution.is_some());
-        let execution = component.execution.as_ref().unwrap();
+        let root = root.display().to_string();
+        let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::node::connect_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server.into_channel(),
+        )
+        .unwrap();
+        (temp_dir, client)
+    }
 
-        assert!(execution.start_reason.is_some());
-        let start_reason = execution.start_reason.as_ref().unwrap();
-        assert_eq!(start_reason, "Instance is the root");
+    pub fn create_runtime_dir() -> (TempDir, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
 
-        assert!(execution.elf_runtime.is_some());
-        let elf_runtime = execution.elf_runtime.as_ref().unwrap();
+        fs::create_dir_all(root.join("elf")).unwrap();
+        fs::write(root.join("elf/job_id"), "1234").unwrap();
+        fs::write(root.join("elf/process_id"), "2345").unwrap();
+        fs::write(root.join("elf/process_start_time"), "3456").unwrap();
+        fs::write(root.join("elf/process_start_time_utc_estimate"), "abcd").unwrap();
+
+        let root = root.display().to_string();
+        let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::node::connect_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server.into_channel(),
+        )
+        .unwrap();
+        (temp_dir, client)
+    }
+
+    pub fn create_appmgr_out() -> (TempDir, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
+
+        fs::create_dir_all(root.join("hub/r")).unwrap();
+
+        {
+            let sshd = root.join("hub/c/sshd.cmx/9898");
+            fs::create_dir_all(&sshd).unwrap();
+            fs::create_dir_all(sshd.join("in/pkg")).unwrap();
+            fs::create_dir_all(sshd.join("out/dev")).unwrap();
+
+            fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx").unwrap();
+            fs::write(sshd.join("in/pkg/meta"), "1234").unwrap();
+            fs::write(sshd.join("job-id"), "5454").unwrap();
+            fs::write(sshd.join("process-id"), "9898").unwrap();
+        }
+
+        let root = root.display().to_string();
+        let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::node::connect_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server.into_channel(),
+        )
+        .unwrap();
+        (temp_dir, client)
+    }
+
+    fn create_explorer_and_query() -> (Vec<TempDir>, fsys::RealmExplorerProxy, fsys::RealmQueryProxy)
+    {
+        // Serve RealmExplorer for CML components.
+        let explorer = serve_realm_explorer(vec![
+            fsys::InstanceInfo {
+                moniker: "./my_foo".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
+                instance_id: Some("1234567890".to_string()),
+                state: fsys::InstanceState::Resolved,
+            },
+            fsys::InstanceInfo {
+                moniker: "./core/appmgr".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                instance_id: None,
+                state: fsys::InstanceState::Started,
+            },
+        ]);
+
+        // Serve RealmQuery for CML components.
+        let (temp_dir_out, out_dir) = create_out_dir();
+        let (temp_dir_pkg, pkg_dir) = create_pkg_dir();
+        let (temp_dir_runtime, runtime_dir) = create_runtime_dir();
+        let (temp_dir_appmgr_out, appmgr_out_dir) = create_appmgr_out();
+
+        // The exposed dir is not used by this library.
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        // The namespace dir is not used by this library.
+        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        let query = serve_realm_query(HashMap::from([
+            (
+                "./my_foo".to_string(),
+                (
+                    fsys::InstanceInfo {
+                        moniker: "./my_foo".to_string(),
+                        url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
+                        instance_id: Some("1234567890".to_string()),
+                        state: fsys::InstanceState::Resolved,
+                    },
+                    Some(Box::new(fsys::ResolvedState {
+                        uses: vec![fdecl::Use::Protocol(fdecl::UseProtocol {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                            source_name: Some("fuchsia.foo.bar".to_string()),
+                            target_path: Some("/svc/fuchsia.foo.bar".to_string()),
+                            ..fdecl::UseProtocol::EMPTY
+                        })],
+                        exposes: vec![fdecl::Expose::Protocol(fdecl::ExposeProtocol {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
+                            source_name: Some("fuchsia.bar.baz".to_string()),
+                            target_name: Some("fuchsia.bar.baz".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                            ..fdecl::ExposeProtocol::EMPTY
+                        })],
+                        config: Some(Box::new(fconfig::ResolvedConfig {
+                            checksum: fdecl::ConfigChecksum::Sha256([0; 32]),
+                            fields: vec![fconfig::ResolvedConfigField {
+                                key: "foo".to_string(),
+                                value: fconfig::Value::Single(fconfig::SingleValue::Bool(false)),
+                            }],
+                        })),
+                        pkg_dir: Some(pkg_dir),
+                        started: Some(Box::new(fsys::StartedState {
+                            out_dir: Some(out_dir),
+                            runtime_dir: Some(runtime_dir),
+                            start_reason: "Debugging Workflow".to_string(),
+                        })),
+                        exposed_dir,
+                        ns_dir,
+                    })),
+                ),
+            ),
+            (
+                "./core/appmgr".to_string(),
+                (
+                    fsys::InstanceInfo {
+                        moniker: "./core/appmgr".to_string(),
+                        url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                        instance_id: None,
+                        state: fsys::InstanceState::Started,
+                    },
+                    Some(Box::new(fsys::ResolvedState {
+                        uses: vec![],
+                        exposes: vec![],
+                        config: None,
+                        pkg_dir: None,
+                        started: Some(Box::new(fsys::StartedState {
+                            out_dir: Some(appmgr_out_dir),
+                            runtime_dir: None,
+                            start_reason: "Debugging Workflow".to_string(),
+                        })),
+                        exposed_dir: appmgr_exposed_dir,
+                        ns_dir: appmgr_ns_dir,
+                    })),
+                ),
+            ),
+        ]));
+        (vec![temp_dir_out, temp_dir_pkg, temp_dir_runtime, temp_dir_appmgr_out], explorer, query)
+    }
+
+    #[fuchsia::test]
+    async fn basic_cml() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
+
+        let mut instances = find_instances("foo.cm".to_string(), &explorer, &query).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
+
+        assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
+        assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
+        assert!(!instance.is_cmx);
+        assert!(instance.resolved.is_some());
+
+        let resolved = instance.resolved.unwrap();
+        assert_eq!(resolved.incoming_capabilities.len(), 1);
+        assert_eq!(resolved.incoming_capabilities[0], "/svc/fuchsia.foo.bar");
+
+        assert_eq!(resolved.exposed_capabilities.len(), 1);
+        assert_eq!(resolved.exposed_capabilities[0], "fuchsia.bar.baz");
+        assert_eq!(resolved.merkle_root.unwrap(), "1234");
+
+        let config = resolved.config.unwrap();
+        assert_eq!(
+            config,
+            vec![ConfigField { key: "foo".to_string(), value: "Bool(false)".to_string() }]
+        );
+
+        let started = resolved.started.unwrap();
+        let outgoing_capabilities = started.outgoing_capabilities.unwrap();
+        assert_eq!(outgoing_capabilities, vec!["diagnostics".to_string()]);
+        assert_eq!(started.start_reason, "Debugging Workflow".to_string());
+
+        let elf_runtime = started.elf_runtime.unwrap();
+        assert_eq!(elf_runtime.job_id, 1234);
+        assert_eq!(elf_runtime.process_id, Some(2345));
+        assert_eq!(elf_runtime.process_start_time, Some(3456));
+        assert_eq!(elf_runtime.process_start_time_utc_estimate, Some("abcd".to_string()));
+    }
+
+    #[fuchsia::test]
+    async fn basic_cmx() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
+
+        let mut instances = find_instances("sshd".to_string(), &explorer, &query).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
+
+        assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
+        assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
+        assert!(instance.instance_id.is_none());
+        assert!(instance.is_cmx);
+        assert!(instance.resolved.is_some());
+
+        let resolved = instance.resolved.unwrap();
+        assert_eq!(resolved.incoming_capabilities.len(), 1);
+        assert_eq!(resolved.incoming_capabilities[0], "pkg");
+
+        assert!(resolved.exposed_capabilities.is_empty());
+        assert_eq!(resolved.merkle_root.unwrap(), "1234");
+
+        assert!(resolved.config.is_none());
+
+        let started = resolved.started.unwrap();
+        let outgoing_capabilities = started.outgoing_capabilities.unwrap();
+        assert_eq!(outgoing_capabilities, vec!["dev".to_string()]);
+        assert_eq!(started.start_reason, "Unknown start reason".to_string());
+
+        let elf_runtime = started.elf_runtime.unwrap();
         assert_eq!(elf_runtime.job_id, 5454);
-        let process_id = elf_runtime.process_id.unwrap();
-        assert_eq!(process_id, 9898);
-
-        assert!(elf_runtime.process_start_time.is_some());
-        let process_start_time = elf_runtime.process_start_time.unwrap();
-        assert_eq!(process_start_time, 101010101010);
-
-        assert!(elf_runtime.process_start_time_utc_estimate.is_some());
-        let process_start_time_utc_estimate =
-            elf_runtime.process_start_time_utc_estimate.as_ref().unwrap();
-        assert_eq!(process_start_time_utc_estimate, "Mon 12 Jul 2021 03:53:33 PM UTC");
-
-        assert!(execution.outgoing_capabilities.is_some());
-        let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
-        assert_eq!(outgoing_capabilities.len(), 1);
-
-        let outgoing_capability = &outgoing_capabilities[0];
-        assert_eq!(outgoing_capability, "minfs");
-
-        let resolved = component.resolved.as_ref().unwrap();
-        assert!(resolved.merkle_root.is_some());
-        let merkle_root = resolved.merkle_root.as_ref().unwrap();
-        assert_eq!(merkle_root, "1234");
+        assert_eq!(elf_runtime.process_id, Some(9898));
+        assert_eq!(elf_runtime.process_start_time, None);
+        assert_eq!(elf_runtime.process_start_time_utc_estimate, None);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn barebones_execution_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn find_by_moniker() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // .
-        // |- children
-        // |- component_type
-        // |- url
-        // |- exec
-        //    |- in
-        //    |- out
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
-        fs::create_dir_all(root.join("exec/in")).unwrap();
-        fs::create_dir_all(root.join("exec/out")).unwrap();
-        fs::write(root.join("exec/start_reason"), "Instance is the root").unwrap();
+        let mut instances = find_instances("my_foo".to_string(), &explorer, &query).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
 
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
-
-        assert!(component.execution.is_some());
-        let execution = component.execution.as_ref().unwrap();
-
-        assert!(execution.start_reason.is_some());
-        let start_reason = execution.start_reason.as_ref().unwrap();
-        assert_eq!(start_reason, "Instance is the root");
-
-        assert!(execution.elf_runtime.is_none());
-
-        assert!(execution.outgoing_capabilities.is_some());
-        let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
-        assert!(outgoing_capabilities.is_empty());
-
-        assert!(component.resolved.is_none());
+        assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
+        assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn find_by_instance_id() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- component_type
-        //          |- url
-        //          |- exec
-        //             |- in
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 9898
-        //                            |- job-id
-        //                            |- process-id
-        //                            |- url
-        //                            |- in
-        //                               |- pkg
-        //                                  |- meta
-        //                            |- out
-        //                               |- dev
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
+        let mut instances = find_instances("1234567".to_string(), &explorer, &query).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
 
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::write(appmgr.join("component_type"), "static").unwrap();
-            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
-                .unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            fs::create_dir_all(appmgr.join("exec/in")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-
-            {
-                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
-                fs::create_dir_all(&sshd).unwrap();
-                fs::create_dir_all(sshd.join("in/pkg")).unwrap();
-                fs::create_dir_all(sshd.join("out/dev")).unwrap();
-
-                fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd.join("in/pkg/meta"), "1234").unwrap();
-                fs::write(sshd.join("job-id"), "5454").unwrap();
-                fs::write(sshd.join("process-id"), "9898").unwrap();
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-        let component = &components[0];
-        assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
-        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-        assert_eq!(component.component_type, "CMX component");
-
-        assert!(component.resolved.is_some());
-        let resolved = component.resolved.as_ref().unwrap();
-
-        assert!(resolved.merkle_root.is_some());
-        let merkle_root = resolved.merkle_root.as_ref().unwrap();
-        assert_eq!(merkle_root, "1234");
-
-        let incoming_capabilities = &resolved.incoming_capabilities;
-        assert_eq!(incoming_capabilities.len(), 1);
-
-        let instance_id = &resolved.instance_id;
-        assert!(instance_id.is_none());
-
-        let incoming_capability = &incoming_capabilities[0];
-        assert_eq!(incoming_capability, "pkg");
-
-        let exposed_capabilities = &resolved.exposed_capabilities;
-        assert!(exposed_capabilities.is_empty());
-
-        assert!(component.execution.is_some());
-        let execution = component.execution.as_ref().unwrap();
-
-        assert!(execution.start_reason.is_none());
-
-        assert!(execution.elf_runtime.is_some());
-        let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-        assert_eq!(elf_runtime.job_id, 5454);
-        let process_id = elf_runtime.process_id.unwrap();
-        assert_eq!(process_id, 9898);
-        assert!(elf_runtime.process_start_time.is_none());
-        assert!(elf_runtime.process_start_time_utc_estimate.is_none());
-
-        assert!(execution.outgoing_capabilities.is_some());
-        let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
-        assert_eq!(outgoing_capabilities.len(), 1);
-
-        let outgoing_capability = &outgoing_capabilities[0];
-        assert_eq!(outgoing_capability, "dev");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn multiple_cmx_different_process_ids() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- component_type
-        //          |- url
-        //          |- exec
-        //             |- in
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 8787
-        //                            |- job-id
-        //                            |- process-id
-        //                            |- url
-        //                            |- in
-        //                            |- out
-        //                         |- 9898
-        //                            |- job-id
-        //                            |- process-id
-        //                            |- url
-        //                            |- in
-        //                            |- out
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::write(appmgr.join("component_type"), "static").unwrap();
-            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
-                .unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            fs::create_dir_all(appmgr.join("exec/in")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-
-            {
-                let sshd_1 = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
-                fs::create_dir_all(&sshd_1).unwrap();
-                fs::create_dir(sshd_1.join("in")).unwrap();
-                fs::create_dir(sshd_1.join("out")).unwrap();
-
-                fs::write(sshd_1.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd_1.join("job-id"), "5454").unwrap();
-                fs::write(sshd_1.join("process-id"), "8787").unwrap();
-            }
-
-            {
-                let sshd_2 = appmgr.join("exec/out/hub/c/sshd.cmx/8787");
-                fs::create_dir_all(&sshd_2).unwrap();
-                fs::create_dir(sshd_2.join("in")).unwrap();
-                fs::create_dir(sshd_2.join("out")).unwrap();
-
-                fs::write(sshd_2.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd_2.join("job-id"), "5454").unwrap();
-                fs::write(sshd_2.join("process-id"), "9898").unwrap();
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 2);
-
-        {
-            let component = &components[0];
-            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
-            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-            assert_eq!(component.component_type, "CMX component");
-
-            assert!(component.execution.is_some());
-            let execution = component.execution.as_ref().unwrap();
-
-            assert!(execution.elf_runtime.is_some());
-            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-            assert_eq!(elf_runtime.job_id, 5454);
-            let process_id = elf_runtime.process_id.unwrap();
-            assert_eq!(process_id, 9898);
-        }
-
-        {
-            let component = &components[1];
-            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
-            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-            assert_eq!(component.component_type, "CMX component");
-
-            assert!(component.execution.is_some());
-            let execution = component.execution.as_ref().unwrap();
-
-            assert!(execution.elf_runtime.is_some());
-            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-            assert_eq!(elf_runtime.job_id, 5454);
-            let process_id = elf_runtime.process_id.unwrap();
-            assert_eq!(process_id, 8787);
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn multiple_cmx_different_realms() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- component_type
-        //          |- url
-        //          |- exec
-        //             |- in
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                      |- sys
-        //                         |- 1765
-        //                            |- r
-        //                            |- c
-        //                               |- sshd.cmx
-        //                                  |- 1765
-        //                                     |- job-id
-        //                                     |- url
-        //                                     |- in
-        //                                     |- out
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 5454
-        //                            |- job-id
-        //                            |- process-id
-        //                            |- url
-        //                            |- in
-        //                            |- out
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::write(appmgr.join("component_type"), "static").unwrap();
-            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
-                .unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            fs::create_dir_all(appmgr.join("exec/in")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r/sys/1765/r")).unwrap();
-
-            {
-                let sshd_1 = appmgr.join("exec/out/hub/c/sshd.cmx/5454");
-                fs::create_dir_all(&sshd_1).unwrap();
-                fs::create_dir(sshd_1.join("in")).unwrap();
-                fs::create_dir(sshd_1.join("out")).unwrap();
-
-                fs::write(sshd_1.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd_1.join("job-id"), "5454").unwrap();
-                fs::write(sshd_1.join("process-id"), "8787").unwrap();
-            }
-
-            {
-                let sshd_2 = appmgr.join("exec/out/hub/r/sys/1765/c/sshd.cmx/1765");
-                fs::create_dir_all(&sshd_2).unwrap();
-                fs::create_dir(sshd_2.join("in")).unwrap();
-                fs::create_dir(sshd_2.join("out")).unwrap();
-
-                fs::write(sshd_2.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd_2.join("job-id"), "1765").unwrap();
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("sshd".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 2);
-
-        {
-            let component = &components[0];
-            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx"].into());
-            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-            assert_eq!(component.component_type, "CMX component");
-
-            assert!(component.execution.is_some());
-            let execution = component.execution.as_ref().unwrap();
-
-            assert!(execution.elf_runtime.is_some());
-            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-            assert_eq!(elf_runtime.job_id, 5454);
-            let process_id = elf_runtime.process_id.unwrap();
-            assert_eq!(process_id, 8787);
-        }
-
-        {
-            let component = &components[1];
-            assert_eq!(component.moniker, vec!["appmgr", "sys", "sshd.cmx"].into());
-            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-            assert_eq!(component.component_type, "CMX component");
-
-            assert!(component.execution.is_some());
-            let execution = component.execution.as_ref().unwrap();
-
-            assert!(execution.elf_runtime.is_some());
-            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-            assert_eq!(elf_runtime.job_id, 1765);
-            assert!(elf_runtime.process_id.is_none());
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn runner_cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- component_type
-        //          |- url
-        //          |- exec
-        //             |- in
-        //             |- out
-        //                |- hub
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 5454
-        //                            |- job-id
-        //                            |- process-id
-        //                            |- url
-        //                            |- in
-        //                            |- out
-        //                            |- c
-        //                               |- foo.cmx
-        //                                  |- 1234
-        //                                     |- job-id
-        //                                     |- process-id
-        //                                     |- url
-        //                                     |- in
-        //                                     |- out
-        // |- component_type
-        // |- url
-        fs::create_dir(root.join("children")).unwrap();
-        fs::write(root.join("component_type"), "static").unwrap();
-        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::write(appmgr.join("component_type"), "static").unwrap();
-            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
-                .unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            fs::create_dir_all(appmgr.join("exec/in")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-
-            {
-                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/5454");
-                fs::create_dir_all(&sshd).unwrap();
-                fs::create_dir(sshd.join("in")).unwrap();
-                fs::create_dir(sshd.join("out")).unwrap();
-
-                fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
-                    .unwrap();
-                fs::write(sshd.join("job-id"), "5454").unwrap();
-                fs::write(sshd.join("process-id"), "8787").unwrap();
-                {
-                    let foo = sshd.join("c/foo.cmx/1234");
-                    fs::create_dir_all(&foo).unwrap();
-                    fs::create_dir(foo.join("in")).unwrap();
-                    fs::create_dir(foo.join("out")).unwrap();
-
-                    fs::write(foo.join("url"), "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx")
-                        .unwrap();
-                    fs::write(foo.join("job-id"), "1234").unwrap();
-                    fs::write(foo.join("process-id"), "4536").unwrap();
-                }
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("foo.cmx".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(components.len(), 1);
-
-        {
-            let component = &components[0];
-            assert_eq!(component.moniker, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
-            assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx");
-            assert_eq!(component.component_type, "CMX component");
-
-            assert!(component.execution.is_some());
-            let execution = component.execution.as_ref().unwrap();
-
-            assert!(execution.elf_runtime.is_some());
-            let elf_runtime = execution.elf_runtime.as_ref().unwrap();
-            assert_eq!(elf_runtime.job_id, 1234);
-            let process_id = elf_runtime.process_id.unwrap();
-            assert_eq!(process_id, 4536);
-        }
+        assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
+        assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
     }
 }

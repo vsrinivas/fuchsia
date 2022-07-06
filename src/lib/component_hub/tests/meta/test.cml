@@ -35,6 +35,14 @@
             rights: [ "r*" ],
             path: "/hub",
         },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+        },
 
         // This capability isn't actually being used.
         // `select` should still be able to find it.

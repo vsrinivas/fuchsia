@@ -1,17 +1,23 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     crate::io::Directory,
-    anyhow::Result,
-    futures::future::{join, join3, join_all, BoxFuture, FutureExt},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
+    anyhow::{format_err, Result},
+    fidl_fuchsia_sys2 as fsys,
+    futures::future::{join, join_all, BoxFuture, FutureExt},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, RelativeMoniker,
+        RelativeMonikerBase,
+    },
+    std::collections::HashSet,
     std::str::FromStr,
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+/// Reading from the v1/CMX hub is flaky while components are being added/removed.
+/// Attempt to get CMX instances several times before calling it a failure.
+const CMX_HUB_RETRY_ATTEMPTS: u64 = 10;
 
 /// Filters that can be applied when listing components
 #[derive(Debug, PartialEq)]
@@ -55,996 +61,700 @@ impl FromStr for ListFilter {
     }
 }
 
-/// Basic information about a component for the `list` command.
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-pub struct Component {
-    // Name (ie `ChildMoniker`) of the component. This gets printed out.
-    pub name: String,
-
-    // Moniker of the component.
-    pub moniker: AbsoluteMoniker,
-
-    // True if component is of appmgr/CMX type.
-    // False if it is of the component_manager/CML type.
-    pub is_cmx: bool,
-
-    // CML components may not always be running.
-    // Always true for CMX components.
-    pub is_running: bool,
-
-    // URL of the component.
-    pub url: String,
-
-    // Children of this component.
-    pub children: Vec<Component>,
+#[derive(PartialEq, Debug)]
+pub enum InstanceState {
+    Unresolved,
+    Resolved,
+    Started,
 }
 
-impl Component {
-    /// Recursive helper method for parse that accumulates the ancestors of the component.
-    fn parse_recursive(
-        child_moniker: String,
-        abs_moniker: AbsoluteMoniker,
-        hub_dir: Directory,
-    ) -> BoxFuture<'static, Result<Component>> {
-        async move {
-            let exec_fut = hub_dir.exists("exec");
-            let moniker_fut = hub_dir.read_file("moniker");
-            let url_fut = hub_dir.read_file("url");
-            let (exec_res, moniker_res, url_res) = join3(exec_fut, moniker_fut, url_fut).await;
-            // TODO(fxbug.dev/96102): enforce the presence of the moniker file and remove
-            // the `unwrap_or()` fallback behavior
-            let (is_running, child_moniker, url) =
-                (exec_res?, moniker_res.unwrap_or(child_moniker), url_res?);
-
-            // Recurse on the CML children
-            let mut future_children = vec![];
-            let children_dir = hub_dir.open_dir_readable("children")?;
-            for child_dir in children_dir.entries().await? {
-                let hub_dir = children_dir.open_dir_readable(&child_dir)?;
-                let future_moniker = abs_moniker.child(ChildMoniker::parse(&child_dir)?);
-                let future_child = Component::parse_recursive(child_dir, future_moniker, hub_dir);
-                future_children.push(future_child);
-            }
-
-            let results = join_all(future_children).await;
-            let mut children = vec![];
-            for result in results {
-                let component = result?;
-                children.push(component);
-            }
-
-            if child_moniker == "appmgr" {
-                // Get all CMX components + realms
-                let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
-                let component = Component::parse_cmx_realm(
-                    "".to_string(),
-                    abs_moniker.clone(),
-                    url.clone(),
-                    realm_dir,
-                )
-                .await?;
-                children.extend(component.children);
-            }
-
-            Ok(Component {
-                name: child_moniker,
-                moniker: abs_moniker,
-                children,
-                is_cmx: false,
-                url,
-                is_running,
-            })
+impl From<fsys::InstanceState> for InstanceState {
+    fn from(state: fsys::InstanceState) -> Self {
+        match state {
+            fsys::InstanceState::Unresolved => InstanceState::Unresolved,
+            fsys::InstanceState::Resolved => InstanceState::Resolved,
+            fsys::InstanceState::Started => InstanceState::Started,
         }
-        .boxed()
     }
+}
 
-    pub fn parse(
-        root_moniker: String,
-        moniker: AbsoluteMoniker,
-        hub_dir: Directory,
-    ) -> BoxFuture<'static, Result<Component>> {
-        Component::parse_recursive(root_moniker, moniker, hub_dir)
-    }
+/// Basic information about a component for the `list` command.
+pub struct Instance {
+    /// Moniker of the component.
+    pub moniker: AbsoluteMoniker,
 
-    fn parse_cmx_component(
-        name: String,
-        moniker: AbsoluteMoniker,
-        dir: Directory,
-    ) -> BoxFuture<'static, Result<Component>> {
-        async move {
-            // Runner CMX components may have child components
+    /// URL of the component.
+    pub url: Option<String>,
 
-            let url = dir.read_file("url").await?;
+    /// Unique identifier of component.
+    pub instance_id: Option<String>,
 
-            let children = if dir.exists("c").await? {
-                let children_dir = dir.open_dir_readable("c")?;
+    /// True if instance is CMX component/realm.
+    // TODO(https://fxbug.dev/102390): Remove this when CMX is deprecated.
+    pub is_cmx: bool,
 
-                Component::parse_cmx_components_in_c_dir(children_dir, moniker.clone()).await?
-            } else {
-                vec![]
-            };
+    /// Current state of instance.
+    pub state: InstanceState,
 
-            // CMX components are always running if they exist in tree.
-            Ok(Component { name, moniker, children, is_cmx: true, url, is_running: true })
+    /// Points to the Hub Directory of this component.
+    /// Value is present only for CMX components.
+    // TODO(https://fxbug.dev/102390): Remove this when CMX is deprecated.
+    pub hub_dir: Option<Directory>,
+}
+
+/// Uses the fuchsia.sys2.RealmExplorer and fuchsia.sys2.RealmQuery protocols to retrieve a list of
+/// all CMX and CML components in the system that match the given filter.
+pub async fn get_all_instances(
+    explorer: &fsys::RealmExplorerProxy,
+    query: &fsys::RealmQueryProxy,
+    filter: Option<ListFilter>,
+) -> Result<Vec<Instance>> {
+    let instances = match filter {
+        Some(ListFilter::CML) => get_all_cml_instances(explorer).await?,
+        Some(ListFilter::CMX) => get_all_cmx_instances(query).await?,
+        _ => {
+            // Get both CMX and CML instances.
+            let instances_future = get_all_cml_instances(explorer);
+            let cmx_future = get_all_cmx_instances(query);
+
+            let (instances, cmx) = join(instances_future, cmx_future).await;
+            let mut instances = instances?;
+            let mut cmx = cmx?;
+
+            instances.append(&mut cmx);
+            instances
         }
-        .boxed()
-    }
+    };
 
-    fn parse_cmx_realm(
-        realm_name: String,
-        moniker: AbsoluteMoniker,
-        url: String,
-        realm_dir: Directory,
-    ) -> BoxFuture<'static, Result<Component>> {
-        async move {
-            let children_dir = realm_dir.open_dir_readable("c")?;
-            let realms_dir = realm_dir.open_dir_readable("r")?;
-
-            let future_children =
-                Component::parse_cmx_components_in_c_dir(children_dir, moniker.clone());
-            let future_realms = Component::parse_cmx_realms_in_r_dir(realms_dir, moniker.clone());
-
-            let (children, realms) = join(future_children, future_realms).await;
-            let mut children = children?;
-            let mut realms = realms?;
-
-            children.append(&mut realms);
-
-            // Consider a realm as a CMX component that has children.
-            // This is not technically true, but works as a generalization.
-            Ok(Component {
-                name: realm_name,
-                moniker,
-                children,
-                is_cmx: true,
-                url,
-                is_running: true,
-            })
+    let mut instances = match filter {
+        Some(ListFilter::Running) => {
+            instances.into_iter().filter(|i| i.state == InstanceState::Started).collect()
         }
-        .boxed()
-    }
-
-    async fn parse_cmx_components_in_c_dir(
-        children_dir: Directory,
-        moniker: AbsoluteMoniker,
-    ) -> Result<Vec<Component>> {
-        // Get all CMX child components
-        let child_component_names = children_dir.entries().await?;
-        let mut future_children = vec![];
-        for child_component_name in child_component_names {
-            let child_moniker = ChildMoniker::parse(&child_component_name)?;
-            let child_moniker = moniker.child(child_moniker);
-            let job_ids_dir = children_dir.open_dir_readable(&child_component_name)?;
-            let child_dirs = Component::open_all_job_ids(job_ids_dir).await?;
-            for child_dir in child_dirs {
-                let future_child = Component::parse_cmx_component(
-                    child_component_name.clone(),
-                    child_moniker.clone(),
-                    child_dir,
-                );
-                future_children.push(future_child);
-            }
+        Some(ListFilter::Stopped) => {
+            instances.into_iter().filter(|i| i.state != InstanceState::Started).collect()
         }
+        Some(ListFilter::Ancestor(m)) => filter_ancestors(instances, m),
+        Some(ListFilter::Descendant(m)) => filter_descendants(instances, m),
+        Some(ListFilter::Relative(m)) => filter_relatives(instances, m),
+        _ => instances,
+    };
 
-        let results = join_all(future_children).await;
-        results.into_iter().collect()
-    }
+    instances.sort_by_key(|c| c.moniker.to_string());
 
-    async fn parse_cmx_realms_in_r_dir(
-        realms_dir: Directory,
-        moniker: AbsoluteMoniker,
-    ) -> Result<Vec<Component>> {
-        // Get all CMX child realms
-        let mut future_realms = vec![];
-        for child_realm_name in realms_dir.entries().await? {
-            let child_moniker = ChildMoniker::parse(&child_realm_name)?;
-            let child_moniker = moniker.child(child_moniker);
-            let job_ids_dir = realms_dir.open_dir_readable(&child_realm_name)?;
-            let child_realm_dirs = Component::open_all_job_ids(job_ids_dir).await?;
-            for child_realm_dir in child_realm_dirs {
-                let future_realm = Component::parse_cmx_realm(
-                    child_realm_name.clone(),
-                    child_moniker.clone(),
-                    "".to_string(), // cmx realms don't have a url
-                    child_realm_dir,
-                );
-                future_realms.push(future_realm);
+    Ok(instances)
+}
+
+fn filter_ancestors(instances: Vec<Instance>, child_str: String) -> Vec<Instance> {
+    let mut ancestors = HashSet::new();
+
+    // Find monikers with this child as the leaf.
+    for instance in &instances {
+        if let Some(child) = instance.moniker.leaf() {
+            if child.as_str() == &child_str {
+                // Add this moniker to ancestor list.
+                let mut cur_moniker = instance.moniker.clone();
+                ancestors.insert(cur_moniker.clone());
+
+                // Loop over parents of this moniker and add them to ancestor list.
+                while let Some(parent) = cur_moniker.parent() {
+                    ancestors.insert(parent.clone());
+                    cur_moniker = parent;
+                }
             }
-        }
-        let results = join_all(future_realms).await;
-        results.into_iter().collect()
-    }
-
-    async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
-        // Recurse on the job_ids
-        let mut dirs = vec![];
-        for job_id in job_ids_dir.entries().await? {
-            let dir = job_ids_dir.open_dir_readable(&job_id)?;
-            dirs.push(dir);
-        }
-        Ok(dirs)
-    }
-
-    pub fn should_include(&self, list_filter: &ListFilter) -> bool {
-        match list_filter {
-            ListFilter::CML => !self.is_cmx,
-            ListFilter::CMX => self.is_cmx,
-            ListFilter::Running => self.is_running,
-            ListFilter::Stopped => !self.is_running,
-
-            ListFilter::Descendant(name) => {
-                self.name == name.to_string() || self.has_ancestor(name.to_string())
-            }
-
-            // These algorithms will walk most of the graph for most of the components.
-            // This works for topologies with only a few layers but could be optimized.
-            ListFilter::Relative(name) => {
-                self.name == name.to_string()
-                    || self.has_ancestor(name.to_string())
-                    || self.has_descendant(name.to_string())
-            }
-            ListFilter::Ancestor(name) => {
-                self.name == name.to_string() || self.has_descendant(name.to_string())
-            }
-
-            ListFilter::None => true,
         }
     }
 
-    fn has_ancestor(&self, component_name: String) -> bool {
-        for part in self.moniker.path() {
-            if part.to_string() == component_name {
-                return true;
+    instances.into_iter().filter(|i| ancestors.contains(&i.moniker)).collect()
+}
+
+fn filter_descendants(instances: Vec<Instance>, child_str: String) -> Vec<Instance> {
+    let mut descendants = HashSet::new();
+
+    // Find monikers with this child as the leaf.
+    for instance in &instances {
+        if let Some(child) = instance.moniker.leaf() {
+            if child.as_str() == &child_str {
+                // Get all descendants of this moniker.
+                for possible_child_instance in &instances {
+                    if instance.moniker.contains_in_realm(&possible_child_instance.moniker) {
+                        descendants.insert(possible_child_instance.moniker.clone());
+                    }
+                }
             }
         }
-        false
     }
 
-    fn has_descendant(&self, component_name: String) -> bool {
-        self.children
-            .iter()
-            .any(|c| c.name == component_name || c.has_descendant(component_name.clone()))
+    instances.into_iter().filter(|i| descendants.contains(&i.moniker)).collect()
+}
+
+fn filter_relatives(instances: Vec<Instance>, child_str: String) -> Vec<Instance> {
+    let mut relatives = HashSet::new();
+
+    // Find monikers with this child as the leaf.
+    for instance in &instances {
+        if let Some(child) = instance.moniker.leaf() {
+            if child.as_str() == &child_str {
+                // Loop over parents of this moniker and add them to relatives list.
+                let mut cur_moniker = instance.moniker.clone();
+                while let Some(parent) = cur_moniker.parent() {
+                    relatives.insert(parent.clone());
+                    cur_moniker = parent;
+                }
+
+                // Get all descendants of this moniker and add them to relatives list.
+                for possible_child_instance in &instances {
+                    if instance.moniker.contains_in_realm(&possible_child_instance.moniker) {
+                        relatives.insert(possible_child_instance.moniker.clone());
+                    }
+                }
+            }
+        }
     }
+
+    instances.into_iter().filter(|i| relatives.contains(&i.moniker)).collect()
+}
+
+pub async fn get_all_cml_instances(explorer: &fsys::RealmExplorerProxy) -> Result<Vec<Instance>> {
+    let iterator = explorer
+        .get_all_instance_infos()
+        .await?
+        .map_err(|e| format_err!("could not get instance infos from realm explorer: {:?}", e))?;
+    let iterator = iterator.into_proxy()?;
+    let mut instance_infos = vec![];
+
+    loop {
+        let mut batch = iterator.next().await?;
+        if batch.is_empty() {
+            break;
+        }
+        instance_infos.append(&mut batch);
+    }
+
+    let mut instances = vec![];
+
+    for info in instance_infos {
+        let mut moniker = RelativeMoniker::parse(&info.moniker)?;
+        let path = moniker.down_path_mut().drain(..).collect();
+        let moniker = AbsoluteMoniker::new(path);
+        let instance = Instance {
+            moniker,
+            url: Some(info.url),
+            instance_id: info.instance_id,
+            is_cmx: false,
+            state: info.state.into(),
+            hub_dir: None,
+        };
+        instances.push(instance);
+    }
+
+    Ok(instances)
+}
+
+pub async fn get_all_cmx_instances(query: &fsys::RealmQueryProxy) -> Result<Vec<Instance>> {
+    // Reading from the v1/CMX hub is flaky while components are being added/removed.
+    // Attempt to get CMX instances several times before calling it a failure.
+    let mut attempt = 1;
+    loop {
+        match get_all_cmx_instances_internal(query).await {
+            Ok(instances) => break Ok(instances),
+            Err(e) => {
+                if attempt == CMX_HUB_RETRY_ATTEMPTS {
+                    break Err(format_err!(
+                        "Maximum attempts reached trying to parse CMX realm.\nLast Error: {}",
+                        e
+                    ));
+                }
+                attempt += 1;
+            }
+        }
+    }
+}
+
+async fn get_all_cmx_instances_internal(query: &fsys::RealmQueryProxy) -> Result<Vec<Instance>> {
+    let moniker = AbsoluteMoniker::parse_str("/core/appmgr")?;
+
+    if let Ok((_, resolved)) = query.get_instance_info("./core/appmgr").await? {
+        if let Some(resolved) = resolved {
+            if let Some(started) = resolved.started {
+                let out_dir = started.out_dir.ok_or_else(|| {
+                    format_err!("Outgoing directory is not available from appmgr")
+                })?;
+
+                let out_dir = out_dir.into_proxy()?;
+                let out_dir = Directory::from_proxy(out_dir);
+                let root_realm_dir = out_dir.open_dir_readable("hub")?;
+
+                let mut instances = parse_cmx_realm(moniker, root_realm_dir).await?;
+
+                // Remove the /core/appmgr CMX root realm instance because that already exists as
+                // a CML component.
+                instances.pop();
+
+                return Ok(instances);
+            }
+        }
+    }
+
+    // Return an empty list if appmgr does not exist or is not started
+    Ok(vec![])
+}
+
+fn parse_cmx_realm(
+    moniker: AbsoluteMoniker,
+    realm_dir: Directory,
+) -> BoxFuture<'static, Result<Vec<Instance>>> {
+    async move {
+        let children_dir = realm_dir.open_dir_readable("c")?;
+        let realms_dir = realm_dir.open_dir_readable("r")?;
+
+        let future_children = parse_cmx_components_in_c_dir(children_dir, moniker.clone());
+        let future_realms = parse_cmx_realms_in_r_dir(realms_dir, moniker.clone());
+
+        let (children, realms) = join(future_children, future_realms).await;
+        let mut children = children?;
+        let mut realms = realms?;
+
+        children.append(&mut realms);
+
+        // Add this realm to the results.
+        children.push(Instance {
+            moniker,
+            url: None, // CMX realms don't have a URL.
+            instance_id: None,
+            is_cmx: true,
+            state: InstanceState::Started,
+            hub_dir: None,
+        });
+
+        Ok(children)
+    }
+    .boxed()
+}
+
+fn parse_cmx_component(
+    moniker: AbsoluteMoniker,
+    dir: Directory,
+) -> BoxFuture<'static, Result<Vec<Instance>>> {
+    async move {
+        // Runner CMX components may have child components.
+        let url = dir.read_file("url").await?;
+
+        let mut instances = if dir.exists("c").await? {
+            let children_dir = dir.open_dir_readable("c")?;
+            parse_cmx_components_in_c_dir(children_dir, moniker.clone()).await?
+        } else {
+            vec![]
+        };
+
+        instances.push(Instance {
+            moniker,
+            url: Some(url),
+            instance_id: None,
+            is_cmx: true,
+            state: InstanceState::Started, // CMX components are always running.
+            hub_dir: Some(dir.clone()?),
+        });
+
+        Ok(instances)
+    }
+    .boxed()
+}
+
+async fn parse_cmx_components_in_c_dir(
+    children_dir: Directory,
+    moniker: AbsoluteMoniker,
+) -> Result<Vec<Instance>> {
+    let child_component_names = children_dir.entries().await?;
+    let mut future_children = vec![];
+    for child_component_name in child_component_names {
+        let child_moniker = ChildMoniker::parse(&child_component_name)?;
+        let child_moniker = moniker.child(child_moniker);
+        let job_ids_dir = children_dir.open_dir_readable(&child_component_name)?;
+        let child_dirs = open_all_job_ids(job_ids_dir).await?;
+        for child_dir in child_dirs {
+            let future_child = parse_cmx_component(child_moniker.clone(), child_dir);
+            future_children.push(future_child);
+        }
+    }
+
+    let instances: Vec<Result<Vec<Instance>>> = join_all(future_children).await;
+    let instances: Result<Vec<Vec<Instance>>> = instances.into_iter().collect();
+    let instances: Vec<Instance> = instances?.into_iter().flatten().collect();
+
+    Ok(instances)
+}
+
+async fn parse_cmx_realms_in_r_dir(
+    realms_dir: Directory,
+    moniker: AbsoluteMoniker,
+) -> Result<Vec<Instance>> {
+    let mut future_realms = vec![];
+    for child_realm_name in realms_dir.entries().await? {
+        let child_moniker = ChildMoniker::parse(&child_realm_name)?;
+        let child_moniker = moniker.child(child_moniker);
+        let job_ids_dir = realms_dir.open_dir_readable(&child_realm_name)?;
+        let child_realm_dirs = open_all_job_ids(job_ids_dir).await?;
+        for child_realm_dir in child_realm_dirs {
+            let future_realm = parse_cmx_realm(child_moniker.clone(), child_realm_dir);
+            future_realms.push(future_realm);
+        }
+    }
+
+    let instances: Vec<Result<Vec<Instance>>> = join_all(future_realms).await;
+    let instances: Result<Vec<Vec<Instance>>> = instances.into_iter().collect();
+    let instances: Vec<Instance> = instances?.into_iter().flatten().collect();
+
+    Ok(instances)
+}
+
+async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
+    let dirs = job_ids_dir
+        .entries()
+        .await?
+        .into_iter()
+        .map(|job_id| job_ids_dir.open_dir_readable(&job_id))
+        .collect::<Result<Vec<Directory>>>()?;
+    Ok(dirs)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        std::{fs, path::Path},
-        tempfile::TempDir,
-    };
+    use fidl::endpoints::*;
+    use fidl_fuchsia_io as fio;
+    use fuchsia_async::Task;
+    use futures::StreamExt;
+    use std::collections::HashMap;
+    use std::fs;
+    use tempfile::TempDir;
 
-    // Creates component files for components in the exec directory.
-    fn create_exec_path(root: &Path, path: &'static str) {
-        let mut parent_dir = root.to_path_buf();
-        let mut parent_name = root.to_str().unwrap();
-        for dir_name in path.split_terminator("/") {
-            let dir = parent_dir.join(dir_name);
-            fs::create_dir_all(&dir).unwrap();
-            if parent_name.ends_with(".cmx") {
-                fs::write(dir.join("url"), "fuchsia-test://test.com/".to_owned() + parent_name)
-                    .unwrap();
+    pub fn serve_realm_explorer(instances: Vec<fsys::InstanceInfo>) -> fsys::RealmExplorerProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmExplorerMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let fsys::RealmExplorerRequest::GetAllInstanceInfos { responder } =
+                    stream.next().await.unwrap().unwrap();
+                let iterator = serve_instance_iterator(instances.clone());
+                responder.send(&mut Ok(iterator)).unwrap();
             }
-            parent_dir = dir;
-            parent_name = dir_name;
+        })
+        .detach();
+        client
+    }
+
+    pub fn serve_instance_iterator(
+        instances: Vec<fsys::InstanceInfo>,
+    ) -> ClientEnd<fsys::InstanceInfoIteratorMarker> {
+        let (client, mut stream) =
+            create_request_stream::<fsys::InstanceInfoIteratorMarker>().unwrap();
+        Task::spawn(async move {
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut instances.clone().iter_mut()).unwrap();
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut std::iter::empty()).unwrap();
+        })
+        .detach();
+        client
+    }
+
+    pub fn serve_realm_query(
+        mut instances: HashMap<String, (fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>)>,
+    ) -> fsys::RealmQueryProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmQueryMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
+                    stream.next().await.unwrap().unwrap();
+                let response = instances.remove(&moniker).unwrap();
+                responder.send(&mut Ok(response)).unwrap();
+            }
+        })
+        .detach();
+        client
+    }
+
+    pub fn create_appmgr_out() -> (TempDir, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
+
+        fs::create_dir_all(root.join("hub/r")).unwrap();
+
+        {
+            let sshd = root.join("hub/c/sshd.cmx/9898");
+            fs::create_dir_all(&sshd).unwrap();
+            fs::create_dir_all(sshd.join("in/pkg")).unwrap();
+            fs::create_dir_all(sshd.join("out/dev")).unwrap();
+
+            fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx").unwrap();
+            fs::write(sshd.join("in/pkg/meta"), "1234").unwrap();
+            fs::write(sshd.join("job-id"), "5454").unwrap();
+            fs::write(sshd.join("process-id"), "9898").unwrap();
         }
-    }
 
-    // Creates component files for components that contain a children directory.
-    fn create_child_path(root: &Path, path: &'static str) {
-        let mut parent_dir = root.to_path_buf();
-        let mut path_iter = path.split_terminator("/").peekable();
-        while let Some(dir_name) = path_iter.next() {
-            let dir = parent_dir.join(dir_name);
-            fs::create_dir_all(&dir).unwrap();
-            if let Some(&"children") = path_iter.peek() {
-                fs::write(dir.join("url"), "fuchsia-test://test.com/".to_owned() + dir_name)
-                    .unwrap();
-                fs::write(dir.join("moniker"), dir_name).unwrap();
-            }
-            parent_dir = dir;
-        }
-    }
-
-    /// Gets the names of each component in `component`'s tree that is
-    /// includable for the given `filter`.
-    fn filter_includable(component: &Component, filter: ListFilter) -> Vec<String> {
-        fn filter_includable_recursive(
-            component: &Component,
-            filter: &ListFilter,
-            names: &mut Vec<String>,
-        ) {
-            if component.should_include(&filter) {
-                names.extend([component.name.clone()]);
-            }
-
-            for child in &component.children {
-                filter_includable_recursive(&child, &filter, names);
-            }
-        }
-
-        let mut names = Vec::<String>::new();
-        filter_includable_recursive(&component, &filter, &mut names);
-        names
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn no_children() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        // |- url
-        fs::create_dir_all(&root.join("children")).unwrap();
-        fs::write(root.join("moniker"), "/").unwrap();
-        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component =
-            Component::parse("/".to_string(), AbsoluteMoniker::root(), root_dir).await.unwrap();
-
-        assert!(component.children.is_empty());
-        assert!(!component.is_cmx);
-        assert!(!component.is_running);
-        assert_eq!(component.name, "/");
-        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn running() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        // |- url
-        // |- exec
-        fs::create_dir_all(&root.join("children")).unwrap();
-        fs::create_dir_all(&root.join("exec")).unwrap();
-        fs::write(root.join("moniker"), "/").unwrap();
-        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component =
-            Component::parse("/".to_string(), AbsoluteMoniker::root(), root_dir).await.unwrap();
-
-        assert!(!component.is_cmx);
-        assert!(component.is_running);
-        assert_eq!(component.name, "/");
-        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn single_cmx_child() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert!(!component.is_cmx);
-        assert!(component.is_running);
-        assert_eq!(component.name, "appmgr");
-        assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
-        assert_eq!(component.children.len(), 1);
-
-        let child = component.children.get(0).unwrap();
-        assert_eq!(child.name, "foo.cmx");
-        assert_eq!(child.url, "fuchsia-test://test.com/foo.cmx");
-        assert!(child.is_running);
-        assert!(child.is_cmx);
-        assert!(child.children.is_empty());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn runner_cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        //                   |- c
-        //                      |- bar.cmx
-        //                         |- 456
-        //                            |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123/c/bar.cmx/456");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert!(!component.is_cmx);
-        assert!(component.is_running);
-        assert_eq!(component.name, "appmgr");
-        assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
-        assert_eq!(component.children.len(), 1);
-
-        let child = component.children.get(0).unwrap();
-        assert_eq!(child.name, "foo.cmx");
-        assert_eq!(child.url, "fuchsia-test://test.com/foo.cmx");
-        assert!(child.is_running);
-        assert!(child.is_cmx);
-        assert_eq!(child.children.len(), 1);
-
-        let child = child.children.get(0).unwrap();
-        assert_eq!(child.name, "bar.cmx");
-        assert_eq!(child.url, "fuchsia-test://test.com/bar.cmx");
-        assert!(child.is_running);
-        assert!(child.is_cmx);
-        assert_eq!(child.children.len(), 0);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn single_cml_child() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- url
-        // |- children
-        //    |- foo
-        //       |- url
-        //       |- children
-        fs::write(root.join("moniker"), "/").unwrap();
-        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
-        create_child_path(&root, "children/foo/children");
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component =
-            Component::parse("/".to_string(), AbsoluteMoniker::root(), root_dir).await.unwrap();
-
-        assert!(!component.is_cmx);
-        assert!(!component.is_running);
-        assert_eq!(component.name, "/");
-        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
-        assert_eq!(component.children.len(), 1);
-
-        let child = component.children.get(0).unwrap();
-        assert_eq!(child.name, "foo");
-        assert_eq!(child.url, "fuchsia-test://test.com/foo");
-        assert!(!child.is_running);
-        assert!(!child.is_cmx);
-        assert!(child.children.is_empty());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_read_component_name_from_file() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        fs::create_dir_all(&root.join("children/")).unwrap();
-        fs::write(root.join("moniker"), "my_name").unwrap();
-        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
-
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component = Component::parse(
-            "fallback_name".to_string(),
-            AbsoluteMoniker::parse_str("/my_name").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-        assert_eq!(component.name, "my_name");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_read_dir_name_if_missing_file() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        fs::create_dir_all(&root.join("children/")).unwrap();
-        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
-
-        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let component = Component::parse(
-            "fallback_name".to_string(),
-            AbsoluteMoniker::parse_str("/fallback_name").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-        assert_eq!(component.name, "fallback_name");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        //                   |- c
-        //                      |- bar.cmx
-        //                         |- 456
-        //                            |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123/c/bar.cmx/456");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(filter_includable(&component, ListFilter::CMX), ["foo.cmx", "bar.cmx"]);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        //                   |- c
-        //                      |- bar.cmx
-        //                         |- 456
-        //                            |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123/c/bar.cmx/456");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(filter_includable(&component, ListFilter::CML), ["appmgr"]);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_running() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        //                   |- c
-        //                      |- bar.cmx
-        //                         |- 456
-        //                            |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123/c/bar.cmx/456");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(
-            filter_includable(&component, ListFilter::Running),
-            ["appmgr", "foo.cmx", "bar.cmx"]
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_stopped() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // appmgr
-        // |- children
-        // |- url
-        // |- exec
-        //    |- out
-        //       |- hub
-        //          |- r
-        //          |- c
-        //             |- foo.cmx
-        //                |- 123
-        //                   |- url
-        //                   |- c
-        //                      |- bar.cmx
-        //                         |- 456
-        //                            |- url
-        create_child_path(&root, "appmgr/children");
-        create_exec_path(&root, "appmgr/exec/out/hub/c/foo.cmx/123/c/bar.cmx/456");
-        create_exec_path(&root, "appmgr/exec/out/hub/r");
-
-        let root_dir = Directory::from_namespace(root.join("appmgr")).unwrap();
-        let component = Component::parse(
-            "appmgr".to_string(),
-            AbsoluteMoniker::parse_str("/appmgr").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(filter_includable(&component, ListFilter::Stopped), Vec::<String>::new());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_relative() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // ancestor
-        // |- url
-        // |- children
-        //    |- branch1
-        //        |- url
-        //        |- children
-        //    |- parent
-        //        |- url
-        //        |- children
-        //            |- branch2
-        //                |- url
-        //                |- children
-        //            |- foo
-        //                |- url
-        //                |- children
-        //                    |- branch3
-        //                        |- url
-        //                        |- children
-        //                    |- child
-        //                        |- url
-        //                        |- children
-        //                            |- branch4
-        //                                |- url
-        //                                |- children
-        //                            |- descendant
-        //                                |- url
-        //                                |- children
-        create_child_path(
+        let root = root.display().to_string();
+        let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::node::connect_in_namespace(
             &root,
-            "ancestor/children/parent/children/foo/children/child/children/descendant/children",
-        );
-        create_child_path(&root, "ancestor/children/branch1/children");
-        create_child_path(&root, "ancestor/children/parent/children/branch2/children");
-        create_child_path(&root, "ancestor/children/parent/children/foo/children/branch3/children");
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/branch4/children",
-        );
-        let root_dir = Directory::from_namespace(root.join("ancestor")).unwrap();
-        let component = Component::parse(
-            "ancestor".to_string(),
-            AbsoluteMoniker::parse_str("/ancestor").unwrap(),
-            root_dir,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server.into_channel(),
         )
-        .await
         .unwrap();
+        (temp_dir, client)
+    }
 
+    #[fuchsia::test]
+    async fn basic_cml() {
+        let explorer = serve_realm_explorer(vec![fsys::InstanceInfo {
+            moniker: "./".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/foo#meta/bar.cm".to_string(),
+            instance_id: Some("1234567890".to_string()),
+            state: fsys::InstanceState::Started,
+        }]);
+
+        let mut instances = get_all_cml_instances(&explorer).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
+
+        assert_eq!(instance.moniker, AbsoluteMoniker::root());
+        assert_eq!(instance.url, Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cm".to_string()));
+        assert_eq!(instance.instance_id, Some("1234567890".to_string()));
+        assert!(!instance.is_cmx);
+        assert!(instance.hub_dir.is_none());
+        assert_eq!(instance.state, InstanceState::Started);
+    }
+
+    #[fuchsia::test]
+    async fn basic_cmx() {
+        let (_temp_out_dir, out_dir) = create_appmgr_out();
+
+        // The exposed and namespace dir is not used by this library.
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        let query = serve_realm_query(HashMap::from([(
+            "./core/appmgr".to_string(),
+            (
+                fsys::InstanceInfo {
+                    moniker: "./core/appmgr".to_string(),
+                    url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                    instance_id: None,
+                    state: fsys::InstanceState::Started,
+                },
+                Some(Box::new(fsys::ResolvedState {
+                    uses: vec![],
+                    exposes: vec![],
+                    config: None,
+                    pkg_dir: None,
+                    started: Some(Box::new(fsys::StartedState {
+                        out_dir: Some(out_dir),
+                        runtime_dir: None,
+                        start_reason: "Debugging Workflow".to_string(),
+                    })),
+                    exposed_dir,
+                    ns_dir,
+                })),
+            ),
+        )]));
+
+        let mut instances = get_all_cmx_instances(&query).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        let instance = instances.remove(0);
+
+        assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
+        assert_eq!(instance.url, Some("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".to_string()));
+        assert!(instance.instance_id.is_none());
+        assert!(instance.is_cmx);
+        assert!(instance.hub_dir.is_some());
+        assert_eq!(instance.state, InstanceState::Started);
+    }
+
+    fn create_explorer_and_query() -> (TempDir, fsys::RealmExplorerProxy, fsys::RealmQueryProxy) {
+        // Serve RealmExplorer for CML components
+        let explorer = serve_realm_explorer(vec![
+            fsys::InstanceInfo {
+                moniker: "./core".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/core#meta/core.cm".to_string(),
+                instance_id: None,
+                state: fsys::InstanceState::Started,
+            },
+            fsys::InstanceInfo {
+                moniker: "./core/appmgr".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                instance_id: None,
+                state: fsys::InstanceState::Started,
+            },
+            fsys::InstanceInfo {
+                moniker: "./".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/root#meta/root.cm".to_string(),
+                instance_id: None,
+                state: fsys::InstanceState::Resolved,
+            },
+        ]);
+
+        // Serve RealmQuery to provide /core/appmgr and hence the CMX hub
+        let (temp_dir, out_dir) = create_appmgr_out();
+
+        // The exposed and namespace dir is not used by this library.
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        let query = serve_realm_query(HashMap::from([(
+            "./core/appmgr".to_string(),
+            (
+                fsys::InstanceInfo {
+                    moniker: "./core/appmgr".to_string(),
+                    url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                    instance_id: None,
+                    state: fsys::InstanceState::Started,
+                },
+                Some(Box::new(fsys::ResolvedState {
+                    uses: vec![],
+                    exposes: vec![],
+                    config: None,
+                    pkg_dir: None,
+                    started: Some(Box::new(fsys::StartedState {
+                        out_dir: Some(out_dir),
+                        runtime_dir: None,
+                        start_reason: "Debugging Workflow".to_string(),
+                    })),
+                    exposed_dir,
+                    ns_dir,
+                })),
+            ),
+        )]));
+        (temp_dir, explorer, query)
+    }
+
+    #[fuchsia::test]
+    async fn no_filter() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
+
+        let mut instances = get_all_instances(&explorer, &query, None).await.unwrap();
+        assert_eq!(instances.len(), 4);
+
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::root());
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
         assert_eq!(
-            filter_includable(&component, ListFilter::Relative("foo".to_string())),
-            ["ancestor", "parent", "foo", "branch3", "child", "branch4", "descendant"]
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr").unwrap()
+        );
+        assert_eq!(
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap()
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_ancestor() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn cml_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // ancestor
-        // |- url
-        // |- children
-        //    |- branch1
-        //        |- url
-        //        |- children
-        //    |- parent
-        //        |- url
-        //        |- children
-        //            |- branch2
-        //                |- url
-        //                |- children
-        //            |- foo
-        //                |- url
-        //                |- children
-        //                    |- branch3
-        //                        |- url
-        //                        |- children
-        //                    |- child
-        //                        |- url
-        //                        |- children
-        //                            |- branch4
-        //                                |- url
-        //                                |- children
-        //                            |- descendant
-        //                                |- url
-        //                                |- children
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/descendant/children",
-        );
-        create_child_path(&root, "ancestor/children/branch1/children");
-        create_child_path(&root, "ancestor/children/parent/children/branch2/children");
-        create_child_path(&root, "ancestor/children/parent/children/foo/children/branch3/children");
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/branch4/children",
-        );
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::CML)).await.unwrap();
+        assert_eq!(instances.len(), 3);
 
-        let root_dir = Directory::from_namespace(root.join("ancestor")).unwrap();
-        let component = Component::parse(
-            "ancestor".to_string(),
-            AbsoluteMoniker::parse_str("/ancestor").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::root());
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
         assert_eq!(
-            filter_includable(&component, ListFilter::Ancestor("foo".to_string())),
-            ["ancestor", "parent", "foo"]
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr").unwrap()
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_no_filter() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn cmx_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // ancestor
-        // |- url
-        // |- children
-        //    |- branch1
-        //        |- url
-        //        |- children
-        //    |- parent
-        //        |- url
-        //        |- children
-        //            |- branch2
-        //                |- url
-        //                |- children
-        //            |- foo
-        //                |- url
-        //                |- children
-        //                    |- branch3
-        //                        |- url
-        //                        |- children
-        //                    |- child
-        //                        |- url
-        //                        |- children
-        //                            |- branch4
-        //                                |- url
-        //                                |- children
-        //                            |- descendant
-        //                                |- url
-        //                                |- children
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/descendant/children",
-        );
-        create_child_path(&root, "ancestor/children/branch1/children");
-        create_child_path(&root, "ancestor/children/parent/children/branch2/children");
-        create_child_path(&root, "ancestor/children/parent/children/foo/children/branch3/children");
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/branch4/children",
-        );
-        let root_dir = Directory::from_namespace(root.join("ancestor")).unwrap();
-        let component = Component::parse(
-            "ancestor".to_string(),
-            AbsoluteMoniker::parse_str("/ancestor").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::CMX)).await.unwrap();
+        assert_eq!(instances.len(), 1);
         assert_eq!(
-            filter_includable(&component, ListFilter::None),
-            [
-                "ancestor",
-                "branch1",
-                "parent",
-                "branch2",
-                "foo",
-                "branch3",
-                "child",
-                "branch4",
-                "descendant"
-            ]
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap()
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn should_include_descendant() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn running_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // ancestor
-        // |- url
-        // |- children
-        //    |- branch1
-        //        |- url
-        //        |- children
-        //    |- parent
-        //        |- url
-        //        |- children
-        //            |- branch2
-        //                |- url
-        //                |- children
-        //            |- foo
-        //                |- url
-        //                |- children
-        //                    |- branch3
-        //                        |- url
-        //                        |- children
-        //                    |- child
-        //                        |- url
-        //                        |- children
-        //                            |- branch4
-        //                                |- url
-        //                                |- children
-        //                            |- descendant
-        //                                |- url
-        //                                |- children
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/descendant/children",
-        );
-        create_child_path(&root, "ancestor/children/branch1/children");
-        create_child_path(&root, "ancestor/children/parent/children/branch2/children");
-        create_child_path(&root, "ancestor/children/parent/children/foo/children/branch3/children");
-        create_child_path(
-            &root,
-            "ancestor/children/parent/children/foo/children/child/children/branch4/children",
-        );
-        let root_dir = Directory::from_namespace(root.join("ancestor")).unwrap();
-        let component = Component::parse(
-            "ancestor".to_string(),
-            AbsoluteMoniker::parse_str("/ancestor").unwrap(),
-            root_dir,
-        )
-        .await
-        .unwrap();
-
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::Running)).await.unwrap();
+        assert_eq!(instances.len(), 3);
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
         assert_eq!(
-            filter_includable(&component, ListFilter::Descendant("foo".to_string())),
-            ["foo", "branch3", "child", "branch4", "descendant"]
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr").unwrap()
+        );
+        assert_eq!(
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap()
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn list_filter_from_str() {
-        assert_eq!(ListFilter::from_str("cmx"), Ok(ListFilter::CMX));
-        assert_eq!(ListFilter::from_str("cml"), Ok(ListFilter::CML));
-        assert_eq!(ListFilter::from_str("running"), Ok(ListFilter::Running));
-        assert_eq!(ListFilter::from_str("stopped"), Ok(ListFilter::Stopped));
+    #[fuchsia::test]
+    async fn stopped_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        assert_eq!(
-            ListFilter::from_str("relative:component"),
-            Ok(ListFilter::Relative("component".to_string()))
-        );
-        assert_eq!(
-            ListFilter::from_str("relative:collection:element"),
-            Ok(ListFilter::Relative("collection:element".to_string()))
-        );
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::Stopped)).await.unwrap();
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::root());
+    }
 
-        assert_eq!(
-            ListFilter::from_str("relatives:component"),
-            Ok(ListFilter::Relative("component".to_string()))
-        );
-        assert_eq!(
-            ListFilter::from_str("relatives:collection:element"),
-            Ok(ListFilter::Relative("collection:element".to_string()))
-        );
+    #[fuchsia::test]
+    async fn descendants_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::Descendant("core".to_string())))
+                .await
+                .unwrap();
+        assert_eq!(instances.len(), 3);
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
         assert_eq!(
-            ListFilter::from_str("descendant:component"),
-            Ok(ListFilter::Descendant("component".to_string()))
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr").unwrap()
         );
         assert_eq!(
-            ListFilter::from_str("descendant:collection:element"),
-            Ok(ListFilter::Descendant("collection:element".to_string()))
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap()
         );
+    }
 
-        assert_eq!(
-            ListFilter::from_str("descendants:component"),
-            Ok(ListFilter::Descendant("component".to_string()))
-        );
-        assert_eq!(
-            ListFilter::from_str("descendants:collection:element"),
-            Ok(ListFilter::Descendant("collection:element".to_string()))
-        );
+    #[fuchsia::test]
+    async fn ancestors_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        assert_eq!(
-            ListFilter::from_str("ancestor:component"),
-            Ok(ListFilter::Ancestor("component".to_string()))
-        );
-        assert_eq!(
-            ListFilter::from_str("ancestor:collection:element"),
-            Ok(ListFilter::Ancestor("collection:element".to_string()))
-        );
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::Ancestor("core".to_string())))
+                .await
+                .unwrap();
+        assert_eq!(instances.len(), 2);
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::root());
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
+    }
 
-        assert_eq!(
-            ListFilter::from_str("ancestors:component"),
-            Ok(ListFilter::Ancestor("component".to_string()))
-        );
-        assert_eq!(
-            ListFilter::from_str("ancestors:collection:element"),
-            Ok(ListFilter::Ancestor("collection:element".to_string()))
-        );
+    #[fuchsia::test]
+    async fn relative_only() {
+        let (_temp_dir, explorer, query) = create_explorer_and_query();
 
-        assert!(ListFilter::from_str("nonsense").is_err());
+        let mut instances =
+            get_all_instances(&explorer, &query, Some(ListFilter::Relative("core".to_string())))
+                .await
+                .unwrap();
+        assert_eq!(instances.len(), 4);
+
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::root());
+        assert_eq!(instances.remove(0).moniker, AbsoluteMoniker::parse_str("/core").unwrap());
+        assert_eq!(
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr").unwrap()
+        );
+        assert_eq!(
+            instances.remove(0).moniker,
+            AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap()
+        );
     }
 }

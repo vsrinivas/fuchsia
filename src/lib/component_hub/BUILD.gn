@@ -44,13 +44,9 @@ rustc_library("component_hub") {
   ]
 
   sources = [
-    "src/doctor.rs",
     "src/io.rs",
     "src/lib.rs",
     "src/list.rs",
-    "src/new/list.rs",
-    "src/new/mod.rs",
-    "src/new/show.rs",
     "src/select.rs",
     "src/show.rs",
   ]

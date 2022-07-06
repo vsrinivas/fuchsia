@@ -8,22 +8,16 @@ use crate::component::types::{
 };
 use anyhow::Error;
 use component_hub::{
-    io::Directory,
-    list::{Component as ListComponent, ListFilter},
-    show::find_components,
+    list::{get_all_instances, ListFilter},
+    show::find_instances,
 };
 use fidl_fuchsia_sys::ComponentControllerEvent;
+use fidl_fuchsia_sys2 as fsys;
 use fuchsia_component::client;
 use fuchsia_syslog::macros::fx_log_info;
 use fuchsia_syslog::macros::*;
 use futures::StreamExt;
-use lazy_static::lazy_static;
-use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
 use serde_json::{from_value, Value};
-
-lazy_static! {
-    static ref HUB_DIR: Directory = Directory::from_namespace("/hub-v2").unwrap();
-}
 
 /// Perform operations related to Component.
 ///
@@ -126,46 +120,28 @@ impl ComponentFacade {
             }
             None => return Err(format_err!("Need name of the component to search.")),
         };
-        let components = match find_components(name.to_string(), HUB_DIR.clone()?).await {
+        let query = client::connect_to_protocol::<fsys::RealmQueryMarker>()?;
+        let explorer = client::connect_to_protocol::<fsys::RealmExplorerMarker>()?;
+        let instances = match find_instances(name.to_string(), &explorer, &query).await {
             Ok(p) => p,
             Err(err) => fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to find component: {}, err: {:}", name.to_string(), err)
             ),
         };
-        if components.is_empty() {
+        if instances.is_empty() {
             return Ok(ComponentSearchResult::NotFound);
         }
         Ok(ComponentSearchResult::Success)
     }
 
-    fn filter(&self, component: &ListComponent, filter: ListFilter) -> Vec<String> {
-        fn filter_recursive(
-            component: &ListComponent,
-            filter: &ListFilter,
-            component_urls: &mut Vec<String>,
-        ) {
-            if component.should_include(&filter) {
-                component_urls.extend([component.url.clone()]);
-            }
-
-            for child in &component.children {
-                filter_recursive(&child, &filter, component_urls);
-            }
-        }
-        let mut component_urls = Vec::<String>::new();
-        filter_recursive(&component, &filter, &mut component_urls);
-        component_urls
-    }
-
     /// List running components, returns a vector containing component full URL.
     pub async fn list(&self) -> Result<Vec<String>, Error> {
         fx_log_info!("List running Component under appmgr in ComponentSearch Facade",);
-        // let hub_path = PathBuf::from("/hub-v2");
-        let hub_dir = Directory::from_namespace("/hub-v2").unwrap();
-        match ListComponent::parse("/".to_string(), AbsoluteMoniker::root(), hub_dir).await {
-            Ok(component) => Ok(self.filter(&component, ListFilter::Running)),
-            Err(e) => Err(e),
-        }
+        let query = client::connect_to_protocol::<fsys::RealmQueryMarker>()?;
+        let explorer = client::connect_to_protocol::<fsys::RealmExplorerMarker>()?;
+        let instances = get_all_instances(&explorer, &query, Some(ListFilter::Running)).await?;
+        let urls: Vec<String> = instances.into_iter().filter_map(|i| i.url).collect();
+        Ok(urls)
     }
 }

@@ -5,7 +5,7 @@
 use {
     ansi_term::Color,
     anyhow::{Context, Result},
-    component_hub::new::show::{find_instances, Instance, Resolved},
+    component_hub::show::{find_instances, Instance, Resolved},
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
@@ -39,11 +39,16 @@ pub async fn show(
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening realm query")?;
 
-    let instances = find_instances(filter, &explorer_proxy, &query_proxy).await?;
+    let instances = find_instances(filter.clone(), &explorer_proxy, &query_proxy).await?;
 
     if writer.is_machine() {
         writer.machine(&instances)?;
     } else {
+        if instances.is_empty() {
+            writeln!(&mut writer, "No matching components found for query \"{}\"", filter)?;
+            return Ok(());
+        }
+
         for instance in instances {
             let table = create_table(instance);
             table.print(&mut writer)?;
@@ -54,7 +59,7 @@ pub async fn show(
     Ok(())
 }
 
-fn create_table(instance: Instance) -> Table {
+pub fn create_table(instance: Instance) -> Table {
     let mut table = Table::new();
     table.set_format(*FORMAT_CLEAN);
 

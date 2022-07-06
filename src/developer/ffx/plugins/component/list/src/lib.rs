@@ -5,7 +5,7 @@
 use {
     ansi_term::Colour,
     anyhow::{Context, Result},
-    component_hub::new::list::{get_all_instances, Instance, InstanceState},
+    component_hub::list::{get_all_instances, Instance, InstanceState},
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
