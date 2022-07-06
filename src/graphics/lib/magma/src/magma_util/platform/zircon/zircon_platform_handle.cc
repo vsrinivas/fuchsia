@@ -25,18 +25,16 @@ bool ZirconPlatformHandle::GetCount(uint32_t* count_out) {
   return true;
 }
 
-uint64_t ZirconPlatformHandle::GetId() {
-  uint64_t key;
-  PlatformObject::IdFromHandle(get(), &key);
-  return key;
+uint64_t ZirconPlatformHandle::global_id() {
+  uint64_t id;
+  PlatformObject::IdFromHandle(get(), &id);
+  return id;
 }
 
-bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t* key_out) {
-  if (!PlatformObject::IdFromHandle(get(), key_out))
-    return DRET_MSG(false, "IdFromHandle failed");
-
+bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t key) {
   auto zircon_port = static_cast<ZirconPlatformPort*>(port);
-  zx_status_t status = handle_.wait_async(zircon_port->zx_port(), *key_out,
+
+  zx_status_t status = handle_.wait_async(zircon_port->zx_port(), key,
                                           ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   if (status != ZX_OK)
     return DRETF(false, "wait_async failed: %d", status);

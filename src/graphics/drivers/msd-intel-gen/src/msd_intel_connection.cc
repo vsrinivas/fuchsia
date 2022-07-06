@@ -120,16 +120,16 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
   ReleaseBuffer(buffer, [](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
                            uint32_t timeout_ms) {
     auto port = magma::PlatformPort::Create();
-    uint64_t key;
 
     for (auto& semaphore : semaphores) {
-      if (!semaphore->WaitAsync(port.get(), &key)) {
+      if (!semaphore->WaitAsync(port.get(), semaphore->global_id())) {
         DASSERT(false);
       }
     }
 
     // Semaphores may be context wait semaphores or a pipeline fence so we return when any
     // semaphore is signaled.
+    uint64_t key;
     return port->Wait(&key, timeout_ms);
   });
 }

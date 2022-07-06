@@ -329,8 +329,8 @@ void JobScheduler::PlatformPortSignaled(uint64_t key) {
       completed_atom = true;
       owner_->AtomCompleted(atom.get(), kArmMaliResultSuccess);
     } else {
-      if (atom->platform_semaphore()->id() == key)
-        atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort());
+      if (atom->platform_semaphore()->global_id() == key)
+        atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort(), key);
       unfinished_atoms.push_back(atom);
     }
   }
@@ -523,7 +523,8 @@ void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom) {
       SoftJobCompleted(atom);
     } else {
       waiting_atoms_.push_back(atom);
-      atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort());
+      atom->platform_semaphore()->WaitAsync(owner_->GetPlatformPort(),
+                                            atom->platform_semaphore()->global_id());
     }
   } else {
     DASSERT(false);

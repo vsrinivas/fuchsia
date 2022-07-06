@@ -122,7 +122,7 @@ magma::Status MagmaSystemConnection::EnablePerformanceCounterAccess(
   if (!access_token) {
     return DRET(MAGMA_STATUS_INVALID_ARGS);
   }
-  if (access_token->GetId() != perf_count_access_token_id) {
+  if (access_token->global_id() != perf_count_access_token_id) {
     // This is not counted as an error, since it can happen if the client uses the event from the
     // wrong driver.
     return MAGMA_STATUS_OK;

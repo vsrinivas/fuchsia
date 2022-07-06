@@ -374,10 +374,12 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
           return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid condition for semaphore: 0x%x",
                           items[i].condition);
         auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(items[i].semaphore);
-        uint64_t key;
-        if (!semaphore->WaitAsync(port.get(), &key))
+
+        uint64_t key = semaphore->global_id();
+        if (!semaphore->WaitAsync(port.get(), key))
           return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitAsync failed");
 
+        DASSERT(map.find(key) == map.end());
         map[key] = i;
         break;
       }
@@ -391,13 +393,14 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
         if (!platform_handle)
           return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create platform handle");
 
-        uint64_t key;
-        bool result = platform_handle->WaitAsync(port.get(), &key);
+        uint64_t key = platform_handle->global_id();
+        bool result = platform_handle->WaitAsync(port.get(), key);
         platform_handle->release();
 
         if (!result)
           return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitAsync failed");
 
+        DASSERT(map.find(key) == map.end());
         map[key] = i;
         break;
       }

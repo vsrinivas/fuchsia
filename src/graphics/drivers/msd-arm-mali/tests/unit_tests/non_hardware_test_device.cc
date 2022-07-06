@@ -273,8 +273,8 @@ class TestNonHardwareMsdArmDevice {
 
       magma::Status Wait(uint64_t timeout_ms) override { return MAGMA_STATUS_OK; }
 
-      bool WaitAsync(magma::PlatformPort* port, uint64_t* key_out) override {
-        return real_semaphore_->WaitAsync(port, key_out);
+      bool WaitAsync(magma::PlatformPort* port, uint64_t key) override {
+        return real_semaphore_->WaitAsync(port, key);
       }
 
       void set_local_id(uint64_t id) override {}

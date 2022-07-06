@@ -87,7 +87,7 @@ class SemaphorePort {
       DLOG("adding semaphore 0x%" PRIx64 " to the map", semaphore->id());
       map_[semaphore->id()] = shared_wait_set;
 
-      if (!semaphore->WaitAsync(port_.get()))
+      if (!semaphore->WaitAsync(port_.get(), semaphore->id()))
         return DRETF(false, "WaitAsync failed");
     }
 

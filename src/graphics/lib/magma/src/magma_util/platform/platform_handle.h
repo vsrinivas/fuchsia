@@ -22,13 +22,13 @@ class PlatformHandle {
 
   // Registers an async wait delivered on the given |port| when the given handle is readable,
   // or if the handle has a peer and the peer is closed.
-  // On success returns true and |key_out| is set.
-  virtual bool WaitAsync(PlatformPort* port, uint64_t* key_out) = 0;
+  // On success returns true.
+  virtual bool WaitAsync(PlatformPort* port, uint64_t key) = 0;
 
   virtual std::string GetName() = 0;
 
   // Returns a globally-unique ID for this handle.
-  virtual uint64_t GetId() = 0;
+  virtual uint64_t global_id() = 0;
 
   static bool duplicate_handle(uint32_t handle_in, uint32_t* handle_out);
 

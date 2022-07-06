@@ -430,7 +430,7 @@ class TestPlatformConnection {
     EXPECT_EQ(client_connection_->GetError(), 0);
     {
       std::unique_lock<std::mutex> lock(shared_data_->mutex);
-      EXPECT_EQ(shared_data_->test_access_token->GetId(), semaphore->id());
+      EXPECT_EQ(shared_data_->test_access_token->global_id(), semaphore->id());
     }
   }
 

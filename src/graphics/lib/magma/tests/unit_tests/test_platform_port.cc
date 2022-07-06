@@ -36,15 +36,15 @@ class TestPort {
     std::shared_ptr<magma::PlatformSemaphore> sem(magma::PlatformSemaphore::Create());
 
     // Verify WaitAsync/Signal/Reset then Wait flow (no autoreset when waiting on a port)
-    sem->WaitAsync(port.get());
+    sem->WaitAsync(port.get(), sem->global_id());
     sem->Signal();
     sem->Reset();
     thread.reset(new std::thread([port, sem] {
       DLOG("Waiting for port");
       uint64_t key;
       EXPECT_EQ(MAGMA_STATUS_OK, port->Wait(&key, 100).get());
-      EXPECT_EQ(key, sem->id());
-      DLOG("Port wait returned 0x%" PRIx64, sem->id());
+      EXPECT_EQ(key, sem->global_id());
+      DLOG("Port wait returned 0x%" PRIx64, sem->global_id());
     }));
     thread->join();
 
@@ -62,11 +62,11 @@ class TestPort {
       DLOG("Waiting for semaphore");
       uint64_t key;
       EXPECT_EQ(MAGMA_STATUS_OK, port->Wait(&key).get());
-      EXPECT_EQ(key, sem->id());
+      EXPECT_EQ(key, sem->global_id());
       DLOG("Semaphore wait returned");
     }));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    sem->WaitAsync(port.get());
+    sem->WaitAsync(port.get(), sem->global_id());
     sem->Signal();
     sem->Reset();
     thread->join();
@@ -109,8 +109,8 @@ class TestPort {
     auto port = magma::PlatformPort::Create();
     ASSERT_TRUE(port);
 
-    uint64_t handle_key;
-    EXPECT_TRUE(handle->WaitAsync(port.get(), &handle_key));
+    uint64_t handle_key = handle->global_id();
+    EXPECT_TRUE(handle->WaitAsync(port.get(), handle_key));
 
     uint64_t key;
     EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, port->Wait(&key, 0).get());
@@ -133,7 +133,7 @@ class TestPort {
 
     handle = magma::PlatformHandle::Create(local.release());
 
-    EXPECT_TRUE(handle->WaitAsync(port.get(), &handle_key));
+    EXPECT_TRUE(handle->WaitAsync(port.get(), handle->global_id()));
 
     EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, port->Wait(&key, 0).get());
 #else

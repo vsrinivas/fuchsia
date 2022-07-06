@@ -466,7 +466,7 @@ int MsdArmDevice::DeviceThreadLoop() {
   }
 
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
-  device_request_semaphore_->WaitAsync(device_port_.get());
+  device_request_semaphore_->WaitAsync(device_port_.get(), device_request_semaphore_->global_id());
 
   uint32_t timeout_count = 0;
   while (!device_thread_quit_flag_) {
@@ -495,9 +495,10 @@ int MsdArmDevice::DeviceThreadLoop() {
     }
     if (status.ok()) {
       timeout_count = 0;
-      if (key == device_request_semaphore_->id()) {
+      if (key == device_request_semaphore_->global_id()) {
         device_request_semaphore_->Reset();
-        device_request_semaphore_->WaitAsync(device_port_.get());
+        device_request_semaphore_->WaitAsync(device_port_.get(),
+                                             device_request_semaphore_->global_id());
         while (!device_thread_quit_flag_) {
           lock.lock();
           if (!device_request_list_.size()) {

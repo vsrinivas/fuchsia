@@ -48,7 +48,7 @@ class ZirconPlatformSemaphore : public PlatformSemaphore {
   magma::Status WaitNoReset(uint64_t timeout_ms) override;
   magma::Status Wait(uint64_t timeout_ms) override;
 
-  bool WaitAsync(PlatformPort* port, uint64_t* key_out) override;
+  bool WaitAsync(PlatformPort* port, uint64_t key) override;
 
   zx_handle_t zx_handle() const { return event_.get(); }
 

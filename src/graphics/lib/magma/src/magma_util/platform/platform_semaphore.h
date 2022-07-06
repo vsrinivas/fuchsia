@@ -68,13 +68,8 @@ class PlatformSemaphore : public PlatformObject {
 
   // Registers an async wait delivered on the given port when this semaphore is signalled.
   // Note that a port wait completion will not autoreset the semaphore.
-  // On success returns true and |key_out| is set.
-  virtual bool WaitAsync(PlatformPort* port, uint64_t* key_out) = 0;
-
-  bool WaitAsync(PlatformPort* port) {
-    uint64_t key;
-    return WaitAsync(port, &key);
-  }
+  // On success returns true.
+  virtual bool WaitAsync(PlatformPort* port, uint64_t key) = 0;
 };
 
 }  // namespace magma
