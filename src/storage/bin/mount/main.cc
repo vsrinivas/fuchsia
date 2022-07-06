@@ -33,7 +33,7 @@ int usage(void) {
 int parse_args(int argc, char** argv, fidl::AnyArena& arena,
                fuchsia_fshost::wire::MountOptions& options, char** devicepath,
                std::string* mount_name, std::string& fshost_path) {
-  while (1) {
+  while (true) {
     static struct option opts[] = {
         {"readonly", no_argument, nullptr, 'r'},          {"verbose", no_argument, nullptr, 'v'},
         {"compression", required_argument, nullptr, 'c'}, {"help", no_argument, nullptr, 'h'},

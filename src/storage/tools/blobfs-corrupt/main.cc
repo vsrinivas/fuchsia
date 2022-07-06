@@ -42,7 +42,7 @@ zx_status_t ProcessArgs(int argc, char** argv, zx::channel* block_channel,
   char* arg_block_path = nullptr;
   char* arg_merkle = nullptr;
 
-  while (1) {
+  while (true) {
     static struct option opts[] = {
         {"device", required_argument, nullptr, 'd'},
         {"merkle", required_argument, nullptr, 'm'},

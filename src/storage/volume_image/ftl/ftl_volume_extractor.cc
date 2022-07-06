@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
   char* arg_spare_size = nullptr;
   char* arg_block_pages = nullptr;
   char* arg_bad_blocks = nullptr;
-  while (1) {
+  while (true) {
     static struct option opts[] = {
         {"data_input", required_argument, nullptr, 'd'},
         {"page_size", required_argument, nullptr, 'p'},
