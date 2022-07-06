@@ -31,7 +31,7 @@ impl UnhandledInputHandler for PointerMotionDisplayScaleHandler {
                         location:
                             mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                                 counts: raw_counts,
-                                millimeters: _,
+                                millimeters: raw_mm,
                             }),
                         wheel_delta_v,
                         wheel_delta_h,
@@ -45,14 +45,14 @@ impl UnhandledInputHandler for PointerMotionDisplayScaleHandler {
                 trace_id: _,
             } => {
                 let scaled_counts = self.scale_motion(raw_counts);
+                let scaled_mm = self.scale_motion(raw_mm);
                 let input_event = input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Mouse(
                         mouse_binding::MouseEvent {
                             location: mouse_binding::MouseLocation::Relative(
                                 mouse_binding::RelativeLocation {
                                     counts: scaled_counts,
-                                    // TODO(https://fxbug.dev/102569): Implement millimeters.
-                                    millimeters: Position::zero(),
+                                    millimeters: scaled_mm,
                                 },
                             ),
                             wheel_delta_v,
@@ -119,6 +119,7 @@ mod tests {
         test_case::test_case,
     };
 
+    const COUNTS_PER_MM: f32 = 12.0;
     const DEVICE_DESCRIPTOR: input_device::InputDeviceDescriptor =
         input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
             device_id: 0,
@@ -127,8 +128,7 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
-            // TODO(https://fxbug.dev/102569) Use millimeters.
-            counts_per_mm: 1,
+            counts_per_mm: COUNTS_PER_MM as i64,
         });
 
     std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[fuchsia::test(allow_stalls = false)]
-    async fn applies_scale() {
+    async fn applies_scale_counts() {
         let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -192,12 +192,41 @@ mod tests {
     }
 
     #[fuchsia::test(allow_stalls = false)]
+    async fn applies_scale_mm() {
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position { x: 1.5, y: 4.5 },
+            }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Move,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        });
+        assert_matches!(
+                   handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
+                   [input_device::InputEvent {
+                       device_event:
+                           input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                               location:
+                                   mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {millimeters: Position { x, y },   counts: _
+        }),
+                               ..
+                           }),
+                       ..
+                   }] if *x == 3.0  && *y == 9.0
+               );
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
     async fn does_not_consume_event() {
         let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -220,7 +249,7 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -244,7 +273,7 @@ mod tests {
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -264,7 +293,7 @@ mod tests {
         let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
