@@ -41,12 +41,28 @@ core_realm_shards += [
 ]
 core_realm_restrict_persistent_storage = false
 
+core_realm_shards += [
+  "//src/intl/intl_services:intl_services_small_shard",
+
+  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
+  # needed in core.gni for tests that use the core image.
+  "//src/intl/intl_services:intl_services_small_timezones_shard",
+]
+
 legacy_base_package_labels += [
   "//src/developer/sshd-host",
   "//src/developer/sshd-host:config",
   "//src/connectivity/bluetooth:core",
   "//src/connectivity/wlan:packages",
   "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/intl/intl_services:pkg_small",
+
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr_small",
+
+  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
+  # needed in core.gni for tests that use the core image.
+  "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/settings/service:setui_service",
 ]
 

@@ -37,14 +37,9 @@ core_realm_shards = [
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/memory/mem:core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
-  "//src/intl/intl_services:intl_services_small_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
-
-  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
-  # needed in core.gni for tests that use the core image.
-  "//src/intl/intl_services:intl_services_small_timezones_shard",
 ]
 
 # TODO(fxbug.dev/102390): deprecate appmgr from minimal.
@@ -63,10 +58,6 @@ core_realm_restrict_persistent_storage = true
 legacy_base_package_labels += [
   "//build/info:build-info",
   "//src/diagnostics/log_listener:log_listener_shell",
-  "//src/intl/intl_services:pkg_small",
-
-  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
-  "//src/intl/intl_services/config:sysmgr_small",
   "//src/sys/sysmgr",
   "//src/sys/sysmgr:services_config",
   "//src/cobalt/bin/app:cobalt",
@@ -77,11 +68,6 @@ legacy_base_package_labels += [
   "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/network/netcfg:config-default",
   "//src/connectivity/network",
-
-  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
-  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
-  # needed in core.gni for tests that use the core image.
-  "//src/intl/intl_services/config:sysmgr_small_timezones",
 
   # TODO(https://fxbug.dev/85821): remove once out-of-tree users no longer
   # reference v1 components.
