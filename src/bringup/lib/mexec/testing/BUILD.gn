@@ -10,6 +10,7 @@ zbi_test_executable("mexec-zbi-test-entry") {
   deps = [
     ":zbi-test-entry",
     "//src/bringup/lib/mexec",
+    "//src/zircon/testing/standalone-test",
   ]
 }
 
@@ -24,9 +25,8 @@ source_set("zbi-test-entry") {
 
   sources = [ "zbi-test-entry.cc" ]
   deps = [
-    "//sdk/lib/fdio",
     "//src/bringup/lib/mexec",
-    "//zircon/system/ulib/fbl",
+    "//src/zircon/testing/standalone-test",
     "//zircon/system/ulib/zbitl",
   ]
 

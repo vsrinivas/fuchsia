@@ -5,20 +5,18 @@
 #include "zbi-test-entry.h"
 
 #include <fcntl.h>
-#include <lib/fdio/io.h>
+#include <lib/standalone-test/standalone.h>
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <lib/zbitl/vmo.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <cstddef>
 #include <string_view>
 
-#include <fbl/unique_fd.h>
 #include <src/bringup/lib/mexec/mexec.h>
 
 constexpr const char* kMexecZbi = "testdata/mexec-child.zbi";
@@ -58,15 +56,15 @@ zx::status<> ZbiTestEntry::Init(int argc, char** argv) {
   ZX_ASSERT(argc > 0);
   const char* program_name = argv[0];
 
-  zx::vmo bootfs(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
-  if (!bootfs.is_valid()) {
+  zx::unowned_vmo bootfs(standalone::GetVmo("uncompressed-bootfs"));
+  if (!bootfs->is_valid()) {
     printf("%s: received an invalid bootfs VMO handle\n", program_name);
     return zx::error(ZX_ERR_INTERNAL);
   }
 
   {
     zx::vmo vmo;
-    zbitl::MapUnownedVmo unowned_bootfs(bootfs.borrow());
+    zbitl::MapUnownedVmo unowned_bootfs(bootfs->borrow());
     if (zx_status_t status = GetFileFromBootfs(kMexecZbi, unowned_bootfs, &vmo); status != ZX_OK) {
       printf("%s: failed to get child ZBI's VMO: %s\n", program_name, zx_status_get_string(status));
       return zx::error(status);
@@ -110,13 +108,13 @@ zx::status<> ZbiTestEntry::Init(int argc, char** argv) {
     }
   }
 
-  root_resource_.reset(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  if (!root_resource_.is_valid()) {
-    printf("%s: unable to get a hold of the root resource\n", program_name);
+  root_resource_ = standalone::GetRootResource();
+  if (!root_resource_->is_valid()) {
+    printf("%s: unable to get ahold of the root resource\n", program_name);
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  zx_status_t status = mexec::PrepareDataZbi(root_resource_.borrow(), data_zbi_.borrow());
+  zx_status_t status = mexec::PrepareDataZbi(root_resource_->borrow(), data_zbi_.borrow());
   if (status != ZX_OK) {
     printf("%s: failed to prepare data ZBI: %s\n", program_name, zx_status_get_string(status));
     return zx::error(status);

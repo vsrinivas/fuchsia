@@ -171,14 +171,6 @@ if (is_fuchsia) {
   # some of the tests require the root resource handle or no system
   # services whatsoever.
   zbi_test_executable("core-tests-standalone") {
-    # Prevent default injections of configs and deps we don't want.
-    configs -= [ "//build/config/fuchsia:fdio_config" ]
-    disable_syslog_backend = true
-    assert_no_deps = [
-      "//sdk/lib/fdio/*",
-      "//sdk/lib/syslog/*",
-    ]
-
     sources = [ "test-main-with-filter.cc" ]
     deps = [
       "//src/zircon/testing/standalone-test",

@@ -23,7 +23,7 @@ zbi_test_executable("cprng-draw") {
   sources = [ "cprng-draw.cc" ]
   deps = [
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/zx",
+    "//src/zircon/testing/standalone-test",
   ]
 }
 

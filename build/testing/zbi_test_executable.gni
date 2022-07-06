@@ -15,6 +15,11 @@ import("//build/zbi/kernel_cmdline.gni")
 #
 # Parameters are as for test().
 #
+# Note that defaults for `configs` exclude the implicit fdio dependency, and
+# defaults for `disable_syslog_backend` and `assert_no_deps` are injected to
+# avoid other implicit deps inappropriate for standalone test executables and
+# to ensure those haven't crept in from elsewhere in the deps graph.  These
+# parameters can be set explicitly to override this.
 template("zbi_test_executable") {
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
@@ -48,4 +53,14 @@ template("zbi_test_executable") {
 
 set_defaults("zbi_test_executable") {
   configs = default_executable_configs
+  if (is_fuchsia && !is_kernel) {
+    configs -= [ "//build/config/fuchsia:fdio_config" ]
+  }
+
+  assert_no_deps = [
+    "//sdk/lib/fdio/*",
+    "//sdk/lib/syslog/*",
+  ]
+
+  disable_syslog_backend = true
 }

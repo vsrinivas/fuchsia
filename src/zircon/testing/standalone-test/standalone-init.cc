@@ -83,6 +83,7 @@ extern "C" [[gnu::retain]] __EXPORT void __libc_extensions_init(uint32_t count,
         break;
 
       case PA_VMO_BOOTDATA:
+      case PA_VMO_BOOTFS:
       case PA_VMO_KERNEL_FILE: {
         // Store it in the map by VMO name for StandaloneGetVmo to find later.
         char vmo_name[ZX_MAX_NAME_LEN];

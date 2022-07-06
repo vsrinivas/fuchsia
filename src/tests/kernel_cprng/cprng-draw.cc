@@ -7,9 +7,6 @@
 // The program is intended to be used for testing.
 
 #include <assert.h>
-#include <lib/fdio/fd.h>
-#include <lib/zx/debuglog.h>
-#include <lib/zx/resource.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,27 +37,10 @@ void print_random_string() {
   }
   printf("}\n");
 }
+
 }  // namespace
 
 int main(int argc, char** argv) {
-  zx::resource root_resource(zx_take_startup_handle(PA_RESOURCE));
-  if (root_resource.get() == ZX_HANDLE_INVALID) {
-    return -1;
-  }
-
-  zx::debuglog debuglog;
-  if (auto status = zx::debuglog::create(root_resource, 0, &debuglog); status != ZX_OK) {
-    return status;
-  }
-
-  int fd;
-  if (auto status = fdio_fd_create(debuglog.get(), &fd); status != ZX_OK) {
-    return status;
-  }
-  if (dup2(fd, STDOUT_FILENO) == -1) {
-    return -1;
-  }
-
   printf("%s\n", kProgramStartMsg);
 
   for (size_t i = 0; i < kRandomDraws; i++) {
