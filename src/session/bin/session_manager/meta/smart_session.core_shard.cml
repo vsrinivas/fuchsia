@@ -51,7 +51,6 @@
             // Routed from v1 components.
             protocol: [
                 "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.virtualkeyboard.Registry",
                 "fuchsia.input.virtualkeyboard.ControllerCreator",
@@ -131,6 +130,7 @@
         },
         {
             protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",

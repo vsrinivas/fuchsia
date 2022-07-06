@@ -23,7 +23,6 @@
         // lose access to the protocol at some point when the system is shut down.
         {
             protocol: [
-                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.bluetooth.snoop.Snoop",
                 "fuchsia.factory.AlphaFactoryStoreProvider",
                 "fuchsia.factory.CastCredentialsFactoryStoreProvider",
