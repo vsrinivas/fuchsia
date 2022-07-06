@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {
   output_name = "mem"
@@ -20,31 +19,10 @@ executable("bin") {
   ]
 }
 
-# TODO(fxbug.dev/82740): mem could be an ffx plugin
-fuchsia_component("mem_cml") {
-  component_name = "mem"
-  manifest = "meta/mem.cml"
-  deps = [ ":bin" ]
-}
-
-core_shard("core_shard") {
-  shard_file = "meta/mem.core_shard.cml"
-}
-
-# TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests.
-# TODO(fxbug.dev/82782): can't delete mem.cmx because it supports the current
-# `fx mem` use case. Reading stdout/stderr from v2 components via
-# `ffx component run` is not supported yet.
-# Delete the below when the bugs are fixed.
-fuchsia_component("mem_cmx") {
-  component_name = "mem"
+# TODO(fxbug.dev/82740): delete the below, use `ffx profile memory` everywhere
+fuchsia_shell_package("mem") {
+  # TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests.
+  # Delete the below after it's no longer used.
   manifest = "meta/mem.cmx"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("mem") {
-  deps = [
-    ":mem_cml",
-    ":mem_cmx",
-  ]
 }

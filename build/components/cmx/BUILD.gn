@@ -181,7 +181,7 @@ group("cmx_allowlist") {
     "//src/developer/forensics/crasher/cpp:crasher_v1_manifest_compile",
     "//src/developer/forensics/crasher/rust:crasher_v1_manifest_compile",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests_component_manifest_compile",
-    "//src/developer/memory/mem:mem_cmx_manifest_compile",
+    "//src/developer/memory/mem:mem_component_manifest_compile",
     "//src/developer/memory/monitor:legacy_component_manifest_compile",
     "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests_component_manifest_compile",
     "//src/developer/memory/monitor/tests:memory_monitor_test_app_component_manifest_compile",

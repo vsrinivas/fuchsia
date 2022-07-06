@@ -34,7 +34,6 @@ core_realm_shards = [
   "//src/performance/trace_manager:trace_manager_core_shard",
   "//src/connectivity/network:virtualization-core-shard",
   "//src/developer/build_info:build_info_core_shard",
-  "//src/developer/memory/mem:core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
