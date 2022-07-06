@@ -14,15 +14,9 @@ executable("test_membw_bin") {
   sources = [ "test_membw.cc" ]
 }
 
-fuchsia_component("test_membw_component") {
-  testonly = true
-  component_name = "test_membw"
+fuchsia_unittest_package("test-membw") {
+  manifest = "meta/test_membw.cml"
   deps = [ ":test_membw_bin" ]
-  manifest = "meta/test_membw.cmx"
-}
-
-fuchsia_test_package("test-membw") {
-  test_components = [ ":test_membw_component" ]
 }
 
 executable("vkcopy_bin") {
