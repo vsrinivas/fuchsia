@@ -11,7 +11,6 @@
 
 import("//build/security/policies.gni")
 import("//products/bringup.gni")
-import("//src/sys/appmgr/core_shards.gni")
 
 # Minimal, and all products based on it, use the "standard" assembled_system()
 # impl in `//build/images/fuchsia`
@@ -41,10 +40,6 @@ core_realm_shards = [
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
 ]
-
-# TODO(fxbug.dev/102390): deprecate appmgr from minimal.
-# Try to move up to core.gni or "higher" / specific product configurations.
-core_realm_shards += appmgr_core_shards
 
 # TODO(fxbug.dev/103301) Seems like virtualization shouldn't be needed by "minimal"
 core_realm_shards += [
@@ -87,17 +82,8 @@ legacy_base_package_labels += [
   "//src/hwinfo:hwinfo",
   "//src/hwinfo:default_product_config",
   "//src/recovery/factory_reset",
-  "//src/security/policy:appmgr_policy_eng",
   "//src/security/root_ssl_certificates",
   "//src/sys/activity",
-  "//src/sys/appmgr",
-  "//src/sys/appmgr:appmgr_scheme_config",
-
-  # All v1 components are allowed to use isolated-persistent-storage, even if
-  # they're not listed in the component ID index.
-  "//src/sys/appmgr:component_id_index_no_restrict_storage",
-  "//src/sys/appmgr:core_component_id_index",
-
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",
@@ -133,3 +119,18 @@ legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
 # This should be overridden by products which inherit from minimal.
 fuchsia_product_assembly_config_file =
     "//build/assembly/empty_product_config.json"
+
+# TODO(fxbug.dev/102390): deprecate appmgr from minimal.
+# Try to move up to core.gni or "higher" / specific product configurations.
+import("//src/sys/appmgr/core_shards.gni")
+core_realm_shards += appmgr_core_shards
+legacy_base_package_labels += [
+  "//src/security/policy:appmgr_policy_eng",
+  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
+
+  # All v1 components are allowed to use isolated-persistent-storage, even if
+  # they're not listed in the component ID index.
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
+  "//src/sys/appmgr:core_component_id_index",
+]
