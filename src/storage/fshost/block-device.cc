@@ -224,8 +224,8 @@ std::string GetTopologicalPath(int fd) {
   return {path.data(), path.size()};
 }
 
-fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost_config::Config* config, const FshostBootArgs* boot_args) {
+fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(const fshost_config::Config* config,
+                                                             const FshostBootArgs* boot_args) {
   fuchsia_fs_startup::wire::StartOptions options;
   options.write_compression_level = -1;
   options.sandbox_decompression = config->sandbox_decompression();
@@ -387,7 +387,6 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() c
 zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   FX_LOGS(INFO) << "Binding: " << driver;
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  zx_status_t call_status = ZX_OK;
   auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
                   ->Bind(::fidl::StringView::FromExternal(driver));
   zx_status_t io_status = resp.status();
@@ -395,9 +394,10 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
     return io_status;
   }
   if (resp->is_error()) {
-    call_status = resp->error_value();
+    FX_PLOGS(ERROR, resp->error_value()) << "Failed to attach driver";
+    return resp->error_value();
   }
-  return call_status;
+  return ZX_OK;
 }
 
 zx_status_t BlockDevice::UnsealZxcrypt() {
@@ -713,9 +713,9 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
-      if (zx_status_t status =
-              mounter_->MountBlob(std::move(block_device),
-                                  GetBlobfsStartOptions(device_config_, mounter_->boot_args().get()));
+      if (zx_status_t status = mounter_->MountBlob(
+              std::move(block_device),
+              GetBlobfsStartOptions(device_config_, mounter_->boot_args().get()));
           status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
         return status;
