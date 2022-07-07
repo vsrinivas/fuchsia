@@ -12,6 +12,7 @@ use core::{fmt::Debug, hash::Hash};
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
 
+pub(crate) use crate::socket::address::{ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr};
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
     socket::{
@@ -26,13 +27,14 @@ use crate::{
 /// with address vectors composed of the provided address and identifier types.
 pub(crate) trait PosixSocketMapSpec: Sized {
     type IpAddress: IpAddress;
-    /// The type of a remote address.
-    type RemoteAddr: Clone + Debug + Eq + Hash;
+    /// The type of an identifier for a remote address, typically a port (or
+    /// `()` for raw and ICMP sockets).
+    type RemoteIdentifier: Clone + Debug + Eq + Hash;
     /// The type of a local identifier for an address, typically a port (or
     /// ICMP stream ID).
     type LocalIdentifier: Clone + Debug + Eq + Hash;
     /// An identifier for a local device.
-    type DeviceId: Clone + Debug + Hash + PartialEq;
+    type DeviceId: Clone + Debug + Eq + Hash + PartialEq;
 
     /// An identifier for a listening socket.
     type ListenerId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
@@ -54,84 +56,37 @@ pub(crate) trait PosixSocketMapSpec: Sized {
     ) -> Result<(), InsertError>;
 }
 
-/// The address vector of a listening socket.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Debug(bound = ""),
-    Hash(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = "")
-)]
-pub(crate) struct ListenerAddr<P: PosixSocketMapSpec> {
-    pub(crate) ip: ListenerIpAddr<P>,
-    pub(crate) device: Option<P::DeviceId>,
-}
-
-/// The IP addresses and port of a listening socket.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Debug(bound = ""),
-    Hash(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = "")
-)]
-pub(crate) struct ListenerIpAddr<P: PosixSocketMapSpec> {
-    /// The specific address being listened on, or `None` for all addresses.
-    pub(crate) addr: Option<SpecifiedAddr<P::IpAddress>>,
-    pub(crate) identifier: P::LocalIdentifier,
-}
-
-impl<P: PosixSocketMapSpec> From<ListenerIpAddr<P>> for PosixIpAddrVec<P> {
-    fn from(listener: ListenerIpAddr<P>) -> Self {
+impl<P: PosixSocketMapSpec> From<ListenerIpAddr<P::IpAddress, P::LocalIdentifier>>
+    for PosixIpAddrVec<P>
+{
+    fn from(listener: ListenerIpAddr<P::IpAddress, P::LocalIdentifier>) -> Self {
         PosixIpAddrVec::Listener(listener)
     }
 }
 
-impl<P: PosixSocketMapSpec> From<ConnIpAddr<P>> for PosixIpAddrVec<P> {
-    fn from(conn: ConnIpAddr<P>) -> Self {
+impl<P: PosixSocketMapSpec> From<ConnIpAddr<P::IpAddress, P::LocalIdentifier, P::RemoteIdentifier>>
+    for PosixIpAddrVec<P>
+{
+    fn from(conn: ConnIpAddr<P::IpAddress, P::LocalIdentifier, P::RemoteIdentifier>) -> Self {
         PosixIpAddrVec::Connected(conn)
     }
 }
 
-/// The address vector of a connected socket.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Debug(bound = ""),
-    Hash(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = "")
-)]
-pub(crate) struct ConnAddr<P: PosixSocketMapSpec> {
-    pub(crate) ip: ConnIpAddr<P>,
-    pub(crate) device: Option<P::DeviceId>,
-}
-
-/// The IP addresses and port of a connected socket.
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Debug(bound = ""),
-    Hash(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = "")
-)]
-pub(crate) struct ConnIpAddr<P: PosixSocketMapSpec> {
-    pub(crate) local_ip: SpecifiedAddr<P::IpAddress>,
-    pub(crate) local_identifier: P::LocalIdentifier,
-    pub(crate) remote: P::RemoteAddr,
-}
-
-impl<P: PosixSocketMapSpec> From<ListenerAddr<P>> for AddrVec<P> {
-    fn from(listener: ListenerAddr<P>) -> Self {
+impl<P: PosixSocketMapSpec> From<ListenerAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier>>
+    for AddrVec<P>
+{
+    fn from(listener: ListenerAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier>) -> Self {
         AddrVec::Listen(listener)
     }
 }
 
-impl<P: PosixSocketMapSpec> From<ConnAddr<P>> for AddrVec<P> {
-    fn from(conn: ConnAddr<P>) -> Self {
+impl<P: PosixSocketMapSpec>
+    From<ConnAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier, P::RemoteIdentifier>>
+    for AddrVec<P>
+{
+    fn from(
+        conn: ConnAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier, P::RemoteIdentifier>,
+    ) -> Self {
         AddrVec::Conn(conn)
     }
 }
@@ -147,8 +102,8 @@ impl<P: PosixSocketMapSpec> From<ConnAddr<P>> for AddrVec<P> {
     Hash(bound = "")
 )]
 pub(crate) enum PosixIpAddrVec<P: PosixSocketMapSpec> {
-    Listener(ListenerIpAddr<P>),
-    Connected(ConnIpAddr<P>),
+    Listener(ListenerIpAddr<P::IpAddress, P::LocalIdentifier>),
+    Connected(ConnIpAddr<P::IpAddress, P::LocalIdentifier, P::RemoteIdentifier>),
 }
 
 impl<P: PosixSocketMapSpec> PosixIpAddrVec<P> {
@@ -173,8 +128,11 @@ impl<P: PosixSocketMapSpec> PosixIpAddrVec<P> {
                 let _: P::LocalIdentifier = identifier;
                 None
             }
-            PosixIpAddrVec::Connected(ConnIpAddr { local_ip, local_identifier, remote }) => {
-                let _: P::RemoteAddr = remote;
+            PosixIpAddrVec::Connected(ConnIpAddr {
+                local: (local_ip, local_identifier),
+                remote,
+            }) => {
+                let _: (SpecifiedAddr<P::IpAddress>, P::RemoteIdentifier) = remote;
                 Some(ListenerIpAddr { addr: Some(local_ip), identifier: local_identifier })
             }
             PosixIpAddrVec::Listener(ListenerIpAddr { addr: Some(addr), identifier }) => {
@@ -298,8 +256,8 @@ pub(crate) enum PosixAddrType {
     Connected,
 }
 
-impl<'a, P: PosixSocketMapSpec> From<&'a ListenerIpAddr<P>> for PosixAddrType {
-    fn from(ListenerIpAddr { addr, identifier: _ }: &'a ListenerIpAddr<P>) -> Self {
+impl<'a, A: IpAddress, LI> From<&'a ListenerIpAddr<A, LI>> for PosixAddrType {
+    fn from(ListenerIpAddr { addr, identifier: _ }: &'a ListenerIpAddr<A, LI>) -> Self {
         match addr {
             Some(_) => PosixAddrType::SpecificListener,
             None => PosixAddrType::AnyListener,
@@ -307,8 +265,8 @@ impl<'a, P: PosixSocketMapSpec> From<&'a ListenerIpAddr<P>> for PosixAddrType {
     }
 }
 
-impl<'a, P: PosixSocketMapSpec> From<&'a ConnIpAddr<P>> for PosixAddrType {
-    fn from(_: &'a ConnIpAddr<P>) -> Self {
+impl<'a, A: IpAddress, LI, RI> From<&'a ConnIpAddr<A, LI, RI>> for PosixAddrType {
+    fn from(_: &'a ConnIpAddr<A, LI, RI>) -> Self {
         PosixAddrType::Connected
     }
 }
@@ -344,10 +302,10 @@ pub(crate) struct PosixAddrVecTag {
     pub(crate) sharing: PosixSharingOptions,
 }
 
-impl<T, P: PosixSocketMapSpec> Tagged<ListenerAddr<P>> for PosixAddrState<T> {
+impl<T, A: IpAddress, D, LI> Tagged<ListenerAddr<A, D, LI>> for PosixAddrState<T> {
     type Tag = PosixAddrVecTag;
 
-    fn tag(&self, address: &ListenerAddr<P>) -> Self::Tag {
+    fn tag(&self, address: &ListenerAddr<A, D, LI>) -> Self::Tag {
         let ListenerAddr { ip, device } = address;
         PosixAddrVecTag {
             has_device: device.is_some(),
@@ -357,10 +315,10 @@ impl<T, P: PosixSocketMapSpec> Tagged<ListenerAddr<P>> for PosixAddrState<T> {
     }
 }
 
-impl<T, P: PosixSocketMapSpec> Tagged<ConnAddr<P>> for PosixAddrState<T> {
+impl<T, A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for PosixAddrState<T> {
     type Tag = PosixAddrVecTag;
 
-    fn tag(&self, address: &ConnAddr<P>) -> Self::Tag {
+    fn tag(&self, address: &ConnAddr<A, D, LI, RI>) -> Self::Tag {
         let ConnAddr { ip, device } = address;
         PosixAddrVecTag {
             has_device: device.is_some(),
@@ -391,9 +349,9 @@ impl<T> ToPosixSharingOptions for PosixAddrState<T> {
 }
 
 impl<P: PosixSocketMapSpec> SocketMapSpec for P {
-    type ListenerAddr = ListenerAddr<P>;
+    type ListenerAddr = ListenerAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier>;
 
-    type ConnAddr = ConnAddr<P>;
+    type ConnAddr = ConnAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier, P::RemoteIdentifier>;
 
     type AddrVecTag = PosixAddrVecTag;
 
@@ -525,7 +483,7 @@ mod tests {
 
     impl<I: Ip> PosixSocketMapSpec for TransportSocketPosixSpec<I> {
         type IpAddress = I::Addr;
-        type RemoteAddr = (SpecifiedAddr<I::Addr>, NonZeroU16);
+        type RemoteIdentifier = NonZeroU16;
         type LocalIdentifier = NonZeroU16;
         type DeviceId = DummyDeviceId;
         type ListenerId = ListenerId;
@@ -575,11 +533,7 @@ mod tests {
         let remote_ip = SpecifiedAddr::new(remote_ip).expect("addr must be specified");
         let remote_port = NonZeroU16::new(remote_port).expect("port must be nonzero");
         AddrVec::Conn(ConnAddr {
-            ip: ConnIpAddr {
-                local_ip,
-                local_identifier: local_port,
-                remote: (remote_ip, remote_port),
-            },
+            ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
             device: None,
         })
     }
@@ -685,9 +639,9 @@ mod tests {
         I: IntoIterator<Item = (AddrVec<TransportSocketPosixSpec<Ipv4>>, PosixSharingOptions)>,
         I::IntoIter: ExactSizeIterator,
     {
-        enum Socket<T: PosixSocketMapSpec> {
-            Listener(ListenerId, ListenerAddr<T>),
-            Conn(ConnId, ConnAddr<T>),
+        enum Socket<A: IpAddress, D, LI, RI> {
+            Listener(ListenerId, ListenerAddr<A, D, LI>),
+            Conn(ConnId, ConnAddr<A, D, LI, RI>),
         }
         let spec = spec.into_iter();
         let spec_len = spec.len();

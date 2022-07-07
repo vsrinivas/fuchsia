@@ -5,11 +5,11 @@
 //! General-purpose socket utilities common to device layer and IP layer
 //! sockets.
 
+pub(crate) mod address;
 pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};
-use core::fmt::Debug;
-use core::hash::Hash;
+use core::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 

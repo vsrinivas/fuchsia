@@ -98,7 +98,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Posi
 {
     type IpAddress = I::Addr;
     type DeviceId = D;
-    type RemoteAddr = (SpecifiedAddr<I::Addr>, NonZeroU16);
+    type RemoteIdentifier = NonZeroU16;
     type LocalIdentifier = NonZeroU16;
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
@@ -359,7 +359,7 @@ where
     SC: TcpSyncContext<I, C>,
 {
     let id = MaybeListenerId::from(id);
-    let (listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
+    let (listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
         .get_listener_by_id_mut(&id)
@@ -486,8 +486,7 @@ where
     );
     let conn_addr = ConnAddr {
         ip: ConnIpAddr {
-            local_ip: ip_sock.local_ip().clone(),
-            local_identifier: local_port,
+            local: (ip_sock.local_ip().clone(), local_port),
             remote: (ip_sock.remote_ip().clone(), remote_port),
         },
         // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
@@ -859,7 +858,7 @@ mod tests {
         }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
-            let (state, sharing, _): &(_, _, ConnAddr<_>) = net
+            let (state, sharing, _): &(_, _, ConnAddr<_, _, _, _>) = net
                 .sync_ctx(name)
                 .get_ref()
                 .sockets
@@ -997,7 +996,7 @@ mod tests {
 
         net.run_until_idle(handle_frame, panic_if_any_timer);
         // Finally, the connection should be reset.
-        let (state, _, _): &(_, PosixSharingOptions, ConnAddr<_>) = net
+        let (state, _, _): &(_, PosixSharingOptions, ConnAddr<_, _, _, _>) = net
             .sync_ctx(LOCAL)
             .get_ref()
             .sockets

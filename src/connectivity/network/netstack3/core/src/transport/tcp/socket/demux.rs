@@ -22,7 +22,7 @@ use crate::{
     socket::{
         posix::{
             ConnAddr, ConnIpAddr, ListenerAddr, PosixAddrState, PosixAddrVecIter,
-            PosixSharingOptions, PosixSocketMapSpec,
+            PosixSharingOptions,
         },
         AddrVec,
     },
@@ -85,13 +85,12 @@ where
         };
         let now = ctx.now();
 
-        let conn_addr = ConnIpAddr::<TcpPosixSocketSpec<_, _, _, _, _>> {
-            local_ip: local_ip,
-            local_identifier: local_port,
-            remote: (remote_ip, remote_port),
-        };
+        let conn_addr =
+            ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) };
 
-        let mut addrs_to_search = PosixAddrVecIter::with_device(conn_addr.clone(), device);
+        let mut addrs_to_search = PosixAddrVecIter::<
+            TcpPosixSocketSpec<I, _, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
+        >::with_device(conn_addr.clone(), device);
 
         let conn_id = addrs_to_search.find_map(|addr| -> Option<ConnectionId> {match addr {
             // Connections are always searched before listeners because they
@@ -126,7 +125,7 @@ where
                     );
                 maybe_listener_id.and_then(|listener_id| {
                     let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
-                    let (maybe_listener, _, _): &(_, PosixSharingOptions, ListenerAddr<_>) =
+                    let (maybe_listener, _, _): &(_, PosixSharingOptions, ListenerAddr<_, _, _>) =
                         socketmap.get_listener_by_id(&listener_id).expect("invalid listener_id");
 
                     let listener = match maybe_listener {
@@ -178,8 +177,8 @@ where
                         .try_insert_conn(
                             ConnAddr {
                                 ip: ConnIpAddr {
-                                    local_ip,
-                                    local_identifier: local_port,
+                                    local: (local_ip,
+                                    local_port),
                                     remote: (remote_ip, remote_port),
                                 },
                                 device: None,
@@ -194,7 +193,7 @@ where
                         )
                         .expect("failed to create a new connection");
 
-                    let (maybe_listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
+                    let (maybe_listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
                         .get_tcp_state_mut()
                         .socketmap
                         .get_listener_by_id_mut(&listener_id)
@@ -218,7 +217,7 @@ where
                 let (Connection { acceptor: _, state, ip_sock }, _, _): (
                     _,
                     &PosixSharingOptions,
-                    &ConnAddr<_>,
+                    &ConnAddr<_, _, _, _>,
                 ) = sync_ctx
                     .get_tcp_state_mut()
                     .socketmap
@@ -271,7 +270,7 @@ where
         }
 
         let _: Option<()> = conn_id.and_then(|conn_id| {
-            let (conn, _, _): (_, &PosixSharingOptions, &ConnAddr<_>) = sync_ctx
+            let (conn, _, _): (_, &PosixSharingOptions, &ConnAddr<_, _, _, _>) = sync_ctx
                 .get_tcp_state_mut()
                 .socketmap
                 .get_conn_by_id_mut(&conn_id)
@@ -338,22 +337,16 @@ impl<'a> TryFrom<TcpSegment<&'a [u8]>> for Segment<&'a [u8]> {
     }
 }
 
-pub(super) fn tcp_serialize_segment<'a, S, A, P>(
+pub(super) fn tcp_serialize_segment<'a, S, A>(
     segment: S,
-    conn_addr: ConnIpAddr<P>,
+    conn_addr: ConnIpAddr<A, NonZeroU16, NonZeroU16>,
 ) -> Nested<Buf<Vec<u8>>, TcpSegmentBuilder<A>>
 where
     S: Into<Segment<SendPayload<'a>>>,
     A: IpAddress,
-    P: PosixSocketMapSpec<
-        IpAddress = A,
-        LocalIdentifier = NonZeroU16,
-        RemoteAddr = (SpecifiedAddr<A>, NonZeroU16),
-    >,
 {
     let Segment { seq, ack, wnd, contents } = segment.into();
-    let ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) } =
-        conn_addr;
+    let ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) } = conn_addr;
     let mut builder = TcpSegmentBuilder::new(
         *local_ip,
         *remote_ip,

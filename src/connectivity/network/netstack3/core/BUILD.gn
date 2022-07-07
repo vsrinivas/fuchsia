@@ -47,6 +47,7 @@ lib_sources = [
   "src/ip/types.rs",
   "src/lib.rs",
   "src/macros.rs",
+  "src/socket/address.rs",
   "src/socket/mod.rs",
   "src/socket/posix.rs",
   "src/testutil.rs",

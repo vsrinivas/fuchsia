@@ -180,7 +180,7 @@ impl<I: Ip, D> Default for UnboundSocketState<I, D> {
 
 /// Produces an iterator over eligible receiving socket addresses.
 fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
-    addr: ConnIpAddr<Udp<I, D, S>>,
+    addr: ConnIpAddr<I::Addr, NonZeroU16, NonZeroU16>,
     device: D,
 ) -> impl Iterator<Item = AddrVec<Udp<I, D, S>>> {
     PosixAddrVecIter::with_device(addr, device)
@@ -321,7 +321,7 @@ pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
             )
         }
         AddrVec::Conn(ConnAddr {
-            ip: ConnIpAddr { local_ip, local_identifier, remote: _ },
+            ip: ConnIpAddr { local: (local_ip, local_identifier), remote: _ },
             device: None,
         }) => {
             // A connected socket `dest` without a device shadows listeners
@@ -393,7 +393,7 @@ pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
 impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     type IpAddress = I::Addr;
     type DeviceId = D;
-    type RemoteAddr = (SpecifiedAddr<I::Addr>, NonZeroU16);
+    type RemoteIdentifier = NonZeroU16;
     type LocalIdentifier = NonZeroU16;
     type ListenerId = UdpListenerId<I>;
     type ConnId = UdpConnId<I>;
@@ -410,9 +410,9 @@ impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     }
 }
 
-enum LookupResult<I: Ip, D: IpDeviceId, S> {
-    Conn(UdpConnId<I>, ConnAddr<Udp<I, D, S>>),
-    Listener(UdpListenerId<I>, ListenerAddr<Udp<I, D, S>>),
+enum LookupResult<I: Ip, D: IpDeviceId> {
+    Conn(UdpConnId<I>, ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>),
+    Listener(UdpListenerId<I>, ListenerAddr<I::Addr, D, NonZeroU16>),
 }
 
 #[derive(Hash, Copy, Clone)]
@@ -449,13 +449,19 @@ impl<T> PosixAddrState<T> {
 }
 
 enum AddrEntry<'a, I: Ip, P: PosixSocketMapSpec> {
-    Listen(&'a PosixAddrState<UdpListenerId<I>>, ListenerAddr<P>),
-    Conn(&'a PosixAddrState<UdpConnId<I>>, ConnAddr<P>),
+    Listen(
+        &'a PosixAddrState<UdpListenerId<I>>,
+        ListenerAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier>,
+    ),
+    Conn(
+        &'a PosixAddrState<UdpConnId<I>>,
+        ConnAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier, P::RemoteIdentifier>,
+    ),
 }
 
 impl<'a, I: Ip, D: IpDeviceId + 'a, S: 'a> AddrEntry<'a, I, Udp<I, D, S>> {
     /// Returns an iterator that yields a `LookupResult` for each contained ID.
-    fn collect_all_ids(self) -> impl Iterator<Item = LookupResult<I, D, S>> + 'a {
+    fn collect_all_ids(self) -> impl Iterator<Item = LookupResult<I, D>> + 'a {
         match self {
             Self::Listen(state, l) => Either::Left(
                 state.collect_all_ids().map(move |id| LookupResult::Listener(*id, l.clone())),
@@ -470,7 +476,7 @@ impl<'a, I: Ip, D: IpDeviceId + 'a, S: 'a> AddrEntry<'a, I, Udp<I, D, S>> {
     fn select_receiver<A: AsRef<I::Addr> + Hash>(
         self,
         selector: SocketSelectorParams<I, A>,
-    ) -> LookupResult<I, D, S> {
+    ) -> LookupResult<I, D> {
         match self {
             Self::Listen(state, l) => LookupResult::Listener(*state.select_receiver(selector), l),
             Self::Conn(state, c) => LookupResult::Conn(*state.select_receiver(selector), c),
@@ -491,14 +497,14 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         dst_port: NonZeroU16,
         src_port: NonZeroU16,
         device: D,
-    ) -> impl Iterator<Item = LookupResult<I, D, S>> + '_ {
+    ) -> impl Iterator<Item = LookupResult<I, D>> + '_ {
         let Self { bound } = self;
 
         let mut matching_entries = iter_receiving_addrs(
-            ConnIpAddr { local_ip: dst_ip, local_identifier: dst_port, remote: (src_ip, src_port) },
+            ConnIpAddr { local: (dst_ip, dst_port), remote: (src_ip, src_port) },
             device,
         )
-        .filter_map(move |addr| match addr {
+        .filter_map(move |addr: AddrVec<Udp<I, D, S>>| match addr {
             AddrVec::Listen(l) => {
                 bound.get_listener_by_addr(&l).map(|state| AddrEntry::Listen(state, l))
             }
@@ -506,7 +512,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         });
 
         if dst_ip.is_multicast() {
-            let all_ids = matching_entries.flat_map(AddrEntry::collect_all_ids);
+            let all_ids = matching_entries.flat_map(AddrEntry::<I, Udp<I, D, S>>::collect_all_ids);
             Either::Left(all_ids)
         } else {
             let selector = SocketSelectorParams::<I, _> {
@@ -543,7 +549,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
                         device: _,
                     }) => *identifier,
                     AddrVec::Conn(ConnAddr {
-                        ip: ConnIpAddr { local_ip: _, local_identifier, remote: _ },
+                        ip: ConnIpAddr { local: (_, local_identifier), remote: _ },
                         device: _,
                     }) => *local_identifier,
                 })
@@ -554,7 +560,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             all_addrs
                 .filter_map(|addr| match addr {
                     AddrVec::Conn(ConnAddr {
-                        ip: ConnIpAddr { local_ip, local_identifier, remote: _ },
+                        ip: ConnIpAddr { local: (local_ip, local_identifier), remote: _ },
                         device: _,
                     }) => addrs.clone().any(|a| a == local_ip).then(|| *local_identifier),
                     AddrVec::Listen(ListenerAddr {
@@ -622,22 +628,18 @@ impl<I: Ip, D: IpDeviceId, S> PortAllocImpl for UdpConnectionState<I, D, S> {
 
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
-        AddrVec::< _>::from(conn).iter_shadows().all(|a| match &a {
+        AddrVec::< Udp<I, D, S>>::from(conn).iter_shadows().all(|a| match &a {
             AddrVec::Listen(l) => bound.get_listener_by_addr(&l).is_none(),
             AddrVec::Conn(c) => bound.get_conn_by_addr(&c).is_none(),
         } && bound.get_shadower_counts(&a) == 0)
     }
 }
 
-impl<I: Ip, D: IpDeviceId, S> ConnAddr<Udp<I, D, S>> {
-    fn from_protocol_flow_and_local_port(
-        id: &ProtocolFlowId<I::Addr>,
-        local_port: NonZeroU16,
-    ) -> Self {
+impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
+    fn from_protocol_flow_and_local_port(id: &ProtocolFlowId<A>, local_port: NonZeroU16) -> Self {
         Self {
             ip: ConnIpAddr {
-                local_ip: *id.local_addr(),
-                local_identifier: local_port,
+                local: (*id.local_addr(), local_port),
                 remote: (*id.remote_addr(), id.remote_port()),
             },
             device: None,
@@ -658,10 +660,9 @@ pub struct UdpConnInfo<A: IpAddress> {
     pub remote_port: NonZeroU16,
 }
 
-impl<I: Ip, D: IpDeviceId, S> From<ConnIpAddr<Udp<I, D, S>>> for UdpConnInfo<I::Addr> {
-    fn from(c: ConnIpAddr<Udp<I, D, S>>) -> Self {
-        let ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) } =
-            c;
+impl<A: IpAddress> From<ConnIpAddr<A, NonZeroU16, NonZeroU16>> for UdpConnInfo<A> {
+    fn from(c: ConnIpAddr<A, NonZeroU16, NonZeroU16>) -> Self {
+        let ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) } = c;
         Self { local_ip, local_port, remote_ip, remote_port }
     }
 }
@@ -675,10 +676,12 @@ pub struct UdpListenerInfo<A: IpAddress> {
     pub local_port: NonZeroU16,
 }
 
-impl<I: Ip, D: IpDeviceId, S> From<ListenerAddr<Udp<I, D, S>>> for UdpListenerInfo<I::Addr> {
+impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for UdpListenerInfo<A> {
     fn from(
         ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device: _ }: ListenerAddr<
-            Udp<I, D, S>,
+            A,
+            D,
+            NonZeroU16,
         >,
     ) -> Self {
         Self { local_ip: addr, local_port: identifier }
@@ -1103,7 +1106,7 @@ impl<
 
         let state = sync_ctx.get_state();
 
-        let recipients: Vec<LookupResult<_, _, _>> = SpecifiedAddr::new(src_ip)
+        let recipients: Vec<LookupResult<_, _>> = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| {
                 packet.src_port().map(|src_port| {
                     state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device)
@@ -1121,12 +1124,7 @@ impl<
                     LookupResult::Conn(
                         id,
                         ConnAddr {
-                            ip:
-                                ConnIpAddr {
-                                    local_ip: _,
-                                    local_identifier: _,
-                                    remote: (remote_ip, remote_port),
-                                },
+                            ip: ConnIpAddr { local: _, remote: (remote_ip, remote_port) },
                             device: _,
                         },
                     ) => ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, &buffer),
@@ -1260,7 +1258,7 @@ pub fn send_udp_conn<
         bound.get_conn_by_id(&conn).expect("no such connection");
     let sock = socket.clone();
     let ConnAddr {
-        ip: ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
+        ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
         device: _,
     } = *addr;
 
@@ -1485,7 +1483,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
 
     let c = ConnAddr {
-        ip: ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
+        ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
         device,
     };
     bound.try_insert_conn(c, ConnState { socket: ip_sock, multicast_memberships }, sharing).map_err(
@@ -1627,12 +1625,12 @@ pub fn get_udp_posix_reuse_port<
             let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
             match id {
                 UdpBoundId::Listening(id) => {
-                    let (_, sharing, _): &(ListenerState<_, _>, _, ListenerAddr<_>) =
+                    let (_, sharing, _): &(ListenerState<_, _>, _, ListenerAddr<_, _, _>) =
                         bound.get_listener_by_id(&id).expect("listener UDP socket not found");
                     sharing
                 }
                 UdpBoundId::Connected(id) => {
-                    let (_, sharing, _): &(ConnState<_, _, _>, _, ConnAddr<_>) =
+                    let (_, sharing, _): &(ConnState<_, _, _>, _, ConnAddr<_, _, _, _>) =
                         bound.get_conn_by_id(&id).expect("conneted UDP socket not found");
                     sharing
                 }
@@ -1776,7 +1774,7 @@ pub fn set_udp_multicast_membership<
                     let (ListenerState { multicast_memberships }, _, _): (
                         _,
                         &PosixSharingOptions,
-                        &ListenerAddr<_>,
+                        &ListenerAddr<_, _, _>,
                     ) = bound.get_listener_by_id_mut(&id).expect("Listening socket not found");
                     multicast_memberships
                 }
@@ -1784,7 +1782,7 @@ pub fn set_udp_multicast_membership<
                     let (ConnState { socket: _, multicast_memberships }, _, _): (
                         _,
                         &PosixSharingOptions,
-                        &ConnAddr<_>,
+                        &ConnAddr<_, _, _, _>,
                     ) = bound.get_conn_by_id_mut(&id).expect("Connected socket not found");
                     multicast_memberships
                 }
@@ -2297,7 +2295,9 @@ mod tests {
     }
 
     impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
-        fn iter_conn_addrs(&self) -> impl Iterator<Item = &ConnAddr<Udp<I, D, S>>> {
+        fn iter_conn_addrs(
+            &self,
+        ) -> impl Iterator<Item = &ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>> {
             let Self { bound } = self;
             bound.iter_addrs().filter_map(|a| match a {
                 AddrVec::Conn(c) => Some(c),
@@ -2346,11 +2346,7 @@ mod tests {
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         ConnAddr {
-            ip: ConnIpAddr {
-                local_ip,
-                local_identifier: LOCAL_PORT,
-                remote: (remote_ip, REMOTE_PORT),
-            },
+            ip: ConnIpAddr { local: (local_ip, LOCAL_PORT), remote: (remote_ip, REMOTE_PORT) },
             device,
         }
         .into()
@@ -2395,8 +2391,7 @@ mod tests {
     #[ip_test]
     fn test_iter_receiving_addrs<I: Ip + TestIpExt>() {
         let addr = ConnIpAddr {
-            local_ip: local_ip::<I>(),
-            local_identifier: LOCAL_PORT,
+            local: (local_ip::<I>(), LOCAL_PORT),
             remote: (remote_ip::<I>(), REMOTE_PORT),
         };
         assert_eq!(
@@ -3690,8 +3685,7 @@ mod tests {
             addr,
             &ConnAddr {
                 ip: ConnIpAddr {
-                    local_ip: local_ip::<I>(),
-                    local_identifier: local_port,
+                    local: (local_ip::<I>(), local_port),
                     remote: (remote_ip::<I>(), remote_port),
                 },
                 device: None
@@ -3766,19 +3760,19 @@ mod tests {
         let valid_range =
             &UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE;
         let port_a = assert_matches!(bound.get_conn_by_id(&conn_a),
-            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local_identifier, ..}, device: _})) => local_identifier)
+            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert!(valid_range.contains(&port_a));
         let port_b = assert_matches!(bound.get_conn_by_id(&conn_b),
-            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local_identifier, ..}, device: _})) => local_identifier)
+            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_b);
         let port_c = assert_matches!(bound.get_conn_by_id(&conn_c),
-            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local_identifier, ..}, device: _})) => local_identifier)
+            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_c);
         let port_d = assert_matches!(bound.get_conn_by_id(&conn_d),
-            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local_identifier, ..}, device: _})) => local_identifier)
+            Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_d);
     }
