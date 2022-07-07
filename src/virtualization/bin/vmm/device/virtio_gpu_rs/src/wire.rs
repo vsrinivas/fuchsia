@@ -81,7 +81,7 @@ pub struct VirtioGpuCtrlHeader {
     pub fence_id: LE64,
     pub ctx_id: LE32,
     pub ring_idx: u8,
-    pub padding: [u8; 3],
+    pub _padding: [u8; 3],
 }
 
 //
@@ -116,11 +116,11 @@ pub struct VirtioGpuRespDisplayInfo {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_GET_EDID
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuGetEdid {
     pub scanout: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
 }
 
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
@@ -128,7 +128,7 @@ pub struct VirtioGpuGetEdid {
 pub struct VirtioGpuRespEdid {
     pub hdr: VirtioGpuCtrlHeader,
     pub size: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
     pub edid: [u8; 1024],
 }
 
@@ -144,7 +144,7 @@ pub const VIRTIO_GPU_FORMAT_X8B8G8R8_UNORM: u32 = 68;
 pub const VIRTIO_GPU_FORMAT_A8B8G8R8_UNORM: u32 = 121;
 pub const VIRTIO_GPU_FORMAT_R8G8B8X8_UNORM: u32 = 134;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceCreate2d {
     pub resource_id: LE32,
@@ -156,17 +156,17 @@ pub struct VirtioGpuResourceCreate2d {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_UNREF
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceUnref {
     pub resource_id: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_SET_SCANOUT
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuSetScanout {
     pub r: VirtioGpuRect,
@@ -177,62 +177,62 @@ pub struct VirtioGpuSetScanout {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_FLUSH
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceFlush {
     pub r: VirtioGpuRect,
     pub resource_id: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_FLUSH
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuTransferToHost2d {
     pub r: VirtioGpuRect,
     pub offset: LE64,
     pub resource_id: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceAttachBacking {
     pub resource_id: LE32,
     pub nr_entries: LE32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuMemEntry {
     pub addr: LE64,
     pub length: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceDetachBacking {
     pub resource_id: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_GET_CAPSET_INFO
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuGetCapsetInfo {
     pub capset_index: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 pub const VIRTIO_GPU_CAPSET_VIRGL: u32 = 1;
@@ -241,20 +241,20 @@ pub const VIRTIO_GPU_CAPSET_GFXSTREAM: u32 = 3;
 pub const VIRTIO_GPU_CAPSET_VENUS: u32 = 4;
 pub const VIRTIO_GPU_CAPSET_CROSS_DOMAIN: u32 = 5;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuRespCapsetInfo {
     pub hdr: VirtioGpuCtrlHeader,
     pub capset_id: LE32,
     pub capset_max_version: LE32,
     pub capset_max_size: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_GET_CAPSET
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuGetCapset {
     pub capset_id: LE32,
@@ -273,18 +273,18 @@ pub struct VirtioGpuGetCapset {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_ASSIGN_UUID
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceAssignUuid {
     pub resource_id: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuRespResourceUuid {
-    hdr: VirtioGpuCtrlHeader,
-    uuid: [u8; 16],
+    pub hdr: VirtioGpuCtrlHeader,
+    pub uuid: [u8; 16],
 }
 
 //
@@ -298,7 +298,7 @@ pub const VIRTIO_GPU_BLOB_FLAG_USE_MAPPABLE: u32 = 0x0001;
 pub const VIRTIO_GPU_BLOB_FLAG_USE_SHAREABLE: u32 = 0x0002;
 pub const VIRTIO_GPU_BLOB_FLAG_USE_CROSS_DEVICE: u32 = 0x0004;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceCreateBlob {
     pub resource_id: LE32,
@@ -312,7 +312,7 @@ pub struct VirtioGpuResourceCreateBlob {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_SET_SCANOUT_BLOB
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuSetScanoutBlob {
     pub r: VirtioGpuRect,
@@ -321,7 +321,7 @@ pub struct VirtioGpuSetScanoutBlob {
     pub width: LE32,
     pub height: LE32,
     pub format: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
     pub strides: [LE32; 4],
     pub offsets: [LE32; 4],
 }
@@ -342,11 +342,11 @@ pub struct VirtioGpuCtxCreate {
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_MAP_BLOB
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceMapBlob {
     pub resource_id: LE32,
-    pub padding: LE32,
+    pub _padding: LE32,
     pub offset: LE64,
 }
 
@@ -356,44 +356,44 @@ pub const VIRTIO_GPU_MAP_CACHE_CACHED: u32 = 1;
 pub const VIRTIO_GPU_MAP_CACHE_UNCACHED: u32 = 2;
 pub const VIRTIO_GPU_MAP_CACHE_WC: u32 = 3;
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuRespMapInfo {
     pub hdr: VirtioGpuCtrlHeader,
     // These are specified in the spec as u32 and not le32. Unclear if this is oversight or
     // intentional. For now we'll leave them to match the spec.
     pub map_info: u32,
-    padding: u32,
+    pub _padding: u32,
 }
 
 //
 // 5.7.6.8: VIRTIO_GPU_CMD_RESOURCE_UNMAP_BLOB
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuResourceUnmapBlob {
     pub resource_id: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
 //
 // 5.7.6.10: cursorq
 //
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuCursorPos {
     pub scanout_id: LE32,
     pub x: LE32,
     pub y: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C, packed)]
 pub struct VirtioGpuUpdateCursor {
     pub pos: VirtioGpuCursorPos,
     pub resource_id: LE32,
     pub hot_x: LE32,
     pub hot_y: LE32,
-    padding: LE32,
+    pub _padding: LE32,
 }
