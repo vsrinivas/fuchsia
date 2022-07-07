@@ -65,20 +65,3 @@ re-open the list later, you can copy the URL from the Chrome Address Bar.
 Beware, you will have to re-copy the URL each time you add, modify or remove a graph. This
 includes moving the green slider beneath a graph or making any selections in the box to
 the right of the graph.
-
-
-## Enabling regression detection
-
-To enable regression detection, you must enable "monitoring" for a test by clicking the
-"Request Monitoring for Tests" button under the "Report issue" dropdown at the top of the
-page.
-
-![monitoring_button_example](/docs/images/benchmarking/monitoring_button_example.png "monitoring_button_example")
-
-This will open a bug form you can fill out to enable monitoring for a benchmark. The
-Chrome team has a Sheriff rotation (oncall rotation) to triage regression alerts. The
-dashboard only allows triaging bugs in monorail.
-
-See this link for more information about the [Sheriff rotation]
-
-[Sheriff rotation]: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/speed/perf_regression_sheriffing.md
