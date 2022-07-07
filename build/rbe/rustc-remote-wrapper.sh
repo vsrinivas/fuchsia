@@ -877,6 +877,11 @@ exec_root_flag=()
 # and pass options available in the new version, e.g.:
 #  --preserve_symlink
 #
+# labels:
+#   type=tool says we are providing a custom tool (Rust compiler), and thus,
+#     own the logic for providing explicit inputs.
+#   shallow=true works around an issue where racing mode downloads incorrectly
+#
 # --canonicalize_working_dir: coerce the output dir to a constant.
 #   This requires that the command be insensitive to output dir, and
 #   that its outputs do not leak the remote output dir.
@@ -884,6 +889,7 @@ exec_root_flag=()
 #   build directories helps with caching.
 remote_rustc_command=(
   "$remote_action_wrapper"
+  --labels="type=tool,shallow=true"
   "${exec_root_flag[@]}"
   --canonicalize_working_dir=true
   "${remote_trace_flags[@]}"

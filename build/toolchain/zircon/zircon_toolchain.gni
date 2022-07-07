@@ -170,7 +170,19 @@ template("zircon_toolchain") {
     use_goma = invoker.use_goma
   }
   if (cxx_rbe_enable) {
-    compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir) + " -- "
+    compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir)
+    assert(
+        cxx_rbe_exec_strategy == "remote" || cxx_rbe_exec_strategy == "local" ||
+            cxx_rbe_exec_strategy == "racing",
+        "Unsupported RBE exec_strategy: \"$cxx_rbe_exec_strategy\".")
+    if (cxx_rbe_exec_strategy == "remote") {
+      compiler_prefix += " --exec_strategy=remote"
+    } else if (cxx_rbe_exec_strategy == "local") {
+      compiler_prefix += " --exec_strategy=local --remote_update_cache=false"
+    } else if (cxx_rbe_exec_strategy == "racing") {
+      compiler_prefix += " --exec_strategy=racing"
+    }
+    compiler_prefix += " -- "
     not_needed([ "use_goma" ])
   } else if (use_goma) {
     compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"

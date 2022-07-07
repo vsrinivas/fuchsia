@@ -44,6 +44,9 @@ declare_args() {
   #   * "local": Lookup action in the remote cache, but execute action
   #         locally on cache miss.  The locally produced result is
   #         not uploaded to the remote cache.
+  #
+  #   * "racing": Race local vs. remote execution, take the first to finish.
+  #
   #   (There are other rewrapper options that are not exposed.)
   rust_rbe_exec_strategy = "remote"
 
@@ -89,6 +92,9 @@ declare_args() {
   #   * "local": Lookup action in the remote cache, but execute action
   #         locally on cache miss.  The locally produced result is
   #         not uploaded to the remote cache.
+  #
+  #   * "racing": Race local vs. remote execution, take the first to finish.
+  #
   #   (There are other rewrapper options that are not exposed.)
   cxx_rbe_exec_strategy = "remote"
 }

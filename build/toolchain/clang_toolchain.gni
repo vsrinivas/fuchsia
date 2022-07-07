@@ -69,7 +69,20 @@ template("clang_toolchain") {
       use_goma = invoker.use_goma
     }
     if (cxx_rbe_enable) {
-      compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir) + " -- "
+      # Use reclient to remotely build C++.
+      compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir)
+      assert(cxx_rbe_exec_strategy == "remote" ||
+                 cxx_rbe_exec_strategy == "local" ||
+                 cxx_rbe_exec_strategy == "racing",
+             "Unsupported RBE exec_strategy: \"$cxx_rbe_exec_strategy\".")
+      if (cxx_rbe_exec_strategy == "remote") {
+        compiler_prefix += " --exec_strategy=remote"
+      } else if (cxx_rbe_exec_strategy == "local") {
+        compiler_prefix += " --exec_strategy=local --remote_update_cache=false"
+      } else if (cxx_rbe_exec_strategy == "racing") {
+        compiler_prefix += " --exec_strategy=racing"
+      }
+      compiler_prefix += " -- "
       not_needed([ "use_goma" ])
     } else if (use_goma) {
       compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
@@ -131,16 +144,16 @@ template("clang_toolchain") {
         _rewrapper_flags = " --local --check-determinism"
       } else {
         assert(rust_rbe_exec_strategy == "remote" ||
-                   rust_rbe_exec_strategy == "local",
+                   rust_rbe_exec_strategy == "local" ||
+                   rust_rbe_exec_strategy == "racing",
                "Unsupported RBE exec_strategy: \"$rust_rbe_exec_strategy\".")
         if (rust_rbe_exec_strategy == "remote") {
           _rewrapper_flags = " --exec_strategy=remote"
-
-          # Use remote-worker parallelism
-          _rust_concurrent_jobs = concurrent_jobs.goma
         } else if (rust_rbe_exec_strategy == "local") {
           _rewrapper_flags =
               " --exec_strategy=local --remote_update_cache=false"
+        } else if (rust_rbe_exec_strategy == "racing") {
+          _rewrapper_flags = " --exec_strategy=racing"
         }
       }
       _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
