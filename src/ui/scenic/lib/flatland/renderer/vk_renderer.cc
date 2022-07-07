@@ -275,6 +275,8 @@ void VkRenderer::DeregisterCollection(allocation::GlobalBufferCollectionId colle
 }
 
 bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+  TRACE_DURATION("gfx", "flatland::VkRenderer::ImportBufferImage");
+
   std::unique_lock<std::mutex> lock(mutex_);
 
   // The metadata can't have an invalid collection id.
@@ -373,7 +375,10 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
 }
 
 void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
+  TRACE_DURATION("gfx", "flatland::VkRenderer::ReleaseBufferImage");
+
   std::unique_lock<std::mutex> lock(mutex_);
+
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
     pending_textures_.erase(image_id);

@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+  // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -202,6 +202,8 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
 
 bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
     const allocation::ImageMetadata& metadata) {
+  TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ImportBufferImage");
+
   // The metadata can't have an invalid |collection_id|.
   if (metadata.collection_id == allocation::kInvalidId) {
     FX_LOGS(WARNING) << "Image has invalid collection id.";
@@ -266,6 +268,7 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
 }
 
 void ScreenCaptureBufferCollectionImporter::ReleaseBufferImage(allocation::GlobalImageId image_id) {
+  TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ReleaseBufferImage");
   renderer_->ReleaseBufferImage(image_id);
 }
 

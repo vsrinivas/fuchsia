@@ -249,6 +249,8 @@ void DisplayCompositor::ReleaseBufferCollection(
 }
 
 bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferImage");
+
   FX_DCHECK(display_controller_);
 
   if (metadata.identifier == 0) {
@@ -354,6 +356,8 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
 }
 
 void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
+  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferImage");
+
   auto display_image_id = InternalImageId(image_id);
 
   // Locks the rest of the function.
