@@ -42,7 +42,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     ));
 
     // Create the base package if needed.
-    let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
+    let base_package = if has_base_package(&image_assembly_config) {
         info!("Creating base package");
         Some(construct_base_package(
             &mut images_manifest,

@@ -18,6 +18,7 @@ pub struct BasePackage {
     pub merkle: Hash,
     pub contents: BTreeMap<String, String>,
     pub path: PathBuf,
+    pub manifest_path: PathBuf,
 }
 
 pub fn construct_base_package(
@@ -72,6 +73,7 @@ pub fn construct_base_package(
         merkle: base_merkle,
         contents: build_results.contents,
         path: base_package_path,
+        manifest_path: build_results.manifest_path,
     })
 }
 

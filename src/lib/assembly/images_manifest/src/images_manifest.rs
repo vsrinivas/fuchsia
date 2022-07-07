@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{Context, Result};
 use fuchsia_pkg::PackageManifest;
 use serde::de::{self, Deserializer};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 /// A manifest containing a list of images produced by the Image Assembler.
@@ -196,20 +197,29 @@ pub struct BlobfsContents {
     pub blobs: PackageSetBlobInfo,
 }
 
+/// Contains unique set of blobs.
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct PackageSetBlobInfo(BTreeSet<PackageBlob>);
 
 impl BlobfsContents {
     /// Add base package info into BlobfsContents
-    pub fn add_base_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
-        Self::add_package(&mut self.packages.base, &mut self.blobs, path)?;
+    pub fn add_base_package(
+        &mut self,
+        path: impl AsRef<Path>,
+        merkle_size_map: &HashMap<String, u64>,
+    ) -> anyhow::Result<()> {
+        Self::add_package(&mut self.packages.base, &mut self.blobs, path, merkle_size_map)?;
         Ok(())
     }
 
     /// Add cache package info into BlobfsContents
-    pub fn add_cache_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
-        Self::add_package(&mut self.packages.cache, &mut self.blobs, path)?;
+    pub fn add_cache_package(
+        &mut self,
+        path: impl AsRef<Path>,
+        merkle_size_map: &HashMap<String, u64>,
+    ) -> anyhow::Result<()> {
+        Self::add_package(&mut self.packages.cache, &mut self.blobs, path, merkle_size_map)?;
         Ok(())
     }
 
@@ -217,6 +227,7 @@ impl BlobfsContents {
         package_set: &mut PackageSetMetadata,
         content_blobs: &mut PackageSetBlobInfo,
         path: impl AsRef<Path>,
+        merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
         let manifest = path.as_ref().to_owned();
         let package_manifest = PackageManifest::try_load_from(&manifest)?;
@@ -226,12 +237,16 @@ impl BlobfsContents {
             content_blobs.0.insert(PackageBlob {
                 merkle: blob.merkle.to_string(),
                 path: blob.path.to_string(),
-                used_space_in_blobfs: 0, /* Use 0 until we populate with compressed size */
+                used_space_in_blobfs: *merkle_size_map
+                    .get(&blob.merkle.to_string())
+                    .context("Blob merkle not found")?,
             });
             package_blobs.push(PackageBlob {
                 merkle: blob.merkle.to_string(),
                 path: blob.path.to_string(),
-                used_space_in_blobfs: 0, /* Use 0 until we populate with compressed size */
+                used_space_in_blobfs: *merkle_size_map
+                    .get(&blob.merkle.to_string())
+                    .context("Blob merkle not found.")?,
             });
         }
         package_blobs.sort();
@@ -441,27 +456,46 @@ mod tests {
         path.persist(dir.path().join("package_manifest_temp_file.json"))?;
 
         let mut contents = BlobfsContents::default();
-        contents.add_base_package(dir.path().join("package_manifest_temp_file.json"))?;
-        contents.add_cache_package(dir.path().join("package_manifest_temp_file.json"))?;
+        let mut merkle_size_map: HashMap<String, u64> = HashMap::new();
+        merkle_size_map.insert(
+            "7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581".to_string(),
+            10,
+        );
+        merkle_size_map.insert(
+            "8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567".to_string(),
+            20,
+        );
+        merkle_size_map.insert(
+            "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70".to_string(),
+            30,
+        );
+        contents.add_base_package(
+            dir.path().join("package_manifest_temp_file.json"),
+            &merkle_size_map,
+        )?;
+        contents.add_cache_package(
+            dir.path().join("package_manifest_temp_file.json"),
+            &merkle_size_map,
+        )?;
         let actual_package_blobs_base = &(contents.packages.base.0[0].blobs);
         let actual_package_blobs_cache = &(contents.packages.cache.0[0].blobs);
 
         let package_blob1 = PackageBlob {
             merkle: "7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581".to_string(),
             path: "bin/def".to_string(),
-            used_space_in_blobfs: 0,
+            used_space_in_blobfs: 10,
         };
 
         let package_blob2 = PackageBlob {
             merkle: "8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567".to_string(),
             path: "lib/ghi".to_string(),
-            used_space_in_blobfs: 0,
+            used_space_in_blobfs: 20,
         };
 
         let package_blob3 = PackageBlob {
             merkle: "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70".to_string(),
             path: "abc/".to_string(),
-            used_space_in_blobfs: 0,
+            used_space_in_blobfs: 30,
         };
 
         let expected_blobs = vec![package_blob1, package_blob2, package_blob3];

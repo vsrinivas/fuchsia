@@ -10,6 +10,7 @@ use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
 use assembly_images_manifest::BlobfsContents;
 use assembly_tool::Tool;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub fn construct_blobfs(
@@ -28,22 +29,31 @@ pub fn construct_blobfs(
     // Add the base and cache packages.
     for package_manifest_path in &image_config.base {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.add_base_package(package_manifest_path)?;
     }
     for package_manifest_path in &image_config.cache {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.add_cache_package(package_manifest_path)?;
     }
 
     // Add the base package and its contents.
-    blobfs_builder.add_file(&base_package.path)?;
-    for (_, source) in &base_package.contents {
-        blobfs_builder.add_file(source)?;
-    }
+    blobfs_builder.add_package(&base_package.manifest_path)?;
 
-    // Build the blobfs and return its path.
+    // Build the blobfs and store the merkle to size map.
     let blobfs_path = outdir.as_ref().join("blob.blk");
-    blobfs_builder.build(gendir, &blobfs_path).context("Failed to build the blobfs")?;
+    let blobs_json_path =
+        blobfs_builder.build(gendir, &blobfs_path).context("Failed to build the blobfs")?;
+    let merkle_size_map = match blobfs_builder.read_blobs_json(blobs_json_path) {
+        Ok(blobs_json) => {
+            blobs_json.iter().map(|e| (e.merkle.to_string(), e.used_space_in_blobfs)).collect()
+        }
+        Err(_) => HashMap::default(),
+    };
+    for package_manifest_path in &image_config.base {
+        contents.add_base_package(package_manifest_path, &merkle_size_map)?;
+    }
+    for package_manifest_path in &image_config.cache {
+        contents.add_cache_package(package_manifest_path, &merkle_size_map)?;
+    }
+    contents.add_base_package(&base_package.manifest_path, &merkle_size_map)?;
     Ok((blobfs_path, contents))
 }
 
@@ -57,6 +67,8 @@ mod tests {
     use assembly_tool::ToolProvider;
     use fuchsia_hash::Hash;
     use std::collections::BTreeMap;
+    use std::fs::File;
+    use std::io::Write;
     use std::str::FromStr;
     use tempfile::tempdir;
 
@@ -77,6 +89,18 @@ mod tests {
         // Create a fake base package.
         let base_path = dir.path().join("base.far");
         std::fs::write(&base_path, "fake base").unwrap();
+        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
+        let contents = r#"{
+            "version": "1",
+            "package": {
+                "name": "system_image",
+                "version": "0"
+            },
+            "blobs": []
+        }
+        "#;
+        write!(base_package_manifest_file, "{}", contents).unwrap();
         let base = BasePackage {
             merkle: Hash::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -84,6 +108,7 @@ mod tests {
             .unwrap(),
             contents: BTreeMap::default(),
             path: base_path,
+            manifest_path: base_package_manifest_path,
         };
 
         // Create a fake blobfs tool.

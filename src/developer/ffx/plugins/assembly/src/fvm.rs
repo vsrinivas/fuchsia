@@ -344,6 +344,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Write;
+    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]
@@ -369,6 +370,7 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
+            manifest_path: PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
@@ -412,6 +414,7 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
+            manifest_path: PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
@@ -473,6 +476,7 @@ mod tests {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: "path/to/base_package".into(),
+            manifest_path: PathBuf::default(),
         };
         let slice_size = 0;
         let mut builder = MultiFvmBuilder::new(
@@ -591,10 +595,23 @@ mod tests {
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
         write!(base_package_file, "base package").unwrap();
+        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
+        let contents = r#"{
+            "version": "1",
+            "package": {
+                "name": "system_image",
+                "version": "0"
+            },
+            "blobs": []
+        }
+        "#;
+        write!(base_package_manifest_file, "{}", contents).unwrap();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: base_package_path,
+            manifest_path: base_package_manifest_path,
         };
 
         let slice_size = 0;
@@ -712,10 +729,23 @@ mod tests {
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
         write!(base_package_file, "base package").unwrap();
+        let base_package_manifest_path = dir.path().join("package_manifest.json");
+        let mut base_package_manifest_file = File::create(&base_package_manifest_path).unwrap();
+        let contents = r#"{
+            "version": "1",
+            "package": {
+                "name": "system_image",
+                "version": "0"
+            },
+            "blobs": []
+        }
+        "#;
+        write!(base_package_manifest_file, "{}", contents).unwrap();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
             path: base_package_path,
+            manifest_path: base_package_manifest_path,
         };
 
         let slice_size = 0;

@@ -219,6 +219,7 @@ mod tests {
             .unwrap(),
             contents: BTreeMap::default(),
             path: base_path,
+            manifest_path: PathBuf::default(),
         };
 
         // Create a fake zbi tool.

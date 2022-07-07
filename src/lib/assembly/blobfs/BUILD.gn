@@ -27,6 +27,7 @@ if (is_host) {
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:pathdiff",
+      "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
     ]
 
