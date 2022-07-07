@@ -17,7 +17,7 @@ group("tests") {
   if (!is_asan) {
     deps = [
       ":clang_coverage_tests($host_toolchain)",
-      ":rust_coverage_tests($host_toolchain)",
+      # ":rust_coverage_tests($host_toolchain)",
     ]
   }
 }
