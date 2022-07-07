@@ -142,6 +142,7 @@ class Dispatcher : public async_dispatcher_t,
   zx_status_t QueuePacket(async_receiver_t* receiver, const zx_packet_user_t* data);
   zx_status_t BindIrq(async_irq_t* irq);
   zx_status_t UnbindIrq(async_irq_t* irq);
+  zx_status_t GetSequenceId(async_sequence_id_t* out_sequence_id);
 
   bool HasQueuedTasks();
 

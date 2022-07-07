@@ -7,6 +7,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/irq.h>
 #include <lib/async/receiver.h>
+#include <lib/async/sequence_id.h>
 #include <lib/async/task.h>
 #include <lib/async/trap.h>
 #include <lib/ddk/device.h>
@@ -37,7 +38,7 @@ namespace driver_runtime {
 namespace {
 
 const async_ops_t g_dispatcher_ops = {
-    .version = ASYNC_OPS_V2,
+    .version = ASYNC_OPS_V3,
     .reserved = 0,
     .v1 = {
         .now =
@@ -84,6 +85,13 @@ const async_ops_t g_dispatcher_ops = {
         .detach_paged_vmo = [](async_dispatcher_t* dispatcher,
                                async_paged_vmo_t* paged_vmo) { return ZX_ERR_NOT_SUPPORTED; },
     },
+    .v3 =
+        {
+            .get_sequence_id =
+                [](async_dispatcher_t* dispatcher, async_sequence_id_t* out_thread_id) {
+                  return static_cast<Dispatcher*>(dispatcher)->GetSequenceId(out_thread_id);
+                },
+        },
 };
 
 }  // namespace
@@ -739,6 +747,17 @@ zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
   // thread has already pulled an irq packet from the port and may attempt to call the irq
   // handler. Delay destroying our irq wrapper for a bit in case this race condition happens.
   GetDispatcherCoordinator().CacheUnboundIrq(std::move(unbound_irq));
+  return ZX_OK;
+}
+
+zx_status_t Dispatcher::GetSequenceId(async_sequence_id_t* out_sequence_id) {
+  if (unsynchronized()) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+  if (driver_context::GetCurrentDispatcher() != this) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  out_sequence_id->value = reinterpret_cast<uint64_t>(this);
   return ZX_OK;
 }
 

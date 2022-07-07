@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/irq.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/sequence_id.h>
 #include <lib/async/task.h>
 #include <lib/fdf/arena.h>
 #include <lib/fdf/channel.h>
@@ -2672,6 +2673,77 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedDuringDriverShutdownHandl
 
   thread.join();
   ASSERT_TRUE(wait_complete);
+}
+
+TEST_F(DispatcherTest, GetSequenceIdSynchronizedDispatcher) {
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher));
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+
+  fdf_dispatcher_t* fdf_dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &fdf_dispatcher2));
+  async_dispatcher_t* async_dispatcher2 = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher2);
+
+  async_sequence_id_t dispatcher_id;
+  async_sequence_id_t dispatcher2_id;
+
+  // Get the sequence id for the first dispatcher.
+  libsync::Completion task_completion;
+  ASSERT_OK(async::PostTask(async_dispatcher, [&] {
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &dispatcher_id));
+    ASSERT_OK(async_get_sequence_id(async_dispatcher, &dispatcher_id));
+    task_completion.Signal();
+  }));
+  ASSERT_OK(task_completion.Wait());
+
+  // Get the sequence id for the second dispatcher.
+  task_completion.Reset();
+  ASSERT_OK(async::PostTask(async_dispatcher2, [&] {
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher, &dispatcher2_id));
+    ASSERT_OK(async_get_sequence_id(async_dispatcher2, &dispatcher2_id));
+    task_completion.Signal();
+  }));
+  ASSERT_OK(task_completion.Wait());
+
+  ASSERT_NE(dispatcher_id.value, dispatcher2_id.value);
+
+  // Get the sequence id again for the first dispatcher.
+  task_completion.Reset();
+  ASSERT_OK(async::PostTask(async_dispatcher, [&] {
+    async_sequence_id_t id;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id));
+    ASSERT_OK(async_get_sequence_id(async_dispatcher, &id));
+    ASSERT_EQ(id.value, dispatcher_id.value);
+    task_completion.Signal();
+  }));
+  ASSERT_OK(task_completion.Wait());
+
+  // Get the sequence id from a non-managed thread.
+  async_sequence_id_t id;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher, &id));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id));
+}
+
+TEST_F(DispatcherTest, GetSequenceIdUnsynchronizedDispatcher) {
+  fdf_dispatcher_t* fdf_dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
+                                           CreateFakeDriver(), &fdf_dispatcher));
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher);
+
+  // Get the sequence id for the unsynchronized dispatcher.
+  libsync::Completion task_completion;
+  ASSERT_OK(async::PostTask(async_dispatcher, [&] {
+    async_sequence_id_t id;
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id));
+    task_completion.Signal();
+  }));
+  ASSERT_OK(task_completion.Wait());
+
+  // Get the sequence id from a non-managed thread.
+  async_sequence_id_t id;
+  ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id));
 }
 
 //
