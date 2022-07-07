@@ -24,15 +24,15 @@ typedef struct async_sequence_id {
 // Gets the dispatcher-specific sequence identifier of the currently executing
 // task.
 //
-// If the dispatcher supports a notion of sequences, it should populate a number
-// representing the current sequence, or return |ZX_ERR_INVALID_ARGS| if the
-// calling thread is not executing a task managed by the dispatcher.
-//
-// Otherwise, it should return |ZX_ERR_NOT_SUPPORTED|.
+// If the execution context of the calling thread is associated with a sequence,
+// the dispatcher should populate the sequence identifier represending the
+// current sequence. Otherwise, it should return an error code detailed below.
 //
 // Returns |ZX_OK| if the sequence identifier was successfully obtained.
 // Returns |ZX_ERR_INVALID_ARGS| if the dispatcher supports sequences, but the
 // calling thread is not executing a task managed by the dispatcher.
+// Returns |ZX_ERR_WRONG_TYPE| if the calling thread is executing a task
+// managed by the dispatcher, but that task is not part of a sequence.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.

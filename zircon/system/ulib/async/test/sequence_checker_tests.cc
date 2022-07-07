@@ -62,6 +62,8 @@ TEST(SequenceChecker, NoSequenceId) {
   FakeSequenceIdAsync dispatcher;
   dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS);
   ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE);
+  ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
   dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED);
   ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
 }
@@ -113,6 +115,10 @@ TEST(SynchronizationChecker, SequenceIdThenThreadId) {
   EXPECT_TRUE(checker.is_synchronized());
   ASSERT_DEATH([&] {
     dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS);
+    (void)checker.is_synchronized();
+  });
+  ASSERT_DEATH([&] {
+    dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE);
     (void)checker.is_synchronized();
   });
   ASSERT_DEATH([&] {

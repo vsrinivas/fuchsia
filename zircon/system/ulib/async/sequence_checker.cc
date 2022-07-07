@@ -12,13 +12,19 @@ namespace {
 
 constexpr const char kSequenceNotSupported[] = "The async_dispatcher_t need to support sequences.";
 
-constexpr const char kNoSequence[] = "Current thread is not associated with a sequence.";
+constexpr const char kWrongThread[] =
+    "Current thread is not executing a task managed by the dispatcher.";
+
+constexpr const char kNoSequence[] =
+    "Current thread is executing a task managed by the dispatcher, but the task is not associated "
+    "with a sequence.";
 
 async_sequence_id_t ensure_valid_sequence_id(async_dispatcher_t* dispatcher) {
   async_sequence_id_t current;
   zx_status_t status = async_get_sequence_id(dispatcher, &current);
   ZX_ASSERT_MSG(status != ZX_ERR_NOT_SUPPORTED, "%s", kSequenceNotSupported);
-  ZX_ASSERT_MSG(status != ZX_ERR_INVALID_ARGS, "%s", kNoSequence);
+  ZX_ASSERT_MSG(status != ZX_ERR_INVALID_ARGS, "%s", kWrongThread);
+  ZX_ASSERT_MSG(status != ZX_ERR_WRONG_TYPE, "%s", kNoSequence);
   ZX_ASSERT(status == ZX_OK);
   return current;
 }
@@ -43,7 +49,8 @@ synchronization_checker::synchronization_checker(async_dispatcher_t* dispatcher)
   } else {
     // If the async runtime supports sequences, the current thread must be
     // running on one.
-    ZX_ASSERT_MSG(status != ZX_ERR_INVALID_ARGS, "%s", kNoSequence);
+    ZX_ASSERT_MSG(status != ZX_ERR_INVALID_ARGS, "%s", kWrongThread);
+    ZX_ASSERT_MSG(status != ZX_ERR_WRONG_TYPE, "%s", kNoSequence);
     ZX_ASSERT(status == ZX_OK);
     self_ = current;
   }
