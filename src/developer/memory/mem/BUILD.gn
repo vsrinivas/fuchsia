@@ -21,8 +21,5 @@ executable("bin") {
 
 # TODO(fxbug.dev/82740): delete the below, use `ffx profile memory` everywhere
 fuchsia_shell_package("mem") {
-  # TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests.
-  # Delete the below after it's no longer used.
-  manifest = "meta/mem.cmx"
   deps = [ ":bin" ]
 }
