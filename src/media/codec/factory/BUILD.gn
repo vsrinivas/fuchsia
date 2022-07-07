@@ -75,16 +75,6 @@ executable("codec_detect_hw_encode_test_bin") {
   ]
 }
 
-fuchsia_unittest_package("codec_detect_hw_encode_test") {
-  manifest = "meta/codec_detect_hw_encode_test.cmx"
-  deps = [ ":codec_detect_hw_encode_test_bin" ]
-
-  test_specs = {
-    # test depends on hw encoder device being present
-    environments = [ sherlock_env ]
-  }
-}
-
 executable("codec_detect_hw_decode_test_bin") {
   output_name = "codec_detect_hw_decode_test"
 
@@ -99,20 +89,6 @@ executable("codec_detect_hw_decode_test_bin") {
   ]
 }
 
-fuchsia_unittest_package("codec_detect_hw_decode_test") {
-  manifest = "meta/codec_detect_hw_decode_test.cmx"
-  deps = [ ":codec_detect_hw_decode_test_bin" ]
-
-  test_specs = {
-    # test depends on hw decoder device being present
-    environments = [
-      sherlock_env,
-      astro_env,
-      vim3_env,
-    ]
-  }
-}
-
 fuchsia_test_component("codec_detect_hw_encode") {
   manifest = "meta/codec_detect_hw_encode_test.cml"
   deps = [ ":codec_detect_hw_encode_test_bin" ]
@@ -123,7 +99,7 @@ fuchsia_test_component("codec_detect_hw_decode") {
   deps = [ ":codec_detect_hw_decode_test_bin" ]
 }
 
-fuchsia_test_package("codec_detect_hw_decode_test_v2") {
+fuchsia_test_package("codec_detect_hw_decode_test") {
   test_components = [ ":codec_detect_hw_decode" ]
   test_specs = {
     # test depends on hw decoder device being present
@@ -135,6 +111,15 @@ fuchsia_test_package("codec_detect_hw_decode_test_v2") {
   }
 }
 
+fuchsia_test_package("codec_detect_hw_encode_test") {
+  test_components = [ ":codec_detect_hw_encode" ]
+  test_specs = {
+    # test depends on hw encoder device being present
+    environments = [ sherlock_env ]
+  }
+}
+
+# TODO(fxbug.dev/103877): Remove workaround
 fuchsia_test_package("codec_detect_hw_encode_test_v2") {
   test_components = [ ":codec_detect_hw_encode" ]
   test_specs = {
