@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(UnixSocket, DISABLED_ReadAfterClose) {
+TEST(UnixSocket, ReadAfterClose) {
   int fds[2];
 
   ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_STREAM, 0, fds));
@@ -21,7 +21,7 @@ TEST(UnixSocket, DISABLED_ReadAfterClose) {
   ASSERT_EQ(0, read(fds[1], buf, 1));
 }
 
-TEST(UnixSocket, DISABLED_ReadAfterReadShutdown) {
+TEST(UnixSocket, ReadAfterReadShutdown) {
   int fds[2];
 
   ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_STREAM, 0, fds));
