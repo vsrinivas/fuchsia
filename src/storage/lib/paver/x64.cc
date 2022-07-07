@@ -4,7 +4,11 @@
 
 #include "src/storage/lib/paver/x64.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/validation.h"
@@ -60,14 +64,8 @@ bool EfiDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
                                            PartitionSpec(paver::Partition::kVbMetaR),
                                            PartitionSpec(paver::Partition::kAbrMeta),
                                            PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
-
-  for (const auto& supported : supported_specs) {
-    if (SpecMatches(spec, supported)) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::any_of(std::cbegin(supported_specs), std::cend(supported_specs),
+                     [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
 zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(

@@ -8,6 +8,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
 
+#include <algorithm>
+#include <iterator>
+
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
@@ -192,14 +195,8 @@ bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                                            PartitionSpec(paver::Partition::kSysconfig),
                                            PartitionSpec(paver::Partition::kAbrMeta),
                                            PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
-
-  for (const auto& supported : supported_specs) {
-    if (SpecMatches(spec, supported)) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::any_of(std::cbegin(supported_specs), std::cend(supported_specs),
+                     [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
 zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::AddPartition(

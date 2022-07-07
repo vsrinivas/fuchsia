@@ -4,6 +4,9 @@
 
 #include "src/storage/lib/paver/as370.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include <gpt/gpt.h>
 
 #include "src/storage/lib/paver/pave-logging.h"
@@ -29,14 +32,8 @@ bool As370Partitioner::SupportsPartition(const PartitionSpec& spec) const {
       PartitionSpec(paver::Partition::kBootloaderA), PartitionSpec(paver::Partition::kZirconA),
       PartitionSpec(paver::Partition::kZirconB), PartitionSpec(paver::Partition::kZirconR),
       PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
-
-  for (const auto& supported : supported_specs) {
-    if (SpecMatches(spec, supported)) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::any_of(std::cbegin(supported_specs), std::cend(supported_specs),
+                     [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
 zx::status<std::unique_ptr<PartitionClient>> As370Partitioner::AddPartition(
