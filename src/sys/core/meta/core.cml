@@ -479,6 +479,12 @@
             ],
         },
         {
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            from: "#factory_store_providers",
+            to: "#hwinfo",
+            source_availability: "unknown",
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#hwinfo",

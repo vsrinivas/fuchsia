@@ -24,10 +24,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.snoop.Snoop",
-                "fuchsia.factory.AlphaFactoryStoreProvider",
-                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
@@ -359,12 +355,6 @@
             from: "parent",
             to: "#appmgr",
             rights: [ "rx*" ],
-        },
-        {
-            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
-            from: "self",
-            to: [ "#hwinfo" ],
-            dependency: "weak_for_migration",
         },
         {
             storage: "data",

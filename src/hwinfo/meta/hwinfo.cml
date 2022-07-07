@@ -21,7 +21,8 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            availability: "optional",
         },
         {
             directory: "config-data",
