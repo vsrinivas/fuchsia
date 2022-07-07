@@ -31,7 +31,7 @@ fuchsia_component("mali_vulkan_test_cmp") {
     "//src/lib/vulkan/validation_layers",
   ]
   component_name = "mali_vulkan_test"
-  manifest = "meta/mali_vulkan_test.cmx"
+  manifest = "meta/mali_vulkan_test.cml"
 }
 
 protected_libvulkan_envs = []
