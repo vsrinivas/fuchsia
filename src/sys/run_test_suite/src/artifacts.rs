@@ -4,7 +4,7 @@
 
 use {
     crate::{output, stream_util::StreamUtil},
-    anyhow::{anyhow, Context},
+    anyhow::{anyhow, Context as _},
     fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::{
         future::join_all,
@@ -13,6 +13,29 @@ use {
     log::{debug, warn},
     std::{collections::VecDeque, io::Write, path::PathBuf},
 };
+
+/// Copy an artifact reported over a socket.
+pub(crate) async fn copy_socket_artifact<W: Write>(
+    socket: fidl::Socket,
+    mut artifact: W,
+) -> Result<(), anyhow::Error> {
+    let mut async_socket = fidl::AsyncSocket::from_socket(socket)?;
+    loop {
+        let done =
+            test_diagnostics::SocketReadFut::new(&mut async_socket, |maybe_buf| match maybe_buf {
+                Some(buf) => {
+                    artifact.write_all(buf)?;
+                    Ok(false)
+                }
+                None => Ok(true),
+            })
+            .await?;
+        if done {
+            artifact.flush()?;
+            return Ok(());
+        }
+    }
+}
 
 /// Copy debug data reported over a debug data iterator to an output directory.
 pub(crate) async fn copy_debug_data(
@@ -122,10 +145,37 @@ async fn copy_file_to_writer<T: Write>(
     Ok(())
 }
 
+#[cfg(test)]
+mod socket_tests {
+    use {super::*, futures::AsyncWriteExt};
+
+    #[fuchsia::test]
+    async fn copy_socket() {
+        let cases = vec![vec![], b"0123456789abcde".to_vec(), vec![0u8; 4096]];
+
+        for case in cases.iter() {
+            let (client_socket, server_socket) =
+                fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+            let mut output = vec![];
+            let write_fut = async move {
+                let mut async_socket =
+                    fidl::AsyncSocket::from_socket(server_socket).expect("create socket");
+                async_socket.write_all(case.as_slice()).await.expect("write bytes");
+            };
+
+            let ((), res) =
+                futures::future::join(write_fut, copy_socket_artifact(client_socket, &mut output))
+                    .await;
+            res.expect("copy contents");
+            assert_eq!(output.as_slice(), case.as_slice());
+        }
+    }
+}
+
 // These tests use vfs, which is only available on Fuchsia.
 #[cfg(target_os = "fuchsia")]
 #[cfg(test)]
-mod tests {
+mod file_tests {
     use {
         super::*,
         crate::output::InMemoryDirectoryWriter,

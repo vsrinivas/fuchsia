@@ -265,6 +265,7 @@ mod test {
             let mut case_stdout =
                 case_reporter.new_artifact(&ArtifactType::Stdout).await.expect("create stdout");
             writeln!(case_stdout, "Stdout for test case").expect("write to stdout");
+            case_stdout.flush().expect("flush stdout");
             case_reporter
                 .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
                 .await

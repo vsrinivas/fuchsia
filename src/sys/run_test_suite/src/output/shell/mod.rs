@@ -23,6 +23,10 @@ use writer::{ShellWriterHandle, ShellWriterHandleInner};
 
 /// Duration after which to emit an excessive duration log.
 const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
+/// Buffer stdout and stderr for this duration before dumping to console.
+const STDIO_BUFFERING_DURATION: Duration = Duration::from_secs(5);
+/// Dump stdout and stderr to console if it exceeds this size.
+const STDIO_BUFFER_SIZE: usize = 4096;
 
 /// A reporter that outputs results and artifacts to a single stream, usually stdout.
 /// This reporter is intended to provide "live" updates to a developer watching while
@@ -34,6 +38,10 @@ pub struct ShellReporter<W: 'static + Write + Send + Sync> {
     entity_state_map: Mutex<HashMap<EntityId, EntityState>>,
     /// Number of completed suites, used to output
     completed_suites: AtomicU32,
+    /// Size of the buffer used for stdio.
+    stdio_buffer_size: usize,
+    /// Length of time to buffer stdio before printing it to console.
+    stdio_buffer_duration: Duration,
 }
 
 /// All known state needed by a |ShellReporter| to display results.
@@ -77,6 +85,9 @@ impl ShellReporter<Vec<u8>> {
                 inner: inner.clone(),
                 entity_state_map: Mutex::new(entity_state_map),
                 completed_suites: AtomicU32::new(0),
+                // Disable buffering for most tests to simplify testing.
+                stdio_buffer_duration: Duration::ZERO,
+                stdio_buffer_size: 0,
             },
             ShellWriterView::new(inner),
         )
@@ -92,11 +103,13 @@ impl<W: 'static + Write + Send + Sync> ShellReporter<W> {
             inner,
             entity_state_map: Mutex::new(entity_state_map),
             completed_suites: AtomicU32::new(0),
+            stdio_buffer_duration: STDIO_BUFFERING_DURATION,
+            stdio_buffer_size: STDIO_BUFFER_SIZE,
         }
     }
 
-    fn new_writer_handle(&self, prefix: Option<String>) -> Box<DynArtifact> {
-        Box::new(ShellWriterHandle::new_handle(Arc::clone(&self.inner), prefix))
+    fn new_writer_handle(&self, prefix: Option<String>) -> ShellWriterHandle<W> {
+        ShellWriterHandle::new_handle(Arc::clone(&self.inner), prefix)
     }
 
     fn num_known_suites(entity_map: &HashMap<EntityId, EntityState>) -> usize {
@@ -286,9 +299,17 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
         let name = entity.name();
 
         Ok(match artifact_type {
-            ArtifactType::Stdout => self.new_writer_handle(format!("[stdout - {}]\n", name).into()),
-            ArtifactType::Stderr => self.new_writer_handle(format!("[stderr - {}]\n", name).into()),
-            ArtifactType::Syslog => self.new_writer_handle(None),
+            ArtifactType::Stdout => Box::new(test_diagnostics::StdoutBuffer::new(
+                self.stdio_buffer_duration,
+                self.new_writer_handle(Some(format!("[stdout - {}]\n", name))),
+                self.stdio_buffer_size,
+            )),
+            ArtifactType::Stderr => Box::new(test_diagnostics::StdoutBuffer::new(
+                self.stdio_buffer_duration,
+                self.new_writer_handle(Some(format!("[stderr - {}]\n", name))),
+                self.stdio_buffer_size,
+            )),
+            ArtifactType::Syslog => Box::new(self.new_writer_handle(None)),
             ArtifactType::RestrictedLog => {
                 // Restricted logs are saved for reporting when the entity completes.
                 let log_buffer = Arc::new(Mutex::new(ShellWriterHandleInner::new(vec![])));

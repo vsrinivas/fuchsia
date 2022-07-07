@@ -11,7 +11,7 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, prelude::*, stream::FuturesUnordered, StreamExt},
+    futures::{prelude::*, stream::FuturesUnordered, StreamExt},
     log::{error, warn},
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
@@ -116,54 +116,24 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                             artifact,
                         }) => match artifact {
                             ftest_manager::Artifact::Stdout(socket) => {
-                                let (sender, mut recv) = mpsc::channel(1024);
-                                let t = fuchsia_async::Task::spawn(
-                                    // TODO - this does some buffering that doesn't need to apply to
-                                    // the directory reporter, probably move that logic to the live reporter
-                                    test_diagnostics::collect_and_send_string_output(
-                                        socket, sender,
+                                let reporter = test_case_reporters.get(&identifier).unwrap();
+                                let stdout = reporter.new_artifact(&ArtifactType::Stdout).await?;
+                                test_cases_output.entry(identifier).or_insert(vec![]).push(
+                                    fasync::Task::spawn(
+                                        artifacts::copy_socket_artifact(socket, stdout)
+                                            .named("stdout"),
                                     ),
                                 );
-                                let reporter = test_case_reporters.get(&identifier).unwrap();
-                                let mut stdout =
-                                    reporter.new_artifact(&ArtifactType::Stdout).await?;
-                                let stdout_fut = async move {
-                                    while let Some(msg) = recv.next().await {
-                                        stdout.write_all(msg.as_bytes())?;
-                                    }
-                                    stdout.flush()?;
-                                    t.await?;
-                                    Result::Ok::<(), anyhow::Error>(())
-                                }
-                                .named("stdout");
-                                test_cases_output
-                                    .entry(identifier)
-                                    .or_insert(vec![])
-                                    .push(fasync::Task::spawn(stdout_fut));
                             }
                             ftest_manager::Artifact::Stderr(socket) => {
-                                let (sender, mut recv) = mpsc::channel(1024);
-                                let t = fuchsia_async::Task::spawn(
-                                    test_diagnostics::collect_and_send_string_output(
-                                        socket, sender,
+                                let reporter = test_case_reporters.get_mut(&identifier).unwrap();
+                                let stderr = reporter.new_artifact(&ArtifactType::Stderr).await?;
+                                test_cases_output.entry(identifier).or_insert(vec![]).push(
+                                    fasync::Task::spawn(
+                                        artifacts::copy_socket_artifact(socket, stderr)
+                                            .named("stdout"),
                                     ),
                                 );
-                                let reporter = test_case_reporters.get_mut(&identifier).unwrap();
-                                let mut stderr =
-                                    reporter.new_artifact(&ArtifactType::Stderr).await?;
-                                let stderr_fut = async move {
-                                    while let Some(msg) = recv.next().await {
-                                        stderr.write_all(msg.as_bytes())?;
-                                    }
-                                    stderr.flush()?;
-                                    t.await?;
-                                    Result::Ok::<(), anyhow::Error>(())
-                                }
-                                .named("stderr");
-                                test_cases_output
-                                    .entry(identifier)
-                                    .or_insert(vec![])
-                                    .push(fasync::Task::spawn(stderr_fut));
                             }
                             ftest_manager::Artifact::Log(_) => {
                                 warn!("WARN: per test case logs not supported yet")
@@ -768,14 +738,9 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     {
         Ok(s) => s,
         Err(e) => {
-            println!("Encountered error trying to run tests: {}", e);
             return Outcome::error(e);
         }
     };
-
-    if test_outcome != Outcome::Passed {
-        println!("One or more test runs failed.");
-    }
 
     let report_result =
         match run_reporter.stopped(&test_outcome.clone().into(), Timestamp::Unknown).await {
@@ -783,7 +748,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
             Err(e) => Err(e),
         };
     if let Err(e) = report_result {
-        println!("Failed to record results: {:?}", e);
+        warn!("Failed to record results: {:?}", e);
     }
 
     test_outcome

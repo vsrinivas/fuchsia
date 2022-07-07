@@ -139,7 +139,7 @@ async fn main() {
         },
     };
 
-    match run_test_suite_lib::run_tests_and_get_outcome(
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![
@@ -160,8 +160,11 @@ async fn main() {
         run_reporter,
         futures::future::pending(),
     )
-    .await
-    {
+    .await;
+    if outcome != run_test_suite_lib::Outcome::Passed {
+        println!("One or more test runs failed.");
+    }
+    match outcome {
         run_test_suite_lib::Outcome::Passed => {}
         run_test_suite_lib::Outcome::Timedout => {
             std::process::exit(-fuchsia_zircon::Status::TIMED_OUT.into_raw());
@@ -169,8 +172,11 @@ async fn main() {
         run_test_suite_lib::Outcome::Failed
         | run_test_suite_lib::Outcome::Cancelled
         | run_test_suite_lib::Outcome::DidNotFinish
-        | run_test_suite_lib::Outcome::Inconclusive
-        | run_test_suite_lib::Outcome::Error { .. } => {
+        | run_test_suite_lib::Outcome::Inconclusive => {
+            std::process::exit(1);
+        }
+        run_test_suite_lib::Outcome::Error { origin } => {
+            println!("Encountered error trying to run tests: {}", *origin);
             std::process::exit(1);
         }
     }
