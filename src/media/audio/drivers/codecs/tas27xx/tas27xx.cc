@@ -20,6 +20,7 @@
 
 namespace audio {
 
+// TODO(104023): Add handling for the other formats supported by this hardware.
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::I2S};

@@ -57,7 +57,7 @@ namespace audio {
 namespace audio_fidl = ::fuchsia::hardware::audio;
 namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
-// TODO(andresoportus): Add handling for the other formats supported by this codec.
+// TODO(104023): Add handling for the other formats supported by this hardware.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
 static const std::vector<SampleFormat> kSupportedDaiSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedDaiFrameFormats = {FrameFormat::I2S,

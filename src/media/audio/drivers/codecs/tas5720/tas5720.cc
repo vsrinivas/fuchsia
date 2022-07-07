@@ -18,6 +18,7 @@
 
 namespace audio {
 
+// TODO(104023): Add handling for the other formats supported by this hardware.
 // This codec offers a DAI interface with 2 channel I2S, even though it is a mono amp with the
 // channel actually amplified specified via metadata for a particular product.
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
