@@ -42,7 +42,6 @@
                 "fuchsia.settings.Input",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
-                "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.Launcher",
