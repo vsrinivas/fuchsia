@@ -159,7 +159,7 @@ group("tests") {
 }
 
 fuchsia_unittest_package("power-manager-tests") {
-  manifest = "meta/power_manager_bin_test.cmx"
+  manifest = "meta/power_manager_bin_test.cml"
   deps = [
     ":bin_test",
     "node_config:test_config_data",

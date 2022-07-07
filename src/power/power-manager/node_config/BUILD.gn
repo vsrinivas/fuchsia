@@ -52,8 +52,8 @@ node_config("sherlock") {
 # to allow for some more advanced validation beyond what we can accomplish with
 # JSON schema validation alone.
 # TODO(fxbug.dev/52818): Explore build-time JSON validation
-config_data("test_config_data") {
-  for_pkg = "power-manager-tests"
+resource("test_config_data") {
+  testonly = true
   sources = [
     "astro_node_config.json5",
     "base_node_config.json5",
@@ -62,4 +62,5 @@ config_data("test_config_data") {
     "nelson_node_config.json5",
     "sherlock_node_config.json5",
   ]
+  outputs = [ "config/{{source_file_part}}" ]
 }

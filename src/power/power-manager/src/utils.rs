@@ -324,7 +324,7 @@ pub fn test_each_node_config_file(
     use std::fs;
 
     let suffix = "node_config.json5";
-    let config_files = fs::read_dir("/config/data")
+    let config_files = fs::read_dir("/pkg/config")
         .unwrap()
         .filter(|f| f.as_ref().unwrap().file_name().to_str().unwrap().ends_with(suffix))
         .map(|f| {

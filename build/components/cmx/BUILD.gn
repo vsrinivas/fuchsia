@@ -424,7 +424,6 @@ group("cmx_allowlist") {
     "//src/performance/trace/tests:two_providers_two_engines_test_app_component_manifest_compile",
     "//src/performance/trace_manager:component_cfv1_manifest_compile",
     "//src/performance/trace_stress:trace_stress_component_manifest_compile",
-    "//src/power/power-manager:power-manager-tests_component_manifest_compile",
     "//src/power/testing/thermal-test-control:thermal-test-control_component_manifest_compile",
     "//src/recovery/integration:recovery_integration_test_component_manifest_compile",
     "//src/recovery/system:system_installer_bin_test_manifest_compile",
