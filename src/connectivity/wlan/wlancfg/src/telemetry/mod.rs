@@ -10,12 +10,8 @@ use {
     crate::{telemetry::windowed_stats::WindowedStats, util::pseudo_energy::PseudoDecibel},
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
-    fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_device_service::{
-        GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
-    },
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_inspect::{
         ArrayProperty, InspectType, Inspector, Node as InspectNode, NumericProperty, UintProperty,
@@ -33,7 +29,7 @@ use {
         channel::{mpsc, oneshot},
         select, Future, FutureExt, StreamExt, TryFutureExt,
     },
-    log::{info, warn},
+    log::{error, info, warn},
     num_traits::SaturatingAdd,
     parking_lot::Mutex,
     static_assertions::const_assert_eq,
@@ -230,16 +226,20 @@ pub enum TelemetryEvent {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct QueryStatusResult {
     connection_state: ConnectionStateInfo,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ConnectionStateInfo {
     Idle,
     Disconnected,
-    Connected { iface_id: u16, latest_ap_state: BssDescription },
+    Connected {
+        iface_id: u16,
+        latest_ap_state: BssDescription,
+        telemetry_proxy: Option<fidl_fuchsia_wlan_sme::TelemetryProxy>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -262,7 +262,7 @@ const TELEMETRY_QUERY_INTERVAL: zx::Duration = zx::Duration::from_seconds(15);
 /// time-interval stats. The telemetry loop also handles incoming TelemetryEvent to update
 /// the appropriate stats.
 pub fn serve_telemetry(
-    dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    monitor_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     hasher: WlanHasher,
     inspect_node: InspectNode,
@@ -283,7 +283,7 @@ pub fn serve_telemetry(
         let mut interval_tick = 0u64;
         let mut telemetry = Telemetry::new(
             cloned_sender,
-            dev_svc_proxy,
+            monitor_svc_proxy,
             cobalt_1dot1_proxy,
             hasher,
             inspect_node,
@@ -349,6 +349,8 @@ struct ConnectedState {
 
     last_signal_report: fasync::Time,
     is_driver_unresponsive: InspectableBool,
+
+    telemetry_proxy: Option<fidl_fuchsia_wlan_sme::TelemetryProxy>,
 }
 
 #[derive(Debug)]
@@ -462,11 +464,9 @@ fn inspect_record_connection_status(
 fn inspect_record_external_data(
     external_inspect_node: &ExternalInspectNode,
     telemetry_sender: TelemetrySender,
-    dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
 ) {
     external_inspect_node.node.record_lazy_child("connection_status", move || {
         let telemetry_sender = telemetry_sender.clone();
-        let dev_svc_proxy = dev_svc_proxy.clone();
         async move {
             let inspector = Inspector::new();
             let (sender, receiver) = oneshot::channel();
@@ -479,7 +479,7 @@ fn inspect_record_external_data(
                 }
             };
 
-            if let ConnectionStateInfo::Connected { iface_id, latest_ap_state } = info {
+            if let ConnectionStateInfo::Connected { latest_ap_state, telemetry_proxy, .. } = info {
                 inspect_insert!(inspector.root(), connected_network: {
                     rssi_dbm: latest_ap_state.rssi_dbm,
                     snr_db: latest_ap_state.snr_db,
@@ -496,29 +496,30 @@ fn inspect_record_external_data(
 
                 // TODO(fxbug.dev/90121): This timeout is no longer needed once diagnostics
                 //                        has a timeout on reading LazyNode.
-                match dev_svc_proxy.get_iface_histogram_stats(iface_id)
-                        .map_err(|_e| ())
+                if let Some(proxy) = telemetry_proxy {
+                    match proxy.get_histogram_stats().map_err(|_e| ())
                         .on_timeout(GET_IFACE_STATS_TIMEOUT, || Err(()))
                         .await {
-                    Ok(GetIfaceHistogramStatsResponse::Stats(stats)) => {
-                        let mut histograms = HistogramsNode::new(
-                            inspector.root().create_child("histograms"),
-                        );
-                        histograms
-                            .log_per_antenna_snr_histograms(&stats.snr_histograms[..]);
-                        histograms.log_per_antenna_rx_rate_histograms(
-                            &stats.rx_rate_index_histograms[..],
-                        );
-                        histograms.log_per_antenna_noise_floor_histograms(
-                            &stats.noise_floor_histograms[..],
-                        );
-                        histograms.log_per_antenna_rssi_histograms(
-                            &stats.rssi_histograms[..],
-                        );
+                            Ok(Ok(stats)) => {
+                                let mut histograms = HistogramsNode::new(
+                                    inspector.root().create_child("histograms"),
+                                );
+                                histograms
+                                    .log_per_antenna_snr_histograms(&stats.snr_histograms[..]);
+                                histograms.log_per_antenna_rx_rate_histograms(
+                                    &stats.rx_rate_index_histograms[..],
+                                );
+                                histograms.log_per_antenna_noise_floor_histograms(
+                                    &stats.noise_floor_histograms[..],
+                                );
+                                histograms.log_per_antenna_rssi_histograms(
+                                    &stats.rssi_histograms[..],
+                                );
 
-                        inspector.root().record(histograms);
-                    }
-                    _ => (),
+                                inspector.root().record(histograms);
+                            }
+                            _ => (),
+                        }
                 }
             }
             Ok(inspector)
@@ -664,7 +665,7 @@ impl ExternalInspectNode {
 const UNRESPONSIVE_FLAG_MIN_DURATION: zx::Duration = zx::Duration::from_seconds(60);
 
 pub struct Telemetry {
-    dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    monitor_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     connection_state: ConnectionState,
     last_checked_connection_state: fasync::Time,
     stats_logger: StatsLogger,
@@ -694,7 +695,7 @@ pub struct Telemetry {
 impl Telemetry {
     pub fn new(
         telemetry_sender: TelemetrySender,
-        dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+        monitor_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
         hasher: WlanHasher,
         inspect_node: InspectNode,
@@ -717,13 +718,9 @@ impl Telemetry {
         let connect_events = inspect_node.create_child("connect_events");
         let disconnect_events = inspect_node.create_child("disconnect_events");
         let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
-        inspect_record_external_data(
-            &external_inspect_node,
-            telemetry_sender,
-            dev_svc_proxy.clone(),
-        );
+        inspect_record_external_data(&external_inspect_node, telemetry_sender);
         Self {
-            dev_svc_proxy,
+            monitor_svc_proxy,
             connection_state: ConnectionState::Idle(IdleState { connect_start_time: None }),
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
@@ -773,28 +770,29 @@ impl Telemetry {
                 }
 
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
-                match self
-                    .dev_svc_proxy
-                    .get_iface_counter_stats(state.iface_id)
-                    .map_err(|_e| ())
-                    .on_timeout(GET_IFACE_STATS_TIMEOUT, || Err(()))
-                    .await
-                {
-                    Ok(GetIfaceCounterStatsResponse::Stats(stats)) => {
-                        if let Some(prev_counters) = state.prev_counters.as_ref() {
-                            diff_and_log_counters(
-                                &mut self.stats_logger,
-                                prev_counters,
-                                &stats,
-                                duration,
-                            )
-                            .await;
+                if let Some(proxy) = &state.telemetry_proxy {
+                    match proxy
+                        .get_counter_stats()
+                        .map_err(|_e| ())
+                        .on_timeout(GET_IFACE_STATS_TIMEOUT, || Err(()))
+                        .await
+                    {
+                        Ok(Ok(stats)) => {
+                            if let Some(prev_counters) = state.prev_counters.as_ref() {
+                                diff_and_log_counters(
+                                    &mut self.stats_logger,
+                                    prev_counters,
+                                    &stats,
+                                    duration,
+                                )
+                                .await;
+                            }
+                            let _prev = state.prev_counters.replace(stats);
                         }
-                        let _prev = state.prev_counters.replace(stats);
-                    }
-                    _ => {
-                        self.get_iface_stats_fail_count.add(1);
-                        let _ = state.prev_counters.take();
+                        _ => {
+                            self.get_iface_stats_fail_count.add(1);
+                            let _ = state.prev_counters.take();
+                        }
                     }
                 }
             }
@@ -823,6 +821,7 @@ impl Telemetry {
                     ConnectionState::Connected(state) => ConnectionStateInfo::Connected {
                         iface_id: state.iface_id,
                         latest_ap_state: state.latest_ap_state.clone(),
+                        telemetry_proxy: state.telemetry_proxy.clone(),
                     },
                 };
                 let _result = sender.send(QueryStatusResult { connection_state: info });
@@ -948,6 +947,21 @@ impl Telemetry {
                             .log_reconnect_cobalt_metrics(total_downtime, disconnect_source)
                             .await;
                     }
+                    let telemetry_proxy = match self
+                        .monitor_svc_proxy
+                        .get_sme_telemetry(iface_id)
+                        .await
+                    {
+                        Ok(Ok(svc)) => svc.into_proxy().ok(),
+                        Ok(Err(e)) => {
+                            error!("Request for SME telemetry for iface {} completed with error {}. No telemetry will be captured.", iface_id, e);
+                            None
+                        }
+                        Err(e) => {
+                            error!("Failed to request SME telemetry for iface {} with error {}. No telemetry will be captured.", iface_id, e);
+                            None
+                        }
+                    };
                     self.connection_state = ConnectionState::Connected(ConnectedState {
                         iface_id,
                         new_connect_start_time: None,
@@ -964,6 +978,8 @@ impl Telemetry {
                             &self.inspect_node,
                             "is_driver_unresponsive",
                         ),
+
+                        telemetry_proxy,
                     });
                     self.last_checked_connection_state = now;
                 }
@@ -2595,14 +2611,13 @@ impl ConnectAttemptsCounter {
 
 #[cfg(test)]
 mod tests {
+    use futures::stream::FusedStream;
+
     use {
         super::*,
         crate::util::testing::{create_inspect_persistence_channel, create_wlan_hasher},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
-        fidl_fuchsia_wlan_device_service::{
-            DeviceServiceRequest, GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
-        },
         fidl_fuchsia_wlan_stats,
         fuchsia_inspect::{testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
@@ -2628,24 +2643,25 @@ mod tests {
                 fuchsia_inspect::{assert_data_tree, reader},
             };
 
-            let read_fut = reader::read(&$test_helper.inspector);
+            let inspector = $test_helper.inspector.clone();
+            let read_fut = reader::read(&inspector);
             pin_mut!(read_fut);
             loop {
                 match $test_helper.exec.run_until_stalled(&mut read_fut) {
                     Poll::Pending => {
                         // Run telemetry test future so it can respond to QueryStatus request,
                         // while clearing out any potentially blocking Cobalt events
-                        drain_cobalt_events(
-                            &mut $test_helper.exec,
-                            &mut $test_helper.cobalt_1dot1_stream,
-                            &mut $test_helper.cobalt_events,
-                            &mut $test_fut,
-                        );
+                        $test_helper.drain_cobalt_events(&mut $test_fut);
                         // Manually respond to iface stats request
-                        respond_iface_histogram_stats_req(
-                            &mut $test_helper.exec,
-                            &mut $test_helper.dev_svc_stream,
-                        );
+                        if let Some(telemetry_svc_stream) = &mut $test_helper.telemetry_svc_stream {
+                            if !telemetry_svc_stream.is_terminated() {
+                                respond_iface_histogram_stats_req(
+                                    &mut $test_helper.exec,
+                                    telemetry_svc_stream,
+                                );
+                            }
+                        }
+
                     }
                     Poll::Ready(result) => {
                         let hierarchy = result.expect("failed to get hierarchy");
@@ -2704,7 +2720,7 @@ mod tests {
     fn test_stat_cycles() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -2755,7 +2771,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(8.hours(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -2904,7 +2920,7 @@ mod tests {
     fn test_connected_counters_increase_when_connected() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -2948,7 +2964,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(10.minutes(), test_fut.as_mut());
 
@@ -2972,7 +2988,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
@@ -2996,7 +3012,7 @@ mod tests {
     fn test_counters_connect_then_disconnect() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
 
@@ -3005,7 +3021,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         // The 5 seconds connected duration is not accounted for yet.
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3053,7 +3069,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
         // Indicate that there's no saved neighbor in vicinity
@@ -3062,7 +3078,7 @@ mod tests {
             num_candidates: Ok(0),
             selected_any: false,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3103,7 +3119,7 @@ mod tests {
             num_candidates: Ok(1),
             selected_any: false,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         // `downtime_no_saved_neighbor_duration` counter is not updated right away.
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3150,7 +3166,7 @@ mod tests {
             num_candidates: Ok(0),
             selected_any: false,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
 
         // However, this time neither of the downtime counters should be incremented
@@ -3205,7 +3221,7 @@ mod tests {
     fn test_disconnect_count_counter() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
@@ -3306,7 +3322,7 @@ mod tests {
     fn test_rx_tx_counters_no_issue() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3333,9 +3349,9 @@ mod tests {
     #[fuchsia::test]
     fn test_tx_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 tx_total: 10 * seed,
                 tx_drop: 3 * seed,
                 ..fake_iface_counter_stats(seed)
@@ -3343,7 +3359,7 @@ mod tests {
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3372,9 +3388,9 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 rx_unicast_total: 10 * seed,
                 rx_unicast_drop: 3 * seed,
                 ..fake_iface_counter_stats(seed)
@@ -3382,7 +3398,7 @@ mod tests {
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3411,9 +3427,9 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_tx_high_but_not_very_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 // 3% drop rate would be high, but not very high
                 rx_unicast_total: 100 * seed,
                 rx_unicast_drop: 3 * seed,
@@ -3424,7 +3440,7 @@ mod tests {
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3454,16 +3470,16 @@ mod tests {
     #[fuchsia::test]
     fn test_no_rx_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 rx_unicast_total: 10,
                 ..fake_iface_counter_stats(seed)
             })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3492,12 +3508,10 @@ mod tests {
     #[fuchsia::test]
     fn test_get_iface_stats_fail() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
-            GetIfaceCounterStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED)
-        }));
+        test_helper.set_counter_stats_resp(Box::new(|| Err(zx::sys::ZX_ERR_NOT_SUPPORTED)));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3560,7 +3574,7 @@ mod tests {
     fn test_log_daily_uptime_ratio_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
 
@@ -3568,7 +3582,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
 
@@ -3610,7 +3624,7 @@ mod tests {
         disconnect_source: fidl_sme::DisconnectSource,
     ) {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(4.hours(), test_fut.as_mut());
 
@@ -3618,7 +3632,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
         test_helper.drain_cobalt_events(&mut test_fut);
     }
 
@@ -3699,7 +3713,7 @@ mod tests {
 
         // Connect for another 1 day to dilute the 7d ratio
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
@@ -3752,7 +3766,7 @@ mod tests {
     fn test_log_daily_roaming_disconnect_per_day_connected_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
 
@@ -3765,7 +3779,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
 
@@ -3791,14 +3805,14 @@ mod tests {
     fn test_log_daily_disconnect_per_day_connected_cobalt_metric_device_high_disconnect() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hours(), test_fut.as_mut());
         let info = fake_disconnect_info();
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(23.hours(), test_fut.as_mut());
 
@@ -3811,9 +3825,9 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_rx_tx_ratio_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 tx_total: 10 * seed,
                 // TX drop rate stops increasing at 1 hour + TELEMETRY_QUERY_INTERVAL mark.
                 // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
@@ -3834,7 +3848,7 @@ mod tests {
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
@@ -3905,7 +3919,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
@@ -3970,7 +3984,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
@@ -3999,7 +4013,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
@@ -4009,7 +4023,7 @@ mod tests {
             num_candidates: Ok(0),
             selected_any: false,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
@@ -4034,9 +4048,9 @@ mod tests {
     #[fuchsia::test]
     fn test_log_hourly_fleetwide_rx_tx_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+        test_helper.set_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
-            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            Ok(fidl_fuchsia_wlan_stats::IfaceCounterStats {
                 tx_total: 10 * seed,
                 // TX drop rate stops increasing at 10 min + TELEMETRY_QUERY_INTERVAL mark.
                 // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
@@ -4057,7 +4071,7 @@ mod tests {
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
@@ -4245,7 +4259,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.hours(), test_fut.as_mut());
 
@@ -4371,7 +4385,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         const DUR_MIN: i64 = 125;
         test_helper.advance_by(DUR_MIN.minutes(), test_fut.as_mut());
@@ -4427,7 +4441,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
         test_helper.send_connected_event(random_bss_description!(Wpa2));
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         const DUR_MIN: i64 = 250;
         test_helper.advance_by(DUR_MIN.minutes(), test_fut.as_mut());
@@ -4968,7 +4982,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(42.minutes(), test_fut.as_mut());
         // Indicate that there's no saved neighbor in vicinity
@@ -4977,7 +4991,7 @@ mod tests {
             num_candidates: Ok(0),
             selected_any: false,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.minutes(), test_fut.as_mut());
         // Indicate that there's some saved neighbor in vicinity
@@ -4986,7 +5000,7 @@ mod tests {
             num_candidates: Ok(5),
             selected_any: true,
         });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(7.minutes(), test_fut.as_mut());
         // Reconnect
@@ -5022,7 +5036,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(3.seconds(), test_fut.as_mut());
         // Reconnect
@@ -5062,7 +5076,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
         let downtime = 5_000_000;
         test_helper.advance_by(downtime.micros(), test_fut.as_mut());
 
@@ -5625,10 +5639,12 @@ mod tests {
     struct TestHelper {
         telemetry_sender: TelemetrySender,
         inspector: Inspector,
-        dev_svc_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        monitor_svc_stream: fidl_fuchsia_wlan_device_service::DeviceMonitorRequestStream,
+        telemetry_svc_stream: Option<fidl_fuchsia_wlan_sme::TelemetryRequestStream>,
         cobalt_1dot1_stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
         persistence_stream: mpsc::Receiver<String>,
-        iface_counter_stats_resp: Option<Box<dyn Fn() -> GetIfaceCounterStatsResponse>>,
+        counter_stats_resp:
+            Option<Box<dyn Fn() -> fidl_fuchsia_wlan_sme::TelemetryGetCounterStatsResult>>,
         /// As requests to Cobalt are responded to via `self.drain_cobalt_events()`,
         /// their payloads are drained to this HashMap
         cobalt_events: Vec<MetricEvent>,
@@ -5638,6 +5654,41 @@ mod tests {
     }
 
     impl TestHelper {
+        /// Advance executor until stalled.
+        /// This function will also reply to any ongoing requests to establish an iface
+        /// telemetry channel.
+        fn advance_test_fut<T>(
+            &mut self,
+            test_fut: &mut (impl Future<Output = T> + Unpin),
+        ) -> Poll<T> {
+            let result = self.exec.run_until_stalled(test_fut);
+            if let Poll::Ready(Some(Ok(req))) =
+                self.exec.run_until_stalled(&mut self.monitor_svc_stream.next())
+            {
+                match req {
+                    fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetSmeTelemetry {
+                        iface_id,
+                        responder,
+                    } => {
+                        assert_eq!(iface_id, IFACE_ID);
+                        let (telemetry_client, telemetry_stream) =
+                            fidl::endpoints::create_request_stream::<
+                                fidl_fuchsia_wlan_sme::TelemetryMarker,
+                            >()
+                            .expect("Failed to create telemetry proxy and stream");
+                        responder
+                            .send(&mut Ok(telemetry_client))
+                            .expect("Failed to respond to telemetry request");
+                        self.telemetry_svc_stream = Some(telemetry_stream);
+                        self.exec.run_until_stalled(test_fut)
+                    }
+                    _ => panic!("Unexpected device monitor request: {:?}", req),
+                }
+            } else {
+                result
+            }
+        }
+
         /// Advance executor by `duration`.
         /// This function repeatedly advances the executor by 1 second, triggering
         /// any expired timers and running the test_fut, until `duration` is reached.
@@ -5660,27 +5711,33 @@ mod tests {
             for _i in 0..(duration.into_nanos() / STEP_INCREMENT.into_nanos()) {
                 self.exec.set_fake_time(fasync::Time::after(STEP_INCREMENT));
                 let _ = self.exec.wake_expired_timers();
-                assert_eq!(self.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+                assert_eq!(self.advance_test_fut(&mut test_fut), Poll::Pending);
 
-                respond_iface_counter_stats_req(
-                    &mut self.exec,
-                    &mut self.dev_svc_stream,
-                    &mut self.iface_counter_stats_resp,
-                );
+                if let Some(telemetry_svc_stream) = &mut self.telemetry_svc_stream {
+                    if !telemetry_svc_stream.is_terminated() {
+                        respond_iface_counter_stats_req(
+                            &mut self.exec,
+                            telemetry_svc_stream,
+                            &mut self.counter_stats_resp,
+                        );
+                    }
+                }
 
                 // Respond to any potential Cobalt request, draining their payloads to
                 // `self.cobalt_events`.
                 self.drain_cobalt_events(&mut test_fut);
 
-                assert_eq!(self.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+                assert_eq!(self.advance_test_fut(&mut test_fut), Poll::Pending);
             }
         }
 
-        fn set_iface_counter_stats_resp(
+        fn set_counter_stats_resp(
             &mut self,
-            iface_counter_stats_resp: Box<dyn Fn() -> GetIfaceCounterStatsResponse>,
+            counter_stats_resp: Box<
+                dyn Fn() -> fidl_fuchsia_wlan_sme::TelemetryGetCounterStatsResult,
+            >,
         ) {
-            let _ = self.iface_counter_stats_resp.replace(iface_counter_stats_resp);
+            let _ = self.counter_stats_resp.replace(counter_stats_resp);
         }
 
         /// Advance executor by some duration until the next time `test_fut` handles periodic
@@ -5701,19 +5758,24 @@ mod tests {
         /// Continually execute the future and respond to any incoming Cobalt request with Ok.
         /// Append each metric request payload into `self.cobalt_events`.
         fn drain_cobalt_events(&mut self, test_fut: &mut (impl Future + Unpin)) {
-            drain_cobalt_events(
-                &mut self.exec,
-                &mut self.cobalt_1dot1_stream,
-                &mut self.cobalt_events,
-                test_fut,
-            )
+            let mut made_progress = true;
+            while made_progress {
+                let _result = self.advance_test_fut(test_fut);
+                made_progress = false;
+                while let Poll::Ready(Some(Ok(req))) =
+                    self.exec.run_until_stalled(&mut self.cobalt_1dot1_stream.next())
+                {
+                    self.cobalt_events.append(&mut req.respond_to_metric_req(&mut Ok(())));
+                    made_progress = true;
+                }
+            }
         }
 
         fn get_logged_metrics(&self, metric_id: u32) -> Vec<MetricEvent> {
             self.cobalt_events.iter().filter(|ev| ev.metric_id == metric_id).cloned().collect()
         }
 
-        fn send_connected_event(&self, latest_ap_state: BssDescription) {
+        fn send_connected_event(&mut self, latest_ap_state: BssDescription) {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
                 result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
@@ -5740,48 +5802,30 @@ mod tests {
         }
     }
 
-    fn drain_cobalt_events(
-        executor: &mut fasync::TestExecutor,
-        cobalt_1dot1_stream: &mut fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
-        cobalt_events: &mut Vec<MetricEvent>,
-        test_fut: &mut (impl Future + Unpin),
-    ) {
-        let mut made_progress = true;
-        while made_progress {
-            let _result = executor.run_until_stalled(test_fut);
-            made_progress = false;
-            while let Poll::Ready(Some(Ok(req))) =
-                executor.run_until_stalled(&mut cobalt_1dot1_stream.next())
-            {
-                cobalt_events.append(&mut req.respond_to_metric_req(&mut Ok(())));
-                made_progress = true;
-            }
-        }
-    }
-
     fn respond_iface_counter_stats_req(
         executor: &mut fasync::TestExecutor,
-        dev_svc_stream: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
-        iface_counter_stats_resp: &mut Option<Box<dyn Fn() -> GetIfaceCounterStatsResponse>>,
+        telemetry_svc_stream: &mut fidl_fuchsia_wlan_sme::TelemetryRequestStream,
+        counter_stats_resp: &mut Option<
+            Box<dyn Fn() -> fidl_fuchsia_wlan_sme::TelemetryGetCounterStatsResult>,
+        >,
     ) {
-        let dev_svc_req_fut = dev_svc_stream.try_next();
-        pin_mut!(dev_svc_req_fut);
-        if let Poll::Ready(Ok(Some(request))) = executor.run_until_stalled(&mut dev_svc_req_fut) {
+        let telemetry_svc_req_fut = telemetry_svc_stream.try_next();
+        pin_mut!(telemetry_svc_req_fut);
+        if let Poll::Ready(Ok(Some(request))) =
+            executor.run_until_stalled(&mut telemetry_svc_req_fut)
+        {
             match request {
-                DeviceServiceRequest::GetIfaceCounterStats { iface_id, responder } => {
-                    // Telemetry should make counter stats request to the client iface that's
-                    // connected.
-                    assert_eq!(iface_id, IFACE_ID);
-                    let mut resp = match &iface_counter_stats_resp {
+                fidl_fuchsia_wlan_sme::TelemetryRequest::GetCounterStats { responder } => {
+                    let mut resp = match &counter_stats_resp {
                         Some(get_resp) => get_resp(),
                         None => {
                             let seed = fasync::Time::now().into_nanos() as u64;
-                            GetIfaceCounterStatsResponse::Stats(fake_iface_counter_stats(seed))
+                            Ok(fake_iface_counter_stats(seed))
                         }
                     };
                     responder
                         .send(&mut resp)
-                        .expect("expect sending IfaceCounterStats response to succeed");
+                        .expect("expect sending GetCounterStats response to succeed");
                 }
                 _ => {
                     panic!("unexpected request: {:?}", request);
@@ -5792,20 +5836,19 @@ mod tests {
 
     fn respond_iface_histogram_stats_req(
         executor: &mut fasync::TestExecutor,
-        dev_svc_stream: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        telemetry_svc_stream: &mut fidl_fuchsia_wlan_sme::TelemetryRequestStream,
     ) {
-        let dev_svc_req_fut = dev_svc_stream.try_next();
-        pin_mut!(dev_svc_req_fut);
-        if let Poll::Ready(Ok(Some(request))) = executor.run_until_stalled(&mut dev_svc_req_fut) {
+        let telemetry_svc_req_fut = telemetry_svc_stream.try_next();
+        pin_mut!(telemetry_svc_req_fut);
+        if let Poll::Ready(Ok(Some(request))) =
+            executor.run_until_stalled(&mut telemetry_svc_req_fut)
+        {
             match request {
-                DeviceServiceRequest::GetIfaceHistogramStats { iface_id, responder } => {
-                    // Telemetry should make counter stats request to the client iface that's
-                    // connected.
-                    assert_eq!(iface_id, IFACE_ID);
+                fidl_fuchsia_wlan_sme::TelemetryRequest::GetHistogramStats { responder } => {
                     let stats = fake_iface_histogram_stats();
                     responder
-                        .send(&mut GetIfaceHistogramStatsResponse::Stats(stats))
-                        .expect("expect sending IfaceHistogramStats response to succeed");
+                        .send(&mut Ok(stats))
+                        .expect("expect sending GetHistogramStats response to succeed");
                 }
                 _ => {
                     panic!("unexpected request: {:?}", request);
@@ -5921,8 +5964,8 @@ mod tests {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
-        let (dev_svc_proxy, dev_svc_stream) =
-            create_proxy_and_stream::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
+        let (monitor_svc_proxy, monitor_svc_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceService proxy");
 
         let (cobalt_1dot1_proxy, cobalt_1dot1_stream) =
@@ -5934,7 +5977,7 @@ mod tests {
         let external_inspect_node = inspector.root().create_child("external");
         let (persistence_req_sender, persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, test_fut) = serve_telemetry(
-            dev_svc_proxy,
+            monitor_svc_proxy,
             cobalt_1dot1_proxy,
             create_wlan_hasher(),
             inspect_node,
@@ -5949,10 +5992,11 @@ mod tests {
         let test_helper = TestHelper {
             telemetry_sender,
             inspector,
-            dev_svc_stream,
+            monitor_svc_stream,
+            telemetry_svc_stream: None,
             cobalt_1dot1_stream,
             persistence_stream,
-            iface_counter_stats_resp: None,
+            counter_stats_resp: None,
             cobalt_events: vec![],
             exec,
         };

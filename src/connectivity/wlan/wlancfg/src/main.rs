@@ -330,7 +330,7 @@ async fn run_all_futures() -> Result<(), Error> {
     let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
     let external_inspect_node = component::inspector().root().create_child("external");
     let (telemetry_sender, telemetry_fut) = serve_telemetry(
-        wlan_svc.clone(),
+        monitor_svc.clone(),
         cobalt_1dot1_proxy,
         hasher.clone(),
         component::inspector().root().create_child("client_stats"),
