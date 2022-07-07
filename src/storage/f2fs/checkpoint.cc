@@ -586,8 +586,6 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   GetNodeManager().FlushNatEntries();
   GetSegmentManager().FlushSitEntries();
 
-  GetSegmentManager().ResetVictimSegmap();
-
   // unlock all the fs_lock[] in do_checkpoint()
   DoCheckpoint(is_umount);
 

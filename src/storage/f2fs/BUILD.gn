@@ -45,6 +45,7 @@ static_library("f2fs") {
     "file.h",
     "file_cache.h",
     "fsck.h",
+    "gc.h",
     "mkfs.h",
     "mount.h",
     "node.h",

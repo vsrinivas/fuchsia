@@ -37,6 +37,7 @@ void F2fs::PutSuper() {
 
   node_manager_.reset();
   segment_manager_.reset();
+  gc_manager_.reset();
   raw_sb_.reset();
   superblock_info_.reset();
 }
@@ -286,6 +287,9 @@ void F2fs::Reset() {
     segment_manager_->DestroySegmentManager();
     segment_manager_.reset();
   }
+  if (gc_manager_) {
+    gc_manager_.reset();
+  }
   if (superblock_info_) {
     superblock_info_.reset();
   }
@@ -337,6 +341,7 @@ zx_status_t F2fs::FillSuper() {
 
   segment_manager_ = std::make_unique<SegmentManager>(this);
   node_manager_ = std::make_unique<NodeManager>(this);
+  gc_manager_ = std::make_unique<GcManager>(this);
   if (err = segment_manager_->BuildSegmentManager(); err != ZX_OK) {
     return err;
   }
@@ -344,9 +349,6 @@ zx_status_t F2fs::FillSuper() {
   if (err = node_manager_->BuildNodeManager(); err != ZX_OK) {
     return err;
   }
-
-  // TODO: Enable gc after impl dirty data cache
-  // BuildGcManager(superblock_info);
 
   // if there are nt orphan nodes free them
   if (err = RecoverOrphanInodes(); err != ZX_OK) {

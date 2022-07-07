@@ -9,8 +9,9 @@ namespace f2fs {
 
 // constant macro
 constexpr uint32_t kNullSegNo = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t kNullSecNo = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t kUint32Max = std::numeric_limits<uint32_t>::max();
-constexpr uint32_t kMaxSearchLimit = 20;
+constexpr uint32_t kMaxSearchLimit = 4096;
 
 // during checkpoint, BioPrivate is used to synchronize the last bio
 struct BioPrivate {
@@ -45,6 +46,7 @@ struct VictimSelPolicy {
   AllocMode alloc_mode = AllocMode::kLFS;  // LFS or SSR
   GcMode gc_mode = GcMode::kGcCb;          // cost effective or greedy
   uint8_t *dirty_segmap = nullptr;         // dirty segment bitmap
+  uint32_t max_search = kMaxSearchLimit;   // maximum # of segments to search
   uint32_t offset = 0;                     // last scanned bitmap offset
   uint32_t ofs_unit = 0;                   // bitmap search unit
   uint32_t min_cost = 0;                   // minimum cost
@@ -110,7 +112,7 @@ struct DirtySeglistInfo {
   std::unique_ptr<uint8_t[]> dirty_segmap[static_cast<int>(DirtyType::kNrDirtytype)];
   std::mutex seglist_lock;                                       // lock for segment bitmaps
   int nr_dirty[static_cast<int>(DirtyType::kNrDirtytype)] = {};  // # of dirty segments
-  std::unique_ptr<uint8_t[]> victim_segmap[2];                   // kBgGc, kFgGc
+  std::unique_ptr<uint8_t[]> victim_secmap;                      // background gc victims
 };
 
 // for active log information
@@ -188,7 +190,7 @@ class SegmentManager {
   block_t ReservedSections();
   bool NeedSSR();
   int GetSsrSegment(CursegType type);
-  bool HasNotEnoughFreeSecs();
+  bool HasNotEnoughFreeSecs(uint32_t freed = 0);
   uint32_t Utilization();
   bool NeedInplaceUpdate(VnodeF2fs *vnode);
   uint32_t CursegSegno(int type);
@@ -203,6 +205,7 @@ class SegmentManager {
   void SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version);
   block_t StartSumBlock();
   block_t SumBlkAddr(int base, int type);
+  bool SecUsageCheck(uint32_t secno);
 
   bool NeedToCheckpoint();
   void BalanceFs();
@@ -267,13 +270,12 @@ class SegmentManager {
   void BuildSitEntries();
   void InitFreeSegmap();
   void InitDirtySegmap();
-  zx_status_t InitVictimSegmap();
+  zx_status_t InitVictimSecmap();
   zx_status_t BuildDirtySegmap();
   void InitMinMaxMtime();
 
   void DiscardDirtySegmap(enum DirtyType dirty_type);
-  void ResetVictimSegmap();
-  void DestroyVictimSegmap();
+  void DestroyVictimSecmap();
   void DestroyDirtySegmap();
 
   void DestroyCurseg();
@@ -386,19 +388,21 @@ class SegmentManager {
   // Meanwhile, SSR is to reuse invalid blocks for new block allocation, and thus
   // it uses kGcGreedy to select a dirty segment with more invalid blocks
   // among the same type of dirty segments as that of the current segment.
-  // |out| contains the segment number of the seleceted victim, and
-  // it returns true when it finds a victim segment.
-  bool GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode, uint32_t *out);
+  // If it succeeds in finding an eligible victim, it returns the segment number of the selected
+  // victim. If it fails, it returns ZX_ERR_UNAVAILABLE.
+  zx::status<uint32_t> GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode);
 
   // This function calculates the maximum cost for a victim in each GcType
   // Any segment with a less cost value becomes a victim candidate.
-  uint32_t GetMaxCost(VictimSelPolicy *p);
+  uint32_t GetMaxCost(const VictimSelPolicy &policy);
 
   // This method determines GcMode for GetVictimByDefault
-  void SelectPolicy(GcType gc_type, CursegType type, VictimSelPolicy *p);
+  VictimSelPolicy GetVictimSelPolicy(GcType gc_type, CursegType type, AllocMode alloc_mode);
 
   // This method calculates the gc cost for each dirty segment
-  uint32_t GetGcCost(uint32_t segno, VictimSelPolicy *p);
+  uint32_t GetGcCost(uint32_t segno, const VictimSelPolicy &policy);
+
+  uint32_t GetGreedyCost(uint32_t segno);
 
  private:
   F2fs *fs_ = nullptr;

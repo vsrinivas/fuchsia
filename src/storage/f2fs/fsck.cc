@@ -1447,9 +1447,6 @@ void FsckWorker::InitSuperblockInfo() {
   superblock_info_.SetRootIno(LeToCpu(raw_super.root_ino));
   superblock_info_.SetNodeIno(LeToCpu(raw_super.node_ino));
   superblock_info_.SetMetaIno(LeToCpu(raw_super.meta_ino));
-#if 0  // porting needed
-  superblock_info_.cur_victim_sec = kNullSegNo;
-#endif
 }
 
 zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCheckpoint(

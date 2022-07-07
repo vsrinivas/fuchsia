@@ -389,15 +389,6 @@ class SuperblockInfo {
       0};                   // # of pages, see count_type
   uint64_t mount_opt_ = 0;  // set with kMountOptxxxx bits according to F2fs::mount_options_
 
-#if 0  // porting needed
-  // fs::SharedMutex gc_mutex;                    // mutex for GC
-  // struct F2fsGc_kthread *gc_thread = nullptr;  // GC thread
-  // for stat information.
-  // one is for the LFS mode, and the other is for the SSR mode.
-  // struct f2fs_stat_info *stat_info = nullptr;  // FS status information
-  // int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
-  // int bg_gc = 0;                               // background gc calls
-#endif
   uint64_t segment_count_[2] = {0};  // # of allocated segments
   uint64_t block_count_[2] = {0};    // # of allocated blocks
   uint32_t last_victim_[2] = {0};    // last victim segment #

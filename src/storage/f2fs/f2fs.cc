@@ -302,6 +302,9 @@ bool F2fs::IsValid() const {
   if (node_manager_ == nullptr) {
     return false;
   }
+  if (gc_manager_ == nullptr) {
+    return false;
+  }
   return true;
 }
 

@@ -140,6 +140,17 @@ inline bool TestAndClearBit(uint32_t nr, void *addr) {
   return ret;
 }
 
+inline uint32_t CountBits(const void *addr, uint32_t offset, uint32_t len) {
+  uint32_t end = offset + len, sum = 0;
+
+  for (; offset < end; ++offset) {
+    if (TestBit(offset, addr)) {
+      ++sum;
+    }
+  }
+  return sum;
+}
+
 inline void list_add(list_node_t *list, list_node_t *item) {
   list->next->prev = item;
   item->next = list->next;

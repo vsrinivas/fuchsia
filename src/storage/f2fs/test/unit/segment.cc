@@ -160,89 +160,110 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
   }
 }
 
+TEST_F(SegmentManagerTest, GetVictimSelPolicy) {
+  VictimSelPolicy policy = fs_->GetSegmentManager().GetVictimSelPolicy(
+      GcType::kFgGc, CursegType::kCursegHotNode, AllocMode::kSSR);
+  ASSERT_EQ(policy.gc_mode, GcMode::kGcGreedy);
+  ASSERT_EQ(policy.ofs_unit, 1U);
+
+  policy = fs_->GetSegmentManager().GetVictimSelPolicy(GcType::kFgGc, CursegType::kNoCheckType,
+                                                       AllocMode::kLFS);
+  ASSERT_EQ(policy.gc_mode, GcMode::kGcGreedy);
+  ASSERT_EQ(policy.ofs_unit, fs_->GetSuperblockInfo().GetSegsPerSec());
+  ASSERT_EQ(policy.offset,
+            fs_->GetSuperblockInfo().GetLastVictim(static_cast<int>(GcMode::kGcGreedy)));
+
+  policy = fs_->GetSegmentManager().GetVictimSelPolicy(GcType::kBgGc, CursegType::kNoCheckType,
+                                                       AllocMode::kLFS);
+  ASSERT_EQ(policy.gc_mode, GcMode::kGcCb);
+  ASSERT_EQ(policy.ofs_unit, fs_->GetSuperblockInfo().GetSegsPerSec());
+  ASSERT_EQ(policy.offset, fs_->GetSuperblockInfo().GetLastVictim(static_cast<int>(GcMode::kGcCb)));
+
+  DirtySeglistInfo *dirty_info = &fs_->GetSegmentManager().GetDirtySegmentInfo();
+  dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirty)] = kMaxSearchLimit + 2;
+  policy = fs_->GetSegmentManager().GetVictimSelPolicy(GcType::kBgGc, CursegType::kNoCheckType,
+                                                       AllocMode::kLFS);
+  ASSERT_EQ(policy.max_search, kMaxSearchLimit);
+}
+
 TEST_F(SegmentManagerTest, GetMaxCost) {
-  // Get the maximum cost on cost-benefit GC mode
-  VictimSelPolicy p;
-  p.alloc_mode = AllocMode::kSSR;
-  p.min_segno = kNullSegNo;
-  fs_->GetSegmentManager().SelectPolicy(GcType::kBgGc, CursegType::kCursegHotNode, &p);
+  VictimSelPolicy policy = fs_->GetSegmentManager().GetVictimSelPolicy(
+      GcType::kFgGc, CursegType::kCursegHotNode, AllocMode::kSSR);
+  policy.min_cost = fs_->GetSegmentManager().GetMaxCost(policy);
+  ASSERT_EQ(policy.min_cost,
+            static_cast<uint32_t>(1 << fs_->GetSuperblockInfo().GetLogBlocksPerSeg()));
 
-  p.gc_mode = GcMode::kGcGreedy;
-  p.min_cost = fs_->GetSegmentManager().GetMaxCost(&p);
-  ASSERT_EQ(p.min_cost,
-            static_cast<uint32_t>(1 << fs_->GetSuperblockInfo().GetLogBlocksPerSeg() * p.ofs_unit));
+  policy = fs_->GetSegmentManager().GetVictimSelPolicy(GcType::kFgGc, CursegType::kNoCheckType,
+                                                       AllocMode::kLFS);
+  policy.min_cost = fs_->GetSegmentManager().GetMaxCost(policy);
+  ASSERT_EQ(policy.min_cost,
+            static_cast<uint32_t>(2 * (1 << fs_->GetSuperblockInfo().GetLogBlocksPerSeg()) *
+                                  policy.ofs_unit));
 
-  p.gc_mode = GcMode::kGcCb;
-  p.min_cost = fs_->GetSegmentManager().GetMaxCost(&p);
-  ASSERT_EQ(p.min_cost, std::numeric_limits<uint32_t>::max());
+  policy = fs_->GetSegmentManager().GetVictimSelPolicy(GcType::kBgGc, CursegType::kNoCheckType,
+                                                       AllocMode::kLFS);
+  policy.min_cost = fs_->GetSegmentManager().GetMaxCost(policy);
+  ASSERT_EQ(policy.min_cost, std::numeric_limits<uint32_t>::max());
 }
 
 TEST_F(SegmentManagerTest, GetVictimByDefault) {
-  int nwritten = kMaxSearchLimit + 2;
   DirtySeglistInfo *dirty_info = &fs_->GetSegmentManager().GetDirtySegmentInfo();
 
-  // 1. Dirty current segment
-  CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  FileTester::CreateChild(root_dir_.get(), S_IFDIR, "GetVictimByDefault_current_segment");
-  ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
-  TestAndSetBit(curseg->segno,
-                dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirtyHotNode)].get());
-  ++dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirtyHotNode)];
+  uint32_t target_segno;
+  for (target_segno = 0; target_segno < fs_->GetSegmentManager().TotalSegs(); ++target_segno) {
+    if (!fs_->GetSegmentManager().SecUsageCheck(fs_->GetSegmentManager().GetSecNo(target_segno)) &&
+        fs_->GetSegmentManager().GetValidBlocks(target_segno, 0) == 0U) {
+      break;
+    }
+  }
+  ASSERT_NE(target_segno, fs_->GetSegmentManager().TotalSegs());
+  fs_->GetSegmentManager().GetSegmentEntry(target_segno).type =
+      static_cast<uint8_t>(CursegType::kCursegHotNode);
 
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
-                                              AllocMode::kSSR, &(curseg->next_segno));
-
-  // 2. Skip if victim_segmap is set (kFgGc)
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  FileTester::CreateChild(root_dir_.get(), S_IFDIR, "GetVictimByDefault_kFgGc");
-  ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
-  fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
-  fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
-  SetBit(curseg->segno, dirty_info->victim_segmap[static_cast<int>(GcType::kFgGc)].get());
-
-  // 3. Skip if victim_segmap is set (kBgGc)
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  FileTester::CreateChild(root_dir_.get(), S_IFDIR, "GetVictimByDefault_kBgGc");
-  fs_->WriteCheckpoint(false, false);
-  ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
-  fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
-  fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
-  SetBit(curseg->segno, dirty_info->victim_segmap[static_cast<int>(GcType::kBgGc)].get());
-
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
-                                              AllocMode::kSSR, &(curseg->next_segno));
-
-  // 4. Search dirty_map to kMaxSearchLimit
-  for (int i = 0; i < nwritten; ++i) {
-    CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-    FileTester::CreateChild(root_dir_.get(), S_IFDIR,
-                            "GetVictimByDefault_kMaxSearchLimit_" + std::to_string(i));
-    fs_->WriteCheckpoint(false, false);
-    ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
-    fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
-    fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
+  // 1. Test SSR victim
+  fs_->GetSuperblockInfo().SetLastVictim(static_cast<int>(GcType::kBgGc), target_segno);
+  if (!TestAndSetBit(target_segno,
+                     dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirtyHotNode)].get())) {
+    ++dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirtyHotNode)];
   }
 
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
-                                              AllocMode::kSSR, &(curseg->next_segno));
+  auto victim_or = fs_->GetSegmentManager().GetVictimByDefault(
+      GcType::kBgGc, CursegType::kCursegHotNode, AllocMode::kSSR);
+  ASSERT_FALSE(victim_or.is_error());
+  uint32_t get_victim = victim_or.value();
+  ASSERT_EQ(get_victim, target_segno);
 
-  // 4. Search dirty_map from last_victim
-  for (int i = 0; i < nwritten; ++i) {
-    CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-    FileTester::CreateChild(root_dir_.get(), S_IFDIR,
-                            "GetVictimByDefault_last_victim_" + std::to_string(i));
-    fs_->WriteCheckpoint(false, false);
-    ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
-    fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
-    fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
+  // 2. Test FgGc victim
+  fs_->GetSuperblockInfo().SetLastVictim(static_cast<int>(GcType::kFgGc), target_segno);
+  if (!TestAndSetBit(target_segno,
+                     dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirty)].get())) {
+    ++dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirty)];
   }
 
-  curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-  fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
-                                              AllocMode::kSSR, &(curseg->next_segno));
+  victim_or = fs_->GetSegmentManager().GetVictimByDefault(GcType::kFgGc, CursegType::kNoCheckType,
+                                                          AllocMode::kLFS);
+  ASSERT_FALSE(victim_or.is_error());
+  get_victim = victim_or.value();
+  ASSERT_EQ(get_victim, target_segno);
+
+  // 3. Skip if cur_victim_sec is set (SSR)
+  ASSERT_EQ(fs_->GetGcManager().GetCurVictimSec(), fs_->GetSegmentManager().GetSecNo(target_segno));
+  ASSERT_TRUE(TestBit(target_segno,
+                      dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirtyHotNode)].get()));
+  ASSERT_EQ(dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirtyHotNode)], 1);
+  victim_or = fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
+                                                          AllocMode::kSSR);
+  ASSERT_TRUE(victim_or.is_error());
+
+  // 4. Skip if victim_secmap is set (kBgGc)
+  fs_->GetGcManager().SetCurVictimSec(kNullSecNo);
+  ASSERT_TRUE(TestBit(target_segno,
+                      dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirtyHotNode)].get()));
+  ASSERT_EQ(dirty_info->nr_dirty[static_cast<int>(DirtyType::kDirty)], 1);
+  SetBit(fs_->GetSegmentManager().GetSecNo(target_segno), dirty_info->victim_secmap.get());
+  victim_or = fs_->GetSegmentManager().GetVictimByDefault(GcType::kBgGc, CursegType::kCursegHotNode,
+                                                          AllocMode::kLFS);
+  ASSERT_TRUE(victim_or.is_error());
 }
 
 TEST_F(SegmentManagerTest, AllocateNewSegments) {

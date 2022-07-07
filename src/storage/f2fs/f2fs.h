@@ -78,6 +78,7 @@
 #include "src/storage/f2fs/file.h"
 #include "src/storage/f2fs/node.h"
 #include "src/storage/f2fs/segment.h"
+#include "src/storage/f2fs/gc.h"
 #include "src/storage/f2fs/mkfs.h"
 #include "src/storage/f2fs/mount.h"
 #include "src/storage/f2fs/fsck.h"
@@ -159,11 +160,30 @@ class F2fs : public fs::Vfs {
     }
     *out = std::move(bc_);
   }
-  Bcache &GetBc() { return *bc_; }
-  Superblock &RawSb() { return *raw_sb_; }
-  SuperblockInfo &GetSuperblockInfo() { return *superblock_info_; }
-  SegmentManager &GetSegmentManager() { return *segment_manager_; }
-  NodeManager &GetNodeManager() { return *node_manager_; }
+  Bcache &GetBc() {
+    ZX_DEBUG_ASSERT(bc_ != nullptr);
+    return *bc_;
+  }
+  Superblock &RawSb() {
+    ZX_DEBUG_ASSERT(raw_sb_ != nullptr);
+    return *raw_sb_;
+  }
+  SuperblockInfo &GetSuperblockInfo() {
+    ZX_DEBUG_ASSERT(superblock_info_ != nullptr);
+    return *superblock_info_;
+  }
+  SegmentManager &GetSegmentManager() {
+    ZX_DEBUG_ASSERT(segment_manager_ != nullptr);
+    return *segment_manager_;
+  }
+  NodeManager &GetNodeManager() {
+    ZX_DEBUG_ASSERT(node_manager_ != nullptr);
+    return *node_manager_;
+  }
+  GcManager &GetGcManager() {
+    ZX_DEBUG_ASSERT(gc_manager_ != nullptr);
+    return *gc_manager_;
+  }
 
   // For testing Reset() and ResetBc()
   bool IsValid() const;
@@ -181,6 +201,7 @@ class F2fs : public fs::Vfs {
     node_manager_->DestroyNodeManager();
     node_manager_.reset();
   }
+  void ResetGcManager() { gc_manager_.reset(); }
 
   // super.cc
   void PutSuper();
@@ -315,6 +336,7 @@ class F2fs : public fs::Vfs {
   std::unique_ptr<SuperblockInfo> superblock_info_;
   std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<NodeManager> node_manager_;
+  std::unique_ptr<GcManager> gc_manager_;
 
   VnodeCache vnode_cache_;
   std::unique_ptr<Writer> writer_;

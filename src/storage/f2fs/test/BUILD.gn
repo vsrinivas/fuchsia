@@ -26,6 +26,7 @@ test("f2fs_unit") {
     "unit/file.cc",
     "unit/file_cache.cc",
     "unit/fsck.cc",
+    "unit/gc.cc",
     "unit/inline.cc",
     "unit/mkfs.cc",
     "unit/mmap.cc",

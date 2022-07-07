@@ -125,6 +125,8 @@ TEST(SuperblockTest, Reset) {
   fs->GetVCache().Reset();
 
   ASSERT_TRUE(fs->IsValid());
+  fs->ResetGcManager();
+  ASSERT_FALSE(fs->IsValid());
   fs->ResetNodeManager();
   ASSERT_FALSE(fs->IsValid());
   fs->ResetSegmentManager();

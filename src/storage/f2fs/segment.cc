@@ -162,7 +162,12 @@ bool SegmentManager::NeedSSR() {
 
 int SegmentManager::GetSsrSegment(CursegType type) {
   CursegInfo *curseg = CURSEG_I(type);
-  return GetVictimByDefault(GcType::kBgGc, type, AllocMode::kSSR, &(curseg->next_segno));
+  auto segno_or = GetVictimByDefault(GcType::kBgGc, type, AllocMode::kSSR);
+  if (segno_or.is_error()) {
+    return 0;
+  }
+  curseg->next_segno = segno_or.value();
+  return 1;
 }
 
 // TODO: Without gc, we trigger checkpoint aggressively to secure free segments.
@@ -296,9 +301,16 @@ block_t SegmentManager::SumBlkAddr(int base, int type) {
          LeToCpu(superblock_info_->GetCheckpoint().cp_pack_total_block_count) - (base + 1) + type;
 }
 
+bool SegmentManager::SecUsageCheck(unsigned int secno) {
+  if (IsCurSec(secno) || (fs_->GetGcManager().GetCurVictimSec() == secno)) {
+    return true;
+  }
+  return false;
+}
+
 SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); }
 
-bool SegmentManager::HasNotEnoughFreeSecs() {
+bool SegmentManager::HasNotEnoughFreeSecs(uint32_t freed) {
   uint32_t pages_per_sec =
       (1 << superblock_info_->GetLogBlocksPerSeg()) * superblock_info_->GetSegsPerSec();
   int node_secs = ((superblock_info_->GetPageCount(CountType::kDirtyNodes) + pages_per_sec - 1) >>
@@ -311,7 +323,8 @@ bool SegmentManager::HasNotEnoughFreeSecs() {
   if (superblock_info_->IsOnRecovery())
     return false;
 
-  return FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
+  return (FreeSections() + freed) <=
+         safemath::checked_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
 }
 
 // This function balances dirty node and dentry pages.
@@ -332,14 +345,14 @@ void SegmentManager::BalanceFs() {
   if (NeedToCheckpoint()) {
     FX_LOGS(DEBUG) << "[f2fs] High prefree segments: " << PrefreeSegments();
     fs_->WriteCheckpoint(false, false);
+  } else if (HasNotEnoughFreeSecs()) {
+    if (auto ret = fs_->GetGcManager().F2fsGc(); ret.is_error()) {
+      // F2fsGc() returns ZX_ERR_UNAVAILABLE when there is no available victim section, otherwise
+      // BUG
+      ZX_DEBUG_ASSERT(ret.error_value() == ZX_ERR_UNAVAILABLE);
+    }
   }
-#if 0  // porting needed
-  // TODO: Trigger gc when f2fs does not have enough segments.
-  else if (HasNotEnoughFreeSecs()){
-    // mtx_lock(&superblock_info.gc_mutex);
-    // F2fsGc(&superblock_info, 1);
-  } {
-#endif
+
   if (dirty_data_pages >= soft_limit) {
     // f2fs starts writeback when the number of dirty pages exceeds a soft limit.
     WritebackOperation op = {.to_write = dirty_data_pages, .bSync = true};
@@ -396,8 +409,9 @@ void SegmentManager::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
     if (TestAndClearBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get())) {
       --dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
     }
-    ClearBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].get());
-    ClearBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)].get());
+    if (GetValidBlocks(segno, superblock_info_->GetSegsPerSec()) == 0) {
+      ClearBit(GetSecNo(segno), dirty_info_->victim_secmap.get());
+    }
   }
 }
 
@@ -1497,13 +1511,10 @@ void SegmentManager::InitDirtySegmap() {
   }
 }
 
-zx_status_t SegmentManager::InitVictimSegmap() {
-  uint32_t bitmap_size = BitmapSize(TotalSegs());
+zx_status_t SegmentManager::InitVictimSecmap() {
+  uint32_t bitmap_size = BitmapSize(superblock_info_->GetTotalSections());
 
-  dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)] =
-      std::make_unique<uint8_t[]>(bitmap_size);
-  dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)] =
-      std::make_unique<uint8_t[]>(bitmap_size);
+  dirty_info_->victim_secmap = std::make_unique<uint8_t[]>(bitmap_size);
   return ZX_OK;
 }
 
@@ -1519,7 +1530,7 @@ zx_status_t SegmentManager::BuildDirtySegmap() {
   }
 
   InitDirtySegmap();
-  return InitVictimSegmap();
+  return InitVictimSecmap();
 }
 
 // Update min, max modified time for cost-benefit GC algorithm
@@ -1587,15 +1598,7 @@ void SegmentManager::DiscardDirtySegmap(DirtyType dirty_type) {
   dirty_info_->nr_dirty[static_cast<int>(dirty_type)] = 0;
 }
 
-void SegmentManager::ResetVictimSegmap() {
-  uint32_t bitmap_size = BitmapSize(TotalSegs());
-  memset(dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].get(), 0, bitmap_size);
-}
-
-void SegmentManager::DestroyVictimSegmap() {
-  dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].reset();
-  dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)].reset();
-}
+void SegmentManager::DestroyVictimSecmap() { dirty_info_->victim_secmap.reset(); }
 
 void SegmentManager::DestroyDirtySegmap() {
   if (!dirty_info_)
@@ -1606,7 +1609,7 @@ void SegmentManager::DestroyDirtySegmap() {
     DiscardDirtySegmap(static_cast<DirtyType>(i));
   }
 
-  DestroyVictimSegmap();
+  DestroyVictimSecmap();
   dirty_info_.reset();
 }
 
