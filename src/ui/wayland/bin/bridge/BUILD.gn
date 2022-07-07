@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/sys/core/build/core_shard.gni")
 
 declare_args() {
   # Whether protocol logging should be enabled
@@ -41,11 +40,6 @@ fuchsia_component("wayland_bridge") {
 fuchsia_package("bridge") {
   package_name = "wayland_bridge"
   deps = [ ":wayland_bridge" ]
-}
-
-# TODO(https://fxbug.dev/102036) wayland_bridge should be a child of linux_runner, remove this
-core_shard("core_shard") {
-  shard_file = "meta/wayland_bridge.core_shard.cml"
 }
 
 rustc_test("integration_test") {

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
@@ -196,6 +197,10 @@ fuchsia_unittest_package("linux_runner_tests") {
     "//src/storage/testing:storage_driver_test_realm",
     "//src/storage/testing:storage_test_includes",
   ]
+}
+
+core_shard("linux_runner_core_shard") {
+  shard_file = "meta/linux_runner.core_shard.cml"
 }
 
 group("tests") {

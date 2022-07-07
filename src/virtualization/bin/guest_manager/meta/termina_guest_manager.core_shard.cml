@@ -76,12 +76,6 @@
             source_availability: "unknown",
         },
         {
-            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
-            from: "#termina-guest-manager",
-            to: "#linux_runner",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [ "fuchsia.ui.input.ImeService" ],
             from: "#ui",
             to: [ "#termina-guest-manager" ],

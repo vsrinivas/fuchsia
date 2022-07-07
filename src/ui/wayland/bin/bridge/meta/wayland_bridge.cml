@@ -8,25 +8,23 @@
         binary: "bin/wayland_bridge",
     },
     capabilities: [
-        {
-            protocol: [ "fuchsia.wayland.Server" ],
-        },
+        { protocol: "fuchsia.wayland.Server" },
     ],
     use: [
         {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
-                "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
             ],
+            availability: "optional",
         },
     ],
     expose: [
         {
-            protocol: [ "fuchsia.wayland.Server" ],
+            protocol: "fuchsia.wayland.Server",
             from: "self",
         },
     ],

@@ -7,10 +7,14 @@
         runner: "elf",
         binary: "bin/linux_runner",
     },
-    capabilities: [
+    children: [
         {
-            protocol: [ "fuchsia.virtualization.LinuxManager" ],
+            name: "wayland_bridge",
+            url: "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cm",
         },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.virtualization.LinuxManager" },
     ],
     use: [
         {
@@ -23,18 +27,44 @@
             path: "/dev",
         },
         {
+            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            from: "parent",
+        },
+        {
             protocol: [
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.virtualization.TerminaGuestManager",
-                "fuchsia.wayland.Server",
             ],
             from: "parent",
+            availability: "optional",
+        },
+        {
+            protocol: "fuchsia.wayland.Server",
+            from: "#wayland_bridge",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#wayland_bridge",
+        },
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: "#wayland_bridge",
+            availability: "optional",
         },
     ],
     expose: [
         {
-            protocol: [ "fuchsia.virtualization.LinuxManager" ],
+            protocol: "fuchsia.virtualization.LinuxManager",
             from: "self",
         },
     ],

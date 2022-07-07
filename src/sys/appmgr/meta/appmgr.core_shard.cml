@@ -181,11 +181,6 @@
             from: "#starnix_manager",
         },
         {
-            protocol: "fuchsia.virtualization.LinuxManager",
-            from: "#linux_runner",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             from: "#debug_serial",
         },
@@ -460,10 +455,6 @@
         {
             directory: "hub-legacy",
             from: "#appmgr",
-        },
-        {
-            protocol: [ "fuchsia.virtualization.LinuxManager" ],
-            from: "#linux_runner",
         },
     ],
 }
