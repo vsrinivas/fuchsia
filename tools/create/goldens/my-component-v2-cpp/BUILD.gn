@@ -49,7 +49,7 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "my_component_v2_cpp"
+  component_name = "my-component-v2-cpp"
   manifest = "meta/my_component_v2_cpp.cml"
   deps = [ ":bin" ]
 }

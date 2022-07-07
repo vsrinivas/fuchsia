@@ -45,7 +45,7 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "{{snake_case PROJECT_NAME}}"
+  component_name = "{{PROJECT_NAME}}"
   manifest = "meta/{{snake_case PROJECT_NAME}}.cml"
   deps = [ ":bin" ]
 }
