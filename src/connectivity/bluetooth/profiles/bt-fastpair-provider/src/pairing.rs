@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use async_helpers::maybe_stream::MaybeStream;
+use async_utils::stream::FutureMap;
 use core::{
     pin::Pin,
     task::{Context, Poll},
@@ -13,10 +14,12 @@ use fidl_fuchsia_bluetooth_sys::{
     PairingDelegateOnPairingRequestResponder as PairingResponder, PairingDelegateProxy,
     PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod, PairingProxy,
 };
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_bluetooth::types::{Peer, PeerId};
+use fuchsia_zircon as zx;
 use futures::stream::{FusedStream, FuturesUnordered, Stream, StreamExt};
-use futures::{future::BoxFuture, FutureExt};
-use std::{collections::HashMap, convert::TryFrom};
+use futures::{future::BoxFuture, Future, FutureExt};
+use std::convert::TryFrom;
 use tracing::{debug, info, trace, warn};
 
 use crate::types::{Error, SharedSecret};
@@ -57,17 +60,86 @@ enum ProcedureState {
     PairingComplete,
 }
 
+impl std::fmt::Debug for ProcedureState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Started => write!(f, "Started"),
+            Self::Pairing { .. } => write!(f, "Pairing"),
+            Self::PasskeyChecked => write!(f, "PasskeyChecked"),
+            Self::PairingComplete => write!(f, "PairingComplete"),
+        }
+    }
+}
+
 /// An active Fast Pair Pairing procedure.
 struct Procedure {
+    /// PeerId of the remote peer that we are currently pairing with.
+    id: PeerId,
     /// Shared secret used to encode/decode messages sent/received in the procedure.
     key: SharedSecret,
     /// Current status of the procedure.
     state: ProcedureState,
+    /// Tracks the timeout of the pairing procedure.
+    timer: Option<fasync::Timer>,
 }
 
 impl Procedure {
-    fn new(key: SharedSecret) -> Self {
-        Self { key, state: ProcedureState::Started }
+    /// Default timeout duration for a pairing procedure. Per the GFPS specification, if progress
+    /// is not made within this amount of time, the procedure should be terminated.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/service/gatt#procedure
+    const DEFAULT_PROCEDURE_TIMEOUT_DURATION: zx::Duration = zx::Duration::from_seconds(10);
+
+    fn new(id: PeerId, key: SharedSecret) -> Self {
+        let timer = fasync::Timer::new(Self::DEFAULT_PROCEDURE_TIMEOUT_DURATION.after_now());
+        Self { id, key, state: ProcedureState::Started, timer: Some(timer) }
+    }
+
+    /// Moves the procedure to the new pairing `state` and resets the deadline for the procedure.
+    fn transition(&mut self, state: ProcedureState) -> ProcedureState {
+        let old_state = std::mem::replace(&mut self.state, state);
+        self.timer = Some(fasync::Timer::new(Self::DEFAULT_PROCEDURE_TIMEOUT_DURATION.after_now()));
+        old_state
+    }
+}
+
+impl Future for Procedure {
+    type Output = PeerId;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match &mut self.timer {
+            None => panic!("Future polled after completion (deadline reached)"),
+            Some(timer) => match timer.poll_unpin(cx) {
+                Poll::Ready(()) => {
+                    trace!("Pairing procedure deadline reached: {:?}", self);
+                    self.timer = None;
+                    Poll::Ready(self.id)
+                }
+                Poll::Pending => Poll::Pending,
+            },
+        }
+    }
+}
+
+impl Drop for Procedure {
+    fn drop(&mut self) {
+        // Replaced state is irrelevant as object will be dropped.
+        match std::mem::replace(&mut self.state, ProcedureState::PairingComplete) {
+            ProcedureState::Pairing { responder, .. } => {
+                // Reject the pairing request as dropping a Procedure likely signals Error or it is
+                // no longer needed.
+                let _ = responder.send(false, 0);
+            }
+            _ => {}
+        }
+    }
+}
+
+impl std::fmt::Debug for Procedure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Procedure")
+            .field("id", &self.id)
+            .field("state", &format!("{:?}", self.state))
+            .finish()
     }
 }
 
@@ -113,9 +185,7 @@ pub struct PairingManager {
     /// Active tasks relaying a request from the downstream Pairing Delegate to the upstream client.
     relay_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
     /// Active pairing procedures.
-    // TODO(fxbug.dev/99757): Active procedures should be cleared if no progress has been made
-    // within 10 seconds or when complete (e.g an Account Key has been written).
-    procedures: HashMap<PeerId, Procedure>,
+    procedures: FutureMap<PeerId, Procedure>,
     /// If the PairingManager is finished - i.e either the upstream or downstream delegate
     /// connection has terminated.
     terminated: bool,
@@ -137,7 +207,7 @@ impl PairingManager {
             pairing_requests: MaybeStream::default(),
             owner: PairingDelegateOwner::Upstream,
             relay_tasks: FuturesUnordered::new(),
-            procedures: HashMap::new(),
+            procedures: FutureMap::new(),
             terminated: false,
         };
         this.set_pairing_delegate(PairingDelegateOwner::Upstream)?;
@@ -194,7 +264,7 @@ impl PairingManager {
     /// procedures in progress.
     /// Returns Error if the operation couldn't be completed.
     fn release_delegate(&mut self) -> Result<(), Error> {
-        if !self.owner.is_fast_pair() || !self.procedures.is_empty() {
+        if !self.owner.is_fast_pair() || !self.procedures.inner().is_empty() {
             return Ok(());
         }
 
@@ -203,8 +273,8 @@ impl PairingManager {
     }
 
     /// Returns the SharedSecret for the active procedure with the remote peer.
-    pub fn key_for_procedure(&self, id: &PeerId) -> Option<&SharedSecret> {
-        self.procedures.get(id).map(|procedure| &procedure.key)
+    pub fn key_for_procedure(&mut self, id: &PeerId) -> Option<&SharedSecret> {
+        self.procedures.inner().get(id).map(|procedure| &procedure.key)
     }
 
     /// Attempts to initiate a new Fast Pair pairing procedure with the provided peer.
@@ -214,7 +284,7 @@ impl PairingManager {
         }
 
         self.claim_delegate()?;
-        let _ = self.procedures.insert(id, Procedure::new(key));
+        let _ = self.procedures.insert(id, Procedure::new(id, key));
         Ok(())
     }
 
@@ -234,11 +304,12 @@ impl PairingManager {
         debug!("Comparing passkey for {:?} (gatt passkey: {})", id, gatt_passkey);
         let procedure = self
             .procedures
+            .inner()
             .get_mut(&id)
             .filter(|p| matches!(p.state, ProcedureState::Pairing { .. }))
             .ok_or(Error::internal(&format!("Unexpected passkey response for {:?}", id)))?;
 
-        match std::mem::replace(&mut procedure.state, ProcedureState::PasskeyChecked) {
+        match procedure.transition(ProcedureState::PasskeyChecked) {
             ProcedureState::Pairing { passkey, responder } => {
                 let accept = passkey == gatt_passkey;
                 let _ = responder.send(accept, gatt_passkey);
@@ -258,6 +329,7 @@ impl PairingManager {
     pub fn complete_pairing_procedure(&mut self, id: PeerId) -> Result<(), Error> {
         if !self
             .procedures
+            .inner()
             .get(&id)
             .map_or(false, |p| matches!(p.state, ProcedureState::PairingComplete))
         {
@@ -313,11 +385,11 @@ impl PairingManager {
         passkey: u32,
         responder: PairingResponder,
     ) -> Result<(), Error> {
-        if let Some(procedure) = self.procedures.get_mut(&peer.id) {
+        if let Some(procedure) = self.procedures.inner().get_mut(&peer.id) {
             if matches!(procedure.state, ProcedureState::Started)
                 && method == PairingMethod::PasskeyComparison
             {
-                procedure.state = ProcedureState::Pairing { passkey, responder };
+                let _ = procedure.transition(ProcedureState::Pairing { passkey, responder });
                 return Ok(());
             }
 
@@ -350,11 +422,11 @@ impl PairingManager {
         success: bool,
     ) -> Result<Option<PeerId>, Error> {
         debug!("OnPairingComplete for {} (success = {})", id, success);
-        match self.procedures.get_mut(&id) {
+        match self.procedures.inner().get_mut(&id) {
             Some(procedure)
                 if success && matches!(procedure.state, ProcedureState::PasskeyChecked) =>
             {
-                procedure.state = ProcedureState::PairingComplete;
+                let _ = procedure.transition(ProcedureState::PairingComplete);
                 return Ok(Some(id));
             }
             Some(_) if success => {
@@ -406,17 +478,33 @@ impl PairingManager {
         }
         Ok(None)
     }
+
+    fn poll_procedure_deadlines(&mut self, cx: &mut Context<'_>) {
+        if self.procedures.is_terminated() {
+            return;
+        }
+
+        if let Poll::Ready(Some(id)) = self.procedures.poll_next_unpin(cx) {
+            info!("Deadline reached for Fast Pair procedure with {}. Canceling.", id);
+            // Deadline was reached (e.g no updates within the expected time). Procedure is no
+            // longer valid.
+            let _ = self.cancel_pairing_procedure(id);
+        }
+    }
 }
 
-/// The Stream implementation for `PairingManager` does 3 things:
-///   (1) Poll whether the connection to the upstream `sys.Pairing` client is open. Because pairing
-///       functionality is determined by the client's existence, the `PairingManager` stream will
-///       terminate if the client disconnects.
+/// The Stream implementation for `PairingManager` does 4 things:
+///   (1) Poll the connection to the upstream `sys.Pairing` client to check if it is open. Because
+///       pairing functionality is determined by the client's existence, the `PairingManager` stream
+///       will terminate if the client disconnects.
 ///   (2) Drive pairing relay futures to completion. This is applicable to non-Fast Pair requests.
 ///       Relaying the request to the upstream `sys.Pairing` client is async. Each request is
 ///       inserted into a collection and is progressed anytime the stream is polled.
 ///   (3) Poll the connection to the downstream `sys.Pairing` delegate. Received pairing requests
 ///       will be handled by the `PairingManager`.
+///   (4) Poll the set of active Fast Pair pairing procedures. Per the GFPS, if a procedure doesn't
+///       progress within `Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION`, the shared secret `key` is no
+///       longer valid.
 /// The Stream produces an item anytime Fast Pair pairing successfully completes with a remote peer.
 impl Stream for PairingManager {
     type Item = PeerId;
@@ -465,6 +553,9 @@ impl Stream for PairingManager {
         if !self.relay_tasks.is_terminated() {
             let _ = Pin::new(&mut self.relay_tasks).poll_next(cx);
         }
+
+        // Check if any procedures have missed deadlines.
+        self.poll_procedure_deadlines(cx);
         Poll::Pending
     }
 }
@@ -480,6 +571,7 @@ pub(crate) mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use async_utils::PollExt;
     use fidl::client::QueryResponseFut;
     use fidl_fuchsia_bluetooth_sys::{PairingKeypress, PairingMarker, PairingRequestStream};
     use fuchsia_bluetooth::types::Address;
@@ -963,5 +1055,91 @@ pub(crate) mod tests {
             .expect("fidl request")
             .into_on_pairing_complete()
             .unwrap();
+    }
+
+    #[fuchsia::test]
+    fn procedure_terminates_after_timer_completes() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
+
+        let id = PeerId(123);
+        let procedure = Procedure::new(id, keys::tests::example_aes_key());
+        pin_mut!(procedure);
+        let _ = exec.run_until_stalled(&mut procedure).expect_pending("deadline not reached");
+
+        // Advancing time by less than the deadline means the Procedure Future isn't done.
+        let half_dur = Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION / 2;
+        exec.set_fake_time(fasync::Time::after(half_dur));
+        assert!(!exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut procedure).expect_pending("deadline not reached");
+
+        // Transitioning the procedure should reset the timer.
+        let _ = procedure.transition(ProcedureState::PasskeyChecked);
+        let _ = exec.run_until_stalled(&mut procedure).expect_pending("deadline not reached");
+
+        // Even though the original deadline was met, the procedure should still be active since it
+        // has a new deadline.
+        exec.set_fake_time(fasync::Time::after(half_dur));
+        assert!(!exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut procedure).expect_pending("deadline not reached");
+
+        // Deadline reached - procedure should resolve.
+        exec.set_fake_time(fasync::Time::after(half_dur));
+        assert!(exec.wake_expired_timers());
+        let finished_id = exec.run_until_stalled(&mut procedure).expect("deadline reached");
+        assert_eq!(finished_id, id);
+    }
+
+    #[fuchsia::test]
+    fn procedure_evicted_after_deadline() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
+
+        let setup_fut = MockPairing::new_with_manager();
+        pin_mut!(setup_fut);
+        let (mut manager, mut mock) =
+            exec.run_until_stalled(&mut setup_fut).expect("can create pairing manager");
+
+        // New procedure is started - the shared secret should be available.
+        let id = PeerId(123);
+        assert_matches!(manager.new_pairing_procedure(id, keys::tests::example_aes_key()), Ok(_));
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        {
+            let expect_fut = mock.expect_set_pairing_delegate();
+            pin_mut!(expect_fut);
+            let () = exec.run_until_stalled(&mut expect_fut).expect("pairing delegate request");
+        }
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // Deadline not reached yet - procedure is still in progress.
+        let half_dur = Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION / 2;
+        exec.set_fake_time(fasync::Time::after(half_dur));
+        assert!(!exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // Peer makes a pairing request - should transition to the next state in the procedure.
+        let request_fut = mock.make_pairing_request(id, 555666);
+        pin_mut!(request_fut);
+        let _ = exec.run_until_stalled(&mut request_fut).expect_pending("waiting for response");
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), Some(_));
+
+        // Advancing time to the deadline should evict the procedure - shared secret no longer
+        // available.
+        exec.set_fake_time(fasync::Time::after(Procedure::DEFAULT_PROCEDURE_TIMEOUT_DURATION));
+        assert!(exec.wake_expired_timers());
+        let _ = exec.run_until_stalled(&mut manager.next()).expect_pending("no stream item");
+        assert_matches!(manager.key_for_procedure(&id), None);
+        // Peer's pairing request should be rejected as the procedure was canceled.
+        let (accepted, _) = exec
+            .run_until_stalled(&mut request_fut)
+            .expect("pairing response")
+            .expect("result is OK");
+        assert!(!accepted);
+        // Because there are no other active procedures, the PairingDelegate should be handed back.
+        let expect_fut = mock.expect_set_pairing_delegate();
+        pin_mut!(expect_fut);
+        let () = exec.run_until_stalled(&mut expect_fut).expect("pairing delegate request");
     }
 }
