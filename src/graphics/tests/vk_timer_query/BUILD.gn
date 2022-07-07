@@ -35,7 +35,7 @@ fuchsia_component("vk_timer_query_cmp") {
     "//src/lib/vulkan/validation_layers",
   ]
 
-  manifest = "meta/vk_timer_query.cmx"
+  manifest = "meta/vk_timer_query.cml"
 }
 
 fuchsia_test_package("vk-timer-query-pkg") {

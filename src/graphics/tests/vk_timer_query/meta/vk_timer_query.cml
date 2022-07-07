@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/tests/meta/common.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/vk_timer_query",
+    },
+    use: [
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}
