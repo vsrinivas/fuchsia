@@ -31,7 +31,8 @@ pub(crate) use qemu_base::QemuBasedEngine;
 pub struct QemuEngine {
     #[serde(skip)]
     pub(crate) ffx_config: FfxConfigWrapper,
-
+    #[serde(default)]
+    pub(crate) emulator_binary: PathBuf,
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
@@ -73,32 +74,36 @@ impl QemuEngine {
 
 #[async_trait]
 impl EmulatorEngine for QemuEngine {
-    async fn start(&mut self, proxy: &ffx::TargetCollectionProxy) -> Result<i32> {
-        self.emulator_configuration.guest = self
-            .stage_image_files(
-                &self.emulator_configuration.runtime.name,
-                &self.emulator_configuration.guest,
-                &self.emulator_configuration.device,
-                self.emulator_configuration.runtime.reuse,
-                &self.ffx_config,
-            )
-            .await
-            .context("could not stage image files")?;
+    async fn stage(&mut self) -> Result<()> {
+        self.emulator_binary =
+            self.get_qemu_path().await.context("could not determine qemu cli path")?;
 
-        let qemu = self.get_qemu_path().await.context("could not determine qemu cli path")?;
+        if !self.emulator_binary.exists() || !self.emulator_binary.is_file() {
+            bail!("Giving up finding emulator binary. Tried {:?}", self.emulator_binary)
+        }
 
-        return self.run(&qemu, proxy).await;
+        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration, &self.ffx_config).await
+    }
+
+    async fn start(
+        &mut self,
+        emulator_cmd: Command,
+        proxy: &ffx::TargetCollectionProxy,
+    ) -> Result<i32> {
+        self.run(emulator_cmd, proxy).await
     }
 
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
+
     async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {
         // Extract values from the self here, since there are sharing issues with trying to call
         // shutdown_emulator from another thread.
         let target_id = &self.emulator_configuration.runtime.name;
         Self::stop_emulator(self.is_running(), self.get_pid(), target_id, proxy).await
     }
+
     fn validate(&self) -> Result<()> {
         if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {
             eprintln!("Touchscreen as a pointing device is not available on Qemu.");
@@ -110,12 +115,34 @@ impl EmulatorEngine for QemuEngine {
         self.validate_network_flags(&self.emulator_configuration)
             .and_then(|()| self.check_required_files(&self.emulator_configuration.guest))
     }
+
     fn engine_type(&self) -> EngineType {
         self.engine_type
     }
 
     fn is_running(&self) -> bool {
         process::is_running(self.pid)
+    }
+
+    /// Build the Command to launch Qemu emulator running Fuchsia.
+    fn build_emulator_cmd(&self) -> Command {
+        let mut cmd = Command::new(&self.emulator_binary);
+        cmd.args(&self.emulator_configuration.flags.args);
+        let extra_args = self
+            .emulator_configuration
+            .flags
+            .kernel_args
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if extra_args.len() > 0 {
+            cmd.args(["-append", &extra_args]);
+        }
+        if self.emulator_configuration.flags.envs.len() > 0 {
+            cmd.envs(&self.emulator_configuration.flags.envs);
+        }
+        cmd
     }
 }
 
@@ -137,26 +164,5 @@ impl QemuBasedEngine for QemuEngine {
 
     fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
         return &mut self.emulator_configuration;
-    }
-
-    /// Build the Command to launch Qemu emulator running Fuchsia.
-    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command> {
-        let mut cmd = Command::new(&emu_binary);
-        cmd.args(&self.emulator_configuration.flags.args);
-        let extra_args = self
-            .emulator_configuration
-            .flags
-            .kernel_args
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
-        if extra_args.len() > 0 {
-            cmd.args(["-append", &extra_args]);
-        }
-        if self.emulator_configuration.flags.envs.len() > 0 {
-            cmd.envs(&self.emulator_configuration.flags.envs);
-        }
-        Ok(cmd)
     }
 }

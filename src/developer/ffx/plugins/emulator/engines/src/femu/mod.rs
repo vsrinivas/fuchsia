@@ -12,13 +12,14 @@ use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
-use std::{env, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct FemuEngine {
     #[serde(skip)]
     pub(crate) ffx_config: FfxConfigWrapper,
-
+    #[serde(default)]
+    pub(crate) emulator_binary: PathBuf,
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
@@ -26,19 +27,8 @@ pub struct FemuEngine {
 
 #[async_trait]
 impl EmulatorEngine for FemuEngine {
-    async fn start(&mut self, proxy: &ffx::TargetCollectionProxy) -> Result<i32> {
-        self.emulator_configuration.guest = self
-            .stage_image_files(
-                &self.emulator_configuration.runtime.name,
-                &self.emulator_configuration.guest,
-                &self.emulator_configuration.device,
-                self.emulator_configuration.runtime.reuse,
-                &self.ffx_config,
-            )
-            .await
-            .context("could not stage image files")?;
-
-        let aemu = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
+    async fn stage(&mut self) -> Result<()> {
+        self.emulator_binary = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
             Ok(aemu_path) => aemu_path.canonicalize().context(format!(
                 "Failed to canonicalize the path to the emulator binary: {:?}",
                 aemu_path
@@ -48,20 +38,25 @@ impl EmulatorEngine for FemuEngine {
             }
         };
 
-        // This is done to avoid running emu in the same directory as the kernel or other files
-        // that are used by qemu. If the multiboot.bin file is in the current directory, it does
-        // not start correctly. This probably could be temporary until we know the images loaded
-        // do not have files directly in $sdk_root.
-        env::set_current_dir(
-            &self.emulator_configuration.runtime.instance_directory.parent().unwrap(),
-        )
-        .context("problem changing directory to instance dir")?;
+        if !self.emulator_binary.exists() || !self.emulator_binary.is_file() {
+            bail!("Giving up finding emulator binary. Tried {:?}", self.emulator_binary)
+        }
 
-        return self.run(&aemu, proxy).await;
+        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration, &self.ffx_config).await
     }
+
+    async fn start(
+        &mut self,
+        emulator_cmd: Command,
+        proxy: &ffx::TargetCollectionProxy,
+    ) -> Result<i32> {
+        self.run(emulator_cmd, proxy).await
+    }
+
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
+
     async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {
         // Extract values from the self here, since there are sharing issues with trying to call
         // shutdown_emulator from another thread.
@@ -87,31 +82,10 @@ impl EmulatorEngine for FemuEngine {
     fn is_running(&self) -> bool {
         process::is_running(self.pid)
     }
-}
-
-#[async_trait]
-impl SerializingEngine for FemuEngine {}
-
-impl QemuBasedEngine for FemuEngine {
-    fn set_pid(&mut self, pid: u32) {
-        self.pid = pid;
-    }
-
-    fn get_pid(&self) -> u32 {
-        self.pid
-    }
-
-    fn emu_config(&self) -> &EmulatorConfiguration {
-        return &self.emulator_configuration;
-    }
-
-    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
-        return &mut self.emulator_configuration;
-    }
 
     /// Build the Command to launch Android emulator running Fuchsia.
-    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command> {
-        let mut cmd = Command::new(&emu_binary);
+    fn build_emulator_cmd(&self) -> Command {
+        let mut cmd = Command::new(&self.emulator_binary);
         let feature_arg = self
             .emulator_configuration
             .flags
@@ -140,6 +114,27 @@ impl QemuBasedEngine for FemuEngine {
         if self.emulator_configuration.flags.envs.len() > 0 {
             cmd.envs(&self.emulator_configuration.flags.envs);
         }
-        Ok(cmd)
+        cmd
+    }
+}
+
+#[async_trait]
+impl SerializingEngine for FemuEngine {}
+
+impl QemuBasedEngine for FemuEngine {
+    fn set_pid(&mut self, pid: u32) {
+        self.pid = pid;
+    }
+
+    fn get_pid(&self) -> u32 {
+        self.pid
+    }
+
+    fn emu_config(&self) -> &EmulatorConfiguration {
+        return &self.emulator_configuration;
+    }
+
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+        return &mut self.emulator_configuration;
     }
 }

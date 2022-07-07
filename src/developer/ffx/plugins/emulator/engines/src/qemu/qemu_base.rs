@@ -16,13 +16,12 @@ use ffx_emulator_common::{
     target::{add_target, is_active, remove_target},
 };
 use ffx_emulator_config::{
-    ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
-    NetworkingMode,
+    ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, NetworkingMode,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
 use std::{
-    fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,
+    env, fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,
     time::Duration,
 };
 
@@ -59,7 +58,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// Returns an updated GuestConfig instance with the file paths set to
     /// the instance paths.
     async fn stage_image_files(
-        &self,
         instance_name: &str,
         guest_config: &GuestConfig,
         device_config: &DeviceConfig,
@@ -192,22 +190,36 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(())
     }
 
-    async fn run(
-        &mut self,
-        emu_binary: &PathBuf,
-        proxy: &ffx::TargetCollectionProxy,
-    ) -> Result<i32> {
-        if !emu_binary.exists() || !emu_binary.is_file() {
-            bail!("Giving up finding emulator binary. Tried {:?}", emu_binary)
-        }
+    async fn stage(
+        emu_config: &mut EmulatorConfiguration,
+        ffx_config: &FfxConfigWrapper,
+    ) -> Result<()> {
+        let name = &emu_config.runtime.name;
+        let guest = &emu_config.guest;
+        let device = &emu_config.device;
+        let reuse = emu_config.runtime.reuse;
+        emu_config.guest = Self::stage_image_files(name, guest, device, reuse, ffx_config)
+            .await
+            .context("could not stage image files")?;
 
-        self.emu_config_mut().flags = process_flag_template(&self.emu_config())
+        // This is done to avoid running emu in the same directory as the kernel or other files
+        // that are used by qemu. If the multiboot.bin file is in the current directory, it does
+        // not start correctly. This probably could be temporary until we know the images loaded
+        // do not have files directly in $sdk_root.
+        env::set_current_dir(&emu_config.runtime.instance_directory.parent().unwrap())
+            .context("problem changing directory to instance dir")?;
+
+        emu_config.flags = process_flag_template(&emu_config)
             .context("Failed to process the flags template file.")?;
 
-        let mut emulator_cmd = self
-            .build_emulator_cmd(&emu_binary)
-            .context("Failed while building the emulator command.")?;
+        Ok(())
+    }
 
+    async fn run(
+        &mut self,
+        mut emulator_cmd: Command,
+        proxy: &ffx::TargetCollectionProxy,
+    ) -> Result<i32> {
         if self.emu_config().runtime.console == ConsoleType::None {
             let stdout = File::create(&self.emu_config().host.log)
                 .context(format!("Couldn't open log file {:?}", &self.emu_config().host.log))?;
@@ -216,16 +228,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 .context("Failed trying to clone stdout for the emulator process.")?;
             emulator_cmd.stdout(stdout).stderr(stderr);
             println!("Logging to {:?}", &self.emu_config().host.log);
-        }
-
-        if self.emu_config().runtime.log_level == LogLevel::Verbose
-            || self.emu_config().runtime.dry_run
-        {
-            println!("[emulator] Running emulator cmd: {:?}\n", emulator_cmd);
-            println!("[emulator] Running with ENV: {:?}\n", emulator_cmd.get_envs());
-            if self.emu_config().runtime.dry_run {
-                return Ok(0);
-            }
         }
 
         // If using TAP, check for an upscript to run.
@@ -410,9 +412,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
     /// Mutable access to the engine's emulator_configuration field.
     fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration;
-
-    /// An engine-specific function for building a command-line from the emu_config.
-    fn build_emulator_cmd(&self, emu_binary: &PathBuf) -> Result<Command>;
 }
 
 #[cfg(test)]
@@ -438,19 +437,19 @@ mod tests {
         fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
             todo!()
         }
-        fn build_emulator_cmd(&self, _emu_binary: &PathBuf) -> Result<Command> {
-            todo!()
-        }
     }
     #[async_trait]
     impl EmulatorEngine for TestEngine {
-        async fn start(&mut self, _: &ffx::TargetCollectionProxy) -> Result<i32> {
+        async fn start(&mut self, _: Command, _: &ffx::TargetCollectionProxy) -> Result<i32> {
             todo!()
         }
         async fn stop(&self, _: &ffx::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
         fn show(&self) {
+            todo!()
+        }
+        async fn stage(&mut self) -> Result<()> {
             todo!()
         }
         fn validate(&self) -> Result<()> {
@@ -461,6 +460,9 @@ mod tests {
         }
         fn is_running(&self) -> bool {
             false
+        }
+        fn build_emulator_cmd(&self) -> Command {
+            todo!()
         }
     }
     impl SerializingEngine for TestEngine {}
@@ -533,7 +535,6 @@ mod tests {
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
-        let engine = TestEngine {};
 
         let root = setup(&mut config, &mut guest, &temp)?;
 
@@ -542,8 +543,14 @@ mod tests {
         write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
-        let updated =
-            engine.stage_image_files(instance_name, &guest, &device, false, &config).await;
+        let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
+            instance_name,
+            &guest,
+            &device,
+            false,
+            &config,
+        )
+        .await;
 
         assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
 
@@ -562,8 +569,14 @@ mod tests {
         write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
             .context("cannot write updated value to fvm file")?;
 
-        let updated =
-            engine.stage_image_files(instance_name, &guest, &device, false, &config).await;
+        let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
+            instance_name,
+            &guest,
+            &device,
+            false,
+            &config,
+        )
+        .await;
 
         assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
 
@@ -604,7 +617,6 @@ mod tests {
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
-        let engine = TestEngine {};
 
         let root = setup(&mut config, &mut guest, &temp)?;
 
@@ -614,7 +626,14 @@ mod tests {
         write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
-        let updated = engine.stage_image_files(instance_name, &guest, &device, true, &config).await;
+        let updated: Result<GuestConfig> = <TestEngine as QemuBasedEngine>::stage_image_files(
+            instance_name,
+            &guest,
+            &device,
+            true,
+            &config,
+        )
+        .await;
 
         assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
 
@@ -634,7 +653,14 @@ mod tests {
         write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
             .context("cannot write updated value to fvm file")?;
 
-        let updated = engine.stage_image_files(instance_name, &guest, &device, true, &config).await;
+        let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
+            instance_name,
+            &guest,
+            &device,
+            true,
+            &config,
+        )
+        .await;
 
         assert!(updated.is_ok(), "expected OK got {:?}", updated.unwrap_err());
 

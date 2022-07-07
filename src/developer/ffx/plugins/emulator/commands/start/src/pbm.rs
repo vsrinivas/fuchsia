@@ -127,7 +127,6 @@ async fn apply_command_line_options(
 
     // RuntimeConfig options, starting with simple copies.
     emu_config.runtime.debugger = cmd.debugger;
-    emu_config.runtime.dry_run = cmd.dry_run;
     emu_config.runtime.headless = cmd.headless;
     emu_config.runtime.startup_timeout = Duration::from_secs(cmd.startup_timeout().await?);
     emu_config.runtime.hidpi_scaling = cmd.hidpi_scaling;
@@ -292,7 +291,6 @@ mod tests {
             accel: AccelerationMode::Hyper,
             console: true,
             debugger: true,
-            dry_run: true,
             engine: EngineType::Qemu,
             gpu: GpuType::Host,
             headless: true,
@@ -313,7 +311,6 @@ mod tests {
         assert_eq!(emu_config.host.networking, NetworkingMode::Auto);
         assert_eq!(emu_config.runtime.console, ConsoleType::None);
         assert_eq!(emu_config.runtime.debugger, false);
-        assert_eq!(emu_config.runtime.dry_run, false);
         assert_eq!(emu_config.runtime.headless, false);
         assert_eq!(emu_config.runtime.hidpi_scaling, false);
         assert_eq!(emu_config.runtime.log_level, LogLevel::Info);
@@ -328,7 +325,6 @@ mod tests {
         assert_eq!(opts.host.networking, NetworkingMode::Tap);
         assert_eq!(opts.runtime.console, ConsoleType::Console);
         assert_eq!(opts.runtime.debugger, true);
-        assert_eq!(opts.runtime.dry_run, true);
         assert_eq!(opts.runtime.headless, true);
         assert_eq!(opts.runtime.hidpi_scaling, true);
         assert_eq!(opts.runtime.log_level, LogLevel::Verbose);

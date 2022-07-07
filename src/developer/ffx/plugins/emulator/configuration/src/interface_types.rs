@@ -16,17 +16,23 @@ use async_trait::async_trait;
 use fidl_fuchsia_developer_ffx as ffx;
 use sdk_metadata::{AudioDevice, CpuArchitecture, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Deserializer, Serialize};
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::{collections::HashMap, path::PathBuf, process::Command, time::Duration};
 
 #[async_trait]
 pub trait EmulatorEngine {
-    /// Start the emulator running. This function shouldn't require any additional configuration as
+    /// Prepare an emulator to run. This function shouldn't require any additional configuration as
     /// input, since the object should be fully configured by the EngineBuilder. At its most basic,
-    /// this should assemble the command-line to invoke the emulator binary, then spawn the process
-    /// and return. If support processes are required, or temporary files need to be written to
-    /// disk, that would be handled here. When the function returns, either the emulator will be
-    /// running independently, or an error will be sent back explaining the failure.
-    async fn start(&mut self, proxy: &ffx::TargetCollectionProxy) -> Result<i32>;
+    /// this should assemble the command-line to invoke the emulator binary. If support processes
+    /// are required, or temporary files need to be written to disk, that would be handled here.
+    async fn stage(&mut self) -> Result<()>;
+
+    /// Given a staged emulator instance, start it running. When the function returns, either the
+    /// emulator will be running independently, or an error will be sent back explaining the failure.
+    async fn start(
+        &mut self,
+        mut emulator_cmd: Command,
+        proxy: &ffx::TargetCollectionProxy,
+    ) -> Result<i32>;
 
     /// Shut down a running emulator instance. The engine should have been instantiated from a saved
     /// and serialized instance, so no additional initialization should be needed. This function
@@ -56,6 +62,10 @@ pub trait EmulatorEngine {
     /// This is checked by using signal to the process id, no consideration is
     /// made for multi threaded access.
     fn is_running(&self) -> bool;
+
+    /// Once the engine has been staged, this generates the command line required to start
+    /// emulation. There are no side-effects, and the operation can be repeated as necessary.
+    fn build_emulator_cmd(&self) -> Command;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.
@@ -167,10 +177,6 @@ pub struct RuntimeConfig {
 
     /// Pause the emulator and wait for the user to attach a debugger to the process.
     pub debugger: bool,
-
-    /// Set up the emulation command, print it to the screen, then terminate without
-    /// running the emulator. Useful for debugging configuration problems.
-    pub dry_run: bool,
 
     /// Run the emulator without a GUI. Graphics drivers will still be loaded.
     pub headless: bool,

@@ -56,7 +56,21 @@ pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()
         Err(e) => ffx_bail!("{:?}", e.context("The emulator could not be configured.")),
     };
 
-    match engine.start(&proxy).await {
+    if let Err(e) = engine.stage().await {
+        ffx_bail!("{:?}", e.context("Problem staging to the emulator's instance directory."));
+    }
+
+    let emulator_cmd = engine.build_emulator_cmd();
+
+    if cmd.verbose || cmd.dry_run {
+        println!("[emulator] Running emulator cmd: {:?}\n", emulator_cmd);
+        println!("[emulator] Running with ENV: {:?}\n", emulator_cmd.get_envs());
+        if cmd.dry_run {
+            return Ok(());
+        }
+    }
+
+    match engine.start(emulator_cmd, &proxy).await {
         Ok(result) => std::process::exit(result),
         Err(e) => ffx_bail!("{:?}", e.context("The emulator failed to start.")),
     }
