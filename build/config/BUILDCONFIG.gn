@@ -388,6 +388,7 @@ if (zircon_toolchain == false) {
     "//build/config:no_exceptions",
     "//build/config:no_rtti",
     "//build/config:symbol_visibility_hidden",
+    "//build/config:libcpp_remove_transitive_includes",
     "//build/config/rust:incremental",
     "//build/config/rust:no_features",
     "//build/config/rust:target",

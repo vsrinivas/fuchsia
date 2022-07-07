@@ -1091,6 +1091,17 @@ config("thread_safety_annotations") {
   }
 }
 
+# libc++ removed a number of transitive includes between version 14 and 15
+# but those were later re-added and conditionally gated on a new define in
+# https://reviews.llvm.org/D128661. In Fuchsia, we have already done the
+# cleanup so we can remove these transitive includes unconditionally to
+# avoid regressions.
+#
+# Note: This is going to become the default in future libc++ versions.
+config("libcpp_remove_transitive_includes") {
+  defines = [ "_LIBCPP_REMOVE_TRANSITIVE_INCLUDES" ]
+}
+
 # Tools that must be executed locally.
 pool("local") {
   depth = default_concurrent_jobs.local
