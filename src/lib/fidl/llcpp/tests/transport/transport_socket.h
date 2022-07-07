@@ -86,8 +86,18 @@ class SocketWaiter : private async_wait_t, public TransportWaiter {
   zx_status_t Begin() override {
     return async_begin_wait(dispatcher_, static_cast<async_wait_t*>(this));
   }
-  zx_status_t Cancel() override {
-    return async_cancel_wait(dispatcher_, static_cast<async_wait_t*>(this));
+  CancellationResult Cancel() override {
+    zx_status_t status = async_cancel_wait(dispatcher_, static_cast<async_wait_t*>(this));
+    switch (status) {
+      case ZX_OK:
+        return CancellationResult::kOk;
+      case ZX_ERR_NOT_FOUND:
+        return CancellationResult::kNotFound;
+      case ZX_ERR_NOT_SUPPORTED:
+        return CancellationResult::kNotSupported;
+      default:
+        ZX_PANIC("Unexpected status %d", status);
+    }
   }
 
  private:

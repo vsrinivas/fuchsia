@@ -145,17 +145,24 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   ASSERT_OK(dispatcher1_shutdown.Wait());
 }
 
-TEST(WireSharedClient, CanSendAcrossDispatcher) {
+#endif  // NDEBUG
+
+using DispatcherOptions = uint32_t;
+
+// Test the shared client using both synchronized and unsynchronized dispatcher.
+class WireSharedClient : public zxtest::TestWithParam<DispatcherOptions> {};
+
+TEST_P(WireSharedClient, CanSendAcrossDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   libsync::Completion dispatcher1_shutdown;
   zx::status dispatcher1 = fdf::Dispatcher::Create(
-      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
+      GetParam(), [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
   ASSERT_OK(dispatcher1.status_value());
 
   libsync::Completion dispatcher2_shutdown;
   zx::status dispatcher2 = fdf::Dispatcher::Create(
-      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher2_shutdown.Signal(); });
+      GetParam(), [&](fdf_dispatcher_t* dispatcher) { dispatcher2_shutdown.Signal(); });
   ASSERT_OK(dispatcher2.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -186,6 +193,43 @@ TEST(WireSharedClient, CanSendAcrossDispatcher) {
   ASSERT_OK(dispatcher2_shutdown.Wait());
 }
 
+TEST_P(WireSharedClient, CanDestroyOnUnmanagedThread) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  libsync::Completion dispatcher1_shutdown;
+  zx::status dispatcher1 = fdf::Dispatcher::Create(
+      GetParam(), [&](fdf_dispatcher_t* dispatcher) { dispatcher1_shutdown.Signal(); });
+  ASSERT_OK(dispatcher1.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  std::unique_ptr<fdf::WireSharedClient<test_transport::TwoWayTest>> client;
+
+  // Create on one.
+  libsync::Completion created;
+  libsync::Completion destroyed;
+  async::PostTask(dispatcher1->async_dispatcher(), [&] {
+    client = std::make_unique<fdf::WireSharedClient<test_transport::TwoWayTest>>();
+    client->Bind(std::move(endpoints->client), dispatcher1->get(),
+                 fidl::ObserveTeardown([&] { destroyed.Signal(); }));
+    created.Signal();
+  });
+  ASSERT_OK(created.Wait());
+
+  // Destroy on another.
+  std::thread thread([&] { client.reset(); });
+
+  ASSERT_OK(destroyed.Wait());
+  thread.join();
+
+  dispatcher1->ShutdownAsync();
+  ASSERT_OK(dispatcher1_shutdown.Wait());
+}
+
+// These checks are only performed in debug builds.
+#ifndef NDEBUG
+
 TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
@@ -213,13 +257,14 @@ TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
-TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
+#endif  // NDEBUG
+
+TEST_P(WireSharedClient, CanBindAnyDispatcher) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   libsync::Completion dispatcher_shutdown;
-  zx::status dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
-                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
+  zx::status dispatcher = fdf::Dispatcher::Create(
+      GetParam(), [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
@@ -238,4 +283,17 @@ TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
   ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
-#endif  // NDEBUG
+INSTANTIATE_TEST_SUITE_P(WireSharedClientTests, WireSharedClient,
+                         zxtest::Values<DispatcherOptions>(
+                             /* synchronized */ 0u,
+                             static_cast<uint32_t>(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED)),
+                         [](const auto info) {
+                           switch (info.index) {
+                             case 0:
+                               return "Synchronized";
+                             case 1:
+                               return "Unsynchronized";
+                             default:
+                               ZX_PANIC("Invalid index");
+                           }
+                         });

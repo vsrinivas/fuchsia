@@ -165,20 +165,35 @@ struct TransportWaiter {
   // This operation is thread-safe.
   virtual zx_status_t Begin() = 0;
 
+  enum class CancellationResult {
+    // The wait was pending and it has been successfully canceled; its handler
+    // will not run again and can be released immediately.
+    kOk,
+
+    // There was no pending wait either because it already completed, had not
+    // been started, or it is about to be handled (perhaps on another thread).
+    kNotFound,
+
+    // Cancellation cannot proceed because the calling thread was in the wrong
+    // execution context. Specifically, the dispatcher requires cancellation to
+    // happen from a task scheduled on the dispatcher, but the current thread
+    // is not running a task scheduled on the dispatcher.
+    //
+    // The caller should try cancellation again from a dispatcher task.
+    kDispatcherContextNeeded,
+
+    // Cancellation is not supported by the dispatcher.
+    kNotSupported,
+  };
+
   // Cancels any wait started on the waiter.
   //
   // If successful, the wait's handler will not run.
   //
-  // Returns |ZX_OK| if the wait was pending and it has been successfully
-  // canceled; its handler will not run again and can be released immediately.
-  // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
-  // already completed, had not been started, or its completion packet has been
-  // dequeued from the port and is pending delivery to its handler (perhaps on
-  // another thread).
-  // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+  // See |CancellationResult| for meanings of the return values.
   //
   // This operation is thread-safe.
-  virtual zx_status_t Cancel() = 0;
+  virtual CancellationResult Cancel() = 0;
 
   virtual ~TransportWaiter() = default;
 };

@@ -160,6 +160,29 @@ const TransportVTable ChannelTransport::VTable = {
     .create_thread_checker = channel_create_thread_checker,
 };
 
+zx_status_t ChannelWaiter::Begin() {
+  zx_status_t status = async_begin_wait(dispatcher_, static_cast<async_wait_t*>(this));
+  if (status == ZX_ERR_BAD_STATE) {
+    // async_begin_wait return ZX_ERR_BAD_STATE if the dispatcher is shutting down.
+    return ZX_ERR_CANCELED;
+  }
+  return status;
+}
+
+TransportWaiter::CancellationResult ChannelWaiter::Cancel() {
+  zx_status_t status = async_cancel_wait(dispatcher_, static_cast<async_wait_t*>(this));
+  switch (status) {
+    case ZX_OK:
+      return CancellationResult::kOk;
+    case ZX_ERR_NOT_FOUND:
+      return CancellationResult::kNotFound;
+    case ZX_ERR_NOT_SUPPORTED:
+      return CancellationResult::kNotSupported;
+    default:
+      ZX_PANIC("Unexpected status from async_cancel_wait: %d", status);
+  }
+}
+
 void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

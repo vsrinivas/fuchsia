@@ -229,22 +229,41 @@ zx_status_t DriverWaiter::Begin() {
   return status;
 }
 
-zx_status_t DriverWaiter::Cancel() {
+fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
   fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(state_.dispatcher);
   uint32_t options = fdf_dispatcher_get_options(dispatcher);
-  fdf_status_t status = state_.channel_read->Cancel();
-  if (status != ZX_OK) {
-    return status;
-  }
-  // When the dispatcher is synchronized, our |ChannelRead| handler won't be
-  // called. When the dispatcher is unsynchronized, our |ChannelRead| handler
-  // will always be called (sometimes with a ZX_OK status and othertimes with a
-  // ZX_ERR_CANCELED status). For the purpose of determining which code should
-  // finish teardown of the |AsyncBinding|, it is as if the cancellation failed.
+  ZX_ASSERT(state_.channel_read.has_value());
+
   if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {
-    return ZX_ERR_NOT_FOUND;
+    // Unsynchronized dispatcher.
+    fdf_status_t status = state_.channel_read->Cancel();
+    ZX_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
+
+    // When the dispatcher is unsynchronized, our |ChannelRead| handler will
+    // always be called (sometimes with a ZX_OK status and other times with a
+    // ZX_ERR_CANCELED status). For the purpose of determining which code should
+    // finish teardown of the |AsyncBinding|, it is as if the cancellation
+    // failed.
+    return CancellationResult::kNotFound;
   }
-  return ZX_OK;
+
+  // Synchronized dispatcher.
+  fdf_dispatcher_t* current_dispatcher = fdf_dispatcher_get_current_dispatcher();
+  if (current_dispatcher == dispatcher) {
+    // The binding is being torn down from a dispatcher thread.
+    fdf_status_t status = state_.channel_read->Cancel();
+    // If the status is not |ZX_OK|, then the FIDL runtime has gotten out of
+    // sync with the state of the driver runtime.
+    ZX_ASSERT(status == ZX_OK);
+    return CancellationResult::kOk;
+  }
+
+  // The binding is being torn down from a foreign thread.
+  // The only way this could happen is when the user is using a shared client
+  // or a server binding. In both cases, the contract is that the teardown
+  // will happen asynchronously. We can implement that behavior by indicating
+  // that synchronous cancellation failed.
+  return CancellationResult::kDispatcherContextNeeded;
 }
 
 const CodingConfig DriverTransport::EncodingConfiguration = {

@@ -195,26 +195,28 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
     lifecycle_.TransitionToMustTeardown(info);
   }
 
-  // A boolean value that will become available in the future. |Get| will block
-  // until |Set| is invoked once with the value.
-  class FutureBool {
+  // A |CancellationResult| value that will become available in the future.
+  // |Get| will block until |Set| is invoked once with the value.
+  class FutureResult {
    public:
-    void Set(bool value) {
+    using Result = TransportWaiter::CancellationResult;
+
+    void Set(Result value) {
       value_ = value;
       sync_completion_signal(&result_ready_);
     }
 
-    bool Get() {
+    Result Get() {
       zx_status_t status = sync_completion_wait(&result_ready_, ZX_TIME_INFINITE);
       ZX_DEBUG_ASSERT(status == ZX_OK);
       return value_;
     }
 
    private:
-    bool value_ = false;
+    Result value_ = Result::kOk;
     sync_completion_t result_ready_ = {};
   };
-  std::shared_ptr message_handler_pending = std::make_shared<FutureBool>();
+  std::shared_ptr message_handler_pending = std::make_shared<FutureResult>();
 
   // Attempt to add a task to teardown the bindings. On failure, the dispatcher
   // was shutdown; the message handler would notice and perform the teardown.
@@ -222,7 +224,7 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
    public:
     static zx_status_t Post(async_dispatcher_t* dispatcher,
                             std::weak_ptr<AsyncBinding> weak_binding,
-                            std::shared_ptr<FutureBool> message_handler_pending) {
+                            std::shared_ptr<FutureResult> message_handler_pending) {
       auto* task = new TeardownTask{
           dispatcher,
           std::move(weak_binding),
@@ -241,9 +243,33 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
         ~Deferred() { delete task; }
       } deferred{self};
 
-      if (self->message_handler_pending_->Get())
-        return;
+      TransportWaiter::CancellationResult result = self->message_handler_pending_->Get();
       self->message_handler_pending_.reset();
+
+      if (result == TransportWaiter::CancellationResult::kDispatcherContextNeeded) {
+        // Try teardown again from a dispatcher task.
+        auto binding = self->weak_binding_.lock();
+        if (!binding) {
+          // If |weak_binding_| fails to lock to a strong reference, that means
+          // the binding was already torn down by the message handler. This may
+          // happen if the dispatcher was shutdown, waking the message handler
+          // and tearing down the binding.
+          return;
+        }
+        result = binding->any_transport_waiter_->Cancel();
+      }
+
+      switch (result) {
+        case TransportWaiter::CancellationResult::kOk:
+          break;
+        case TransportWaiter::CancellationResult::kNotFound:
+          // The message handler is driving/will drive the teardown process.
+          return;
+        case TransportWaiter::CancellationResult::kDispatcherContextNeeded:
+          ZX_PANIC("Already in dispatcher context");
+        case TransportWaiter::CancellationResult::kNotSupported:
+          ZX_PANIC("Dispatcher must support canceling waits");
+      }
 
       // If |weak_binding_| fails to lock to a strong reference, that means the
       // binding was already torn down by the message handler. This will never
@@ -265,19 +291,19 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
 
    private:
     TeardownTask(async_dispatcher_t* dispatcher, std::weak_ptr<AsyncBinding> weak_binding,
-                 std::shared_ptr<FutureBool> message_handler_pending)
+                 std::shared_ptr<FutureResult> message_handler_pending)
         : async_task_t({{ASYNC_STATE_INIT}, &TeardownTask::Invoke, async_now(dispatcher)}),
           weak_binding_(std::move(weak_binding)),
           message_handler_pending_(std::move(message_handler_pending)) {}
 
     std::weak_ptr<AsyncBinding> weak_binding_;
-    std::shared_ptr<FutureBool> message_handler_pending_;
+    std::shared_ptr<FutureResult> message_handler_pending_;
   };
 
   // We need to first post the teardown task, then attempt to cancel the message
   // handler, and block the teardown task until the cancellation result is ready
-  // using a |FutureBool|. This is because the dispatcher might be shut down in
-  // between the posting and the cancelling. If we tried to cancel first then
+  // using a |FutureResult|. This is because the dispatcher might be shut down
+  // in between the posting and the cancelling. If we tried to cancel first then
   // post a task, we might end up in a difficult situation where the message
   // handler was successfully canceled, but the dispatcher was also shut down,
   // preventing us from posting any more tasks. Then we would run out of threads
@@ -293,12 +319,11 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
     std::scoped_lock lock(lock_);
     if (lifecycle_.DidBecomeBound()) {
       // Attempt to cancel the current message handler. On failure, the message
-      // handler is driving/will drive the teardown process.
-      zx_status_t status = any_transport_waiter_->Cancel();
-      ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
-      message_handler_pending->Set(status != ZX_OK);
+      // handler or the teardown task will be responsible for driving the
+      // teardown process.
+      message_handler_pending->Set(any_transport_waiter_->Cancel());
     } else {
-      message_handler_pending->Set(false);
+      message_handler_pending->Set(TransportWaiter::CancellationResult::kOk);
     }
   }
 

@@ -98,7 +98,7 @@ class DriverWaiter : public TransportWaiter {
 
   zx_status_t Begin() override;
 
-  zx_status_t Cancel() override;
+  CancellationResult Cancel() override;
 
  private:
   struct State {
