@@ -220,7 +220,12 @@ reproxy_prefix=()
 # Prefix to startup and stop reproxy around this single command,
 # which is needed if reproxy is not already running.
 test "$want_auto_reproxy" = 0 ||
-  reproxy_prefix=( "$auto_reproxy" --cfg="$reproxy_cfg" -- )
+  reproxy_prefix=(
+    "$auto_reproxy"
+    --bindir="$reclient_bindir"
+    --cfg="$reproxy_cfg"
+    --
+  )
 
 full_command=( "${reproxy_prefix[@]}" "${rewrapped_command[@]}" )
 
