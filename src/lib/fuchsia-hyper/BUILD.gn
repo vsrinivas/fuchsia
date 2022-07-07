@@ -76,13 +76,13 @@ rustc_library("fuchsia-hyper") {
 
 fuchsia_component("fuchsia-hyper-lib-test") {
   testonly = true
-  manifest = "meta/fuchsia_hyper_lib_test.cmx"
+  manifest = "meta/fuchsia_hyper_lib_test.cml"
   deps = [ ":fuchsia-hyper_test" ]
 }
 
 fuchsia_test_package("fuchsia-hyper-tests") {
   test_components = [ ":fuchsia-hyper-lib-test" ]
-  deps = [ "//src/connectivity/network/netstack:component-legacy" ]
+  deps = [ "//src/connectivity/network/netstack:component" ]
 }
 
 group("tests") {

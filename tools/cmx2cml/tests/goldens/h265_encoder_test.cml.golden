@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/sys/test_manager/system-test.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/elf_stdio.shard.cml",
     ],
     program: {

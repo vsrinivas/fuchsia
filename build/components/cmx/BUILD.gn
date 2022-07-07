@@ -318,7 +318,6 @@ group("cmx_allowlist") {
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling_component_manifest_compile",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_outer_component_manifest_compile",
     "//src/lib/fuchsia-component/tests:fuchsia_component_v1_test_component_manifest_compile",
-    "//src/lib/fuchsia-hyper:fuchsia-hyper-lib-test_manifest_compile",
     "//src/lib/icu_data/rust/icu_data:icu_data_rust_tests_component_manifest_compile",
     "//src/lib/isolated_devmgr:ethertap-devmgr_manifest_compile",
     "//src/lib/isolated_devmgr:isolated-devmgr-tests_manifest_compile",

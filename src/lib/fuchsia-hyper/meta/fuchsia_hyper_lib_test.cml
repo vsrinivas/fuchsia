@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fuchsia_hyper_lib_test",
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+        },
+
+        // TODO(https://fxbug.dev/103980) package our own certs and remove from system test realm
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#netstack",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+    ],
+}
