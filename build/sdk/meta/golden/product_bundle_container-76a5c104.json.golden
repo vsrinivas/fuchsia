@@ -1,0 +1,60 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "$ref": "#/definitions/product_bundle_container"
+        }
+    ],
+    "definitions": {
+        "product_bundle_container": {
+            "properties": {
+                "data": {
+                    "properties": {
+                        "bundles": {
+                            "description": "A list of product bundles for a particular release.",
+                            "items": {
+                                "properties": {
+                                    "data": {
+                                        "$ref": "product_bundle-6320eef1.json#/definitions/product_bundle"
+                                    },
+                                    "schema_id": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                        },
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "product_bundle_container"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "required": [
+                        "bundles",
+                        "type"
+                    ],
+                    "type": "object"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "A collection of metadata for a particular SDK release.",
+    "id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
+    "type": "object"
+}

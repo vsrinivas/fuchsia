@@ -1,0 +1,116 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "binaries": {
+                    "additionalProperties": false,
+                    "description": "The binary files for the library, per architecture",
+                    "maxProperties": 2,
+                    "minProperties": 1,
+                    "properties": {
+                        "arm64": {
+                            "$ref": "#/definitions/binaryGroup",
+                            "description": "Binaries for the arm64 architecture"
+                        },
+                        "x64": {
+                            "$ref": "#/definitions/binaryGroup",
+                            "description": "Binaries for the x64 architecture"
+                        }
+                    },
+                    "type": "object"
+                },
+                "deps": {
+                    "description": "List of C/C++ libraries this library depends on",
+                    "items": {
+                        "$ref": "common.json#/definitions/cc_library_name"
+                    },
+                    "type": "array"
+                },
+                "format": {
+                    "description": "The distribution format of the binaries",
+                    "enum": [
+                        "shared",
+                        "static"
+                    ],
+                    "type": "string"
+                },
+                "headers": {
+                    "description": "List of public headers",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "include_dir": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path to the base directory for includes"
+                },
+                "name": {
+                    "$ref": "common.json#/definitions/cc_library_name",
+                    "description": "Name of the library"
+                },
+                "root": {
+                    "description": "The root of the element in the SDK",
+                    "type": "string"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "cc_prebuilt_library"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "binaries",
+                "deps",
+                "format",
+                "headers",
+                "include_dir",
+                "root",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "definitions": {
+        "binaryGroup": {
+            "description": "A set of binary files compiled for a given architecture",
+            "properties": {
+                "debug": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "The unstripped version of the library"
+                },
+                "dist": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "The version of the library to add to Fuchsia packages"
+                },
+                "dist_path": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path where the library should be installed in Fuchsia packages"
+                },
+                "link": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "The link-time version of the library"
+                }
+            },
+            "required": [
+                "link"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "A prebuilt C/C++ library",
+    "id": "http://fuchsia.com/schemas/sdk/cc_prebuilt_library.json",
+    "type": "object"
+}

@@ -1,0 +1,12 @@
+# Changing the SDK JSON metadata may dramatically affect users of the SDK.
+# Approval for changes should come from owners and fuchsia.dev/g/sdk-dev.
+set noparent
+
+# Primary.
+dschuyler@google.com
+
+# If the "primary" is not available:
+abarth@google.com
+hjfreyer@google.com
+
+# COMPONENT: DeveloperExperience>SDK

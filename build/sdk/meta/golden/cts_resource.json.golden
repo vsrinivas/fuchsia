@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "description": "Name of the resource set",
+                    "type": "string"
+                },
+                "resources": {
+                    "description": "The list of resources.",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "resource"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "resources",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "description": "A set of resources",
+    "id": "http://fuchsia.com/schemas/sdk/cts_resource.json",
+    "type": "object"
+}

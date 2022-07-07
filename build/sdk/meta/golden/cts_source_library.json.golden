@@ -1,0 +1,70 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "deps": {
+                    "description": "List of C/C++ libraries this library depends on",
+                    "items": {
+                        "$ref": "common.json#/definitions/cc_library_name"
+                    },
+                    "type": "array"
+                },
+                "headers": {
+                    "description": "List of public headers",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "include_dir": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path to the base directory for includes"
+                },
+                "name": {
+                    "$ref": "common.json#/definitions/cc_library_name",
+                    "description": "Name of the library"
+                },
+                "root": {
+                    "description": "The root of the element in the SDK",
+                    "type": "string"
+                },
+                "sources": {
+                    "description": "List of library sources",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "cc_source_library"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "deps",
+                "headers",
+                "include_dir",
+                "root",
+                "sources",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "description": "A set of C/C++ sources",
+    "id": "http://fuchsia.com/schemas/sdk/cts_source_library.json",
+    "type": "object"
+}

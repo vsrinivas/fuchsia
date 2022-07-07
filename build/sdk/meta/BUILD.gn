@@ -4,7 +4,9 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/python/python_host_test.gni")
 import("//build/sdk/sdk_documentation.gni")
+import("//sdk/cts/build/verify_json_schemas.gni")
 
 # Schemas that are required for the product_bundle_container.
 product_bundle_container_required_schemas = [
@@ -72,8 +74,34 @@ go_test("go_meta_tests") {
   ]
 }
 
+verify_json_schemas("verify_json_schemas") {
+  golden = []
+
+  # In the golden directory, there should be one golden file per schema.
+  # Please do not add or remove any schemas without consulting
+  # with sdk-dev@fuchsia.dev .
+  #
+  # If you have approval to make this change, you can fix the build error
+  # by ensuring the golden directory matches the current directory.
+  foreach(schema, schemas) {
+    golden += [ "golden/$schema.golden" ]
+  }
+
+  current = schemas
+
+  policy = "no_changes"
+}
+
+if (is_host) {
+  python_host_test("verify_json_schemas_test") {
+    main_source = "//sdk/cts/build/scripts/verify_json_schemas_test.py"
+    sources = [ "//sdk/cts/build/scripts/verify_json_schemas.py" ]
+  }
+}
+
 source_set("schemas") {
   inputs = schemas
+  deps = [ ":verify_json_schemas" ]
 }
 
 if (is_host) {
@@ -151,5 +179,6 @@ group("tests") {
   deps = [
     ":go_meta_tests($host_toolchain)",
     ":rust_test($host_toolchain)",
+    ":verify_json_schemas_test($host_toolchain)",
   ]
 }

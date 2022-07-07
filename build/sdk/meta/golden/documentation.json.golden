@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "docs": {
+                    "description": "The list of documents pertaining to the set",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                },
+                "name": {
+                    "description": "Name of the document set",
+                    "type": "string"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "documentation"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "docs",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "description": "A set of documents",
+    "id": "http://fuchsia.com/schemas/sdk/documentation.json",
+    "type": "object"
+}

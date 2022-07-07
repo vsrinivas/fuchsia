@@ -1,0 +1,54 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "properties": {
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/physical_hardware"
+                        }
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    ],
+    "definitions": {
+        "physical_hardware": {
+            "allOf": [
+                {
+                    "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                },
+                {
+                    "properties": {
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "physical_device"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "required": [
+                "hardware",
+                "type",
+                "name"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "A physical device specification.",
+    "id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json",
+    "type": "object"
+}

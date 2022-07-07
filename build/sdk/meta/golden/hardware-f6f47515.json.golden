@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "requirements": {
+            "properties": {
+                "hardware": {
+                    "properties": {
+                        "cpu": {
+                            "additionalProperties": false,
+                            "properties": {
+                                "arch": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "arch"
+                            ],
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "cpu"
+                    ],
+                    "type": "object"
+                }
+            },
+            "required": [
+                "hardware"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "Hardware requirements for running a product image.",
+    "id": "http://fuchsia.com/schemas/sdk/hardware-f6f47515.json",
+    "oneOf": [
+        {
+            "$ref": "#/definitions/requirements"
+        }
+    ]
+}

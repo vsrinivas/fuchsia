@@ -1,0 +1,183 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "virtual_hardware": {
+            "allOf": [
+                {
+                    "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                },
+                {
+                    "properties": {
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "virtual_device"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "properties": {
+                        "hardware": {
+                            "properties": {
+                                "audio": {
+                                    "additionalProperties": false,
+                                    "description": "Definition of the virtual device's audio interface, if it has one.",
+                                    "properties": {
+                                        "model": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ac97",
+                                                "adlib",
+                                                "cs4231a",
+                                                "es1370",
+                                                "gus",
+                                                "hda",
+                                                "none",
+                                                "pcspk",
+                                                "sb16"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "model"
+                                    ],
+                                    "type": "object"
+                                },
+                                "inputs": {
+                                    "additionalProperties": false,
+                                    "description": "The kind of input devices to emulate for interacting with the virtual device.",
+                                    "properties": {
+                                        "pointing_device": {
+                                            "type": "string",
+                                            "enum": [
+                                                "mouse",
+                                                "touch"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "pointing_device"
+                                    ],
+                                    "type": "object"
+                                },
+                                "memory": {
+                                    "additionalProperties": false,
+                                    "description": "The amount of memory to allocate within the virtual device.",
+                                    "properties": {
+                                        "quantity": {
+                                            "type": "number"
+                                        },
+                                        "units": {
+                                            "type": "string",
+                                            "enum": [
+                                                "bytes",
+                                                "kilobytes",
+                                                "megabytes",
+                                                "gigabytes",
+                                                "terabytes"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "quantity",
+                                        "units"
+                                    ],
+                                    "type": "object"
+                                },
+                                "storage": {
+                                    "additionalProperties": false,
+                                    "description": "The amount of storage allocated to the device. Used when resizing the disk image.",
+                                    "properties": {
+                                        "quantity": {
+                                            "type": "number"
+                                        },
+                                        "units": {
+                                            "type": "string",
+                                            "enum": [
+                                                "bytes",
+                                                "kilobytes",
+                                                "megabytes",
+                                                "gigabytes",
+                                                "terabytes"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "quantity",
+                                        "units"
+                                    ],
+                                    "type": "object"
+                                },
+                                "window_size": {
+                                    "additionalProperties": false,
+                                    "description": "The size of the virtual device's screen, if it has one.",
+                                    "properties": {
+                                        "height": {
+                                            "type": "number"
+                                        },
+                                        "width": {
+                                            "type": "number"
+                                        },
+                                        "units": {
+                                            "type": "string",
+                                            "enum": [
+                                                "pixels"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "height",
+                                        "width",
+                                        "units"
+                                    ],
+                                    "type": "object"
+                                }
+                            },
+                            "required": [
+                                "audio",
+                                "inputs",
+                                "memory",
+                                "storage",
+                                "window_size"
+                            ],
+                            "type": "object"
+                        }
+                    }
+                }
+            ],
+            "required": [
+                "hardware",
+                "type",
+                "name"
+            ],
+            "type": "object"
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "properties": {
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/virtual_hardware"
+                        }
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    ],
+    "description": "A virtual device specification.",
+    "id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
+    "type": "object"
+}

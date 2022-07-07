@@ -1,0 +1,47 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "data": {
+                    "description": "The list of data files pertaining to the set",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                },
+                "name": {
+                    "description": "Name of the data set",
+                    "type": "string"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "component_manifest",
+                                "config",
+                                "license"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "description": "A set of data files",
+    "id": "http://fuchsia.com/schemas/sdk/documentation.json",
+    "type": "object"
+}
