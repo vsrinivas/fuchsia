@@ -68,7 +68,7 @@ impl UnhandledInputHandler for TouchInjectorHandler {
 
         match unhandled_input_event {
             input_device::UnhandledInputEvent {
-                device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
+                device_event: input_device::InputDeviceEvent::TouchScreen(ref touch_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
                 event_time,
@@ -179,7 +179,7 @@ impl TouchInjectorHandler {
     /// - `touch_descriptor`: The descriptor of the new touch device.
     async fn ensure_injector_registered(
         self: &Rc<Self>,
-        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
+        touch_descriptor: &touch_binding::TouchScreenDeviceDescriptor,
     ) -> Result<(), anyhow::Error> {
         if self.mutable_state.borrow().injectors.contains_key(&touch_descriptor.device_id) {
             return Ok(());
@@ -234,8 +234,8 @@ impl TouchInjectorHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     async fn send_event_to_scenic(
         &self,
-        touch_event: &touch_binding::TouchEvent,
-        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
+        touch_event: &touch_binding::TouchScreenEvent,
+        touch_descriptor: &touch_binding::TouchScreenDeviceDescriptor,
         event_time: zx::Time,
     ) -> Result<(), anyhow::Error> {
         // The order in which events are sent to clients.
@@ -298,7 +298,7 @@ impl TouchInjectorHandler {
     fn create_pointer_sample_event(
         phase: pointerinjector::EventPhase,
         contact: &touch_binding::TouchContact,
-        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
+        touch_descriptor: &touch_binding::TouchScreenDeviceDescriptor,
         display_size: &Size,
         event_time: zx::Time,
     ) -> pointerinjector::Event {
@@ -343,7 +343,7 @@ impl TouchInjectorHandler {
     /// (x, y) coordinates.
     fn display_coordinate_from_contact(
         contact: &touch_binding::TouchContact,
-        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
+        touch_descriptor: &touch_binding::TouchScreenDeviceDescriptor,
         display_size: &Size,
     ) -> Position {
         if let Some(contact_descriptor) = touch_descriptor.contacts.first() {
@@ -427,7 +427,7 @@ mod tests {
 
     /// Returns an |input_device::InputDeviceDescriptor::TouchDescriptor|.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },

@@ -502,10 +502,9 @@ pub fn create_touch_event_with_handled(
         contacts.get(&fidl_ui_input::PointerEventPhase::Remove).unwrap().clone(),
     };
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(touch_binding::TouchEvent {
-            contacts,
-            injector_contacts,
-        }),
+        device_event: input_device::InputDeviceEvent::TouchScreen(
+            touch_binding::TouchScreenEvent { contacts, injector_contacts },
+        ),
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled: handled,

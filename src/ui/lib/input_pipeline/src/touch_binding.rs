@@ -20,7 +20,7 @@ use {
     std::iter::FromIterator,
 };
 
-/// A [`TouchEvent`] represents a set of contacts and the phase those contacts are in.
+/// A [`TouchScreenEvent`] represents a set of contacts and the phase those contacts are in.
 ///
 /// For example, when a user touches a touch screen with two fingers, there will be two
 /// [`TouchContact`]s. When a user removes one finger, there will still be two contacts
@@ -36,7 +36,7 @@ use {
 /// Additionally, a [`fidl_fuchsia_ui_input::PointerEventPhase::Cancel`] may be sent at any time
 /// signalling that the event is no longer directed towards the receiver.
 #[derive(Clone, Debug, PartialEq)]
-pub struct TouchEvent {
+pub struct TouchScreenEvent {
     /// Deprecated. To be removed with fxbug.dev/75817.
     /// The contacts associated with the touch event. For example, a two-finger touch would result
     /// in one touch event with two [`TouchContact`]s.
@@ -106,7 +106,7 @@ impl From<&fidl_fuchsia_input_report::ContactInputReport> for TouchContact {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TouchDeviceDescriptor {
+pub struct TouchScreenDeviceDescriptor {
     /// The id of the connected touch input device.
     pub device_id: u32,
 
@@ -156,7 +156,7 @@ pub struct TouchBinding {
     event_sender: Sender<InputEvent>,
 
     /// Holds information about this device.
-    device_descriptor: TouchDeviceDescriptor,
+    device_descriptor: TouchScreenDeviceDescriptor,
 
     /// Touch device type of the touch device.
     touch_device_type: TouchDeviceType,
@@ -269,7 +269,7 @@ impl TouchBinding {
                 ..
             }) => Ok(TouchBinding {
                 event_sender: input_event_sender,
-                device_descriptor: TouchDeviceDescriptor {
+                device_descriptor: TouchScreenDeviceDescriptor {
                     device_id,
                     contacts: contact_descriptors
                         .iter()
@@ -444,7 +444,7 @@ fn send_event(
     trace_id: fuchsia_trace::Id,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(TouchEvent {
+        device_event: input_device::InputDeviceEvent::TouchScreen(TouchScreenEvent {
             contacts,
             injector_contacts,
         }),
@@ -510,7 +510,7 @@ mod tests {
         let report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
         let report = create_touch_input_report(vec![], report_time);
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![],
         });
@@ -534,7 +534,7 @@ mod tests {
     async fn add_and_down() {
         const TOUCH_ID: u32 = 2;
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![],
         });
@@ -575,7 +575,7 @@ mod tests {
     async fn up_and_remove() {
         const TOUCH_ID: u32 = 2;
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![],
         });
@@ -633,7 +633,7 @@ mod tests {
         let first = Position { x: 10.0, y: 30.0 };
         let second = Position { x: first.x * 2.0, y: first.y * 2.0 };
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![],
         });
@@ -706,7 +706,7 @@ mod tests {
         };
         let report = create_touch_input_report(vec![contact], report_time);
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![],
         });

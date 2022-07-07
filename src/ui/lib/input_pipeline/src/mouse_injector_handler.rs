@@ -115,7 +115,7 @@ impl InputHandler for MouseInjectorHandler {
                 input_event.handled = input_device::Handled::Yes;
             }
             input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Touch(ref _touch_event),
+                device_event: input_device::InputDeviceEvent::TouchScreen(ref _touch_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(ref _touch_device_descriptor),
                 event_time: _,
@@ -620,7 +620,7 @@ mod tests {
 
     /// Returns an TouchDescriptor.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchScreenDeviceDescriptor {
             device_id: 1,
             contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },

@@ -78,7 +78,7 @@ pub enum InputDeviceEvent {
     Keyboard(keyboard_binding::KeyboardEvent),
     ConsumerControls(consumer_controls_binding::ConsumerControlsEvent),
     Mouse(mouse_binding::MouseEvent),
-    Touch(touch_binding::TouchEvent),
+    TouchScreen(touch_binding::TouchScreenEvent),
     MouseConfig(mouse_config::MouseConfigEvent),
     #[cfg(test)]
     Fake,
@@ -98,7 +98,7 @@ pub enum InputDeviceDescriptor {
     Keyboard(keyboard_binding::KeyboardDeviceDescriptor),
     ConsumerControls(consumer_controls_binding::ConsumerControlsDeviceDescriptor),
     Mouse(mouse_binding::MouseDeviceDescriptor),
-    Touch(touch_binding::TouchDeviceDescriptor),
+    Touch(touch_binding::TouchScreenDeviceDescriptor),
     MouseConfig,
     #[cfg(test)]
     Fake,
