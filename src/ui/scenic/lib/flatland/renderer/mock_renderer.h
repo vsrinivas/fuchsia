@@ -31,6 +31,13 @@ class MockRenderer : public Renderer {
 
   MOCK_METHOD(void, DeregisterRenderTargetCollection, (allocation::GlobalBufferCollectionId));
 
+  MOCK_METHOD(bool, RegisterReadbackCollection,
+              (allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
+               fuchsia::math::SizeU size));
+
+  MOCK_METHOD(void, DeregisterReadbackCollection, (allocation::GlobalBufferCollectionId));
+
   MOCK_METHOD(void, Render,
               (const allocation::ImageMetadata&, const std::vector<Rectangle2D>&,
                const std::vector<allocation::ImageMetadata>&, const std::vector<zx::event>&, bool));

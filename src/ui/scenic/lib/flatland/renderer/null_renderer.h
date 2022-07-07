@@ -46,6 +46,17 @@ class NullRenderer final : public Renderer {
       allocation::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
+  virtual bool RegisterReadbackCollection(
+      allocation::GlobalBufferCollectionId collection_id,
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      fuchsia::math::SizeU size = {}) override;
+
+  // |Renderer|.
+  virtual void DeregisterReadbackCollection(
+      allocation::GlobalBufferCollectionId collection_id) override;
+
+  // |Renderer|.
   void Render(const allocation::ImageMetadata& render_target,
               const std::vector<Rectangle2D>& rectangles,
               const std::vector<allocation::ImageMetadata>& images,
@@ -62,9 +73,17 @@ class NullRenderer final : public Renderer {
       const std::vector<zx_pixel_format_t>& available_formats) const override;
 
  private:
+  bool RegisterCollection(allocation::GlobalBufferCollectionId collection_id,
+                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                          bool readback = false);
+  void DeregisterCollection(allocation::GlobalBufferCollectionId collection_id,
+                            bool readback = false);
+
   // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;
-  std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
+  std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo> render_target_map_;
+  std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo> readback_map_;
   std::unordered_map<allocation::GlobalImageId, fuchsia::sysmem::ImageFormatConstraints> image_map_;
 };
 

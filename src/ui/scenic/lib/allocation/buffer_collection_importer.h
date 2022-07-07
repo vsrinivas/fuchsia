@@ -75,8 +75,8 @@ class BufferCollectionImporter {
  public:
   // Allows the service to set its own constraints on the buffer collection. Must be set before
   // the buffer collection is fully allocated/validated. The return value indicates successful
-  // importation via |true| and a failed importation via |false|. The collection_id can be
-  // reused if the importation fails.
+  // importation via |true| and a failed importation via |false|. Returns false if |collection_id|
+  // is already imported. The collection_id can be reused if the importation fails.
   virtual bool ImportBufferCollection(
       GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
