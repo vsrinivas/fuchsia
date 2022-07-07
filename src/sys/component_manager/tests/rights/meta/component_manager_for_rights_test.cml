@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/component_manager",
+        args: [
+            "--config",
+            "/pkg/data/component_manager_debug_config",
+        ],
+    },
+    children: [
+        {
+            name: "expose_dir_rights",
+            url: "#meta/expose_dir_rights.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.component.resolver.RealmBuilder",
+                "fuchsia.component.runner.RealmBuilder",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+        },
+
+        // Take the maximal set of rights here. They should be scoped down by
+        // the component manager configuration file.
+        {
+            directory: "read_only",
+            from: "#expose_dir_rights",
+            rights: [ "r*" ],
+            path: "/read_only",
+        },
+        {
+            directory: "read_write",
+            from: "#expose_dir_rights",
+            rights: [ "rw*" ],
+            path: "/read_write",
+        },
+        {
+            directory: "read_write",
+            from: "#expose_dir_rights",
+            rights: [ "rw*" ],
+            path: "/read_write_dup",
+        },
+        {
+            directory: "read_exec",
+            from: "#expose_dir_rights",
+            rights: [ "rx*" ],
+            path: "/read_exec",
+        },
+        {
+            directory: "read_only_after_scoped",
+            from: "#expose_dir_rights",
+            rights: [ "r*" ],
+            path: "/read_only_after_scoped",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "self",
+        },
+    ],
+}

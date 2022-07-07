@@ -19,15 +19,18 @@ rustc_test("rights_integration_test_bin") {
   source_root = "rights_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/scoped_task",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "rights_integration_test.rs" ]
@@ -195,11 +198,11 @@ component_config("component_manager_debug_config") {
 fuchsia_component("component_manager_for_rights_test") {
   testonly = true
   deps = [ "//src/sys/component_manager:bin" ]
-  manifest = "meta/component_manager_for_rights_test.cmx"
+  manifest = "meta/component_manager_for_rights_test.cml"
 }
 
 fuchsia_unittest_package("rights_integration_test") {
-  manifest = "meta/rights_integration_test.cmx"
+  manifest = "meta/rights_integration_test.cml"
   deps = [
     ":component_manager_debug_config",
     ":component_manager_for_rights_test",
