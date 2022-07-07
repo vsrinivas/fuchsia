@@ -453,6 +453,14 @@
   related_guides: [""]
   area: ["System", "Devices"]
 
+- term: "Domain object"
+  short_description: "The corresponding class or data type in a target language (such as C++) used
+  to represent a FIDL type. A domain object usually models an entity in a problem domain space."
+  full_description: ""
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL"]
+
 - term: "Element"
   short_description: "A component added to a session dynamically through the FIDL
   <code>ElementManager</code> protocol."
