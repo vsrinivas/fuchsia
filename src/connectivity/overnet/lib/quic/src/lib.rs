@@ -562,8 +562,40 @@ impl AsyncQuicStreamReader {
         }
     }
 
-    pub fn read_exact<'b>(&'b mut self, bytes: &'b mut [u8]) -> ReadExact<'b> {
-        ReadExact { read: self.read(bytes), done: false }
+    pub async fn read_exact<'b>(&'b mut self, bytes: &'b mut [u8]) -> Result<bool, Error> {
+        struct State<'b> {
+            this: &'b mut AsyncQuicStreamReader,
+            bytes: &'b mut [u8],
+            read: usize,
+            done: bool,
+        }
+
+        let mut state = State { this: self, bytes, read: 0, done: false };
+
+        impl Drop for State<'_> {
+            fn drop(&mut self) {
+                // If we never returned Ready but did read some data, then return that data to the readers
+                // buffer so that we can try to consume it next time.
+                if !self.done && self.read != 0 {
+                    assert!(self.this.buffered.is_empty());
+                    self.this.buffered = self.bytes[..self.read].to_vec();
+                }
+            }
+        }
+
+        loop {
+            let (n, fin) = state.this.read(&mut state.bytes[state.read..]).await?;
+            state.read += n;
+
+            if state.read == state.bytes.len() {
+                state.done = true;
+                break Ok(fin);
+            }
+
+            if fin {
+                break Err(format_err!("Endo of stream"));
+            }
+        }
     }
 
     pub async fn abandon(&mut self) {
@@ -571,64 +603,6 @@ impl AsyncQuicStreamReader {
         self.observed_closed = true;
         if let Err(e) = self.conn.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Read, 0) {
             log::trace!("shutdown stream failed: {:?}", e);
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ReadExact<'b> {
-    read: QuicRead<'b>,
-    done: bool,
-}
-
-impl<'b> ReadExact<'b> {
-    #[allow(dead_code)]
-    pub fn debug_id(&self) -> impl std::fmt::Debug {
-        self.read.debug_id()
-    }
-}
-
-impl<'b> Future for ReadExact<'b> {
-    type Output = Result<bool, Error>;
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = Pin::into_inner(self);
-        assert!(!this.done);
-        loop {
-            let read = &mut this.read;
-            let (n, fin) = ready!(read.poll_unpin(ctx))?;
-            read.bytes_offset += n;
-            if read.bytes_offset == read.bytes.len() {
-                this.done = true;
-                return Poll::Ready(Ok(fin));
-            }
-            if fin {
-                this.done = true;
-                return Poll::Ready(Err(format_err!("End of stream")));
-            }
-        }
-    }
-}
-
-impl<'b> ReadExact<'b> {
-    pub fn rearm(&mut self, bytes: impl Into<ReadBuf<'b>>) {
-        assert!(self.done);
-        self.read.bytes_offset = 0;
-        self.read.bytes = bytes.into();
-        self.done = false;
-    }
-
-    pub fn conn(&self) -> &Arc<AsyncConnection> {
-        &self.read.conn
-    }
-}
-
-impl<'b> Drop for ReadExact<'b> {
-    fn drop(&mut self) {
-        // If we never returned Ready but did read some data, then return that data to the readers
-        // buffer so that we can try to consume it next time.
-        if !self.done && self.read.bytes_offset != 0 {
-            assert!(self.read.buffered.is_empty());
-            *self.read.buffered = self.read.bytes.take_vec_to(self.read.bytes_offset);
         }
     }
 }
@@ -654,27 +628,10 @@ impl<'b> ReadBuf<'b> {
         }
     }
 
-    fn take_vec_to(&mut self, offset: usize) -> Vec<u8> {
-        match self {
-            Self::Slice(buf) => buf[..offset].to_vec(),
-            Self::Vec(buf) => {
-                buf.truncate(offset);
-                std::mem::replace(buf, Vec::new())
-            }
-        }
-    }
-
     pub fn take_vec(&mut self) -> Vec<u8> {
         match self {
             Self::Slice(buf) => buf.to_vec(),
             Self::Vec(buf) => std::mem::replace(buf, Vec::new()),
-        }
-    }
-
-    fn len(&self) -> usize {
-        match self {
-            Self::Slice(buf) => buf.len(),
-            Self::Vec(buf) => buf.len(),
         }
     }
 }
