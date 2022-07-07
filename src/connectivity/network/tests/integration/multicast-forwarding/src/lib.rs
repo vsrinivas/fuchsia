@@ -532,6 +532,30 @@ fn create_socket_addr_v4(addr: fnet::Ipv4Address) -> std::net::SocketAddrV4 {
     std::net::SocketAddrV4::new(addr.addr.into(), 1234)
 }
 
+/// Waits for the `controller` to be fully initialized.
+///
+/// Multicast forwarding is enabled at the protocol level when a controller is
+/// instantiated. However, controller creation is asynchronous. As a result,
+/// some operations may race with the creation of a controller. In such a case,
+/// callers should invoke this function to ensure that the controller is fully
+/// initialized.
+async fn wait_for_controller_to_start(
+    controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+    test_network: &MulticastForwardingNetwork<'_>,
+) {
+    let mut invalid_addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
+        unicast_source: IPV4_MULTICAST_ADDR,
+        multicast_destination: IPV4_MULTICAST_ADDR,
+    };
+    assert_eq!(
+        controller
+            .add_route(&mut invalid_addresses, test_network.default_multicast_route())
+            .await
+            .expect("add_route failed"),
+        Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress)
+    );
+}
+
 /// Configuration for a client device that has joined a multicast group.
 struct ClientConfig {
     route_min_ttl: u8,
@@ -1030,6 +1054,11 @@ async fn add_multicast_route<E: netemul::Endpoint>(
     let controller = router_realm
         .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
         .expect("connect to protocol");
+
+    // The queuing of a pending packet below may race with the creation of the
+    // multicast controller. As a result, a wait point is inserted to ensure
+    // that the controller is fully initialized before a packet is sent.
+    wait_for_controller_to_start(&controller, &test_network).await;
 
     // Queue a packet that could potentially be forwarded once a multicast route
     // is installed.
