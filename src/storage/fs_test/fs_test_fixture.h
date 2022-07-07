@@ -43,7 +43,7 @@ class BaseFilesystemTest : public testing::Test {
   // Repeatedly run the given test function simulating a power cut at different block write counts
   // for each iteration.
   void RunSimulatedPowerCutTest(const PowerCutOptions& options,
-                                std::function<void()> test_function);
+                                const std::function<void()>& test_function);
 
  protected:
   TestFilesystem fs_;

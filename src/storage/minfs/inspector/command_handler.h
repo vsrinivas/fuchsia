@@ -91,7 +91,7 @@ class CommandHandler : public disk_inspector::CommandHandler {
 
   // Gets the superblock from the inspector, edits the field with |fieldname|
   // to be |value|, and writes the superblock to disk.
-  zx_status_t WriteSuperblockField(std::string fieldname, std::string value);
+  zx_status_t WriteSuperblockField(std::string fieldname, const std::string& value);
 
   std::unique_ptr<MinfsInspector> inspector_;
   std::vector<disk_inspector::Command> command_list_;

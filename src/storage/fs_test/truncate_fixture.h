@@ -37,7 +37,7 @@ class LargeTruncateTest : public BaseFilesystemTest,
 };
 
 std::string GetDescriptionForLargeTruncateTestParamType(
-    const testing::TestParamInfo<LargeTruncateTestParamType>);
+    const testing::TestParamInfo<LargeTruncateTestParamType>&);
 
 }  // namespace fs_test
 

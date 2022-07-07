@@ -33,7 +33,7 @@
 
 namespace {
 
-zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
+zx_status_t do_stat(const fbl::RefPtr<fs::Vnode>& vn, struct stat* s) {
   fs::VnodeAttributes a;
   zx_status_t status = vn->GetAttributes(&a);
   if (status == ZX_OK) {

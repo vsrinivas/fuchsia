@@ -47,11 +47,11 @@ class AstroPartitioner : public DevicePartitioner {
  private:
   AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block,
                    std::shared_ptr<Context> context)
-      : skip_block_(std::move(skip_block)), context_(context) {}
+      : skip_block_(std::move(skip_block)), context_(std::move(context)) {}
 
   static zx::status<> InitializeContext(const fbl::unique_fd& devfs_root,
                                         AbrWearLevelingOption abr_wear_leveling_opt,
-                                        std::shared_ptr<Context> context);
+                                        Context* context);
 
   static bool CanSafelyUpdateLayout(std::shared_ptr<Context> context);
 

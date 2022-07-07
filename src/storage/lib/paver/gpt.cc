@@ -100,8 +100,9 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, std::str
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 
-zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
-                             zx::unowned_channel chan) {
+zx::status<> RebindGptDriver(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+    zx::unowned_channel chan) {  // NOLINT(performance-unnecessary-value-param)
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
     return pauser.take_error();

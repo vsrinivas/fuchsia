@@ -866,7 +866,7 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                     fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel server,
                     std::shared_ptr<Context> context) {
   auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
-                                                      GetCurrentArch(), context);
+                                                      GetCurrentArch(), std::move(context));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -880,9 +880,9 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
                            fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                            zx::channel block_device, zx::channel server,
                            std::shared_ptr<Context> context) {
-  auto partitioner =
-      DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
-                                       GetCurrentArch(), context, std::move(block_device));
+  auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
+                                                      GetCurrentArch(), std::move(context),
+                                                      std::move(block_device));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -942,7 +942,7 @@ void DynamicDataSink::WipeVolume(WipeVolumeRequestView request,
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                        std::shared_ptr<Context> context, zx::channel server) {
-  auto status = abr::ClientFactory::Create(devfs_root.duplicate(), svc_root, context);
+  auto status = abr::ClientFactory::Create(devfs_root.duplicate(), svc_root, std::move(context));
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
     fidl_epitaph_write(server.get(), status.error_value());

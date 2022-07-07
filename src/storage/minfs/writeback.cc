@@ -124,6 +124,7 @@ void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer
 }
 
 // No-op - don't need to pin vnodes on host.
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {}
 #endif
 

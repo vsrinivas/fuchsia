@@ -112,7 +112,7 @@ class PageLoader {
   // 3. ZX_ERR_BAD_STATE - Any other type of failure which prevents us from successfully completing
   // the page request, e.g. failure while decompressing, or while transferring pages from the
   // transfer buffer etc.
-  [[nodiscard]] PagerErrorStatus TransferPages(PageSupplier page_supplier, uint64_t offset,
+  [[nodiscard]] PagerErrorStatus TransferPages(const PageSupplier& page_supplier, uint64_t offset,
                                                uint64_t length, const LoaderInfo& info);
 
  private:
@@ -131,16 +131,16 @@ class PageLoader {
 
     // See |PageLoader::TransferPages()| which simply selects which Worker to delegate the
     // actual work to.
-    [[nodiscard]] PagerErrorStatus TransferPages(PageLoader::PageSupplier page_supplier,
+    [[nodiscard]] PagerErrorStatus TransferPages(const PageLoader::PageSupplier& page_supplier,
                                                  uint64_t offset, uint64_t length,
                                                  const LoaderInfo& info);
 
    private:
     Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics);
 
-    PagerErrorStatus TransferChunkedPages(PageLoader::PageSupplier page_supplier, uint64_t offset,
-                                          uint64_t length, const LoaderInfo& info);
-    PagerErrorStatus TransferUncompressedPages(PageLoader::PageSupplier page_supplier,
+    PagerErrorStatus TransferChunkedPages(const PageLoader::PageSupplier& page_supplier,
+                                          uint64_t offset, uint64_t length, const LoaderInfo& info);
+    PagerErrorStatus TransferUncompressedPages(const PageLoader::PageSupplier& page_supplier,
                                                uint64_t offset, uint64_t length,
                                                const LoaderInfo& info);
 

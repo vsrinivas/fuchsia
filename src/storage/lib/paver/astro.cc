@@ -58,7 +58,7 @@ bool AstroPartitioner::CanSafelyUpdateLayout(std::shared_ptr<Context> context) {
   // above state, where it is impossible to roll back to older version.
   std::unique_ptr<PartitionClient> partition_client =
       std::make_unique<AstroSysconfigPartitionClientBuffered>(
-          context, sysconfig::SyncClient::PartitionType::kABRMetadata);
+          std::move(context), sysconfig::SyncClient::PartitionType::kABRMetadata);
 
   auto status_or_client = abr::AbrPartitionClient::Create(std::move(partition_client));
   if (status_or_client.is_error()) {
@@ -99,7 +99,7 @@ bool AstroPartitioner::CanSafelyUpdateLayout(std::shared_ptr<Context> context) {
 
 zx::status<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_root,
                                                  AbrWearLevelingOption abr_wear_leveling_opt,
-                                                 std::shared_ptr<Context> context) {
+                                                 Context* context) {
   return context->Initialize<AstroPartitionerContext>(
       [&]() -> zx::status<std::unique_ptr<AstroPartitionerContext>> {
         std::optional<sysconfig::SyncClient> client;
@@ -143,7 +143,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
           ? AbrWearLevelingOption::ON
           : AbrWearLevelingOption::OFF;
 
-  if (auto status = InitializeContext(devfs_root, option, context); status.is_error()) {
+  if (auto status = InitializeContext(devfs_root, option, context.get()); status.is_error()) {
     ERROR("Failed to initialize context. %s\n", status.status_string());
     return status.take_error();
   }
@@ -164,7 +164,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
       new SkipBlockDevicePartitioner(std::move(devfs_root)));
 
-  return zx::ok(new AstroPartitioner(std::move(skip_block), context));
+  return zx::ok(new AstroPartitioner(std::move(skip_block), std::move(context)));
 }
 
 // Astro bootloader types:

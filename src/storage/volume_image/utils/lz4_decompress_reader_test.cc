@@ -90,7 +90,7 @@ fpromise::result<std::vector<uint8_t>, std::string> CompressedData(
 // Compressed Reader.
 class FakeReader : public Reader {
  public:
-  FakeReader(std::vector<uint8_t> data) : data_(data) {}
+  FakeReader(std::vector<uint8_t> data) : data_(std::move(data)) {}
 
   uint64_t length() const final { return data_.size(); }
 

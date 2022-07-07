@@ -22,22 +22,22 @@ namespace minfs {
 
 std::unique_ptr<disk_inspector::DiskObjectUint64> CreateUint64DiskObj(fbl::String fieldName,
                                                                       const uint64_t* value) {
-  return std::make_unique<disk_inspector::DiskObjectUint64>(fieldName, value);
+  return std::make_unique<disk_inspector::DiskObjectUint64>(std::move(fieldName), value);
 }
 
 std::unique_ptr<disk_inspector::DiskObjectUint32> CreateUint32DiskObj(fbl::String fieldName,
                                                                       const uint32_t* value) {
-  return std::make_unique<disk_inspector::DiskObjectUint32>(fieldName, value);
+  return std::make_unique<disk_inspector::DiskObjectUint32>(std::move(fieldName), value);
 }
 
 std::unique_ptr<disk_inspector::DiskObjectUint64Array> CreateUint64ArrayDiskObj(
     fbl::String fieldName, const uint64_t* value, size_t size) {
-  return std::make_unique<disk_inspector::DiskObjectUint64Array>(fieldName, value, size);
+  return std::make_unique<disk_inspector::DiskObjectUint64Array>(std::move(fieldName), value, size);
 }
 
 std::unique_ptr<disk_inspector::DiskObjectUint32Array> CreateUint32ArrayDiskObj(
     fbl::String fieldName, const uint32_t* value, size_t size) {
-  return std::make_unique<disk_inspector::DiskObjectUint32Array>(fieldName, value, size);
+  return std::make_unique<disk_inspector::DiskObjectUint32Array>(std::move(fieldName), value, size);
 }
 
 zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) {

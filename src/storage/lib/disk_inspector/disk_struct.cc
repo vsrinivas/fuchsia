@@ -68,7 +68,7 @@ void DiskStruct::AddField(std::string key, FieldType type, uint64_t field_offset
     }
   }
   fields_[key] = std::move(info);
-  field_list_.emplace_back(key);
+  field_list_.emplace_back(std::move(key));
 }
 
 zx_status_t DiskStruct::WriteField(void* position, std::vector<std::string> keys,

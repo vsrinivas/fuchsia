@@ -33,7 +33,7 @@ BlobCache::~BlobCache() {
 }
 
 void BlobCache::Reset() {
-  ForAllOpenNodes([this](fbl::RefPtr<CacheNode> node) {
+  ForAllOpenNodes([this](const fbl::RefPtr<CacheNode>& node) {
     // If someone races alongside Reset, and evicts an open node concurrently with us,
     // a status other than "ZX_OK" may be returned. This is allowed.
     __UNUSED zx_status_t status = Evict(node);

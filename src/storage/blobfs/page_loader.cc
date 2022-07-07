@@ -200,7 +200,7 @@ zx::status<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
   return zx::ok(std::move(worker));
 }
 
-PagerErrorStatus PageLoader::Worker::TransferPages(PageLoader::PageSupplier page_supplier,
+PagerErrorStatus PageLoader::Worker::TransferPages(const PageLoader::PageSupplier& page_supplier,
                                                    uint64_t offset, uint64_t length,
                                                    const LoaderInfo& info) {
   size_t end;
@@ -211,8 +211,8 @@ PagerErrorStatus PageLoader::Worker::TransferPages(PageLoader::PageSupplier page
   }
 
   if (info.decompressor)
-    return TransferChunkedPages(std::move(page_supplier), offset, length, info);
-  return TransferUncompressedPages(std::move(page_supplier), offset, length, info);
+    return TransferChunkedPages(page_supplier, offset, length, info);
+  return TransferUncompressedPages(page_supplier, offset, length, info);
 }
 
 // The requested range is aligned in multiple steps as follows:
@@ -225,8 +225,8 @@ PagerErrorStatus PageLoader::Worker::TransferPages(PageLoader::PageSupplier page
 // Merkle tree verification. We have static asserts in place to check this assumption - the transfer
 // buffer (256MB) is 8k block aligned.
 PagerErrorStatus PageLoader::Worker::TransferUncompressedPages(
-    PageLoader::PageSupplier page_supplier, uint64_t requested_offset, uint64_t requested_length,
-    const LoaderInfo& info) {
+    const PageLoader::PageSupplier& page_supplier, uint64_t requested_offset,
+    uint64_t requested_length, const LoaderInfo& info) {
   ZX_DEBUG_ASSERT(!info.decompressor);
 
   const auto [start_offset, total_length] =
@@ -340,10 +340,9 @@ PagerErrorStatus PageLoader::Worker::TransferUncompressedPages(
 // transfer buffer should work with the worst case compression ratio of 1. We have static asserts in
 // place to check both these assumptions - the transfer buffer is the same size as the decompression
 // buffer (256MB), and both these buffers are 8k block aligned.
-PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSupplier page_supplier,
-                                                          uint64_t requested_offset,
-                                                          uint64_t requested_length,
-                                                          const LoaderInfo& info) {
+PagerErrorStatus PageLoader::Worker::TransferChunkedPages(
+    const PageLoader::PageSupplier& page_supplier, uint64_t requested_offset,
+    uint64_t requested_length, const LoaderInfo& info) {
   ZX_DEBUG_ASSERT(info.decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
@@ -530,7 +529,7 @@ uint32_t PageLoader::AllocateWorker() {
   return worker_id_allocator_++;
 }
 
-PagerErrorStatus PageLoader::TransferPages(PageSupplier page_supplier, uint64_t offset,
+PagerErrorStatus PageLoader::TransferPages(const PageSupplier& page_supplier, uint64_t offset,
                                            uint64_t length, const LoaderInfo& info) {
   static const fs_watchdog::FsOperationType kOperation(
       fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
@@ -538,7 +537,7 @@ PagerErrorStatus PageLoader::TransferPages(PageSupplier page_supplier, uint64_t 
 
   // Assigns a worker to each pager thread statically.
   thread_local uint32_t worker_id = AllocateWorker();
-  return workers_[worker_id]->TransferPages(std::move(page_supplier), offset, length, info);
+  return workers_[worker_id]->TransferPages(page_supplier, offset, length, info);
 }
 
 }  // namespace blobfs

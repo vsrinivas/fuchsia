@@ -85,7 +85,7 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 std::vector<TestFilesystemOptions> AllTestFilesystems();
 // Provides the ability to map and filter all test file systems, using the supplied function.
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
-    std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>);
+    const std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>&);
 TestFilesystemOptions OptionsWithDescription(std::string_view description);
 
 // Returns device and device path.

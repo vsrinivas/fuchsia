@@ -831,7 +831,7 @@ using FindPartitionFn = std::function<zx_status_t(const Partitions* partitions, 
                                                   uint64_t* out_first, uint64_t* out_last)>;
 
 void SetPartitionRangeTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync,
-                                 FindPartitionFn find_part) {
+                                 const FindPartitionFn& find_part) {
   uint64_t new_last = 0, new_first = 0;
 
   ASSERT_GT(total_partitions, 1, "For range to test we need at least two partition");

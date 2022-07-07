@@ -338,12 +338,12 @@ const std::string& FakePaver::data_file_path() const {
 
 void FakePaver::set_supported_firmware_type(std::string type) {
   fbl::AutoLock al(&lock_);
-  supported_firmware_type_ = type;
+  supported_firmware_type_ = std::move(type);
 }
 
 void FakePaver::set_expected_device(std::string expected) {
   fbl::AutoLock al(&lock_);
-  expected_block_device_ = expected;
+  expected_block_device_ = std::move(expected);
 }
 
 const AbrData FakePaver::abr_data() {

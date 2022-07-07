@@ -51,17 +51,17 @@ void CommandHandler::InitializeCommands() {
       {"TogglePrintHex",
        {},
        "Toggles printing fields in hexadecimal.",
-       [this](ParsedCommand args) -> zx_status_t { return TogglePrintHex(); }},
+       [this](const ParsedCommand& args) -> zx_status_t { return TogglePrintHex(); }},
 
       {"ToggleHideArray",
        {},
        "Toggles showing array field entries.",
-       [this](ParsedCommand args) -> zx_status_t { return ToggleHideArray(); }},
+       [this](const ParsedCommand& args) -> zx_status_t { return ToggleHideArray(); }},
 
       {"PrintSuperblock",
        {},
        "Prints the superblock.",
-       [this](ParsedCommand args) -> zx_status_t { return PrintSuperblock(); }},
+       [this](const ParsedCommand& args) -> zx_status_t { return PrintSuperblock(); }},
 
       {"PrintInode",
        {
@@ -93,7 +93,7 @@ void CommandHandler::InitializeCommands() {
       {"PrintJournalSuperblock",
        {},
        "Prints the journal superblock.",
-       [this](ParsedCommand args) -> zx_status_t { return PrintJournalSuperblock(); }},
+       [this](const ParsedCommand& args) -> zx_status_t { return PrintJournalSuperblock(); }},
 
       {"PrintJournalEntries",
        {
@@ -126,7 +126,7 @@ void CommandHandler::InitializeCommands() {
       {"PrintBackupSuperblock",
        {},
        "Prints the backup superblock.",
-       [this](ParsedCommand args) -> zx_status_t { return PrintBackupSuperblock(); }},
+       [this](const ParsedCommand& args) -> zx_status_t { return PrintBackupSuperblock(); }},
 
       {"WriteSuperblockField",
        {
@@ -294,7 +294,7 @@ zx_status_t CommandHandler::PrintBackupSuperblock() {
   return ZX_OK;
 }
 
-zx_status_t CommandHandler::WriteSuperblockField(std::string fieldname, std::string value) {
+zx_status_t CommandHandler::WriteSuperblockField(std::string fieldname, const std::string& value) {
   Superblock superblock = inspector_->InspectSuperblock();
   std::unique_ptr<disk_inspector::DiskStruct> object = GetSuperblockStruct();
   zx_status_t status = object->WriteField(&superblock, {std::move(fieldname)}, {0}, value);

@@ -434,7 +434,7 @@ TestFilesystemOptions OptionsWithDescription(std::string_view description) {
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
-    std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>
+    const std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>&
         map_and_filter) {
   std::vector<TestFilesystemOptions> results;
   for (const TestFilesystemOptions& options : AllTestFilesystems()) {

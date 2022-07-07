@@ -36,7 +36,7 @@ void FillFile(fbl::unique_fd fd, unsigned char value) {
 }
 
 std::string GetDescriptionForFullTestParamType(
-    const testing::TestParamInfo<FullTestParamType> param) {
+    const testing::TestParamInfo<FullTestParamType>& param) {
   std::stringstream s;
   s << std::get<0>(param.param) << (std::get<1>(param.param) ? "WithRemount" : "WithoutRemount");
   return s.str();

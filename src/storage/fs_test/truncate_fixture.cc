@@ -150,7 +150,7 @@ TEST_P(LargeTruncateTest, RepeatedlyWritingAndTruncatingLargeFileSucceeds) {
 }  // namespace
 
 std::string GetDescriptionForLargeTruncateTestParamType(
-    const testing::TestParamInfo<LargeTruncateTestParamType> param) {
+    const testing::TestParamInfo<LargeTruncateTestParamType>& param) {
   std::stringstream s;
   s << std::get<0>(param.param) << "WithBufferSize"
     << std::to_string(std::get<0>(std::get<1>(param.param))) << "Iterations"

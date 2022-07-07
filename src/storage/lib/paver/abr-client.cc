@@ -243,7 +243,8 @@ zx::status<std::unique_ptr<abr::Client>> ClientFactory::Create(
   }
 
   for (auto& factory : *registered_factory_list()) {
-    if (auto status = factory->New(devfs_root.duplicate(), svc_root, context); status.is_ok()) {
+    if (auto status = factory->New(devfs_root.duplicate(), svc_root, std::move(context));
+        status.is_ok()) {
       return status.take_value();
     }
   }

@@ -115,8 +115,9 @@ void Directory::CancelPendingWriteback() {}
 
 #endif
 
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackFind(fbl::RefPtr<Directory> vndir,
-                                                                     Dirent* de, DirArgs* args) {
+zx::status<Directory::IteratorCommand> Directory::DirentCallbackFind(
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   if ((de->ino != 0) && std::string_view(de->name, de->namelen) == args->name) {
     args->ino = de->ino;
     args->type = de->type;
@@ -222,8 +223,9 @@ zx::status<Directory::IteratorCommand> Directory::UnlinkChild(Transaction* trans
 }
 
 // caller is expected to prevent unlink of "." or ".."
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackUnlink(fbl::RefPtr<Directory> vndir,
-                                                                       Dirent* de, DirArgs* args) {
+zx::status<Directory::IteratorCommand> Directory::DirentCallbackUnlink(
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
@@ -245,7 +247,8 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackUnlink(fbl::RefP
 
 // same as unlink, but do not validate vnode
 zx::status<Directory::IteratorCommand> Directory::DirentCallbackForceUnlink(
-    fbl::RefPtr<Directory> vndir, Dirent* de, DirArgs* args) {
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
@@ -267,7 +270,8 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackForceUnlink(
 //      - Remove the old vnode (decrement link count by one)
 //      - Replace the old vnode's position in the directory with the new inode
 zx::status<Directory::IteratorCommand> Directory::DirentCallbackAttemptRename(
-    fbl::RefPtr<Directory> vndir, Dirent* de, DirArgs* args) {
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
@@ -313,7 +317,8 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackAttemptRename(
 }
 
 zx::status<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
-    fbl::RefPtr<Directory> vndir, Dirent* de, DirArgs* args) {
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
     return NextDirent(de, &args->offs);
   }
@@ -331,7 +336,8 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
 }
 
 zx::status<Directory::IteratorCommand> Directory::DirentCallbackFindSpace(
-    fbl::RefPtr<Directory> vndir, Dirent* de, DirArgs* args) {
+    fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
+    Dirent* de, DirArgs* args) {
   // Reserved space for this record (possibly going to the max directory size if it's the last
   // one).
   uint32_t reserved_size = static_cast<uint32_t>(DirentReservedSize(de, args->offs.off));

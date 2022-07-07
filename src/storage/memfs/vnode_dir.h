@@ -48,7 +48,7 @@ class VnodeDir final : public Vnode {
 
   // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches
   // dnode to vnode, and adds dnode to parent directory.
-  zx_status_t AttachVnode(fbl::RefPtr<memfs::Vnode> vn, std::string_view name, bool isdir);
+  zx_status_t AttachVnode(const fbl::RefPtr<memfs::Vnode>& vn, std::string_view name, bool isdir);
 
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, std::string_view oldname,

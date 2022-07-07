@@ -71,7 +71,7 @@ Digest GenerateDigest(size_t seed) {
 
 void CheckNothingOpenHelper(BlobCache* cache) {
   ASSERT_TRUE(cache);
-  cache->ForAllOpenNodes([](fbl::RefPtr<CacheNode>) -> zx_status_t { ZX_ASSERT(false); });
+  cache->ForAllOpenNodes([](const fbl::RefPtr<CacheNode>&) -> zx_status_t { ZX_ASSERT(false); });
 }
 
 TEST(BlobCacheTest, Null) {
@@ -163,7 +163,7 @@ TEST(BlobCacheTest, EvictWhileCaching) {
 void CheckExistsAloneInOpenCache(BlobCache* cache, void* node_ptr) {
   ASSERT_TRUE(cache);
   int node_count = 0;
-  cache->ForAllOpenNodes([&node_count, &node_ptr](fbl::RefPtr<CacheNode> node) {
+  cache->ForAllOpenNodes([&node_count, &node_ptr](const fbl::RefPtr<CacheNode>& node) {
     node_count++;
     ZX_ASSERT(node.get() == node_ptr);
     return ZX_OK;
@@ -278,7 +278,7 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
   // Double check that the nodes which should be open are open, and that the nodes
   // which aren't open aren't visible.
   size_t node_index = 0;
-  cache.ForAllOpenNodes([&open_nodes, &node_index](fbl::RefPtr<CacheNode> node) {
+  cache.ForAllOpenNodes([&open_nodes, &node_index](const fbl::RefPtr<CacheNode>& node) {
     ZX_ASSERT(node_index < std::size(open_nodes));
     for (fbl::RefPtr<TestNode>& open_node : open_nodes) {
       // We should be able to find this node in the set of open nodes -- but only once.

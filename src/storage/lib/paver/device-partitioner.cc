@@ -170,7 +170,8 @@ std::unique_ptr<DevicePartitioner> DevicePartitionerFactory::Create(
   }
 
   for (auto& factory : *registered_factory_list()) {
-    if (auto status = factory->New(devfs_root.duplicate(), svc_root, arch, context, block_dev);
+    if (auto status =
+            factory->New(devfs_root.duplicate(), svc_root, arch, std::move(context), block_dev);
         status.is_ok()) {
       return std::move(status.value());
     }

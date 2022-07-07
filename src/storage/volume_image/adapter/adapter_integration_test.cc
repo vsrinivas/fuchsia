@@ -63,7 +63,7 @@ constexpr std::string_view kFvmSparseImagePath =
 // Implementation of a Writer backed by a VMO.
 class VmoWriter final : public Writer {
  public:
-  VmoWriter(zx::unowned_vmo vmo, uint64_t size) : vmo_(vmo), vmo_size_(size) {}
+  VmoWriter(zx::unowned_vmo vmo, uint64_t size) : vmo_(std::move(vmo)), vmo_size_(size) {}
 
   void PoisonRange(uint64_t offset, uint64_t length) {
     ASSERT_GT(length, 0u);
@@ -105,7 +105,7 @@ class VmoWriter final : public Writer {
 // Implementation of a Writer backed by a VMO.
 class VmoReader final : public Reader {
  public:
-  VmoReader(zx::unowned_vmo vmo, uint64_t size) : vmo_(vmo), vmo_size_(size) {}
+  VmoReader(zx::unowned_vmo vmo, uint64_t size) : vmo_(std::move(vmo)), vmo_size_(size) {}
 
   uint64_t length() const final { return vmo_size_; }
 

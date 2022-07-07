@@ -202,7 +202,7 @@ TEST_P(TruncateTest, ShrinkRace) {
   }
 }
 
-std::string GetParamDescription(const testing::TestParamInfo<ParamType> param) {
+std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) {
   std::stringstream s;
   s << std::get<0>(param.param);
   switch (std::get<1>(param.param)) {

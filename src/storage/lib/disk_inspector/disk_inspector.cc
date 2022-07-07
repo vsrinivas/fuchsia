@@ -7,7 +7,8 @@
 namespace disk_inspector {
 
 template <typename T>
-PrimitiveType<T>::PrimitiveType(fbl::String name, const T* value) : name_(name), value_(value) {
+PrimitiveType<T>::PrimitiveType(fbl::String name, const T* value)
+    : name_(std::move(name)), value_(value) {
   ZX_DEBUG_ASSERT_MSG(value, "Null input buffer value is not allowed");
 }
 
@@ -26,7 +27,7 @@ template class PrimitiveType<char>;
 
 template <typename T>
 PrimitiveTypeArray<T>::PrimitiveTypeArray(fbl::String name, const T* value, size_t size)
-    : name_(name), value_(value), size_(size) {
+    : name_(std::move(name)), value_(value), size_(size) {
   ZX_DEBUG_ASSERT_MSG(value, "Null input buffer value is not allowed");
   ZX_DEBUG_ASSERT_MSG(size, "Zero-sized arrays are not allowed");
 }

@@ -1081,7 +1081,7 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
         return paged_vfs->SupplyPages(*dest_vmo, offset, length, aux_vmo, aux_offset);
       });
   PagerErrorStatus pager_error_status =
-      blobfs_->page_loader().TransferPages(std::move(page_supplier), offset, length, loader_info_);
+      blobfs_->page_loader().TransferPages(page_supplier, offset, length, loader_info_);
   if (pager_error_status != PagerErrorStatus::kOK) {
     FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));

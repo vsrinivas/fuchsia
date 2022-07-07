@@ -18,7 +18,7 @@ BaseFilesystemTest::~BaseFilesystemTest() {
 }
 
 void BaseFilesystemTest::RunSimulatedPowerCutTest(const PowerCutOptions& options,
-                                                  std::function<void()> test_function) {
+                                                  const std::function<void()>& test_function) {
   ASSERT_FALSE(fs().options().use_ram_nand);                   // This only works with ram-disks.
   ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK);  // This resets counts.
 

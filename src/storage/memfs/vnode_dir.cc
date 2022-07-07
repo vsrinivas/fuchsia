@@ -296,7 +296,7 @@ zx_status_t VnodeDir::CanCreate(std::string_view name) const {
   return status;
 }
 
-zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<Vnode> vn, std::string_view name, bool isdir) {
+zx_status_t VnodeDir::AttachVnode(const fbl::RefPtr<Vnode>& vn, std::string_view name, bool isdir) {
   // dnode takes a reference to the vnode
   std::unique_ptr<Dnode> dn;
   if ((dn = Dnode::Create(name, vn)) == nullptr) {

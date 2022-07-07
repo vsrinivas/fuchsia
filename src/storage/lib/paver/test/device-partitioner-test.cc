@@ -352,7 +352,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = false;
 
-    args.board_name = board_name;
+    args.board_name = std::move(board_name);
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;

@@ -30,7 +30,7 @@ void Sysconfig::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                      fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                      std::shared_ptr<Context> context, zx::channel server) {
   auto device_partitioner = DevicePartitionerFactory::Create(
-      devfs_root.duplicate(), std::move(svc_root), GetCurrentArch(), context);
+      devfs_root.duplicate(), std::move(svc_root), GetCurrentArch(), std::move(context));
   if (!device_partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);

@@ -209,7 +209,7 @@ class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
 
   void SetAstroSysConfigAbrWearLeveling(bool opt) { astro_sysconfig_abr_wear_leveling_ = opt; }
 
-  void SetArgResponse(std::string arg_response) { arg_response_ = arg_response; }
+  void SetArgResponse(std::string arg_response) { arg_response_ = std::move(arg_response); }
 
  private:
   bool astro_sysconfig_abr_wear_leveling_ = false;

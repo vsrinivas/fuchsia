@@ -27,7 +27,7 @@ std::unique_ptr<Dnode> Dnode::Create(std::string_view name, fbl::RefPtr<Vnode> v
   memcpy(namebuffer.get(), name.data(), name.length());
   namebuffer[name.length()] = '\0';
   auto dn = std::unique_ptr<Dnode>(
-      new Dnode(vn, std::move(namebuffer), static_cast<uint32_t>(name.length())));
+      new Dnode(std::move(vn), std::move(namebuffer), static_cast<uint32_t>(name.length())));
   return dn;
 }
 

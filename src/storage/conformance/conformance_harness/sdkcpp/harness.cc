@@ -25,7 +25,7 @@
 
 namespace fio_test = fuchsia::io::test;
 
-zx_status_t DummyWriter(std::vector<uint8_t>) { return ZX_OK; }
+zx_status_t DummyWriter(const std::vector<uint8_t>&) { return ZX_OK; }
 class SdkCppHarness : public fio_test::Io1Harness {
  public:
   explicit SdkCppHarness() = default;
