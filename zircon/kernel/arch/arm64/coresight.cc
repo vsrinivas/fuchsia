@@ -146,8 +146,9 @@ int WalkRomTable(zx_vaddr_t addr, uint32_t view_size) {
     DumpComponentInfo(addr + offset);
   });
   if (result.is_error()) {
-    ktl::string_view error = ktl::move(result).error_value();
-    printf("error: %.*s\n", static_cast<int>(error.size()), error.data());
+    coresight::RomTable::WalkError error = ktl::move(result).error_value();
+    printf("error at offset %" PRIx32 ": %.*s\n", error.offset,
+           static_cast<int>(error.reason.size()), error.reason.data());
     return 1;
   }
   return 0;

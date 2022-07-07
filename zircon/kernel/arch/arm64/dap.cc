@@ -201,7 +201,7 @@ void arm_dap_init_percpu(uint level) {
     // Walk the ROM table to find the debug interface for this CPU.
     hwreg::RegisterMmio mmio(reinterpret_cast<void *>(da.virt));
     const auto vaddr = reinterpret_cast<uintptr_t>(da.virt);
-    fitx::result<ktl::string_view> result = coresight::RomTable::Walk(
+    fitx::result<coresight::RomTable::WalkError> result = coresight::RomTable::Walk(
         mmio, static_cast<uint32_t>(da.size),
         [&dp, vaddr, curr_cpu_mpidr, curr_cpu_num](uint32_t offset) {
           const uintptr_t component = vaddr + offset;
@@ -257,9 +257,10 @@ void arm_dap_init_percpu(uint level) {
           }
         });
     if (result.is_error()) {
-      printf("DAP: error during ROM table walk (base %#lx) on cpu-%u: %.*s\n", da.base,
-             curr_cpu_num, static_cast<int>(result.error_value().size()),
-             result.error_value().data());
+      coresight::RomTable::WalkError error = ktl::move(result).error_value();
+      printf("DAP: error during ROM table walk (base %#lx) at address %#lx on cpu-%u: %.*s\n",
+             da.base, da.base + error.offset, curr_cpu_num, static_cast<int>(error.reason.size()),
+             error.reason.data());
     }
   }
 

@@ -10,8 +10,10 @@
 #include <hwreg/mock.h>
 #include <zxtest/zxtest.h>
 
-#define EXPECT_IS_OK(result) \
-  EXPECT_TRUE(result.is_ok(), "unexpected error: %s", result.error_value().data())
+#define EXPECT_IS_OK(result)                                                                     \
+  EXPECT_TRUE(result.is_ok(), "unexpected error at offset %" PRIx32 ": %.*s",                    \
+              result.error_value().offset, static_cast<int>(result.error_value().reason.size()), \
+              result.error_value().reason.data())
 
 namespace {
 

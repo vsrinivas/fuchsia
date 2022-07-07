@@ -88,6 +88,12 @@ struct Class0x9RomDeviceIdRegister
 // "base ROM table" (or, more plainly, "the ROM table").
 class RomTable {
  public:
+  // Represents an error occurred while walking the table.
+  struct WalkError {
+    std::string_view reason;
+    uint32_t offset{};
+  };
+
   // Walks the underlying tree of components with no dynamic allocation,
   // calling `callback` on the offset from the table's base address (implicitly
   // encoded in `io`) of each component found. The (`io`, `max_offset`)
@@ -100,10 +106,10 @@ class RomTable {
   // is left to the caller. The offset must at least be
   // `kMininumComponentSize`, which is the size of the base table proper.
   template <typename IoProvider, typename ComponentCallback>
-  static fitx::result<std::string_view> Walk(IoProvider io, uint32_t max_offset,
-                                             ComponentCallback&& callback) {
-    ZX_ASSERT(max_offset >= kMinimumComponentSize);
+  static fitx::result<WalkError> Walk(IoProvider io, uint32_t max_offset,
+                                      ComponentCallback&& callback) {
     static_assert(std::is_invocable_v<ComponentCallback, uint32_t>);
+    ZX_ASSERT(max_offset >= kMinimumComponentSize);
     return WalkFrom(io, max_offset, callback, 0);
   }
 
@@ -129,8 +135,8 @@ class RomTable {
   };
 
   template <typename IoProvider, typename ComponentCallback>
-  static fitx::result<std::string_view> WalkFrom(IoProvider io, uint32_t max_offset,
-                                                 ComponentCallback&& callback, uint32_t offset) {
+  static fitx::result<WalkError> WalkFrom(IoProvider io, uint32_t max_offset,
+                                          ComponentCallback&& callback, uint32_t offset) {
     const ClassId classid = ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
@@ -141,14 +147,14 @@ class RomTable {
 
       fitx::result<std::string_view, uint32_t> upper_bound = EntryIndexUpperBound(classid, format);
       if (upper_bound.is_error()) {
-        return fitx::error(upper_bound.error_value());
+        return fitx::error(WalkError{upper_bound.error_value(), offset});
       }
 
       for (uint32_t i = 0; i < upper_bound.value(); ++i) {
         fitx::result<std::string_view, EntryContents> read_entry_result =
             ReadEntryAt(io, offset, i, classid, format);
         if (read_entry_result.is_error()) {
-          return fitx::error(read_entry_result.error_value());
+          return fitx::error(WalkError{read_entry_result.error_value(), offset});
         }
         EntryContents contents = read_entry_result.value();
         if (contents.value == 0) {
@@ -162,10 +168,9 @@ class RomTable {
         uint32_t new_offset = offset + (contents.offset << 12);
         if (max_offset - kMinimumComponentSize < new_offset) {
           printf("does not fit: (view size, offset) = (%u, %u)\n", max_offset, new_offset);
-          return fitx::error("component exceeds aperture");
+          return fitx::error(WalkError{"component exceeds aperture", new_offset});
         }
-        if (fitx::result<std::string_view> walk_result =
-                WalkFrom(io, max_offset, callback, new_offset);
+        if (fitx::result<WalkError> walk_result = WalkFrom(io, max_offset, callback, new_offset);
             walk_result.is_error()) {
           return walk_result;
         }
@@ -175,7 +180,7 @@ class RomTable {
 
     // There should be a ROM table at offset zero.
     if (offset == 0) {
-      return fitx::error{"not a ROM table"};
+      return fitx::error{WalkError{"not a ROM table", 0}};
     }
 
     std::forward<ComponentCallback>(callback)(offset);
