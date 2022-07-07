@@ -192,7 +192,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
     TcpSockets<I, D, II, R, S>
 {
     fn get_listener_by_id_mut(&mut self, id: ListenerId) -> Option<&mut Listener> {
-        self.socketmap.get_listener_by_id_mut(MaybeListenerId::from(id)).map(
+        self.socketmap.get_listener_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
                 MaybeListener::Bound(_) => {
                     unreachable!("contract violated: ListenerId points to an inactive entry")
@@ -334,14 +334,14 @@ where
     sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .try_insert_listener_with_sharing(
+        .try_insert_listener(
             ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: port }, device: None },
             MaybeListener::Bound(inactive.clone()),
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
             PosixSharingOptions::Exclusive,
         )
         .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|(err, _): (_, MaybeListener)| {
+        .map_err(|(err, _, _): (_, MaybeListener, PosixSharingOptions)| {
             assert_eq!(sync_ctx.get_tcp_state_mut().inactive.insert(idmap_key, inactive), None);
             BindError::Conflict(err)
         })
@@ -359,10 +359,10 @@ where
     SC: TcpSyncContext<I, C>,
 {
     let id = MaybeListenerId::from(id);
-    let (listener, _, _): (_, PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
+    let (listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .get_listener_by_id_mut(id)
+        .get_listener_by_id_mut(&id)
         .expect("invalid listener id");
     match listener {
         MaybeListener::Bound(_) => {
@@ -393,10 +393,10 @@ where
     let listener =
         sync_ctx.get_tcp_state_mut().get_listener_by_id_mut(id).expect("invalid listener id");
     let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
-    let (conn, _, conn_addr): (_, PosixSharingOptions, _) = sync_ctx
+    let (conn, _, conn_addr): (_, &PosixSharingOptions, _) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .get_conn_by_id_mut(conn_id)
+        .get_conn_by_id_mut(&conn_id)
         .expect("failed to retrieve the connection state");
     conn.acceptor = None;
     let (remote_ip, remote_port) = conn_addr.ip.remote;
@@ -422,12 +422,13 @@ where
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let bound_id = MaybeListenerId::from(id);
-    let (bound, bound_addr) = sync_ctx
+    let (bound, sharing, bound_addr) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
         .get_listener_by_id(&bound_id)
         .expect("invalid socket id");
-    assert_matches!(bound, (MaybeListener::Bound(_), PosixSharingOptions::Exclusive));
+    assert_matches!(bound, MaybeListener::Bound(_));
+    assert_eq!(sharing, &PosixSharingOptions::Exclusive);
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *bound_addr;
     let ip_sock = sync_ctx
@@ -497,7 +498,7 @@ where
     let conn_id = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .try_insert_conn_with_sharing(
+        .try_insert_conn(
             conn_addr.clone(),
             Connection {
                 acceptor: None,
@@ -858,7 +859,7 @@ mod tests {
         }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
-            let (state, _): &(_, ConnAddr<_>) = net
+            let (state, sharing, _): &(_, _, ConnAddr<_>) = net
                 .sync_ctx(name)
                 .get_ref()
                 .sockets
@@ -867,11 +868,9 @@ mod tests {
                 .expect("failed to retrieve the client socket");
             assert_matches!(
                 state,
-                (
-                    Connection { acceptor: None, state: State::Established(_), ip_sock: _ },
-                    PosixSharingOptions::Exclusive
-                )
+                Connection { acceptor: None, state: State::Established(_), ip_sock: _ }
             );
+            assert_eq!(sharing, &PosixSharingOptions::Exclusive);
         };
 
         assert_connected(LOCAL, client);
@@ -998,7 +997,7 @@ mod tests {
 
         net.run_until_idle(handle_frame, panic_if_any_timer);
         // Finally, the connection should be reset.
-        let ((state, _), _): &((_, PosixSharingOptions), ConnAddr<_>) = net
+        let (state, _, _): &(_, PosixSharingOptions, ConnAddr<_>) = net
             .sync_ctx(LOCAL)
             .get_ref()
             .sockets

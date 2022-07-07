@@ -15,8 +15,8 @@ use net_types::{ip::IpAddress, SpecifiedAddr};
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
     socket::{
-        AddrVec, Bound, BoundSocketMap, IncompatibleError, InsertError, RemoveResult,
-        SocketMapAddrStateSpec, SocketMapSpec,
+        AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketMapAddrStateSpec,
+        SocketMapSpec,
     },
 };
 
@@ -401,11 +401,11 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
 
     type ConnId = P::ConnId;
 
-    // TODO(https://fxbug.dev/101914): Be generic about which part of the state
-    // is not related to computing tags.
-    type ListenerState = (P::ListenerState, PosixSharingOptions);
+    type ListenerState = P::ListenerState;
+    type ListenerSharingState = PosixSharingOptions;
 
-    type ConnState = (P::ConnState, PosixSharingOptions);
+    type ConnState = P::ConnState;
+    type ConnSharingState = PosixSharingOptions;
 
     type ListenerAddrState = PosixAddrState<P::ListenerId>;
 
@@ -419,36 +419,35 @@ impl<T> ToPosixSharingOptions for (T, PosixSharingOptions) {
     }
 }
 
-impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
+impl<A, I, P> SocketMapAddrStateSpec<A, PosixSharingOptions, I, P> for PosixAddrState<I>
 where
     A: Into<AddrVec<P>> + Clone,
     P: PosixSocketMapSpec,
-    St: ToPosixSharingOptions,
     I: PartialEq + Debug,
 {
     fn check_for_conflicts(
-        new_state: &St,
+        new_sharing_state: &PosixSharingOptions,
         addr: &A,
         socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
     ) -> Result<(), InsertError> {
-        P::check_posix_sharing(new_state.to_sharing_options(), addr.clone().into(), socketmap)
+        P::check_posix_sharing(*new_sharing_state, addr.clone().into(), socketmap)
     }
 
     fn try_get_dest<'a, 'b>(
         &'b mut self,
-        new_state: &'a St,
+        new_sharing_state: &'a PosixSharingOptions,
     ) -> Result<&'b mut Vec<I>, IncompatibleError> {
         match self {
             PosixAddrState::Exclusive(_) => Err(IncompatibleError),
-            PosixAddrState::ReusePort(ids) => match new_state.to_sharing_options() {
+            PosixAddrState::ReusePort(ids) => match new_sharing_state {
                 PosixSharingOptions::Exclusive => Err(IncompatibleError),
                 PosixSharingOptions::ReusePort => Ok(ids),
             },
         }
     }
 
-    fn new_addr_state(new_state: &St, id: I) -> Self {
-        match new_state.to_sharing_options() {
+    fn new_addr_state(new_sharing_state: &PosixSharingOptions, id: I) -> Self {
+        match new_sharing_state {
             PosixSharingOptions::Exclusive => Self::Exclusive(id),
             PosixSharingOptions::ReusePort => Self::ReusePort(vec![id]),
         }
@@ -467,48 +466,6 @@ where
                 }
             }
         }
-    }
-}
-
-impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
-    pub(crate) fn try_insert_listener_with_sharing(
-        &mut self,
-        listener_addr: ListenerAddr<P>,
-        state: P::ListenerState,
-        sharing: PosixSharingOptions,
-    ) -> Result<P::ListenerId, (InsertError, P::ListenerState)> {
-        self.try_insert_listener(listener_addr, (state, sharing))
-            .map_err(|(e, (state, _sharing)): (_, (_, PosixSharingOptions))| (e, state))
-    }
-
-    pub(crate) fn try_insert_conn_with_sharing(
-        &mut self,
-        conn_addr: ConnAddr<P>,
-        state: P::ConnState,
-        sharing: PosixSharingOptions,
-    ) -> Result<P::ConnId, (InsertError, P::ConnState)> {
-        self.try_insert_conn(conn_addr, (state, sharing))
-            .map_err(|(e, (state, _)): (_, (_, PosixSharingOptions))| (e, state))
-    }
-
-    pub(crate) fn get_listener_by_id_mut(
-        &mut self,
-        id: P::ListenerId,
-    ) -> Option<(&mut P::ListenerState, PosixSharingOptions, &ListenerAddr<P>)> {
-        let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state: _ } = self;
-        listener_id_to_sock
-            .get_mut(id.clone().into())
-            .map(|((state, sharing), addr)| (state, *sharing, &*addr))
-    }
-
-    pub(crate) fn get_conn_by_id_mut(
-        &mut self,
-        id: P::ConnId,
-    ) -> Option<(&mut P::ConnState, PosixSharingOptions, &ConnAddr<P>)> {
-        let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state: _ } = self;
-        conn_id_to_sock
-            .get_mut(id.clone().into())
-            .map(|((state, sharing), addr)| (state, *sharing, &*addr))
     }
 }
 
@@ -693,12 +650,10 @@ mod tests {
         let mut spec = spec.into_iter().peekable();
         let mut try_insert = |(addr, options)| {
             match addr {
-                AddrVec::Conn(c) => map.try_insert_conn_with_sharing(c, (), options).map(|_| ()),
-                AddrVec::Listen(l) => {
-                    map.try_insert_listener_with_sharing(l, (), options).map(|_| ())
-                }
+                AddrVec::Conn(c) => map.try_insert_conn(c, (), options).map(|_| ()),
+                AddrVec::Listen(l) => map.try_insert_listener(l, (), options).map(|_| ()),
             }
-            .map_err(|(e, ())| e)
+            .map_err(|(e, (), _)| e)
         };
         let last = loop {
             let one_spec = spec.next().expect("empty list of test cases");
@@ -743,10 +698,10 @@ mod tests {
                 .map(|(addr, options)| {
                     match addr {
                         AddrVec::Conn(c) => map
-                            .try_insert_conn_with_sharing(c.clone(), (), options)
+                            .try_insert_conn(c.clone(), (), options)
                             .map(|id| Socket::Conn(id, c)),
                         AddrVec::Listen(l) => map
-                            .try_insert_listener_with_sharing(l.clone(), (), options)
+                            .try_insert_listener(l.clone(), (), options)
                             .map(|id| Socket::Listener(id, l)),
                     }
                     .expect("insert_failed")
@@ -757,49 +712,14 @@ mod tests {
                 match socket {
                     Socket::Listener(l, addr) => {
                         assert_matches!(map.remove_listener_by_id(l),
-                                        Some((_, a)) => assert_eq!(a, addr));
+                                        Some((_, _, a)) => assert_eq!(a, addr));
                     }
                     Socket::Conn(c, addr) => {
                         assert_matches!(map.remove_conn_by_id(c),
-                                        Some((_, a)) => assert_eq!(a, addr));
+                                        Some((_, _, a)) => assert_eq!(a, addr));
                     }
                 }
             }
         }
-    }
-
-    #[test]
-    fn socketmap_mut_ref() {
-        let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
-        let port = NonZeroU16::new(42).unwrap();
-        let listener_addr = ListenerAddr {
-            ip: ListenerIpAddr { addr: SpecifiedAddr::new(ip_v4!("1.1.1.1")), identifier: port },
-            device: None,
-        };
-        let listener_id = map
-            .try_insert_listener_with_sharing(
-                listener_addr.clone(),
-                (),
-                PosixSharingOptions::Exclusive,
-            )
-            .expect("failed to insert");
-        let (&mut (), sharing, addr) =
-            map.get_listener_by_id_mut(listener_id).expect("failed to get listener");
-        assert_eq!(sharing, PosixSharingOptions::Exclusive);
-        assert_eq!(addr, &listener_addr);
-        let conn_addr = ConnAddr {
-            ip: ConnIpAddr {
-                local_ip: SpecifiedAddr::new(ip_v4!("2.2.2.2")).unwrap(),
-                local_identifier: port,
-                remote: (SpecifiedAddr::new(ip_v4!("3.3.3.3")).unwrap(), port),
-            },
-            device: None,
-        };
-        let conn_id = map
-            .try_insert_conn_with_sharing(conn_addr.clone(), (), PosixSharingOptions::Exclusive)
-            .expect("failed to insert");
-        let (&mut (), sharing, addr) = map.get_conn_by_id_mut(conn_id).expect("failed to get conn");
-        assert_eq!(sharing, PosixSharingOptions::Exclusive);
-        assert_eq!(addr, &conn_addr);
     }
 }

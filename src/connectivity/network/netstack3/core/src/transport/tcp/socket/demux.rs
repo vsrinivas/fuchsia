@@ -126,7 +126,7 @@ where
                     );
                 maybe_listener_id.and_then(|listener_id| {
                     let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
-                    let ((maybe_listener, _), _): &((_, PosixSharingOptions), ListenerAddr<_>) =
+                    let (maybe_listener, _, _): &(_, PosixSharingOptions, ListenerAddr<_>) =
                         socketmap.get_listener_by_id(&listener_id).expect("invalid listener_id");
 
                     let listener = match maybe_listener {
@@ -175,7 +175,7 @@ where
                     // TODO(https://fxbug.dev/102135): Inherit the socket
                     // options from the listener.
                     let conn_id = socketmap
-                        .try_insert_conn_with_sharing(
+                        .try_insert_conn(
                             ConnAddr {
                                 ip: ConnIpAddr {
                                     local_ip,
@@ -194,10 +194,10 @@ where
                         )
                         .expect("failed to create a new connection");
 
-                    let (maybe_listener, _, _): (_, PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
+                    let (maybe_listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_>) = sync_ctx
                         .get_tcp_state_mut()
                         .socketmap
-                        .get_listener_by_id_mut(listener_id)
+                        .get_listener_by_id_mut(&listener_id)
                         .expect("the listener must still be active");
 
                     match maybe_listener {
@@ -217,12 +217,12 @@ where
             Some(id) => {
                 let (Connection { acceptor: _, state, ip_sock }, _, _): (
                     _,
-                    PosixSharingOptions,
+                    &PosixSharingOptions,
                     &ConnAddr<_>,
                 ) = sync_ctx
                     .get_tcp_state_mut()
                     .socketmap
-                    .get_conn_by_id_mut(*id)
+                    .get_conn_by_id_mut(id)
                     .expect("inconsistent state: invalid connection id");
 
                 // Note: We should avoid the clone if we can teach rustc that
@@ -271,10 +271,10 @@ where
         }
 
         let _: Option<()> = conn_id.and_then(|conn_id| {
-            let (conn, _, _): (_, PosixSharingOptions, &ConnAddr<_>) = sync_ctx
+            let (conn, _, _): (_, &PosixSharingOptions, &ConnAddr<_>) = sync_ctx
                 .get_tcp_state_mut()
                 .socketmap
-                .get_conn_by_id_mut(conn_id)
+                .get_conn_by_id_mut(&conn_id)
                 .expect("inconsistent state: invalid connection id");
             let acceptor_id = match conn {
                 Connection {
