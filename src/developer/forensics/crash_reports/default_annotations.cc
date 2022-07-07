@@ -30,17 +30,10 @@ AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annot
     return Error::kMissingValue;
   };
 
-  // TODO(fxbug.dev/102899): Remove unnecessary lines. Annotations are now collected via
-  // a non-FIDL, unfiltered method.
   AnnotationMap default_annotations;
   default_annotations.Set(feedback::kOSNameKey, "Fuchsia")
       .Set(feedback::kOSVersionKey, GetFromStartup(feedback::kBuildVersionKey))
-      .Set(feedback::kOSChannelKey, GetFromStartup(feedback::kSystemUpdateChannelCurrentKey))
-      .Set(feedback::kBuildVersionKey, GetFromStartup(feedback::kBuildVersionKey))
-      .Set(feedback::kBuildBoardKey, GetFromStartup(feedback::kBuildBoardKey))
-      .Set(feedback::kBuildProductKey, GetFromStartup(feedback::kBuildProductKey))
-      .Set(feedback::kBuildLatestCommitDateKey,
-           GetFromStartup(feedback::kBuildLatestCommitDateKey));
+      .Set(feedback::kOSChannelKey, GetFromStartup(feedback::kSystemUpdateChannelCurrentKey));
 
   return default_annotations;
 }

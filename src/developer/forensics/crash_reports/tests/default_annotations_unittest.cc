@@ -17,45 +17,26 @@ using ::testing::Pair;
 using ::testing::UnorderedElementsAreArray;
 
 TEST(DefaultAnnotationsTest, BuildDefaultAnnotations_EmptyStartupAnnotations) {
-  EXPECT_THAT(BuildDefaultAnnotations({}).Raw(),
-              UnorderedElementsAreArray({
-                  Pair(feedback::kOSNameKey, "Fuchsia"),
-                  Pair(feedback::kOSVersionKey, "unknown"),
-                  Pair("debug.osVersion.error", "missing"),
-                  Pair(feedback::kOSChannelKey, "unknown"),
-                  Pair("debug.osChannel.error", "missing"),
-                  Pair(feedback::kBuildVersionKey, "unknown"),
-                  Pair("debug.build.version.error", "missing"),
-                  Pair(feedback::kBuildBoardKey, "unknown"),
-                  Pair("debug.build.board.error", "missing"),
-                  Pair(feedback::kBuildProductKey, "unknown"),
-                  Pair("debug.build.product.error", "missing"),
-                  Pair(feedback::kBuildLatestCommitDateKey, "unknown"),
-                  Pair("debug.build.latest-commit-date.error", "missing"),
-              }));
+  EXPECT_THAT(BuildDefaultAnnotations({}).Raw(), UnorderedElementsAreArray({
+                                                     Pair(feedback::kOSNameKey, "Fuchsia"),
+                                                     Pair(feedback::kOSVersionKey, "unknown"),
+                                                     Pair("debug.osVersion.error", "missing"),
+                                                     Pair(feedback::kOSChannelKey, "unknown"),
+                                                     Pair("debug.osChannel.error", "missing"),
+                                                 }));
 }
 
 TEST(DefaultAnnotationsTest, BuildDefaultAnnotations) {
-  EXPECT_THAT(
-      BuildDefaultAnnotations({
-                                  {feedback::kBuildVersionKey, "version"},
-                                  {feedback::kSystemUpdateChannelCurrentKey, "channel"},
-                                  {feedback::kBuildBoardKey, "board"},
-                                  {feedback::kBuildProductKey, Error::kTimeout},
-                                  {feedback::kBuildLatestCommitDateKey, Error::kFileReadFailure},
-                              })
-          .Raw(),
-      UnorderedElementsAreArray({
-          Pair(feedback::kOSNameKey, "Fuchsia"),
-          Pair(feedback::kOSVersionKey, "version"),
-          Pair(feedback::kOSChannelKey, "channel"),
-          Pair(feedback::kBuildVersionKey, "version"),
-          Pair(feedback::kBuildBoardKey, "board"),
-          Pair(feedback::kBuildProductKey, "unknown"),
-          Pair("debug.build.product.error", "timeout"),
-          Pair(feedback::kBuildLatestCommitDateKey, "unknown"),
-          Pair("debug.build.latest-commit-date.error", "file read failure"),
-      }));
+  EXPECT_THAT(BuildDefaultAnnotations({
+                                          {feedback::kBuildVersionKey, "version"},
+                                          {feedback::kSystemUpdateChannelCurrentKey, "channel"},
+                                      })
+                  .Raw(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kOSNameKey, "Fuchsia"),
+                  Pair(feedback::kOSVersionKey, "version"),
+                  Pair(feedback::kOSChannelKey, "channel"),
+              }));
 }
 
 }  // namespace
