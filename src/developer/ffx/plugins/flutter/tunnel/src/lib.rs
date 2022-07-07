@@ -65,8 +65,10 @@ pub async fn tunnel_impl<W: std::io::Write>(
     let show_cmd = iquery::commands::ShowCommand {
         manifest: None,
         selectors: vec![
-            String::from("flutter_*_runner.cmx"),
+            String::from("assistant_*_runner.cmx"),
             String::from("core/session-manager/session\\:session/flutter_*_runner"),
+            String::from("flutter_*_runner.cmx"),
+            String::from("g3_assistant_*_runner.cmx"),
         ],
         accessor_path: None,
     };
