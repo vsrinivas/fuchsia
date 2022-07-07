@@ -6,17 +6,37 @@
 
 use crate::types::uapi;
 
+/// Represents the location at which an error was generated.
+///
+/// This is useful if the anyhow error associated with the `Errno` can't print backtraces.
+pub struct ErrnoSource {
+    pub file: String,
+    pub line: u32,
+}
+
+impl std::fmt::Debug for ErrnoSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}:{:?}", self.file, self.line)
+    }
+}
+
 pub struct Errno {
     value: u32,
     anyhow: Option<anyhow::Error>,
 }
 
 impl Errno {
-    pub fn new(value: u32, name: &'static str, context: Option<String>) -> Errno {
+    pub fn new(
+        value: u32,
+        name: &'static str,
+        context: Option<String>,
+        source: ErrnoSource,
+    ) -> Errno {
         Errno {
             value,
             anyhow: Some(anyhow::format_err!(
-                "{} ({}), context: {}",
+                "{:?} {} ({}), context: {}",
+                source,
                 name,
                 value,
                 context.as_ref().unwrap_or(&"None".to_string())
@@ -204,10 +224,20 @@ pub const ERESTARTSYS: Errno = Errno { value: 512, anyhow: None };
 /// Use `error!` instead if you want the `Errno` to be wrapped in an `Err`.
 macro_rules! errno {
     ($err:ident) => {
-        Errno::new(crate::types::errno::$err.value(), stringify!($err), None)
+        Errno::new(
+            crate::types::errno::$err.value(),
+            stringify!($err),
+            None,
+            crate::types::errno::ErrnoSource { file: file!().to_string(), line: line!() },
+        )
     };
     ($err:ident, $context:expr) => {
-        Errno::new(crate::types::errno::$err.value(), stringify!($err), Some($context.to_string()))
+        Errno::new(
+            crate::types::errno::$err.value(),
+            stringify!($err),
+            Some($context.to_string()),
+            crate::types::errno::ErrnoSource { file: file!().to_string(), line: line!() },
+        )
     };
 }
 
