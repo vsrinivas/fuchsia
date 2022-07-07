@@ -307,7 +307,6 @@ group("cmx_allowlist") {
     "//src/lib/elfldltl:symbol-fuzzer_component_manifest_compile",
     "//src/lib/elflib:elflib_fuzzer_component_manifest_compile",
     "//src/lib/fidl/dart/gidl:gidl-library-test_manifest_compile",
-    "//src/lib/fuchsia-async:fuchsia-async-tests_component_manifest_compile",
     "//src/lib/fuchsia-component-test/tests:echo_client_component_manifest_compile",
     "//src/lib/fuchsia-component-test/tests:echo_server_component_manifest_compile",
     "//src/lib/fuchsia-component/component-launching-test:echo-service-checker-with-probe_manifest_compile",
