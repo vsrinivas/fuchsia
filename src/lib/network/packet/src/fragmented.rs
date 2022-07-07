@@ -18,18 +18,24 @@ pub struct FragmentedByteSlice<'a, B: ByteSlice>(&'a mut [B]);
 
 /// A single byte slice fragment in a [`FragmentedByteSlice`].
 pub trait Fragment: ByteSlice {
-    /// Takes `n` bytes out of the front of this fragment.
+    /// Takes `n` bytes from the front of this fragment.
+    ///
+    /// After a call to `take_front(n)`, the fragment is `n` bytes shorter.
     ///
     /// # Panics
     ///
     /// Panics if `n` is larger than the length of this `ByteSlice`.
     fn take_front(&mut self, n: usize) -> Self;
-    /// Takes `n` bytes out of the back of this fragment.
+
+    /// Takes `n` bytes from the back of this fragment.
+    ///
+    /// After a call to `take_back(n)`, the fragment is `n` bytes shorter.
     ///
     /// # Panics
     ///
     /// Panics if `n` is larger than the length of this `ByteSlice`.
     fn take_back(&mut self, n: usize) -> Self;
+
     /// Constructs a new empty `Fragment`.
     fn empty() -> Self;
 }
@@ -113,9 +119,9 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
     /// `range`.
     ///
     /// `slice` will mutate the backing slice by dropping or shrinking fragments
-    /// as necessary so the overall composition now matches the requested
-    /// `range`. The returned new `FragmentedByteSlice` uses the same (albeit
-    /// likely modified) backing mutable slice reference as `self`.
+    /// as necessary so the overall composition matches the requested `range`.
+    /// The returned `FragmentedByteSlice` uses the same (albeit possibly
+    /// modified) backing mutable slice reference as `self`.
     ///
     /// # Panics
     ///
@@ -167,8 +173,8 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
         Self(bytes)
     }
 
-    /// Checks if the contents of this `FragmentedByteSlice` are equal to the
-    /// contents of `other`.
+    /// Checks whether the contents of this `FragmentedByteSlice` are equal to
+    /// the contents of `other`.
     pub fn eq_slice(&self, mut other: &[u8]) -> bool {
         for x in self.0.iter() {
             let x = x.as_ref();
@@ -180,12 +186,12 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
         other.is_empty()
     }
 
-    /// Gets an iterator over all the bytes in this `FragmentedByteSlice`.
+    /// Iterates over all the bytes in this `FragmentedByteSlice`.
     pub fn iter(&self) -> impl '_ + Iterator<Item = u8> {
         self.0.iter().map(|x| x.iter()).flatten().copied()
     }
 
-    /// Gets an iterator over the fragments of this `FragmentedByteSlice`.
+    /// Iterates over the fragments of this `FragmentedByteSlice`.
     pub fn iter_fragments(&'a self) -> impl 'a + Iterator<Item = &'a [u8]> + Clone {
         self.0.iter().map(|x| x.as_ref())
     }
@@ -204,7 +210,8 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
         assert_eq!(dst.len(), 0);
     }
 
-    /// Copies all the bytes in `self` to a `Vec`.
+    /// Returns a flattened version of this buffer, copying its contents into a
+    /// [`Vec`].
     pub fn to_flattened_vec(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(self.len());
         for x in self.0.iter() {
@@ -284,11 +291,12 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
 
     /// Tries to convert this `FragmentedByteSlice` into a contiguous one.
     ///
-    /// Returns `Ok` if `self` is a single contiguous byte slice (or is empty),
+    /// Returns `Ok` if `self`'s backing storage contains 0 or 1 byte slices,
     /// and `Err` otherwise.
     ///
-    /// On success, the backing slice is mutated to contain a single, empty byte
-    /// slice.
+    /// If `self`'s backing storage contains 1 byte slice, that byte slice will
+    /// be replaced with an empty byte slice, and the original used to construct
+    /// the return value.
     pub fn try_into_contiguous(self) -> Result<B, Self> {
         if self.0.is_empty() {
             Ok(B::empty())
@@ -299,21 +307,19 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
         }
     }
 
-    /// Attempt to get a contiguous reference to this `FragmentedByteSlice`.
+    /// Tries to get a contiguous reference to this `FragmentedByteSlice`.
     ///
-    /// Returns `Some` if this `FragmentedByteSlice` is a single contiguous part
-    /// (or is empty). Returns `None` otherwise.
+    /// Returns `Some` if `self`'s backing storage contains 0 or 1 byte slices,
+    /// and `None` otherwise.
     pub fn try_get_contiguous(&self) -> Option<&[u8]> {
-        if self.0.is_empty() {
-            Some(&[])
-        } else if self.0.len() == 1 {
-            Some(self.0[0].as_ref())
-        } else {
-            None
+        match &self.0 {
+            [] => Some(&[]),
+            [slc] => Some(slc),
+            _ => None,
         }
     }
 
-    /// Tries to splits this `FragmentedByteSlice` into a contiguous prefix, a
+    /// Tries to split this `FragmentedByteSlice` into a contiguous prefix, a
     /// (possibly fragmented) body, and a contiguous suffix.
     ///
     /// Returns `None` if it isn't possible to form a contiguous prefix and
@@ -357,7 +363,7 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
 }
 
 impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
-    /// Gets an iterator of mutable references to all the bytes in this
+    /// Iterates over mutable references to all the bytes in this
     /// `FragmentedByteSlice`.
     pub fn iter_mut(&mut self) -> impl '_ + Iterator<Item = &'_ mut u8> {
         self.0.iter_mut().map(|x| x.iter_mut()).flatten()
@@ -432,61 +438,59 @@ impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
     /// Copies elements from one part of the `FragmentedByteSlice` to another
     /// part of itself.
     ///
-    /// `src` is the range within `self` to copy from. `dest` is the starting
+    /// `src` is the range within `self` to copy from. `dst` is the starting
     /// index of the range within `self` to copy to, which will have the same
     /// length as `src`. The two ranges may overlap. The ends of the two ranges
     /// must be less than or equal to `self.len()`.
     ///
     /// # Panics
     ///
-    /// This function will panic if either range is out of bounds, or if the end
-    /// of `src` is before the start.
-    pub fn copy_within<R: RangeBounds<usize>>(&mut self, src: R, dest: usize) {
+    /// Panics if either the source or destination range is out of bounds, or if
+    /// `src` is nonsensical (its end precedes its start).
+    pub fn copy_within<R: RangeBounds<usize>>(&mut self, src: R, dst: usize) {
         let Range { start, end } = canonicalize_range(self.len(), &src);
         assert!(end >= start);
         let len = end - start;
-        if start == dest || len == 0 {
+        if start == dst || len == 0 {
             // no work to do
-        } else if start > dest {
+        } else if start > dst {
             // copy front to back
             let mut start = self.get_index(start);
-            let mut dest = self.get_index(dest);
+            let mut dst = self.get_index(dst);
             for _ in 0..len {
-                self.0[dest.0][dest.1] = self.0[start.0][start.1];
+                self.0[dst.0][dst.1] = self.0[start.0][start.1];
                 self.increment_index(&mut start);
-                self.increment_index(&mut dest);
+                self.increment_index(&mut dst);
             }
         } else {
             // copy back to front
             let mut start = self.get_index(end - 1);
-            let mut dest = self.get_index(dest + len - 1);
+            let mut dst = self.get_index(dst + len - 1);
             for _ in 0..len {
-                self.0[dest.0][dest.1] = self.0[start.0][start.1];
+                self.0[dst.0][dst.1] = self.0[start.0][start.1];
                 self.decrement_index(&mut start);
-                self.decrement_index(&mut dest);
+                self.decrement_index(&mut dst);
             }
         }
     }
 
-    /// Attempt to get a contiguous mutable reference to this
+    /// Attempts to get a contiguous mutable reference to this
     /// `FragmentedByteSlice`.
     ///
     /// Returns `Some` if this `FragmentedByteSlice` is a single contiguous part
     /// (or is empty). Returns `None` otherwise.
     pub fn try_get_contiguous_mut(&mut self) -> Option<&mut [u8]> {
-        if self.0.is_empty() {
-            Some(&mut [])
-        } else if self.0.len() == 1 {
-            Some(self.0[0].as_mut())
-        } else {
-            None
+        match &mut self.0 {
+            [] => Some(&mut []),
+            [slc] => Some(slc),
+            _ => None,
         }
     }
 }
 
-/// A [`FragmentedByteSlice`] with immutable byte slices.
+/// A [`FragmentedByteSlice`] backed by immutable byte slices.
 pub type FragmentedBytes<'a, 'b> = FragmentedByteSlice<'a, &'b [u8]>;
-/// A [`FragmentedByteSlice`] with mutable byte slices.
+/// A [`FragmentedByteSlice`] backed by mutable byte slices.
 pub type FragmentedBytesMut<'a, 'b> = FragmentedByteSlice<'a, &'b mut [u8]>;
 
 #[cfg(test)]
