@@ -23,6 +23,7 @@
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture_buffer_collection_importer.h"
+#include "src/ui/scenic/lib/screenshot/screenshot_manager.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/metrics_impl.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_dump.h"
@@ -549,6 +550,17 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::ScreenCapture>)> handler =
         fit::bind_member(screen_capture_manager_.get(),
                          &screen_capture::ScreenCaptureManager::CreateClient);
+    zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  // Easy screenshot protocol.
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[screenshot_manager]");
+    screenshot_manager_ =
+        std::make_unique<screenshot::ScreenshotManager>(config_values_.i_can_haz_flatland);
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
+        fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateBinding);
     zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
     FX_DCHECK(status == ZX_OK);
   }

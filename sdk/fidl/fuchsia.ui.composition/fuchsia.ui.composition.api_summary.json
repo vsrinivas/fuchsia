@@ -714,6 +714,51 @@
         "strictness": "strict"
     },
     {
+        "declaration": "(fuchsia.ui.composition/ScreenshotTakeRequest payload) -> (fuchsia.ui.composition/ScreenshotTakeResponse payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.composition/Screenshot.Take"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.composition/Screenshot"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.composition/ScreenshotFormat.BGRA_RAW",
+        "value": "0"
+    },
+    {
+        "declaration": "uint8",
+        "kind": "enum",
+        "name": "fuchsia.ui.composition/ScreenshotFormat",
+        "strictness": "flexible"
+    },
+    {
+        "declaration": "fuchsia.ui.composition/ScreenshotFormat",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/ScreenshotTakeRequest.format"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.composition/ScreenshotTakeRequest",
+        "resourceness": "resource"
+    },
+    {
+        "declaration": "fuchsia.math/SizeU",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/ScreenshotTakeResponse.size"
+    },
+    {
+        "declaration": "zx/handle:VMO",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/ScreenshotTakeResponse.vmo"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.composition/ScreenshotTakeResponse",
+        "resourceness": "resource"
+    },
+    {
         "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.ui.composition/TransformId.value"

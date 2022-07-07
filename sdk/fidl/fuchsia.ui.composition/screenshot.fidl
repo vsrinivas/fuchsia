@@ -1,0 +1,49 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.composition;
+
+using fuchsia.math;
+using zx;
+
+/// The different formats of Screenshot that can be requested.
+@available(added=HEAD)
+type ScreenshotFormat = flexible enum : uint8 {
+    /// The default format, requesting a tightly packed pixel data with 32 bit BGRA pixels.
+    BGRA_RAW = 0;
+    // TODO(fxbug.dev/103742): Add png format.
+};
+
+/// Collects the current graphical content of a display.
+@available(added=HEAD)
+@discoverable
+protocol Screenshot {
+    /// Collects the current graphical content of a display in a specified buffer `format` in the
+    /// sRGB color space.
+    ///
+    /// Screenshot is taken immediately, populated with the display's content from the most recent
+    /// VSYNC.
+    ///
+    /// If the client calls [`Take`] a second time before a first [`Take`] call returns, the server
+    /// will close the Screenshot connection with a ZX_ERR_SHOULD_WAIT epitaph.
+    ///
+    /// If capture fails due to an internal error, the server will close the Screenshot connection
+    /// with a ZX_ERR_INTERNAL epitaph.
+    Take(resource table {
+        /// Format of the requested screenshot.
+        1: format ScreenshotFormat;
+    }) -> (resource table {
+        /// CPU accessible read-only VMO that contains screenshot data. The server owns the VMO and
+        /// may reuse for the next [`Take`].
+        ///
+        /// Basic usage: After the client receives a VMO handle, to ensure data stability, it should
+        /// finish reading the VMO before calling [`Take`] again. When finished reading, the client
+        /// should drop the VMO handle.
+        ///
+        /// Advanced usage: To edit the data, or to persist it beyond the next [`Take`] call, the
+        /// client should copy the data to a private VMO.
+        1: vmo zx.handle:VMO;
+        /// Size of the screenshot in pixels.
+        2: size fuchsia.math.SizeU;
+    });
+};
