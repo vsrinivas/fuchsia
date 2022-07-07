@@ -1,7 +1,8 @@
 #![warn(rust_2018_idioms, single_use_lifetimes)]
 
-use pin_project::{pin_project, pinned_drop};
 use std::pin::Pin;
+
+use pin_project::{pin_project, pinned_drop};
 
 #[test]
 fn safe_project() {
@@ -69,10 +70,10 @@ fn self_ty() {
 
             // pat
             match *self {
-                Self { f: _ } => {}
+                Self { f: () } => {}
             }
-            if let Self { f: _ } = *self {}
-            let Self { f: _ } = *self;
+            if let Self { f: () } = *self {}
+            let Self { f: () } = *self;
         }
     }
 
@@ -112,11 +113,11 @@ fn self_ty() {
 
             // pat
             match *self {
-                Self::Struct { f: _ } => {}
+                Self::Struct { f: () } => {}
                 Self::Tuple(_) => {}
                 Self::Unit => {}
             }
-            if let Self::Struct { f: _ } = *self {}
+            if let Self::Struct { f: () } = *self {}
             if let Self::Tuple(_) = *self {}
             if let Self::Unit = *self {}
         }
@@ -137,7 +138,7 @@ fn self_inside_macro_containing_fn() {
     #[pinned_drop]
     impl PinnedDrop for S {
         fn drop(self: Pin<&mut Self>) {
-            let _ = mac!({
+            mac!({
                 impl S {
                     pub fn _f(self) -> Self {
                         self
@@ -212,7 +213,7 @@ fn self_ty_inside_macro_call() {
     }
 
     impl<T: Send> Trait for Struct<T> {
-        type Assoc2 = ();
+        type Assoc2 = u8;
         const ASSOC2: usize = 2;
         fn assoc2() {}
     }
@@ -260,4 +261,24 @@ fn inside_macro() {
     }
 
     mac!(1);
+}
+
+pub mod self_path {
+    use super::*;
+
+    #[pin_project(PinnedDrop)]
+    pub struct S<T: Unpin>(T);
+
+    fn f() {}
+
+    #[pinned_drop]
+    impl<T: Unpin> PinnedDrop for self::S<T> {
+        fn drop(mut self: Pin<&mut Self>) {
+            self::f();
+            let _: self::S<()> = self::S(());
+            let _: self::S<Pin<&mut Self>> = self::S(self.as_mut());
+            let self::S(()) = self::S(());
+            let self::S(&mut Self(_)) = self::S(&mut *self);
+        }
+    }
 }

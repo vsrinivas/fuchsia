@@ -8,8 +8,8 @@
     )
 ))]
 #![warn(unsafe_code)]
-#![warn(future_incompatible, rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(clippy::all, clippy::default_trait_access)]
+#![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
+#![warn(clippy::default_trait_access, clippy::wildcard_imports)]
 #![allow(clippy::needless_doctest_main)]
 
 // older compilers require explicit `extern crate`.
@@ -29,9 +29,9 @@ use proc_macro::TokenStream;
 ///
 /// This attribute creates projection types according to the following rules:
 ///
-/// * For the fields that use `#[pin]` attribute, create the pinned reference to
+/// - For the fields that use `#[pin]` attribute, create the pinned reference to
 ///   the field.
-/// * For the other fields, create a normal reference to the field.
+/// - For the other fields, create a normal reference to the field.
 ///
 /// And the following methods are implemented on the original type:
 ///
@@ -161,8 +161,9 @@ use proc_macro::TokenStream;
 /// `#[pin_project]` can be used on structs and enums.
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::pin::Pin;
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project]
 /// struct Struct<T, U> {
@@ -181,8 +182,9 @@ use proc_macro::TokenStream;
 /// ```
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::pin::Pin;
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project]
 /// struct TupleStruct<T, U>(#[pin] T, U);
@@ -200,8 +202,9 @@ use proc_macro::TokenStream;
 /// returned from the method.
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::pin::Pin;
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project(project = EnumProj)]
 /// enum Enum<T, U> {
@@ -256,8 +259,9 @@ use proc_macro::TokenStream;
 /// consuming the [`Pin`].
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::pin::Pin;
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project]
 /// struct Struct<T> {
@@ -292,8 +296,9 @@ use proc_macro::TokenStream;
 /// field.
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::marker::PhantomPinned;
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project]
 /// struct Struct<T> {
@@ -346,8 +351,8 @@ use proc_macro::TokenStream;
 /// This impl block acts just like a normal [`Drop`] impl,
 /// except for the following two:
 ///
-/// * `drop` method takes [`Pin`]`<&mut Self>`
-/// * Name of the trait is `PinnedDrop`.
+/// - `drop` method takes [`Pin`]`<&mut Self>`
+/// - Name of the trait is `PinnedDrop`.
 ///
 /// ```rust
 /// # use std::pin::Pin;
@@ -366,8 +371,9 @@ use proc_macro::TokenStream;
 /// For example:
 ///
 /// ```rust
-/// use pin_project::{pin_project, pinned_drop};
 /// use std::{fmt::Debug, pin::Pin};
+///
+/// use pin_project::{pin_project, pinned_drop};
 ///
 /// #[pin_project(PinnedDrop)]
 /// struct PrintOnDrop<T: Debug, U: Debug> {
@@ -418,8 +424,9 @@ use proc_macro::TokenStream;
 /// For example:
 ///
 /// ```rust
-/// use pin_project::pin_project;
 /// use std::{marker::PhantomData, pin::Pin};
+///
+/// use pin_project::pin_project;
 ///
 /// #[pin_project(project_replace)]
 /// struct Struct<T, U> {
@@ -488,8 +495,8 @@ pub fn pin_project(args: TokenStream, input: TokenStream) -> TokenStream {
 /// The impl block annotated with this attribute acts just like a normal
 /// [`Drop`] impl, except for the following two:
 ///
-/// * `drop` method takes [`Pin`]`<&mut Self>`
-/// * Name of the trait is `PinnedDrop`.
+/// - `drop` method takes [`Pin`]`<&mut Self>`
+/// - Name of the trait is `PinnedDrop`.
 ///
 /// ```rust
 /// # use std::pin::Pin;
@@ -508,8 +515,9 @@ pub fn pin_project(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Examples
 ///
 /// ```rust
-/// use pin_project::{pin_project, pinned_drop};
 /// use std::pin::Pin;
+///
+/// use pin_project::{pin_project, pinned_drop};
 ///
 /// #[pin_project(PinnedDrop)]
 /// struct PrintOnDrop {

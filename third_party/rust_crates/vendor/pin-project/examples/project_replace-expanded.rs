@@ -76,6 +76,12 @@ const _: () = {
         ) -> __StructProjectionOwned<T, U> {
             unsafe {
                 let __self_ptr: *mut Self = self.get_unchecked_mut();
+
+                // Destructors will run in reverse order, so next create a guard to overwrite
+                // `self` with the replacement value without calling destructors.
+                let __guard =
+                    ::pin_project::__private::UnsafeOverwriteGuard::new(__self_ptr, __replacement);
+
                 let Self { pinned, unpinned } = &mut *__self_ptr;
 
                 // First, extract all the unpinned fields
@@ -84,20 +90,13 @@ const _: () = {
                     unpinned: ::pin_project::__private::ptr::read(unpinned),
                 };
 
-                // Destructors will run in reverse order, so next create a guard to overwrite
-                // `self` with the replacement value without calling destructors.
-                let __guard = ::pin_project::__private::UnsafeOverwriteGuard {
-                    target: __self_ptr,
-                    value: ::pin_project::__private::ManuallyDrop::new(__replacement),
-                };
-
                 // Now create guards to drop all the pinned fields
                 //
                 // Due to a compiler bug (https://github.com/rust-lang/rust/issues/47949)
                 // this must be in its own scope, or else `__result` will not be dropped
                 // if any of the destructors panic.
                 {
-                    let __guard = ::pin_project::__private::UnsafeDropInPlaceGuard(pinned);
+                    let __guard = ::pin_project::__private::UnsafeDropInPlaceGuard::new(pinned);
                 }
 
                 // Finally, return the result
@@ -111,7 +110,7 @@ const _: () = {
     //
     // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/34
     // for details.
-    #[forbid(safe_packed_borrows)]
+    #[forbid(unaligned_references, safe_packed_borrows)]
     fn __assert_not_repr_packed<T, U>(this: &Struct<T, U>) {
         let _ = &this.pinned;
         let _ = &this.unpinned;

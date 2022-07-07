@@ -3,8 +3,9 @@
 // ```rust
 // #![allow(dead_code)]
 //
-// use pin_project::{pin_project, pinned_drop};
 // use std::pin::Pin;
+//
+// use pin_project::{pin_project, pinned_drop};
 //
 // #[pin_project(PinnedDrop)]
 // pub struct Struct<'a, T> {
@@ -22,10 +23,11 @@
 // ```
 
 #![allow(dead_code, unused_imports, unused_parens, unknown_lints, renamed_and_removed_lints)]
-#![allow(clippy::needless_lifetimes)]
+#![allow(clippy::needless_lifetimes, clippy::mut_mut)]
+
+use std::pin::Pin;
 
 use pin_project::{pin_project, pinned_drop};
-use std::pin::Pin;
 
 // #[pin_project(PinnedDrop)]
 pub struct Struct<'a, T> {
@@ -80,7 +82,7 @@ const _: () = {
     //
     // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/34
     // for details.
-    #[forbid(safe_packed_borrows)]
+    #[forbid(unaligned_references, safe_packed_borrows)]
     fn __assert_not_repr_packed<'a, T>(this: &Struct<'a, T>) {
         let _ = &this.was_dropped;
         let _ = &this.field;
@@ -133,6 +135,7 @@ const _: () = {
 // Users can implement [`Drop`] safely using `#[pinned_drop]` and can drop a
 // type that implements `PinnedDrop` using the [`drop`] function safely.
 // **Do not call or implement this trait directly.**
+#[doc(hidden)]
 impl<T> ::pin_project::__private::PinnedDrop for Struct<'_, T> {
     // Since calling it twice on the same object would be UB,
     // this method is unsafe.

@@ -1,45 +1,44 @@
-#![warn(nonstandard_style, rust_2018_idioms, rustdoc, unused)]
+// Check interoperability with rustc and clippy lints.
+
+// for old compilers
+#![allow(unknown_lints)]
+#![warn(nonstandard_style, rust_2018_idioms, unused)]
 // Note: This does not guarantee compatibility with forbidding these lints in the future.
 // If rustc adds a new lint, we may not be able to keep this.
-#![forbid(future_incompatible, rust_2018_compatibility)]
-#![allow(unknown_lints)] // for old compilers
+#![forbid(future_incompatible, rust_2018_compatibility, rust_2021_compatibility)]
+// lints forbidden as a part of future_incompatible, rust_2018_compatibility, and rust_2021_compatibility are not included in the list below.
+// elided_lifetimes_in_paths, explicit_outlives_requirements, unused_extern_crates:  as a part of rust_2018_idioms
+// unsafe_op_in_unsafe_fn: requires Rust 1.52. and, we don't generate unsafe fn.
+// non_exhaustive_omitted_patterns: unstable
+// unstable_features: no way to generate #![feature(..)] by macros, expect for unstable inner attribute. and this lint is deprecated: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#unstable-features
+// unused_crate_dependencies, must_not_suspend: unrelated
+// unsafe_code: checked in forbid_unsafe module
 #![warn(
     box_pointers,
     deprecated_in_future,
-    elided_lifetimes_in_paths,
-    explicit_outlives_requirements,
+    fuzzy_provenance_casts,
+    lossy_provenance_casts,
     macro_use_extern_crate,
     meta_variable_misuse,
+    missing_abi,
     missing_copy_implementations,
-    missing_crate_level_docs,
     missing_debug_implementations,
     missing_docs,
     non_ascii_idents,
+    noop_method_call,
     single_use_lifetimes,
     trivial_casts,
     trivial_numeric_casts,
-    unaligned_references,
     unreachable_pub,
-    unused_extern_crates,
     unused_import_braces,
     unused_lifetimes,
     unused_qualifications,
     unused_results,
     variant_size_differences
 )]
-// absolute_paths_not_starting_with_crate, anonymous_parameters, keyword_idents, pointer_structural_match: forbidden as a part of future_incompatible
-// missing_doc_code_examples, private_doc_tests, invalid_html_tags: warned as a part of rustdoc
-// unsafe_block_in_unsafe_fn: unstable
-// unsafe_code: checked in forbid_unsafe module
-// unstable_features: deprecated: https://doc.rust-lang.org/beta/rustc/lints/listing/allowed-by-default.html#unstable-features
-// unused_crate_dependencies: unrelated
-#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
-#![warn(clippy::restriction)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::restriction)]
 #![allow(clippy::blanket_clippy_restriction_lints)] // this is a test, so enable all restriction lints intentionally.
-
-// Check interoperability with rustc and clippy lints.
-
-mod auxiliary;
+#![allow(clippy::exhaustive_structs, clippy::exhaustive_enums, clippy::single_char_lifetime_names)] // TODO
 
 pub mod basic {
     include!("include/basic.rs");
@@ -240,14 +239,17 @@ pub mod basic {
                     Unit,
                 }
 
+                #[allow(clippy::undocumented_unsafe_blocks)]
                 unsafe impl<T: ::pin_project::__private::Unpin, U: ::pin_project::__private::Unpin>
                     ::pin_project::UnsafeUnpin for UnsafeUnpinStruct<T, U>
                 {
                 }
+                #[allow(clippy::undocumented_unsafe_blocks)]
                 unsafe impl<T: ::pin_project::__private::Unpin, U: ::pin_project::__private::Unpin>
                     ::pin_project::UnsafeUnpin for UnsafeUnpinTupleStruct<T, U>
                 {
                 }
+                #[allow(clippy::undocumented_unsafe_blocks)]
                 unsafe impl<T: ::pin_project::__private::Unpin, U: ::pin_project::__private::Unpin>
                     ::pin_project::UnsafeUnpin for UnsafeUnpinEnum<T, U>
                 {
@@ -543,6 +545,123 @@ pub mod box_pointers {
     }
 }
 
+pub mod deprecated {
+    use pin_project::pin_project;
+
+    #[allow(deprecated)] // for the type itself
+    #[pin_project(project_replace)]
+    #[derive(Debug, Clone, Copy)]
+    #[deprecated]
+    pub struct Struct {
+        #[deprecated]
+        #[pin]
+        pub p: (),
+        #[deprecated]
+        pub u: (),
+    }
+
+    #[allow(deprecated)] // for the type itself
+    #[pin_project(project_replace)]
+    #[derive(Debug, Clone, Copy)]
+    #[deprecated]
+    pub struct TupleStruct(
+        #[deprecated]
+        #[pin]
+        pub (),
+        #[deprecated] pub (),
+    );
+
+    #[allow(deprecated)] // for the type itself
+    #[pin_project(
+        project = EnumProj,
+        project_ref = EnumProjRef,
+        project_replace = EnumProjOwn,
+    )]
+    #[derive(Debug, Clone, Copy)]
+    #[deprecated]
+    pub enum Enum {
+        #[deprecated]
+        Struct {
+            #[deprecated]
+            #[pin]
+            p: (),
+            #[deprecated]
+            u: (),
+        },
+        #[deprecated]
+        Tuple(
+            #[deprecated]
+            #[pin]
+            (),
+            #[deprecated] (),
+        ),
+        #[deprecated]
+        Unit,
+    }
+
+    pub mod inside_macro {
+        use pin_project::pin_project;
+
+        #[rustfmt::skip]
+        macro_rules! mac {
+            () => {
+                #[allow(deprecated)] // for the type itself
+                #[pin_project(project_replace)]
+                #[derive(Debug, Clone, Copy)]
+                #[deprecated]
+                pub struct Struct {
+                    #[deprecated]
+                    #[pin]
+                    pub p: (),
+                    #[deprecated]
+                    pub u: (),
+                }
+
+                #[allow(deprecated)] // for the type itself
+                #[pin_project(project_replace)]
+                #[derive(Debug, Clone, Copy)]
+                #[deprecated]
+                pub struct TupleStruct(
+                    #[deprecated]
+                    #[pin]
+                    pub (),
+                    #[deprecated] pub (),
+                );
+
+                #[allow(deprecated)] // for the type itself
+                #[pin_project(
+                    project = EnumProj,
+                    project_ref = EnumProjRef,
+                    project_replace = EnumProjOwn,
+                )]
+                #[derive(Debug, Clone, Copy)]
+                #[deprecated]
+                pub enum Enum {
+                    #[deprecated]
+                    Struct {
+                        #[deprecated]
+                        #[pin]
+                        p: (),
+                        #[deprecated]
+                        u: (),
+                    },
+                    #[deprecated]
+                    Tuple(
+                        #[deprecated]
+                        #[pin]
+                        (),
+                        #[deprecated] (),
+                    ),
+                    #[deprecated]
+                    Unit,
+                }
+            };
+        }
+
+        mac!();
+    }
+}
+
 pub mod explicit_outlives_requirements {
     use pin_project::pin_project;
 
@@ -652,14 +771,14 @@ pub mod single_use_lifetimes {
     #[allow(single_use_lifetimes)] // for the type itself: https://github.com/rust-lang/rust/issues/55058
     #[pin_project(project_replace)]
     #[derive(Debug)]
-    pub struct HRTB<'pin___, T>
+    pub struct Hrtb<'pin___, T>
     where
         for<'pin> &'pin T: Unpin,
         T: for<'pin> Trait<'pin>,
         for<'pin, 'pin_, 'pin__> &'pin &'pin_ &'pin__ T: Unpin,
     {
         #[pin]
-        f: &'pin___ mut T,
+        _f: &'pin___ mut T,
     }
 
     pub mod inside_macro {
@@ -675,14 +794,14 @@ pub mod single_use_lifetimes {
                 #[allow(single_use_lifetimes)] // for the type itself: https://github.com/rust-lang/rust/issues/55058
                 #[pin_project(project_replace)]
                 #[derive(Debug)]
-                pub struct HRTB<'pin___, T>
+                pub struct Hrtb<'pin___, T>
                 where
                     for<'pin> &'pin T: Unpin,
                     T: for<'pin> Trait<'pin>,
                     for<'pin, 'pin_, 'pin__> &'pin &'pin_ &'pin__ T: Unpin,
                 {
                     #[pin]
-                    f: &'pin___ mut T,
+                    _f: &'pin___ mut T,
                 }
             };
         }
@@ -839,6 +958,7 @@ mod clippy_redundant_pub_crate {
     pub mod inside_macro {
         use pin_project::pin_project;
 
+        #[allow(clippy::redundant_pub_crate)]
         #[rustfmt::skip]
         macro_rules! mac {
             () => {
@@ -964,6 +1084,45 @@ pub mod clippy_type_repetition_in_bounds {
     }
 }
 
+pub mod clippy_use_self {
+    use pin_project::pin_project;
+
+    pub trait Trait {
+        type Assoc;
+    }
+
+    #[pin_project(project_replace)]
+    #[derive(Debug)]
+    pub struct Generics<T: Trait<Assoc = Self>>
+    where
+        Self: Trait<Assoc = Self>,
+    {
+        _f: T,
+    }
+
+    pub mod inside_macro {
+        use pin_project::pin_project;
+
+        use super::Trait;
+
+        #[rustfmt::skip]
+        macro_rules! mac {
+            () => {
+                #[pin_project(project_replace)]
+                #[derive(Debug)]
+                pub struct Generics<T: Trait<Assoc = Self>>
+                where
+                    Self: Trait<Assoc = Self>,
+                {
+                    _f: T,
+                }
+            };
+        }
+
+        mac!();
+    }
+}
+
 pub mod clippy_used_underscore_binding {
     use pin_project::pin_project;
 
@@ -1043,19 +1202,4 @@ pub mod clippy_ref_option_ref {
             _unpinned: Option<&'a ()>,
         },
     }
-}
-
-// Run `./dev.sh +$toolchain test --test lint` to update this.
-#[cfg(not(miri))]
-#[allow(clippy::restriction)]
-#[rustversion::attr(before(2020-12-25), ignore)] // Note: This date is commit-date and the day before the toolchain date.
-#[test]
-fn check_lint_list() {
-    use auxiliary::assert_diff;
-    use std::{env, process::Command, str};
-
-    let rustc = env::var_os("RUSTC").unwrap_or_else(|| "rustc".into());
-    let output = Command::new(rustc).args(&["-W", "help"]).output().unwrap();
-    let new = str::from_utf8(&output.stdout).unwrap();
-    assert_diff("tests/lint.txt", new);
 }

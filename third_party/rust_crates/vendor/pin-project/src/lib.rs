@@ -6,8 +6,9 @@
 //! covering all the fields of struct or enum.
 //!
 //! ```rust
-//! use pin_project::pin_project;
 //! use std::pin::Pin;
+//!
+//! use pin_project::pin_project;
 //!
 //! #[pin_project]
 //! struct Struct<T, U> {
@@ -31,8 +32,9 @@
 //! returned from the method.
 //!
 //! ```rust
-//! use pin_project::pin_project;
 //! use std::pin::Pin;
+//!
+//! use pin_project::pin_project;
 //!
 //! #[pin_project(project = EnumProj)]
 //! enum Enum<T, U> {
@@ -59,10 +61,10 @@
 //! See [`#[pin_project]`][`pin_project`] attribute for more details, and
 //! see [examples] directory for more examples and generated code.
 //!
-//! [examples]: https://github.com/taiki-e/pin-project/blob/master/examples/README.md
-//! [enum-default-expanded]: https://github.com/taiki-e/pin-project/blob/master/examples/enum-default-expanded.rs
+//! [examples]: https://github.com/taiki-e/pin-project/blob/HEAD/examples/README.md
+//! [enum-default-expanded]: https://github.com/taiki-e/pin-project/blob/HEAD/examples/enum-default-expanded.rs
 //! [pin-projection]: core::pin#projections-and-structural-pinning
-//! [struct-default-expanded]: https://github.com/taiki-e/pin-project/blob/master/examples/struct-default-expanded.rs
+//! [struct-default-expanded]: https://github.com/taiki-e/pin-project/blob/HEAD/examples/struct-default-expanded.rs
 
 #![no_std]
 #![doc(test(
@@ -72,14 +74,12 @@
         allow(dead_code, unused_variables)
     )
 ))]
-#![warn(future_incompatible, rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(missing_docs)]
-#![warn(clippy::all, clippy::default_trait_access)]
+#![warn(missing_docs, rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
+#![warn(clippy::default_trait_access, clippy::wildcard_imports)]
 #![allow(clippy::needless_doctest_main)]
 
 #[doc(inline)]
 pub use pin_project_internal::pin_project;
-
 #[doc(inline)]
 pub use pin_project_internal::pinned_drop;
 
@@ -87,6 +87,8 @@ pub use pin_project_internal::pinned_drop;
 ///
 /// This trait is used in conjunction with the `UnsafeUnpin` argument to
 /// the [`#[pin_project]`][macro@pin_project] attribute.
+///
+/// # Safety
 ///
 /// The Rust [`Unpin`] trait is safe to implement - by itself,
 /// implementing it cannot lead to [undefined behavior][undefined-behavior].
@@ -146,19 +148,19 @@ pub unsafe trait UnsafeUnpin {}
 // Not public API.
 #[doc(hidden)]
 pub mod __private {
+    use core::mem::ManuallyDrop;
     #[doc(hidden)]
     pub use core::{
         marker::{PhantomData, PhantomPinned, Unpin},
-        mem::ManuallyDrop,
         ops::Drop,
         pin::Pin,
         ptr,
     };
 
-    use super::UnsafeUnpin;
-
     #[doc(hidden)]
     pub use pin_project_internal::__PinProjectInternalDerive;
+
+    use super::UnsafeUnpin;
 
     // An internal trait used for custom implementations of [`Drop`].
     //
@@ -253,7 +255,14 @@ pub mod __private {
 
     // This is an internal helper used to ensure a value is dropped.
     #[doc(hidden)]
-    pub struct UnsafeDropInPlaceGuard<T: ?Sized>(pub *mut T);
+    pub struct UnsafeDropInPlaceGuard<T: ?Sized>(*mut T);
+
+    impl<T: ?Sized> UnsafeDropInPlaceGuard<T> {
+        #[doc(hidden)]
+        pub unsafe fn new(ptr: *mut T) -> Self {
+            Self(ptr)
+        }
+    }
 
     impl<T: ?Sized> Drop for UnsafeDropInPlaceGuard<T> {
         fn drop(&mut self) {
@@ -267,8 +276,15 @@ pub mod __private {
     // its destructor being called.
     #[doc(hidden)]
     pub struct UnsafeOverwriteGuard<T> {
-        pub value: ManuallyDrop<T>,
-        pub target: *mut T,
+        target: *mut T,
+        value: ManuallyDrop<T>,
+    }
+
+    impl<T> UnsafeOverwriteGuard<T> {
+        #[doc(hidden)]
+        pub unsafe fn new(target: *mut T, value: T) -> Self {
+            Self { target, value: ManuallyDrop::new(value) }
+        }
     }
 
     impl<T> Drop for UnsafeOverwriteGuard<T> {

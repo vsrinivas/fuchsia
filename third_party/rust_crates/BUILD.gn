@@ -566,7 +566,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("pin-project") {
-  public_deps = [ ":pin-project-v1_0_4" ]
+  public_deps = [ ":pin-project-v1_0_11" ]
 }
 
 group("pin-utils") {
@@ -4328,7 +4328,7 @@ rust_library("futures-test-v0_3_19") {
   deps += [ ":futures-sink-v0_3_19" ]
   deps += [ ":futures-task-v0_3_19" ]
   deps += [ ":futures-util-v0_3_19" ]
-  deps += [ ":pin-project-v1_0_4" ]
+  deps += [ ":pin-project-v1_0_11" ]
   deps += [ ":pin-utils-v0_1_0" ]
 
   rustenv = []
@@ -6926,32 +6926,32 @@ rust_library("phf_shared-v0_7_24") {
   visibility = [ ":*" ]
 }
 
-rust_library("pin-project-v1_0_4") {
+rust_library("pin-project-v1_0_11") {
   crate_name = "pin_project"
   crate_root = "//third_party/rust_crates/vendor/pin-project/src/lib.rs"
-  output_name = "pin_project-22de70c7a2098ec0"
+  output_name = "pin_project-55a716de2a61a73b"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":pin-project-internal-v1_0_4($host_toolchain)" ]
+  deps += [ ":pin-project-internal-v1_0_11($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=22de70c7a2098ec0",
-    "-Cextra-filename=-22de70c7a2098ec0",
+    "-Cmetadata=55a716de2a61a73b",
+    "-Cextra-filename=-55a716de2a61a73b",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("pin-project-internal-v1_0_4") {
+rust_proc_macro("pin-project-internal-v1_0_11") {
   crate_name = "pin_project_internal"
   crate_root =
       "//third_party/rust_crates/vendor/pin-project-internal/src/lib.rs"
-  output_name = "pin_project_internal-f37959f5f2096c25"
+  output_name = "pin_project_internal-94b0d1eaf7b218df"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -6964,8 +6964,8 @@ rust_proc_macro("pin-project-internal-v1_0_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f37959f5f2096c25",
-    "-Cextra-filename=-f37959f5f2096c25",
+    "-Cmetadata=94b0d1eaf7b218df",
+    "-Cextra-filename=-94b0d1eaf7b218df",
   ]
 
   visibility = [ ":*" ]
@@ -10633,7 +10633,7 @@ rust_library("tracing-futures-v0_2_5") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":pin-project-v1_0_4" ]
+  deps += [ ":pin-project-v1_0_11" ]
   deps += [ ":tracing-v0_1_29" ]
 
   rustenv = []

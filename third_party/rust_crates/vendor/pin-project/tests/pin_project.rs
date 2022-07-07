@@ -4,12 +4,13 @@
 #[macro_use]
 mod auxiliary;
 
-use pin_project::{pin_project, pinned_drop, UnsafeUnpin};
 use std::{
     marker::{PhantomData, PhantomPinned},
     panic,
     pin::Pin,
 };
+
+use pin_project::{pin_project, pinned_drop, UnsafeUnpin};
 
 #[test]
 fn projection() {
@@ -93,7 +94,7 @@ fn projection() {
         EnumProj::Struct { f1, f2 } => {
             let _: Pin<&mut i32> = f1;
             let _: &mut i32 = f2;
-            unreachable!()
+            unreachable!();
         }
         EnumProj::Unit => unreachable!(),
     }
@@ -107,7 +108,7 @@ fn projection() {
         EnumProj::Tuple(x, y) => {
             let _: Pin<&mut i32> = x;
             let _: &mut i32 = y;
-            unreachable!()
+            unreachable!();
         }
         EnumProj::Struct { f1, f2 } => {
             let _: Pin<&mut i32> = f1;
@@ -336,7 +337,7 @@ fn overlapping_lifetime_names() {
 
     #[allow(single_use_lifetimes)] // https://github.com/rust-lang/rust/issues/55058
     #[pin_project(project_replace)]
-    pub struct HRTB<'pin___, T>
+    pub struct Hrtb<'pin___, T>
     where
         for<'pin> &'pin T: Unpin,
         T: for<'pin> Trait<'pin>,
@@ -722,6 +723,7 @@ fn parse_self() {
         type Assoc;
     }
 
+    #[allow(clippy::type_repetition_in_bounds)]
     #[pin_project(project_replace)]
     pub struct Generics<T: Trait<Assoc = Self>>
     where
@@ -845,7 +847,7 @@ fn project_replace_panic() {
         fn drop(&mut self) {
             *self.0 = true;
             if self.1 {
-                panic!()
+                panic!();
             }
         }
     }
