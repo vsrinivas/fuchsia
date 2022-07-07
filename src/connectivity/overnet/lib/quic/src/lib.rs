@@ -10,7 +10,6 @@ use fuchsia_async::{Task, Timer};
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use quiche::{Connection, Shutdown};
 use std::collections::BTreeMap;
-use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -549,17 +548,78 @@ impl Drop for AsyncQuicStreamReader {
 }
 
 impl AsyncQuicStreamReader {
-    pub fn read<'b>(&'b mut self, bytes: impl Into<ReadBuf<'b>>) -> QuicRead<'b> {
-        QuicRead {
-            conn: &self.conn,
-            id: self.id,
-            observed_closed: &mut self.observed_closed,
-            ready: &mut self.ready,
-            buffered: &mut self.buffered,
-            bytes: bytes.into(),
-            bytes_offset: 0,
-            io_lock: MutexTicket::new(&self.conn.io),
+    pub async fn read<'b>(&'b mut self, bytes: &'b mut [u8]) -> Result<(usize, bool), Error> {
+        if !self.buffered.is_empty() {
+            let to_drain = std::cmp::min(self.buffered.len(), bytes.len());
+            self.buffered
+                .drain(..to_drain)
+                .zip(bytes.iter_mut())
+                .for_each(|(src, dest)| *dest = src);
+            return Ok((to_drain, self.observed_closed && self.buffered.is_empty()));
         }
+
+        let mut io_lock = MutexTicket::new(&self.conn.io);
+
+        let (n, fin) = loop {
+            let got = {
+                let mut io = io_lock.lock().await;
+                io.conn_send.ready();
+                match io.conn.stream_recv(self.id, bytes) {
+                    Ok((n, fin)) => {
+                        self.ready = true;
+                        Some(Ok((n, fin)))
+                    }
+                    Err(quiche::Error::Done) => {
+                        self.ready = true;
+                        let finished = io.conn.stream_finished(self.id);
+                        if finished {
+                            Some(Ok((0, true)))
+                        } else if io.closed {
+                            log::trace!("{:?} reader abandon", self.debug_id());
+                            let _ = io.conn.stream_shutdown(self.id, Shutdown::Read, 0);
+                            Some(Ok((0, true)))
+                        } else {
+                            None
+                        }
+                    }
+                    Err(quiche::Error::InvalidStreamState(_)) if !self.ready => None,
+                    Err(quiche::Error::InvalidStreamState(_))
+                        if io.conn.stream_finished(self.id) =>
+                    {
+                        Some(Ok((0, true)))
+                    }
+                    Err(x) => Some(Err(x).with_context(|| {
+                        format_err!(
+                            "async quic read: stream_id={:?} ready={:?}",
+                            self.id,
+                            self.ready,
+                        )
+                    })),
+                }
+            };
+
+            if let Some(got) = got {
+                break got?;
+            } else {
+                let mut thru = false;
+                poll_fn(|ctx| {
+                    if !thru {
+                        let mut io = ready!(io_lock.poll(ctx));
+                        thru = true;
+                        io.stream_recv.pending(ctx, self.id)
+                    } else {
+                        Poll::Ready(())
+                    }
+                })
+                .await;
+            }
+        };
+
+        if fin {
+            self.observed_closed = true;
+        }
+
+        Ok((n, fin))
     }
 
     pub async fn read_exact<'b>(&'b mut self, bytes: &'b mut [u8]) -> Result<bool, Error> {
@@ -607,47 +667,6 @@ impl AsyncQuicStreamReader {
     }
 }
 
-#[derive(Debug)]
-pub enum ReadBuf<'b> {
-    Slice(&'b mut [u8]),
-    Vec(&'b mut Vec<u8>),
-}
-
-impl<'b> ReadBuf<'b> {
-    fn as_mut_slice_from<'a>(&'a mut self, offset: usize) -> &'a mut [u8] {
-        match self {
-            Self::Slice(buf) => &mut buf[offset..],
-            Self::Vec(buf) => &mut buf[offset..],
-        }
-    }
-
-    pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u8] {
-        match self {
-            Self::Slice(buf) => buf,
-            Self::Vec(buf) => buf.as_mut(),
-        }
-    }
-
-    pub fn take_vec(&mut self) -> Vec<u8> {
-        match self {
-            Self::Slice(buf) => buf.to_vec(),
-            Self::Vec(buf) => std::mem::replace(buf, Vec::new()),
-        }
-    }
-}
-
-impl<'b> From<&'b mut [u8]> for ReadBuf<'b> {
-    fn from(buf: &'b mut [u8]) -> Self {
-        Self::Slice(buf)
-    }
-}
-
-impl<'b> From<&'b mut Vec<u8>> for ReadBuf<'b> {
-    fn from(buf: &'b mut Vec<u8>) -> Self {
-        Self::Vec(buf)
-    }
-}
-
 impl StreamProperties for AsyncQuicStreamReader {
     fn conn(&self) -> &Arc<AsyncConnection> {
         &self.conn
@@ -655,96 +674,6 @@ impl StreamProperties for AsyncQuicStreamReader {
 
     fn id(&self) -> u64 {
         self.id
-    }
-}
-
-#[derive(Debug)]
-pub struct QuicRead<'b> {
-    id: u64,
-    ready: &'b mut bool,
-    observed_closed: &'b mut bool,
-    buffered: &'b mut Vec<u8>,
-    conn: &'b Arc<AsyncConnection>,
-    bytes: ReadBuf<'b>,
-    bytes_offset: usize,
-    io_lock: MutexTicket<'b, ConnState>,
-}
-
-impl<'b> QuicRead<'b> {
-    #[allow(dead_code)]
-    pub fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.conn.endpoint, self.id)
-    }
-
-    fn poll_inner(&mut self, ctx: &mut Context<'_>) -> Poll<Result<(usize, bool), Error>> {
-        let bytes = &mut self.bytes.as_mut_slice_from(self.bytes_offset);
-
-        if !self.buffered.is_empty() {
-            let n = match bytes.len().cmp(&self.buffered.len()) {
-                std::cmp::Ordering::Less => {
-                    let trail = self.buffered.split_off(bytes.len());
-                    let head = std::mem::replace(self.buffered, trail);
-                    bytes.copy_from_slice(&head);
-                    bytes.len()
-                }
-                std::cmp::Ordering::Equal => {
-                    bytes.copy_from_slice(self.buffered);
-                    self.buffered.clear();
-                    bytes.len()
-                }
-                std::cmp::Ordering::Greater => {
-                    let n = self.buffered.len();
-                    bytes[..n].copy_from_slice(self.buffered);
-                    self.buffered.clear();
-                    n
-                }
-            };
-            return Poll::Ready(Ok((n, false)));
-        }
-
-        let mut io = ready!(self.io_lock.poll(ctx));
-        io.conn_send.ready();
-        match io.conn.stream_recv(self.id, bytes) {
-            Ok((n, fin)) => {
-                *self.ready = true;
-                Poll::Ready(Ok((n, fin)))
-            }
-            Err(quiche::Error::Done) => {
-                *self.ready = true;
-                let finished = io.conn.stream_finished(self.id);
-                if finished {
-                    Poll::Ready(Ok((0, true)))
-                } else if io.closed {
-                    log::trace!("{:?} reader abandon", self.debug_id());
-                    let _ = io.conn.stream_shutdown(self.id, Shutdown::Read, 0);
-                    Poll::Ready(Ok((0, true)))
-                } else {
-                    io.stream_recv.pending(ctx, self.id)
-                }
-            }
-            Err(quiche::Error::InvalidStreamState(_)) if !*self.ready => {
-                io.stream_recv.pending(ctx, self.id)
-            }
-            Err(quiche::Error::InvalidStreamState(_)) if io.conn.stream_finished(self.id) => {
-                Poll::Ready(Ok((0, true)))
-            }
-            Err(x) => Poll::Ready(Err(x).with_context(|| {
-                format_err!("async quic read: stream_id={:?} ready={:?}", self.id, *self.ready,)
-            })),
-        }
-    }
-}
-
-impl<'b> Future for QuicRead<'b> {
-    type Output = Result<(usize, bool), Error>;
-
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = Pin::into_inner(self);
-        let (n, fin) = ready!(this.poll_inner(ctx))?;
-        if fin {
-            *this.observed_closed = true;
-        }
-        Poll::Ready(Ok((n, fin)))
     }
 }
 
