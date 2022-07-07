@@ -21,10 +21,29 @@ use crate::logging::set_zx_name;
 use crate::logging::strace;
 use crate::mm::MemoryManager;
 use crate::signals::*;
-use crate::syscalls::decls::SyscallDecl;
+use crate::syscalls::decls::{Syscall, SyscallDecl};
 use crate::syscalls::table::dispatch_syscall;
+use crate::task::ExitStatus::Exit;
 use crate::task::*;
 use crate::types::*;
+
+/// Contains context to track the most recently failing system call.
+///
+/// When a task exits with a non-zero exit code, this context is logged to help debugging which
+/// system call may have triggered the failure.
+struct ErrorContext {
+    /// The system call that failed.
+    syscall: Syscall,
+
+    /// The error that was returned for the system call.
+    error: Errno,
+}
+
+impl std::fmt::Debug for ErrorContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} caused {:?}", self.syscall, self.error)
+    }
+}
 
 /// Spawns a thread that executes `current_task`.
 ///
@@ -112,6 +131,8 @@ fn run_exception_loop(
     exceptions: zx::Channel,
 ) -> Result<ExitStatus, Error> {
     let mut buffer = zx::MessageBuf::new();
+    // This tracks the last failing system call to aid in debugging task failures.
+    let mut error_context = None;
     loop {
         match read_channel_sync(&exceptions, &mut buffer) {
             Err(zx::Status::PEER_CLOSED) => {
@@ -136,15 +157,15 @@ fn run_exception_loop(
         );
 
         let report = thread.get_exception_report()?;
-        let syscall_number = report.context.synth_data as u64;
         current_task.registers = thread.read_state_general_regs()?.into();
 
+        let syscall_decl = SyscallDecl::from_number(report.context.synth_data as u64);
         // The `rax` register read from the thread's state is clobbered by zircon with
         // ZX_ERR_BAD_SYSCALL, but it really should be the syscall number.
-        current_task.registers.rax = syscall_number;
+        current_task.registers.rax = syscall_decl.number;
 
         // `orig_rax` should hold the original value loaded into `rax` by the userspace process.
-        current_task.registers.orig_rax = syscall_number;
+        current_task.registers.orig_rax = syscall_decl.number;
 
         let regs = &current_task.registers;
         match info.type_ {
@@ -153,18 +174,19 @@ fn run_exception_loop(
             {
                 let start_time = zx::Time::get_monotonic();
                 let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-                strace!(
-                    current_task,
-                    "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
-                    SyscallDecl::from_number(syscall_number).name,
-                    args.0,
-                    args.1,
-                    args.2,
-                    args.3,
-                    args.4,
-                    args.5
-                );
-                match dispatch_syscall(current_task, syscall_number, args) {
+
+                let syscall = Syscall {
+                    decl: syscall_decl,
+                    arg0: args.0,
+                    arg1: args.1,
+                    arg2: args.2,
+                    arg3: args.3,
+                    arg4: args.4,
+                    arg5: args.5,
+                };
+                strace!(current_task, "{:?}", syscall);
+
+                match dispatch_syscall(current_task, syscall.decl.number, args) {
                     Ok(return_value) => {
                         strace!(
                             current_task,
@@ -182,6 +204,7 @@ fn run_exception_loop(
                             (zx::Time::get_monotonic() - start_time).into_millis()
                         );
                         current_task.registers.rax = errno.return_value();
+                        error_context = Some(ErrorContext { error: errno, syscall });
                     }
                 }
             }
@@ -216,6 +239,14 @@ fn run_exception_loop(
                 // avoid re-entrancy.
                 drop(task_state);
                 strace!(current_task, "exiting with status {:?}", exit_status);
+                if let Some(error_context) = error_context {
+                    match exit_status {
+                        Exit(value) if value == 0 => {}
+                        _ => {
+                            log::warn!("[{:?}] {:?}", current_task, error_context);
+                        }
+                    };
+                }
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
                 return Ok(exit_status);
             }

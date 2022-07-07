@@ -373,12 +373,39 @@ macro_rules! for_each_syscall {
 /// A system call declaration.
 ///
 /// Describes the name of the syscall and its number.
-///
-/// TODO: Add information about the number of arguments (and their types) so
-/// that we can make strace more useful.
 pub struct SyscallDecl {
     pub name: &'static str,
     pub number: u64,
+}
+
+impl std::fmt::Debug for SyscallDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.name, self.number,)
+    }
+}
+
+/// A particular invocation of a system call.
+///
+/// Contains the declaration of the invoked system call, as well as which arguments it was invoked
+/// with.
+pub struct Syscall {
+    pub decl: &'static SyscallDecl,
+    pub arg0: u64,
+    pub arg1: u64,
+    pub arg2: u64,
+    pub arg3: u64,
+    pub arg4: u64,
+    pub arg5: u64,
+}
+
+impl std::fmt::Debug for Syscall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:?}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
+            self.decl, self.arg0, self.arg1, self.arg2, self.arg3, self.arg4, self.arg5
+        )
+    }
 }
 
 /// A macro for declaring a const SyscallDecl for a given syscall.
