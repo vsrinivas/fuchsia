@@ -106,7 +106,7 @@ pub async fn doctor(
     let rel_moniker = format!(".{}", &moniker);
 
     // Query the Component Manager for information about this instance.
-    write!(writer, "Querying component manager for {}\n", &moniker)?;
+    writeln!(writer, "Querying component manager for {}", &moniker)?;
     let (realm_query, route_validator) = start_proxies(rcs).await
         .map_err(|e| ffx_error!("Error reaching the target: {}\nIs your device/emulator up and shown in `ffx target list`?", e))?;
 
@@ -135,9 +135,9 @@ pub async fn doctor(
     // 3) emitting structured output for machine readability [use `writer.is_machine()`].
 
     // Print the basic information.
-    write!(writer, "URL: {}", info.url)?;
+    writeln!(writer, "URL: {}", info.url)?;
     let instance_id = if let Some(i) = info.instance_id { i } else { "None".to_string() };
-    write!(writer, "Instance ID: {}\n", instance_id)?;
+    writeln!(writer, "Instance ID: {}\n", instance_id)?;
 
     if state.is_none() {
         ffx_bail!(
