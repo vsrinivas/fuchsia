@@ -100,7 +100,7 @@ fn handle_notification(
 ) -> Result<bool, Error> {
     trace!("received notification for {:?} {:?}", notif, data);
 
-    let preamble = VendorDependentPreamble::decode(data).map_err(|e| Error::PacketError(e))?;
+    let preamble = VendorDependentPreamble::decode(data)?;
 
     let data = &data[preamble.encoded_len()..];
 
@@ -110,32 +110,28 @@ fn handle_notification(
 
     match notif {
         NotificationEventId::EventPlaybackStatusChanged => {
-            let response = PlaybackStatusChangedNotificationResponse::decode(data)
-                .map_err(|e| Error::PacketError(e))?;
+            let response = PlaybackStatusChangedNotificationResponse::decode(data)?;
             peer.write().handle_new_controller_notification_event(
                 ControllerEvent::PlaybackStatusChanged(response.playback_status()),
             );
             Ok(false)
         }
         NotificationEventId::EventTrackChanged => {
-            let response = TrackChangedNotificationResponse::decode(data)
-                .map_err(|e| Error::PacketError(e))?;
+            let response = TrackChangedNotificationResponse::decode(data)?;
             peer.write().handle_new_controller_notification_event(ControllerEvent::TrackIdChanged(
                 response.identifier(),
             ));
             Ok(false)
         }
         NotificationEventId::EventPlaybackPosChanged => {
-            let response = PlaybackPosChangedNotificationResponse::decode(data)
-                .map_err(|e| Error::PacketError(e))?;
+            let response = PlaybackPosChangedNotificationResponse::decode(data)?;
             peer.write().handle_new_controller_notification_event(
                 ControllerEvent::PlaybackPosChanged(response.position()),
             );
             Ok(false)
         }
         NotificationEventId::EventVolumeChanged => {
-            let response = VolumeChangedNotificationResponse::decode(data)
-                .map_err(|e| Error::PacketError(e))?;
+            let response = VolumeChangedNotificationResponse::decode(data)?;
             peer.write().handle_new_controller_notification_event(ControllerEvent::VolumeChanged(
                 response.volume(),
             ));

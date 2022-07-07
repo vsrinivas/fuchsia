@@ -52,11 +52,10 @@ impl Controller {
     /// Sends SetAbsoluteVolume command to the peer.
     /// Returns the volume as reported by the peer.
     pub async fn set_absolute_volume(&self, volume: u8) -> Result<u8, Error> {
-        let cmd = SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
+        let cmd = SetAbsoluteVolumeCommand::new(volume)?;
         trace!("set_absolute_volume send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response =
-            SetAbsoluteVolumeResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        let response = SetAbsoluteVolumeResponse::decode(&buf[..])?;
         trace!("set_absolute_volume received response {:#?}", response);
         Ok(response.volume())
     }
@@ -68,8 +67,7 @@ impl Controller {
         let cmd = GetElementAttributesCommand::all_attributes();
         trace!("get_media_attributes send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response =
-            GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        let response = GetElementAttributesResponse::decode(&buf[..])?;
         trace!("get_media_attributes received response {:#?}", response);
         media_attributes.title = response.title;
         media_attributes.artist_name = response.artist_name;
@@ -93,8 +91,7 @@ impl Controller {
         let cmd = GetPlayStatusCommand::new();
         trace!("get_play_status send command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response =
-            GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        let response = GetPlayStatusResponse::decode(&buf[..])?;
         trace!("get_play_status received response {:?}", response);
         let mut play_status = fidl_avrcp::PlayStatus::EMPTY;
         play_status.song_length = if response.song_length != SONG_LENGTH_NOT_SUPPORTED {
@@ -118,8 +115,7 @@ impl Controller {
         let cmd = GetCurrentPlayerApplicationSettingValueCommand::new(attribute_ids);
         trace!("get_current_player_application_settings command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response = GetCurrentPlayerApplicationSettingValueResponse::decode(&buf[..])
-            .map_err(|e| Error::PacketError(e))?;
+        let response = GetCurrentPlayerApplicationSettingValueResponse::decode(&buf[..])?;
         Ok(response.try_into()?)
     }
 
@@ -130,8 +126,7 @@ impl Controller {
         let cmd = ListPlayerApplicationSettingAttributesCommand::new();
         trace!("list_player_application_setting_attributes command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response = ListPlayerApplicationSettingAttributesResponse::decode(&buf[..])
-            .map_err(|e| Error::PacketError(e))?;
+        let response = ListPlayerApplicationSettingAttributesResponse::decode(&buf[..])?;
 
         // Get the text information of supported attributes.
         // TODO(fxbug.dev/41253): Get attribute text information for only custom attributes.
@@ -140,16 +135,14 @@ impl Controller {
         );
         trace!("get_player_application_setting_attribute_text command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let _text_response = GetPlayerApplicationSettingAttributeTextResponse::decode(&buf[..])
-            .map_err(|e| Error::PacketError(e))?;
+        let _text_response = GetPlayerApplicationSettingAttributeTextResponse::decode(&buf[..])?;
 
         // For each attribute returned, get the set of possible values and text.
         for attribute in response.player_application_setting_attribute_ids() {
             let cmd = ListPlayerApplicationSettingValuesCommand::new(attribute);
             trace!("list_player_application_setting_values command {:?}", cmd);
             let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-            let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
-                .map_err(|e| Error::PacketError(e))?;
+            let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])?;
 
             // TODO(fxbug.dev/41253): Get value text information for only custom attributes.
             let cmd = GetPlayerApplicationSettingValueTextCommand::new(
@@ -159,8 +152,7 @@ impl Controller {
             trace!("get_player_application_setting_value_text command {:?}", cmd);
             let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
             let value_text_response =
-                GetPlayerApplicationSettingValueTextResponse::decode(&buf[..])
-                    .map_err(|e| Error::PacketError(e))?;
+                GetPlayerApplicationSettingValueTextResponse::decode(&buf[..])?;
             trace!(
                 "Response from get_player_application_setting_value_text: {:?}",
                 value_text_response
@@ -204,8 +196,7 @@ impl Controller {
 
             match response_buf {
                 Ok(buf) => {
-                    let _ = SetPlayerApplicationSettingValueResponse::decode(&buf[..])
-                        .map_err(|e| Error::PacketError(e))?;
+                    let _ = SetPlayerApplicationSettingValueResponse::decode(&buf[..])?;
                 }
                 Err(_) => {
                     let attribute = setting.0;
@@ -223,8 +214,7 @@ impl Controller {
         let cmd = InformBatteryStatusOfCtCommand::new(battery_status);
         trace!("inform_battery_status_of_ct command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
-        let response =
-            InformBatteryStatusOfCtResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        let response = InformBatteryStatusOfCtResponse::decode(&buf[..])?;
         trace!("inform_battery_status_of_ct received response {:?}", response);
         Ok(())
     }

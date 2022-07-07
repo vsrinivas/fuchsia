@@ -505,7 +505,7 @@ async fn handle_list_player_application_setting_attributes(
 
     let response = ListPlayerApplicationSettingAttributesResponse::new(
         attributes.len() as u8,
-        attributes.into_iter().map(|a| a.into()).collect(),
+        attributes.into_iter().map(Into::into).collect(),
     );
     Ok(Box::new(response))
 }
@@ -516,10 +516,10 @@ async fn handle_list_player_application_setting_values(
     // Currently, media players only support RepeatStatusMode and ShuffleMode.
     let values: Vec<u8> = match cmd.player_application_setting_attribute_id {
         PlayerApplicationSettingAttributeId::RepeatStatusMode => {
-            RepeatStatusMode::VARIANTS.to_vec().into_iter().map(|v| u8::from(&v)).collect()
+            RepeatStatusMode::VARIANTS.to_vec().iter().map(Into::into).collect()
         }
         PlayerApplicationSettingAttributeId::ShuffleMode => {
-            ShuffleMode::VARIANTS.to_vec().into_iter().map(|v| u8::from(&v)).collect()
+            ShuffleMode::VARIANTS.to_vec().iter().map(Into::into).collect()
         }
         _ => {
             return Err(StatusCode::InvalidParameter);
@@ -537,7 +537,7 @@ async fn handle_get_current_player_application_setting_value(
 ) -> Result<Box<dyn PacketEncodable>, StatusCode> {
     let current_values: PlayerApplicationSettings = target_delegate
         .send_get_player_application_settings_command(
-            cmd.attribute_ids.into_iter().map(|id| id.into()).collect(),
+            cmd.attribute_ids.into_iter().map(Into::into).collect(),
         )
         .await
         .map(|v| PlayerApplicationSettings::from(&v))
@@ -751,12 +751,12 @@ fn handle_request_continuing_response(
         Err(_) => return send_avc_reject(&command, cmd.raw_pdu_id(), StatusCode::InvalidParameter),
         Ok(x) => x,
     };
-    return match continuations.pop_packet(&pdu_id) {
+    match continuations.pop_packet(&pdu_id) {
         Some(packet) => command
             .send_response(AvcResponseType::ImplementedStable, &packet[..])
             .map_err(|e| Error::AvctpError(e)),
         None => send_avc_reject(&command, cmd.raw_pdu_id(), StatusCode::InvalidParameter),
-    };
+    }
 }
 
 fn handle_abort_continuing_response(
@@ -770,10 +770,8 @@ fn handle_abort_continuing_response(
     };
     continuations.clear_continuation(&pdu_id);
     let response = AbortContinuingResponseResponse::new();
-    let packet = response.encode_packet().map_err(|e| Error::PacketError(e))?;
-    return command
-        .send_response(AvcResponseType::Accepted, &packet[..])
-        .map_err(|e| Error::AvctpError(e));
+    let packet = response.encode_packet()?;
+    command.send_response(AvcResponseType::Accepted, &packet[..]).map_err(|e| Error::AvctpError(e))
 }
 
 async fn handle_set_addressed_player(

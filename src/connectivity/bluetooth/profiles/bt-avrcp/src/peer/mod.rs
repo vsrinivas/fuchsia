@@ -584,8 +584,7 @@ async fn send_vendor_dependent_command_internal(
 
     loop {
         let response = loop {
-            let result = stream.next().await.ok_or(Error::CommandFailed)?;
-            let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
+            let response = stream.next().await.ok_or(Error::CommandFailed)??;
             trace!("vendor response {:?}", response);
             match (response.response_type(), command.command_type()) {
                 (AvcResponseType::Interim, _) => continue,
@@ -631,8 +630,7 @@ async fn get_supported_events_internal(
     let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
     trace!("Getting supported events: {:?}", cmd);
     let buf = send_vendor_dependent_command_internal(peer.clone(), &cmd).await?;
-    let capabilities =
-        GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+    let capabilities = GetCapabilitiesResponse::decode(&buf[..])?;
     let mut event_ids = HashSet::new();
     for event_id in capabilities.event_ids() {
         let _ = event_ids.insert(NotificationEventId::try_from(event_id)?);
