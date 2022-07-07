@@ -14,8 +14,7 @@ from pathlib import Path
 
 def main():
     params = argparse.ArgumentParser(
-        description="Copy all files in a directory tree and touch a stamp file"
-    )
+        description="Copy all files in a directory tree and touch a stamp file")
     params.add_argument("source", type=Path)
     params.add_argument("target", type=Path)
     params.add_argument("stamp", type=Path)
@@ -36,11 +35,10 @@ def main():
 
     def ignore_wrapper(current, children):
         nonlocal file_list, ignore
-        for f in children:
-            file_list.append(Path(current) / f)
-        if ignore:
-            return ignore(current, children)
-        return []
+        to_ignore = set(ignore(current, children)) if ignore else set()
+        file_list.extend(
+            (Path(current) / f) for f in children if f not in to_ignore)
+        return to_ignore
 
     shutil.copytree(
         args.source,
@@ -56,7 +54,11 @@ def main():
             f.write(" ".join(map(str, file_list)))
             f.write("\n")
             for file in file_list:
-                print(os.path.join(args.target, os.path.relpath(file, start=args.source)) + ": " + str(file), file=f)
+                print(
+                    os.path.join(
+                        args.target, os.path.relpath(file, start=args.source)) +
+                    ": " + str(file),
+                    file=f)
 
     args.stamp.touch()
 
