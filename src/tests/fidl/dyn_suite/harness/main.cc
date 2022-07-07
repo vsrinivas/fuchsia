@@ -12,16 +12,6 @@
 
 namespace {
 
-// To find all ordinals:
-//
-//     cat
-//     out/default/fidling/gen/src/tests/fidl/dyn_suite/fidl.dynsuite/fidl.dynsuite/llcpp/fidl/fidl.dynsuite/cpp/wire_messaging.cc
-//     | grep -e 'constexpr.*kBase.*Ordinal' -A 1
-//
-// While using `jq` would be much nicer, large numbers are mishandled and the
-// displayed ordinal ends up being incorrect.
-static const uint64_t kOrdinalOneWayInteractionNoPayload = 6896935086133512518lu;
-
 static const std::string kGo = "go";
 static const std::string kHlcpp = "hlcpp";
 
@@ -29,6 +19,9 @@ std::string target_binding = {};
 
 }  // namespace
 
+// NOTE: It is unclear whether we want to migrate this test to the server_suite
+// given the vague definition of what it means to observe unbind in a given
+// binding.
 TEST_F(ServerTest, Bad_ClientClosingChannelCausesUnbind) {
   when([&]() {
     zx_handle_close(client_end);
@@ -42,67 +35,6 @@ TEST_F(ServerTest, Bad_ClientClosingChannelCausesUnbind) {
     EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
     EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
   });
-}
-
-TEST_F(ServerTest, Bad_WrongOrdinalCausesUnbind) {
-  when([&]() {
-    fidl_message_header_t hdr;
-    fidl::InitTxnHeader(&hdr, 0, /* some wrong ordinal */ 8888888lu,
-                        fidl::MessageDynamicFlags::kStrictMethod);
-    zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
-  }).wait_for([&](auto observations) {
-      return observations.has(Observation::Kind::kOnComplete);
-    }).then_observe([&](auto observations) {
-    // Some bindings observe an error, which will precede unbinding.
-    ASSERT_TRUE(2u <= observations.size());
-    auto last = observations.size() - 1;
-    EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
-    EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
-  });
-
-  zx_handle_close(client_end);
-}
-
-TEST_F(ServerTest, Good_OneWayInteraction) {
-  // TODO(fxbug.dev/92603): Should work on HLCPP.
-  DISABLED_FOR(kHlcpp);
-
-  when([&]() {
-    fidl_message_header_t hdr;
-    fidl::InitTxnHeader(&hdr, 0, kOrdinalOneWayInteractionNoPayload,
-                        fidl::MessageDynamicFlags::kStrictMethod);
-    zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
-  }).wait_for([&](auto observations) {
-      return 2 <= observations.size();
-    }).then_observe([&](auto observations) {
-    ASSERT_EQ(2u, observations.size());
-    EXPECT_EQ(Observation::Kind::kOnMethodInvocation, observations[0].kind());
-    EXPECT_EQ(Observation::Kind::kOnMethodInvocation, observations[1].kind());
-  });
-
-  zx_handle_close(client_end);
-}
-
-TEST_F(ServerTest, Bad_OneWayInteractionWithTxIdNotZero) {
-  // TODO(fxbug.dev/92604): Should work on Go.
-  DISABLED_FOR(kGo);
-
-  when([&]() {
-    fidl_message_header_t hdr;
-    fidl::InitTxnHeader(&hdr, 56 /* txid not 0 */, kOrdinalOneWayInteractionNoPayload,
-                        fidl::MessageDynamicFlags::kStrictMethod);
-    zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
-  }).wait_for([&](auto observations) {
-      return observations.has(Observation::Kind::kOnComplete);
-    }).then_observe([&](auto observations) {
-    // Some bindings observe an error, which will precede unbinding.
-    ASSERT_TRUE(2u <= observations.size());
-    auto last = observations.size() - 1;
-    EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
-    EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
-  });
-
-  zx_handle_close(client_end);
 }
 
 TEST_F(ClientTest, Good_ServerClosesChannel) {

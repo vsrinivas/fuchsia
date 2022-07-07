@@ -34,6 +34,10 @@ type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
 
+func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, error) {
+	return test != serversuite.TestOneWayWithNonZeroTxid, nil
+}
+
 func (*runnerImpl) Start(
 	_ fidl.Context,
 	reporter serversuite.ReporterWithCtxInterface) (serversuite.TargetWithCtxInterface, error) {

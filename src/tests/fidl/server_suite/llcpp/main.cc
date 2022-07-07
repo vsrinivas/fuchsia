@@ -29,6 +29,11 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
  public:
   explicit RunnerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
+  void IsTestEnabled(IsTestEnabledRequestView request,
+                     IsTestEnabledCompleter::Sync& completer) override {
+    completer.Reply(request->test != fidl_serversuite::Test::kOneWayWithNonZeroTxid);
+  }
+
   void Start(StartRequestView request, StartCompleter::Sync& completer) override {
     std::cout << "Runner.Start()" << std::endl;
 

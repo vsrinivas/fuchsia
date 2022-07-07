@@ -31,6 +31,10 @@ class RunnerServer : public fidl::serversuite::Runner {
  public:
   explicit RunnerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
+  void IsTestEnabled(fidl::serversuite::Test test, IsTestEnabledCallback callback) override {
+    callback(true);
+  }
+
   void Start(fidl::InterfaceHandle<fidl::serversuite::Reporter> reporter,
              StartCallback callback) override {
     target_server_ = std::make_unique<TargetServer>(reporter.Bind());

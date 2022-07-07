@@ -14,6 +14,15 @@
 #define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
 #define ASSERT_OK(value) ASSERT_EQ(ZX_OK, value)
 
+// Defines a new server test. Relies on gtest under the hood.
+// Tests must use upper camel case names and be defined in the |Test| enum in
+// serversuite.test.fidl.
+#define SERVER_TEST(test_name)                                                           \
+  struct ServerTestWrapper##test_name : public ServerTest {                              \
+    ServerTestWrapper##test_name() : ServerTest(fidl_serversuite::Test::k##test_name) {} \
+  };                                                                                     \
+  TEST_F(ServerTestWrapper##test_name, test_name)
+
 class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
  public:
   void ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadRequest& request,
@@ -27,6 +36,8 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
 
 class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
  protected:
+  explicit ServerTest(fidl_serversuite::Test test) : test_(test) {}
+
   void SetUp() override;
   void TearDown() override;
 
@@ -39,6 +50,8 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
   }
 
  private:
+  fidl_serversuite::Test test_;
+
   fidl::SyncClient<fidl_serversuite::Runner> runner_;
 
   zx::channel target_;

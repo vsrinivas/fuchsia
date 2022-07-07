@@ -7,6 +7,13 @@ library fidl.serversuite;
 // The Runner coordinates test activity and is shared by multiple tests.
 @discoverable
 protocol Runner {
+    // Check if a test with a given name is enabled before running it.
+    IsTestEnabled(struct {
+        test Test;
+    }) -> (struct {
+        is_enabled bool;
+    });
+
     // Create a Target to run tests against.
     Start(resource struct {
         reporter client_end:Reporter;
@@ -26,4 +33,11 @@ protocol Target {
 // The Reporter sends results of the test to the test harness.
 protocol Reporter {
     ReceivedOneWayNoPayload();
+};
+
+type Test = enum {
+    SETUP = 1;
+    ONE_WAY_NO_PAYLOAD = 2;
+    ONE_WAY_WITH_NON_ZERO_TXID = 3;
+    UNKNOWN_ORDINAL_CAUSES_CLOSE = 4;
 };

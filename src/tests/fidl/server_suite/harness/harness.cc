@@ -20,6 +20,13 @@ void ServerTest::SetUp() {
   auto checkAliveResult = runner_->CheckAlive();
   ASSERT_TRUE(checkAliveResult.is_ok()) << checkAliveResult.error_value();
 
+  auto isTestEnabledResult = runner_->IsTestEnabled(test_);
+  ASSERT_TRUE(isTestEnabledResult.is_ok()) << isTestEnabledResult.error_value();
+  if (!isTestEnabledResult->is_enabled()) {
+    GTEST_SKIP() << "(test skipped by binding server)";
+    return;
+  }
+
   // Create Reporter, which will allow the binding server to report test progress.
   auto reporter_endpoints = fidl::CreateEndpoints<fidl_serversuite::Reporter>();
   ASSERT_OK(reporter_endpoints.status_value());

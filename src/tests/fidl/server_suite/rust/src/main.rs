@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fidl_serversuite::{
-        ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
+        ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest, Test,
     },
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -38,6 +38,9 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
             match request {
+                RunnerRequest::IsTestEnabled { test, responder } => {
+                    responder.send(test != Test::OneWayWithNonZeroTxid)?;
+                }
                 RunnerRequest::Start { reporter, responder } => {
                     println!("Runner.Start() called");
                     let reporter_proxy: &ReporterProxy = &reporter.into_proxy()?;
