@@ -112,8 +112,7 @@ protocol DriverIndex {
     /// Adds a device group to the driver index. The driver index stores the
     /// device group and maps it by the topological path. The stored device
     /// groups are included in the driver matching process.
-    AddDeviceGroup(struct {
-        topological_path string:MAX;
-        nodes vector<fuchsia.driver.framework.DeviceGroupNode>:MAX;
-    }) -> (struct {}) error zx.status;
+    AddDeviceGroup(fuchsia.driver.framework.DeviceGroup) -> (struct {
+        composite_driver MatchedCompositeInfo;
+    }) error zx.status;
 };

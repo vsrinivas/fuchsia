@@ -264,13 +264,9 @@ impl Indexer {
             .collect())
     }
 
-    fn add_device_group(
-        &self,
-        topological_path: String,
-        nodes: Vec<fdf::DeviceGroupNode>,
-    ) -> fdi::DriverIndexAddDeviceGroupResult {
+    fn add_device_group(&self, group: fdf::DeviceGroup) -> fdi::DriverIndexAddDeviceGroupResult {
         let mut device_group_manager = self.device_group_manager.borrow_mut();
-        device_group_manager.add_device_group(topological_path, nodes)
+        device_group_manager.add_device_group(group)
     }
 
     fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
@@ -483,9 +479,9 @@ async fn run_index_server(
                         .or_else(ignore_peer_closed)
                         .context("error responding to MatchDriversV1")?;
                 }
-                DriverIndexRequest::AddDeviceGroup { topological_path, nodes, responder } => {
+                DriverIndexRequest::AddDeviceGroup { payload, responder } => {
                     responder
-                        .send(&mut indexer.add_device_group(topological_path, nodes))
+                        .send(&mut indexer.add_device_group(payload))
                         .or_else(ignore_peer_closed)
                         .context("error responding to AddDeviceGroup")?;
                 }
@@ -2140,12 +2136,20 @@ mod tests {
                 },
             ];
 
-            let nodes = &mut [fdf::DeviceGroupNode {
-                name: "whimbrel".to_string(),
-                properties: node_properties,
-            }];
-
-            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/path".to_string()),
+                        nodes: Some(vec![fdf::DeviceGroupNode {
+                            name: "whimbrel".to_string(),
+                            properties: node_properties,
+                        }]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
 
             let device_properties_match = vec![
                 fdf::NodeProperty {
@@ -2254,12 +2258,20 @@ mod tests {
                 },
             ];
 
-            let nodes = &mut [fdf::DeviceGroupNode {
-                name: "whimbrel".to_string(),
-                properties: node_properties,
-            }];
-
-            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/path".to_string()),
+                        nodes: Some(vec![fdf::DeviceGroupNode {
+                            name: "whimbrel".to_string(),
+                            properties: node_properties,
+                        }]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
 
             let device_properties_match = vec![
                 fdf::NodeProperty {
@@ -2391,12 +2403,20 @@ mod tests {
                 },
             ];
 
-            let nodes = &mut [fdf::DeviceGroupNode {
-                name: "whimbrel".to_string(),
-                properties: node_properties,
-            }];
-
-            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/path".to_string()),
+                        nodes: Some(vec![fdf::DeviceGroupNode {
+                            name: "whimbrel".to_string(),
+                            properties: node_properties,
+                        }]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
 
             let duplicate_node_properties = vec![fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(200),
@@ -2404,13 +2424,17 @@ mod tests {
                 values: vec![fdf::NodePropertyValue::IntValue(2)],
             }];
 
-            let duplicate_nodes = &mut [fdf::DeviceGroupNode {
-                name: "dunlin".to_string(),
-                properties: duplicate_node_properties,
-            }];
-
-            let result =
-                proxy.add_device_group("test/path", &mut duplicate_nodes.iter_mut()).await.unwrap();
+            let result = proxy
+                .add_device_group(fdf::DeviceGroup {
+                    topological_path: Some("test/path".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        name: "dunlin".to_string(),
+                        properties: duplicate_node_properties,
+                    }]),
+                    ..fdf::DeviceGroup::EMPTY
+                })
+                .await
+                .unwrap();
             assert_eq!(Err(Status::ALREADY_EXISTS.into_raw()), result);
         }
         .fuse();
@@ -2470,12 +2494,17 @@ mod tests {
                 },
             ];
 
-            let nodes = &mut [fdf::DeviceGroupNode {
-                name: "whimbrel".to_string(),
-                properties: node_properties,
-            }];
-
-            let result = proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap();
+            let result = proxy
+                .add_device_group(fdf::DeviceGroup {
+                    topological_path: Some("test/path".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        name: "whimbrel".to_string(),
+                        properties: node_properties,
+                    }]),
+                    ..fdf::DeviceGroup::EMPTY
+                })
+                .await
+                .unwrap();
             assert_eq!(Err(Status::INVALID_ARGS.into_raw()), result);
         }
         .fuse();

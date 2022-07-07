@@ -278,12 +278,19 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
 zx_status_t DriverLoader::AddDeviceGroup(std::string_view topological_path,
                                          fidl::VectorView<fdf::wire::DeviceGroupNode> nodes) {
   fidl::Arena allocator;
-  auto result = driver_index_.sync()->AddDeviceGroup(fidl::StringView(allocator, topological_path),
-                                                     std::move(nodes));
-  if (!result.ok()) {
-    LOGF(ERROR, "DriverIndex::AddDeviceGroup failed: %d", result.status());
+  auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
+                          .topological_path(fidl::StringView(allocator, topological_path))
+                          .nodes(std::move(nodes))
+                          .Build();
+
+  auto result = driver_index_.sync()->AddDeviceGroup(device_group);
+
+  // TODO(fxb/103208): Handle a matched composite driver in DFv1.
+  if (result.ok() || result.status() == ZX_ERR_NOT_FOUND) {
+    return ZX_OK;
   }
 
+  LOGF(ERROR, "DriverIndex::AddDeviceGroup failed: %d", result.status());
   return result.status();
 }
 

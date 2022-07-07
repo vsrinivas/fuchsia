@@ -35,11 +35,14 @@ impl DeviceGroupManager {
         DeviceGroupManager { device_group_nodes: HashMap::new(), device_group_list: HashSet::new() }
     }
 
+    // TODO(fxb/93766): Handle transformation in the device group.
     pub fn add_device_group(
         &mut self,
-        topological_path: String,
-        nodes: Vec<fdf::DeviceGroupNode>,
+        group: fdf::DeviceGroup,
     ) -> fdi::DriverIndexAddDeviceGroupResult {
+        let topological_path = group.topological_path.ok_or(Status::INVALID_ARGS.into_raw())?;
+        let nodes = group.nodes.ok_or(Status::INVALID_ARGS.into_raw())?;
+
         if self.device_group_list.contains(&topological_path) {
             return Err(Status::ALREADY_EXISTS.into_raw());
         }
@@ -75,7 +78,8 @@ impl DeviceGroupManager {
                 .or_insert(vec![group_info]);
         }
 
-        Ok(())
+        // TODO(fxb/103541): Match with a composite driver.
+        Err(Status::NOT_FOUND.into_raw())
     }
 
     // Match the given device properties to all the nodes. Returns a list of device groups for all the
@@ -227,21 +231,23 @@ mod tests {
         ];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node 1.
         let mut device_properties_1: DeviceProperties = HashMap::new();
@@ -312,15 +318,17 @@ mod tests {
         ];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![fdf::DeviceGroupNode {
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![fdf::DeviceGroupNode {
                     name: "whimbrel".to_string(),
                     properties: node_properties,
-                }],
-            )
-            .unwrap();
+                }]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node.
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -403,37 +411,41 @@ mod tests {
         }];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
-        device_group_manager
-            .add_device_group(
-                "test/path2".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path2".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_2_rearranged,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_3,
+                        properties: node_properties_3
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node.
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -534,26 +546,29 @@ mod tests {
         }];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
-        device_group_manager
-            .add_device_group(
-                "test/path2".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path2".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "sanderling".to_string(),
                         properties: node_properties_3,
@@ -562,19 +577,22 @@ mod tests {
                         name: "plover".to_string(),
                         properties: node_properties_1_rearranged,
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
-        device_group_manager
-            .add_device_group(
-                "test/path3".to_string(),
-                vec![fdf::DeviceGroupNode {
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path3".to_string()),
+                nodes: Some(vec![fdf::DeviceGroupNode {
                     name: "dunlin".to_string(),
                     properties: node_properties_4,
-                }],
-            )
-            .unwrap();
+                }]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node.
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -648,21 +666,23 @@ mod tests {
         ];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         let mut device_properties: DeviceProperties = HashMap::new();
         device_properties.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(200));
@@ -718,21 +738,23 @@ mod tests {
         ];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "godwit".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node 1.
         let mut device_properties_1: DeviceProperties = HashMap::new();
@@ -813,21 +835,23 @@ mod tests {
         ];
 
         let mut device_group_manager = DeviceGroupManager::new();
-        device_group_manager
-            .add_device_group(
-                "test/path".to_string(),
-                vec![
+        assert_eq!(
+            Err(Status::NOT_FOUND.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "sanderling".to_string(),
                         properties: node_properties_1,
                     },
                     fdf::DeviceGroupNode {
                         name: "dunlin".to_string(),
-                        properties: node_properties_2,
+                        properties: node_properties_2
                     },
-                ],
-            )
-            .unwrap();
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
 
         // Match node 1.
         let mut device_properties_1: DeviceProperties = HashMap::new();
@@ -860,13 +884,14 @@ mod tests {
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
-            device_group_manager.add_device_group(
-                "test/path".to_string(),
-                vec![fdf::DeviceGroupNode {
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![fdf::DeviceGroupNode {
                     name: "whimbrel".to_string(),
                     properties: node_properties_1,
-                }],
-            )
+                }]),
+                ..fdf::DeviceGroup::EMPTY
+            })
         );
 
         assert!(device_group_manager.device_group_nodes.is_empty());
@@ -891,13 +916,14 @@ mod tests {
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
-            device_group_manager.add_device_group(
-                "test/path".to_string(),
-                vec![fdf::DeviceGroupNode {
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![fdf::DeviceGroupNode {
                     name: "whimbrel".to_string(),
                     properties: node_properties_1,
-                },],
-            )
+                },]),
+                ..fdf::DeviceGroup::EMPTY
+            })
         );
 
         assert!(device_group_manager.device_group_nodes.is_empty());
@@ -906,7 +932,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_node_properties() {
-        let node_properties_1 = vec![
+        let node_properties = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
@@ -922,16 +948,63 @@ mod tests {
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
-            device_group_manager.add_device_group(
-                "test/path".to_string(),
-                vec![
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: Some(vec![
                     fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
-                        properties: node_properties_1,
+                        properties: node_properties,
                     },
                     fdf::DeviceGroupNode { name: "curlew".to_string(), properties: vec![] },
-                ],
-            )
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
+
+        assert!(device_group_manager.device_group_nodes.is_empty());
+        assert!(device_group_manager.device_group_list.is_empty());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_missing_device_group_fields() {
+        let node_properties = vec![
+            fdf::DeviceGroupProperty {
+                key: fdf::NodePropertyKey::IntValue(10),
+                condition: fdf::Condition::Reject,
+                values: vec![fdf::NodePropertyValue::IntValue(200)],
+            },
+            fdf::DeviceGroupProperty {
+                key: fdf::NodePropertyKey::IntValue(10),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(10)],
+            },
+        ];
+
+        let mut device_group_manager = DeviceGroupManager::new();
+        assert_eq!(
+            Err(Status::INVALID_ARGS.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: None,
+                nodes: Some(vec![
+                    fdf::DeviceGroupNode {
+                        name: "whimbrel".to_string(),
+                        properties: node_properties,
+                    },
+                    fdf::DeviceGroupNode { name: "curlew".to_string(), properties: vec![] },
+                ]),
+                ..fdf::DeviceGroup::EMPTY
+            })
+        );
+        assert!(device_group_manager.device_group_nodes.is_empty());
+        assert!(device_group_manager.device_group_list.is_empty());
+
+        assert_eq!(
+            Err(Status::INVALID_ARGS.into_raw()),
+            device_group_manager.add_device_group(fdf::DeviceGroup {
+                topological_path: Some("test/path".to_string()),
+                nodes: None,
+                ..fdf::DeviceGroup::EMPTY
+            })
         );
 
         assert!(device_group_manager.device_group_nodes.is_empty());

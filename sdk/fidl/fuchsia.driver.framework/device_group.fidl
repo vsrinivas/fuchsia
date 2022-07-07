@@ -25,11 +25,31 @@ type DeviceGroupProperty = struct {
     values vector<NodePropertyValue>:MAX_PROPERTY_COUNT;
 };
 
+/// A struct that represents a node in device group transformation.
+type TransformNode = table {
+    /// The node properties used for matching the nodes in a composite
+    /// driver.
+    1: properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
+};
+
 /// Struct that represents a node in a device group.
-// TODO(fxb/93766): Support property transformation.
 type DeviceGroupNode = struct {
     name string:MAX_NODE_NAME_LENGTH;
 
     /// Properties of the node. Keys must be unique.
     properties vector<DeviceGroupProperty>:MAX_PROPERTY_COUNT;
+};
+
+/// Struct that represents a device group.
+type DeviceGroup = table {
+    /// The device group's topological path.
+    1: topological_path string:MAX;
+
+    /// The nodes in the device group. The driver index matches bind properties
+    /// to these nodes. Must not be empty. The first node is the primary node.
+    2: nodes vector<DeviceGroupNode>:MAX;
+
+    /// The list of nodes that the device group transforms into. Must not be empty.
+    /// The first node is the primary node.
+    3: transformation vector<TransformNode>:MAX;
 };
