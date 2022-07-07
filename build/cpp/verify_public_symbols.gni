@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/sdk/config.gni")
+import("//build/toolchain/zircon/gcc.gni")
 
 # Verifies the list of public symbols from a prebuilt library to be added to
 # the SDK against a golden file.
@@ -69,16 +70,7 @@ template("verify_public_symbols") {
       args += invoker.ifs_args
     }
 
-    # Libraries linked with gnu linkers get these symbols implicitly. They aren't
-    # part of the abi that is worth tracking, nor do we want to exporting them in shared
-    # object stubs.
-    if (select_variant + [ "gcc" ] - [ "gcc" ] != select_variant) {
-      args += [
-        "--exclude=__bss_start",
-        "--exclude=_edata",
-        "--exclude=_end",
-      ]
-    }
+    args += ifs_extra_switches
   }
 
   action(main_target) {

@@ -614,6 +614,10 @@ template("zircon_toolchain") {
             link_output,
           ]
           command += " && $llvm_ifs --write-if-changed --output-ifs=$depend_output --output-elf=$link_output $unstripped_output"
+
+          if (ifs_extra_switches != []) {
+            command += " " + string_join(" ", ifs_extra_switches)
+          }
         }
       }
 

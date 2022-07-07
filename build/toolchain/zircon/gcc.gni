@@ -24,3 +24,19 @@ if (gcc_tool_dir == "") {
   gcc_tool_dir = "$_prebuilt_gcc_dir/bin"
   gcc_version_string = _prebuilt_cipd_version.instance_id
 }
+
+ifs_extra_switches = []
+
+# GNU linkers add these symbols which we want to exclude from abi tracking
+# and shared object stub creation.
+gnu_linker_synthetic_symbols = [
+  "__bss_start",
+  "_edata",
+  "_end",
+]
+
+if (is_gcc) {
+  foreach(symbol, gnu_linker_synthetic_symbols) {
+    ifs_extra_switches += [ "--exclude=$symbol" ]
+  }
+}
