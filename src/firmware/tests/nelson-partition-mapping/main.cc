@@ -25,6 +25,7 @@
 #include <fbl/unique_fd.h>
 #include <gpt/c/gpt.h>
 #include <gpt/guid.h>
+#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 

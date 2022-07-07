@@ -9,6 +9,7 @@ test("partition-mapping") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//src/storage/gpt",
@@ -22,6 +23,6 @@ test("partition-mapping") {
 }
 
 fuchsia_unittest_package("partition-mapping-test") {
-  manifest = "meta/partition-mapping.cmx"
+  manifest = "meta/partition-mapping.cml"
   deps = [ ":partition-mapping" ]
 }
