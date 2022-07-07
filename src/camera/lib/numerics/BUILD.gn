@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+
+group("numerics") {
+  public_deps = [ ":rational" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":numerics-unittest" ]
+}
+
+source_set("rational") {
+  visibility = [ ":*" ]
+  sources = [ "rational.cc" ]
+  public = [ "rational.h" ]
+}
+
+executable("numerics-unittest-bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "numerics-unittest.cc" ]
+  deps = [
+    "//src/camera/lib/numerics",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("numerics-unittest") {
+  visibility = [ ":*" ]
+  deps = [ ":numerics-unittest-bin" ]
+}

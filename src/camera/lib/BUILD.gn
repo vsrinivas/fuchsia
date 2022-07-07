@@ -25,6 +25,7 @@ group("tests") {
     "fake_stream:tests",
     "hanging_get_helper:tests",
     "image_utils:tests",
+    "numerics:tests",
     "stream_utils:tests",
     "virtual_camera:tests",
     "vmo_pool_wrapper:tests",
