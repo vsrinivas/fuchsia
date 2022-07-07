@@ -12,7 +12,7 @@ use {
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
-#[ffx_plugin("component.experimental.reload")]
+#[ffx_plugin("component.experimental")]
 pub async fn reload(rcs_proxy: rc::RemoteControlProxy, cmd: ReloadComponentCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
     reload_impl(lifecycle_controller, cmd.moniker, &mut std::io::stdout()).await
