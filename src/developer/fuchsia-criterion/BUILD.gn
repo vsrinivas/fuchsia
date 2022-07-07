@@ -33,7 +33,7 @@ rustc_library("fuchsia-criterion") {
 
 fuchsia_unittest_package("fuchsia-criterion-tests") {
   deps = [ ":fuchsia-criterion_test" ]
-  manifest = "meta/fuchsia_criterion_lib_test.cmx"
+  manifest = "meta/fuchsia_criterion_lib_test.cml"
 }
 
 rustc_binary("criterion_bench_bin") {
