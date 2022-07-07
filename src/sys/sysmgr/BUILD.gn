@@ -87,10 +87,6 @@ cfg("services_config") {
   name = "services.config"
 }
 
-cfg("router_config") {
-  name = "router.config"
-}
-
 config("update_packages_config") {
   defines = [ "AUTO_UPDATE_PACKAGES" ]
 }
