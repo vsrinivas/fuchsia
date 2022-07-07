@@ -229,14 +229,14 @@ Do the following:
 1. Download the latest Workstation image for the emulator:
 
    ```posix-terminal
-   tools/ffx product-bundle get workstation_eng.qemu-x64
+   tools/ffx product-bundle get workstation.qemu-x64
    ```
 
    This command may take a few minutes to download the image and product
    metadata.
 
     Once the download is finished, the `ffx product-bundle get` command creates
-    a local Fuchsia package repository named `workstation_eng.qemu-x64` on your host
+    a local Fuchsia package repository named `workstation.qemu-x64` on your host
     machine. This package repository hosts additional system packages for this
     Workstation prebuilt image. Later in Step 7 you’ll register this package
     repository to the emulator instance.
@@ -250,7 +250,7 @@ Do the following:
 3. Start the Fuchsia emulator:
 
    ```posix-terminal
-   tools/ffx emu start workstation_eng.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
+   tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
    ```
 
    This command starts a headless emulator instance running the Workstation
@@ -260,7 +260,7 @@ Do the following:
    the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start workstation_eng.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" -- kernel-args "devmgr.enable-ephemeral=true"
+   $ tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" -- kernel-args "devmgr.enable-ephemeral=true"
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds).
    Emulator is ready.
@@ -300,11 +300,11 @@ Do the following:
    ffx repository server is listening on [::]:8083
    ```
 
-7. Register the system package repository (`workstation_eng.qemu-x64`) to the
+7. Register the system package repository (`workstation.qemu-x64`) to the
    target device:
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation_eng.qemu-x64 --alias fuchsia.com
+   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
    ```
 
    This command exits silently without output.
@@ -765,7 +765,7 @@ Do the following:
 1. Start a new instance of the Fuchsia emulator:
 
    ```posix-terminal
-   tools/ffx emu start workstation_eng.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
+   tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
    ```
 
    This command starts a headless emulator instance running the Workstation
@@ -869,7 +869,7 @@ downloaded files, symlinks, configuration settings, and more).
 Remove the package repositories created in this guide:
 
 ```posix-terminal
-tools/ffx repository remove workstation_eng.qemu-x64
+tools/ffx repository remove workstation.qemu-x64
 ```
 
 ```posix-terminal
