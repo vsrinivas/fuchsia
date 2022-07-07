@@ -194,7 +194,7 @@ impl Platform {
 
 impl Drop for Platform {
     fn drop(&mut self) {
-        trace!("Dropping Platform");
+        debug!("Dropping Platform");
         unsafe {
             // SAFETY: Both calls below must only be called from Drop.
             otSysDeinit();
