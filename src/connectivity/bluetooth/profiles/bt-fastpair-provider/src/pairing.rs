@@ -25,9 +25,9 @@ use tracing::{debug, info, trace, warn};
 use crate::types::{Error, SharedSecret};
 
 pub struct PairingArgs {
-    input: InputCapability,
-    output: OutputCapability,
-    delegate: PairingDelegateProxy,
+    pub input: InputCapability,
+    pub output: OutputCapability,
+    pub delegate: PairingDelegateProxy,
 }
 
 /// The current owner of the Pairing Delegate.
@@ -192,8 +192,6 @@ pub struct PairingManager {
 }
 
 impl PairingManager {
-    #[allow(unused)]
-    // TODO(fxbug.dev/96222): Remove when used by Provider server.
     pub fn new(pairing: PairingProxy, upstream_client: PairingArgs) -> Result<Self, Error> {
         let delegate = upstream_client.delegate.clone();
         let upstream_connection = async move {
@@ -582,6 +580,7 @@ pub(crate) mod tests {
     /// Holds onto the necessary FIDL connections to facilitate pairing. Provides convenience
     /// methods to drive pairing procedures.
     pub struct MockPairing {
+        pub pairing_svc: PairingProxy,
         pub downstream_pairing_server: PairingRequestStream,
         pub downstream_delegate_client: PairingDelegateProxy,
         pub upstream_delegate_server: PairingDelegateRequestStream,
@@ -591,7 +590,7 @@ pub(crate) mod tests {
         /// Builds and returns a PairingManager and MockPairing object which can be used to simulate
         /// upstream & downstream pairing actions.
         pub async fn new_with_manager() -> (PairingManager, Self) {
-            let (c, mut downstream_pairing_server) =
+            let (pairing_svc, mut downstream_pairing_server) =
                 fidl::endpoints::create_proxy_and_stream::<PairingMarker>().unwrap();
             let (delegate, upstream_delegate_server) =
                 fidl::endpoints::create_proxy_and_stream::<PairingDelegateMarker>().unwrap();
@@ -600,7 +599,8 @@ pub(crate) mod tests {
                 output: OutputCapability::None,
                 delegate,
             };
-            let manager = PairingManager::new(c, client).expect("can create pairing manager");
+            let manager = PairingManager::new(pairing_svc.clone(), client)
+                .expect("can create pairing manager");
             // Expect the manager to register a delegate on behalf of the upstream.
             let (_, _, delegate, _) = downstream_pairing_server
                 .select_next_some()
@@ -611,6 +611,7 @@ pub(crate) mod tests {
             let downstream_delegate_client = delegate.into_proxy().unwrap();
 
             let mock = MockPairing {
+                pairing_svc,
                 downstream_pairing_server,
                 downstream_delegate_client,
                 upstream_delegate_server,

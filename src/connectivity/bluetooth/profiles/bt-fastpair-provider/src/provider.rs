@@ -4,16 +4,20 @@
 
 use async_helpers::maybe_stream::MaybeStream;
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
-use fidl_fuchsia_bluetooth_sys::HostWatcherMarker;
+use fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, PairingMarker, PairingProxy};
 use fuchsia_bluetooth::types::PeerId;
-use futures::{select, stream::StreamExt};
+use futures::{
+    channel::mpsc,
+    select,
+    stream::{FusedStream, StreamExt},
+};
 use tracing::{debug, info, warn};
 
 use crate::advertisement::LowEnergyAdvertiser;
 use crate::config::Config;
 use crate::gatt_service::{GattRequest, GattService, GattServiceResponder};
 use crate::host_watcher::{HostEvent, HostWatcher};
-use crate::pairing::PairingManager;
+use crate::pairing::{PairingArgs, PairingManager};
 use crate::types::keys::aes_from_anti_spoofing_and_public;
 use crate::types::packets::{
     decrypt_account_key_request, decrypt_key_based_pairing_request, decrypt_passkey_request,
@@ -21,6 +25,12 @@ use crate::types::packets::{
     KeyBasedPairingAction, KeyBasedPairingRequest,
 };
 use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
+
+/// The types of FIDL requests that the Provider server can service.
+pub enum ServiceRequest {
+    /// A request to set the Pairing Delegate.
+    Pairing(PairingArgs),
+}
 
 /// The toplevel server that manages the current state of the Fast Pair Provider service.
 /// Owns the interfaces for interacting with various BT system services.
@@ -36,6 +46,8 @@ pub struct Provider {
     gatt: GattService,
     /// Watches for changes in the locally active Bluetooth Host.
     host_watcher: HostWatcher,
+    /// Connection to the system pairing service.
+    pairing_svc: PairingProxy,
     /// Manages Fast Pair pairing procedures and proxies non-FP requests to the upstream
     /// `sys.Pairing` client.
     pairing: MaybeStream<PairingManager>,
@@ -47,12 +59,14 @@ impl Provider {
         let gatt = GattService::new(config.clone()).await?;
         let watcher = fuchsia_component::client::connect_to_protocol::<HostWatcherMarker>()?;
         let host_watcher = HostWatcher::new(watcher);
+        let pairing_svc = fuchsia_component::client::connect_to_protocol::<PairingMarker>()?;
         Ok(Self {
             config,
             account_keys: AccountKeyList::load()?,
             advertiser,
             gatt,
             host_watcher,
+            pairing_svc,
             pairing: MaybeStream::default(),
         })
     }
@@ -281,7 +295,7 @@ impl Provider {
     /// Run the Fast Pair Provider service to completion.
     /// Terminates if an irrecoverable error is encountered, or all Fast Pair related resources
     /// have been exhausted.
-    pub async fn run(mut self) -> Result<(), Error> {
+    pub async fn run(mut self, mut requests: mpsc::Receiver<ServiceRequest>) -> Result<(), Error> {
         loop {
             select! {
                 // It's OK if the advertisement terminates for any reason. We use `select_next_some`
@@ -321,6 +335,18 @@ impl Provider {
                         }
                     }
                 }
+                service_request = requests.next() => {
+                    match service_request {
+                        None => return Err(Error::internal("FIDL service handler unexpectedly terminated")),
+                        Some(ServiceRequest::Pairing(client)) => {
+                            if self.pairing.inner_mut().map_or(true, |p| p.is_terminated()) {
+                                self.pairing.set(PairingManager::new(self.pairing_svc.clone(), client)?);
+                            } else {
+                                warn!("Pairing Delegate is already active, ignoring..");
+                            }
+                        }
+                    }
+                }
                 complete => {
                     break;
                 }
@@ -343,10 +369,12 @@ mod tests {
         ValueChangedParameters,
     };
     use fidl_fuchsia_bluetooth_le::{PeripheralMarker, PeripheralRequestStream};
-    use fidl_fuchsia_bluetooth_sys::HostWatcherRequestStream;
+    use fidl_fuchsia_bluetooth_sys::{
+        HostWatcherRequestStream, InputCapability, OutputCapability, PairingDelegateMarker,
+    };
     use fuchsia_async as fasync;
     use fuchsia_bluetooth::types::HostId;
-    use futures::{pin_mut, FutureExt};
+    use futures::{pin_mut, FutureExt, SinkExt};
     use std::convert::{TryFrom, TryInto};
 
     use crate::gatt_service::{
@@ -384,6 +412,7 @@ mod tests {
             advertiser,
             gatt,
             host_watcher,
+            pairing_svc: mock_pairing.pairing_svc.clone(),
             pairing: Some(pairing).into(),
         };
 
@@ -394,7 +423,8 @@ mod tests {
     async fn terminates_if_host_watcher_closes() {
         let (provider, _peripheral, _gatt, host_watcher_stream, _mock_pairing) =
             setup_provider().await;
-        let provider_fut = provider.run();
+        let (_sender, receiver) = mpsc::channel(0);
+        let provider_fut = provider.run(receiver);
         pin_mut!(provider_fut);
 
         // Upstream `bt-gap` can no longer service HostWatcher requests.
@@ -408,7 +438,8 @@ mod tests {
     #[fuchsia::test]
     async fn terminates_if_gatt_closes() {
         let (provider, _peripheral, gatt, _host_watcher, _mock_pairing) = setup_provider().await;
-        let provider_fut = provider.run();
+        let (_sender, receiver) = mpsc::channel(0);
+        let provider_fut = provider.run(receiver);
         pin_mut!(provider_fut);
 
         // Upstream bt-host no longer can support advertising the GATT service.
@@ -419,15 +450,22 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn terminates_if_fidl_request_handler_closes() {
+        let (provider, _peripheral, _gatt, _host_watcher, _mock_pairing) = setup_provider().await;
+        let (sender, receiver) = mpsc::channel(0);
+        let provider_fut = provider.run(receiver);
+        pin_mut!(provider_fut);
+
+        drop(sender);
+        let result = provider_fut.await;
+        assert_matches!(result, Err(Error::InternalError(_)));
+    }
+
+    #[fuchsia::test]
     async fn advertisement_changes_upon_host_discoverable_change() {
         let (provider, mut le_peripheral, _gatt, mut host_watcher, _mock_pairing) =
             setup_provider().await;
-        let provider_fut = provider.run();
-        // The Provider server should never terminate. Always running.
-        let _provider_server = fasync::Task::local(async move {
-            let result = provider_fut.await;
-            panic!("Provider server unexpectedly finished with result: {:?}", result);
-        });
+        let (_sender, _provider_server) = server_task(provider);
 
         // Expect the Provider server to watch active hosts.
         let watch_request = host_watcher.select_next_some().await.expect("fidl request");
@@ -480,12 +518,14 @@ mod tests {
         let _ = responder.send(&mut Ok(())).unwrap();
     }
 
-    fn server_task(provider: Provider) -> fasync::Task<()> {
-        let provider_fut = provider.run();
-        fasync::Task::local(async move {
+    fn server_task(provider: Provider) -> (mpsc::Sender<ServiceRequest>, fasync::Task<()>) {
+        let (sender, receiver) = mpsc::channel(0);
+        let provider_fut = provider.run(receiver);
+        let task = fasync::Task::local(async move {
             let result = provider_fut.await;
             panic!("Provider server unexpectedly finished with result: {:?}", result);
-        })
+        });
+        (sender, task)
     }
 
     const PEER_ID: PeerId = PeerId(123);
@@ -541,7 +581,8 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let server_fut = provider.run();
+        let (_sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
         pin_mut!(server_fut);
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
@@ -617,7 +658,7 @@ mod tests {
     #[fuchsia::test]
     async fn public_key_pairing_request_with_no_host() {
         let (provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) = setup_provider().await;
-        let _provider_server = server_task(provider);
+        let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a valid key-based pairing request should succeed and be handled gracefully.
         // Because there's no active host, we don't expect any subsequent GATT notification.
@@ -642,7 +683,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let _provider_server = server_task(provider);
+        let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a key-based pairing request with public key should succeed and be handled
         // gracefully. Because the local host is not discoverable, we don't expect a subsequent GATT
@@ -668,7 +709,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let _provider_server = server_task(provider);
+        let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a key-based pairing request should be handled gracefully. Because there are no
         // saved Account Keys, pairing should not continue.
@@ -701,7 +742,7 @@ mod tests {
                 AccountKey::new(keys::tests::example_aes_key().as_bytes().clone()),
             ],
         );
-        let _provider_server = server_task(provider);
+        let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a key-based pairing request should be handled gracefully. Because there are no
         // saved Account Keys, pairing should not continue.
@@ -725,7 +766,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let _provider_server = server_task(provider);
+        let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a passkey write request should be handled gracefully. Because there is no
         // active pairing procedure (e.g a key-based pairing write was never received), pairing
@@ -755,7 +796,8 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let server_fut = provider.run();
+        let (_sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
         pin_mut!(server_fut);
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
@@ -810,7 +852,8 @@ mod tests {
                 .try_into()
                 .unwrap(),
         );
-        let server_fut = provider.run();
+        let (_sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
         pin_mut!(server_fut);
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
@@ -866,5 +909,69 @@ mod tests {
             /* expect_item= */ false,
         );
         let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+    }
+
+    #[fuchsia::test]
+    async fn pairing_fidl_request_ignored_when_already_set() {
+        // By default, the created `provider` server will have an active PairingManager.
+        let (provider, _le_peripheral, _gatt, _host_watcher, _mock_pairing) =
+            setup_provider().await;
+        let (mut sender, _provider_server) = server_task(provider);
+
+        // Simulate a new FIDL client trying to set the Pairing Delegate.
+        let (delegate, mut delegate_server) =
+            create_proxy_and_stream::<PairingDelegateMarker>().unwrap();
+        let client =
+            PairingArgs { input: InputCapability::None, output: OutputCapability::None, delegate };
+        let _ = sender
+            .send(ServiceRequest::Pairing(client))
+            .await
+            .expect("provider server task is running");
+
+        // Because there is currently an active Pairing Delegate, the `Provider` server should
+        // reject the request - the upstream client `delegate_server` should terminate.
+        let result = delegate_server.next().await;
+        assert_matches!(result, None);
+    }
+
+    #[fuchsia::test]
+    fn pairing_fidl_request_is_accepted() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let setup_fut = setup_provider();
+        pin_mut!(setup_fut);
+        let (provider, _le_peripheral, _gatt, _host_watcher, mut mock_pairing) =
+            exec.run_singlethreaded(&mut setup_fut);
+        let (mut sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
+        pin_mut!(server_fut);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Shutting down and dropping the existing upstream delegate indicates client termination.
+        let (delegate, new_upstream_delegate_server) =
+            create_proxy_and_stream::<PairingDelegateMarker>().unwrap();
+        let upstream_delegate_server = std::mem::replace(
+            &mut mock_pairing.upstream_delegate_server,
+            new_upstream_delegate_server,
+        );
+        upstream_delegate_server.control_handle().shutdown();
+        drop(upstream_delegate_server);
+        // Provider server should handle this without failing.
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Simulate the FIDL client trying to set the Pairing Delegate. This is OK now that there no
+        // longer is an active Pairing Delegate.
+        let client =
+            PairingArgs { input: InputCapability::None, output: OutputCapability::None, delegate };
+        let send_fut = sender.send(ServiceRequest::Pairing(client));
+        pin_mut!(send_fut);
+        let (send_result, server_fut) = run_while(&mut exec, server_fut, send_fut);
+        assert_matches!(send_result, Ok(_));
+
+        // We expect the downstream pairing handler to receive the SetPairingDelegate request that
+        // is made as a result of the aforementioned FIDL client request.
+        let expect_fut = mock_pairing.expect_set_pairing_delegate();
+        pin_mut!(expect_fut);
+        let ((), _server_fut) = run_while(&mut exec, server_fut, expect_fut);
     }
 }

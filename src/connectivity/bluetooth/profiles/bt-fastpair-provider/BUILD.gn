@@ -48,6 +48,7 @@ rustc_binary("bin") {
     "src/advertisement/low_energy_advertiser.rs",
     "src/advertisement/mod.rs",
     "src/config.rs",
+    "src/fidl_service.rs",
     "src/gatt_service.rs",
     "src/host_watcher.rs",
     "src/main.rs",

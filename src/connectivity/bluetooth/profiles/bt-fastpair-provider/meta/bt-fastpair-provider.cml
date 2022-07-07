@@ -7,6 +7,11 @@
         runner: "elf",
         binary: "bin/bt_fastpair_provider",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.bluetooth.sys.Pairing" ],
+        },
+    ],
     use: [
         {
             storage: "data",
@@ -17,8 +22,15 @@
                 "fuchsia.bluetooth.gatt2.Server",
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "parent",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.bluetooth.sys.Pairing" ],
+            from: "self",
         },
     ],
 }
