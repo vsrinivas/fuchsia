@@ -84,7 +84,7 @@ fuchsia_component("vkcopy_cmp") {
   testonly = true
   component_name = "vkcopy"
   deps = [ ":vkcopy_bin" ]
-  manifest = "meta/vkcopy.cmx"
+  manifest = "meta/vkcopy.cml"
 }
 
 fuchsia_test_package("vkcopy-pkg") {
