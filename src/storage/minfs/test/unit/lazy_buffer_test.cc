@@ -174,7 +174,7 @@ TEST_F(LazyBufferTest, FlushWritesAllBlocksInRange) {
                                       [&](ResizeableBufferType* resizeable_buffer, BlockRange range,
                                           DeviceBlock device_block) {
                                         EXPECT_EQ(&buffer_->buffer(), resizeable_buffer);
-                                        write_calls.push_back(std::make_pair(range, device_block));
+                                        write_calls.emplace_back(range, device_block);
                                         return zx::ok();
                                       });
               })

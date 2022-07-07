@@ -212,8 +212,7 @@ constexpr struct {
 RwWorkersTest::RwWorkersTest() {
   // Assemble the work.
   for (const auto& work : kWork) {
-    workers_.push_back(
-        Worker(fs().mount_path(), work.name, &Worker::Writer, work.size, work.flags));
+    workers_.emplace_back(fs().mount_path(), work.name, &Worker::Writer, work.size, work.flags);
   }
 }
 

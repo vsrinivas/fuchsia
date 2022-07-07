@@ -192,7 +192,7 @@ zx::status<> FlashmapPartitionClient::Init() {
   }
 
   for (auto& area : areas.value().areas) {
-    areas_.emplace_back(FlashmapArea(area));
+    areas_.emplace_back(area);
   }
 
   auto erase_block_size = flashmap_->GetEraseBlockSize();

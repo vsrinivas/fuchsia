@@ -66,7 +66,7 @@ TEST_P(FragmentationTest, Fragmentation) {
       capture_large_blob_storage_space_usage = false;
     }
     if (do_small_blob) {
-      small_blobs.push_back(fbl::String(info->path));
+      small_blobs.emplace_back(info->path);
     }
 
     do_small_blob = !do_small_blob;

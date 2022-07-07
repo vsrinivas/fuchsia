@@ -151,8 +151,8 @@ std::vector<FullTestParamType> GetTestParams() {
     // memory is the limiting factor).
     if (options.filesystem->GetTraits().in_memory)
       continue;
-    test_combinations.push_back(std::make_tuple(options, true));
-    test_combinations.push_back(std::make_tuple(options, false));
+    test_combinations.emplace_back(options, true);
+    test_combinations.emplace_back(options, false);
   }
   return test_combinations;
 }

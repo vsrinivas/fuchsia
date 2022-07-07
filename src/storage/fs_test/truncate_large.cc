@@ -32,7 +32,7 @@ std::vector<LargeTruncateTestParamType> GetTestCombinations(
         options.device_block_size = kBlockSize;
       }
       options.fvm_slice_size = 1LLU << 23;
-      test_combinations.push_back(std::make_tuple(options, variation));
+      test_combinations.emplace_back(options, variation);
     }
   }
   return test_combinations;

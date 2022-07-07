@@ -200,7 +200,7 @@ fpromise::result<Partition, std::string> OpenSparseImage(
         return result.take_error_result();
       }
       offset += sizeof(extent);
-      extents.push_back(std::make_pair(extent, data_offset));
+      extents.emplace_back(extent, data_offset);
       data_offset += extent.extent_length;
 
       // Push FVM's allocation metadata
