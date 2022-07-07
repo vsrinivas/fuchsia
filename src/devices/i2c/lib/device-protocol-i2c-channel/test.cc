@@ -126,20 +126,6 @@ class I2cChannelTest : public zxtest::Test {
   void TearDown() override { loop_.Shutdown(); }
 
  protected:
-  static void TransactCallback(void* ctx, zx_status_t status, const i2c_op_t* op_list,
-                               size_t op_count) {
-    reinterpret_cast<I2cChannelTest*>(ctx)->TransactCallback(status, op_list, op_count);
-  }
-
-  void TransactCallback(zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-    ASSERT_LE(op_count, fuchsia_hardware_i2c::wire::kMaxCountTransactions);
-    read_ops_ = op_count;
-    for (size_t i = 0; i < op_count; i++) {
-      read_data_[i] = {op_list[i].data_buffer, op_list[i].data_buffer + op_list[i].data_size};
-    }
-    transact_status_ = status;
-  }
-
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> BindI2c(
       fidl::WireServer<fuchsia_hardware_i2c::Device>* server) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
@@ -148,10 +134,6 @@ class I2cChannelTest : public zxtest::Test {
     fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), server);
     return std::move(endpoints->client);
   }
-
-  std::vector<uint8_t> read_data_[fuchsia_hardware_i2c::wire::kMaxCountTransactions];
-  size_t read_ops_ = 0;
-  zx_status_t transact_status_ = ZX_ERR_IO;
 
   async::Loop loop_;
 };
@@ -277,78 +259,6 @@ TEST_F(I2cChannelTest, FidlWriteRead) {
   EXPECT_OK(client.WriteReadSync(nullptr, 0, buf, expected_rx_data.size()));
   EXPECT_EQ(i2c_dev.tx_data().size(), 0);
   EXPECT_BYTES_EQ(buf, expected_rx_data.data(), expected_rx_data.size());
-}
-
-TEST_F(I2cChannelTest, FidlTransfer) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  I2cDevice i2c_dev;
-  auto binding = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &i2c_dev);
-
-  auto parent = MockDevice::FakeRootParent();
-
-  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
-                          [this, &i2c_dev](zx::channel channel) {
-                            fidl::BindServer(
-                                loop_.dispatcher(),
-                                fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
-                                &i2c_dev);
-                            return ZX_OK;
-                          });
-
-  ddk::I2cChannel client(parent.get());
-  ASSERT_TRUE(client.is_valid());
-
-  const std::array<uint8_t, 4> expected_rx_data{0x12, 0x34, 0xab, 0xcd};
-  const std::array<uint8_t, 4> expected_tx_data{0x0f, 0x1e, 0x2d, 0x3c};
-
-  i2c_dev.set_rx_data({expected_rx_data.data(), expected_rx_data.data() + expected_rx_data.size()});
-
-  i2c_op_t ops[4];
-  ops[0] = {
-      .data_buffer = expected_tx_data.data(),
-      .data_size = 2,
-      .is_read = false,
-      .stop = true,
-  };
-  ops[1] = {
-      .data_buffer = nullptr,
-      .data_size = 2,
-      .is_read = true,
-      .stop = false,
-  };
-  ops[2] = {
-      .data_buffer = expected_tx_data.data() + 2,
-      .data_size = 2,
-      .is_read = false,
-      .stop = true,
-  };
-  ops[3] = {
-      .data_buffer = nullptr,
-      .data_size = 2,
-      .is_read = true,
-      .stop = false,
-  };
-
-  client.Transact(ops, std::size(ops), TransactCallback, this);
-  EXPECT_OK(transact_status_);
-
-  ASSERT_EQ(read_ops_, 2);
-
-  ASSERT_EQ(read_data_[0].size(), 2);
-  EXPECT_BYTES_EQ(read_data_[0].data(), expected_rx_data.data(), 2);
-
-  ASSERT_EQ(read_data_[1].size(), 2);
-  EXPECT_BYTES_EQ(read_data_[1].data(), expected_rx_data.data() + 2, 2);
-
-  ASSERT_EQ(i2c_dev.tx_data().size(), expected_tx_data.size());
-  EXPECT_BYTES_EQ(i2c_dev.tx_data().data(), expected_tx_data.data(), expected_tx_data.size());
-
-  EXPECT_TRUE(i2c_dev.stop()[0]);
-  EXPECT_FALSE(i2c_dev.stop()[1]);
-  EXPECT_TRUE(i2c_dev.stop()[2]);
-  EXPECT_FALSE(i2c_dev.stop()[3]);
 }
 
 TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {

@@ -6,8 +6,7 @@
 #define SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_H_
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
-#include <lib/sync/completion.h>
+#include <lib/ddk/driver.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -131,72 +130,6 @@ class I2cChannel {
     }
 
     return ZX_OK;
-  }
-
-  void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                void* cookie) {
-    if (op_count > fuchsia_hardware_i2c::wire::kMaxCountTransactions) {
-      callback(cookie, ZX_ERR_OUT_OF_RANGE, nullptr, 0);
-      return;
-    }
-
-    fidl::Arena arena;
-    fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions(arena, op_count);
-
-    size_t read_count = 0;
-    for (size_t i = 0; i < op_count; i++) {
-      if (op_list[i].data_size > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
-        callback(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
-        return;
-      }
-
-      const auto size = static_cast<uint32_t>(op_list[i].data_size);
-      if (op_list[i].is_read) {
-        read_count++;
-        transactions[i] =
-            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
-                .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(size))
-                .stop(op_list[i].stop)
-                .Build();
-      } else {
-        fidl::VectorView<uint8_t> write_data(arena, size);
-        memcpy(write_data.mutable_data(), op_list[i].data_buffer, size);
-        transactions[i] =
-            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
-                .data_transfer(
-                    fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(arena, write_data))
-                .stop(op_list[i].stop)
-                .Build();
-      }
-    }
-
-    const auto reply = fidl_client_->Transfer(transactions);
-    if (!reply.ok()) {
-      callback(cookie, reply.status(), nullptr, 0);
-      return;
-    }
-    if (reply.value().is_error()) {
-      callback(cookie, reply.value().error_value(), nullptr, 0);
-      return;
-    }
-
-    const fidl::VectorView<fidl::VectorView<uint8_t>>& read_data = reply.value().value()->read_data;
-    if (read_data.count() != read_count) {
-      callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
-      return;
-    }
-
-    i2c_op_t read_ops[fuchsia_hardware_i2c::wire::kMaxCountTransactions];
-    for (size_t i = 0; i < read_count; i++) {
-      read_ops[i] = {
-          .data_buffer = read_data[i].data(),
-          .data_size = read_data[i].count(),
-          .is_read = true,
-          .stop = false,
-      };
-    }
-
-    callback(cookie, ZX_OK, read_ops, read_count);
   }
 
   fidl::WireResult<fuchsia_hardware_i2c::Device::Transfer> Transfer(
