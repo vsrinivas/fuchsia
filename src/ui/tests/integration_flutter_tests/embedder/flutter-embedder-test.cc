@@ -4,6 +4,7 @@
 
 #include "src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test.h"
 
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -18,28 +19,30 @@ namespace {
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
+using component_testing::DirectoryContents;
 using component_testing::ParentRef;
 using component_testing::Protocol;
 using component_testing::RealmRoot;
 using component_testing::Route;
 using RealmBuilder = component_testing::RealmBuilder;
 
-constexpr auto kRootPresenter = "root_presenter";
-constexpr auto kRootPresenterRef = ChildRef{kRootPresenter};
-constexpr auto kScenicTestRealm = "scenic_test_realm";
-constexpr auto kScenicTestRealmRef = ChildRef{kScenicTestRealm};
-constexpr auto kParentFlutter = "parent_flutter";
-constexpr auto kParentFlutterRef = ChildRef{kParentFlutter};
+static constexpr auto kChildFlutterRealm = "child_flutter";
+static constexpr auto kChildFlutterRealmRef = ChildRef{kChildFlutterRealm};
+static constexpr auto kRootPresenter = "root_presenter";
+static constexpr auto kRootPresenterRef = ChildRef{kRootPresenter};
+static constexpr auto kRootPresenterUrl = "#meta/root_presenter.cm";
+static constexpr auto kScenicTestRealm = "scenic_test_realm";
+static constexpr auto kScenicTestRealmRef = ChildRef{kScenicTestRealm};
+static constexpr auto kScenicTestRealmUrl = "#meta/scenic_only.cm";
+static constexpr auto kParentFlutterRealm = "parent_flutter";
+static constexpr auto kParentFlutterRealmRef = ChildRef{kParentFlutterRealm};
 
 }  // namespace
 
 namespace flutter_embedder_test {
 
-constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view.cmx";
-constexpr char kParentViewDisabledHittestUrl[] =
-    "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-disabled-hittest.cmx";
-constexpr char kParentViewShowOverlayUrl[] =
-    "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-show-overlay.cmx";
+constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-realm.cm";
+constexpr char kChildViewUrl[] = "fuchsia-pkg://fuchsia.com/child-view#meta/child-view-realm.cm";
 
 constexpr scenic::Color kParentBackgroundColor = {0x00, 0x00, 0xFF, 0xFF};  // Blue
 constexpr scenic::Color kParentTappedColor = {0x00, 0x00, 0x00, 0xFF};      // Black
@@ -68,15 +71,33 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
 
 void FlutterEmbedderTest::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
+
   // Add base components.
-  realm_builder_.AddChild(kRootPresenter, "#meta/root_presenter.cm");
-  realm_builder_.AddChild(kScenicTestRealm, "#meta/scenic_only.cm");
+  realm_builder_.AddChild(kRootPresenter, kRootPresenterUrl);
+  realm_builder_.AddChild(kScenicTestRealm, kScenicTestRealmUrl);
+
+  // Add embedded child component to realm.
+  realm_builder_.AddChild(kChildFlutterRealm, kChildViewUrl);
+
+  // Add child flutter app routes. Note that we do not route ViewProvider to ParentRef{} as it is
+  // embedded.
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = kScenicTestRealmRef,
+                                .targets = {kChildFlutterRealmRef}});
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::sys::Environment::Name_},
+                             Protocol{fuchsia::sysmem::Allocator::Name_},
+                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                             Protocol{fuchsia::tracing::provider::Registry::Name_}},
+            .source = ParentRef{},
+            .targets = {kChildFlutterRealmRef}});
 
   // Add base routes.
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
-                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                             Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+                             Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                             Protocol{fuchsia::vulkan::loader::Loader::Name_}},
             .source = ParentRef{},
             .targets = {kScenicTestRealmRef}});
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
@@ -89,15 +110,15 @@ void FlutterEmbedderTest::SetUpRealmBase() {
 
   // Route between siblings.
   realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                             Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
+      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
+                             Protocol{fuchsia::ui::scenic::Scenic::Name_}},
             .source = kScenicTestRealmRef,
             .targets = {kRootPresenterRef}});
 
   // Capabilities routed to test driver.
   realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_},
-                             Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_}},
+      Route{.capabilities = {Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_},
+                             Protocol{fuchsia::ui::policy::Presenter::Name_}},
             .source = kRootPresenterRef,
             .targets = {ParentRef{}}});
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
@@ -105,25 +126,46 @@ void FlutterEmbedderTest::SetUpRealmBase() {
                                 .targets = {ParentRef{}}});
 }
 
-void FlutterEmbedderTest::BuildRealmAndLaunchApp(const std::string& component_url) {
+void FlutterEmbedderTest::BuildRealmAndLaunchApp(const std::string& component_url,
+                                                 const std::vector<std::string>& component_args) {
   FX_LOGS(INFO) << "Building realm with component: " << component_url;
-  realm_builder_.AddLegacyChild(kParentFlutter, component_url);
+  realm_builder_.AddChild(kParentFlutterRealm, kParentViewUrl);
 
   // Capabilities routed to embedded flutter app.
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = ChildRef{kScenicTestRealm},
-                                .targets = {kParentFlutterRef}});
+                                .source = kScenicTestRealmRef,
+                                .targets = {kParentFlutterRealmRef}});
   realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
-                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
+      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::sys::Environment::Name_},
+                             Protocol{fuchsia::sysmem::Allocator::Name_},
                              Protocol{fuchsia::tracing::provider::Registry::Name_},
-                             Protocol{fuchsia::sysmem::Allocator::Name_}},
+                             Protocol{fuchsia::vulkan::loader::Loader::Name_}},
             .source = ParentRef{},
-            .targets = {kParentFlutterRef}});
+            .targets = {kParentFlutterRealmRef}});
 
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                                .source = kParentFlutterRef,
+                                .source = kParentFlutterRealmRef,
                                 .targets = {ParentRef()}});
+
+  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                                .source = kChildFlutterRealmRef,
+                                .targets = {kParentFlutterRealmRef}});
+
+  if (!component_args.empty()) {
+    // Construct a args.csv file containing the specified comma-separated component args.
+    std::string csv;
+    for (const auto& arg : component_args) {
+      csv += arg + ',';
+    }
+    // Remove last comma.
+    csv.pop_back();
+
+    auto config_directory_contents = DirectoryContents();
+    config_directory_contents.AddFile("args.csv", csv);
+    realm_builder_.RouteReadOnlyDirectory("config-data", {kParentFlutterRealmRef},
+                                          std::move(config_directory_contents));
+  }
   realm_ = std::make_unique<RealmRoot>(realm_builder_.Build());
 
   scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
@@ -184,7 +226,7 @@ TEST_F(FlutterEmbedderTest, HittestEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTest, HittestDisabledEmbedding) {
-  BuildRealmAndLaunchApp(kParentViewDisabledHittestUrl);
+  BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -205,7 +247,7 @@ TEST_F(FlutterEmbedderTest, HittestDisabledEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTest, EmbeddingWithOverlay) {
-  BuildRealmAndLaunchApp(kParentViewShowOverlayUrl);
+  BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(
@@ -222,7 +264,7 @@ TEST_F(FlutterEmbedderTest, EmbeddingWithOverlay) {
 }
 
 TEST_F(FlutterEmbedderTest, HittestEmbeddingWithOverlay) {
-  BuildRealmAndLaunchApp(kParentViewShowOverlayUrl);
+  BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));

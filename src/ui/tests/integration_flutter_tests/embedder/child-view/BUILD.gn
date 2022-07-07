@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/flutter/flutter_app.gni")
+import("//build/flutter/flutter_build_config.gni")
+import(
+    "//src/ui/tests/integration_flutter_tests/embedder/flutter_build_config.gni")
 
 dart_library("lib") {
   package_name = "child-view"
@@ -10,14 +13,26 @@ dart_library("lib") {
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }
 
-flutter_component("child-view-component") {
+flutter_component("component") {
   component_name = "child-view"
-  manifest = "meta/child-view.cmx"
+  manifest = "meta/child-view.cml"
   main_package = "child-view"
   main_dart = "child_view.dart"
+
+  # See comment in flutter_build_config.gni.
+  build_cfg = embedder_test_build_cfg
   deps = [ ":lib" ]
 }
 
+fuchsia_component("realm") {
+  component_name = "child-view-realm"
+  manifest = "meta/child-view-realm.cml"
+  deps = [ ":component" ]
+}
+
 fuchsia_package("child-view") {
-  deps = [ ":child-view-component" ]
+  deps = [
+    ":component",
+    ":realm",
+  ]
 }

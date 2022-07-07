@@ -5,8 +5,9 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+import 'dart:io';
+
 import 'package:args/args.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +15,10 @@ import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 
-const _kChildAppUrl =
-    'fuchsia-pkg://fuchsia.com/child-view#meta/child-view.cmx';
+final _argsCsvFilePath = '/config/data/args.csv';
 
 Future<void> main(List<String> args) async {
+  args = args + _GetArgsFromConfigFile();
   WidgetsFlutterBinding.ensureInitialized();
   final parser = ArgParser()
     ..addFlag('showOverlay', defaultsTo: false)
@@ -31,7 +32,7 @@ Future<void> main(List<String> args) async {
 
   final useFlatland = arguments['useFlatland'];
   if (useFlatland) {
-    final viewportCreationToken = _launchFlatlandApp(_kChildAppUrl);
+    final viewportCreationToken = _launchFlatlandApp();
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: TestApp(
@@ -42,7 +43,7 @@ Future<void> main(List<String> args) async {
       ),
     ));
   } else {
-    final childViewToken = _launchGfxApp(_kChildAppUrl);
+    final childViewToken = _launchGfxApp();
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: TestApp(
@@ -115,25 +116,9 @@ class TestApp extends StatelessWidget {
   }
 }
 
-ViewportCreationToken _launchFlatlandApp(String componentUrl) {
-  final incoming = Incoming();
-  final componentController = ComponentControllerProxy();
-
-  final launcher = LauncherProxy();
-  Incoming.fromSvcPath()
-    ..connectToService(launcher)
-    ..close();
-  launcher.createComponent(
-    LaunchInfo(
-      url: componentUrl,
-      directoryRequest: incoming.request().passChannel(),
-    ),
-    componentController.ctrl.request(),
-  );
-  launcher.ctrl.close();
-
+ViewportCreationToken _launchFlatlandApp() {
   ViewProviderProxy viewProvider = ViewProviderProxy();
-  incoming
+  Incoming.fromSvcPath()
     ..connectToService(viewProvider)
     ..close();
 
@@ -149,25 +134,9 @@ ViewportCreationToken _launchFlatlandApp(String componentUrl) {
   return viewportCreationToken;
 }
 
-ViewHolderToken _launchGfxApp(String componentUrl) {
-  final incoming = Incoming();
-  final componentController = ComponentControllerProxy();
-
-  final launcher = LauncherProxy();
-  Incoming.fromSvcPath()
-    ..connectToService(launcher)
-    ..close();
-  launcher.createComponent(
-    LaunchInfo(
-      url: componentUrl,
-      directoryRequest: incoming.request().passChannel(),
-    ),
-    componentController.ctrl.request(),
-  );
-  launcher.ctrl.close();
-
+ViewHolderToken _launchGfxApp() {
   ViewProviderProxy viewProvider = ViewProviderProxy();
-  incoming
+  Incoming.fromSvcPath()
     ..connectToService(viewProvider)
     ..close();
 
@@ -180,4 +149,15 @@ ViewHolderToken _launchGfxApp(String componentUrl) {
   viewProvider.ctrl.close();
 
   return viewHolderToken;
+}
+
+List<String> _GetArgsFromConfigFile() {
+  List<String> args;
+  final f = File(_argsCsvFilePath);
+  if (!f.existsSync()) {
+    return List.empty();
+  }
+  final fileContentCsv = f.readAsStringSync();
+  args = fileContentCsv.split('\n');
+  return args;
 }

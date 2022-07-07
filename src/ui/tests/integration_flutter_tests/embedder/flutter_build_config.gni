@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/flutter/flutter_build_config.gni")
+
+# Avoid the use of the flutter jit runner. JIT requires ambient_mark_vmo_exec
+# which, as a security policy, is disabled for vulkan-test. Whilst the embedder
+# test could run as a system-test, providing the required policy, system-test
+# suspends all rules around hermeticity. embedder_test_build_cfg is specified to
+# both the parent-view and child-view flutter components.
+declare_args() {
+  if (is_debug) {
+    embedder_test_build_cfg = flutter_aot_debug_build_cfg
+  } else {
+    embedder_test_build_cfg = flutter_profile_build_cfg
+  }
+}

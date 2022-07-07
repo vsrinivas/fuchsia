@@ -4,6 +4,8 @@
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_component.gni")
+import(
+    "//src/ui/tests/integration_flutter_tests/embedder/flutter_build_config.gni")
 
 dart_library("lib") {
   package_name = "parent-view"
@@ -20,38 +22,26 @@ dart_library("lib") {
   ]
 }
 
-flutter_component("parent-view-component") {
+flutter_component("component") {
   component_name = "parent-view"
-  manifest = "meta/parent-view.cmx"
+  manifest = "meta/parent-view.cml"
   main_package = "parent-view"
   main_dart = "parent_view.dart"
+
+  # See comment in flutter_build_config.gni.
+  build_cfg = embedder_test_build_cfg
   deps = [ ":lib" ]
 }
 
-# The following build targets build new packages that use the same parent-view
-# flutter app but specify arguments at launch.
-# TODO(fxb/97018): Replace parent-view with CFv2 manifest and consolidate
-# different build targets to config changes.
-flutter_component("parent-view-disabled-hittest-component") {
-  component_name = "parent-view-disabled-hittest"
-  manifest = "meta/parent-view-disabled-hittest.cmx"
-  main_package = "parent-view"
-  main_dart = "parent_view.dart"
-  deps = [ ":lib" ]
-}
-
-flutter_component("parent-view-show-overlay-component") {
-  component_name = "parent-view-show-overlay"
-  manifest = "meta/parent-view-show-overlay.cmx"
-  main_package = "parent-view"
-  main_dart = "parent_view.dart"
-  deps = [ ":lib" ]
+fuchsia_component("realm") {
+  component_name = "parent-view-realm"
+  manifest = "meta/parent-view-realm.cml"
+  deps = [ ":component" ]
 }
 
 fuchsia_package("parent-view") {
   deps = [
-    ":parent-view-component",
-    ":parent-view-disabled-hittest-component",
-    ":parent-view-show-overlay-component",
+    ":component",
+    ":realm",
   ]
 }

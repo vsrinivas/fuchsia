@@ -1,0 +1,60 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "flutter_aot_runner", // Needed for release builds.
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+        },
+        {
+            name: "flutter_jit_runner", // Needed for non-release builds.
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+        },
+        {
+            name: "child_view",
+            url: "#meta/child-view.cm",
+            environment: "#child_view_env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#child_view",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#child_view",
+            to: "parent",
+        },
+    ],
+    environments: [
+        {
+            name: "child_view_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
+                },
+            ],
+        },
+    ],
+}

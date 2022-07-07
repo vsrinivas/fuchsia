@@ -82,7 +82,8 @@ class FlutterEmbedderTest : public ::loop_fixture::RealLoop, public ::testing::T
     return scenic::Screenshot(screenshot_out);
   }
 
-  void BuildRealmAndLaunchApp(const std::string& component_url);
+  void BuildRealmAndLaunchApp(const std::string& component_url,
+                              const std::vector<std::string>& component_args = {});
 
   bool TakeScreenshotUntil(scenic::Color color,
                            fit::function<void(std::map<scenic::Color, size_t>)> callback = nullptr,
