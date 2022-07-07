@@ -37,6 +37,9 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("process_unittests") {
-  manifest = "meta/process_unittests.cmx"
-  deps = [ ":unittests" ]
+  manifest = "meta/process_unittests.cml"
+  deps = [
+    ":unittests",
+    "//zircon/third_party/uapp/dash",
+  ]
 }

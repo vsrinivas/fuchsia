@@ -11,7 +11,7 @@
 namespace process {
 namespace {
 
-static constexpr char kShell[] = "/boot/bin/sh";
+static constexpr char kShell[] = "/pkg/bin/sh";
 
 TEST(ProcessBuilder, Control) {
   ProcessBuilder builder(sys::ServiceDirectory::CreateFromNamespace());
