@@ -806,10 +806,12 @@ Marking a type as [`flexible`][flexible-lang] makes it possible to handle data
 that is unknown to the current FIDL schema, and is recommended for types that
 may add or remove members in the future (e.g., configs, metadata, or errors). It
 is always possible to [soft transition][flexible-transition] between `strict`
-and `flexible` for an existing type. For types that accept the
-`strict`/`flexible` modifier (`bits`, `enum`, and `union`), such a modifier
-should always be specified rather than relying on defaults (e.g., always prefer
-`flexible bits ...` to just `bits ...`).
+and `flexible` for an existing type.
+
+It is
+[stylish](/docs/development/languages/fidl/guides/style.md#explicit-strict-flexible)
+to always specify this modifier, when the type permits. The Fuchsia project
+enforces this style with a linter check.
 
 Using `strict` or `flexible` does not have any significant performance impact.
 

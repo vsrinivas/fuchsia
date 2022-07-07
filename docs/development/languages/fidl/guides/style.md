@@ -294,6 +294,14 @@ appears in the name of the enclosing type.
 In all target languages, bitfield member names are scoped by their
 enclosing type.
 
+## Types
+
+### Explicit "`strict`/`flexible`" modifier {#explicit-strict-flexible}
+
+For types that accept the `strict`/`flexible` modifier (`bits`, `enum`, and
+`union`), such a modifier should always be specified rather than relying on
+defaults. That is, always prefer `flexible bits ...` to just `bits ...`.
+
 ## Organization
 
 ### Syntax
