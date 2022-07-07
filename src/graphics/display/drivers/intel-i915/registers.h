@@ -132,6 +132,8 @@ class GMBus4 : public hwreg::RegisterBase<GMBus4, uint32_t> {
 };
 
 // PWR_WELL_CTL
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1063-1065
 class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t> {
  public:
   hwreg::BitfieldRef<uint32_t> power_request(size_t index) {
@@ -154,26 +156,39 @@ class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  static auto Get() { return hwreg::RegisterAddr<PowerWellControl2>(0x45404); }
+  static auto Get() {
+    // The address below is for PWR_WELL_CTL2, which is provided for driver use.
+    // By contrast, PWR_WELL_CTL1 is intended for BIOS use.
+    return hwreg::RegisterAddr<PowerWellControl2>(0x45404);
+  }
 };
 
 // PWR_WELL_CTL_DDI
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1072-1075
 class PowerWellControlDdi2 : public hwreg::RegisterBase<PowerWellControlDdi2, uint32_t> {
  public:
   hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_request(Ddi ddi) {
+    // DDI A-C: bits 1/3/5. DDI TC1-6: bits 7/9/11/13/15/17.
     int bit = ddi * 2 + 1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
   hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_state(Ddi ddi) {
-    int bit = ddi * 2;
+    int bit = ddi * 2;  // DDI A-C: bits 0/2/4. DDI TC1-6: bits 6/8/10/12/14/16.
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  static auto Get() { return hwreg::RegisterAddr<PowerWellControlDdi2>(0x45454); }
+  static auto Get() {
+    // The address below is for PWR_WELL_CTL_DDI2, which is provided for driver
+    // use. By contrast, PWR_WELL_CTL_DDI1 is intended for BIOS use.
+    return hwreg::RegisterAddr<PowerWellControlDdi2>(0x45454);
+  }
 };
 
 // FUSE_STATUS
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 990-991
 class FuseStatus : public hwreg::RegisterBase<FuseStatus, uint32_t> {
  public:
   DEF_BIT(31, fuse_download_status);

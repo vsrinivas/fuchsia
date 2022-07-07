@@ -22,6 +22,9 @@ bool SetPowerWellImpl(const PowerWellInfo& power_well_info, bool enable,
     return true;
   }
 
+  // Sequences from IHD-OS-TGL-Vol 12-12.21 "Sequences for Power Wells".
+  // "Enable sequence" on page 220, "Disable sequence" on page 221.
+
   auto power_well_reg = registers::PowerWellControl2::Get().ReadFrom(mmio_space);
 
   power_well_reg.power_request(power_well_info.request_bit_index).set(enable);
@@ -156,7 +159,13 @@ class SklPower : public Power {
   }
 };
 
+// Dependencies between power wells from IHD-OS-TGL-Vol 12-12.21
+// "Enable Sequence", pages 220-221.
+//
+// FUSE_STATUS bits from IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 990-991.
+// PWR_WELL_CTL bits from IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1063-1065.
 const std::unordered_map<PowerWellId, PowerWellInfo> kTglPowerWellInfo = {
+    // PG0 not tracked because it's managed by the CPU power controller.
     {PowerWellId::PG1,
      {
          .name = "Power Well 1",
@@ -220,6 +229,9 @@ class TglPower : public Power {
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
   PowerWellRef GetPipePowerWellRef(registers::Pipe pipe) override {
+    // Power well assignments from IHD-OS-TGL-Vol 12-12.21
+    // "Functions Within Each Well", pages 219-220.
+
     // TODO(fxbug.dev/95863): Add all pipes supported by gen12.
     switch (pipe) {
       case registers::PIPE_A:
@@ -234,6 +246,9 @@ class TglPower : public Power {
   }
 
   PowerWellRef GetDdiPowerWellRef(registers::Ddi ddi) override {
+    // Power well assignments from IHD-OS-TGL-Vol 12-12.21
+    // "Functions Within Each Well", pages 219-220.
+
     switch (ddi) {
       case registers::DDI_A:
       case registers::DDI_B:
