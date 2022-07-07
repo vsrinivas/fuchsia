@@ -30,8 +30,8 @@ AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annot
     return Error::kMissingValue;
   };
 
-  // TODO(fxbug.dev/70398): Share annotations with feedback_data so synchonous and constant
-  // annotations can be added to crash reports.
+  // TODO(fxbug.dev/102899): Remove unnecessary lines. Annotations are now collected via
+  // a non-FIDL, unfiltered method.
   AnnotationMap default_annotations;
   default_annotations.Set(feedback::kOSNameKey, "Fuchsia")
       .Set(feedback::kOSVersionKey, GetFromStartup(feedback::kBuildVersionKey))

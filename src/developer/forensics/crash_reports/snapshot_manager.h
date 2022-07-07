@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fpromise/promise.h>
@@ -21,6 +20,7 @@
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
+#include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -42,7 +42,7 @@ using SnapshotUuid = std::string;
 class SnapshotManager {
  public:
   SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
-                  fuchsia::feedback::DataProvider* data_provider,
+                  feedback_data::DataProviderInternal* data_provider,
                   feedback::AnnotationManager* annotation_manager,
                   zx::duration shared_request_window,
                   const std::string& garbage_collected_snapshots_path,
@@ -124,7 +124,8 @@ class SnapshotManager {
   SnapshotUuid MakeNewSnapshotRequest(zx::time start_time, zx::duration timeout);
 
   // Use |fidl_snapshot| to update all snapshot-related state with Uuid |uuid|.
-  void CompleteWithSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Snapshot fidl_snapshot);
+  void CompleteWithSnapshot(const SnapshotUuid& uuid, feedback::Annotations annotations,
+                            fuchsia::feedback::Attachment archive);
 
   // Remove the annotations and archives of the oldest requests, independently of one another, until
   // |current_annotations_size_| is less than or equal to |max_annotations_size_| and
@@ -144,7 +145,7 @@ class SnapshotManager {
   std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
 
-  fuchsia::feedback::DataProvider* data_provider_;
+  feedback_data::DataProviderInternal* data_provider_;
   feedback::AnnotationManager* annotation_manager_;
 
   zx::duration shared_request_window_;

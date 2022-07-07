@@ -136,6 +136,14 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
   });
 }
 
+void DataProvider::GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) {
+  GetSnapshotInternal(timeout, [callback = std::move(callback)](
+                                   const feedback::Annotations& annotations,
+                                   fsl::SizedVmo archive) mutable {
+    callback(annotations, {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+  });
+}
+
 void DataProvider::GetSnapshotInternal(
     zx::duration timeout, fit::callback<void(feedback::Annotations, fsl::SizedVmo)> callback) {
   const uint64_t timer_id = cobalt_->StartTimer();

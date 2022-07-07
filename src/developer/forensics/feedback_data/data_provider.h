@@ -42,8 +42,20 @@ class ServedArchive {
   std::unique_ptr<async::WaitOnce> channel_closed_observer_ = nullptr;
 };
 
+// Internal-only class for collecting snapshots that avoids converting data to FIDL domain objects.
+// Should be used by Feedback itself because the conversion to FIDL is lossy and information on why
+// data is missing, like annotations, is dropped.
+class DataProviderInternal {
+ public:
+  virtual ~DataProviderInternal() = default;
+
+  using GetSnapshotInternalCallback =
+      fit::callback<void(feedback::Annotations, fuchsia::feedback::Attachment)>;
+  virtual void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) = 0;
+};
+
 // Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
-class DataProvider : public fuchsia::feedback::DataProvider {
+class DataProvider : public fuchsia::feedback::DataProvider, public DataProviderInternal {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, RedactorBase* redactor, bool is_first_instance,
@@ -58,6 +70,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                       GetAnnotationsCallback callback) override;
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 

@@ -59,7 +59,7 @@ void FeedbackData::Handle(
                                                    dispatcher_, std::move(error_handler));
 }
 
-fuchsia::feedback::DataProvider* FeedbackData::DataProvider() { return &data_provider_; }
+feedback_data::DataProvider* FeedbackData::DataProvider() { return &data_provider_; }
 
 void FeedbackData::ShutdownImminent(::fit::deferred_callback stop_respond) {
   system_log_recorder_lifecycle_.set_error_handler(

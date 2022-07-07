@@ -798,7 +798,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAnnotationsOnServer();
+  CheckAnnotationsOnServer({{"debug.snapshot.present", "false"}});
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 

@@ -24,23 +24,16 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::GetSnapshotParameters;
-using FidlSnapshot = fuchsia::feedback::Snapshot;
 
 template <typename V>
-void AddAnnotation(const std::string& key, const V& value, FidlSnapshot* snapshot) {
-  snapshot->mutable_annotations()->push_back(Annotation{
-      .key = key,
-      .value = std::to_string(value),
-  });
+void AddAnnotation(const std::string& key, const V& value, feedback::Annotations& annotations) {
+  annotations.insert({key, std::to_string(value)});
 }
 
 template <>
 void AddAnnotation<std::string>(const std::string& key, const std::string& value,
-                                FidlSnapshot* snapshot) {
-  snapshot->mutable_annotations()->push_back(Annotation{
-      .key = key,
-      .value = value,
-  });
+                                feedback::Annotations& annotations) {
+  annotations.insert({key, value});
 }
 
 // Helper function to make a shared_ptr from a rvalue-reference of a type.
@@ -52,7 +45,7 @@ std::shared_ptr<T> MakeShared(T&& t) {
 }  // namespace
 
 SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
-                                 fuchsia::feedback::DataProvider* data_provider,
+                                 feedback_data::DataProviderInternal* data_provider,
                                  feedback::AnnotationManager* annotation_manager,
                                  zx::duration shared_request_window,
                                  const std::string& garbage_collected_snapshots_path,
@@ -254,16 +247,15 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
                       });
 
   requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
-    GetSnapshotParameters params;
-
     // Give 15s for the packaging of the snapshot and the round-trip between the client and
     // the server and the rest is given to each data collection.
-    params.set_collection_timeout_per_data((timeout - zx::sec(15)).get());
-
-    data_provider_->GetSnapshot(std::move(params), [this, uuid](FidlSnapshot snapshot) {
-      CompleteWithSnapshot(uuid, std::move(snapshot));
-      EnforceSizeLimits();
-    });
+    zx::duration collection_timeout_per_data = timeout - zx::sec(15);
+    data_provider_->GetSnapshotInternal(
+        collection_timeout_per_data,
+        [this, uuid](feedback::Annotations annotations, fuchsia::feedback::Attachment archive) {
+          CompleteWithSnapshot(uuid, std::move(annotations), std::move(archive));
+          EnforceSizeLimits();
+        });
   });
   requests_.back()->delayed_get_snapshot.PostForTime(dispatcher_,
                                                      start_time + shared_request_window_);
@@ -303,7 +295,9 @@ void SnapshotManager::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadlin
   }
 }
 
-void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapshot fidl_snapshot) {
+void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid,
+                                           feedback::Annotations annotations,
+                                           fuchsia::feedback::Attachment archive) {
   auto* request = FindSnapshotRequest(uuid);
   auto* data = FindSnapshotData(uuid);
 
@@ -313,38 +307,37 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   FX_CHECK(request->is_pending);
 
   data->presence_annotations = std::make_shared<feedback::Annotations>();
-  if (fidl_snapshot.IsEmpty()) {
-    data->presence_annotations->insert({"debug.snapshot.present", "false"});
-  }
 
   // Add annotations about the snapshot. These are not "presence" annotations because
   // they're unchanging and not the result of the SnapshotManager's data management.
   AddAnnotation("debug.snapshot.shared-request.num-clients", data->num_clients_with_uuid,
-                &fidl_snapshot);
-  AddAnnotation("debug.snapshot.shared-request.uuid", request->uuid, &fidl_snapshot);
+                annotations);
+  AddAnnotation("debug.snapshot.shared-request.uuid", request->uuid, annotations);
 
-  // Take ownership of |fidl_snapshot| and the record the size of its annotations and archive.
-  if (fidl_snapshot.has_annotations()) {
-    data->annotations = MakeShared(feedback::FromFidl(fidl_snapshot.annotations()));
+  // Take ownership of |annotations| and then record the size of the annotations and archive.
+  data->annotations = MakeShared(std::move(annotations));
 
-    for (const auto& [k, v] : *data->annotations) {
-      data->annotations_size += StorageSize::Bytes(k.size());
-      if (v.HasValue()) {
-        data->annotations_size += StorageSize::Bytes(v.Value().size());
-      }
+  for (const auto& [k, v] : *data->annotations) {
+    data->annotations_size += StorageSize::Bytes(k.size());
+    if (v.HasValue()) {
+      data->annotations_size += StorageSize::Bytes(v.Value().size());
     }
-    current_annotations_size_ += data->annotations_size;
   }
+  current_annotations_size_ += data->annotations_size;
 
-  if (fidl_snapshot.has_archive()) {
-    data->archive = MakeShared(ManagedSnapshot::Archive(fidl_snapshot.archive()));
+  if (!archive.key.empty() && archive.value.vmo.is_valid()) {
+    data->archive = MakeShared(ManagedSnapshot::Archive(archive));
 
     data->archive_size += StorageSize::Bytes(data->archive->key.size());
     data->archive_size += StorageSize::Bytes(data->archive->value.size());
     current_archives_size_ += data->archive_size;
   }
 
-  // The request is completed and unblock all promises that need |snapshot|.
+  if (data->archive == nullptr) {
+    data->presence_annotations->insert({"debug.snapshot.present", "false"});
+  }
+
+  // The request is completed and unblock all promises that need |annotations| and |archive|.
   request->is_pending = false;
   for (auto& blocked_promise : request->blocked_promises) {
     if (blocked_promise) {

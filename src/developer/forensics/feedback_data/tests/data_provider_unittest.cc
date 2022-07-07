@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
@@ -61,6 +62,12 @@ constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
 
 constexpr zx::duration kDefaultSnapshotFlowDuration = zx::usec(5);
+
+// Timeout for a single asynchronous piece of data, e.g., syslog collection, if the client didn't
+// specify one.
+//
+// 30s seems reasonable to collect everything.
+constexpr zx::duration kDefaultDataTimeout = zx::sec(30);
 
 // Returns a Screenshot with the right dimensions, no image.
 std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
@@ -202,6 +209,29 @@ class DataProviderTest : public UnitTestFixture {
     clock_.Set(zx::time(0) + snapshot_flow_duration);
     RunLoopUntilIdle();
     return snapshot;
+  }
+
+  std::pair<feedback::Annotations, fuchsia::feedback::Attachment> GetSnapshotInternal(
+      zx::duration snapshot_flow_duration = kDefaultSnapshotFlowDuration) {
+    FX_CHECK(data_provider_);
+
+    feedback::Annotations annotations;
+    fuchsia::feedback::Attachment archive;
+
+    // We can set |clock_|'s start and end times because the call to start the timer happens
+    // independently of the loop while the call to end it happens in a task that is posted on the
+    // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
+    // recorded.
+    clock_.Set(zx::time(0));
+    data_provider_->GetSnapshotInternal(
+        kDefaultDataTimeout, [&annotations, &archive](feedback::Annotations resultAnnotations,
+                                                      fuchsia::feedback::Attachment resultArchive) {
+          annotations = std::move(resultAnnotations);
+          archive = std::move(resultArchive);
+        });
+    clock_.Set(zx::time(0) + snapshot_flow_duration);
+    RunLoopUntilIdle();
+    return {std::move(annotations), std::move(archive)};
   }
 
   size_t NumCurrentServedArchives() { return data_provider_->NumCurrentServedArchives(); }
@@ -533,6 +563,30 @@ TEST_F(DataProviderTest, GetSnapshot_SingleAttachmentOnEmptyAttachmentAllowlist)
   Snapshot snapshot = GetSnapshot();
   auto unpacked_attachments = UnpackSnapshot(snapshot);
   EXPECT_EQ(unpacked_attachments.count(kAttachmentAnnotations), 1u);
+}
+
+TEST_F(DataProviderTest, GetSnapshot_ErrorAnnotationsNotInFidl) {
+  SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{},
+                    {{"annotation1", Error::kMissingValue}});
+
+  Snapshot snapshot = GetSnapshot();
+  EXPECT_FALSE(snapshot.has_annotations());
+}
+
+TEST_F(DataProviderTest, GetSnapshotUnfilteredAnnotations_DoesNotFilterMissingAnnotations) {
+  SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{},
+                    {{"annotation1", Error::kMissingValue}});
+
+  auto [annotations, archive] = GetSnapshotInternal();
+  EXPECT_EQ(annotations.size(), 1u);
+  EXPECT_TRUE(annotations.find("annotation1") != annotations.end());
+}
+
+TEST_F(DataProviderTest, GetSnapshotUnfilteredAnnotations_ReturnsFilledArchive) {
+  SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
+
+  auto [annotations, archive] = GetSnapshotInternal();
+  EXPECT_TRUE(archive.value.size > 0u);
 }
 
 }  // namespace

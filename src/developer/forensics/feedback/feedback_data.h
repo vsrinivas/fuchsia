@@ -52,7 +52,7 @@ class FeedbackData {
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request,
               ::fit::function<void(zx_status_t)> error_handler);
 
-  fuchsia::feedback::DataProvider* DataProvider();
+  feedback_data::DataProvider* DataProvider();
 
   void ShutdownImminent(::fit::deferred_callback stop_respond);
 

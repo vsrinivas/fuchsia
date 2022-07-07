@@ -16,12 +16,18 @@
 #include <map>
 #include <memory>
 
+#include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/testing/stubs/fidl_server.h"
 
 namespace forensics {
 namespace stubs {
 
-using DataProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DataProvider);
+using DataProviderServerBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DataProvider);
+
+class DataProviderBase : public DataProviderServerBase, public feedback_data::DataProviderInternal {
+ public:
+  ~DataProviderBase() override = default;
+};
 
 class DataProvider : public DataProviderBase {
  public:
@@ -32,6 +38,9 @@ class DataProvider : public DataProviderBase {
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
 
  protected:
   const std::map<std::string, std::string> annotations_;
@@ -46,6 +55,9 @@ class DataProviderReturnsNoAnnotation : public DataProvider {
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
 };
 
 class DataProviderReturnsNoAttachment : public DataProvider {
@@ -56,6 +68,9 @@ class DataProviderReturnsNoAttachment : public DataProvider {
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
 };
 
 class DataProviderReturnsEmptySnapshot : public DataProviderBase {
@@ -63,6 +78,9 @@ class DataProviderReturnsEmptySnapshot : public DataProviderBase {
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
 };
 
 class DataProviderTracksNumConnections : public DataProviderBase {
@@ -83,6 +101,9 @@ class DataProviderTracksNumConnections : public DataProviderBase {
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
 
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
+
  private:
   const size_t expected_num_connections_;
 
@@ -98,6 +119,9 @@ class DataProviderTracksNumCalls : public DataProviderBase {
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
 
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
+
  private:
   const size_t expected_num_calls_;
 
@@ -109,6 +133,10 @@ class DataProviderNeverReturning : public DataProviderBase {
   // |fuchsia::feedback::DataProvider|
   STUB_METHOD_DOES_NOT_RETURN(GetSnapshot, fuchsia::feedback::GetSnapshotParameters,
                               GetSnapshotCallback)
+
+  // |feedback::DataProviderInternal|
+  STUB_METHOD_DOES_NOT_RETURN(GetSnapshotInternal, zx::duration timeout,
+                              GetSnapshotInternalCallback callback)
 };
 
 class DataProviderSnapshotOnly : public DataProviderBase {
@@ -119,6 +147,9 @@ class DataProviderSnapshotOnly : public DataProviderBase {
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
 
  private:
   fuchsia::feedback::Attachment snapshot_;

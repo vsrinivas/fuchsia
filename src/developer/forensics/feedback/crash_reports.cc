@@ -14,7 +14,8 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, inspect::Node* inspect_root,
                            feedback::AnnotationManager* annotation_manager,
-                           fuchsia::feedback::DataProvider* data_provider, const Options options)
+                           feedback_data::DataProviderInternal* data_provider,
+                           const Options options)
     : dispatcher_(dispatcher),
       info_context_(
           std::make_shared<crash_reports::InfoContext>(inspect_root, clock, dispatcher, services)),
