@@ -291,7 +291,8 @@ impl BuiltinEnvironmentBuilder {
         };
 
         let boot_resolver = if self.add_environment_resolvers {
-            let boot_resolver = register_boot_resolver(&mut self.resolvers, &runtime_config)?;
+            let boot_resolver =
+                register_boot_resolver(&mut self.resolvers, &runtime_config).await?;
             register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
             boot_resolver
         } else {
@@ -1155,7 +1156,7 @@ impl BuiltinEnvironment {
 // Creates a FuchsiaBootResolver if the /boot directory is installed in component_manager's
 // namespace, and registers it with the ResolverRegistry. The resolver is returned to so that
 // it can be installed as a Builtin capability.
-fn register_boot_resolver(
+async fn register_boot_resolver(
     resolvers: &mut ResolverRegistry,
     runtime_config: &RuntimeConfig,
 ) -> Result<Option<Arc<FuchsiaBootResolver>>, Error> {
@@ -1163,7 +1164,8 @@ fn register_boot_resolver(
         BuiltinBootResolver::Boot => "/boot",
         BuiltinBootResolver::None => return Ok(None),
     };
-    let boot_resolver = FuchsiaBootResolver::new(path).context("Failed to create boot resolver")?;
+    let boot_resolver =
+        FuchsiaBootResolver::new(path).await.context("Failed to create boot resolver")?;
     match boot_resolver {
         None => {
             info!(%path, "fuchsia-boot resolver unavailable, not in namespace");

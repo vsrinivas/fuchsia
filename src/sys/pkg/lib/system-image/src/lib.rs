@@ -14,7 +14,7 @@ pub use crate::{
         AllowListError, CachePackagesInitError, PathHashMappingError, StaticPackagesInitError,
     },
     non_static_allowlist::NonStaticAllowList,
-    path_hash_mapping::{PathHashMapping, StaticPackages},
+    path_hash_mapping::{Bootfs, PathHashMapping, StaticPackages},
     system_image::{ExecutabilityRestrictions, SystemImage},
 };
 

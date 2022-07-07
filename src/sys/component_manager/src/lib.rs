@@ -8,6 +8,7 @@
 #![recursion_limit = "256"]
 
 pub mod bootfs;
+pub mod builtin;
 pub mod builtin_environment;
 pub mod capability;
 pub mod elf_runner;
@@ -21,6 +22,5 @@ pub(crate) mod framework;
 pub(crate) mod fuchsia_pkg_resolver;
 pub(crate) mod root_stop_notifier;
 
-mod builtin;
 mod constants;
 mod diagnostics;

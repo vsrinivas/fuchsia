@@ -44,7 +44,7 @@ const BOOTFS_EXECUTABLE_PACKAGE_DIRECTORIES: &[&str] = &["bin", "lib"];
 
 // Top level directories in bootfs that are allowed to contain executable files.
 // Every file in these directories will have ZX_RIGHT_EXECUTE.
-const BOOTFS_EXECUTABLE_DIRECTORIES: &[&str] = &["bin", "driver", "lib", "test"];
+const BOOTFS_EXECUTABLE_DIRECTORIES: &[&str] = &["bin", "driver", "lib", "test", "blob"];
 
 pub struct BootfsSvc {
     next_inode: u64,
@@ -60,6 +60,16 @@ impl BootfsSvc {
             anyhow!("Ingesting a bootfs image requires a valid bootfs vmo handle.")
         })?);
 
+        Self::new_internal(bootfs)
+    }
+
+    // BootfsSvc can be used in hermetic integration tests by providing
+    // an arbitrary vmo containing a valid bootfs image.
+    pub fn new_for_test(bootfs: zx::Vmo) -> Result<Self, Error> {
+        Self::new_internal(bootfs)
+    }
+
+    fn new_internal(bootfs: zx::Vmo) -> Result<Self, Error> {
         let bootfs_dup = bootfs.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
         let parser = BootfsParser::create_from_vmo(bootfs_dup)?;
 
@@ -173,11 +183,12 @@ impl BootfsSvc {
         Err(anyhow!("Unable to find config: {}.", config_path))
     }
 
-    pub fn ingest_bootfs_vmo(mut self, system: &Option<Resource>) -> Result<Self, Error> {
+    pub fn ingest_bootfs_vmo(self, system: &Option<Resource>) -> Result<Self, Error> {
         let system = system.as_ref().ok_or(anyhow!(
             "Bootfs requires a valid system resource handle so that it can make \
             VMO regions executable."
         ))?;
+
         let vmex = system.create_child(
             zx::ResourceKind::SYSTEM,
             None,
@@ -196,6 +207,19 @@ impl BootfsSvc {
         let bootfs_exec: zx::Vmo = self.bootfs.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
         let bootfs_exec = bootfs_exec.replace_as_executable(&vmex)?;
 
+        self.ingest_bootfs_vmo_internal(bootfs_exec)
+    }
+
+    // Ingesting the bootfs vmo with this API will produce a /boot VFS that supports all
+    // functionality except execution of contents; the permission to convert arbitrary vmos
+    // to executable requires the root System resource, which is not available to fuchsia
+    // test components.
+    pub fn ingest_bootfs_vmo_for_test(self) -> Result<Self, Error> {
+        let fake_exec: zx::Vmo = self.bootfs.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
+        self.ingest_bootfs_vmo_internal(fake_exec)
+    }
+
+    pub fn ingest_bootfs_vmo_internal(mut self, bootfs_exec: zx::Vmo) -> Result<Self, Error> {
         for entry in self.parser.zero_copy_iter() {
             match entry {
                 Ok(entry) => {

@@ -17,6 +17,10 @@ use {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Static;
 
+/// PhantomData type marker to indicate a `PathHashMapping` is a "data/bootfs_packages" file.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct Bootfs;
+
 pub type StaticPackages = PathHashMapping<Static>;
 
 /// A `PathHashMapping` reads and writes line-oriented "{package_path}={hash}\n" files, e.g.
