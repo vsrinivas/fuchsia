@@ -39,6 +39,7 @@ class SdkCppHarness : public fio_test::Io1Harness {
     config.set_mutable_file(true);         // Files are mutable.
     config.set_supports_remote_dir(true);  // vfs::RemoteDir
     config.set_supports_vmo_file(true);    // vfs::VmoFile
+    config.set_supports_get_buffer(true);  // vfs::VmoFile
 
     // Unsupported configuration options:
     config.set_supports_create(false);           // OPEN_FLAG_CREATE is not supported.
@@ -49,9 +50,8 @@ class SdkCppHarness : public fio_test::Io1Harness {
     config.set_conformant_path_handling(false);  // Path handling is currently inconsistent.
     config.set_supports_unlink(false);           // Unlink is not supported.
 
-    // TODO(fxbug.dev/45287): Support ExecutableFile, and GetBuffer.
+    // TODO(https://fxbug.dev/45287): Support ExecutableFile
     config.set_supports_executable_file(false);
-    config.set_supports_get_buffer(false);
 
     callback(std::move(config));
   }

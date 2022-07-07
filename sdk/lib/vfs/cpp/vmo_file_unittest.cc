@@ -419,10 +419,6 @@ TEST(VmoFile, VmoWithNoRights) {
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());
   }
-
-  // Describing the VMO should close the connection.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, file_ptr->Describe(&info));
 }
 
 TEST(VmoFile, UnalignedCopyOnWrite) {
@@ -456,10 +452,6 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
     EXPECT_EQ(vmo_result, result.response().data);
     EXPECT_EQ('a', result.response().data[0]);
   }
-
-  // Describing the VMO should close the connection.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, file_ptr->Describe(&info));
 }
 
 }  // namespace

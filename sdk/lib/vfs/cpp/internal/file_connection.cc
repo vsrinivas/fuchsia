@@ -158,9 +158,26 @@ void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
   callback(fpromise::ok());
 }
 
-void FileConnection::GetBackingMemory(fuchsia::io::VmoFlags flags,
+void FileConnection::GetBackingMemory(fuchsia::io::VmoFlags vmo_flags,
                                       GetBackingMemoryCallback callback) {
-  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+  if ((vmo_flags & fuchsia::io::VmoFlags::READ) != fuchsia::io::VmoFlags{}) {
+    if (!Flags::IsReadable(flags())) {
+      callback(fpromise::error(ZX_ERR_ACCESS_DENIED));
+      return;
+    }
+  }
+  if ((vmo_flags & fuchsia::io::VmoFlags::WRITE) != fuchsia::io::VmoFlags{}) {
+    if (!Flags::IsWritable(flags())) {
+      callback(fpromise::error(ZX_ERR_ACCESS_DENIED));
+      return;
+    }
+  }
+  zx::vmo vmo;
+  if (zx_status_t status = vn_->GetBackingMemory(vmo_flags, &vmo); status != ZX_OK) {
+    callback(fpromise::error(status));
+  } else {
+    callback(fpromise::ok(std::move(vmo)));
+  }
 }
 
 void FileConnection::SendOnOpenEvent(zx_status_t status) {

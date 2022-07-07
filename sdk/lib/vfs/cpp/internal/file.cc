@@ -37,6 +37,10 @@ zx_status_t File::CreateConnection(fuchsia::io::OpenFlags flags,
 
 size_t File::GetCapacity() { return std::numeric_limits<size_t>::max(); }
 
+zx_status_t File::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 NodeKind::Type File::GetKind() const { return NodeKind::kFile; }
 
 }  // namespace internal

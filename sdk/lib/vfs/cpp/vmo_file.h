@@ -107,6 +107,9 @@ class VmoFile final : public vfs::internal::File {
   // this value.
   size_t GetCapacity() override;
 
+  // Override that implements this; the parent class returns an error.
+  zx_status_t GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo) override;
+
   // Returns the node attributes for this VmoFile.
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
@@ -114,8 +117,6 @@ class VmoFile final : public vfs::internal::File {
   NodeKind::Type GetKind() const override;
 
  private:
-  zx::vmo GetVmoForDescribe();
-
   const size_t offset_;
   const size_t length_;
   const WriteOption write_option_;

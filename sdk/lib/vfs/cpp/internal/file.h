@@ -61,6 +61,12 @@ class File : public Node {
   // this value.
   virtual size_t GetCapacity();
 
+  // Retrieve the memory backing the file.
+  //
+  // If |GetBackingMemory| returns |ZX_OK|, |out_vmo| should contain a valid handle to the retrieved
+  // backing memory, in accordance with properties requested by |flags|.
+  virtual zx_status_t GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo);
+
  protected:
   NodeKind::Type GetKind() const override;
 
