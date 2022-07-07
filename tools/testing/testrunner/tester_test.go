@@ -191,11 +191,16 @@ func TestSubprocessTester(t *testing.T) {
 
 type fakeDataSinkCopier struct {
 	reconnectCalls int
-	remoteDir      string
+	remoteDirs     map[string]struct{}
+}
+
+func (c *fakeDataSinkCopier) GetAllDataSinks(remoteDir string) ([]runtests.DataSink, error) {
+	c.remoteDirs[remoteDir] = struct{}{}
+	return []runtests.DataSink{{Name: "sink", File: "sink"}}, nil
 }
 
 func (c *fakeDataSinkCopier) GetReferences(remoteDir string) (map[string]runtests.DataSinkReference, error) {
-	c.remoteDir = remoteDir
+	c.remoteDirs[remoteDir] = struct{}{}
 	return map[string]runtests.DataSinkReference{}, nil
 }
 
@@ -257,7 +262,7 @@ func TestFFXTester(t *testing.T) {
 			client := &fakeSSHClient{
 				runErrs: c.sshRunErrs,
 			}
-			copier := &fakeDataSinkCopier{}
+			copier := &fakeDataSinkCopier{remoteDirs: make(map[string]struct{})}
 			sshTester := &FuchsiaSSHTester{
 				client:                      client,
 				copier:                      copier,
@@ -375,8 +380,8 @@ func TestFFXTester(t *testing.T) {
 					t.Errorf("failed to find kernel sinks")
 				}
 			} else {
-				if copier.remoteDir != dataOutputDir {
-					t.Errorf("expected sinks in dir: %s, but got: %s", dataOutputDir, copier.remoteDir)
+				if _, ok := copier.remoteDirs[dataOutputDir]; !ok {
+					t.Errorf("expected sinks in dir: %s, but got: %s", dataOutputDir, copier.remoteDirs)
 				}
 			}
 		})
@@ -467,7 +472,7 @@ func TestSSHTester(t *testing.T) {
 				reconnectErrs: c.reconErrs,
 				runErrs:       c.runErrs,
 			}
-			copier := &fakeDataSinkCopier{}
+			copier := &fakeDataSinkCopier{remoteDirs: make(map[string]struct{})}
 			serialSocket := &fakeSerialClient{}
 			var tester Tester
 			tester = &FuchsiaSSHTester{
@@ -519,8 +524,22 @@ func TestSSHTester(t *testing.T) {
 				}
 			}
 			if c.runV2 {
-				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, &TestOutputs{}); err != nil {
+				outputs := &TestOutputs{OutDir: t.TempDir()}
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, outputs); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
+				}
+				foundKernelSinks := false
+				for _, test := range outputs.Summary.Tests {
+					if test.Name == "kernel_sinks" {
+						foundKernelSinks = true
+						if len(test.DataSinks["llvm-profile"]) != 1 {
+							t.Errorf("got %d kernel sinks, want 1", len(test.DataSinks["llvm-profile"]))
+						}
+						break
+					}
+				}
+				if !foundKernelSinks {
+					t.Errorf("failed to find kernel sinks")
 				}
 			}
 
@@ -554,12 +573,14 @@ func TestSSHTester(t *testing.T) {
 			}
 
 			if c.useRuntests {
-				expectedRemoteDir := dataOutputDir
+				expectedRemoteDirs := []string{dataOutputDir}
 				if c.runV2 {
-					expectedRemoteDir = dataOutputDirV2
+					expectedRemoteDirs = []string{dataOutputDirV2, dataOutputDirKernel}
 				}
-				if copier.remoteDir != expectedRemoteDir {
-					t.Errorf("expected sinks in dir: %s, but got: %s", expectedRemoteDir, copier.remoteDir)
+				for _, dir := range expectedRemoteDirs {
+					if _, ok := copier.remoteDirs[dir]; !ok {
+						t.Errorf("expected sinks in dir: %s, but got: %s", dir, copier.remoteDirs)
+					}
 				}
 			}
 		})

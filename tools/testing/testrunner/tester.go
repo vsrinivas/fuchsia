@@ -49,6 +49,9 @@ const (
 	// The output data directory for component v2 tests.
 	dataOutputDirV2 = "/tmp/test_manager:0/children/debug_data:0/data"
 
+	// The output data directory for kernel coverage.
+	dataOutputDirKernel = "/tmp/test_manager:0/data"
+
 	// Various tools for running tests.
 	runtestsName         = "runtests"
 	runTestComponentName = "run-test-component"
@@ -103,6 +106,7 @@ type sshClient interface {
 
 // For testability
 type dataSinkCopier interface {
+	GetAllDataSinks(remoteDir string) ([]runtests.DataSink, error)
 	GetReferences(remoteDir string) (map[string]runtests.DataSinkReference, error)
 	Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error)
 	Reconnect() error
@@ -930,7 +934,7 @@ func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 	v2Sinks, err := t.copier.GetReferences(dataOutputDirV2)
 	if err != nil {
 		// If we fail to get v2 sinks, just log the error but continue to copy v1 sinks.
-		logger.Errorf(ctx, "failed to determine data sinks for v2 tests: %s", err)
+		logger.Debugf(ctx, "failed to determine data sinks for v2 tests: %s", err)
 	}
 	var v2SinkRefs []runtests.DataSinkReference
 	for _, ref := range v2Sinks {
@@ -941,6 +945,25 @@ func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 			return err
 		}
 		outputs.updateDataSinks(v2Sinks, "v2")
+	}
+	// Collect kernel coverage.
+	kernelSinks, err := t.copier.GetAllDataSinks(dataOutputDirKernel)
+	if err != nil {
+		logger.Debugf(ctx, "failed to determine data sinks for the kernel: %s", err)
+	}
+	if len(kernelSinks) > 0 {
+		// If there were kernel sinks, record the "kernel_sinks" test in the outputs
+		// so that the test result can be updated with the kernel sinks.
+		kernelSinksTest := &TestResult{
+			Name:   kernelSinksTestName,
+			Result: runtests.TestSuccess,
+		}
+		outputs.Record(ctx, *kernelSinksTest)
+		kernelSinkRef := runtests.DataSinkReference{Sinks: runtests.DataSinkMap{"llvm-profile": kernelSinks}, RemoteDir: dataOutputDirKernel}
+		if err := t.copySinks(ctx, []runtests.DataSinkReference{kernelSinkRef}, filepath.Join(t.localOutputDir, "kernel")); err != nil {
+			return err
+		}
+		outputs.updateDataSinks(map[string]runtests.DataSinkReference{kernelSinksTestName: kernelSinkRef}, "kernel")
 	}
 	return t.copySinks(ctx, sinkRefs, t.localOutputDir)
 }

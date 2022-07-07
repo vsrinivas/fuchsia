@@ -12,11 +12,16 @@ import (
 
 type fakeViewer struct {
 	s           TestSummary
+	allSinks    []string
 	copiedFiles map[string]string
 }
 
 func (v fakeViewer) summary(_ string) (*TestSummary, error) {
 	return &v.s, nil
+}
+
+func (v fakeViewer) getAllDataSinks(remote string) ([]string, error) {
+	return v.allSinks, nil
 }
 
 func (v fakeViewer) copyFile(remote, local string) error {
@@ -26,6 +31,27 @@ func (v fakeViewer) copyFile(remote, local string) error {
 
 func (v fakeViewer) close() error {
 	return nil
+}
+
+func TestGetAllDataSinks(t *testing.T) {
+	expectedSinks := []DataSink{
+		{
+			Name: "sink1",
+			File: "sink1",
+		},
+		{
+			Name: "sink2",
+			File: "sink2",
+		},
+	}
+	viewer := fakeViewer{allSinks: []string{"sink1", "sink2"}, copiedFiles: map[string]string{}}
+	copier := DataSinkCopier{viewer: viewer}
+	dataSinks, err := copier.GetAllDataSinks("REMOTE_DIR")
+	if err != nil {
+		t.Fatalf("failed to get data sinks: %s", err)
+	} else if !reflect.DeepEqual(dataSinks, expectedSinks) {
+		t.Errorf("got data sinks %v, expected %v", dataSinks, expectedSinks)
+	}
 }
 
 func TestCopyDataSinks(t *testing.T) {

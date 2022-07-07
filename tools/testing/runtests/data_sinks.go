@@ -47,6 +47,11 @@ func (c DataSinkCopier) GetReferences(remoteDir string) (map[string]DataSinkRefe
 	return getDataSinkReferences(c.viewer, remoteDir)
 }
 
+// GetAllDataSinks returns a list of DataSinks for all files in the remoteDir.
+func (c DataSinkCopier) GetAllDataSinks(remoteDir string) ([]DataSink, error) {
+	return getAllDataSinks(c.viewer, remoteDir)
+}
+
 // Reconnect should be called after the sshClient has been disconnected and
 // reconnected. It closes the old viewer and creates a new viewer using the
 // refreshed sshClient.
@@ -87,6 +92,7 @@ func (d DataSinkReference) Size() int {
 // files from a remote host after a runtests invocation.
 type remoteViewer interface {
 	summary(string) (*TestSummary, error)
+	getAllDataSinks(string) ([]string, error)
 	copyFile(string, string) error
 	close() error
 }
@@ -107,6 +113,22 @@ func (v sftpViewer) summary(summaryPath string) (*TestSummary, error) {
 		return nil, err
 	}
 	return &summary, nil
+}
+
+func (v sftpViewer) getAllDataSinks(remoteDir string) ([]string, error) {
+	var sinks []string
+	walker := v.client.Walk(remoteDir)
+	for walker.Step() {
+		if filepath.Ext(walker.Path()) != ".profraw" {
+			continue
+		}
+		relPath, err := filepath.Rel(remoteDir, walker.Path())
+		if err != nil {
+			return nil, err
+		}
+		sinks = append(sinks, relPath)
+	}
+	return sinks, nil
 }
 
 func (v sftpViewer) copyFile(remote, local string) error {
@@ -147,6 +169,19 @@ func getDataSinkReferences(viewer remoteViewer, remoteOutputDir string) (map[str
 		sinksPerTest[details.Name] = DataSinkReference{details.DataSinks, remoteOutputDir}
 	}
 	return sinksPerTest, nil
+}
+
+// getAllDataSinks returns a list of DataSinks for all files in the remoteOutputDir.
+func getAllDataSinks(viewer remoteViewer, remoteOutputDir string) ([]DataSink, error) {
+	var sinks []DataSink
+	sinkRelPaths, err := viewer.getAllDataSinks(remoteOutputDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, sink := range sinkRelPaths {
+		sinks = append(sinks, DataSink{Name: sink, File: sink})
+	}
+	return sinks, nil
 }
 
 // CopyDataSinks copies the data sinks specified in references from the
