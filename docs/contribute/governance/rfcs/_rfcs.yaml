@@ -2193,6 +2193,19 @@
   submitted: '2022-05-17'
   reviewed: '2022-06-15'
 
+- name: 'RFC-0169'
+  title: 'SDK Tool Compatibility'
+  short_description: 'Describes compatibility requirements for SDK tools'
+  authors: ['jeremymanson@google.com']
+  file: '0169_sdk_tool_compatibility.md'
+  area: ['Developer']
+  issue: ['99820']
+  gerrit_change_id: ['677102']
+  status: 'Draft'
+  reviewers: ['abarth@google.com', 'amituttam@google.com', 'dschuyler@google.com', 'maruel@google.com', 'sebmarchand@google.com', 'sethladd@google.com', 'yaar@google.com']
+  submitted: '2022-05-06'
+  reviewed: '2022-06-16'
+
 - name: 'RFC-0170'
   title: 'Remove binary images from the update package'
   short_description: 'Reorder image writes during an OTA to save space.'
