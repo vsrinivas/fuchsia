@@ -29,7 +29,9 @@
         // These system capabilities are offered for use by the google tests.
         {
             protocol: [
+                "fuchsia.device.NameProvider",
                 "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.scenic.Scenic",
