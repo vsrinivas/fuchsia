@@ -7,19 +7,21 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
+#include <functional>
+
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 
-namespace scenic_impl {
-namespace input {
-
-class InputSystem;
+namespace scenic_impl::input {
 
 // Legacy API implementation.
 // Per-session treatment of input commands.
 // Routes input events to Scenic clients.
 class InputCommandDispatcher : public CommandDispatcher {
  public:
-  InputCommandDispatcher(scheduling::SessionId session_id, InputSystem* input_system);
+  InputCommandDispatcher(
+      scheduling::SessionId session_id,
+      std::function<void(fuchsia::ui::input::SendPointerInputCmd, scheduling::SessionId)>
+          dispatch_pointer_command);
   ~InputCommandDispatcher() override = default;
 
   // |CommandDispatcher|
@@ -31,10 +33,10 @@ class InputCommandDispatcher : public CommandDispatcher {
 
  private:
   const scheduling::SessionId session_id_;
-  InputSystem* const input_system_ = nullptr;
+  const std::function<void(fuchsia::ui::input::SendPointerInputCmd, scheduling::SessionId)>
+      dispatch_pointer_command_;
 };
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
 
 #endif  // SRC_UI_SCENIC_LIB_INPUT_INPUT_COMMAND_DISPATCHER_H_

@@ -7,19 +7,16 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include "src/ui/scenic/lib/input/input_system.h"
-
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 using InputCommand = fuchsia::ui::input::Command;
 using ScenicCommand = fuchsia::ui::scenic::Command;
 
-InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
-                                               InputSystem* input_system)
-    : session_id_(session_id), input_system_(input_system) {
-  FX_CHECK(input_system_);
-}
+InputCommandDispatcher::InputCommandDispatcher(
+    scheduling::SessionId session_id,
+    std::function<void(fuchsia::ui::input::SendPointerInputCmd, scheduling::SessionId)>
+        dispatch_pointer_command)
+    : session_id_(session_id), dispatch_pointer_command_(std::move(dispatch_pointer_command)) {}
 
 void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
                                              scheduling::PresentId present_id) {
@@ -28,7 +25,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
 
   InputCommand& input = command.input();
   if (input.is_send_pointer_input()) {
-    input_system_->DispatchPointerCommand(input.send_pointer_input(), session_id_);
+    dispatch_pointer_command_(input.send_pointer_input(), session_id_);
   } else if (input.is_send_keyboard_input()) {
     FX_LOGS(WARNING) << "SendKeyboardInputCmd deprecated. Command ignored.";
   } else if (input.is_set_hard_keyboard_delivery()) {
@@ -40,5 +37,4 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
   }
 }
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input

@@ -225,8 +225,8 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     {
       const AccessibilityPointerEvent& add = listener.events()[0];
       EXPECT_EQ(add.phase(), fui_Phase::ADD);
-      EXPECT_EQ(add.ndc_point().x, 0);
-      EXPECT_EQ(add.ndc_point().y, 0);
+      EXPECT_EQ(add.ndc_point().x, 0.f);
+      EXPECT_EQ(add.ndc_point().y, 0.f);
       EXPECT_EQ(add.viewref_koid(), kClientKoid);
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
@@ -245,8 +245,8 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     {
       const AccessibilityPointerEvent& move = listener.events()[1];
       EXPECT_EQ(move.phase(), fui_Phase::MOVE);
-      EXPECT_EQ(move.ndc_point().x, 0);
-      EXPECT_EQ(move.ndc_point().y, 0);
+      EXPECT_EQ(move.ndc_point().x, 0.f);
+      EXPECT_EQ(move.ndc_point().y, 0.f);
       EXPECT_EQ(move.viewref_koid(), kClientKoid);
       EXPECT_EQ(move.local_point().x, 2.5);
       EXPECT_EQ(move.local_point().y, 2.5);
@@ -270,7 +270,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     {
       const AccessibilityPointerEvent& move = events[0];
       EXPECT_EQ(move.phase(), fui_Phase::MOVE);
-      EXPECT_EQ(move.ndc_point().x, 0);
+      EXPECT_EQ(move.ndc_point().x, 0.f);
       EXPECT_NEAR(move.ndc_point().y, .4, kNdcEpsilon);
       EXPECT_EQ(move.viewref_koid(), kClientKoid);
       EXPECT_EQ(move.local_point().x, 2.5);
@@ -281,7 +281,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     {
       const AccessibilityPointerEvent& remove = events[1];
       EXPECT_EQ(remove.phase(), fui_Phase::REMOVE);
-      EXPECT_EQ(remove.ndc_point().x, 0);
+      EXPECT_EQ(remove.ndc_point().x, 0.f);
       EXPECT_NEAR(remove.ndc_point().y, .4, kNdcEpsilon);
       EXPECT_EQ(remove.viewref_koid(), kClientKoid);
       EXPECT_EQ(remove.local_point().x, 2.5);
@@ -350,8 +350,8 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     {
       const AccessibilityPointerEvent& add = events[0];
       EXPECT_EQ(add.phase(), fui_Phase::ADD);
-      EXPECT_EQ(add.ndc_point().x, 0);
-      EXPECT_EQ(add.ndc_point().y, 0);
+      EXPECT_EQ(add.ndc_point().x, 0.f);
+      EXPECT_EQ(add.ndc_point().y, 0.f);
       EXPECT_EQ(add.viewref_koid(), kClientKoid);
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
@@ -442,8 +442,8 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
     {
       const AccessibilityPointerEvent& add = events[2];
       EXPECT_EQ(add.phase(), fui_Phase::ADD);
-      EXPECT_EQ(add.ndc_point().x, 0);
-      EXPECT_EQ(add.ndc_point().y, 0);
+      EXPECT_EQ(add.ndc_point().x, 0.f);
+      EXPECT_EQ(add.ndc_point().y, 0.f);
       EXPECT_EQ(add.viewref_koid(), kClientKoid);
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
@@ -453,8 +453,8 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
     {
       const AccessibilityPointerEvent& remove = events[3];
       EXPECT_EQ(remove.phase(), fui_Phase::REMOVE);
-      EXPECT_EQ(remove.ndc_point().x, 0);
-      EXPECT_EQ(remove.ndc_point().y, 0);
+      EXPECT_EQ(remove.ndc_point().x, 0.f);
+      EXPECT_EQ(remove.ndc_point().y, 0.f);
       EXPECT_EQ(remove.viewref_koid(), kClientKoid);
       EXPECT_EQ(remove.local_point().x, 2.5);
       EXPECT_EQ(remove.local_point().y, 2.5);
@@ -564,8 +564,8 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
     {
       const AccessibilityPointerEvent& add = events[0];
       EXPECT_EQ(add.phase(), fui_Phase::ADD);
-      EXPECT_EQ(add.ndc_point().x, 0);
-      EXPECT_EQ(add.ndc_point().y, 0);
+      EXPECT_EQ(add.ndc_point().x, 0.f);
+      EXPECT_EQ(add.ndc_point().y, 0.f);
       EXPECT_EQ(add.viewref_koid(), kClientKoid);
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);

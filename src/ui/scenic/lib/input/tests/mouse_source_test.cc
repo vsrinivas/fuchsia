@@ -255,7 +255,9 @@ TEST_F(MouseSourceTest, MouseDeviceInfo_ShouldBeSent_OncePerDevice) {
       EXPECT_EQ(unit.exponent, 900);
       EXPECT_FALSE(device_info.has_scroll_h_range());
       ASSERT_TRUE(device_info.has_buttons());
-      EXPECT_THAT(device_info.buttons(), testing::ElementsAre(12, 34, 56));
+      EXPECT_THAT(device_info.buttons(),
+                  testing::ElementsAre(static_cast<uint8_t>(12), static_cast<uint8_t>(34),
+                                       static_cast<uint8_t>(56)));
 
       ASSERT_TRUE(event.has_pointer_sample());
       ASSERT_TRUE(event.pointer_sample().has_device_id());
@@ -270,7 +272,8 @@ TEST_F(MouseSourceTest, MouseDeviceInfo_ShouldBeSent_OncePerDevice) {
       ASSERT_TRUE(pointer_sample.has_device_id());
       EXPECT_EQ(pointer_sample.device_id(), kDeviceId1);
       ASSERT_TRUE(pointer_sample.has_pressed_buttons());
-      EXPECT_THAT(pointer_sample.pressed_buttons(), testing::ElementsAre(12, 56));
+      EXPECT_THAT(pointer_sample.pressed_buttons(),
+                  testing::ElementsAre(static_cast<uint8_t>(12), static_cast<uint8_t>(56)));
     }
 
     {

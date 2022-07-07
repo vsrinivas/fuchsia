@@ -193,7 +193,8 @@ TEST_F(PointerCaptureTest, IfAnotherViewGetsInput_ListenerShouldOnlyGetCapturedI
     root_resources.scene.AddChild(holder_2);
 
     // Translate capture listener client entirely off screen.
-    holder_2.SetTranslation(test_display_width_px(), test_display_height_px(), 0);
+    holder_2.SetTranslation(static_cast<float>(test_display_width_px()),
+                            static_cast<float>(test_display_height_px()), 0);
 
     RequestToPresent(session);
   }
@@ -238,7 +239,8 @@ TEST_F(PointerCaptureTest, WhenListenerDisconnects_OtherClientsShouldStillWork) 
     root_resources.scene.AddChild(holder_2);
 
     // Translate capture client so it doesn't get input.
-    holder_2.SetTranslation(test_display_width_px(), test_display_height_px(), 0);
+    holder_2.SetTranslation(static_cast<float>(test_display_width_px()),
+                            static_cast<float>(test_display_height_px()), 0);
 
     RequestToPresent(session);
   }
@@ -522,10 +524,10 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.5 / 2.0, 0.5 / 3.0));
-    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 0.0 / 2.0, -4.0 / 3.0));
-    EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 5.0 / 2.0, -4.0 / 3.0));
-    EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 5.0 / 2.0, 1.0 / 3.0));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.5f / 2.f, 0.5f / 3.f));
+    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 0 / 2.f, -4.f / 3.f));
+    EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 5.f / 2.f, -4.f / 3.f));
+    EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 5.f / 2.f, 1.f / 3.f));
   }
 }
 
@@ -588,8 +590,8 @@ TEST_F(PointerCaptureTest, ClipSpaceTransformedListenerView_ShouldGetTransformed
 
   static constexpr float kScaleX = 0.5f;
   static constexpr float kScaleY = 1.5f;
-  const float width = static_cast<float>(test_display_width_px());
-  const float height = static_cast<float>(test_display_height_px());
+  const float width = static_cast<float>(static_cast<float>(test_display_width_px()));
+  const float height = static_cast<float>(static_cast<float>(test_display_height_px()));
 
   {
     scenic::Session* const session = root_session.session();

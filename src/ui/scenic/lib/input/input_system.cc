@@ -184,9 +184,13 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
 CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
     scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
     std::shared_ptr<ErrorReporter> error_reporter) {
-  return CommandDispatcherUniquePtr(new InputCommandDispatcher(session_id, this),
-                                    // Custom deleter.
-                                    [](CommandDispatcher* cd) { delete cd; });
+  return CommandDispatcherUniquePtr(
+      new InputCommandDispatcher(session_id,
+                                 [this](auto command, auto session_id) {
+                                   this->DispatchPointerCommand(std::move(command), session_id);
+                                 }),
+      // Custom deleter.
+      [](CommandDispatcher* cd) { delete cd; });
 }
 
 fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
@@ -446,7 +450,8 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
       context_from_world_transform.value() * world_from_screen_transform.value();
 
   InternalTouchEvent internal_event = GfxPointerEventToInternalEvent(
-      command.pointer_event, root_koid, screen_width, screen_height, context_from_screen_transform);
+      command.pointer_event, root_koid, static_cast<float>(screen_width),
+      static_cast<float>(screen_height), context_from_screen_transform);
 
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH: {

@@ -3,57 +3,94 @@
 # found in the LICENSE file.
 
 source_set("input") {
+  public_deps = [
+    ":constants",
+    ":gesture_contender_interface",
+    ":injection",
+    ":legacy",
+    ":mouse",
+    ":system",
+    ":touch",
+    ":utils",
+  ]
+}
+
+source_set("system") {
+  sources = [
+    "input_system.cc",
+    "input_system.h",
+  ]
+
+  deps = [
+    ":constants",
+    ":injection",
+    ":legacy",
+    ":mouse",
+    ":touch",
+    ":utils",
+    "//src/ui/scenic/lib/gfx",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [ "//src/ui/scenic/lib/view_tree:view_tree_snapshot" ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.cc",
+    "constants.h",
+  ]
+
+  deps = [ "//src/lib/files:files" ]
+}
+
+source_set("utils") {
+  sources = [
+    "helper.cc",
+    "helper.h",
+    "internal_pointer_event.h",
+    "stream_id.cc",
+    "stream_id.h",
+  ]
+
+  deps = [
+    "//src/ui/lib/escher/geometry:escher_geometry",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [ "//src/ui/scenic/lib/view_tree:view_tree_snapshot" ]
+}
+
+source_set("gesture_contender_interface") {
+  sources = [
+    "gesture_contender.h",
+    "gesture_contender_inspector.cc",
+    "gesture_contender_inspector.h",
+  ]
+
+  public_deps = [
+    ":utils",
+    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+source_set("legacy") {
   sources = [
     "a11y_legacy_contender.cc",
     "a11y_legacy_contender.h",
     "a11y_registry.cc",
     "a11y_registry.h",
-    "constants.cc",
-    "constants.h",
-    "gesture_arena.cc",
-    "gesture_arena.h",
-    "gesture_contender.h",
-    "gesture_contender_inspector.cc",
-    "gesture_contender_inspector.h",
     "gfx_legacy_contender.cc",
     "gfx_legacy_contender.h",
-    "helper.cc",
-    "helper.h",
-    "injector.cc",
-    "injector.h",
     "input_command_dispatcher.cc",
     "input_command_dispatcher.h",
-    "input_system.cc",
-    "input_system.h",
-    "internal_pointer_event.h",
-    "mouse_injector.cc",
-    "mouse_injector.h",
-    "mouse_source.cc",
-    "mouse_source.h",
-    "mouse_source_base.cc",
-    "mouse_source_base.h",
-    "mouse_source_with_global_mouse.cc",
-    "mouse_source_with_global_mouse.h",
-    "pointerinjector_registry.cc",
-    "pointerinjector_registry.h",
-    "stream_id.cc",
-    "stream_id.h",
-    "touch_injector.cc",
-    "touch_injector.h",
-    "touch_source.cc",
-    "touch_source.h",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/files",
-    "//src/lib/fostr/fidl/fuchsia.ui.input",
-    "//src/lib/fostr/fidl/fuchsia.ui.input.accessibility",
-    "//src/lib/fostr/fidl/fuchsia.ui.pointerinjector",
-    "//src/lib/fxl",
-    "//src/ui/lib/escher/geometry:escher_geometry",
+    ":gesture_contender_interface",
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/gfx:ids",
     "//src/ui/scenic/lib/scenic",
@@ -64,12 +101,79 @@ source_set("input") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointer.augment",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.input.accessibility",
+  ]
+}
+
+source_set("injection") {
+  sources = [
+    "injector.cc",
+    "injector.h",
+    "mouse_injector.cc",
+    "mouse_injector.h",
+    "pointerinjector_registry.cc",
+    "pointerinjector_registry.h",
+    "touch_injector.cc",
+    "touch_injector.h",
   ]
 
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  deps = [
+    ":constants",
+    ":utils",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/lib/sys/cpp:cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.pointerinjector",
+  ]
+}
+
+source_set("mouse") {
+  sources = [
+    "mouse_source.cc",
+    "mouse_source.h",
+    "mouse_source_base.cc",
+    "mouse_source_base.h",
+    "mouse_source_with_global_mouse.cc",
+    "mouse_source_with_global_mouse.h",
+  ]
+
+  deps = [
+    ":gesture_contender_interface",
+    ":utils",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointer.augment",
+  ]
+}
+
+source_set("touch") {
+  sources = [
+    "gesture_arena.cc",
+    "gesture_arena.h",
+    "touch_source.cc",
+    "touch_source.h",
+  ]
+
+  deps = [
+    ":gesture_contender_interface",
+    ":utils",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointer.augment",
+  ]
 }

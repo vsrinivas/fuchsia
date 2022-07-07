@@ -35,13 +35,16 @@ executable("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/input",
+    "//src/ui/scenic/lib/input:gesture_contender_interface",
+    "//src/ui/scenic/lib/input:injection",
+    "//src/ui/scenic/lib/input:legacy",
+    "//src/ui/scenic/lib/input:mouse",
+    "//src/ui/scenic/lib/input:touch",
+    "//src/ui/scenic/lib/input:utils",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("util") {
@@ -62,7 +65,4 @@ source_set("util") {
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/input",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -98,7 +98,8 @@ void InputSystemTest::RequestToPresent(scenic::Session* session) {
 std::pair<SessionWrapper, ResourceGraph> InputSystemTest::CreateScene() {
   SessionWrapper root_session(scenic());
   ResourceGraph root_resources(root_session.session());
-  root_resources.layer.SetSize(test_display_width_px(), test_display_height_px());
+  root_resources.layer.SetSize(static_cast<float>(test_display_width_px()),
+                               static_cast<float>(test_display_height_px()));
   {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     scenic::ViewHolder view_holder(root_session.session(), std::move(view_holder_token),
