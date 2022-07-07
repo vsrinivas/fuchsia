@@ -764,6 +764,12 @@ mod tests {
                     .expect("handle_request failed");
             }
         );
+        // Make sure the background thread that actually calls terminate() on the volume finishes
+        // before exiting the test. terminate() should be a no-op since we already verified
+        // mounted_directories is empty, but the volume's terminate() future in the background task
+        // may still be outstanding. As both the background task and VolumesDirectory::terminate()
+        // hold the write lock, we use that to block until the background task has completed.
+        volumes_directory.terminate().await;
     }
 
     #[fasync::run_singlethreaded(test)]
