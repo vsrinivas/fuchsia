@@ -199,6 +199,11 @@ class I2cChannel {
     callback(cookie, ZX_OK, read_ops, read_count);
   }
 
+  fidl::WireResult<fuchsia_hardware_i2c::Device::Transfer> Transfer(
+      fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions) {
+    return fidl_client_->Transfer(transactions);
+  }
+
   bool is_valid() const { return fidl_client_.is_valid(); }
 
  private:
