@@ -257,6 +257,11 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
 
+                // Needed for Bluetooth streaming E2E tests.
+                // TODO(fxbug.dev/90434): Consider removing when mediaplayer is v2.
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+
                 // Needed for //src/cobalt/bin/meta/cobalt_testapp_for_prober_do_not_run_manually.cml
                 // TODO(fxbug.dev/83038): Remove once e2e is better supported.
                 "fuchsia.net.http.Loader",

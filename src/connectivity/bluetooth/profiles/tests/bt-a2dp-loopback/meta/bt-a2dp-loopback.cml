@@ -1,0 +1,49 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/media/codec/factory/meta/include_codecfactory.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/bt_a2dp_loopback",
+        args: [ "--test-threads=1" ],
+    },
+    children: [
+        {
+            name: "mock-cobalt",
+            url: "fuchsia-pkg://fuchsia.com/bt-a2dp-loopback-test#meta/mock_cobalt.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#mock-cobalt" ],
+        },
+        {
+            protocol: [
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec-factory",
+            to: [ "#realm_builder" ],
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#mock-cobalt",
+            to: [ "#realm_builder" ],
+        },
+    ],
+}

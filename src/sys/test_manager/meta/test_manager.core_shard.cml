@@ -121,6 +121,7 @@
         },
         {
             protocol: [
+                "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.process.Resolver",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
