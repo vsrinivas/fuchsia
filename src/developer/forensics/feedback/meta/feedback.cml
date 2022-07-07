@@ -30,7 +30,6 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "fuchsia.feedback.DeviceIdProvider",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Product",
@@ -50,6 +49,10 @@
                 "fuchsia.settings.Privacy",
                 "fuchsia.update.channelcontrol.ChannelControl",
             ],
+            availability: "optional",
+        },
+        {
+            protocol: "fuchsia.feedback.DeviceIdProvider",
             availability: "optional",
         },
         {

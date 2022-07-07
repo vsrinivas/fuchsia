@@ -43,7 +43,6 @@
         },
         {
             protocol: [
-                "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
@@ -62,7 +61,12 @@
             to: "#test_manager",
         },
         {
-            protocol: [ "fuchsia.component.resolution.Resolver" ],
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#feedback",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.component.resolution.Resolver",
             from: "#full-resolver",
             to: "#test_manager",
         },

@@ -24,12 +24,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.snoop.Snoop",
-                "fuchsia.feedback.ComponentDataRegister",
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.feedback.CrashReportingProductRegister",
-                "fuchsia.feedback.DeviceIdProvider",
-                "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
-                "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.lowpan.device.Lookup",
@@ -384,7 +378,6 @@
         },
         {
             protocol: [
-                "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.ui.composition.Allocator",
@@ -410,7 +403,6 @@
         },
         {
             protocol: [
-                "fuchsia.feedback.DeviceIdProvider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.ui.scenic.Scenic",
             ],
@@ -423,7 +415,6 @@
         // Non-zircon services for svchost
         {
             protocol: [
-                "fuchsia.feedback.CrashReporter",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.process.Resolver",
                 "fuchsia.sys.Environment",

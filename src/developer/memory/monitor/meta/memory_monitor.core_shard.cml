@@ -26,10 +26,9 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.feedback.CrashReporter" ],
-            from: "self",
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#feedback",
             to: "#memory_monitor",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.metrics.MetricEventLoggerFactory",

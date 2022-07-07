@@ -995,6 +995,10 @@
             from: "framework",
         },
         {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#feedback",
+        },
+        {
             protocol: [ "fuchsia.sessionmanager.Startup" ],
             from: "#session-manager",
         },

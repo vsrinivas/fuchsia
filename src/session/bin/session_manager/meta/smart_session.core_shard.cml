@@ -157,6 +157,7 @@
         {
             protocol: [
                 "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.feedback.DataProvider",
                 "fuchsia.feedback.LastRebootInfoProvider",
