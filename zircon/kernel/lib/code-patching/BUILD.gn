@@ -26,7 +26,7 @@ library_headers("headers") {
     "//zircon/kernel/lib/arch:headers",
 
     # code-patches.h includes <lib/zbitl/items/bootfs.h>
-    "//zircon/system/ulib/zbitl:headers",
+    "//src/lib/zbitl:headers",
 
     # code-patches.h includes <lib/fitx/result.h>
     "//zircon/system/ulib/zxc:headers",

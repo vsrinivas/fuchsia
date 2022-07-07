@@ -52,10 +52,10 @@ source_set("zbitl") {
   sources = [ "zbitl_tests.cc" ]
 
   deps = [
+    "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
     "//zircon/kernel/lib/unittest",
-    "//zircon/system/ulib/zbitl",
   ]
 
   if (toolchain_environment == "kernel") {

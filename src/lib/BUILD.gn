@@ -4,6 +4,7 @@
 
 group("lib") {
   testonly = true
+
   deps = [
     ":tests",
     "backoff",
@@ -55,6 +56,7 @@ group("lib") {
     "uuid",
     "versioning",
     "vmo_store",
+    "zbitl",
     "zerocopy",
     "zxdump",
   ]
@@ -155,6 +157,7 @@ group("tests") {
     "vmo_store:tests",
     "vulkan:tests",
     "watch_handler:tests",
+    "zbitl:tests",
     "zerocopy:tests",
     "zircon:tests",
     "zxc:tests",

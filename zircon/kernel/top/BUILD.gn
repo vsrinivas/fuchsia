@@ -14,6 +14,7 @@ source_set("top") {
     "main.cc",
   ]
   deps = [
+    "//src/lib/zbitl",
     "//zircon/kernel/arch/$zircon_cpu",
     "//zircon/kernel/dev:init",
     "//zircon/kernel/dev/hw_rng",
@@ -32,6 +33,5 @@ source_set("top") {
     "//zircon/kernel/lib/version",
     "//zircon/kernel/phys:handoff",
     "//zircon/kernel/platform",
-    "//zircon/system/ulib/zbitl",
   ]
 }

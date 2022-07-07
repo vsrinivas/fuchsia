@@ -133,9 +133,9 @@ source_set("lib") {
     "//src/graphics/lib/magma/include/virtio",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
+    "//src/lib/zbitl",
     "//src/virtualization/third_party/fdt",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zircon-internal",
   ]
 

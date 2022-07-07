@@ -45,6 +45,7 @@ zbi_executable("zbi-code-patching-test.executable") {
   deps = [
     ":multiply_by_factor",
     "..:zbi-test-main",
+    "//src/lib/zbitl",
     "//zircon/kernel/lib/code-patching",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
@@ -53,7 +54,6 @@ zbi_executable("zbi-code-patching-test.executable") {
     "//zircon/kernel/phys:zbitl-allocation",
     "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zbitl",
   ]
 
   include_dirs = [ "." ]

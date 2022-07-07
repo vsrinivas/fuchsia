@@ -8,9 +8,9 @@ source_set("mexec") {
 
   sources = [ "mexec.cc" ]
   deps = [
+    "//src/lib/zbitl",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zircon-internal",
   ]
 }

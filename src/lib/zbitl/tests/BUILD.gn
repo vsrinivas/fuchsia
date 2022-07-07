@@ -1,0 +1,172 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//build/testing/host_test_data.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":zbitl-fuzzers",
+    ":zbitl-tests",
+    ":zbitl-unittests($host_toolchain)",
+  ]
+}
+
+# Test data ZBIs created by data/gen.py.
+test_data_zbis = [
+  "data/empty.zbi",
+  "data/one-item.zbi",
+  "data/compressed-item.zbi",
+  "data/bad-crc-item.zbi",
+  "data/multiple-small-items.zbi",
+  "data/second-item-on-page-boundary.zbi",
+  "data/bootfs.zbi",
+]
+
+if (is_host) {
+  host_test_data("host-test-data") {
+    sources = test_data_zbis
+    outputs = [ "$root_out_dir/test_data/zbitl/{{source_file_part}}" ]
+  }
+}
+
+# We define a translation unit per (src, dest) storage type pair, which
+# parametrize the tests for the copy APIs. The number of test cases is subject
+# to combinatorial explosion and in putting all such cases in a single TU we
+# see a significant build bottleneck arise, as well as stack overflow for
+# certain instrumentation and optimization levels (due to the global
+# constructors defined by the zxtest framework).
+#
+# For each storage type, we expect <type>TestTraits to coincide with the name
+# of its associated test traits type.
+src_storage_types = [
+  "String",
+  "ByteSpan",
+  "FblByteArray",
+  "Efi",
+  "Fd",
+  "Stdio",
+]
+if (is_fuchsia) {
+  src_storage_types += [
+    "Vmo",
+    "UnownedVmo",
+    "MapOwnedVmo",
+    "MapUnownedVmo",
+  ]
+}
+
+# Subtract the non-extensible types.
+dest_storage_types = src_storage_types - [
+                       "String",
+                       "ByteSpan",
+                     ]
+copy_test_deps = []
+foreach(src, src_storage_types) {
+  foreach(dest, dest_storage_types) {
+    source_set_name = "copy_tests.${src}-to-${dest}"
+    source_set(source_set_name) {
+      testonly = true
+      sources = [ "copy-tests.cc" ]
+      deps = [
+        "//src/lib/zbitl",
+        "//src/zircon/lib/zircon",
+        "//third_party/googletest:gtest",
+        "//zircon/kernel/lib/efi/testing",
+      ]
+      defines = [
+        "SRC_STORAGE_TYPE=${src}",
+        "DEST_STORAGE_TYPE=${dest}",
+      ]
+    }
+    copy_test_deps += [ ":${source_set_name}" ]
+  }
+}
+
+test("zbitl-unittests") {
+  sources = [
+    "array-tests.cc",
+    "checking-tests.cc",
+    "cpu-topology-tests.cc",
+    "efi-tests.cc",
+    "fd-tests.cc",
+    "json-tests.cc",
+    "mem-config-test.cc",
+    "span-tests.cc",
+    "stdio-tests.cc",
+    "tests.cc",
+  ]
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/zbitl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+    "//zircon/kernel/lib/efi/testing",
+  ]
+  deps += copy_test_deps
+
+  if (is_fuchsia) {
+    sources += [ "vmo-tests.cc" ]
+  } else if (is_host) {
+    deps += [ ":host-test-data" ]
+  }
+}
+
+resource("zbitl-test-resources") {
+  sources = test_data_zbis + [ "data/large.zst" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("zbitl-tests") {
+  deps = [
+    ":zbitl-test-resources",
+    ":zbitl-unittests",
+  ]
+  manifest = "meta/zbitl-unittests.cml"
+}
+
+fuzzer_package("zbitl-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [
+    ":append-fuzzer",
+    ":bootfs-iteration-fuzzer",
+    ":copy-fuzzer",
+    ":view-iteration-fuzzer",
+  ]
+}
+
+cpp_fuzzer("append-fuzzer") {
+  sources = [ "append-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("copy-fuzzer") {
+  sources = [ "copy-fuzzer.cc" ]
+  deps = [
+    "..",
+    "//zircon/system/ulib/fbl",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/zx" ]
+  }
+}
+
+# Why does passing configs not work when cpp_fuzzer is used? GN produces an
+# undefined identifier error, but cpp_fuzzer is a direct delegate to fuzzer.
+fuzzer("bootfs-iteration-fuzzer") {
+  sources = [ "bootfs-iteration-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("view-iteration-fuzzer") {
+  sources = [ "view-iteration-fuzzer.cc" ]
+  deps = [ ".." ]
+}

@@ -10,10 +10,10 @@ zx_host_tool("zbi") {
   sources = [ "zbi.cc" ]
   deps = [
     "//sdk/lib/stdcompat",
+    "//src/lib/zbitl",
     "//third_party/rapidjson",
     "//third_party/zstd",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zbitl",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/lz4",
   ]

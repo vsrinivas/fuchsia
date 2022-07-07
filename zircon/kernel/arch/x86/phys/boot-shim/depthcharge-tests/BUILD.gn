@@ -16,8 +16,8 @@ zbi_executable("proper-zbi-test") {
   testonly = true
   sources = [ "proper-zbi-test.cc" ]
   deps = [
+    "//src/lib/zbitl",
     "//zircon/kernel/phys/test:zbi-test-main",
-    "//zircon/system/ulib/zbitl",
   ]
   include_dirs = [ "//zircon/kernel/phys/test" ]
 }

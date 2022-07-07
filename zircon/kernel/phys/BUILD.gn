@@ -169,11 +169,11 @@ if (toolchain_environment == "kernel.phys" ||
       ":stdio",
       ":uart",
       ":zbi-memory",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/crypto:crypto-entropy-src",
       "//zircon/system/ulib/uart",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -182,8 +182,8 @@ if (toolchain_environment == "kernel.phys" ||
     public_deps = [
       ":allocation",
       ":handoff",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/ktl",
-      "//zircon/system/ulib/zbitl",
     ]
 
     public_configs = [ ":includes" ]
@@ -363,7 +363,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":allocation",
 
       # zbitl-allocation.h has #include <lib/zbitl/storage-traits.h>.
-      "//zircon/system/ulib/zbitl",
+      "//src/lib/zbitl",
 
       # zbitl-allocation.h has #include <lib/fitx/result.h>.
       "//zircon/system/ulib/zxc",
@@ -384,12 +384,12 @@ if (toolchain_environment == "kernel.phys" ||
       ":main",
       ":page-table",
       ":symbolize",
+      "//src/lib/zbitl",
       "//zircon/kernel/arch/$zircon_cpu/phys:address-space",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
-      "//zircon/system/ulib/zbitl",
     ]
     public_deps = [
       "//zircon/kernel/lib/ktl",
@@ -407,11 +407,11 @@ if (toolchain_environment == "kernel.phys" ||
       ":allocation",
       ":stdio",
       ":symbolize",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/pretty",
-      "//zircon/system/ulib/zbitl",
       "//zircon/system/ulib/zxc",
     ]
   }
@@ -421,11 +421,11 @@ if (toolchain_environment == "kernel.phys" ||
     public = [ "handoff-entropy.h" ]
     public_deps = [
       ":stdio",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/crypto:crypto-entropy-src",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/zbitl",
     ]
     deps = [ "//zircon/system/ulib/explicit-memory" ]
   }
@@ -439,9 +439,9 @@ if (toolchain_environment == "kernel.phys" ||
       ":handoff",
       ":zbitl-allocation",
       "//src/lib/trivial-allocator",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -458,10 +458,10 @@ if (toolchain_environment == "kernel.phys" ||
       ":symbolize",
       ":zbitl-allocation",
       "//src/lib/llvm-profdata",
+      "//src/lib/zbitl",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys/lib/memalloc",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 }
@@ -501,13 +501,13 @@ zbi_executable("physboot") {
     ":symbolize",
     ":trampoline-boot",
     ":uart",
+    "//src/lib/zbitl",
     "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/code-patching",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
-    "//zircon/system/ulib/zbitl",
   ]
 
   # Used as a bias when patching kernel code.

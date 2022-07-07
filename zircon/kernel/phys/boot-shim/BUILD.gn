@@ -24,12 +24,12 @@ if (toolchain_environment == "kernel.phys") {
     sources = [ "zbi-boot-shim.cc" ]
     include_dirs = [ "//zircon/kernel/phys" ]
     deps = [
+      "//src/lib/zbitl",
       "//zircon/kernel/phys:allocation",
       "//zircon/kernel/phys:boot-zbi",
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys:zbi-memory",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 }

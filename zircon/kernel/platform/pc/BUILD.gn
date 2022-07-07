@@ -29,6 +29,7 @@ zx_library("pc") {
   ]
   deps = [
     ":tests",
+    "//src/lib/zbitl",
     "//zircon/kernel/arch/x86:headers",
     "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/pcie",
@@ -55,7 +56,6 @@ zx_library("pc") {
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/ram-crashlog",
     "//zircon/system/ulib/smbios",
-    "//zircon/system/ulib/zbitl",
     "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [

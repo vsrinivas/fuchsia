@@ -9,8 +9,8 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("efi") {
   visibility = [
     "//src/firmware/gigaboot/*",
+    "//src/lib/zbitl/*",
     "//zircon/kernel/*",
-    "//zircon/system/ulib/zbitl/*",
   ]
 
   sources = [ "guids.c" ]

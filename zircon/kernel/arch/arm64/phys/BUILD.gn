@@ -18,13 +18,13 @@ if (toolchain_environment == "kernel.phys") {
     sources = [ "address-space.cc" ]
     include_dirs = [ "//." ]
     deps = [
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys:allocation",
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -40,6 +40,7 @@ if (toolchain_environment == "kernel.phys") {
     ]
     include_dirs = [ "//zircon/.." ]
     deps = [
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
@@ -47,7 +48,6 @@ if (toolchain_environment == "kernel.phys") {
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:stdio",
       "//zircon/kernel/phys:symbolize",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 

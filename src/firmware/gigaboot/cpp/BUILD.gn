@@ -15,9 +15,9 @@ efi_executable("gigaboot") {
 
   deps = [
     "//src/firmware/lib/zircon_boot:in_tree",
+    "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
-    "//zircon/system/ulib/zbitl",
     "//zircon/third_party/ulib/cksum",
   ]
 

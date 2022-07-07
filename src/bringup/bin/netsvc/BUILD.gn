@@ -91,6 +91,7 @@ source_set("netsvc_common") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/bringup/lib/mexec",
+    "//src/lib/zbitl",
     "//src/storage/gpt",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -99,7 +100,6 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
-    "//zircon/system/ulib/zbitl",
   ]
   public_deps = [
     ":inet6",

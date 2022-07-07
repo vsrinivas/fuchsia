@@ -195,13 +195,13 @@ if (current_toolchain != default_toolchain) {
     deps = [
       ":phys-unittest",
       ":test-main",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch/test:kernel-tests",
       "//zircon/kernel/lib/crypto:crypto-entropy-test",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/lib/unittest",
       "//zircon/kernel/tests",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -212,11 +212,11 @@ if (current_toolchain != default_toolchain) {
       ":phys-unittest",
       ":test-main",
       "..:handoff-entropy",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/lib/unittest",
-      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -252,9 +252,9 @@ if (current_toolchain != default_toolchain) {
       "..:allocation",
       "..:zbi-memory",
       "..:zbitl-allocation",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/zbitl",
       "//zircon/system/ulib/zxc",
     ]
     data_deps = [ ":decompress-test-data" ]
@@ -357,10 +357,10 @@ if (current_toolchain != default_toolchain) {
     public_deps = [
       "..:allocation",
       "..:symbolize",
+      "//src/lib/zbitl",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/zbitl",
     ]
     sources = [ "turducken.cc" ]
     deps = [

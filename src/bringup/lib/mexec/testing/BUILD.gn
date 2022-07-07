@@ -26,8 +26,8 @@ source_set("zbi-test-entry") {
   sources = [ "zbi-test-entry.cc" ]
   deps = [
     "//src/bringup/lib/mexec",
+    "//src/lib/zbitl",
     "//src/zircon/testing/standalone-test",
-    "//zircon/system/ulib/zbitl",
   ]
 
   data_deps =

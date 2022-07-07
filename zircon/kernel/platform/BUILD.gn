@@ -15,6 +15,7 @@ source_set("platform") {
     "ram_mappable_crashlog.cc",
   ]
   deps = [
+    "//src/lib/zbitl",
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/code-patching:headers",
@@ -30,7 +31,6 @@ source_set("platform") {
     "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ram-crashlog",
-    "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zxc",
   ]
 }

@@ -51,6 +51,7 @@ zbi_executable("x86-legacy-zbi-boot-shim") {
   sources = [ "x86-legacy-zbi-boot-shim.cc" ]
   deps = [
     ":legacy-mem-config",
+    "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
     "//zircon/kernel/phys:allocation",
@@ -58,7 +59,6 @@ zbi_executable("x86-legacy-zbi-boot-shim") {
     "//zircon/kernel/phys:main",
     "//zircon/kernel/phys:symbolize",
     "//zircon/kernel/phys/lib/boot-shim",
-    "//zircon/system/ulib/zbitl",
   ]
 
   configs -= [ "//zircon/kernel/phys:load-pic" ]
@@ -83,12 +83,12 @@ zbi_executable("pic-1mb-boot-shim") {
 
   sources = [ "pic-1mb-shim.cc" ]
   deps = [
+    "//src/lib/zbitl",
     "//zircon/kernel/phys:main",
     "//zircon/kernel/phys:symbolize",
     "//zircon/kernel/phys:trampoline-boot",
     "//zircon/kernel/phys:zbi-memory",
     "//zircon/kernel/phys/lib/memalloc",
-    "//zircon/system/ulib/zbitl",
   ]
 }
 
@@ -135,7 +135,7 @@ source_set("legacy-mem-config") {
     "//zircon/kernel/lib/efi",
 
     # legacy-mem-config.h has #include <lib/zbitl/storage-traits.h>
-    "//zircon/system/ulib/zbitl",
+    "//src/lib/zbitl",
 
     # legacy-mem-config.h has #include <lib/fitx/result.h>
     "//zircon/system/ulib/zxc",
@@ -251,9 +251,9 @@ test("legacy-mem-config-tests") {
   deps = [
     ":legacy-mem-config",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/zbitl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/zbitl",
   ]
 }
 

@@ -182,7 +182,7 @@ source_set("lib") {
 
   deps = [
     "//src/lib/fsl",
-    "//zircon/system/ulib/zbitl",
+    "//src/lib/zbitl",
   ]
 
   configs += [ "//build/config:all_source" ]
