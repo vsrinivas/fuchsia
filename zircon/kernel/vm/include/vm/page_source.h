@@ -430,6 +430,10 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // Forwards to the underlying PageRequestInterface::FinalizeRequest, see that for details.
   zx_status_t FinalizeRequest();
 
+  // If initialized, asks the underlying PageRequestInterface to abort this request, by calling
+  // PageRequestInterface::CancelRequest.
+  void CancelRequest();
+
   // Returns |true| if this is a batch request that can still accept additional requests. If |true|
   // the |FinalizeRequest| method must be called before |Wait| can be used. If this is |false| then
   // either this is not a batch request, or the batch request has already been closed and does not

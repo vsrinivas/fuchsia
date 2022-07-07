@@ -4461,12 +4461,14 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedResize, ZX_VMO_RESIZABLE) {
   ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), zx_system_get_page_size(),
                     zx_system_get_page_size(), &addr, 1, &pmt));
 
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
   // Try to resize down across the pinned page. The resize should fail.
   ASSERT_EQ(vmo->vmo().set_size(zx_system_get_page_size()), ZX_ERR_BAD_STATE);
-
-  if (pmt) {
-    pmt.unpin();
-  }
 
   // The VMO should not be modified.
   ASSERT_FALSE(pager.VerifyModified(vmo));
@@ -4665,6 +4667,589 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedNoReset, 0) {
   ASSERT_TRUE(pager.VerifyModified(vmo));
   // Querying the modified state now with the reset option should have reset the modified flag.
   ASSERT_FALSE(pager.VerifyModified(vmo));
+}
+
+// Tests that pinning a page for read does not dirty it and does not mark the VMO modified.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForRead, 0) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page for read.
+  zx::iommu iommu;
+  zx::bti bti;
+  zx::pmt pmt;
+  zx_iommu_desc_dummy_t desc;
+  ASSERT_OK(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()));
+  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  zx_paddr_t addr;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), 0, zx_system_get_page_size(), &addr, 1, &pmt));
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that pinning a page for write dirties it and marks the VMO modified.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWrite, 0) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr;
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0, zx_system_get_page_size(),
+                   &addr, 1, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // If we're trapping dirty transitions, the pin will generate a DIRTY request.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a page cannot be marked clean while it is pinned.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinnedWriteback, 0) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr;
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0, zx_system_get_page_size(),
+                   &addr, 1, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // If we're trapping dirty transitions, the pin will generate a DIRTY request.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Try to writeback the VMO. Since it is still pinned, this will be a no-op.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Unpin the VMO and attempt writeback again.
+  if (pmt) {
+    pmt.unpin();
+    pmt.reset();
+  }
+
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+
+  // The VMO should now be clean.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+}
+
+// Tests that writing to a page after pinning does not generate additional DIRTY requests.
+TEST(PagerWriteback, DirtyAfterPin) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr;
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0, zx_system_get_page_size(),
+                   &addr, 1, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // The pin will generate a DIRTY request.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write to the VMO. This should not generate further DIRTY requests.
+  uint8_t data = 0xaa;
+  ASSERT_OK(vmo->vmo().write(&data, 0, sizeof(data)));
+
+  // The VMO should be modified as we wrote to it again.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that pinning an already dirty page does not generate additional DIRTY requests.
+TEST(PagerWriteback, PinAfterDirty) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Write to the VMO.
+  uint8_t data = 0xaa;
+  TestThread t([vmo, data]() -> bool { return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK; });
+
+  // We should see a DIRTY request.
+  ASSERT_TRUE(t.Start());
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Pin a page for write. This should not generate further DIRTY requests.
+  zx::pmt pmt;
+  zx::iommu iommu;
+  zx::bti bti;
+  zx_iommu_desc_dummy_t desc;
+  ASSERT_OK(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()));
+  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  zx_paddr_t addr;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0, zx_system_get_page_size(),
+                    &addr, 1, &pmt));
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  // No DIRTY requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+
+  // The VMO should be modified as we wrote to it again.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that both READ and DIRTY requests are generated as expected when pinning an unpopulated
+// range for write.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWriteUnpopulated, 0) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+  // Supply only one page so we can fault on the other.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin both pages for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr[2];
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0,
+                   2 * zx_system_get_page_size(), addr, 2, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // If we're trapping dirty transitions, the pin will generate a DIRTY request for the page already
+  // present.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+
+  // We should see a READ request for the unpopulated page.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+
+  // If we're trapping dirty transitions, the pin will generate a DIRTY request for the second page.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a failed pin write does not mark the VMO modified.
+TEST(PagerWriteback, NotModifiedFailedPinWrite) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin a page for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr;
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0, zx_system_get_page_size(),
+                   &addr, 1, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // We should see a DIRTY request.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the DIRTY request, so that the overall pin fails.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+  ASSERT_TRUE(t.WaitForFailure());
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
+// Tests that a pin write that fails part of the way does not mark the VMO modified.
+TEST(PagerWriteback, NotModifiedPartialFailedPinWrite) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Pin both pages for write.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, vmo]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr[2];
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo->vmo(), 0,
+                   2 * zx_system_get_page_size(), addr, 2, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // We should see a DIRTY request for both pages.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 2, ZX_TIME_INFINITE));
+
+  // Dirty one page but fail the other and wait for the overall pin to fail.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
+  ASSERT_TRUE(t.WaitForFailure());
+
+  // The VMO should not be modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 }
 
 }  // namespace pager_tests

@@ -523,11 +523,7 @@ void PageSource::Dump() const {
   page_provider_->Dump();
 }
 
-PageRequest::~PageRequest() {
-  if (offset_ != UINT64_MAX) {
-    src_->CancelRequest(this);
-  }
-}
+PageRequest::~PageRequest() { CancelRequest(); }
 
 void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
                        page_request_type type, VmoDebugInfo vmo_debug_info,
@@ -584,6 +580,16 @@ zx_status_t PageRequest::FinalizeRequest() {
   batch_state_ = BatchState::Finalized;
 
   return src_->FinalizeRequest(this);
+}
+
+void PageRequest::CancelRequest() {
+  // Nothing to cancel if the request isn't initialized yet.
+  if (offset_ == UINT64_MAX) {
+    return;
+  }
+  DEBUG_ASSERT(src_);
+  src_->CancelRequest(this);
+  DEBUG_ASSERT(offset_ == UINT64_MAX);
 }
 
 PageRequest* LazyPageRequest::get() {

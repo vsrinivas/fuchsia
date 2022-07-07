@@ -345,6 +345,25 @@ class VmCowPages final
   // See VmObject::WritebackEnd
   zx_status_t WritebackEndLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
+  // Tries to prepare the range [offset, offset + len) for writing by marking pages dirty or
+  // verifying that they are already dirty. It is possible for only some or none of the pages in the
+  // range to be dirtied at the end of this call. |dirty_len_out| will return the (page-aligned)
+  // length starting at |offset| that contains dirty pages, either already dirty before making the
+  // call or dirtied during the call. In other words, the range [offset, offset + dirty_len_out)
+  // will be dirty when this call returns, i.e. prepared for the write to proceed, where
+  // |dirty_len_out| <= |len|.
+  //
+  // If the specified range starts with pages that are not already dirty and need to request the
+  // page source before transitioning to dirty, a DIRTY page request will be forwarded to the page
+  // source. In this case |dirty_len_out| will be set to 0, ZX_ERR_SHOULD_WAIT will be returned and
+  // the caller should wait on |page_request|. If no page requests need to be generated, i.e. we
+  // could find some pages that are already dirty at the start of the range, or if the VMO does not
+  // require dirty transitions to be trapped, ZX_OK is returned.
+  //
+  // |offset| and |len| should be page-aligned.
+  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
+                                    uint64_t* dirty_len_out) TA_REQ(lock_);
+
   using LookupInfo = VmObject::LookupInfo;
   using DirtyTrackingAction = VmObject::DirtyTrackingAction;
   // See VmObject::GetPage
@@ -433,8 +452,8 @@ class VmCowPages final
   // already be committed and this either pins all pages in the range, or pins no pages and returns
   // an error. The caller can assume that on success len / PAGE_SIZE pages were pinned.
   // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
-  //
-  // This method also replaces any loaned pages with non-loaned pages.
+  // All pages in the specified range are assumed to be non-loaned pages, so the caller is expected
+  // to replace any loaned pages beforehand if required.
   zx_status_t PinRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // See VmObject::Unpin
@@ -475,6 +494,18 @@ class VmCowPages final
   // ALLOC state.  On return, the old_page is owned by the caller.  Typically the caller will
   // remove the old_page from pmm_page_queues() and free the old_page.
   void SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) TA_REQ(lock_);
+
+  // If any pages in the specified range are loaned pages, replaces them with non-loaned pages
+  // (which requires providing a |page_request|). The specified range should be fully committed
+  // before calling this function. If a gap or a marker is encountered, or a loaned page cannot be
+  // replaced, returns early with ZX_ERR_BAD_STATE. If the replacement needs to wait on the PMM for
+  // allocation, returns ZX_ERR_SHOULD_WAIT, and the caller should wait on the |page_request|.
+  // |non_loaned_len| is set to the length (starting at |offset|) that contains only non-loaned
+  // pages. |offset| and |len| must be page-aligned. In case of slices, replaces corresponding pages
+  // in the parent.
+  zx_status_t ReplacePagesWithNonLoanedLocked(uint64_t offset, uint64_t len,
+                                              LazyPageRequest* page_request,
+                                              uint64_t* non_loaned_len) TA_REQ(lock_);
 
   // If page is still at offset, replace it with a loaned page.
   zx_status_t ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) TA_EXCL(lock_);
@@ -857,25 +888,6 @@ class VmCowPages final
   // performed on the page.
   void UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
                               bool is_pending_add = false) TA_REQ(lock_);
-
-  // Tries to prepare the range [offset, offset + len) for writing by marking pages dirty or
-  // verifying that they are already dirty. It is possible for only some or none of the pages in the
-  // range to be dirtied at the end of this call. |dirty_len_out| will return the (page-aligned)
-  // length starting at |offset| that contains dirty pages, either already dirty before making the
-  // call or dirtied during the call. In other words, the range [offset, offset + dirty_len_out)
-  // will be dirty when this call returns, i.e. prepared for the write to proceed, where
-  // |dirty_len_out| <= |len|.
-  //
-  // If the specified range starts with pages that are not already dirty and need to request the
-  // page source before transitioning to dirty, a DIRTY page request will be forwarded to the page
-  // source. In this case |dirty_len_out| will be set to 0, ZX_ERR_SHOULD_WAIT will be returned and
-  // the caller should wait on |page_request|. If no page requests need to be generated, i.e. we
-  // could find some pages that are already dirty at the start of the range, or if the VMO does not
-  // require dirty transitions to be trapped, ZX_OK is returned.
-  //
-  // |offset| and |len| should be page-aligned.
-  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
-                                    uint64_t* dirty_len_out) TA_REQ(lock_);
 
   // If supply_zero_offset_ falls within the specified range [start_offset, end_offset), try to
   // advance supply_zero_offset_ over any pages in the range that might have been committed
