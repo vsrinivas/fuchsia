@@ -291,7 +291,7 @@ fn elf_to_vmar_can_map_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
         flags |= zx::VmarFlags::CAN_MAP_WRITE;
     }
     if elf_flags.contains(elf::SegmentFlags::EXECUTE) {
-        flags |= zx::VmarFlags::CAN_MAP_EXECUTE;
+        flags |= zx::VmarFlags::CAN_MAP_EXECUTE | zx::VmarFlags::CAN_MAP_READ;
     }
     flags
 }
@@ -305,7 +305,7 @@ fn elf_to_vmar_perm_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
         flags |= zx::VmarFlags::PERM_WRITE;
     }
     if elf_flags.contains(elf::SegmentFlags::EXECUTE) {
-        flags |= zx::VmarFlags::PERM_EXECUTE;
+        flags |= zx::VmarFlags::PERM_EXECUTE | zx::VmarFlags::PERM_READ_IF_XOM_UNSUPPORTED;
     }
     flags
 }
@@ -360,6 +360,7 @@ mod tests {
         vmo: zx::Vmo,
         vmo_offset: u64,
         length: usize,
+        flags: zx::VmarFlags,
     }
 
     /// Records which VMOs and the offset within them are to be mapped.
@@ -387,12 +388,13 @@ mod tests {
             vmo: &zx::Vmo,
             vmo_offset: u64,
             length: usize,
-            _flags: zx::VmarFlags,
+            flags: zx::VmarFlags,
         ) -> Result<usize, zx::Status> {
             self.0.borrow_mut().push(RecordedMapping {
                 vmo: vmo.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS).unwrap().into(),
                 vmo_offset,
                 length,
+                flags,
             });
             Ok(vmar_offset)
         }
@@ -702,5 +704,46 @@ mod tests {
         for mapping in mapper.into_iter() {
             assert!(mapping.length != 0);
         }
+    }
+
+    #[test]
+    fn map_execute_only_segment() {
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::EXECUTE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE as usize,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: 0x10,
+                    memsz: 0x10,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+
+        let mut mapping_iter = mapper.into_iter();
+        let mapping = mapping_iter.next().expect("mapping from ELF VMO");
+        assert_eq!(
+            mapping.flags,
+            zx::VmarFlags::SPECIFIC
+                | zx::VmarFlags::PERM_EXECUTE
+                | zx::VmarFlags::PERM_READ_IF_XOM_UNSUPPORTED
+        );
+
+        // No more mappings expected.
+        assert_matches!(mapping_iter.next(), None);
     }
 }

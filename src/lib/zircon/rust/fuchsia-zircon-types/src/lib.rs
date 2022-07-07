@@ -156,6 +156,7 @@ multiconst!(zx_vm_option_t, [
     ZX_VM_REQUIRE_NON_RESIZABLE = 1 << 11;
     ZX_VM_ALLOW_FAULTS          = 1 << 12;
     ZX_VM_OFFSET_IS_UPPER_LIMIT = 1 << 13;
+    ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED = 1 << 14;
 ]);
 
 // matches ///zircon/system/public/zircon/errors.h
