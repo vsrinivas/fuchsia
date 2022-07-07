@@ -1909,7 +1909,7 @@
   short_description: 'Describes the windowing system for the Fuchsia platform and ratifies its role in the platform.'
   authors: ['dworsham@google.com', 'jaeheon@google.com', 'neelsa@google.com']
   file: '0147_view_system.md'
-  area: ['HCI, UI']
+  area: ['Graphics', 'HCI', 'View System']
   issue: ['83310']
   gerrit_change_id: ['602783']
   status: 'Accepted'
@@ -2158,7 +2158,7 @@
   short_description: 'Clarifies plans and policy to move all Fuchsia Products to a single graphics and input stack.'
   authors: ['neelsa@google.com']
   file: '0166_ui_stack.md'
-  area: ['UI']
+  area: ['Graphics', 'HCI', 'View System']
   issue: ['100308']
   gerrit_change_id: ['676347']
   status: 'Accepted'
@@ -2237,7 +2237,7 @@
   short_description: 'Proposal for a service for determining user input active or idle state and notifying clients.'
   authors: ['carolineliu@google.com']
   file: '0172_ui_activity_service.md'
-  area: ['HCI', 'UI']
+  area: ['HCI', 'Graphics']
   issue: ['86773']
   gerrit_change_id: ['686247']
   status: 'Accepted'
@@ -2264,7 +2264,7 @@
   short_description: 'Define how graphical scaling operations are handled in Flatland.'
   authors: ['emircan@google.com']
   file: '0174_scale_in_flatland.md'
-  area: ['UI']
+  area: ['Graphics']
   issue: ['99312']
   gerrit_change_id: ['686572']
   status: 'Accepted'
