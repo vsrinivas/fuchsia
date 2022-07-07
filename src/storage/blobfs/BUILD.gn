@@ -134,6 +134,7 @@ static_library("blobfs") {
       "component_runner.cc",
       "compression/blob_compressor.cc",
       "compression/external_decompressor.cc",
+      "compression/streaming_chunked_decompressor.cc",
       "directory.cc",
       "format.cc",
       "fsck.cc",

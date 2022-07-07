@@ -29,7 +29,7 @@ class FsckTest : public testing::Test {
   }
 
   MountOptions DefaultMountOptions() {
-    return {.decompression_connector = decompressor_creator_->GetDecompressorConnector()};
+    return {.decompression_connector = &decompressor_creator_->GetDecompressorConnector()};
   }
 
  private:

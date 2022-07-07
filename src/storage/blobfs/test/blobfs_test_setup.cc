@@ -41,7 +41,7 @@ zx_status_t BlobfsTestSetupBase::Mount(std::unique_ptr<BlockDevice> device,
       }
       decompressor_connector_ = std::move(connector_or.value());
     }
-    options_copy.decompression_connector = decompressor_connector_->GetDecompressorConnector();
+    options_copy.decompression_connector = &decompressor_connector_->GetDecompressorConnector();
   }
 
   auto blobfs_or = Blobfs::Create(dispatcher(), std::move(device), vfs_.get(), options_copy);

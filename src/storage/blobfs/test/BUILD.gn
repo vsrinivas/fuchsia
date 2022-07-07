@@ -99,6 +99,7 @@ test("blobfs_unittest") {
     "unit/node_reserver_test.cc",
     "unit/parser_test.cc",
     "unit/seekable_compressor_test.cc",
+    "unit/streaming_decompressor_test.cc",
     "unit/vector_extent_iterator_test.cc",
   ]
   deps = [
