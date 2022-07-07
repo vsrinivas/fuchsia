@@ -42,7 +42,6 @@
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
-                "fuchsia.recovery.policy.Device",
                 "fuchsia.settings.Audio",
                 "fuchsia.settings.Input",
                 "fuchsia.settings.Keyboard",

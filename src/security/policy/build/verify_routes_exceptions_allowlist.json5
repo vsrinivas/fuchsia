@@ -866,6 +866,26 @@
                         message: "A `use from parent` declaration was found at `/core/linux_runner` for `fuchsia.wayland.Server`, but no matching `offer` declaration was found in the parent",
                     },
                 },
+
+                // TODO(fxbug.dev/103940): once fixed, delete the suppressions below.
+                {
+                    using_node: "/core/setui_service",
+                    capability: "fuchsia.recovery.policy.Device",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "ui",
+                                        moniker: "/core",
+                                        capability_id: "fuchsia.recovery.policy.Device",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/core` tried to offer `fuchsia.recovery.policy.Device` from its child `#ui`, but `#ui` does not expose `fuchsia.recovery.policy.Device`.",
+                    },
+                },
             ],
         },
     },

@@ -37,12 +37,16 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sounds.Player",
                 "fuchsia.media.UsageReporter",
-                "fuchsia.recovery.policy.Device",
                 "fuchsia.stash.Store",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
+        },
+        {
+            protocol: "fuchsia.recovery.policy.Device",
+            from: "parent",
+            availability: "optional",
         },
 
         // Device directories.
