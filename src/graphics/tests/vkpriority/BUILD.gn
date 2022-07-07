@@ -28,7 +28,7 @@ fuchsia_component("vkpriority_cmp") {
     "//src/lib/vulkan/validation_layers",
   ]
 
-  manifest = "meta/vkpriority.cmx"
+  manifest = "meta/vkpriority.cml"
 }
 
 fuchsia_test_package("vkpriority-pkg") {
