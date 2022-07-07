@@ -22,8 +22,6 @@ SuperblockManager::SuperblockManager(const Superblock& info) {
   memcpy(info_blk_, &info, sizeof(Superblock));
 }
 
-SuperblockManager::~SuperblockManager() = default;
-
 // static
 zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(const Superblock& info,
                                                                          uint32_t max_blocks,

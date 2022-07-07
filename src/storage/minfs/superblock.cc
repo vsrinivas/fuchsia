@@ -22,8 +22,6 @@ namespace minfs {
 SuperblockManager::SuperblockManager(const Superblock& info, fzl::OwnedVmoMapper mapper)
     : mapping_(std::move(mapper)) {}
 
-SuperblockManager::~SuperblockManager() = default;
-
 // static
 zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(
     block_client::BlockDevice* device, const Superblock& info, uint32_t max_blocks,

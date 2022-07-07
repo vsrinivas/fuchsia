@@ -36,7 +36,7 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-class SuperblockManager {
+class SuperblockManager final {
  public:
   SuperblockManager() = delete;
 
@@ -46,7 +46,7 @@ class SuperblockManager {
   SuperblockManager(SuperblockManager&&) = delete;
   SuperblockManager& operator=(SuperblockManager&&) = delete;
 
-  ~SuperblockManager();
+  ~SuperblockManager() = default;
 
   static zx::status<std::unique_ptr<SuperblockManager>> Create(block_client::BlockDevice* device,
                                                                const Superblock& info,
@@ -87,7 +87,7 @@ class SuperblockManager {
 
 #else  // __Fuchsia__
 
-class SuperblockManager {
+class SuperblockManager final {
  public:
   SuperblockManager() = delete;
 
@@ -97,7 +97,7 @@ class SuperblockManager {
   SuperblockManager(SuperblockManager&&) = delete;
   SuperblockManager& operator=(SuperblockManager&&) = delete;
 
-  ~SuperblockManager();
+  ~SuperblockManager() = default;
 
   static zx::status<std::unique_ptr<SuperblockManager>> Create(const Superblock& info,
                                                                uint32_t max_blocks,
