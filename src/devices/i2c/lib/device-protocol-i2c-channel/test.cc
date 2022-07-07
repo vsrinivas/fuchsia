@@ -132,7 +132,7 @@ class I2cChannelTest : public zxtest::Test {
   }
 
   void TransactCallback(zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-    ASSERT_LE(op_count, I2C_MAX_RW_OPS);
+    ASSERT_LE(op_count, fuchsia_hardware_i2c::wire::kMaxCountTransactions);
     read_ops_ = op_count;
     for (size_t i = 0; i < op_count; i++) {
       read_data_[i] = {op_list[i].data_buffer, op_list[i].data_buffer + op_list[i].data_size};
@@ -149,7 +149,7 @@ class I2cChannelTest : public zxtest::Test {
     return std::move(endpoints->client);
   }
 
-  std::vector<uint8_t> read_data_[I2C_MAX_RW_OPS];
+  std::vector<uint8_t> read_data_[fuchsia_hardware_i2c::wire::kMaxCountTransactions];
   size_t read_ops_ = 0;
   zx_status_t transact_status_ = ZX_ERR_IO;
 
