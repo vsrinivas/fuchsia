@@ -10,7 +10,6 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire_types.h>
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/binding_driver.h>
@@ -251,9 +250,9 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
 
   auto& subordinate = it->second;
 
-  IntelI2cSubordinateSegment segs[I2C_MAX_RW_OPS];
+  IntelI2cSubordinateSegment segs[I2C_IMPL_MAX_RW_OPS];
 
-  if (op_count >= I2C_MAX_RW_OPS) {
+  if (op_count >= I2C_IMPL_MAX_RW_OPS) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

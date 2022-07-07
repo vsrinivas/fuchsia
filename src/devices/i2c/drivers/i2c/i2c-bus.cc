@@ -81,8 +81,8 @@ void I2cBus::WaitForStop() { thrd_join(thread_, nullptr); }
 
 int I2cBus::I2cThread() {
   fbl::AllocChecker ac;
-  fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_MAX_TOTAL_TRANSFER],
-                                  I2C_MAX_TOTAL_TRANSFER);
+  fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_IMPL_MAX_TOTAL_TRANSFER],
+                                  I2C_IMPL_MAX_TOTAL_TRANSFER);
   if (!ac.check()) {
     zxlogf(ERROR, "%s could not allocate read_buffer", __FUNCTION__);
     return 0;
@@ -109,8 +109,8 @@ int I2cBus::I2cThread() {
       auto p_writes = reinterpret_cast<uint8_t*>(op_list) + op_count * sizeof(i2c_op_t);
       uint8_t* p_reads = read_buffer.data();
 
-      ZX_ASSERT(op_count < I2C_MAX_RW_OPS);
-      i2c_impl_op_t impl_ops[I2C_MAX_RW_OPS];
+      ZX_ASSERT(op_count < I2C_IMPL_MAX_RW_OPS);
+      i2c_impl_op_t impl_ops[I2C_IMPL_MAX_RW_OPS];
       for (size_t i = 0; i < op_count; ++i) {
         // Same address for all ops, since there is one address per channel.
         impl_ops[i].address = txn->address;
@@ -128,7 +128,7 @@ int I2cBus::I2cThread() {
       auto status = i2c_.Transact(bus_id_, impl_ops, op_count);
 
       if (status == ZX_OK) {
-        i2c_op_t read_ops[I2C_MAX_RW_OPS];
+        i2c_op_t read_ops[I2C_IMPL_MAX_RW_OPS];
         size_t read_ops_cnt = 0;
         for (size_t i = 0; i < op_count; ++i) {
           if (op_list[i].is_read) {
@@ -194,7 +194,7 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
   }
   // Add space for requests and writes data.
   size_t req_length = sizeof(I2cTxn) + op_count * sizeof(i2c_op_t) + writes_length;
-  if (req_length >= I2C_MAX_TOTAL_TRANSFER) {
+  if (req_length >= I2C_IMPL_MAX_TOTAL_TRANSFER) {
     callback(cookie, ZX_ERR_BUFFER_TOO_SMALL, nullptr, 0);
     return;
   }

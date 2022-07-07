@@ -4,7 +4,6 @@
 
 #include "aml-hdmi.h"
 
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -194,28 +193,28 @@ void AmlHdmiDevice::ModeSet(ModeSetRequestView request, ModeSetCompleter::Sync& 
 
 void AmlHdmiDevice::EdidTransfer(EdidTransferRequestView request,
                                  EdidTransferCompleter::Sync& completer) {
-  if (request->ops.count() < 1 || request->ops.count() >= I2C_MAX_RW_OPS) {
+  if (request->ops.count() < 1 || request->ops.count() >= I2C_IMPL_MAX_RW_OPS) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   fbl::AllocChecker ac;
-  fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_MAX_TOTAL_TRANSFER],
-                                  I2C_MAX_TOTAL_TRANSFER);
+  fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_IMPL_MAX_TOTAL_TRANSFER],
+                                  I2C_IMPL_MAX_TOTAL_TRANSFER);
   if (!ac.check()) {
     zxlogf(ERROR, "%s could not allocate read_buffer", __FUNCTION__);
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
-  fbl::Array<uint8_t> write_buffer(new (&ac) uint8_t[I2C_MAX_TOTAL_TRANSFER],
-                                   I2C_MAX_TOTAL_TRANSFER);
+  fbl::Array<uint8_t> write_buffer(new (&ac) uint8_t[I2C_IMPL_MAX_TOTAL_TRANSFER],
+                                   I2C_IMPL_MAX_TOTAL_TRANSFER);
   if (!ac.check()) {
     zxlogf(ERROR, "%s could not allocate write_buffer", __FUNCTION__);
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
-  i2c_impl_op_t op_list[I2C_MAX_RW_OPS];
+  i2c_impl_op_t op_list[I2C_IMPL_MAX_RW_OPS];
   size_t write_cnt = 0;
   size_t read_cnt = 0;
   uint8_t* p_writes = write_buffer.data();
