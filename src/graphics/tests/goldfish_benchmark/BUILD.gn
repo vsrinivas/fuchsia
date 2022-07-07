@@ -29,7 +29,7 @@ fuchsia_component("goldfish_benchmark_cmp") {
   testonly = true
   component_name = "goldfish_benchmark"
   deps = [ ":goldfish_benchmark_bin" ]
-  manifest = "meta/goldfish_benchmark.cmx"
+  manifest = "meta/goldfish_benchmark.cml"
 }
 
 fuchsia_test_package("goldfish_benchmark") {
