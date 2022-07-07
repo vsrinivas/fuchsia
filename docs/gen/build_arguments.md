@@ -1115,7 +1115,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:82
+From //build/toolchain/rbe.gni:85
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1123,7 +1123,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:82
+From //build/toolchain/rbe.gni:85
 
 ### cxx_rbe_exec_strategy
 One of:
@@ -1134,11 +1134,14 @@ One of:
   * "local": Lookup action in the remote cache, but execute action
         locally on cache miss.  The locally produced result is
         not uploaded to the remote cache.
+
+  * "racing": Race local vs. remote execution, take the first to finish.
+
   (There are other rewrapper options that are not exposed.)
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:93
+From //build/toolchain/rbe.gni:99
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
@@ -1380,6 +1383,24 @@ Explicitly specify DWARF version used.
 **Current value (from the default):** `5`
 
 From //build/config/compiler.gni:66
+
+### embedder_test_build_cfg
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = false
+  is_aot = true
+  is_debug = false
+  is_product = false
+  platform_name = "flutter_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+}
+```
+
+From //src/ui/tests/integration_flutter_tests/embedder/flutter_build_config.gni:16
 
 ### emu_window_size_height
 
@@ -3928,7 +3949,7 @@ One of:
 
 **Current value (from the default):** `"none"`
 
-From //build/toolchain/rbe.gni:74
+From //build/toolchain/rbe.gni:77
 
 ### rust_rbe_enable
 Set to true to enable distributed compilation of Rust using RBE.
@@ -3958,11 +3979,14 @@ One of:
   * "local": Lookup action in the remote cache, but execute action
         locally on cache miss.  The locally produced result is
         not uploaded to the remote cache.
+
+  * "racing": Race local vs. remote execution, take the first to finish.
+
   (There are other rewrapper options that are not exposed.)
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:48
+From //build/toolchain/rbe.gni:51
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
