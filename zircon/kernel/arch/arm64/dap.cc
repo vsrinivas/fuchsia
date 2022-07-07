@@ -201,57 +201,61 @@ void arm_dap_init_percpu(uint level) {
     // Walk the ROM table to find the debug interface for this CPU.
     hwreg::RegisterMmio mmio(reinterpret_cast<void *>(da.virt));
     const auto vaddr = reinterpret_cast<uintptr_t>(da.virt);
-    coresight::RomTable table(vaddr, static_cast<uint32_t>(da.size));
-    fitx::result<ktl::string_view> result = table.Walk(mmio, [&dp, curr_cpu_mpidr,
-                                                              curr_cpu_num](uintptr_t component) {
-      hwreg::RegisterMmio mmio(reinterpret_cast<void *>(component));
-      const ComponentIdRegister::Class classid =
-          ComponentIdRegister::Get().ReadFrom(&mmio).classid();
+    fitx::result<ktl::string_view> result = coresight::RomTable::Walk(
+        mmio, static_cast<uint32_t>(da.size),
+        [&dp, vaddr, curr_cpu_mpidr, curr_cpu_num](uint32_t offset) {
+          const uintptr_t component = vaddr + offset;
+          hwreg::RegisterMmio mmio(reinterpret_cast<void *>(component));
+          const ComponentIdRegister::Class classid =
+              ComponentIdRegister::Get().ReadFrom(&mmio).classid();
 
-      // We're only interested in ARM-architected CoreSight components.
-      const DeviceArchRegister arch_reg = DeviceArchRegister::Get().ReadFrom(&mmio);
-      const uint16_t architect = arch_reg.architect() ? static_cast<uint16_t>(arch_reg.architect())
-                                                      : coresight::GetDesigner(mmio);
-      if (architect != coresight::arm::kArchitect) {
-        LTRACEF("cpu-%u ignoring component with architect %#x\n", curr_cpu_num, architect);
-        return;
-      }
-      if (classid != ComponentIdRegister::Class::kCoreSight) {
-        const ktl::string_view classid_sv = coresight::ToString(classid);
-        LTRACEF("cpu-%u ignoring component with classid %.*s\n", curr_cpu_num,
-                static_cast<int>(classid_sv.size()), classid_sv.data());
-        return;
-      }
+          // We're only interested in ARM-architected CoreSight components.
+          const DeviceArchRegister arch_reg = DeviceArchRegister::Get().ReadFrom(&mmio);
+          const uint16_t architect = arch_reg.architect()
+                                         ? static_cast<uint16_t>(arch_reg.architect())
+                                         : coresight::GetDesigner(mmio);
+          if (architect != coresight::arm::kArchitect) {
+            LTRACEF("cpu-%u ignoring component with architect %#x\n", curr_cpu_num, architect);
+            return;
+          }
+          if (classid != ComponentIdRegister::Class::kCoreSight) {
+            const ktl::string_view classid_sv = coresight::ToString(classid);
+            LTRACEF("cpu-%u ignoring component with classid %.*s\n", curr_cpu_num,
+                    static_cast<int>(classid_sv.size()), classid_sv.data());
+            return;
+          }
 
-      // We're only interested in components for *this* CPU.
-      const uint64_t component_affinity = DeviceAffinityRegister::Get().ReadFrom(&mmio).reg_value();
-      if (component_affinity != curr_cpu_mpidr) {
-        LTRACEF("cpu-%u ignoring component with affinity %#lx\n", curr_cpu_num, component_affinity);
-        return;
-      }
+          // We're only interested in components for *this* CPU.
+          const uint64_t component_affinity =
+              DeviceAffinityRegister::Get().ReadFrom(&mmio).reg_value();
+          if (component_affinity != curr_cpu_mpidr) {
+            LTRACEF("cpu-%u ignoring component with affinity %#lx\n", curr_cpu_num,
+                    component_affinity);
+            return;
+          }
 
-      // We're only interested in Core Debug Interface and ARM Cross-Trigger Matrix components.
-      const auto archid = static_cast<uint16_t>(arch_reg.archid());
-      switch (archid) {
-        case coresight::arm::archid::kCti:
-          dp.cpu_num = curr_cpu_num;
-          dp.cti = reinterpret_cast<volatile uint32_t *>(component);
-          break;
-        case coresight::arm::archid::kCoreDebugInterface8_0A:
-        case coresight::arm::archid::kCoreDebugInterface8_1A:
-        case coresight::arm::archid::kCoreDebugInterface8_2A:
-          dp.cpu_num = curr_cpu_num;
-          dp.dap = reinterpret_cast<volatile uint32_t *>(component);
-          break;
+          // We're only interested in Core Debug Interface and ARM Cross-Trigger Matrix components.
+          const auto archid = static_cast<uint16_t>(arch_reg.archid());
+          switch (archid) {
+            case coresight::arm::archid::kCti:
+              dp.cpu_num = curr_cpu_num;
+              dp.cti = reinterpret_cast<volatile uint32_t *>(component);
+              break;
+            case coresight::arm::archid::kCoreDebugInterface8_0A:
+            case coresight::arm::archid::kCoreDebugInterface8_1A:
+            case coresight::arm::archid::kCoreDebugInterface8_2A:
+              dp.cpu_num = curr_cpu_num;
+              dp.dap = reinterpret_cast<volatile uint32_t *>(component);
+              break;
 
-        default:
-          LTRACEF("ignoring component with archid %#x\n", archid);
-          break;
-      };
-      if (dp.cti && dp.dap) {
-        dp.initialized = true;
-      }
-    });
+            default:
+              LTRACEF("ignoring component with archid %#x\n", archid);
+              break;
+          };
+          if (dp.cti && dp.dap) {
+            dp.initialized = true;
+          }
+        });
     if (result.is_error()) {
       printf("DAP: error during ROM table walk (base %#lx) on cpu-%u: %.*s\n", da.base,
              curr_cpu_num, static_cast<int>(result.error_value().size()),

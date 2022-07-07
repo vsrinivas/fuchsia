@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include <dev/coresight/component.h>
@@ -79,24 +80,31 @@ struct Class0x9RomDeviceIdRegister
 
 // [CS] D5
 // A ROM table is a basic CoreSight component that provides pointers to other
-// components (including other ROM tables) in its lower registers. It is an
-// organizational structure that can be used to find all CoreSight components -
-// possibly as well as legacy or vendor-specific ones - on an SoC. Thought of
-// as a tree, the leaves are the system's CoreSight components and the root is
-// typically referred to as the "base ROM table" (or, more plainly, "the ROM
-// table").
+// components (including other ROM tables) in its lower registers via offsets
+// from its base address. It is an organizational structure that can be used to
+// find all CoreSight components - possibly as well as legacy or
+// vendor-specific ones - on an SoC. Thought of as a tree, the leaves are the
+// system's CoreSight components and the root is typically referred to as the
+// "base ROM table" (or, more plainly, "the ROM table").
 class RomTable {
  public:
-  // Conceptually, we construct a ROM table from a span of bytes, the span
-  // being required to contain all of the components that the table
-  // transitively refers to.
-  RomTable(uintptr_t base, uint32_t span_size) : base_(base), span_size_(span_size) {}
-
   // Walks the underlying tree of components with no dynamic allocation,
-  // calling `callback` on the address of each component found.
+  // calling `callback` on the offset from the table's base address (implicitly
+  // encoded in `io`) of each component found. The (`io`, `max_offset`)
+  // together implicitly give the aperture to walk.
+  //
+  // The walk will visit and access the first page of memory of each found
+  // component. Unfortunately, however, there is no canonical means to
+  // determine how large a region of memory this entails. The determination of
+  // the maximum visited offset - or at least something deemed large enough -
+  // is left to the caller. The offset must at least be
+  // `kMininumComponentSize`, which is the size of the base table proper.
   template <typename IoProvider, typename ComponentCallback>
-  fitx::result<std::string_view> Walk(IoProvider io, ComponentCallback&& callback) {
-    return WalkFrom(io, callback, 0);
+  static fitx::result<std::string_view> Walk(IoProvider io, uint32_t max_offset,
+                                             ComponentCallback&& callback) {
+    ZX_ASSERT(max_offset >= kMinimumComponentSize);
+    static_assert(std::is_invocable_v<ComponentCallback, uint32_t>);
+    return WalkFrom(io, max_offset, callback, 0);
   }
 
  private:
@@ -121,8 +129,8 @@ class RomTable {
   };
 
   template <typename IoProvider, typename ComponentCallback>
-  fitx::result<std::string_view> WalkFrom(IoProvider io, ComponentCallback&& callback,
-                                          uint32_t offset) {
+  static fitx::result<std::string_view> WalkFrom(IoProvider io, uint32_t max_offset,
+                                                 ComponentCallback&& callback, uint32_t offset) {
     const ClassId classid = ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
@@ -152,11 +160,12 @@ class RomTable {
         // [CS] D5.4
         // the offset provided by the ROM table entry requires a shift of 12 bits.
         uint32_t new_offset = offset + (contents.offset << 12);
-        if (new_offset + kMinimumComponentSize > span_size_) {
-          printf("does not fit: (view size, offset) = (%u, %u)\n", span_size_, new_offset);
-          return fitx::error("does not fit");
+        if (max_offset - kMinimumComponentSize < new_offset) {
+          printf("does not fit: (view size, offset) = (%u, %u)\n", max_offset, new_offset);
+          return fitx::error("component exceeds aperture");
         }
-        if (fitx::result<std::string_view> walk_result = WalkFrom(io, callback, new_offset);
+        if (fitx::result<std::string_view> walk_result =
+                WalkFrom(io, max_offset, callback, new_offset);
             walk_result.is_error()) {
           return walk_result;
         }
@@ -169,19 +178,19 @@ class RomTable {
       return fitx::error{"not a ROM table"};
     }
 
-    std::forward<ComponentCallback>(callback)(base_ + offset);
+    std::forward<ComponentCallback>(callback)(offset);
     return fitx::ok();
   }
 
-  bool IsTable(ClassId classid, uint16_t architect, uint16_t archid) const;
+  static bool IsTable(ClassId classid, uint16_t architect, uint16_t archid);
 
-  fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ClassId classid,
-                                                                uint8_t format) const;
+  static fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ClassId classid,
+                                                                       uint8_t format);
 
   template <typename IoProvider>
-  fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
-                                                            uint32_t N, ClassId classid,
-                                                            uint8_t format) {
+  static fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
+                                                                   uint32_t N, ClassId classid,
+                                                                   uint8_t format) {
     if (classid == ClassId::k0x1RomTable) {
       auto entry = Class0x1RomEntry::GetAt(offset, N).ReadFrom(&io);
       return fitx::ok(EntryContents{
@@ -221,9 +230,6 @@ class RomTable {
     }
     return fitx::error("bad format value");
   }
-
-  uintptr_t base_;
-  uint32_t span_size_;
 };
 
 }  // namespace coresight

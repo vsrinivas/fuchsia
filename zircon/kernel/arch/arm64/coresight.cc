@@ -139,15 +139,16 @@ void DumpComponentInfo(uintptr_t component) {
   printf("unknown: (archid, part number) = (%#x, %#x)\n", archid, partid);
 }
 
-int WalkRomTable(uintptr_t addr, uint32_t view_size) {
+int WalkRomTable(zx_vaddr_t addr, uint32_t view_size) {
   hwreg::RegisterMmio mmio(reinterpret_cast<void*>(addr));
-  coresight::RomTable table(addr, view_size);
-  auto result = table.Walk(mmio, [](uintptr_t component) {
+  auto result = coresight::RomTable::Walk(mmio, view_size, [addr](uint32_t offset) {
     printf("\n----------------------------------------\n");
-    DumpComponentInfo(component);
+    DumpComponentInfo(addr + offset);
   });
   if (result.is_error()) {
-    printf("error: %s\n", result.error_value().data());
+    ktl::string_view error = ktl::move(result).error_value();
+    printf("error: %.*s\n", static_cast<int>(error.size()), error.data());
+    return 1;
   }
   return 0;
 }

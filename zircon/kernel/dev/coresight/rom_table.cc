@@ -10,7 +10,7 @@
 
 namespace coresight {
 
-bool RomTable::IsTable(ClassId classid, uint16_t architect, uint16_t archid) const {
+bool RomTable::IsTable(ClassId classid, uint16_t architect, uint16_t archid) {
   if (classid == ClassId::k0x1RomTable) {
     return true;
   }
@@ -22,7 +22,7 @@ bool RomTable::IsTable(ClassId classid, uint16_t architect, uint16_t archid) con
 }
 
 fitx::result<std::string_view, uint32_t> RomTable::EntryIndexUpperBound(ClassId classid,
-                                                                        uint8_t format) const {
+                                                                        uint8_t format) {
   if (classid == ClassId::k0x1RomTable) {
     return fitx::ok(k0x1EntryUpperBound);
   }
