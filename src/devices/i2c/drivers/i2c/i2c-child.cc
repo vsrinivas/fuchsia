@@ -88,6 +88,8 @@ zx_status_t I2cChild::CreateAndAddDevice(
   char name[32];
   snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
   status = dev->DdkAdd(ddk::DeviceAddArgs(name)
+                           // Add the Banjo protocol ID to create aliases under /dev/class/i2c.
+                           .set_proto_id(ZX_PROTOCOL_I2C)
                            .set_flags(DEVICE_ADD_MUST_ISOLATE)
                            .set_props(props)
                            .set_fidl_protocol_offers(offers)
