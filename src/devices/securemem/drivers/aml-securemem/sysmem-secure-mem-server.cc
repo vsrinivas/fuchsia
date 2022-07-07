@@ -25,7 +25,7 @@
 namespace {
 
 constexpr uint32_t kProtectedRangeGranularity = 64u * 1024;
-constexpr uint32_t kMaxClientUsableProtectedRangeCount = 11;
+constexpr uint32_t kMaxClientUsableProtectedRangeCount = 10;
 
 bool VerifyRange(uint64_t physical_address, size_t size_bytes, uint32_t required_alignment) {
   if (physical_address % required_alignment != 0) {
