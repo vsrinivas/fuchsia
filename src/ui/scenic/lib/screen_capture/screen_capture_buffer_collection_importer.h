@@ -22,7 +22,9 @@ using BufferCount = uint32_t;
 
 class ScreenCaptureBufferCollectionImporter : public allocation::BufferCollectionImporter {
  public:
-  explicit ScreenCaptureBufferCollectionImporter(std::shared_ptr<flatland::Renderer> renderer);
+  ScreenCaptureBufferCollectionImporter(fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
+                                        std::shared_ptr<flatland::Renderer> renderer,
+                                        bool enable_copy_fallback);
   ~ScreenCaptureBufferCollectionImporter() override;
 
   // |BufferCollectionImporter|
@@ -46,8 +48,15 @@ class ScreenCaptureBufferCollectionImporter : public allocation::BufferCollectio
       allocation::GlobalBufferCollectionId collection_id);
 
  private:
-  // Dispatcher where this class runs on. Currently points to scenic main thread's dispatcher.
-  async_dispatcher_t* dispatcher_;
+  // Re-allocates and re-registers new render targets. Sometimes there is no overlap between the
+  // client's constraints and renderer's render target constraints. As a fallback, we allocate
+  // render target buffers by *only* using the renderer's render target constraints, which should
+  // succeed. We then copy these render targets to the client's screen capture buffers.
+  bool ResetRenderTargetsForReadback(const allocation::ImageMetadata& metadata,
+                                     uint32_t buffer_count);
+
+  // Allocator used to allocate readback images.
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   std::shared_ptr<flatland::Renderer> renderer_;
 
@@ -60,8 +69,17 @@ class ScreenCaptureBufferCollectionImporter : public allocation::BufferCollectio
   std::unordered_map<allocation::GlobalBufferCollectionId, BufferCount>
       buffer_collection_buffer_counts_;
 
+  // Resetting render target for readback only should happen once at the first ImportBufferImage
+  // from that BufferCollection. This set keeps track of BufferCollections that have been reset.
+  std::unordered_set<allocation::GlobalBufferCollectionId> reset_render_targets_;
+
   // Store all registered buffer collections.
   std::unordered_set<allocation::GlobalBufferCollectionId> buffer_collections_;
+
+  // Whether we should try to allocate a buffer for render target copy. This may be necessary for
+  // cases where host-visible render targets are unsupported, i.e. emulator.
+  // TODO(fxbug.dev/103678): Remove this once we establish prunable token based allocations.
+  bool enable_copy_fallback_;
 };
 
 }  // namespace screen_capture

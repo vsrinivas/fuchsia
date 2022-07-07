@@ -30,7 +30,9 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
   void SetUp() override {
     VkSessionTest::SetUp();
     renderer_ = std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
-    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(renderer_);
+    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionTest"), renderer_,
+        /*enable_copy_fallback=*/escher::test::GlobalEscherUsesVirtualGpu());
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo2WithConstraints(
@@ -98,8 +100,6 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   // Set constraints.
   const auto pixel_format = GetParam();
@@ -128,8 +128,6 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCountFromCollectionId) {
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   // Set constraints.
   const auto pixel_format = GetParam();
@@ -175,8 +173,6 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) 
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   // Set constraints.
   const auto pixel_format = GetParam();
@@ -235,7 +231,6 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_ErrorCases) {
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   // Set constraints.
   const auto pixel_format = GetParam();
@@ -261,8 +256,6 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_Error
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_BuffersNotAllocated) {
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   zx_status_t status;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();

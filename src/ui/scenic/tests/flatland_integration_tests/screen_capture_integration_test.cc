@@ -51,6 +51,20 @@ using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::views::ViewRef;
 using RealmRoot = component_testing::RealmRoot;
 
+static constexpr uint32_t kBytesPerPixel = 4;
+
+// BGRA
+static constexpr uint8_t kRed[] = {0, 0, 255, 255};
+static constexpr uint8_t kGreen[] = {0, 255, 0, 255};
+static constexpr uint8_t kBlue[] = {255, 0, 0, 255};
+static constexpr uint8_t kYellow[] = {0, 255, 255, 255};
+
+bool PixelEquals(const uint8_t* a, const uint8_t* b) { return memcmp(a, b, kBytesPerPixel) == 0; }
+
+void AppendPixel(std::vector<uint8_t>* values, const uint8_t* pixel) {
+  values->insert(values->end(), pixel, pixel + kBytesPerPixel);
+}
+
 class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
  public:
   ScreenCaptureIntegrationTest()
@@ -221,13 +235,7 @@ class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
   }
 
   const TransformId kChildRootTransform{.value = 1};
-  static constexpr uint32_t kBytesPerPixel = 4;
   static constexpr zx::duration kEventDelay = zx::msec(5000);
-
-  static constexpr uint32_t red = (255U << 24) | (255U);
-  static constexpr uint32_t green = (255U << 16) | (255U);
-  static constexpr uint32_t blue = (255U << 8) | (255U);
-  static constexpr uint32_t yellow = green | blue;
 
   RealmRoot realm_;
 
@@ -287,7 +295,7 @@ inline uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& set
 
 // This method writes to a sysmem buffer, taking into account any potential stride width
 // differences. The method also flushes the cache if the buffer is in RAM domain.
-void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
+void WriteToSysmemBuffer(const std::vector<uint8_t>& write_values,
                          fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info,
                          uint32_t buffer_collection_idx, uint32_t kBytesPerPixel,
                          uint32_t image_width, uint32_t image_height) {
@@ -305,12 +313,12 @@ void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
 
                    if (bytes_per_row == valid_bytes_per_row) {
                      // Fast path.
-                     memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
+                     memcpy(vmo_host, write_values.data(), write_values.size());
                    } else {
                      // Copy over row-by-row.
                      for (size_t i = 0; i < image_height; ++i) {
-                       memcpy(vmo_host + (i * bytes_per_row), &write_values[i * image_width],
-                              valid_bytes_per_row);
+                       memcpy(&vmo_host[i * bytes_per_row],
+                              &write_values[i * image_width * kBytesPerPixel], valid_bytes_per_row);
                      }
                    }
                  });
@@ -325,7 +333,7 @@ void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
 }
 
 // This function returns a linear buffer of pixels of size width * height.
-std::vector<uint32_t> ExtractScreenCapture(
+std::vector<uint8_t> ExtractScreenCapture(
     const fpromise::result<FrameInfo, ScreenCaptureError>& frame_result,
     fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info, uint32_t kBytesPerPixel,
     uint32_t render_target_width, uint32_t render_target_height) {
@@ -344,8 +352,9 @@ std::vector<uint32_t> ExtractScreenCapture(
 
   uint32_t pixels_per_row =
       GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, render_target_width);
-  std::vector<uint32_t> read_values;
-  read_values.resize(static_cast<size_t>(render_target_width) * render_target_height);
+  std::vector<uint8_t> read_values;
+  read_values.resize(static_cast<size_t>(render_target_width) * render_target_height *
+                     kBytesPerPixel);
 
   MapHostPointer(buffer_collection_info, buffer_id,
                  [&read_values, kBytesPerPixel, pixels_per_row, render_target_width,
@@ -361,8 +370,8 @@ std::vector<uint32_t> ExtractScreenCapture(
                             static_cast<size_t>(bytes_per_row) * render_target_height);
                    } else {
                      for (size_t i = 0; i < render_target_height; ++i) {
-                       memcpy(&read_values[i * render_target_width], vmo_host + (i * bytes_per_row),
-                              valid_bytes_per_row);
+                       memcpy(&read_values[i * render_target_width * kBytesPerPixel],
+                              &vmo_host[i * bytes_per_row], valid_bytes_per_row);
                      }
                    }
                  });
@@ -385,8 +394,10 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
-  std::vector<uint32_t> write_values;
-  write_values.assign(num_pixels_, green);
+  std::vector<uint8_t> write_values;
+  for (uint32_t i = 0; i < num_pixels_; ++i) {
+    write_values.insert(write_values.end(), kRed, kRed + kBytesPerPixel);
+  }
 
   WriteToSysmemBuffer(write_values, buffer_collection_info, 0, kBytesPerPixel, image_width,
                       image_height);
@@ -432,14 +443,14 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
   EXPECT_EQ(read_values.size(), write_values.size());
 
   // Compare read and write values.
-  uint32_t num_green = 0;
+  uint32_t num_red = 0;
 
-  for (unsigned int read_value : read_values) {
-    if (read_value == green)
-      num_green++;
+  for (size_t i = 0; i < read_values.size(); i += kBytesPerPixel) {
+    if (PixelEquals(&read_values[i], kRed))
+      num_red++;
   }
 
-  EXPECT_EQ(num_green, num_pixels_);
+  EXPECT_EQ(num_red, num_pixels_);
 }
 
 // Creates this image:
@@ -469,14 +480,14 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with half green, half red
-  std::vector<uint32_t> write_values;
+  std::vector<uint8_t> write_values;
   const uint32_t pixel_color_count = num_pixels_ / 2;
 
   for (uint32_t i = 0; i < pixel_color_count; ++i) {
-    write_values.push_back(red);
+    AppendPixel(&write_values, kRed);
   }
   for (uint32_t i = 0; i < pixel_color_count; ++i) {
-    write_values.push_back(green);
+    AppendPixel(&write_values, kGreen);
   }
   WriteToSysmemBuffer(write_values, buffer_collection_info, 0, kBytesPerPixel, image_width,
                       image_height);
@@ -527,13 +538,13 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
   uint32_t num_green = 0;
   uint32_t num_red = 0;
 
-  for (size_t i = 0; i < read_values.size(); i++) {
-    if (read_values[i] == green) {
+  for (size_t i = 0; i < read_values.size(); i += kBytesPerPixel) {
+    if (PixelEquals(&read_values[i], kGreen)) {
       num_green++;
-      EXPECT_EQ(write_values[i], red);
-    } else if (read_values[i] == red) {
+      EXPECT_TRUE(PixelEquals(&write_values[i], kRed));
+    } else if (PixelEquals(&read_values[i], kRed)) {
       num_red++;
-      EXPECT_EQ(write_values[i], green);
+      EXPECT_TRUE(PixelEquals(&write_values[i], kGreen));
     }
   }
 
@@ -574,7 +585,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
-  std::vector<uint32_t> write_values;
+  std::vector<uint8_t> write_values;
 
   uint32_t red_pixel_count = 0;
   uint32_t green_pixel_count = 0;
@@ -588,22 +599,22 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
 
     // Top-left quadrant
     if (row < image_height / 2 && col < image_width / 2) {
-      write_values.push_back(red);
+      AppendPixel(&write_values, kRed);
       ++red_pixel_count;
     }
     // Top-right quadrant
     else if (row < image_height / 2 && col >= image_width / 2) {
-      write_values.push_back(green);
+      AppendPixel(&write_values, kGreen);
       ++green_pixel_count;
     }
     // Bottom-right quadrant
     else if (row >= image_height / 2 && col >= image_width / 2) {
-      write_values.push_back(blue);
+      AppendPixel(&write_values, kBlue);
       ++blue_pixel_count;
     }
     // Bottom-left quadrant
     else if (row >= image_height / 2 && col < image_width / 2) {
-      write_values.push_back(yellow);
+      AppendPixel(&write_values, kYellow);
       ++yellow_pixel_count;
     }
   }
@@ -663,28 +674,29 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
   uint32_t bottom_right_correct = 0;
   uint32_t bottom_left_correct = 0;
 
-  for (uint32_t i = 0; i < read_values.size(); i++) {
+  for (uint32_t i = 0; i < num_pixels_; ++i) {
     uint32_t row = i / render_target_width;
     uint32_t col = i % render_target_width;
+    const uint8_t* read_value = &read_values[i * kBytesPerPixel];
 
     // Top-left quadrant
     if (row < render_target_height / 2 && col < render_target_width / 2) {
-      if (read_values[i] == yellow)
+      if (PixelEquals(read_value, kYellow))
         top_left_correct++;
     }
     // Top-right quadrant
     else if (row < render_target_height / 2 && col >= render_target_width / 2) {
-      if (read_values[i] == red)
+      if (PixelEquals(read_value, kRed))
         top_right_correct++;
     }
     // Bottom-right quadrant
     else if (row >= render_target_height / 2 && col >= render_target_width / 2) {
-      if (read_values[i] == green)
+      if (PixelEquals(read_value, kGreen))
         bottom_right_correct++;
     }
     // Bottom-left quadrant
     else if (row >= render_target_height / 2 && col < render_target_width / 2) {
-      if (read_values[i] == blue)
+      if (PixelEquals(read_value, kBlue))
         bottom_left_correct++;
     }
   }
@@ -728,7 +740,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
           std::move(ref_pair.export_token), RegisterBufferCollectionUsage::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
-  std::vector<uint32_t> write_values;
+  std::vector<uint8_t> write_values;
 
   uint32_t red_pixel_count = 0;
   uint32_t green_pixel_count = 0;
@@ -742,22 +754,22 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
 
     // Top-left quadrant
     if (row < image_height / 2 && col < image_width / 2) {
-      write_values.push_back(red);
+      AppendPixel(&write_values, kRed);
       ++red_pixel_count;
     }
     // Top-right quadrant
     else if (row < image_height / 2 && col >= image_width / 2) {
-      write_values.push_back(green);
+      AppendPixel(&write_values, kGreen);
       ++green_pixel_count;
     }
     // Bottom-right quadrant
     else if (row >= image_height / 2 && col >= image_width / 2) {
-      write_values.push_back(blue);
+      AppendPixel(&write_values, kBlue);
       ++blue_pixel_count;
     }
     // Bottom-left quadrant
     else if (row >= image_height / 2 && col < image_width / 2) {
-      write_values.push_back(yellow);
+      AppendPixel(&write_values, kYellow);
       ++yellow_pixel_count;
     }
   }
@@ -817,28 +829,29 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
   uint32_t bottom_right_correct = 0;
   uint32_t bottom_left_correct = 0;
 
-  for (uint32_t i = 0; i < read_values.size(); i++) {
+  for (uint32_t i = 0; i < num_pixels_; ++i) {
     uint32_t row = i / render_target_width;
     uint32_t col = i % render_target_width;
+    const uint8_t* read_value = &read_values[i * kBytesPerPixel];
 
     // Top-left quadrant
     if (row < render_target_height / 2 && col < render_target_width / 2) {
-      if (read_values[i] == green)
+      if (PixelEquals(read_value, kGreen))
         top_left_correct++;
     }
     // Top-right quadrant
     else if (row < render_target_height / 2 && col >= render_target_width / 2) {
-      if (read_values[i] == blue)
+      if (PixelEquals(read_value, kBlue))
         top_right_correct++;
     }
     // Bottom-right quadrant
     else if (row >= render_target_height / 2 && col >= render_target_width / 2) {
-      if (read_values[i] == yellow)
+      if (PixelEquals(read_value, kYellow))
         bottom_right_correct++;
     }
     // Bottom-left quadrant
     else if (row >= render_target_height / 2 && col < render_target_width / 2) {
-      if (read_values[i] == red)
+      if (PixelEquals(read_value, kRed))
         bottom_left_correct++;
     }
   }
@@ -903,13 +916,14 @@ TEST_F(ScreenCaptureIntegrationTest, FilledRectScreenshot) {
       ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
                            render_target_width, render_target_height);
 
-  EXPECT_EQ(read_values.size(), num_pixels_);
+  EXPECT_EQ(read_values.size(), num_pixels_ * kBytesPerPixel);
 
   // Compare read and write values.
   uint32_t num_fuchsia_count = 0;
+  static constexpr uint8_t kFuchsia[] = {255, 0, 255, 255};
 
-  for (unsigned int read_value : read_values) {
-    if (read_value == 0xFFFF00FF)
+  for (size_t i = 0; i < read_values.size(); i += kBytesPerPixel) {
+    if (PixelEquals(&read_values[i], kFuchsia))
       num_fuchsia_count++;
   }
 
@@ -927,6 +941,7 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
 
   // Create a red rectangle.
   child_session_->CreateFilledRect(kFilledRectId);
+  // Set as RGBA. Corresponds to kRed.
   child_session_->SetSolidFill(kFilledRectId, {1, 0, 0, 1}, {image_width, image_height});
 
   // Associate the rect with a transform.
@@ -970,14 +985,13 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
       ExtractScreenCapture(cs_result, sc_buffer_collection_info, kBytesPerPixel,
                            render_target_width, render_target_height);
 
-  EXPECT_EQ(read_values.size(), num_pixels_);
+  EXPECT_EQ(read_values.size(), num_pixels_ * kBytesPerPixel);
 
   // Compare read and write values.
   uint32_t num_red_count = 0;
 
-  for (unsigned int read_value : read_values) {
-    // Output is ARGB
-    if (read_value == 0xFFFF0000)
+  for (size_t i = 0; i < read_values.size(); i += kBytesPerPixel) {
+    if (PixelEquals(&read_values[i], kRed))
       num_red_count++;
   }
 
@@ -990,6 +1004,7 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
 
   // Create a blue rectangle.
   child_session_->CreateFilledRect(kFilledRectId2);
+  // Set as RGBA. Corresponds to kBlue.
   child_session_->SetSolidFill(kFilledRectId2, {0, 0, 1, 1}, {image_width, image_height});
 
   // Associate the rect with a transform.
@@ -1008,13 +1023,13 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
       ExtractScreenCapture(cs_result2, sc_buffer_collection_info, kBytesPerPixel,
                            render_target_width, render_target_height);
 
-  EXPECT_EQ(read_values2.size(), num_pixels_);
+  EXPECT_EQ(read_values2.size(), num_pixels_ * kBytesPerPixel);
 
   // Compare read and write values.
   uint32_t num_blue_count = 0;
 
-  for (unsigned int read_value : read_values2) {
-    if (read_value == 0xFF0000FF)
+  for (size_t i = 0; i < read_values2.size(); i += kBytesPerPixel) {
+    if (PixelEquals(&read_values2[i], kBlue))
       num_blue_count++;
   }
 

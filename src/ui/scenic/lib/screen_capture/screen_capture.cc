@@ -29,7 +29,9 @@ ScreenCapture::ScreenCapture(
     : binding_(this, std::move(request)),
       buffer_collection_importers_(buffer_collection_importers),
       renderer_(std::move(renderer)),
-      get_renderables_(std::move(get_renderables)) {}
+      get_renderables_(std::move(get_renderables)) {
+  binding_.set_error_handler([this](zx_status_t status) { ClearImages(); });
+}
 
 ScreenCapture::~ScreenCapture() { ClearImages(); }
 

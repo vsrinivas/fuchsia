@@ -487,8 +487,16 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     }
   }
 
+  // TODO(fxbug.dev/103678): Remove this once we establish prunable token based allocations in
+  // ScreenCaptureBufferCollectionImporter.
+  // For current devices, emulators are the only one which require copying into a CPU-accessible
+  // buffer, because render targets cannot be CPU-accesible.
+  const bool using_virtual_gpu = escher_->vk_physical_device().getProperties().deviceType ==
+                                 vk::PhysicalDeviceType::eVirtualGpu;
   auto screen_capture_buffer_collection_importer =
-      std::make_shared<screen_capture::ScreenCaptureBufferCollectionImporter>(flatland_renderer);
+      std::make_shared<screen_capture::ScreenCaptureBufferCollectionImporter>(
+          utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureBufferCollectionImporter"),
+          flatland_renderer, /*enable_copy_fallback=*/using_virtual_gpu);
 
   // Allocator service needs Flatland DisplayCompositor to act as a BufferCollectionImporter.
   {

@@ -42,12 +42,16 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
     sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
 
     renderer_ = std::make_shared<flatland::NullRenderer>();
-    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(renderer_);
+    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2Test"), renderer_,
+        /*enable_copy_fallback=*/false);
   }
 
   void SetUpMockImporter() {
     mock_renderer_ = std::make_shared<flatland::MockRenderer>();
-    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(mock_renderer_);
+    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
+        utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2Test"), mock_renderer_,
+        /*enable_copy_fallback=*/false);
   }
 
   std::shared_ptr<Allocator> CreateAllocator() {

@@ -5,8 +5,12 @@
 #include "screen_capture_buffer_collection_importer.h"
 
 #include <lib/async/default.h>
+#include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <zircon/status.h>
 
+#include <cstdint>
 #include <optional>
 
 namespace {
@@ -17,11 +21,14 @@ const vk::Format kSupportedImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Form
 namespace screen_capture {
 
 ScreenCaptureBufferCollectionImporter::ScreenCaptureBufferCollectionImporter(
-    std::shared_ptr<flatland::Renderer> renderer)
-    : dispatcher_(async_get_default_dispatcher()), renderer_(renderer) {}
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
+    std::shared_ptr<flatland::Renderer> renderer, bool enable_copy_fallback)
+    : sysmem_allocator_(std::move(sysmem_allocator)),
+      renderer_(std::move(renderer)),
+      enable_copy_fallback_(enable_copy_fallback) {}
 
 ScreenCaptureBufferCollectionImporter::~ScreenCaptureBufferCollectionImporter() {
-  for (auto& id : buffer_collections_) {
+  for (auto id : buffer_collections_) {
     renderer_->ReleaseBufferCollection(id);
   }
   buffer_collections_.clear();
@@ -45,7 +52,7 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
   }
 
   // Tie the |buffer_collection_info| to the |collection_id| using the |local_token|.
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  fuchsia::sysmem::BufferCollectionSyncPtr local_buffer_collection;
 
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = token.BindSync();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
@@ -56,30 +63,109 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     return false;
   }
 
-  sysmem_allocator->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
-  status = buffer_collection->Sync();
+  sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                         local_buffer_collection.NewRequest());
+  status = local_buffer_collection->Sync();
 
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << __func__ << " failed, could not bind buffer collection: " << status;
     return false;
   }
 
-  status = buffer_collection->SetConstraints(false, fuchsia::sysmem::BufferCollectionConstraints());
+  status = local_buffer_collection->SetConstraints(false,
+                                                   fuchsia::sysmem::BufferCollectionConstraints());
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << __func__ << " failed, could not set constraints: " << status;
     return false;
   }
 
-  buffer_collection_sync_ptrs_[collection_id] = std::move(buffer_collection);
+  if (!enable_copy_fallback_) {
+    const bool success = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
+                                                                   std::move(vulkan_token));
+    if (!success) {
+      ReleaseBufferCollection(collection_id);
+      FX_LOGS(WARNING) << __func__ << " failed, could not register with Renderer";
+      return false;
+    }
+  } else {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr readback_sync_token = std::move(vulkan_token);
+    fuchsia::sysmem::BufferCollectionTokenHandle readback_token;
+    fuchsia::sysmem::BufferCollectionTokenHandle render_target_token;
+    zx_status_t status;
 
-  const bool success = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
-                                                                 std::move(vulkan_token));
-  if (!success) {
-    ReleaseBufferCollection(collection_id);
-    FX_LOGS(WARNING) << __func__ << " failed, could not register with Renderer";
-    return false;
+    status = readback_sync_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                            readback_token.NewRequest());
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Cannot duplicate readback sync token: " << zx_status_get_string(status)
+                       << "; The client may have invalidated the token.";
+      return false;
+    }
+
+    fuchsia::sysmem::BufferCollectionSyncPtr readback_collection;
+    status = sysmem_allocator->BindSharedCollection(std::move(readback_sync_token),
+                                                    readback_collection.NewRequest());
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Cannot bind readback sync token: " << zx_status_get_string(status)
+                       << "; The client may have invalidated the token.";
+      return false;
+    }
+
+    status = readback_collection->Sync();
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Could not sync readback buffer collection: "
+                       << zx_status_get_string(status);
+      return false;
+    }
+
+    if (!renderer_->RegisterReadbackCollection(collection_id, sysmem_allocator,
+                                               std::move(readback_token))) {
+      FX_LOGS(WARNING) << "Could not register readback token with VkRenderer";
+      return false;
+    }
+
+    status = readback_collection->SetConstraints(false /* has_constraints */,
+                                                 fuchsia::sysmem::BufferCollectionConstraints());
+    if (status != ZX_OK) {
+      renderer_->DeregisterReadbackCollection(collection_id);
+      FX_LOGS(WARNING) << "Cannot set constraints on readback collection: "
+                       << zx_status_get_string(status);
+      return false;
+    }
+
+    // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
+    status =
+        readback_collection->AttachToken(ZX_RIGHT_SAME_RIGHTS, render_target_token.NewRequest());
+    if (status != ZX_OK) {
+      renderer_->DeregisterReadbackCollection(collection_id);
+      FX_LOGS(WARNING) << "Cannot create render target sync token via AttachToken: "
+                       << zx_status_get_string(status);
+      return false;
+    }
+
+    status = readback_collection->Sync();
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Could not sync readback buffer collection: "
+                       << zx_status_get_string(status);
+      return false;
+    }
+
+    if (!renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
+                                                   std::move(render_target_token))) {
+      renderer_->DeregisterReadbackCollection(collection_id);
+      FX_LOGS(WARNING) << "Could not register render target token with VkRenderer";
+      return false;
+    }
+
+    status = readback_collection->Close();
+    if (status != ZX_OK) {
+      renderer_->DeregisterRenderTargetCollection(collection_id);
+      renderer_->DeregisterReadbackCollection(collection_id);
+      FX_LOGS(WARNING) << "Cannot close readback collection: " << zx_status_get_string(status);
+      return false;
+    }
   }
 
+  buffer_collection_sync_ptrs_[collection_id] = std::move(local_buffer_collection);
   buffer_collections_.insert(collection_id);
 
   return true;
@@ -89,15 +175,14 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
     allocation::GlobalBufferCollectionId collection_id) {
   TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection");
 
-  auto collection_itr = buffer_collections_.find(collection_id);
-
   // If the collection is not in the map, then there's nothing to do.
-  if (collection_itr == buffer_collections_.end()) {
+  if (buffer_collections_.find(collection_id) == buffer_collections_.end()) {
     FX_LOGS(WARNING) << "Attempting to release a non-existent buffer collection.";
     return;
   }
 
   buffer_collections_.erase(collection_id);
+  reset_render_targets_.erase(collection_id);
 
   if (buffer_collection_sync_ptrs_.find(collection_id) != buffer_collection_sync_ptrs_.end()) {
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -109,6 +194,9 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
     buffer_collection_buffer_counts_.erase(collection_id);
   };
 
+  if (enable_copy_fallback_) {
+    renderer_->DeregisterReadbackCollection(collection_id);
+  }
   renderer_->DeregisterRenderTargetCollection(collection_id);
 }
 
@@ -154,9 +242,23 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
     return false;
   }
 
-  const bool success = renderer_->ImportBufferImage(metadata);
-  if (!success) {
-    FX_LOGS(WARNING) << __func__ << " failed, could not import to Renderer";
+  if (renderer_->ImportBufferImage(metadata)) {
+    if (enable_copy_fallback_) {
+      // AttachToken succeeded. Readback images are unnecessary.
+      renderer_->DeregisterReadbackCollection(metadata.collection_id);
+    }
+  } else if (enable_copy_fallback_) {
+    // Try to re-allocate and re-import readback render targets.
+    if (!ResetRenderTargetsForReadback(metadata, buffer_count.value())) {
+      FX_LOGS(WARNING) << "Cannot reallocate readback render targets!";
+      return false;
+    }
+    if (!renderer_->ImportBufferImage(metadata)) {
+      FX_LOGS(WARNING) << "Could not import fallback render target to VkRenderer";
+      return false;
+    }
+  } else {
+    FX_LOGS(WARNING) << "Could not import render target to VkRenderer";
     return false;
   }
 
@@ -169,8 +271,9 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferImage(allocation::Globa
 
 std::optional<BufferCount> ScreenCaptureBufferCollectionImporter::GetBufferCollectionBufferCount(
     allocation::GlobalBufferCollectionId collection_id) {
-  // If the collection info has not been retrieved before, wait for the buffers to be allocated and
-  // populate the map/delete the reference to the |collection_id| from |collection_id_sync_ptrs_|.
+  // If the collection info has not been retrieved before, wait for the buffers to be allocated
+  // and populate the map/delete the reference to the |collection_id| from
+  // |collection_id_sync_ptrs_|.
   if (buffer_collection_buffer_counts_.find(collection_id) ==
       buffer_collection_buffer_counts_.end()) {
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -204,6 +307,90 @@ std::optional<BufferCount> ScreenCaptureBufferCollectionImporter::GetBufferColle
   }
 
   return buffer_collection_buffer_counts_[collection_id];
+}
+
+bool ScreenCaptureBufferCollectionImporter::ResetRenderTargetsForReadback(
+    const allocation::ImageMetadata& metadata, uint32_t buffer_count) {
+  FX_DCHECK(enable_copy_fallback_);
+  // Resetting render target for readback only should happen once at the first ImportBufferImage
+  // from that BufferCollection. Don't do it again if this method had already been called for this
+  // |metadata.collection_id|.
+  if (reset_render_targets_.find(metadata.collection_id) != reset_render_targets_.end()) {
+    return true;
+  }
+
+  FX_LOGS(WARNING) << "Could not import render target to VkRenderer; attempting to create fallback";
+  renderer_->DeregisterRenderTargetCollection(metadata.collection_id);
+
+  auto deregister_collection =
+      fit::defer([renderer = renderer_, collection_id = metadata.collection_id] {
+        renderer->DeregisterReadbackCollection(collection_id);
+      });
+
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr fallback_render_target_sync_token;
+  zx_status_t status =
+      sysmem_allocator_->AllocateSharedCollection(fallback_render_target_sync_token.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Cannot allocate fallback render target sync token: "
+                     << zx_status_get_string(status);
+    return false;
+  }
+
+  fuchsia::sysmem::BufferCollectionTokenHandle fallback_render_target_token;
+  status = fallback_render_target_sync_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                        fallback_render_target_token.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot duplicate fallback render target sync token: "
+                   << zx_status_get_string(status);
+    return false;
+  }
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  status = sysmem_allocator_->BindSharedCollection(std::move(fallback_render_target_sync_token),
+                                                   buffer_collection.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot bind fallback render target sync token: "
+                   << zx_status_get_string(status);
+    return false;
+  }
+
+  if (!renderer_->RegisterRenderTargetCollection(metadata.collection_id, sysmem_allocator_.get(),
+                                                 std::move(fallback_render_target_token),
+                                                 {metadata.width, metadata.height})) {
+    FX_LOGS(WARNING) << "Could not register fallback render target with VkRenderer";
+    return false;
+  }
+
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count = buffer_count;
+  constraints.usage.vulkan = fuchsia::sysmem::noneUsage;
+  status = buffer_collection->SetConstraints(true, constraints);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Cannot set constraints on fallback render target collection: "
+                     << zx_status_get_string(status);
+    return false;
+  }
+
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  if (status != ZX_OK || allocation_status != ZX_OK) {
+    FX_LOGS(WARNING) << "Could not wait on allocation for fallback render target collection: "
+                     << zx_status_get_string(status)
+                     << " ;alloc: " << zx_status_get_string(allocation_status);
+    return false;
+  }
+
+  status = buffer_collection->Close();
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Could not close fallback render target collection: "
+                     << zx_status_get_string(status);
+    return false;
+  }
+
+  reset_render_targets_.insert(metadata.collection_id);
+  deregister_collection.cancel();
+  return true;
 }
 
 }  // namespace screen_capture
