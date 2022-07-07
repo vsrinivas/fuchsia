@@ -31,6 +31,7 @@ extern "C" {
 typedef enum ZirconBootResult {
   kBootResultOK = 0,
 
+  kBootResultErrorInvalidArguments,
   kBootResultErrorMarkUnbootable,
   kBootResultErrorReadHeader,
   kBootResultErrorZbiHeaderNotFound,

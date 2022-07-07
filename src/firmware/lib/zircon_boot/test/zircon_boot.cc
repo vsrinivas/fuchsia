@@ -136,6 +136,16 @@ void ValidateBootedSlot(const MockZirconBootOps* dev, AbrSlotIndex expected_slot
   EXPECT_EQ(zbi_items_added, zbi_items_expected);
 }
 
+TEST(BootTests, InvalidMemoryBufferErrorsOut) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURE(CreateMockZirconBootOps(&dev));
+  ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
+  zircon_boot_ops.get_firmware_slot = nullptr;
+  MarkSlotActive(dev.get(), kAbrSlotIndexA);
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, nullptr, kZirconPartitionSize, kForceRecoveryOff),
+            kBootResultErrorInvalidArguments);
+}
+
 // Tests that boot logic for OS ABR works correctly.
 // ABR metadata is initialized to mark |initial_active_slot| as the active slot.
 // |expected_slot| specifies the resulting booted slot.

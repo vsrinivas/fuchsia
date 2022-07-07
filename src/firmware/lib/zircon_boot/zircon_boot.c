@@ -196,6 +196,10 @@ static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_addr
 
 ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load_address_size,
                              ForceRecovery force_recovery) {
+  if (!load_address) {
+    return kBootResultErrorInvalidArguments;
+  }
+
   AbrSlotIndex slot;
   ZirconBootResult res;
   if (ops->get_firmware_slot) {

@@ -9,6 +9,8 @@ efi_executable("gigaboot") {
   sources = [
     "main.cc",
     "sysdeps.cc",
+    "zircon_boot_ops.cc",
+    "zircon_boot_ops.h",
   ]
 
   deps = [
