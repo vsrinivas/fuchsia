@@ -101,7 +101,7 @@ all test cases.
 
     ```cpp
     #include <lib/async-loop/cpp/loop.h>
-    #include <lib/async-loop/cpp/default.h>
+    #include <lib/async-loop/default.h>
 
     TEST(SampleTest, CallEcho) {
         async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
