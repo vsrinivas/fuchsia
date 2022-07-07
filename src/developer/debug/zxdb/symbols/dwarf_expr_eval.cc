@@ -251,8 +251,15 @@ ErrOr<DwarfStackEntry> DwarfOperatorShiftRightArithmetically(const DwarfStackEnt
 
 }  // namespace
 
-DwarfExprEval::DwarfExprEval()
-    : symbol_context_(SymbolContext::ForRelativeAddresses()), weak_factory_(this) {}
+DwarfExprEval::DwarfExprEval(UnitSymbolFactory symbol_factory,
+                             fxl::RefPtr<SymbolDataProvider> data_provider,
+                             const SymbolContext& symbol_context)
+    : unit_symbol_factory_(std::move(symbol_factory)),
+      data_provider_(std::move(data_provider)),
+      symbol_context_(symbol_context),
+      weak_factory_(this) {
+  FX_DCHECK(data_provider_);
+}
 
 DwarfExprEval::~DwarfExprEval() {
   // This assertion verifies that this class was not accidentally deleted from
@@ -284,19 +291,15 @@ TaggedData DwarfExprEval::TakeResultData() {
   return result_data_.TakeData();
 }
 
-DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                                              const SymbolContext& symbol_context, DwarfExpr expr,
-                                              CompletionCallback cb) {
-  SetUp(std::move(data_provider), symbol_context, expr, std::move(cb));
+DwarfExprEval::Completion DwarfExprEval::Eval(DwarfExpr expr, CompletionCallback cb) {
+  SetUp(expr, std::move(cb));
 
   // Note: ContinueEval() may call callback, which may delete |this|.
   return ContinueEval() ? Completion::kSync : Completion::kAsync;
 }
 
-std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                                    const SymbolContext& symbol_context, DwarfExpr expr,
-                                    bool pretty) {
-  SetUp(std::move(data_provider), symbol_context, expr, nullptr);
+std::string DwarfExprEval::ToString(DwarfExpr expr, bool pretty) {
+  SetUp(expr, nullptr);
   result_data_ = TaggedDataBuilder();
 
   string_output_mode_ = pretty ? StringOutput::kPretty : StringOutput::kLiteral;
@@ -312,12 +315,8 @@ std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provide
   return result;
 }
 
-void DwarfExprEval::SetUp(fxl::RefPtr<SymbolDataProvider> data_provider,
-                          const SymbolContext& symbol_context, DwarfExpr expr,
-                          CompletionCallback cb) {
+void DwarfExprEval::SetUp(DwarfExpr expr, CompletionCallback cb) {
   is_complete_ = false;
-  data_provider_ = std::move(data_provider);
-  symbol_context_ = symbol_context;
   expr_ = std::move(expr);
   completion_callback_ = std::move(cb);
   data_extractor_ = DataExtractor(expr_.data());
@@ -337,7 +336,6 @@ bool DwarfExprEval::ContinueEval() {
       if (is_string_output())
         return true;  // Only expecting to produce a string.
 
-      data_provider_.reset();
       is_complete_ = true;
       Err err;
       if (stack_.empty() && result_data_.empty()) {
@@ -763,7 +761,6 @@ DwarfExprEval::Completion DwarfExprEval::ReportError(const Err& err) {
   if (is_string_output())
     AppendString("ERROR: \"" + err.msg() + "\"");
 
-  data_provider_.reset();
   is_complete_ = true;
 
   // Wrap completion callback with the flag to catch deletions from within the callback.
@@ -1025,9 +1022,16 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
   if (!data_extractor_.ReadBytes(sub_expr_bytes.size(), sub_expr_bytes.data()))
     return ReportError("Not enough data for DW_OP_entry_value.");
 
-  DwarfExpr sub_expr(std::move(sub_expr_bytes), expr_.source());
+  // Get the data provider for the nested context.
+  auto entry_data_provider = data_provider_->GetEntryDataProvider();
+  if (!entry_data_provider)
+    return ReportError("Can not compute function entry values in this context.");
+
   FX_DCHECK(!nested_eval_);
-  nested_eval_ = std::make_unique<DwarfExprEval>();
+  nested_eval_ = std::make_unique<DwarfExprEval>(unit_symbol_factory_,
+                                                 std::move(entry_data_provider), symbol_context_);
+
+  DwarfExpr sub_expr(std::move(sub_expr_bytes), expr_.source());
 
   if (is_string_output()) {
     std::string nested_str(op_name);
@@ -1035,19 +1039,14 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
 
     // For string output the data provider doesn't matter, so keep using ours since the entry
     // provider might not be available.
-    nested_str += nested_eval_->ToString(data_provider_, symbol_context_, std::move(sub_expr),
-                                         string_output_mode_ == StringOutput::kPretty);
+    nested_str +=
+        nested_eval_->ToString(std::move(sub_expr), string_output_mode_ == StringOutput::kPretty);
 
     nested_str += ")";
     AppendString(nested_str);
     nested_eval_.reset();
     return Completion::kSync;
   }
-
-  // Get the data provider for the nested context.
-  auto entry_data_provider = data_provider_->GetEntryDataProvider();
-  if (!entry_data_provider)
-    return ReportError("Can not compute function entry values in this context.");
 
   // Since we own the nested evaluator, it's OK to capture |this| in the callback.
   //
@@ -1056,8 +1055,7 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
   // passed to the callback. The shared boolean allows us to track this.
   auto is_async_completion = std::make_shared<bool>(false);
   Completion completion = nested_eval_->Eval(
-      std::move(entry_data_provider), symbol_context_, std::move(sub_expr),
-      [this, is_async_completion](DwarfExprEval* nested, const Err& err) {
+      std::move(sub_expr), [this, is_async_completion](DwarfExprEval* nested, const Err& err) {
         // TODO(brettw) do we need to call ContinueEval on error? What about in other cases this
         // comes up? They may be wrong.
         if (err.has_error()) {

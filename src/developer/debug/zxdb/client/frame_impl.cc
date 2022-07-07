@@ -252,7 +252,8 @@ bool FrameImpl::EnsureBasePointer() {
   }
 
   // Try to evaluate the location.
-  base_pointer_eval_ = std::make_unique<DwarfExprEval>();
+  base_pointer_eval_ = std::make_unique<DwarfExprEval>(
+      UnitSymbolFactory(function), GetSymbolDataProvider(), loc.symbol_context());
 
   // Callback when the expression is done. Will normally get called reentrantly by
   // DwarfExprEval::Eval().
@@ -276,8 +277,7 @@ bool FrameImpl::EnsureBasePointer() {
       cb(*computed_base_pointer_);
   };
 
-  auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(), loc.symbol_context(),
-                                              *location_expr, std::move(save_result));
+  auto eval_result = base_pointer_eval_->Eval(*location_expr, std::move(save_result));
 
   // In the common case this will complete synchronously and the above callback will have put the
   // result into base_pointer_requests_ before this code is executed.

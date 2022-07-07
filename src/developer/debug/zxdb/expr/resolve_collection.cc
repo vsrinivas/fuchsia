@@ -385,11 +385,11 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
 
       // The expression is evaluated by pushing the derived pointer on the evaluation stack and
       // executing the DWARF expression to get the resulting base class pointer.
-      auto async_eval = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(on_expr_complete));
+      auto async_eval = fxl::MakeRefCounted<AsyncDwarfExprEval>(
+          UnitSymbolFactory(first_from), context->GetDataProvider(),
+          first_from->GetSymbolContext(context->GetProcessSymbols()), std::move(on_expr_complete));
       async_eval->dwarf_eval().Push(DwarfStackEntry(derived));
-      async_eval->Eval(context->GetDataProvider(),
-                       first_from->GetSymbolContext(context->GetProcessSymbols()),
-                       first_from->location_expression());
+      async_eval->Eval(first_from->location_expression());
       return;
     }
   }

@@ -52,6 +52,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   std::time_t GetModificationTime() const override;
   std::string GetBuildDir() const override;
   uint64_t GetMappedLength() const override;
+  const SymbolFactory* GetSymbolFactory() const override;
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const override;

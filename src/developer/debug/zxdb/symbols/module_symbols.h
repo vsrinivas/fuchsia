@@ -68,6 +68,8 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // This may return 0 on error or in testing which indicates the mapped length is unknown.
   virtual uint64_t GetMappedLength() const = 0;
 
+  virtual const SymbolFactory* GetSymbolFactory() const = 0;
+
   // Converts the given InputLocation into one or more locations. Called by LoadedModuleSymbols. See
   // there for more info.
   virtual std::vector<Location> ResolveInputLocation(

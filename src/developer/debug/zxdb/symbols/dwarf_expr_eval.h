@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_stack_entry.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/developer/debug/zxdb/symbols/unit_symbol_factory.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -79,7 +80,8 @@ class DwarfExprEval {
 
   using CompletionCallback = fit::callback<void(DwarfExprEval* eval, const Err& err)>;
 
-  DwarfExprEval();
+  DwarfExprEval(UnitSymbolFactory symbol_factory, fxl::RefPtr<SymbolDataProvider> data_provider,
+                const SymbolContext& symbol_context);
   ~DwarfExprEval();
 
   // Pushes a value on the stack. Call before Eval() for the cases where an expression requires
@@ -129,8 +131,7 @@ class DwarfExprEval {
   // asynchronously.
   //
   // This class must not be deleted from within the completion callback.
-  Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                  const SymbolContext& symbol_context, DwarfExpr expr, CompletionCallback cb);
+  Completion Eval(DwarfExpr expr, CompletionCallback cb);
 
   // Converts the given DWARF expression to a string. The result values on this class won't be
   // set since the expression won't actually be evaluated.
@@ -140,12 +141,10 @@ class DwarfExprEval {
   //
   // When "pretty" mode is enabled, operations will be simplified and platform register names will
   // be substituted.
-  std::string ToString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                       const SymbolContext& symbol_context, DwarfExpr expr, bool pretty);
+  std::string ToString(DwarfExpr expr, bool pretty);
 
  private:
-  void SetUp(fxl::RefPtr<SymbolDataProvider> data_provider, const SymbolContext& symbol_context,
-             DwarfExpr expr, CompletionCallback cb);
+  void SetUp(DwarfExpr expr, CompletionCallback cb);
 
   // Evaluates the next phases of the expression until an asynchronous operation is required.
   // Returns the value of |is_complete| because |this| could be deleted by the time this method
@@ -259,6 +258,7 @@ class DwarfExprEval {
   Completion AppendString(const std::string& op_output,
                           const std::string& nice_output = std::string());
 
+  UnitSymbolFactory unit_symbol_factory_;
   fxl::RefPtr<SymbolDataProvider> data_provider_;
   SymbolContext symbol_context_;
 

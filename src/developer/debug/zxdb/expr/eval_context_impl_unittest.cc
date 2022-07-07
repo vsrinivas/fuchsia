@@ -25,6 +25,7 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
@@ -43,7 +44,7 @@ const char kPresentVarName[] = "present";
 
 class EvalContextImplTest : public TestWithLoop {
  public:
-  EvalContextImplTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
+  EvalContextImplTest() {}
 
   DwarfExprEval& eval() { return eval_; }
   fxl::RefPtr<MockSymbolDataProvider>& provider() { return provider_; }
@@ -72,8 +73,12 @@ class EvalContextImplTest : public TestWithLoop {
   }
 
  private:
-  DwarfExprEval eval_;
-  fxl::RefPtr<MockSymbolDataProvider> provider_;
+  SymbolContext symbol_context_ = SymbolContext(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  fxl::RefPtr<MockSymbolDataProvider> provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
+
+  // We do not test expressions that refer to DIEs (for type information) so can supply an empty
+  // UnitSymbolFactory.
+  DwarfExprEval eval_ = DwarfExprEval(UnitSymbolFactory(), provider_, symbol_context_);
 };
 
 struct ValueResult {
@@ -320,7 +325,6 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   // Need to have a module for the variable to be relative to and to have an index.
   ProcessSymbolsTestSetup setup;
   MockModuleSymbols* module_symbols = setup.InjectMockModule();
-  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
   // Offset from beginning of the module of the data.
   constexpr uint8_t kRelativeValAddress = 0x99;
@@ -337,7 +341,7 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   // The variable needs to have a unit that references the module to provide the symbol context
   // in which to evaluate the location expression. This will convert the kRelativeValAddress to
   // kAbsoluteValAddress.
-  auto unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), DwarfLang::kC,
+  auto unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), 0, DwarfLang::kC,
                                                "file.cc", std::nullopt);
   SymbolTestParentSetter var_parent(real_variable, unit);
 

@@ -108,8 +108,8 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // Returns the format to be used for converting vector registers to values.
   virtual VectorRegisterFormat GetVectorRegisterFormat() const = 0;
 
-  // Returns true if base classes should automatically be promoted to derived classes when pointer
-  // and references are dereferences.
+  // Returns true if base classes should automatically be promoted to derived classes (when the
+  // derived class is known) when pointer and references are dereferences.
   virtual bool ShouldPromoteToDerived() const = 0;
 
  protected:

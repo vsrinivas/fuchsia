@@ -11,12 +11,14 @@
 
 namespace zxdb {
 
-void DwarfExprToValue(const fxl::RefPtr<EvalContext>& eval_context,
+void DwarfExprToValue(UnitSymbolFactory symbol_factory,
+                      const fxl::RefPtr<EvalContext>& eval_context,
                       const SymbolContext& symbol_context, DwarfExpr expr, fxl::RefPtr<Type> type,
                       EvalCallback cb) {
-  auto evaluator =
-      fxl::MakeRefCounted<AsyncDwarfExprEvalValue>(eval_context, std::move(type), std::move(cb));
-  evaluator->Eval(eval_context->GetDataProvider(), symbol_context, std::move(expr));
+  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEvalValue>(
+      std::move(symbol_factory), eval_context->GetDataProvider(), symbol_context, eval_context,
+      std::move(type), std::move(cb));
+  evaluator->Eval(std::move(expr));
 }
 
 void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval& eval,
@@ -73,23 +75,24 @@ void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval
   }
 }
 
-void AsyncDwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                              const SymbolContext& expr_symbol_context, DwarfExpr expr) {
-  dwarf_eval_.Eval(std::move(data_provider), expr_symbol_context, std::move(expr),
-                   [this_ref = RefPtrTo(this)](DwarfExprEval*, const Err& err) {
-                     this_ref->dwarf_callback_(this_ref->dwarf_eval_, err);
+void AsyncDwarfExprEval::Eval(DwarfExpr expr) {
+  dwarf_eval_.Eval(std::move(expr), [this_ref = RefPtrTo(this)](DwarfExprEval*, const Err& err) {
+    this_ref->dwarf_callback_(this_ref->dwarf_eval_, err);
 
-                     // Prevent the DwarfExprEval from getting reentrantly deleted from within its
-                     // own callback by posting a reference back to the message loop.
-                     debug::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                             [this_ref = std::move(this_ref)]() {});
-                   });
+    // Prevent the DwarfExprEval from getting reentrantly deleted from within its
+    // own callback by posting a reference back to the message loop.
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [this_ref = std::move(this_ref)]() {});
+  });
 }
 
 // The callback passed to the base class can capture |this| because we're the same object.
-AsyncDwarfExprEvalValue::AsyncDwarfExprEvalValue(const fxl::RefPtr<EvalContext>& context,
+AsyncDwarfExprEvalValue::AsyncDwarfExprEvalValue(UnitSymbolFactory symbol_factory,
+                                                 fxl::RefPtr<SymbolDataProvider> data_provider,
+                                                 const SymbolContext& expr_symbol_context,
+                                                 const fxl::RefPtr<EvalContext>& context,
                                                  fxl::RefPtr<Type> type, EvalCallback cb)
-    : AsyncDwarfExprEval([this](DwarfExprEval&, const Err& err) { OnEvalComplete(err); }),
+    : AsyncDwarfExprEval(std::move(symbol_factory), std::move(data_provider), expr_symbol_context,
+                         [this](DwarfExprEval&, const Err& err) { OnEvalComplete(err); }),
       context_(context),
       type_(std::move(type)),
       value_callback_(std::move(cb)) {}

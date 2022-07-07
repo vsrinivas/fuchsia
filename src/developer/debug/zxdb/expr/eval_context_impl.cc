@@ -249,7 +249,8 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   }
 
   // Schedule the expression to be evaluated.
-  DwarfExprToValue(RefPtrTo(this), symbol_context, *loc_expr, std::move(type), std::move(cb));
+  DwarfExprToValue(UnitSymbolFactory(input_val.get()), RefPtrTo(this), symbol_context, *loc_expr,
+                   std::move(type), std::move(cb));
 }
 
 const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {

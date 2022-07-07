@@ -31,9 +31,14 @@ class TrackedAsyncDwarfExprEval : public AsyncDwarfExprEvalValue {
   FRIEND_MAKE_REF_COUNTED(TrackedAsyncDwarfExprEval);
 
   // Sets the given boolean in the destructor. The pointer must outlive this class.
-  explicit TrackedAsyncDwarfExprEval(const fxl::RefPtr<EvalContext>& context,
+  explicit TrackedAsyncDwarfExprEval(UnitSymbolFactory symbol_factory,
+                                     fxl::RefPtr<SymbolDataProvider> data_provider,
+                                     const SymbolContext& expr_symbol_context,
+                                     const fxl::RefPtr<EvalContext>& context,
                                      fxl::RefPtr<Type> type, EvalCallback cb, bool* destroyed)
-      : AsyncDwarfExprEvalValue(std::move(context), std::move(type), std::move(cb)),
+      : AsyncDwarfExprEvalValue(std::move(symbol_factory), std::move(data_provider),
+                                expr_symbol_context, std::move(context), std::move(type),
+                                std::move(cb)),
         destroyed_(destroyed) {}
 
   ~TrackedAsyncDwarfExprEval() override { *destroyed_ = true; }
@@ -76,9 +81,10 @@ TEST_F(AsyncDwarfExprEvalTest, MemoryManagement) {
   };
 
   bool destroyed = false;
-  auto eval = fxl::MakeRefCounted<TrackedAsyncDwarfExprEval>(eval_context, uint32_type,
-                                                             value_callback, &destroyed);
-  eval->Eval(eval_context->GetDataProvider(), symbol_context, expr);
+  auto eval = fxl::MakeRefCounted<TrackedAsyncDwarfExprEval>(
+      UnitSymbolFactory(), eval_context->GetDataProvider(), symbol_context, eval_context,
+      uint32_type, value_callback, &destroyed);
+  eval->Eval(expr);
 
   // Should evaluate asynchronously.
   EXPECT_FALSE(called);

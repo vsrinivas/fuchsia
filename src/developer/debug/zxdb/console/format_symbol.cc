@@ -239,9 +239,10 @@ OutputBuffer FormatDwarfExpr(debug::Arch arch, FormatSymbolOptions::DwarfExpr wh
     return result;
   }
 
-  DwarfExprEval eval;
-  return eval.ToString(fxl::MakeRefCounted<ArchDataProvider>(arch), symbol_context, expr,
-                       what == FormatSymbolOptions::DwarfExpr::kPretty);
+  // Stringifying does not require DIE lookups so we can pass an empty UnitSymbolFactory.
+  DwarfExprEval eval(UnitSymbolFactory(), fxl::MakeRefCounted<ArchDataProvider>(arch),
+                     symbol_context);
+  return eval.ToString(expr, what == FormatSymbolOptions::DwarfExpr::kPretty);
 }
 
 OutputBuffer FormatVariableLocation(int indent, const std::string& title,

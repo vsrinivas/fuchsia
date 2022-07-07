@@ -35,7 +35,8 @@ class Type;
 
 // Evaluates the given DWARF expression and calls the callback with the result, using the given
 // type. See file comment above.
-void DwarfExprToValue(const fxl::RefPtr<EvalContext>& eval_context,
+void DwarfExprToValue(UnitSymbolFactory symbol_factory,
+                      const fxl::RefPtr<EvalContext>& eval_context,
                       const SymbolContext& symbol_context, DwarfExpr expr, fxl::RefPtr<Type> type,
                       EvalCallback cb);
 
@@ -69,14 +70,17 @@ class AsyncDwarfExprEval : public fxl::RefCountedThreadSafe<AsyncDwarfExprEval> 
   //
   // The symbol context should be the one for the module the expression came from so that addresses
   // within the expression can be interpreted correctly.
-  void Eval(fxl::RefPtr<SymbolDataProvider> data_provider, const SymbolContext& expr_symbol_context,
-            DwarfExpr expr);
+  void Eval(DwarfExpr expr);
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(AsyncDwarfExprEval);
   FRIEND_MAKE_REF_COUNTED(AsyncDwarfExprEval);
 
-  explicit AsyncDwarfExprEval(DwarfEvalCallback cb) : dwarf_callback_(std::move(cb)) {}
+  explicit AsyncDwarfExprEval(UnitSymbolFactory symbol_factory,
+                              fxl::RefPtr<SymbolDataProvider> data_provider,
+                              const SymbolContext& expr_symbol_context, DwarfEvalCallback cb)
+      : dwarf_eval_(std::move(symbol_factory), std::move(data_provider), expr_symbol_context),
+        dwarf_callback_(std::move(cb)) {}
   virtual ~AsyncDwarfExprEval() = default;
 
  private:
@@ -104,7 +108,10 @@ class AsyncDwarfExprEvalValue : public AsyncDwarfExprEval {
 
   // The passed-in callback will be executed if the DwarfExprEval returns success. It will have
   // the given type.
-  AsyncDwarfExprEvalValue(const fxl::RefPtr<EvalContext>& context, fxl::RefPtr<Type> type,
+  AsyncDwarfExprEvalValue(UnitSymbolFactory symbol_factory,
+                          fxl::RefPtr<SymbolDataProvider> data_provider,
+                          const SymbolContext& expr_symbol_context,
+                          const fxl::RefPtr<EvalContext>& context, fxl::RefPtr<Type> type,
                           EvalCallback cb);
 
  private:

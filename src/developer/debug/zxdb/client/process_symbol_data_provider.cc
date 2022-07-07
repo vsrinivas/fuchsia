@@ -152,9 +152,16 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
     // This code manually creates a DwarfExprEval rather that use the AsyncDwarfExprEval (which
     // makes things a little simpler) because we want to get the exact stack value (this is called
     // in the context of another DwarfExprEval).
-    auto dwarf_eval = std::make_shared<DwarfExprEval>();
+    //
+    // Here we assume that the expression does not use any typed stack entries so we can pass a
+    // default-constructed UnitSymbolFactory. Since Fuchsia controls the definition of this DWARF
+    // expression, we can know it doesn't use the DWARF 5 typed operations. The definition of this
+    // expression isn't really in the symbols, but is instead in the static data of the dynamic
+    // loaders so unit-relative addresses don't make sense.
+    auto dwarf_eval =
+        std::make_shared<DwarfExprEval>(UnitSymbolFactory(), this_ref, symbol_context);
     dwarf_eval->Push(DwarfStackEntry(debug_address));
-    dwarf_eval->Eval(this_ref, symbol_context, DwarfExpr(std::move(program)),
+    dwarf_eval->Eval(DwarfExpr(std::move(program)),
                      [dwarf_eval, cb = std::move(cb)](DwarfExprEval*, const Err& err) mutable {
                        // Prevent the DwarfExprEval from getting reentrantly deleted from within its
                        // own callback by posting a reference back to the message loop. This creates

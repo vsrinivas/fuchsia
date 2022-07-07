@@ -22,6 +22,8 @@ class CompileUnit final : public Symbol {
   // is also null in many unit testing situations where mock symbols are created.
   const fxl::WeakPtr<ModuleSymbols>& module() const { return module_; }
 
+  uint64_t die_addr() const { return die_addr_; }
+
   DwarfLang language() const { return language_; }
 
   // The file name that generated this unit.
@@ -43,11 +45,15 @@ class CompileUnit final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);
   FRIEND_MAKE_REF_COUNTED(CompileUnit);
 
-  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, DwarfLang lang, std::string name,
-                       const std::optional<uint64_t>& addr_base);
+  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, uint64_t die_addr, DwarfLang lang,
+                       std::string name, const std::optional<uint64_t>& addr_base);
   ~CompileUnit() override;
 
   fxl::WeakPtr<ModuleSymbols> module_;
+
+  // Address of this unit's DIE in the symbol file. Some references are relative to a unit
+  // so this information is required. See symbol.h for more discussion on DIE addresses.
+  uint64_t die_addr_;
 
   DwarfLang language_ = DwarfLang::kNone;
   std::string name_;

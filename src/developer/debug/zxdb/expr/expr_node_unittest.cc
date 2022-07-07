@@ -379,7 +379,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
 // Tests that Rust references are autodereferenced by the . operator.
 TEST_F(ExprNodeTest, RustMemberAccess) {
   auto context = fxl::MakeRefCounted<MockEvalContext>();
-  auto unit = fxl::MakeRefCounted<CompileUnit>(fxl::WeakPtr<ModuleSymbols>(), DwarfLang::kRust,
+  auto unit = fxl::MakeRefCounted<CompileUnit>(fxl::WeakPtr<ModuleSymbols>(), 0, DwarfLang::kRust,
                                                "module.so", std::nullopt);
 
   // Define a class.

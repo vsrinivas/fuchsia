@@ -26,13 +26,13 @@ class UncachedLazySymbol;
 class DwarfSymbolFactory : public SymbolFactory {
  public:
   // SymbolFactory implementation.
-  fxl::RefPtr<Symbol> CreateSymbol(uint64_t factory_data) override;
+  fxl::RefPtr<Symbol> CreateSymbol(uint64_t factory_data) const override;
 
   // Returns a LazySymbol referencing the given DIE or DIE offset.
-  LazySymbol MakeLazy(const llvm::DWARFDie& die);
-  LazySymbol MakeLazy(uint64_t die_offset);
-  UncachedLazySymbol MakeUncachedLazy(const llvm::DWARFDie& die);
-  UncachedLazySymbol MakeUncachedLazy(uint64_t die_offset);
+  LazySymbol MakeLazy(const llvm::DWARFDie& die) const;
+  LazySymbol MakeLazy(uint64_t die_offset) const;
+  UncachedLazySymbol MakeUncachedLazy(const llvm::DWARFDie& die) const;
+  UncachedLazySymbol MakeUncachedLazy(uint64_t die_offset) const;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(DwarfSymbolFactory);
@@ -41,10 +41,10 @@ class DwarfSymbolFactory : public SymbolFactory {
   explicit DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols);
   ~DwarfSymbolFactory() override;
 
-  llvm::DWARFContext* GetLLVMContext();
+  llvm::DWARFContext* GetLLVMContext() const;
 
   // Internal version that creates a symbol from a Die.
-  fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die) const;
 
   // As with SymbolFactory::CreateSymbol, these should never return null but rather an empty Symbol
   // implementation on error.
@@ -56,27 +56,28 @@ class DwarfSymbolFactory : public SymbolFactory {
   // looking up the definitions, we want the original DIE tag rather than the specification's tag
   // (the original could be an inlined function while the specification will never be).
   fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,
-                                     bool is_specification = false);
-  fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeCallSite(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeCallSiteParameter(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeCollection(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeCompileUnit(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeEnum(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeFunctionType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeImportedDeclaration(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeInheritedFrom(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeMemberPtr(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeTemplateParameter(const llvm::DWARFDie& die, DwarfTag tag);
-  fxl::RefPtr<Symbol> DecodeUnspecifiedType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die, bool is_specification = false);
-  fxl::RefPtr<Symbol> DecodeVariant(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeVariantPart(const llvm::DWARFDie& die);
+                                     bool is_specification = false) const;
+  fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeCallSite(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeCallSiteParameter(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeCollection(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeCompileUnit(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeEnum(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeFunctionType(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeImportedDeclaration(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeInheritedFrom(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeMemberPtr(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeTemplateParameter(const llvm::DWARFDie& die, DwarfTag tag) const;
+  fxl::RefPtr<Symbol> DecodeUnspecifiedType(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die,
+                                     bool is_specification = false) const;
+  fxl::RefPtr<Symbol> DecodeVariant(const llvm::DWARFDie& die) const;
+  fxl::RefPtr<Symbol> DecodeVariantPart(const llvm::DWARFDie& die) const;
 
   // This can be null if the module is unloaded but there are still some dangling type references to
   // it.

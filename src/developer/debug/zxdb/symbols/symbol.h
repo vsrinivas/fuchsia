@@ -70,6 +70,15 @@ class VariantPart;
 // objects can never be freed without unloading the whole module). This scheme would mean that
 // symbols will be freed when the module is removed, which will require weak pointers from the
 // expression system.
+//
+// DIE ADDRESSES
+// -------------
+// Some things refer to symbols by the address of the DIE. Normally DIE addresses are stored in
+// the LazySymbol for constructing the Symbol object, and are discarded. So Symbols don't know their
+// own DIE address.
+//
+// Currently the only Symbol that knows its own DIE is the CompilationUnit because some offsets are
+// unit relative. This address could be changed in the future if needed so it lives on all symbols.
 class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
  public:
   DwarfTag tag() const { return tag_; }

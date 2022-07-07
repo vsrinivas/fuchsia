@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
@@ -27,9 +28,17 @@ using debug::RegisterID;
 // Base address of the imaginary module. Relative addresses will be relative to this number.
 constexpr TargetPointer kModuleBase = 0x78000000;
 
+// Offset of the compilation unit DIE corresponding to the DIE referencing the evaluated expression
+// in the symbols. This is used by the UnitSymbolFactory when there are DIE references in an
+// expression.
+constexpr uint64_t kUnitOffset = 0x2000000;
+
 class DwarfExprEvalTest : public TestWithLoop {
  public:
-  DwarfExprEvalTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
+  DwarfExprEvalTest()
+      : symbol_factory_(fxl::MakeRefCounted<MockSymbolFactory>()),
+        provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()),
+        eval_(UnitSymbolFactory(symbol_factory_, kUnitOffset), provider_, symbol_context_) {}
 
   DwarfExprEval& eval() { return eval_; }
   fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
@@ -70,9 +79,10 @@ class DwarfExprEvalTest : public TestWithLoop {
               const char* expected_message = nullptr);
 
  private:
-  DwarfExprEval eval_;
+  fxl::RefPtr<MockSymbolFactory> symbol_factory_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
   SymbolContext symbol_context_ = SymbolContext(kModuleBase);
+  DwarfExprEval eval_;
 };
 
 void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expected_success,
@@ -92,7 +102,7 @@ void DwarfExprEvalTest::DoEvalTest(DwarfExpr expr, bool expected_success,
   // Check string-ification. Do this first because it won't set up the complete state of the
   // DwarfExprEval and some tests want to validate this after the DoEvalTest call.
   eval_.Clear();
-  std::string stringified = eval_.ToString(provider(), symbol_context_, expr, false);
+  std::string stringified = eval_.ToString(expr, false);
   EXPECT_EQ(expected_string, stringified);
 
   eval_.Clear();
@@ -106,21 +116,21 @@ void DwarfExprEvalTest::DoEval(DwarfExpr expr, bool expected_success,
                                DwarfExprEval::ResultType expected_result_type,
                                const char* expected_message) {
   bool callback_issued = false;
-  EXPECT_EQ(expected_completion,
-            eval_.Eval(provider(), symbol_context_, expr,
-                       [&callback_issued, expected_success, expected_result, expected_result_type,
+  EXPECT_EQ(
+      expected_completion,
+      eval_.Eval(expr, [&callback_issued, expected_success, expected_result, expected_result_type,
                         expected_message](DwarfExprEval* eval, const Err& err) {
-                         EXPECT_TRUE(eval->is_complete());
-                         EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
-                         if (err.ok()) {
-                           EXPECT_EQ(expected_result_type, eval->GetResultType());
-                           if (expected_result_type != DwarfExprEval::ResultType::kData)
-                             EXPECT_EQ(expected_result, eval->GetResult());
-                         } else if (expected_message) {
-                           EXPECT_EQ(expected_message, err.msg());
-                         }
-                         callback_issued = true;
-                       }));
+        EXPECT_TRUE(eval->is_complete());
+        EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
+        if (err.ok()) {
+          EXPECT_EQ(expected_result_type, eval->GetResultType());
+          if (expected_result_type != DwarfExprEval::ResultType::kData)
+            EXPECT_EQ(expected_result, eval->GetResult());
+        } else if (expected_message) {
+          EXPECT_EQ(expected_message, err.msg());
+        }
+        callback_issued = true;
+      }));
 
   if (expected_completion == DwarfExprEval::Completion::kAsync) {
     // In the async case the message loop needs to be run to get the result.
@@ -180,10 +190,11 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
   // This expression loops back to the beginning infinitely.
   std::vector<uint8_t> loop_data = {llvm::dwarf::DW_OP_skip, 0xfd, 0xff};
 
-  std::unique_ptr<DwarfExprEval> eval = std::make_unique<DwarfExprEval>();
+  std::unique_ptr<DwarfExprEval> eval =
+      std::make_unique<DwarfExprEval>(UnitSymbolFactory(), provider(), symbol_context());
 
   bool callback_issued = false;
-  eval->Eval(provider(), symbol_context(), DwarfExpr(loop_data),
+  eval->Eval(DwarfExpr(loop_data),
              [&callback_issued](DwarfExprEval* eval, const Err& err) { callback_issued = true; });
 
   // Let the message loop process messages for a few times so the evaluator can run.
@@ -310,7 +321,7 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
   // This unit has an DW_AT_addr_base which is added to the offsets for the "addrx" and "constx"
   // operators for expressions inside of it.
   constexpr uint64_t kAddrBase = 12;
-  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(),
+  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), 0,
                                                        DwarfLang::kCpp14, "source.cc", kAddrBase);
 
   // Offset from kAddrBase of our value.
@@ -1162,8 +1173,7 @@ TEST_F(DwarfExprEvalTest, GetTLSAddr) {
 TEST_F(DwarfExprEvalTest, PrettyPrint) {
   eval().Clear();
   std::string stringified =
-      eval().ToString(provider(), symbol_context(),
-                      DwarfExpr({llvm::dwarf::DW_OP_reg3, llvm::dwarf::DW_OP_breg0, 2,
+      eval().ToString(DwarfExpr({llvm::dwarf::DW_OP_reg3, llvm::dwarf::DW_OP_breg0, 2,
                                  llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_plus_uconst, 1,
                                  // This address is "1" relative to the module base.
                                  llvm::dwarf::DW_OP_addr, 1, 0, 0, 0, 0, 0, 0, 0}),

@@ -20,6 +20,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
@@ -32,6 +33,7 @@
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/unit_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/elflib/elflib.h"
 
@@ -185,6 +187,8 @@ std::time_t ModuleSymbolsImpl::GetModificationTime() const {
 std::string ModuleSymbolsImpl::GetBuildDir() const { return build_dir_; }
 
 uint64_t ModuleSymbolsImpl::GetMappedLength() const { return binary_->GetMappedLength(); }
+
+const SymbolFactory* ModuleSymbolsImpl::GetSymbolFactory() const { return symbol_factory_.get(); }
 
 std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContext& symbol_context,
                                                               const InputLocation& input_location,
@@ -604,8 +608,8 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
     return Location(symbol_context, std::move(variable));
 
   auto global_data_provider = fxl::MakeRefCounted<GlobalSymbolDataProvider>();
-  DwarfExprEval eval;
-  eval.Eval(global_data_provider, symbol_context, variable->location().locations()[0].expression,
+  DwarfExprEval eval(UnitSymbolFactory(variable.get()), global_data_provider, symbol_context);
+  eval.Eval(variable->location().locations()[0].expression,
             [](DwarfExprEval* eval, const Err& err) {});
 
   // Only evaluate synchronous outputs that result in a pointer.

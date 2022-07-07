@@ -92,7 +92,7 @@ void CallSiteSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegis
   };
 
   // Dispatch the evaluation request. In practice, many call site expression evaluations will
-  // complete synchronouslt because they're expressed in terms of other known registers. But the
+  // complete synchronously because they're expressed in terms of other known registers. But the
   // contract for GetRegisterAsync is that it will always complete asynchronously. As a result,
   // always start execution from the message loop to prevent executing the callback from within
   // the caller's stack frame.
@@ -100,11 +100,11 @@ void CallSiteSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegis
   // Note that we pass the frame_provider_ as the symbol data provider instead of ourselves. Call
   // site parameters should not be expressed in terms of other call site parameters, so we only need
   // the underlying values. And this avoids the danger of infinitely recursive definitions.
-  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(handle_done));
+  auto evaluator =
+      fxl::MakeRefCounted<AsyncDwarfExprEval>(UnitSymbolFactory(param.get()), frame_provider_,
+                                              call_site_symbol_context_, std::move(handle_done));
   debug::MessageLoop::Current()->PostTask(
-      FROM_HERE,
-      [evaluator, provider = frame_provider_, symbol_context = call_site_symbol_context_,
-       expr = param->value_expr()]() { evaluator->Eval(provider, symbol_context, expr); });
+      FROM_HERE, [evaluator, expr = param->value_expr()]() { evaluator->Eval(expr); });
 }
 
 void CallSiteSymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
