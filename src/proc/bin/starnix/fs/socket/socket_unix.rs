@@ -751,9 +751,6 @@ impl UnixSocketInner {
         if self.peer_closed_with_unread_data {
             return error!(ECONNRESET);
         }
-        if self.is_shutdown && self.messages.is_empty() {
-            return Ok(MessageReadInfo::default());
-        }
         let info = if socket_type == SocketType::Stream {
             if flags.contains(SocketMessageFlags::PEEK) {
                 self.messages.peek_stream(current_task, user_buffers)?
