@@ -4,7 +4,7 @@
 
 use {
     crate::wire,
-    anyhow::Error,
+    anyhow::{anyhow, Context, Error},
     std::io::{Read, Write},
     tracing,
     virtio_device::chain::{ReadableChain, WritableChain},
@@ -16,17 +16,52 @@ use {
 const VIRTIO_GPU_STARTUP_HEIGHT: u32 = 720;
 const VIRTIO_GPU_STARTUP_WIDTH: u32 = 1280;
 
-/// Reads a `wire::VirtioGpuCtrlHeader` from the chain.
-fn read_header<'a, 'b, N: DriverNotify, M: DriverMem>(
+/// Consumes bytes equal to the size of `message` and writes `message` to the chain.
+///
+/// Will fail if there is an error walking the chain, or if there is insufficient space left in
+/// `chain`.
+fn write_to_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: AsBytes>(
+    mut chain: WritableChain<'a, 'b, N, M>,
+    message: T,
+) -> Result<(), Error> {
+    let size = chain.remaining()?;
+    if size < std::mem::size_of::<wire::VirtioGpuCtrlHeader>() {
+        return Err(anyhow!("Insufficient wriable space to write message to the chain"));
+    }
+    // unwrap here because since we already checked if there is space in the writable chain
+    // we do not expect this to fail.
+    chain.write_all(message.as_bytes()).unwrap();
+    Ok(())
+}
+
+/// Writes a response to the chain with the given `wire::VirtioGpuError`.
+fn write_error_to_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+    chain: ReadableChain<'a, 'b, N, M>,
+    error_code: wire::VirtioGpuError,
+) -> Result<(), Error> {
+    // Since this is an error, assume it's possible some bytes may not have been read from the
+    // readable portion of the chain.
+    let chain =
+        WritableChain::from_incomplete_readable(chain).context("Failed to get a writable chain")?;
+    let response = wire::VirtioGpuCtrlHeader { ty: error_code.to_wire(), ..Default::default() };
+    write_to_chain(chain, response).with_context(|| format!("Failed to write error {}", error_code))
+}
+
+/// Reads a `FromBytes` type from the chain. Fails if there are insufficient bytes remaining in the
+/// chain to fully read the the value.
+fn read_from_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: FromBytes>(
     chain: &mut ReadableChain<'a, 'b, N, M>,
-) -> Result<wire::VirtioGpuCtrlHeader, anyhow::Error> {
-    let mut header_buf: [u8; std::mem::size_of::<wire::VirtioGpuCtrlHeader>()] =
-        [0; std::mem::size_of::<wire::VirtioGpuCtrlHeader>()];
-    chain.read_exact(&mut header_buf)?;
+) -> Result<T, anyhow::Error> {
+    // Ideally we'd just use an array here instead of doing this short-lived heap allocation.
+    // Unfortunately that is not currently possible with rust.
+    //
+    // See https://github.com/rust-lang/rust/issues/43408 for more details. If and when the rust
+    // compiler will accept an array here we can remove this allocation.
+    let mut buffer = vec![0u8; std::mem::size_of::<T>()];
+    chain.read_exact(&mut buffer)?;
     // read_from should not fail since we've sized the buffer appropriately. Any failures here are
     // unexpected.
-    Ok(wire::VirtioGpuCtrlHeader::read_from(header_buf.as_slice())
-        .expect("Failed to deserialize VirtioGpuCtrlHeader."))
+    Ok(T::read_from(buffer.as_slice()).unwrap())
 }
 
 pub struct GpuDevice {}
@@ -40,10 +75,16 @@ impl GpuDevice {
         &self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        let header = read_header(&mut chain)?;
+        let header: wire::VirtioGpuCtrlHeader = match read_from_chain(&mut chain) {
+            Ok(header) => header,
+            Err(e) => {
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified)
+                    .with_context(|| format!("Failed to read request header from queue: {}", e));
+            }
+        };
         match header.ty.get() {
-            wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain),
-            cmd => self.unsupported_command(chain, cmd),
+            wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
+            cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
     }
@@ -52,9 +93,15 @@ impl GpuDevice {
         &self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        let header = read_header(&mut chain)?;
+        let header: wire::VirtioGpuCtrlHeader = match read_from_chain(&mut chain) {
+            Ok(header) => header,
+            Err(e) => {
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified)
+                    .with_context(|| format!("Failed to read request header from queue: {}", e));
+            }
+        };
         match header.ty.get() {
-            cmd => self.unsupported_command(chain, cmd),
+            cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
     }
@@ -63,21 +110,15 @@ impl GpuDevice {
         &self,
         chain: ReadableChain<'a, 'b, N, M>,
         cmd: u32,
-    ) {
+    ) -> Result<(), Error> {
         tracing::info!("Command {:#06x} is not implemented", cmd);
-        let response = wire::VirtioGpuCtrlHeader {
-            ty: wire::VIRTIO_GPU_RESP_ERR_UNSPEC.into(),
-            ..Default::default()
-        };
-
-        let mut chain = WritableChain::from_readable(chain).unwrap();
-        chain.write_all(response.as_bytes()).unwrap();
+        write_error_to_chain(chain, wire::VirtioGpuError::Unspecified)
     }
 
     fn get_display_info<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
         chain: ReadableChain<'a, 'b, N, M>,
-    ) {
+    ) -> Result<(), Error> {
         let mut display_info: wire::VirtioGpuRespDisplayInfo = Default::default();
         display_info.hdr.ty = wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO.into();
         // TODO(fxbug.dev/102870): For now we just report a single pmode with some initial
@@ -95,8 +136,8 @@ impl GpuDevice {
             flags: 0.into(),
         };
 
-        let mut chain = WritableChain::from_readable(chain).unwrap();
-        chain.write_all(display_info.as_bytes()).unwrap();
+        // Now write the response to the chain.
+        write_to_chain(WritableChain::from_readable(chain)?, display_info)
     }
 }
 
@@ -144,7 +185,7 @@ mod tests {
         // Process the request.
         device
             .process_control_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
-            .expect("Failed to process display info command");
+            .expect("Failed to process control chain");
 
         // Validate the returned chain has a written header.
         let returned = state.fake_queue.next_used().unwrap();
@@ -183,7 +224,7 @@ mod tests {
         // Process the request.
         device
             .process_control_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
-            .expect("Failed to process display info command");
+            .expect("Failed to process control chain");
 
         // Validate returned chain. We should have a DISPLAY_INFO response structure.
         let returned = state.fake_queue.next_used().unwrap();

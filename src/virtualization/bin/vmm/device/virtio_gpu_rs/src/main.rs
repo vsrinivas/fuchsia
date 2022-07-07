@@ -55,14 +55,24 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
             let guest_mem = &guest_mem;
             let gpu_device = &gpu_device;
             move |chain| async move {
-                gpu_device.process_control_chain(ReadableChain::new(chain, guest_mem))
+                if let Err(e) =
+                    gpu_device.process_control_chain(ReadableChain::new(chain, guest_mem))
+                {
+                    tracing::warn!("Error processing control queue: {}", e);
+                }
+                Ok(())
             }
         }),
         cursor_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
             let guest_mem = &guest_mem;
             let gpu_device = &gpu_device;
             move |chain| async move {
-                gpu_device.process_cursor_chain(ReadableChain::new(chain, guest_mem))
+                if let Err(e) =
+                    gpu_device.process_cursor_chain(ReadableChain::new(chain, guest_mem))
+                {
+                    tracing::warn!("Error processing cursor queue: {}", e);
+                }
+                Ok(())
             }
         }),
     )?;

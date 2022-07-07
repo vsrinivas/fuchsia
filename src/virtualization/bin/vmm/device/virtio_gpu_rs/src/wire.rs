@@ -5,7 +5,10 @@
 // Keep all consts and type defs for completeness.
 #![allow(dead_code)]
 
-use zerocopy::{AsBytes, FromBytes, LittleEndian, U32, U64};
+use {
+    std::fmt,
+    zerocopy::{AsBytes, FromBytes, LittleEndian, U32, U64},
+};
 
 pub type LE32 = U32<LittleEndian>;
 pub type LE64 = U64<LittleEndian>;
@@ -68,6 +71,50 @@ pub const VIRTIO_GPU_RESP_ERR_INVALID_SCANOUT_ID: u32 = 0x1202;
 pub const VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID: u32 = 0x1203;
 pub const VIRTIO_GPU_RESP_ERR_INVALID_CONTEXT_ID: u32 = 0x1204;
 pub const VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER: u32 = 0x1205;
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum VirtioGpuError {
+    Unspecified,
+    OutOfMemory,
+    InvalidScanoutId,
+    InvalidResourceId,
+    InvalidContextId,
+    InvalidParameter,
+}
+
+impl fmt::Display for VirtioGpuError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::Unspecified => "VIRTIO_GPU_RESP_ERR_UNSPEC",
+            Self::OutOfMemory => "VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY",
+            Self::InvalidScanoutId => "VIRTIO_GPU_RESP_ERR_INVALID_SCANOUT_ID",
+            Self::InvalidResourceId => "VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID",
+            Self::InvalidContextId => "VIRTIO_GPU_RESP_ERR_INVALID_CONTEXT_ID",
+            Self::InvalidParameter => "VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Debug for VirtioGpuError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl VirtioGpuError {
+    pub fn to_wire(&self) -> LE32 {
+        match self {
+            Self::Unspecified => VIRTIO_GPU_RESP_ERR_UNSPEC,
+            Self::OutOfMemory => VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY,
+            Self::InvalidScanoutId => VIRTIO_GPU_RESP_ERR_INVALID_SCANOUT_ID,
+            Self::InvalidResourceId => VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID,
+            Self::InvalidContextId => VIRTIO_GPU_RESP_ERR_INVALID_CONTEXT_ID,
+            Self::InvalidParameter => VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
+        }
+        .into()
+    }
+}
 
 // Flags
 pub const VIRTIO_GPU_FLAG_FENCE: u32 = 0x01;
