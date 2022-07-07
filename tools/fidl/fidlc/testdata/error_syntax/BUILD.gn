@@ -12,6 +12,7 @@ fidl("test.errorsyntax.parent") {
 
 fidl("test.errorsyntax") {
   testonly = true
+  experimental_flags = [ "output_index_json" ]
   sources = [ "child.test.fidl" ]
   public_deps = [ ":test.errorsyntax.parent" ]
   golden_fuzzer = true

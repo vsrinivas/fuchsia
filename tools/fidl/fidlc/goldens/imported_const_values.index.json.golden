@@ -1,0 +1,33 @@
+{
+  "name": "test.importedconstvalues",
+  "lib_declarations": [
+    {
+      "data": "test.importedconstvalues",
+      "start_offset": 8,
+      "end_offset": 32,
+      "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.dependent",
+      "referenced_at": {
+        "data": "test.dependent",
+        "start_offset": 41,
+        "end_offset": 55,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.dependent",
+      "library_location": {
+        "data": "library test.dependent",
+        "start_offset": 0,
+        "end_offset": 22,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl"
+      }
+    }
+  ]
+}

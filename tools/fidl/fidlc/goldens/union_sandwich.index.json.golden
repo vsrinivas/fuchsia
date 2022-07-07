@@ -1,0 +1,13 @@
+{
+  "name": "test.unionsandwich",
+  "lib_declarations": [
+    {
+      "data": "test.unionsandwich",
+      "start_offset": 8,
+      "end_offset": 26,
+      "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

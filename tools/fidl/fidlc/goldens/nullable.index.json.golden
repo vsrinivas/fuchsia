@@ -1,0 +1,33 @@
+{
+  "name": "test.nullable",
+  "lib_declarations": [
+    {
+      "data": "test.nullable",
+      "start_offset": 8,
+      "end_offset": 21,
+      "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "zx",
+      "referenced_at": {
+        "data": "zx",
+        "start_offset": 30,
+        "end_offset": 32,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "zx",
+      "library_location": {
+        "data": "@available(platform=\"fuchsia\", added=7)\nlibrary zx",
+        "start_offset": 164,
+        "end_offset": 214,
+        "file": "../../zircon/vdso/overview.fidl"
+      }
+    }
+  ]
+}

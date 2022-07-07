@@ -1,0 +1,33 @@
+{
+  "name": "test.driverhandle",
+  "lib_declarations": [
+    {
+      "data": "test.driverhandle",
+      "start_offset": 173,
+      "end_offset": 190,
+      "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "zx",
+      "referenced_at": {
+        "data": "zx",
+        "start_offset": 199,
+        "end_offset": 201,
+        "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "zx",
+      "library_location": {
+        "data": "@available(platform=\"fuchsia\", added=7)\nlibrary zx",
+        "start_offset": 164,
+        "end_offset": 214,
+        "file": "../../zircon/vdso/overview.fidl"
+      }
+    }
+  ]
+}

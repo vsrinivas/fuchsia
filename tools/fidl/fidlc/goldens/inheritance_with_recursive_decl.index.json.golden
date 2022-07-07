@@ -1,0 +1,13 @@
+{
+  "name": "test.inheritancewithrecursivedecl",
+  "lib_declarations": [
+    {
+      "data": "test.inheritancewithrecursivedecl",
+      "start_offset": 8,
+      "end_offset": 41,
+      "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

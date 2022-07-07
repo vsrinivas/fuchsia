@@ -13,6 +13,7 @@ fidl("test.protocollayouts.imported") {
 fidl("test.protocollayouts") {
   testonly = true
   sources = [ "example.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
   public_deps = [ ":test.protocollayouts.imported" ]
   golden_fuzzer = true
 }

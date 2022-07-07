@@ -1,0 +1,33 @@
+{
+  "name": "test.bindingsdenylist",
+  "lib_declarations": [
+    {
+      "data": "test.bindingsdenylist",
+      "start_offset": 8,
+      "end_offset": 29,
+      "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.dependent",
+      "referenced_at": {
+        "data": "test.dependent",
+        "start_offset": 38,
+        "end_offset": 52,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.dependent",
+      "library_location": {
+        "data": "library test.dependent",
+        "start_offset": 0,
+        "end_offset": 22,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl"
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "test.driveroneway",
+  "lib_declarations": [
+    {
+      "data": "test.driveroneway",
+      "start_offset": 173,
+      "end_offset": 190,
+      "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

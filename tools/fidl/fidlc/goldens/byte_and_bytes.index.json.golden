@@ -1,0 +1,13 @@
+{
+  "name": "test.byteandbytes",
+  "lib_declarations": [
+    {
+      "data": "test.byteandbytes",
+      "start_offset": 8,
+      "end_offset": 25,
+      "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

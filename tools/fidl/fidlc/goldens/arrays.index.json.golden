@@ -1,0 +1,13 @@
+{
+  "name": "test.arrays",
+  "lib_declarations": [
+    {
+      "data": "test.arrays",
+      "start_offset": 8,
+      "end_offset": 19,
+      "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

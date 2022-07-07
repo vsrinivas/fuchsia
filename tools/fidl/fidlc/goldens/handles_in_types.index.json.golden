@@ -1,0 +1,13 @@
+{
+  "name": "test.handlesintypes",
+  "lib_declarations": [
+    {
+      "data": "test.handlesintypes",
+      "start_offset": 8,
+      "end_offset": 27,
+      "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

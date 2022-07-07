@@ -1,0 +1,13 @@
+{
+  "name": "test.padding",
+  "lib_declarations": [
+    {
+      "data": "test.padding",
+      "start_offset": 8,
+      "end_offset": 20,
+      "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

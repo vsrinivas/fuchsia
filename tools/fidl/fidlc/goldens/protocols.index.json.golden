@@ -1,0 +1,33 @@
+{
+  "name": "test.protocols",
+  "lib_declarations": [
+    {
+      "data": "test.protocols",
+      "start_offset": 8,
+      "end_offset": 22,
+      "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "zx",
+      "referenced_at": {
+        "data": "zx",
+        "start_offset": 31,
+        "end_offset": 33,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "zx",
+      "library_location": {
+        "data": "@available(platform=\"fuchsia\", added=7)\nlibrary zx",
+        "start_offset": 164,
+        "end_offset": 214,
+        "file": "../../zircon/vdso/overview.fidl"
+      }
+    }
+  ]
+}

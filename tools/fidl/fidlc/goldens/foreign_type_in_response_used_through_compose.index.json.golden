@@ -1,0 +1,42 @@
+{
+  "name": "test.foreigntypeinresponseusedthroughcompose",
+  "lib_declarations": [
+    {
+      "data": "test.foreigntypeinresponseusedthroughcompose",
+      "start_offset": 8,
+      "end_offset": 52,
+      "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.middle",
+      "referenced_at": {
+        "data": "test.middle",
+        "start_offset": 61,
+        "end_offset": 72,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.bottom",
+      "library_location": {
+        "data": "library test.bottom",
+        "start_offset": 0,
+        "end_offset": 19,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/bottom.test.fidl"
+      }
+    },
+    {
+      "library_name": "test.middle",
+      "library_location": {
+        "data": "library test.middle",
+        "start_offset": 0,
+        "end_offset": 19,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl"
+      }
+    }
+  ]
+}

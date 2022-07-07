@@ -1,0 +1,13 @@
+{
+  "name": "test.unknowninteractions",
+  "lib_declarations": [
+    {
+      "data": "test.unknowninteractions",
+      "start_offset": 173,
+      "end_offset": 197,
+      "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

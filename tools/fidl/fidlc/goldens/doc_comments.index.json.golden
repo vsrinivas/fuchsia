@@ -1,0 +1,13 @@
+{
+  "name": "test.doccomments",
+  "lib_declarations": [
+    {
+      "data": "test.doccomments",
+      "start_offset": 58,
+      "end_offset": 74,
+      "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

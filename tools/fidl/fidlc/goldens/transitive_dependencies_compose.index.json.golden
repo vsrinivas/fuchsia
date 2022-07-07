@@ -1,0 +1,42 @@
+{
+  "name": "test.transitivedependenciescompose",
+  "lib_declarations": [
+    {
+      "data": "test.transitivedependenciescompose",
+      "start_offset": 8,
+      "end_offset": 42,
+      "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.middle",
+      "referenced_at": {
+        "data": "test.middle",
+        "start_offset": 51,
+        "end_offset": 62,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.bottom",
+      "library_location": {
+        "data": "library test.bottom",
+        "start_offset": 0,
+        "end_offset": 19,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl"
+      }
+    },
+    {
+      "library_name": "test.middle",
+      "library_location": {
+        "data": "library test.middle",
+        "start_offset": 0,
+        "end_offset": 19,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/middle.test.fidl"
+      }
+    }
+  ]
+}

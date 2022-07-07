@@ -1,0 +1,13 @@
+{
+  "name": "test.inheritance",
+  "lib_declarations": [
+    {
+      "data": "test.inheritance",
+      "start_offset": 8,
+      "end_offset": 24,
+      "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

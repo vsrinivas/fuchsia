@@ -1,0 +1,33 @@
+{
+  "name": "test.protocollayouts",
+  "lib_declarations": [
+    {
+      "data": "test.protocollayouts",
+      "start_offset": 8,
+      "end_offset": 28,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.protocollayouts.imported",
+      "referenced_at": {
+        "data": "test.protocollayouts.imported",
+        "start_offset": 37,
+        "end_offset": 66,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.protocollayouts.imported",
+      "library_location": {
+        "data": "library test.protocollayouts.imported",
+        "start_offset": 0,
+        "end_offset": 37,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl"
+      }
+    }
+  ]
+}

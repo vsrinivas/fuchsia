@@ -1,0 +1,13 @@
+{
+  "name": "test.error",
+  "lib_declarations": [
+    {
+      "data": "test.error",
+      "start_offset": 8,
+      "end_offset": 18,
+      "file": "../../tools/fidl/fidlc/testdata/error.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

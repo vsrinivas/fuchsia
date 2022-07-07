@@ -1,0 +1,33 @@
+{
+  "name": "test.encapsulatedstructs",
+  "lib_declarations": [
+    {
+      "data": "test.encapsulatedstructs",
+      "start_offset": 8,
+      "end_offset": 32,
+      "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "zx",
+      "referenced_at": {
+        "data": "zx",
+        "start_offset": 41,
+        "end_offset": 43,
+        "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "zx",
+      "library_location": {
+        "data": "@available(platform=\"fuchsia\", added=7)\nlibrary zx",
+        "start_offset": 164,
+        "end_offset": 214,
+        "file": "../../zircon/vdso/overview.fidl"
+      }
+    }
+  ]
+}

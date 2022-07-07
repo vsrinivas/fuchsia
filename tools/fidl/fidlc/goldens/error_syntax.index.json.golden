@@ -1,0 +1,33 @@
+{
+  "name": "test.errorsyntax",
+  "lib_declarations": [
+    {
+      "data": "test.errorsyntax",
+      "start_offset": 173,
+      "end_offset": 189,
+      "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.errorsyntax.parent",
+      "referenced_at": {
+        "data": "test.errorsyntax.parent",
+        "start_offset": 198,
+        "end_offset": 221,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.errorsyntax.parent",
+      "library_location": {
+        "data": "library test.errorsyntax.parent",
+        "start_offset": 165,
+        "end_offset": 196,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl"
+      }
+    }
+  ]
+}

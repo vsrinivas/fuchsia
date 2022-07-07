@@ -1,0 +1,13 @@
+{
+  "name": "test.experimentalmaybefromtypealias",
+  "lib_declarations": [
+    {
+      "data": "test.experimentalmaybefromtypealias",
+      "start_offset": 8,
+      "end_offset": 43,
+      "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

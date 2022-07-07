@@ -1,0 +1,13 @@
+{
+  "name": "test.union",
+  "lib_declarations": [
+    {
+      "data": "test.union",
+      "start_offset": 8,
+      "end_offset": 18,
+      "file": "../../tools/fidl/fidlc/testdata/union.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

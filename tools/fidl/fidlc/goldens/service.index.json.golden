@@ -1,0 +1,13 @@
+{
+  "name": "test.service",
+  "lib_declarations": [
+    {
+      "data": "test.service",
+      "start_offset": 172,
+      "end_offset": 184,
+      "file": "../../tools/fidl/fidlc/testdata/service.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

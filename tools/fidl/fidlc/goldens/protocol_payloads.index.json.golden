@@ -1,0 +1,33 @@
+{
+  "name": "test.protocolpayloads",
+  "lib_declarations": [
+    {
+      "data": "test.protocolpayloads",
+      "start_offset": 8,
+      "end_offset": 29,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.protocolpayloads.imported",
+      "referenced_at": {
+        "data": "test.protocolpayloads.imported",
+        "start_offset": 38,
+        "end_offset": 68,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.protocolpayloads.imported",
+      "library_location": {
+        "data": "library test.protocolpayloads.imported",
+        "start_offset": 0,
+        "end_offset": 38,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl"
+      }
+    }
+  ]
+}

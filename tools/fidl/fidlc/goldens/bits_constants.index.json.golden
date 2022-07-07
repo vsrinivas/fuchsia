@@ -1,0 +1,13 @@
+{
+  "name": "test.bitsconstants",
+  "lib_declarations": [
+    {
+      "data": "test.bitsconstants",
+      "start_offset": 8,
+      "end_offset": 26,
+      "file": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

@@ -1,0 +1,51 @@
+{
+  "name": "test.handles",
+  "lib_declarations": [
+    {
+      "data": "test.handles",
+      "start_offset": 8,
+      "end_offset": 20,
+      "file": "../../tools/fidl/fidlc/testdata/handles.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "zx",
+      "referenced_at": {
+        "data": "zx",
+        "start_offset": 29,
+        "end_offset": 31,
+        "file": "../../tools/fidl/fidlc/testdata/handles.test.fidl"
+      }
+    },
+    {
+      "library_name": "fdf",
+      "referenced_at": {
+        "data": "fdf",
+        "start_offset": 39,
+        "end_offset": 42,
+        "file": "../../tools/fidl/fidlc/testdata/handles.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "fdf",
+      "library_location": {
+        "data": "library fdf",
+        "start_offset": 164,
+        "end_offset": 175,
+        "file": "../../sdk/fidl/fdf/handle.fidl"
+      }
+    },
+    {
+      "library_name": "zx",
+      "library_location": {
+        "data": "@available(platform=\"fuchsia\", added=7)\nlibrary zx",
+        "start_offset": 164,
+        "end_offset": 214,
+        "file": "../../zircon/vdso/overview.fidl"
+      }
+    }
+  ]
+}

@@ -13,6 +13,7 @@ fidl("test.protocolpayloads.imported") {
 fidl("test.protocolpayloads") {
   testonly = true
   sources = [ "example.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
   public_deps = [ ":test.protocolpayloads.imported" ]
   golden_fuzzer = true
 }

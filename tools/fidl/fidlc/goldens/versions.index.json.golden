@@ -1,0 +1,13 @@
+{
+  "name": "test.versions",
+  "lib_declarations": [
+    {
+      "data": "test.versions",
+      "start_offset": 28,
+      "end_offset": 41,
+      "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

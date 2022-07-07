@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("test.structdefaultvalueenumlibraryreference") {
   testonly = true
   sources = [ "example.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
   public_deps = [ ":test.dependent" ]
   golden_fuzzer = true
 }

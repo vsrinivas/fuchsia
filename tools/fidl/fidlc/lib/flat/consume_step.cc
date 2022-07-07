@@ -42,6 +42,7 @@ void ConsumeStep::RunImpl() {
       library()->arbitrary_name_span = file_->library_decl->span();
     }
   }
+  library()->library_name_declarations.emplace_back(file_->library_decl->path->span());
 
   ConsumeAttributeList(std::move(file_->library_decl->attributes), &library()->attributes);
 
@@ -201,8 +202,8 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   }
 
   const auto filename = using_directive->span().source_file().filename();
-  const auto result = library()->dependencies.Register(using_directive->span(), filename,
-                                                       dep_library, using_directive->maybe_alias);
+  const auto result = library()->dependencies.Register(
+      using_directive->using_path->span(), filename, dep_library, using_directive->maybe_alias);
   switch (result) {
     case Dependencies::RegisterResult::kSuccess:
       break;

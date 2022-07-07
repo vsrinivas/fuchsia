@@ -1,0 +1,13 @@
+{
+  "name": "test.vectors",
+  "lib_declarations": [
+    {
+      "data": "test.vectors",
+      "start_offset": 172,
+      "end_offset": 184,
+      "file": "../../tools/fidl/fidlc/testdata/vectors.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

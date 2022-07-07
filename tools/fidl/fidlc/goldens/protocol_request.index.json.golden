@@ -1,0 +1,13 @@
+{
+  "name": "test.protocolrequest",
+  "lib_declarations": [
+    {
+      "data": "test.protocolrequest",
+      "start_offset": 8,
+      "end_offset": 28,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

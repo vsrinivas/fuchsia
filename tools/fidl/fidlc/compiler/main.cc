@@ -7,6 +7,7 @@
 #include <fidl/experimental_flags.h>
 #include <fidl/flat/compiler.h>
 #include <fidl/flat_ast.h>
+#include <fidl/index_json_generator.h>
 #include <fidl/json_generator.h>
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
@@ -23,6 +24,7 @@
 
 #include <cstdarg>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -254,6 +256,7 @@ enum struct Behavior {
   kCServer,
   kTables,
   kJSON,
+  kIndex,
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
@@ -319,6 +322,7 @@ int main(int argc, char* argv[]) {
   std::string library_name;
 
   std::string dep_file_path;
+  std::string json_path;
 
   bool warnings_as_errors = false;
   std::string format = "text";
@@ -360,6 +364,7 @@ int main(int argc, char* argv[]) {
       outputs.emplace_back(std::make_pair(Behavior::kTables, path));
     } else if (behavior_argument == "--json") {
       std::string path = args->Claim();
+      json_path = path;
       outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
     } else if (behavior_argument == "--available") {
       std::string selection = args->Claim();
@@ -412,6 +417,10 @@ int main(int argc, char* argv[]) {
   }
 
   // Ready. Set. Go.
+  if (experimental_flags.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kOutputIndexJson)) {
+    auto path = std::filesystem::path(json_path).replace_extension("index.json");
+    outputs.emplace_back(std::make_pair(Behavior::kIndex, path));
+  }
   fidl::Reporter reporter;
   reporter.set_warnings_as_errors(warnings_as_errors);
   auto status = compile(&reporter, library_name, dep_file_path, source_list, outputs,
@@ -533,6 +542,11 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
       }
       case Behavior::kJSON: {
         fidl::JSONGenerator generator(compilation.get(), experimental_flags);
+        Write(generator.Produce(), file_path);
+        break;
+      }
+      case Behavior::kIndex: {
+        fidl::IndexJSONGenerator generator(compilation.get());
         Write(generator.Produce(), file_path);
         break;
       }

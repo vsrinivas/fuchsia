@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("test.typealiases") {
   testonly = true
   sources = [ "example.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
   public_deps = [ ":test.someotherlibrary" ]
   golden_fuzzer = true
 }

@@ -1,0 +1,13 @@
+{
+  "name": "test.enum",
+  "lib_declarations": [
+    {
+      "data": "test.enum",
+      "start_offset": 8,
+      "end_offset": 17,
+      "file": "../../tools/fidl/fidlc/testdata/enum.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

@@ -1,0 +1,33 @@
+{
+  "name": "test.transitivedependencies",
+  "lib_declarations": [
+    {
+      "data": "test.transitivedependencies",
+      "start_offset": 8,
+      "end_offset": 35,
+      "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.middle",
+      "referenced_at": {
+        "data": "test.middle",
+        "start_offset": 44,
+        "end_offset": 55,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.middle",
+      "library_location": {
+        "data": "library test.middle",
+        "start_offset": 0,
+        "end_offset": 19,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl"
+      }
+    }
+  ]
+}

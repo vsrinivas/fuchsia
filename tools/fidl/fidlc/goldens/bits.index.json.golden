@@ -1,0 +1,13 @@
+{
+  "name": "test.bits",
+  "lib_declarations": [
+    {
+      "data": "test.bits",
+      "start_offset": 8,
+      "end_offset": 17,
+      "file": "../../tools/fidl/fidlc/testdata/bits.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

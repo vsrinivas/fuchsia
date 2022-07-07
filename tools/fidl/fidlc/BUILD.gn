@@ -52,6 +52,7 @@ zx_library("fidl") {
     "lib/flat/verify_steps.cc",
     "lib/flat_ast.cc",
     "lib/formatter.cc",
+    "lib/index_json_generator.cc",
     "lib/json_generator.cc",
     "lib/lexer.cc",
     "lib/linter.cc",
@@ -153,6 +154,10 @@ if (is_host) {
         {
           golden = "${info.name}.json.golden"
           generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+        },
+        {
+          golden = "${info.name}.index.json.golden"
+          generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.index.json"
         },
         {
           golden = "${info.name}.tables.c.golden"

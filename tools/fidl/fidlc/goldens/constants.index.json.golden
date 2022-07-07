@@ -1,0 +1,13 @@
+{
+  "name": "test.constants",
+  "lib_declarations": [
+    {
+      "data": "test.constants",
+      "start_offset": 8,
+      "end_offset": 22,
+      "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

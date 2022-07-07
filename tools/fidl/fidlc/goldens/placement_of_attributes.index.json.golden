@@ -1,0 +1,33 @@
+{
+  "name": "test.placementofattributes",
+  "lib_declarations": [
+    {
+      "data": "test.placementofattributes",
+      "start_offset": 8,
+      "end_offset": 34,
+      "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.exampleusing",
+      "referenced_at": {
+        "data": "test.exampleusing",
+        "start_offset": 96,
+        "end_offset": 113,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.exampleusing",
+      "library_location": {
+        "data": "library test.exampleusing",
+        "start_offset": 0,
+        "end_offset": 25,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl"
+      }
+    }
+  ]
+}

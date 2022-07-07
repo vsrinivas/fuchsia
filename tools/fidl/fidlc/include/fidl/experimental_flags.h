@@ -18,6 +18,7 @@ class ExperimentalFlags {
     kNewSyntaxOnly = 0b1000,
     kUnknownInteractions = 0b10000,
     kNoOptionalStructs = 0b100000,
+    kOutputIndexJson = 0b1000000,
   };
 
   ExperimentalFlags() = default;

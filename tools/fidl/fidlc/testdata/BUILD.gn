@@ -57,16 +57,20 @@ foreach(filename, standalone_libraries) {
       public_deps += [ "//sdk/fidl/fdf" ]
     }
 
+    experimental_flags = []
     if (filename == "unknown_interactions.test.fidl") {
-      experimental_flags = [ "unknown_interactions" ]
+      experimental_flags += [ "unknown_interactions" ]
     }
 
     if (filename == "new_type.test.fidl") {
-      experimental_flags = [ "allow_new_types" ]
+      experimental_flags += [ "allow_new_types" ]
     }
 
     # To ensure quality of generated Dart bindings.
     dart_analysis = true
+
+    # To output index jsons
+    experimental_flags += [ "output_index_json" ]
 
     if (is_fuchsia) {
       # Some test files use the driver transport.

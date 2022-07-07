@@ -1,0 +1,13 @@
+{
+  "name": "test.newtype",
+  "lib_declarations": [
+    {
+      "data": "test.newtype",
+      "start_offset": 8,
+      "end_offset": 20,
+      "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

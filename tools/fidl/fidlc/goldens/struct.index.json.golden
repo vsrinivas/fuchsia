@@ -1,0 +1,13 @@
+{
+  "name": "test.struct",
+  "lib_declarations": [
+    {
+      "data": "test.struct",
+      "start_offset": 8,
+      "end_offset": 19,
+      "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

@@ -901,6 +901,16 @@ class Dependencies {
   // Returns all the dependencies.
   const std::set<Library*>& all() const { return dependencies_aggregate_; }
 
+  std::vector<std::pair<Library*, SourceSpan>> library_references() {
+    std::vector<std::pair<Library*, SourceSpan>> references;
+    references.reserve(refs_.size());
+    for (auto& ref : refs_) {
+      auto library_ref = std::make_pair(ref->library, ref->span);
+      references.emplace_back(library_ref);
+    }
+    return references;
+  }
+
  private:
   // A reference to a library, derived from a "using" statement.
   struct LibraryRef {
@@ -965,6 +975,8 @@ struct Library final : public Element {
   // There is no unique SourceSpan for a library's name since it can be declared
   // in multiple files, but we store an arbitrary one to use in error messages.
   SourceSpan arbitrary_name_span;
+  // stores all library name declaration location
+  std::vector<SourceSpan> library_name_declarations;
   // Set during AvailabilityStep.
   std::optional<Platform> platform;
   Dependencies dependencies;

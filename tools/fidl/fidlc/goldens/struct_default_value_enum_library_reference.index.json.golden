@@ -1,0 +1,33 @@
+{
+  "name": "test.structdefaultvalueenumlibraryreference",
+  "lib_declarations": [
+    {
+      "data": "test.structdefaultvalueenumlibraryreference",
+      "start_offset": 8,
+      "end_offset": 51,
+      "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.dependent",
+      "referenced_at": {
+        "data": "test.dependent",
+        "start_offset": 60,
+        "end_offset": 74,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.dependent",
+      "library_location": {
+        "data": "library test.dependent",
+        "start_offset": 0,
+        "end_offset": 22,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl"
+      }
+    }
+  ]
+}

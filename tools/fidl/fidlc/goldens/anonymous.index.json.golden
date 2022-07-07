@@ -1,0 +1,13 @@
+{
+  "name": "test.anonymous",
+  "lib_declarations": [
+    {
+      "data": "test.anonymous",
+      "start_offset": 8,
+      "end_offset": 22,
+      "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}

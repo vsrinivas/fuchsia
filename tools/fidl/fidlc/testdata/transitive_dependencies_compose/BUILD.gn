@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("test.transitivedependenciescompose") {
   testonly = true
   sources = [ "top.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
   public_deps = [
     ":test.bottom",
     ":test.middle",

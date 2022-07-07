@@ -1,0 +1,33 @@
+{
+  "name": "test.typealiases",
+  "lib_declarations": [
+    {
+      "data": "test.typealiases",
+      "start_offset": 8,
+      "end_offset": 24,
+      "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl"
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.someotherlibrary",
+      "referenced_at": {
+        "data": "test.someotherlibrary",
+        "start_offset": 33,
+        "end_offset": 54,
+        "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl"
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.someotherlibrary",
+      "library_location": {
+        "data": "library test.someotherlibrary",
+        "start_offset": 0,
+        "end_offset": 29,
+        "file": "../../tools/fidl/fidlc/testdata/type_aliases/someotherlibrary.test.fidl"
+      }
+    }
+  ]
+}

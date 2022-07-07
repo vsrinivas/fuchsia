@@ -14,5 +14,6 @@ fidl("test.bindingsdenylist") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.dependent" ]
+  experimental_flags = [ "output_index_json" ]
   golden_fuzzer = true
 }

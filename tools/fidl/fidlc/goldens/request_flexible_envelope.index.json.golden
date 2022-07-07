@@ -1,0 +1,13 @@
+{
+  "name": "test.requestflexibleenvelope",
+  "lib_declarations": [
+    {
+      "data": "test.requestflexibleenvelope",
+      "start_offset": 8,
+      "end_offset": 36,
+      "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl"
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": []
+}
