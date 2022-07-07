@@ -994,14 +994,6 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   related_guides: [""]
   area: ["System", "Component Framework"]
 
-- term: "OpaqueTest"
-  short_description: "A Rust client-side library that sets up hermetic tests for a v2
-  component."
-  full_description: ""
-  see_also: [""]
-  related_guides: ["<a href=\"/docs/concepts/components/v2/opaque_test.md\">Hermetic testing using OpaqueTest</a>"]
-  area: ["Component Framework", "Testing"]
-
 - term: "Out-of-tree"
   short_description: "Relating to or describing an action that can be done outside of a Fuchsia checkout."
   full_description: "For instance, the IDK allows developing for Fuchsia outside the Fuchsia tree.
