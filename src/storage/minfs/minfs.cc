@@ -711,7 +711,7 @@ void Minfs::Sync(SyncCallback closure) {
     return;
   }
   auto dirty_vnodes = GetDirtyVnodes();
-  for (auto vnode : dirty_vnodes) {
+  for (const fbl::RefPtr<VnodeMinfs>& vnode : dirty_vnodes) {
     auto status = vnode->FlushCachedWrites();
     ZX_ASSERT(status.is_ok());
   }

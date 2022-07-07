@@ -249,7 +249,7 @@ TEST_P(ThreadingLinkTest, LinkExclusive) {
 
 std::vector<TestFilesystemOptions> GetThreadingLinkTestCombinations() {
   std::vector<TestFilesystemOptions> test_combinations;
-  for (TestFilesystemOptions options : AllTestFilesystems()) {
+  for (const TestFilesystemOptions& options : AllTestFilesystems()) {
     if (options.filesystem->GetTraits().supports_hard_links) {
       test_combinations.push_back(options);
     }

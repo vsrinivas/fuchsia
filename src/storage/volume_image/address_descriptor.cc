@@ -98,7 +98,7 @@ fpromise::result<std::vector<uint8_t>, std::string> AddressDescriptor::Serialize
 
   rapidjson::Value value_mappings;
   value_mappings.SetArray();
-  for (auto mapping : mappings) {
+  for (const AddressMap& mapping : mappings) {
     value_mappings.PushBack(ToValue(mapping, &document.GetAllocator()), document.GetAllocator());
   }
   document.AddMember("mappings", value_mappings, document.GetAllocator());

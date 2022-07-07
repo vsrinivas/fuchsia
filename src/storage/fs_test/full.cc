@@ -146,7 +146,7 @@ TEST_P(FullTest, UnlinkWhenFullSucceeds) {
 
 std::vector<FullTestParamType> GetTestParams() {
   std::vector<FullTestParamType> test_combinations;
-  for (TestFilesystemOptions options : AllTestFilesystems()) {
+  for (const TestFilesystemOptions& options : AllTestFilesystems()) {
     // Filesystems such as memfs cannot run this test because they OOM (as expected, given
     // memory is the limiting factor).
     if (options.filesystem->GetTraits().in_memory)
