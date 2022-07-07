@@ -134,12 +134,13 @@ async fn main() -> Result<(), Error> {
                                     0x81,
                                     0x02, //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
                                     0xC0, // End Collection
-                                ])?;
+                                ]).expect("failed sending report desc");
                             }
                             finput::DeviceRequest::GetReportsEvent { responder } => {
                                 fx_log_info!("sending reports event and signalling the event");
                                 let event_dup = event.duplicate_handle(event_handle_rights())?;
-                                responder.send(zx::Status::OK.into_raw(), event_dup)?;
+                                responder.send(zx::Status::OK.into_raw(), event_dup)
+                                    .expect("failed sending reports event");
                                 event.signal_handle(zx::Signals::NONE, zx::Signals::USER_0)?;
                             }
                             finput::DeviceRequest::ReadReport { responder } => {
@@ -149,7 +150,7 @@ async fn main() -> Result<(), Error> {
                                     zx::Status::OK.into_raw(),
                                     msg,
                                     zx::Time::get_monotonic().into_nanos(),
-                                )?;
+                                ).expect("failed sending response to ReadReport");
                             }
                             _ => panic!("unexpected call to fuchsia.hardware.input.Device"),
                         }
