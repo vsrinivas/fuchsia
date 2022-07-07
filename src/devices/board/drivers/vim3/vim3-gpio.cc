@@ -103,7 +103,6 @@ const zx_device_prop_t gpio_expander_props[] = {
 };
 
 constexpr zx_bind_inst_t gpio_expander_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_MISC),
     BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x20),

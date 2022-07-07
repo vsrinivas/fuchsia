@@ -79,7 +79,6 @@ driver_bind_rules("sherlock-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -92,7 +91,6 @@ driver_bind_rules("luis-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -115,7 +113,6 @@ driver_bind_rules("sherlock-backlight-bind") {
   tests = "bind-tests/sherlock-backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
@@ -354,7 +351,6 @@ driver_bind_rules("sherlock-light-sensor-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -425,7 +421,6 @@ driver_bind_rules("imx227-sensor-bind") {
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.mipicsi",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sony.platform",
   ]
@@ -487,10 +482,7 @@ driver_bind_rules("luis-codec-bind") {
   header_output = "luis-codec-bind.h"
   bind_output = "luis-codec-bind.bc"
   tests = "bind-tests/luis-codec-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("sherlock-woofer-bind") {
@@ -498,10 +490,7 @@ driver_bind_rules("sherlock-woofer-bind") {
   header_output = "sherlock-woofer-bind.h"
   bind_output = "sherlock-woofer-bind.bc"
   tests = "bind-tests/sherlock-woofer-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("sherlock-tweeter-left-bind") {
@@ -509,10 +498,7 @@ driver_bind_rules("sherlock-tweeter-left-bind") {
   header_output = "sherlock-tweeter-left-bind.h"
   bind_output = "sherlock-tweeter-left-bind.bc"
   tests = "bind-tests/sherlock-tweeter-left-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("sherlock-tweeter-right-bind") {
@@ -520,10 +506,7 @@ driver_bind_rules("sherlock-tweeter-right-bind") {
   header_output = "sherlock-tweeter-right-bind.h"
   bind_output = "sherlock-tweeter-right-bind.bc"
   tests = "bind-tests/sherlock-tweeter-right-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("ernie-tweeter-bind") {
@@ -531,10 +514,7 @@ driver_bind_rules("ernie-tweeter-bind") {
   header_output = "ernie-tweeter-bind.h"
   bind_output = "ernie-tweeter-bind.bc"
   tests = "bind-tests/ernie-tweeter-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("ernie-woofer-bind") {
@@ -542,10 +522,7 @@ driver_bind_rules("ernie-woofer-bind") {
   header_output = "ernie-woofer-bind.h"
   bind_output = "ernie-woofer-bind.bc"
   tests = "bind-tests/ernie-woofer-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("luis-power-domain-bind") {
@@ -576,10 +553,7 @@ driver_bind_rules("luis-0p8-ee-buck-bind") {
   header_output = "luis-0p8-ee-buck-bind.h"
   bind_output = "luis-0p8-ee-buck-bind.bc"
   tests = "bind-tests/luis-0p8-ee-buck-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("luis-cpu-a-buck-bind") {
@@ -587,10 +561,7 @@ driver_bind_rules("luis-cpu-a-buck-bind") {
   header_output = "luis-cpu-a-buck-bind.h"
   bind_output = "luis-cpu-a-buck-bind.bc"
   tests = "bind-tests/luis-cpu-a-buck-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 template("sherlock_driver") {

@@ -32,7 +32,6 @@ driver_bind_rules("astro-backlight-bind") {
   tests = "bind-tests/astro-backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
@@ -166,7 +165,6 @@ driver_bind_rules("ft3x27-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -179,7 +177,6 @@ driver_bind_rules("gt92xx-touch-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -207,7 +204,6 @@ driver_bind_rules("tcs3400-light-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -298,7 +294,6 @@ driver_bind_rules("audio-codec-tas27xx-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 

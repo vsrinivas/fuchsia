@@ -7,10 +7,8 @@ composite tcs3400_light;
 using fuchsia.i2c;
 using fuchsia.gpio;
 using fuchsia.amlogic.platform.s905d3;
-using fuchsia.misc;
 
 primary node "i2c" {
-  fuchsia.BIND_PROTOCOL == fuchsia.misc.BIND_PROTOCOL.DEVICE;
   fuchsia.BIND_FIDL_PROTOCOL == fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE;
   fuchsia.BIND_I2C_BUS_ID == fuchsia.i2c.BIND_I2C_BUS_ID.NELSON_I2C_A0_0;
   fuchsia.BIND_I2C_ADDRESS == fuchsia.i2c.BIND_I2C_ADDRESS.AMBIENTLIGHT;

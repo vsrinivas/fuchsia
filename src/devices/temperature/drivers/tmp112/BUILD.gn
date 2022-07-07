@@ -13,7 +13,6 @@ driver_bind_rules("tmp112-bind") {
   tests = "tmp112-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
 }

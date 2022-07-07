@@ -43,7 +43,6 @@ driver_bind_rules("nelson_backlight_bind") {
   tests = "bind-tests/nelson_backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
@@ -109,7 +108,6 @@ driver_bind_rules("nelson_tcs3400_light_bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
@@ -156,10 +154,7 @@ driver_bind_rules("ti_ina231_mlb_bind") {
   header_output = "ti_ina231_mlb_bind.h"
   bind_output = "ti_ina231_mlb_bind.bc"
   tests = "bind-tests/ti_ina231_mlb-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("ti_ina231_speakers_bind") {
@@ -167,10 +162,7 @@ driver_bind_rules("ti_ina231_speakers_bind") {
   header_output = "ti_ina231_speakers_bind.h"
   bind_output = "ti_ina231_speakers_bind.bc"
   tests = "bind-tests/ti_ina231_speakers-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
 driver_bind_rules("brownout_protection_bind") {
@@ -317,7 +309,6 @@ driver_bind_rules("gt6853_touch_bind") {
     "//src/devices/bind/fuchsia.goodix.platform",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

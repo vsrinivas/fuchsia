@@ -133,7 +133,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, 1),
   };
   const zx_bind_inst_t i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_MISC),
       BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 5),

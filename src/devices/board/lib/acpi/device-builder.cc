@@ -378,23 +378,19 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
 
 std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t child_index) {
   std::vector<zx_bind_inst_t> ret;
-  uint32_t protocol = UINT32_MAX;
   switch (bus_type_) {
     case BusType::kPci:
-      protocol = ZX_PROTOCOL_PCI;
+      ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI));
       break;
     case BusType::kI2c:
-      // TODO(fxbug.dev/96293): Update this once the I2C core driver no longer supports Banjo.
-      protocol = ZX_PROTOCOL_MISC;
+      // No Banjo protocol needed for I2C.
       break;
     case BusType::kSpi:
-      protocol = ZX_PROTOCOL_SPI;
+      ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SPI));
       break;
     case BusType::kUnknown:
       ZX_ASSERT(bus_type_ != BusType::kUnknown);
   }
-
-  ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, protocol));
 
   std::visit(
       [&ret, child_index](auto&& arg) {

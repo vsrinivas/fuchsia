@@ -13,7 +13,6 @@ driver_bind_rules("shtv3-bind") {
   tests = "shtv3-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.sensirion.platform",
   ]
 }

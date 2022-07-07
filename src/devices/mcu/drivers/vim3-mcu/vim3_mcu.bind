@@ -4,9 +4,7 @@
 
 using fuchsia.khadas.platform;
 using fuchsia.i2c;
-using fuchsia.misc;
 
-fuchsia.BIND_PROTOCOL == fuchsia.misc.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_FIDL_PROTOCOL == fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS;
 fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3;

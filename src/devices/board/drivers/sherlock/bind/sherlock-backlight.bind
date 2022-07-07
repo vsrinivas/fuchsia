@@ -7,10 +7,8 @@ composite backlight;
 using fuchsia.i2c;
 using fuchsia.platform;
 using fuchsia.ti.platform;
-using fuchsia.misc;
 
 primary node "i2c" {
-  fuchsia.BIND_PROTOCOL == fuchsia.misc.BIND_PROTOCOL.DEVICE;
   fuchsia.BIND_FIDL_PROTOCOL == fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE;
   fuchsia.BIND_I2C_BUS_ID == 2; // SHERLOCK_I2C_3
   fuchsia.BIND_I2C_ADDRESS == 0x2C;
