@@ -18,10 +18,7 @@ group("utc-time") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":utc-time-tests",
-    "//src/sys/component_manager:component-manager",
-  ]
+  deps = [ ":utc-time-tests" ]
 }
 
 fidl("componentmanager.test") {

@@ -159,6 +159,5 @@ group("stress-tests") {
   deps = [
     ":storage-stress-tests",
     ":storage-stress-tests-short",
-    "//src/sys/component_manager:component-manager",
   ]
 }

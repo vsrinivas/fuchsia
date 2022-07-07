@@ -289,23 +289,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-# Note that this package and the component it contains wrap component_manager
-# as a v1 Component for interactive testing purposes through the shell. This
-# will eventually go away.
-fuchsia_component("component-manager-cmp") {
-  deps = [
-    ":bin",
-    ":component_manager_appmgr_config",
-    ":component_manager_debug_config",
-  ]
-  component_name = "component_manager"
-  manifest = "meta/component_manager.cmx"
-}
-
-fuchsia_package("component-manager") {
-  deps = [ ":component-manager-cmp" ]
-}
-
 # This v2 component bundles component manager with a config suitable for running
 # a nested component manager inside of realm builder.
 fuchsia_component("component-manager-realm-builder-cmp") {
@@ -387,7 +370,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":component-manager",
     ":component-manager-tests",
     "lib:tests",
     "src/elf_runner/tests",

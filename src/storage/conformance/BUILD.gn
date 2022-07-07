@@ -18,7 +18,6 @@ group("tests") {
     "//src/storage/conformance/conformance_harness/minfs:minfs-io1-conformance-test",
     "//src/storage/conformance/conformance_harness/rustvfs:rustvfs-io1-conformance-test",
     "//src/storage/conformance/conformance_harness/sdkcpp:sdkcpp-io1-conformance-test",
-    "//src/sys/component_manager:component-manager",
   ]
 }
 
