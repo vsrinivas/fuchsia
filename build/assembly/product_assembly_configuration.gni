@@ -30,7 +30,17 @@ import("//build/group_with_inputs.gni")
 #     [list, GN targets] A list of GN targets that are the specific targets for
 #     the product-provided packages to place into the base set.
 #
+#   # Transitory
+#   base_package_deprecated [optional]
+#     [list, GN targets] A list of GN targets that are the specific targets for
+#     the product-provided packages to place into the base set.
+#
 #   cache_packages [optional]
+#     [list, GN targets] A list of GN targets that are the specific targets for
+#     the product-provided packages to place into the cache set.
+#
+#   # Transitory
+#   cache_packages_deprecated [optional]
 #     [list, GN targets] A list of GN targets that are the specific targets for
 #     the product-provided packages to place into the cache set.
 #
@@ -64,12 +74,18 @@ template("product_assembly_configuration") {
     if (defined(invoker.base_packages)) {
       base_package_labels += invoker.base_packages
     }
+    if (defined(invoker.base_package_deprecated)) {
+      base_package_labels += invoker.base_package_deprecated
+    }
 
     # Cache packages specified by the invoker, used to create the list of
     # manifests and as the deps for the package set targets.
     cache_package_labels = []
     if (defined(invoker.cache_packages)) {
       cache_package_labels += invoker.cache_packages
+    }
+    if (defined(invoker.cache_packages_deprecated)) {
+      cache_package_labels += invoker.cache_packages_deprecated
     }
   }
 
