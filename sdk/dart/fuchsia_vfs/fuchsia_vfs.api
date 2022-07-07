@@ -760,6 +760,32 @@
               "returnType": "ConnectionInfo",
               "type": "MethodDeclarationImpl"
             },
+            "getBackingMemory": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoFlags"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getBackingMemory",
+              "returnType": "Vmo",
+              "type": "MethodDeclarationImpl"
+            },
             "inodeNumber": {
               "isAbstract": false,
               "isGetter": false,
@@ -842,6 +868,32 @@
               "isStatic": false,
               "name": "describe2",
               "returnType": "ConnectionInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "getBackingMemory": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoFlags"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getBackingMemory",
+              "returnType": "Vmo",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1316,6 +1368,32 @@
               "isStatic": false,
               "name": "describe2",
               "returnType": "ConnectionInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "getBackingMemory": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoFlags"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getBackingMemory",
+              "returnType": "Vmo",
               "type": "MethodDeclarationImpl"
             }
           },

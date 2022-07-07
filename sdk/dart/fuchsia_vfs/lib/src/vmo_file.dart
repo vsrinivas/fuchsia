@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:zircon/zircon.dart';
@@ -34,32 +35,35 @@ class VmoFile extends PseudoFile {
 
   /// Constructor for read-only [Vmo]
   VmoFile.readOnly(this._vmo, this._sharingMode)
-      : assert(_vmo != null),
-        super.readOnly(() {
+      : super.readOnly(() {
           int size = _vmo.getSize().size;
           return _vmo.read(size).bytesAsUint8List();
-        }) {
-    if (_vmo == null) {
-      throw Exception('Vmo cannot be null');
-    }
-  }
+        });
 
   // TODO(crjohns): Support writable vmo files.
 
-  Vmo? _getVmoForDescription() {
+  Vmo? _getVmo() {
     if (_sharingMode == VmoSharingMode.shareDuplicate) {
-      final Vmo duplicatedVmo = _vmo.duplicate(ZX.RIGHTS_BASIC |
+      return _vmo.duplicate(ZX.RIGHTS_BASIC |
           ZX.RIGHT_READ |
           ZX.RIGHT_MAP |
           ZX.RIGHT_GET_PROPERTY);
-      return duplicatedVmo;
     }
     return null;
   }
 
   @override
+  Vmo getBackingMemory(VmoFlags flags) {
+    final vmo = _getVmo();
+    if (vmo != null) {
+      return vmo;
+    }
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
   NodeInfo describe() {
-    var vmo = _getVmoForDescription();
+    final vmo = _getVmo();
     if (vmo != null) {
       return NodeInfo.withVmofile(
           Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
@@ -69,7 +73,7 @@ class VmoFile extends PseudoFile {
 
   @override
   ConnectionInfo describe2(ConnectionInfoQuery query) {
-    var vmo = _getVmoForDescription();
+    final vmo = _getVmo();
     if (vmo != null) {
       return ConnectionInfo(
           representation: Representation.withMemory(MemoryInfo(

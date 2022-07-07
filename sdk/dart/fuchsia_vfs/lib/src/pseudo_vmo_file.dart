@@ -12,7 +12,7 @@ import 'pseudo_file.dart';
 
 // ignore_for_file: public_member_api_docs
 
-typedef VmoFn = Vmo? Function();
+typedef VmoFn = Vmo Function();
 
 /// A [PseudoVmoFile] is a [VmoFile] typed [PseudoFile] whose content is read
 /// from a [Vmo] dynamically produced by a supplied callback.
@@ -21,44 +21,37 @@ typedef VmoFn = Vmo? Function();
 /// and reads the content of the produced [Vmo] into a buffer. Therefore,
 /// connection order is important.
 ///
-/// Reads on each connection are seperately buffered.
+/// Reads on each connection are separately buffered.
 class PseudoVmoFile extends PseudoFile {
-  final VmoFn? _vmoFn;
+  final VmoFn _vmoFn;
 
   /// Constructor for read-only [Vmo]
   ///
-  /// Throws Exception if _vmoFn is null.
-  ///
   /// Resulting PseudoVmoFile returns nothing when read as a regular file.
-  PseudoVmoFile.readOnly(this._vmoFn) : super.readOnly(() => Uint8List(0)) {
-    ArgumentError.checkNotNull(_vmoFn, 'Vmo Function');
+  PseudoVmoFile.readOnly(this._vmoFn) : super.readOnly(() => Uint8List(0));
+
+  Vmo _getVmo() {
+    return _vmoFn().duplicate(
+        ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP | ZX.RIGHT_GET_PROPERTY);
   }
 
-  Vmo? _getVmoForDescription() {
-    final Vmo? originalVmo = _vmoFn!();
-    final Vmo? duplicatedVmo = originalVmo?.duplicate(
-        ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP | ZX.RIGHT_GET_PROPERTY);
-    return duplicatedVmo;
+  @override
+  Vmo getBackingMemory(VmoFlags flags) {
+    return _getVmo();
   }
 
   @override
   NodeInfo describe() {
-    var vmo = _getVmoForDescription();
-    if (vmo != null) {
-      return NodeInfo.withVmofile(
-          Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
-    }
-    return NodeInfo.withFile(FileObject(event: null));
+    final vmo = _getVmo();
+    return NodeInfo.withVmofile(
+        Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
   }
 
   @override
   ConnectionInfo describe2(ConnectionInfoQuery query) {
-    var vmo = _getVmoForDescription();
-    if (vmo != null) {
-      return ConnectionInfo(
-          representation: Representation.withMemory(MemoryInfo(
-              buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
-    }
-    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
+    final vmo = _getVmo();
+    return ConnectionInfo(
+        representation: Representation.withMemory(MemoryInfo(
+            buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
   }
 }

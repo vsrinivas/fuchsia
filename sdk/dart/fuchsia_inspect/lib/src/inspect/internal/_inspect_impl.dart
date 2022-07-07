@@ -44,7 +44,7 @@ class InspectImpl implements Inspect {
     final pseudoVmoNode = PseudoVmoFile.readOnly(() {
       final writer = VmoWriter.withSize(Inspect.vmoSize);
       rootNodeCallback(RootNode(writer));
-      return writer.vmo;
+      return writer.vmo!;
     });
 
     directory.addNode(fileName, pseudoVmoNode);

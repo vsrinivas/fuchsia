@@ -54,10 +54,16 @@ void main() {
     Vmofile? vmoFile = response.vmofile;
     if (vmoFile != null) {
       expect(vmoFile.vmo.isValid, isTrue);
-      final Uint8List value = vmoFile.vmo.map();
-      expect(String.fromCharCodes(value.sublist(0, expectedStr.length)),
+      final Uint8List vmoData = vmoFile.vmo.map();
+      expect(String.fromCharCodes(vmoData.sublist(0, expectedStr.length)),
           expectedStr);
     }
+
+    final vmo = await proxy.getBackingMemory(VmoFlags.$none);
+    expect(vmo.isValid, isTrue);
+    final Uint8List vmoData = vmo.map();
+    expect(String.fromCharCodes(vmoData.sublist(0, expectedStr.length)),
+        expectedStr);
   }
 
   group('vmo file:', () {

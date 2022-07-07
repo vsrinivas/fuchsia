@@ -146,6 +146,10 @@ class PseudoFile extends Vnode {
     return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 
+  Vmo getBackingMemory(VmoFlags flags) {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
   ReadFn _getReadFn(ReadFnStr fn) {
     return () => Uint8List.fromList(fn()!.codeUnits);
   }
@@ -384,9 +388,8 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<Vmo> getBackingMemory(VmoFlags flags) async {
-    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
-  }
+  Future<Vmo> getBackingMemory(VmoFlags flags) async =>
+      file.getBackingMemory(flags);
 
   @override
   Future<Uint8List> read(int count) async {

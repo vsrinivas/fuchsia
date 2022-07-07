@@ -25,15 +25,21 @@ void main() {
   }
 
   Future<void> _assertDescribeVmo(
-      FileProxy proxy, int expectedLength, String expectedString) async {
+      FileProxy proxy, String expectedString) async {
     final response = await proxy.describe();
     Vmofile? vmoFile = response.vmofile;
     if (vmoFile != null) {
       expect(vmoFile.vmo.isValid, isTrue);
       final Uint8List vmoData = vmoFile.vmo.map();
-      expect(String.fromCharCodes(vmoData.getRange(0, expectedLength)),
+      expect(String.fromCharCodes(vmoData.getRange(0, expectedString.length)),
           expectedString);
     }
+
+    final vmo = await proxy.getBackingMemory(VmoFlags.$none);
+    expect(vmo.isValid, isTrue);
+    final Uint8List vmoData = vmo.map();
+    expect(String.fromCharCodes(vmoData.getRange(0, expectedString.length)),
+        expectedString);
   }
 
   group('pseudo vmo file:', () {
@@ -59,25 +65,16 @@ void main() {
 
     test('describe file', () async {
       final stringList = ['test string', 'hello world', 'lorem ipsum'];
-      final file = _TestPseudoVmoFile.fromStringList(stringList);
+      // Each element appears twice because we will retrieve the VMO twice; once
+      // for Describe, and again for GetBackingMemory.
+      final file = _TestPseudoVmoFile.fromStringList(
+          stringList.expand((s) => [s, s]).toList());
 
       for (final expectedString in stringList) {
         final proxy = file.connect(OpenFlags.rightReadable);
-        await _assertDescribeVmo(proxy, expectedString.length, expectedString);
+        await _assertDescribeVmo(proxy, expectedString);
         await proxy.close();
       }
-    });
-
-    test('pass null vmo function', () {
-      _TestPseudoVmoFile produceFile() => _TestPseudoVmoFile.fromVmoFunc(null);
-      expect(produceFile, throwsArgumentError);
-    });
-
-    test('pass null-producing vmo function', () async {
-      Vmo? produceVmo() => null;
-      final file = _TestPseudoVmoFile.fromVmoFunc(produceVmo);
-      final proxy = file.connect(OpenFlags.rightReadable);
-      await _assertDescribeFile(proxy);
     });
   });
 }
@@ -90,7 +87,7 @@ class _TestPseudoVmoFile {
         PseudoVmoFile.readOnly(_vmoFromStringFactory(expectedStrings)));
   }
 
-  factory _TestPseudoVmoFile.fromVmoFunc(VmoFn? vmoFn) {
+  factory _TestPseudoVmoFile.fromVmoFunc(VmoFn vmoFn) {
     return _TestPseudoVmoFile._internal(PseudoVmoFile.readOnly(vmoFn));
   }
 
