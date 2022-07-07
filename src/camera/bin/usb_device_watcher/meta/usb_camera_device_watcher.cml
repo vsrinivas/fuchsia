@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/usb_camera_device_watcher_bin",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.camera.test.DeviceWatcherTester",
+                "fuchsia.camera3.DeviceWatcher",
+            ],
+        },
+    ],
+    use: [
+        {
+            directory: "dev-camera",
+            rights: [ "r*" ],
+            path: "/dev/class/camera",
+        },
+        {
+            protocol: [
+                "fuchsia.camera3.Device",
+                "fuchsia.camera3.Stream",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.camera.test.DeviceWatcherTester",
+                "fuchsia.camera3.DeviceWatcher",
+            ],
+            from: "self",
+        },
+    ],
+}

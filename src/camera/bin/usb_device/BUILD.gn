@@ -1,0 +1,85 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/info/info.gni")
+import("//src/camera/debug.gni")
+
+group("usb_device") {
+  deps = [ ":usb_camera_device" ]
+}
+
+group("tests") {
+  testonly = true
+}
+
+source_set("lib") {
+  sources = [
+    "device_impl.cc",
+    "device_impl.h",
+    "device_impl_client.cc",
+    "frame_waiter.h",
+    "size_util.cc",
+    "size_util.h",
+    "stream_impl.cc",
+    "stream_impl.h",
+    "stream_impl_client.cc",
+    "sysmem_allocator.cc",
+    "sysmem_allocator.h",
+    "util_config.h",
+    "util_fidl.h",
+    "uvc_hack.cc",
+    "uvc_hack.h",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/camera/lib/hanging_get_helper",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/camera/lib/cobalt_logger",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zxc",
+  ]
+
+  defines = [ camera_debug_define ]
+
+  if (build_info_product == "terminal") {
+    defines += [ "CAMERA_QUIRK_ADD_CONFIG_CHANGE_DELAY=1" ]
+  }
+}
+
+executable("usb_camera_device_bin") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
+  ]
+
+  defines = [ camera_debug_define ]
+}
+
+fuchsia_package_with_single_component("usb_camera_device") {
+  manifest = "meta/usb_camera_device.cml"
+  deps = [ ":usb_camera_device_bin" ]
+}
