@@ -5,6 +5,8 @@
 use {
     crate::wire,
     anyhow::{anyhow, Context, Error},
+    futures::StreamExt,
+    machina_virtio_device::{GuestMem, WrappedDescChainStream},
     std::io::{Read, Write},
     tracing,
     virtio_device::chain::{ReadableChain, WritableChain},
@@ -71,8 +73,42 @@ impl GpuDevice {
         Self {}
     }
 
+    pub async fn process_queues<'a, 'b, N: DriverNotify>(
+        &mut self,
+        guest_mem: &'a GuestMem,
+        control_stream: WrappedDescChainStream<'a, 'b, N>,
+        cursor_stream: WrappedDescChainStream<'a, 'b, N>,
+    ) -> Result<(), Error> {
+        // Merge the two streams but tag each value with the source queue. Doing it this way allows
+        // use to pass our '&mut self' reference to the handler function because we don't process
+        // any command concurrently.
+        enum CommandQueue {
+            Control,
+            Cursor,
+        }
+        let mut stream = futures::stream::select(
+            control_stream.map(|chain| (CommandQueue::Control, chain)),
+            cursor_stream.map(|chain| (CommandQueue::Cursor, chain)),
+        );
+
+        while let Some((queue, chain)) = stream.next().await {
+            let result = match queue {
+                CommandQueue::Control => {
+                    self.process_control_chain(ReadableChain::new(chain, guest_mem))
+                }
+                CommandQueue::Cursor => {
+                    self.process_cursor_chain(ReadableChain::new(chain, guest_mem))
+                }
+            };
+            if let Err(e) = result {
+                tracing::warn!("Error processing control queue: {}", e);
+            }
+        }
+        Ok(())
+    }
+
     pub fn process_control_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
-        &self,
+        &mut self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
         let header: wire::VirtioGpuCtrlHeader = match read_from_chain(&mut chain) {
@@ -90,7 +126,7 @@ impl GpuDevice {
     }
 
     pub fn process_cursor_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
-        &self,
+        &mut self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
         let header: wire::VirtioGpuCtrlHeader = match read_from_chain(&mut chain) {
@@ -180,7 +216,7 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let device = GpuDevice::new();
+        let mut device = GpuDevice::new();
 
         // Process the request.
         device
@@ -219,7 +255,7 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let device = GpuDevice::new();
+        let mut device = GpuDevice::new();
 
         // Process the request.
         device

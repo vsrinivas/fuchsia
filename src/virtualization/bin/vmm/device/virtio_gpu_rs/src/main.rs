@@ -13,7 +13,6 @@ use {
     fuchsia_component::server,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     tracing,
-    virtio_device::chain::ReadableChain,
 };
 
 async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(), anyhow::Error> {
@@ -42,7 +41,7 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let gpu_device = GpuDevice::new();
+    let mut gpu_device = GpuDevice::new();
     let control_stream = device.take_stream(wire::CONTROLQ)?;
     let cursor_stream = device.take_stream(wire::CURSORQ)?;
     ready_responder.send()?;
@@ -51,30 +50,7 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
         device
             .run_device_notify(virtio_device_fidl)
             .map_err(|e| anyhow!("run_device_notify: {}", e)),
-        control_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
-            let guest_mem = &guest_mem;
-            let gpu_device = &gpu_device;
-            move |chain| async move {
-                if let Err(e) =
-                    gpu_device.process_control_chain(ReadableChain::new(chain, guest_mem))
-                {
-                    tracing::warn!("Error processing control queue: {}", e);
-                }
-                Ok(())
-            }
-        }),
-        cursor_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
-            let guest_mem = &guest_mem;
-            let gpu_device = &gpu_device;
-            move |chain| async move {
-                if let Err(e) =
-                    gpu_device.process_cursor_chain(ReadableChain::new(chain, guest_mem))
-                {
-                    tracing::warn!("Error processing cursor queue: {}", e);
-                }
-                Ok(())
-            }
-        }),
+        gpu_device.process_queues(&guest_mem, control_stream, cursor_stream),
     )?;
     Ok(())
 }
