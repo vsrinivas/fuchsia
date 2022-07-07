@@ -8,17 +8,14 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     errors::ffx_bail,
     gcs::{
-        client::{Client, ClientFactory},
+        client::{Client, ClientFactory, ProgressResult, ProgressState},
         gs_url::split_gs_url,
         token_store::{
             auth_code_to_refresh, get_auth_code, read_boto_refresh_token, write_boto_refresh_token,
             GcsError, TokenStore,
         },
     },
-    std::{
-        io::Write,
-        path::{Path, PathBuf},
-    },
+    std::path::{Path, PathBuf},
 };
 
 /// Create a GCS client that only allows access to public buckets.
@@ -67,19 +64,18 @@ pub(crate) fn get_gcs_client_with_auth(boto_path: &Path) -> Result<Client> {
 ///
 /// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".
 /// The resulting data will be written to a directory at `local_dir`.
-pub(crate) async fn fetch_from_gcs<W>(
+pub(crate) async fn fetch_from_gcs<F>(
     gcs_url: &str,
     local_dir: &Path,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     let client = get_gcs_client_without_auth();
     let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
-    if !client.fetch_all(bucket, gcs_path, &local_dir, verbose, writer).await.is_ok() {
-        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, verbose, writer)
+    if !client.fetch_all(bucket, gcs_path, &local_dir, progress).await.is_ok() {
+        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, progress)
             .await
             .context("fetch with auth")?;
     }
@@ -89,22 +85,21 @@ where
 /// Download from a given `gcs_url` using auth.
 ///
 /// Fallback from using `fetch_from_gcs()` without auth.
-async fn fetch_from_gcs_with_auth<W>(
+async fn fetch_from_gcs_with_auth<F>(
     gcs_bucket: &str,
     gcs_path: &str,
     local_dir: &Path,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     let boto_path = get_boto_path().await?;
 
     loop {
         let client = get_gcs_client_with_auth(&boto_path)?;
         match client
-            .fetch_all(gcs_bucket, gcs_path, &local_dir, verbose, writer)
+            .fetch_all(gcs_bucket, gcs_path, &local_dir, progress)
             .await
             .context("fetch all")
         {

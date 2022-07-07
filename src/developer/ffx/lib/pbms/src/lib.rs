@@ -27,6 +27,7 @@ use {
         },
         repo_info::RepoInfo,
     },
+    ::gcs::client::ProgressResponse,
     anyhow::{bail, Context, Result},
     fms::Entries,
     futures::TryStreamExt as _,
@@ -42,12 +43,14 @@ mod pbms;
 mod repo_info;
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata<W>(verbose: bool, writer: &mut W) -> Result<()>
+pub async fn update_metadata<W>(_verbose: bool, _writer: &mut W) -> Result<()>
 where
     W: Write + Sync,
 {
     let repos = pbm_repo_list().await.context("getting repo list")?;
-    fetch_product_metadata(&repos, verbose, writer).await.context("fetching product metadata")
+    fetch_product_metadata(&repos, &mut |_d, _f| Ok(ProgressResponse::Continue))
+        .await
+        .context("fetching product metadata")
 }
 
 /// Gather a list of PBM reference URLs which include the product bundle entry

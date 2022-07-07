@@ -8,7 +8,7 @@ use {
     crate::token_store::TokenStore,
     anyhow::{bail, Context, Result},
     fuchsia_hyper::{new_https_client, HttpsClient},
-    hyper::{body::HttpBody as _, Body, Response, StatusCode},
+    hyper::{body::HttpBody as _, header::CONTENT_LENGTH, Body, Response, StatusCode},
     std::{
         fs::{create_dir_all, File},
         io::Write,
@@ -57,6 +57,65 @@ impl ClientFactory {
     }
 }
 
+/// A snapshot of the progress.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProgressState<'a> {
+    /// Current URL.
+    pub url: &'a str,
+
+    /// The current step of the progress.
+    pub at: u64,
+
+    /// The total steps.
+    pub of: u64,
+}
+
+/// Allow the user an opportunity to cancel an operation.
+#[derive(Debug, PartialEq)]
+pub enum ProgressResponse {
+    /// Keep going.
+    Continue,
+
+    /// The user (or high level code) asks that the operation halt. This isn't
+    /// an error in itself. Simply stop (e.g. break from iteration) and return.
+    Cancel,
+}
+
+pub type ProgressResult<E = anyhow::Error> = std::result::Result<ProgressResponse, E>;
+
+/// Throttle an action to N times per second.
+struct Throttle {
+    prior_update: std::time::Instant,
+    interval: std::time::Duration,
+}
+
+impl Throttle {
+    /// `is_ready()` will return true after each `interval` amount of time.
+    pub fn from_duration(interval: std::time::Duration) -> Self {
+        let prior_update = std::time::Instant::now();
+        let prior_update = prior_update.checked_sub(interval).expect("reasonable interval");
+        // A std::time::Instant cannot be created at zero or epoch start, so
+        // the interval is deducted twice to create an instant that will trigger
+        // on the first call to is_ready().
+        // See Rust issue std::time::Instant #40910.
+        let prior_update = prior_update.checked_sub(interval).expect("reasonable interval");
+        Throttle { prior_update, interval }
+    }
+
+    /// Determine whether enough time has elapsed.
+    ///
+    /// Returns true at most N times per second, where N is the value passed
+    /// into `new()`.
+    pub fn is_ready(&mut self) -> bool {
+        let now = std::time::Instant::now();
+        if now.duration_since(self.prior_update) >= self.interval {
+            self.prior_update = now;
+            return true;
+        }
+        return false;
+    }
+}
+
 /// An https client capable of fetching objects from GCS.
 #[derive(Clone, Debug)]
 pub struct Client {
@@ -82,17 +141,16 @@ impl Client {
 
     /// Save content of matching objects (blob) from GCS to local location
     /// `output_dir`.
-    pub async fn fetch_all<P, W>(
+    pub async fn fetch_all<P, F>(
         &self,
         bucket: &str,
         prefix: &str,
         output_dir: P,
-        verbose: bool,
-        writer: &mut W,
+        progress: &mut F,
     ) -> Result<()>
     where
         P: AsRef<Path>,
-        W: Write + Sync,
+        F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
     {
         let objects = self
             .token_store
@@ -100,6 +158,8 @@ impl Client {
             .await
             .context("listing with token store")?;
         let output_dir = output_dir.as_ref();
+        let mut count = 0;
+        let total = objects.len() as u64;
         for object in objects {
             if let Some(relative_path) = object.strip_prefix(prefix) {
                 let start = std::time::Instant::now();
@@ -121,15 +181,21 @@ impl Client {
                     create_dir_all(&parent)
                         .with_context(|| format!("creating dir all for {:?}", parent))?;
                 }
-                let mut file = File::create(&output_path).context("creating file")?;
-                if verbose {
-                    writeln!(writer, "GCS fetch: gs://{}/{}", bucket, object)?;
-                } else {
-                    write!(writer, ".")?;
-                    writer.flush()?;
-                }
-                self.write(bucket, &object, &mut file).await.context("writing object")?;
-
+                let mut file = File::create(&output_path).context("create file")?;
+                let url = format!("gs://{}/", bucket);
+                count += 1;
+                let dir_progress = ProgressState { url: &url, at: count, of: total };
+                self.write(bucket, &object, &mut file, &mut |file_progress| {
+                    assert!(
+                        file_progress.at <= file_progress.of,
+                        "At {} of {}",
+                        file_progress.at,
+                        file_progress.of
+                    );
+                    progress(dir_progress.clone(), file_progress)
+                })
+                .await
+                .context("write object")?;
                 use std::io::{Seek, SeekFrom};
                 let file_size = file.seek(SeekFrom::End(0)).context("getting file size")?;
                 log::debug!(
@@ -142,18 +208,40 @@ impl Client {
                 );
             }
         }
-        if !verbose {
-            writeln!(writer, "")?;
-        }
         Ok(())
     }
 
     /// Save content of a stored object (blob) from GCS at location `output`.
     ///
     /// Wraps call to `self.write` which wraps `self.stream()`.
-    pub async fn fetch<P: AsRef<Path>>(&self, bucket: &str, object: &str, output: P) -> Result<()> {
+    pub async fn fetch_with_progress<P, F>(
+        &self,
+        bucket: &str,
+        object: &str,
+        output: P,
+        progress: &mut F,
+    ) -> ProgressResult
+    where
+        P: AsRef<Path>,
+        F: FnMut(ProgressState<'_>) -> ProgressResult,
+    {
         let mut file = File::create(output.as_ref())?;
-        self.write(bucket, object, &mut file).await
+        self.write(bucket, object, &mut file, progress).await
+    }
+
+    /// As `fetch_with_progress()` without a progress callback.
+    pub async fn fetch_without_progress<P>(
+        &self,
+        bucket: &str,
+        object: &str,
+        output: P,
+    ) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        let mut file = File::create(output.as_ref())?;
+        self.write(bucket, object, &mut file, &mut |_| Ok(ProgressResponse::Continue)).await?;
+        Ok(())
     }
 
     /// Reads content of a stored object (blob) from GCS.
@@ -164,14 +252,62 @@ impl Client {
     /// Write content of a stored object (blob) from GCS to writer.
     ///
     /// Wraps call to `self.stream`.
-    pub async fn write<W: Write>(&self, bucket: &str, object: &str, writer: &mut W) -> Result<()> {
+    pub async fn write<W, F>(
+        &self,
+        bucket: &str,
+        object: &str,
+        writer: &mut W,
+        progress: &mut F,
+    ) -> ProgressResult
+    where
+        W: Write + Sync,
+        F: FnMut(ProgressState<'_>) -> ProgressResult,
+    {
         let mut res = self.stream(bucket, object).await?;
         if res.status() == StatusCode::OK {
+            let mut at: u64 = 0;
+            let length = if res.headers().contains_key(CONTENT_LENGTH) {
+                res.headers()
+                    .get(CONTENT_LENGTH)
+                    .context("getting content length")?
+                    .to_str()?
+                    .parse::<u64>()
+                    .context("parsing content length")?
+            } else if res.headers().contains_key("x-goog-stored-content-length") {
+                // The size of gzipped files is a guess.
+                res.headers()["x-goog-stored-content-length"]
+                    .to_str()
+                    .context("getting content length")?
+                    .parse::<u64>()
+                    .context("parsing content length")?
+                    * 3
+            } else {
+                println!("missing content-length in {}: res.headers() {:?}", object, res.headers());
+                bail!("missing content-length in header");
+            };
+            let mut of = length;
+            // Throttle the progress UI updates to avoid burning CPU on changes
+            // the user will have trouble seeing anyway. Without throttling,
+            // around 20% of the execution time can be spent updating the
+            // progress UI. The throttle makes the overhead negligible.
+            let mut throttle = Throttle::from_duration(std::time::Duration::from_millis(500));
             while let Some(next) = res.data().await {
-                let chunk = next?;
-                writer.write_all(&chunk)?;
+                let chunk = next.context("next chunk")?;
+                writer.write_all(&chunk).context("write chunk")?;
+                at += chunk.len() as u64;
+                if at > of {
+                    of = at;
+                }
+                if throttle.is_ready() {
+                    match progress(ProgressState { url: object, at, of })
+                        .context("rendering progress")?
+                    {
+                        ProgressResponse::Cancel => break,
+                        _ => (),
+                    }
+                }
             }
-            return Ok(());
+            return Ok(ProgressResponse::Continue);
         }
         bail!("Failed to fetch file, result status: {:?}", res.status());
     }
@@ -223,14 +359,22 @@ mod test {
         // Fetch something that does exist.
         let out_dir = tempfile::tempdir().unwrap();
         let out_file = out_dir.path().join("downloaded");
-        client.fetch("fuchsia-sdk", "development/LATEST_LINUX", &out_file).await.expect("fetch");
+        client
+            .fetch_without_progress("fuchsia-sdk", "development/LATEST_LINUX", &out_file)
+            .await
+            .expect("fetch");
         assert!(out_file.exists());
         let fetched = read_to_string(out_file).expect("read out_file");
         assert!(!fetched.is_empty());
 
         // Write the same data.
         let mut written = Vec::new();
-        client.write("fuchsia-sdk", "development/LATEST_LINUX", &mut written).await.expect("write");
+        client
+            .write("fuchsia-sdk", "development/LATEST_LINUX", &mut written, &mut |_| {
+                Ok(ProgressResponse::Continue)
+            })
+            .await
+            .expect("write");
         // The data is expected to be small (less than a KiB). For a non-test
         // keeping the whole file in memory may be impractical.
         let written = String::from_utf8(written).expect("streamed string");

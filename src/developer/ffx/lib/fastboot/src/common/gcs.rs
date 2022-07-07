@@ -50,7 +50,9 @@ impl GcsResolver {
 
         let product_bundle_container_path = temp_dir.path().join("product_bundles.json");
         let gcs_path = format!("development/{}/sdk/product_bundles.json", version);
-        client.fetch("fuchsia-sdk", &gcs_path, &product_bundle_container_path).await?;
+        client
+            .fetch_without_progress("fuchsia-sdk", &gcs_path, &product_bundle_container_path)
+            .await?;
 
         let product_bundle =
             product_bundle_from_container_path(&product_bundle_container_path, &bundle)?;
@@ -99,7 +101,7 @@ impl FileResolver for GcsResolver {
                 if let Some(p) = path.parent() {
                     std::fs::create_dir_all(&p)?;
                 }
-                self.client.fetch(&project, &gcs_path, &path).await?;
+                self.client.fetch_without_progress(&project, &gcs_path, &path).await?;
                 let d = Utc::now().signed_duration_since(download);
                 done_time(writer, d)?;
                 path.to_str()

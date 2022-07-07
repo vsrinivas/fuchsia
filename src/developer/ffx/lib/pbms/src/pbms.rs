@@ -11,6 +11,7 @@ use {
         },
         repo_info::RepoInfo,
     },
+    ::gcs::client::{ProgressResponse, ProgressResult, ProgressState},
     anyhow::{bail, Context, Result},
     chrono::{DateTime, NaiveDateTime, Utc},
     ffx_config::sdk::SdkVersion,
@@ -35,13 +36,9 @@ pub(crate) const GS_SCHEME: &str = "gs";
 ///
 /// Expandable tags (e.g. "{foo}") in `repos` must already be expanded, do not
 /// pass in repo URIs with expandable tags.
-pub(crate) async fn fetch_product_metadata<W>(
-    repos: &Vec<url::Url>,
-    verbose: bool,
-    writer: &mut W,
-) -> Result<()>
+pub(crate) async fn fetch_product_metadata<F>(repos: &Vec<url::Url>, progress: &mut F) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     log::info!("Getting product metadata.");
     let storage_path: PathBuf =
@@ -62,7 +59,7 @@ where
             info.save(&local_dir.join("info"))?;
 
             let temp_dir = tempfile::tempdir_in(&local_dir).context("create temp dir")?;
-            fetch_bundle_uri(&repo_url, &temp_dir.path(), verbose, writer)
+            fetch_bundle_uri(&repo_url, &temp_dir.path(), progress)
                 .await
                 .context("fetch product bundle by URL")?;
             let the_file = temp_dir.path().join("product_bundles.json");
@@ -204,9 +201,13 @@ where
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&vec![url.to_owned()], verbose, writer)
-        .await
-        .context("fetching metadata")?;
+    fetch_product_metadata(&vec![url.to_owned()], &mut |_d, _f| {
+        write!(writer, ".")?;
+        writer.flush()?;
+        Ok(ProgressResponse::Continue)
+    })
+    .await
+    .context("fetching metadata")?;
 
     let storage_path: PathBuf =
         ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
@@ -234,9 +235,13 @@ where
         }
         let base_url = url::Url::parse(&image.base_uri)
             .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
-        fetch_by_format(&image.format, &base_url, &local_dir, verbose, writer)
-            .await
-            .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
+        fetch_by_format(&image.format, &base_url, &local_dir, &mut |_d, _f| {
+            write!(writer, ".")?;
+            writer.flush()?;
+            Ok(ProgressResponse::Continue)
+        })
+        .await
+        .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
     }
     log::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
@@ -541,15 +546,19 @@ where
 async fn fetch_package_repository_from_tgz<W>(
     local_dir: &Path,
     repo_uri: Url,
-    verbose: bool,
+    _verbose: bool,
     writer: &mut W,
 ) -> Result<()>
 where
     W: Write + Sync,
 {
-    fetch_bundle_uri(&repo_uri, &local_dir, verbose, writer)
-        .await
-        .with_context(|| format!("downloading repo URI {}", repo_uri))?;
+    fetch_bundle_uri(&repo_uri, &local_dir, &mut |_d, _f| {
+        write!(writer, ".")?;
+        writer.flush()?;
+        Ok(ProgressResponse::Continue)
+    })
+    .await
+    .with_context(|| format!("downloading repo URI {}", repo_uri))?;
 
     Ok(())
 }
@@ -558,18 +567,17 @@ where
 ///
 /// For a directory, all files in the directory are downloaded.
 /// For a .tgz file, the file is downloaded and expanded.
-async fn fetch_by_format<W>(
+async fn fetch_by_format<F>(
     format: &str,
     uri: &url::Url,
     local_dir: &Path,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     match format {
-        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, verbose, writer).await,
+        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress).await,
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
         // This error could be a typo in the product bundle or a new image
@@ -589,21 +597,20 @@ where
 /// Bundle, "bundle_uri".
 ///
 /// Currently: "pattern": "^(?:http|https|gs|file):\/\/"
-async fn fetch_bundle_uri<W>(
+async fn fetch_bundle_uri<F>(
     product_url: &url::Url,
     local_dir: &Path,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     if product_url.scheme() == GS_SCHEME {
-        fetch_from_gcs(product_url.as_str(), local_dir, verbose, writer)
+        fetch_from_gcs(product_url.as_str(), local_dir, progress)
             .await
             .context("Downloading from GCS.")?;
     } else if product_url.scheme() == "http" || product_url.scheme() == "https" {
-        fetch_from_web(product_url, local_dir).await.context("fetching from http(s)")?;
+        fetch_from_web(product_url, local_dir, progress).await.context("fetching from http(s)")?;
     } else if let Some(_) = &path_from_file_url(product_url) {
         // Since the file is already local, no fetch is necessary.
     } else {
@@ -612,7 +619,14 @@ where
     Ok(())
 }
 
-async fn fetch_from_web(_product_uri: &url::Url, _local_dir: &Path) -> Result<()> {
+async fn fetch_from_web<F>(
+    _product_uri: &url::Url,
+    _local_dir: &Path,
+    _progress: &mut F,
+) -> Result<()>
+where
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+{
     // TODO(fxbug.dev/93850): implement pbms.
     unimplemented!();
 }
@@ -690,18 +704,18 @@ mod tests {
     #[should_panic(expected = "Unexpected image format")]
     async fn test_fetch_by_format() {
         let url = url::Url::parse("fake://foo").expect("url");
-        let mut writer = Box::new(std::io::stdout());
-        fetch_by_format("bad", &url, &Path::new("unused"), /*verbose=*/ false, &mut writer)
-            .await
-            .expect("bad fetch");
+        fetch_by_format("bad", &url, &Path::new("unused"), &mut |_d, _f| {
+            Ok(ProgressResponse::Continue)
+        })
+        .await
+        .expect("bad fetch");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[should_panic(expected = "Unexpected URI scheme")]
     async fn test_fetch_bundle_uri() {
         let url = url::Url::parse("fake://foo").expect("url");
-        let mut writer = Box::new(std::io::stdout());
-        fetch_bundle_uri(&url, &Path::new("unused"), /*verbose=*/ false, &mut writer)
+        fetch_bundle_uri(&url, &Path::new("unused"), &mut |_d, _f| Ok(ProgressResponse::Continue))
             .await
             .expect("bad fetch");
     }
