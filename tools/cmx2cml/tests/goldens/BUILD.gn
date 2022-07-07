@@ -11,7 +11,7 @@ template("cmx2cml_golden") {
   _converter_name = "${target_name}_converter"
 
   _generated_cml = "${target_out_dir}/${target_name}.cml"
-  _golden_cml = string_replace(invoker.cmx, ".cmx", ".cml.golden")
+  _golden_cml = string_replace(invoker.cmx, ".cmx.golden", ".cml.golden")
 
   compiled_action(_converter_name) {
     testonly = true
@@ -37,67 +37,67 @@ template("cmx2cml_golden") {
 }
 
 cmx2cml_golden("button_checker_unittest") {
-  cmx = "button_checker_unittest.cmx"
+  cmx = "button_checker_unittest.cmx.golden"
   runner = "gunit"
 }
 
 cmx2cml_golden("diagnostics_persistence") {
-  cmx = "diagnostics-persistence-tests.cmx"
+  cmx = "diagnostics-persistence-tests.cmx.golden"
   runner = "rust-test"
 }
 
 cmx2cml_golden("echo_hub") {
-  cmx = "echo_hub.cmx"
+  cmx = "echo_hub.cmx.golden"
   runner = "elf"
 }
 
 cmx2cml_golden("fasync") {
-  cmx = "fuchsia_async_lib_test.cmx"
+  cmx = "fuchsia_async_lib_test.cmx.golden"
   runner = "rust-test"
 }
 
 cmx2cml_golden("getenv") {
-  cmx = "getenv2.cmx"
+  cmx = "getenv2.cmx.golden"
   runner = "elf"
 }
 
 cmx2cml_golden("h265") {
-  cmx = "h265_encoder_test.cmx"
+  cmx = "h265_encoder_test.cmx.golden"
   runner = "elf"
 }
 
 cmx2cml_golden("insntrace") {
-  cmx = "insntrace_integration_tests.cmx"
+  cmx = "insntrace_integration_tests.cmx.golden"
   runner = "gtest"
 }
 
 cmx2cml_golden("lowpan") {
-  cmx = "lowpanctl-integration-test.cmx"
+  cmx = "lowpanctl-integration-test.cmx.golden"
   runner = "elf-test"
 }
 
 cmx2cml_golden("pkgctl_integration_test") {
-  cmx = "pkgctl-integration-test.cmx"
+  cmx = "pkgctl-integration-test.cmx.golden"
   runner = "elf-test"
 }
 
 cmx2cml_golden("power_manager_test") {
-  cmx = "power_manager_bin_test.cmx"
+  cmx = "power_manager_bin_test.cmx.golden"
   runner = "rust-test"
 }
 
 cmx2cml_golden("recovery_fdr") {
-  cmx = "system_recovery_fdr.cmx"
+  cmx = "system_recovery_fdr.cmx.golden"
   runner = "elf"
 }
 
 cmx2cml_golden("tee_manager") {
-  cmx = "tee_manager.cmx"
+  cmx = "tee_manager.cmx.golden"
   runner = "elf"
 }
 
 cmx2cml_golden("test_driver") {
-  cmx = "test_driver.cmx"
+  cmx = "test_driver.cmx.golden"
   runner = "elf-test"
 }
 

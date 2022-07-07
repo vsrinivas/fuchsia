@@ -97,7 +97,6 @@ const COPYRIGHT_HEADER: &str = "// Copyright 2022 The Fuchsia Authors. All right
 // found in the LICENSE file.\n";
 
 fn convert_cmx(cmx: &Path, runner: RunnerSelection, out_path: &Path) -> Result<(), Error> {
-    assert_eq!(cmx.extension().map(|s| s.to_str().unwrap()), Some("cmx"));
     let in_bytes = std::fs::read_to_string(&cmx).context("reading cmx file")?;
 
     // use JSON5 because some CMX files have JSON5 elements...sigh
