@@ -313,7 +313,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpOrphanPresentFlag));
 
     for (auto ino : exp_inos) {
-      fs->RemoveOrphanInode(ino);
+      fs->GetSuperblockInfo().RemoveVnodeFromVnodeSet(InoType::kOrphanIno, ino);
     }
 
     for (block_t i = 0; i < orphan_blkaddr; ++i) {
@@ -345,10 +345,10 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
                std::default_random_engine(static_cast<uint32_t>(cp->checkpoint_ver)));
 
   for (auto ino : inos) {
-    fs->AddOrphanInode(ino);
+    fs->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, ino);
   }
 
-  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), orphan_inos);
 
   // Add duplicate orphan inodes
   std::vector<uint32_t> dup_inos(orphan_inos / 10);
@@ -358,7 +358,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
   });
 
   for (auto ino : dup_inos) {
-    fs->AddOrphanInode(ino);
+    fs->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, ino);
   }
 }
 
@@ -399,7 +399,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); ++j) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
-        fs->RemoveOrphanInode(ino);
+        fs->GetSuperblockInfo().RemoveVnodeFromVnodeSet(InoType::kOrphanIno, ino);
       }
     }
 
@@ -417,9 +417,9 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
 
   if (cp->checkpoint_ver <= kCheckpointLoopCnt) {
     for (auto ino : inos) {
-      fs->AddOrphanInode(ino);
+      fs->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, ino);
     }
-    ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
+    ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), orphan_inos);
   }
 
   // 5. Remove orphan inodes
@@ -430,7 +430,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
   });
 
   for (auto ino : rm_inos) {
-    fs->RemoveOrphanInode(ino);
+    fs->GetSuperblockInfo().RemoveVnodeFromVnodeSet(InoType::kOrphanIno, ino);
   }
 }
 
@@ -459,7 +459,7 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
     for (auto &vnode_refptr : vnodes) {
       ASSERT_EQ(vnode_refptr.get()->GetNlink(), (uint32_t)0);
-      fs->RemoveOrphanInode(vnode_refptr->GetKey());
+      fs->GetSuperblockInfo().RemoveVnodeFromVnodeSet(InoType::kOrphanIno, vnode_refptr->GetKey());
       vnode_refptr.reset();
     }
     vnodes.clear();
@@ -492,11 +492,11 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
     fs->InsertVnode(vnode);
 
     vnodes.push_back(std::move(vnode_refptr));
-    fs->AddOrphanInode(ino);
+    fs->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, ino);
     vnode_refptr.reset();
   }
 
-  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), orphan_inos);
 }
 
 void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,

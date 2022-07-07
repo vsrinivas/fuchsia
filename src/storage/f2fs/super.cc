@@ -337,8 +337,6 @@ zx_status_t F2fs::FillSuper() {
   superblock_info_->SetLastValidBlockCount(superblock_info_->GetTotalValidBlockCount());
   superblock_info_->SetAllocValidBlockCount(0);
 
-  InitOrphanInfo();
-
   segment_manager_ = std::make_unique<SegmentManager>(this);
   node_manager_ = std::make_unique<NodeManager>(this);
   gc_manager_ = std::make_unique<GcManager>(this);
@@ -378,9 +376,4 @@ zx_status_t F2fs::FillSuper() {
   reset.cancel();
   return err;
 }
-
-void SuperblockInfo::IncNrOrphans() { n_orphans_ = safemath::CheckAdd(n_orphans_, 1).ValueOrDie(); }
-
-void SuperblockInfo::DecNrOrphans() { n_orphans_ = safemath::CheckSub(n_orphans_, 1).ValueOrDie(); }
-
 }  // namespace f2fs

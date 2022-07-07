@@ -535,7 +535,7 @@ void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page)
   SetNodeAddr(ni, kNullAddr);
 
   if (nid == vnode.Ino()) {
-    fs_->RemoveOrphanInode(nid);
+    fs_->GetSuperblockInfo().RemoveVnodeFromVnodeSet(InoType::kOrphanIno, nid);
     fs_->DecValidInodeCount();
   } else {
     vnode.MarkInodeDirty();

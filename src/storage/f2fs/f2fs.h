@@ -237,8 +237,6 @@ class F2fs : public fs::Vfs {
 
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
-  void AddOrphanInode(nid_t ino);
-  void RemoveOrphanInode(nid_t ino);
   void RecoverOrphanInode(nid_t ino);
   int RecoverOrphanInodes();
   void WriteOrphanInodes(block_t start_blk);
@@ -248,7 +246,7 @@ class F2fs : public fs::Vfs {
   void UnblockOperations();
   void DoCheckpoint(bool is_umount);
   void WriteCheckpoint(bool blocked, bool is_umount);
-  void InitOrphanInfo();
+
 #if 0  // porting needed
   int F2fsWriteMetaPages(address_space *mapping, WritebackControl *wbc);
   int F2fsSetMetaPageDirty(Page *page);

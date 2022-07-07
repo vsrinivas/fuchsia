@@ -6,7 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <numeric>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -56,9 +58,9 @@ TEST(OrphanInode, RecoverOrphanInode) {
   }
 
   // 2. Make orphan inodes
-  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), static_cast<uint64_t>(0));
+  ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), static_cast<uint64_t>(0));
   FileTester::DeleteChildren(vnodes, root_dir, kOrphanCnt);
-  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), kOrphanCnt);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), kOrphanCnt);
 
   for (const auto &iter : vnodes) {
     ASSERT_EQ(iter->GetNlink(), (uint32_t)0);
@@ -81,7 +83,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
   // 4. Remount and recover orphan inodes
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), static_cast<uint64_t>(0));
+  ASSERT_EQ(fs->GetSuperblockInfo().GetVnodeSetSize(InoType::kOrphanIno), static_cast<uint64_t>(0));
 
   ASSERT_EQ(fs->ValidInodeCount(), static_cast<uint64_t>(1));
   ASSERT_EQ(fs->ValidNodeCount(), static_cast<uint64_t>(1));
@@ -95,6 +97,40 @@ TEST(OrphanInode, RecoverOrphanInode) {
   }
 
   FileTester::Unmount(std::move(fs), &bc);
+}
+
+using OrphanTest = F2fsFakeDevTestFixture;
+
+TEST_F(OrphanTest, VnodeSet) {
+  SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
+
+  uint32_t inode_count = 100;
+  std::vector<uint32_t> inos(inode_count);
+  std::iota(inos.begin(), inos.end(), 0);
+
+  for (auto ino : inos) {
+    superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, ino);
+  }
+  ASSERT_EQ(superblock_info.GetVnodeSetSize(InoType::kOrphanIno), inode_count);
+
+  // Duplicate ino insertion
+  superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, 1);
+  superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, 2);
+  superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, 3);
+  superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, 4);
+  ASSERT_EQ(superblock_info.GetVnodeSetSize(InoType::kOrphanIno), inode_count);
+
+  superblock_info.RemoveVnodeFromVnodeSet(InoType::kOrphanIno, 10);
+  ASSERT_EQ(superblock_info.GetVnodeSetSize(InoType::kOrphanIno), inode_count - 1);
+
+  ASSERT_FALSE(superblock_info.FindVnodeFromVnodeSet(InoType::kOrphanIno, 10));
+  ASSERT_TRUE(superblock_info.FindVnodeFromVnodeSet(InoType::kOrphanIno, 11));
+  superblock_info.AddVnodeToVnodeSet(InoType::kOrphanIno, 10);
+
+  std::vector<uint32_t> tmp_inos;
+  superblock_info.ForAllVnodesInVnodeSet(InoType::kOrphanIno,
+                                   [&tmp_inos](nid_t ino) { tmp_inos.push_back(ino); });
+  ASSERT_TRUE(std::equal(inos.begin(), inos.end(), tmp_inos.begin()));
 }
 
 }  // namespace

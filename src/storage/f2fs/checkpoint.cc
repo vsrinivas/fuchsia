@@ -80,8 +80,7 @@ zx_status_t F2fs::CheckOrphanSpace() {
    * for cp pack we can have max 1020*507 orphan entries
    */
   max_orphans = (superblock_info.GetBlocksPerSeg() - 5) * kOrphansPerBlock;
-  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-  if (superblock_info.GetOrphanCount() >= max_orphans) {
+  if (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) >= max_orphans) {
     err = ZX_ERR_NO_SPACE;
 #ifdef __Fuchsia__
     inspect_tree_.OnOutOfSpace();
@@ -91,7 +90,7 @@ zx_status_t F2fs::CheckOrphanSpace() {
 }
 
 void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
-  AddOrphanInode(vnode->GetKey());
+  GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, vnode->GetKey());
 #ifdef __Fuchsia__
   if (vnode->IsDir()) {
     vnode->Notify(vnode->GetNameView(), fuchsia_io::wire::WatchEvent::kDeleted);
@@ -99,64 +98,6 @@ void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
 #endif  // __Fuchsia__
   if (vnode->ClearDirty()) {
     ZX_ASSERT(GetVCache().RemoveDirty(vnode) == ZX_OK);
-  }
-}
-
-void F2fs::AddOrphanInode(nid_t ino) {
-  SuperblockInfo &superblock_info = GetSuperblockInfo();
-  OrphanInodeEntry *new_entry = nullptr, *orphan = nullptr;
-
-  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-  list_node_t *head = &superblock_info.GetOrphanInodeList(), *this_node;
-  list_for_every(head, this_node) {
-    orphan = containerof(this_node, OrphanInodeEntry, list);
-    if (orphan->ino == ino)
-      return;
-    if (orphan->ino > ino)
-      break;
-    orphan = nullptr;
-  }
-
-  // TODO: handle a failing case
-  new_entry = new OrphanInodeEntry;
-  ZX_ASSERT(new_entry != nullptr);
-
-  new_entry->ino = ino;
-  list_initialize(&new_entry->list);
-
-  // add new_entry into list which is sorted by inode number
-  if (orphan) {
-    OrphanInodeEntry *prev;
-
-    // get previous entry
-    prev = containerof(orphan->list.prev, OrphanInodeEntry, list);
-    if (&prev->list != head) {
-      // insert new orphan inode entry
-      list_add(&prev->list, &new_entry->list);
-    } else {
-      list_add(head, &new_entry->list);
-    }
-  } else {
-    list_add_tail(head, &new_entry->list);
-  }
-  superblock_info.IncNrOrphans();
-}
-
-void F2fs::RemoveOrphanInode(nid_t ino) {
-  SuperblockInfo &superblock_info = GetSuperblockInfo();
-  list_node_t *this_node, *next, *head;
-  OrphanInodeEntry *orphan;
-
-  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-  head = &superblock_info.GetOrphanInodeList();
-  list_for_every_safe(head, this_node, next) {
-    orphan = containerof(this_node, OrphanInodeEntry, list);
-    if (orphan->ino == ino) {
-      list_delete(&orphan->list);
-      delete orphan;
-      superblock_info.DecNrOrphans();
-      break;
-    }
   }
 }
 
@@ -205,7 +146,6 @@ zx_status_t F2fs::RecoverOrphanInodes() {
 
 void F2fs::WriteOrphanInodes(block_t start_blk) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
-  list_node_t *head, *this_node, *next;
   OrphanBlock *orphan_blk = nullptr;
   LockedPage page;
   uint32_t nentries = 0;
@@ -213,17 +153,10 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
   uint16_t orphan_blocks;
 
   orphan_blocks = static_cast<uint16_t>(
-      (superblock_info.GetOrphanCount() + (kOrphansPerBlock - 1)) / kOrphansPerBlock);
+      (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) + (kOrphansPerBlock - 1)) /
+      kOrphansPerBlock);
 
-  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-  head = &superblock_info.GetOrphanInodeList();
-
-  // loop for each orphan inode entry and write them in Jornal block
-  list_for_every_safe(head, this_node, next) {
-    OrphanInodeEntry *orphan;
-
-    orphan = containerof(this_node, OrphanInodeEntry, list);
-
+  superblock_info.ForAllVnodesInVnodeSet(InoType::kOrphanIno, [&](nid_t ino) {
     if (nentries == kOrphansPerBlock) {
       // an orphan block is full of 1020 entries,
       // then we need to flush current orphan blocks
@@ -243,8 +176,8 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       memset(orphan_blk, 0, sizeof(*orphan_blk));
       page->SetDirty();
     }
-    orphan_blk->ino[nentries++] = CpuToLe(orphan->ino);
-  }
+    orphan_blk->ino[nentries++] = CpuToLe(ino);
+  });
   if (page) {
     orphan_blk->blk_addr = CpuToLe(index);
     orphan_blk->blk_count = CpuToLe(orphan_blocks);
@@ -466,8 +399,8 @@ void F2fs::DoCheckpoint(bool is_umount) {
     superblock_info.ClearCpFlags(CpFlag::kCpCompactSumFlag);
   }
 
-  orphan_blocks = static_cast<uint32_t>((superblock_info.GetOrphanCount() + kOrphansPerBlock - 1) /
-                                        kOrphansPerBlock);
+  orphan_blocks = static_cast<uint32_t>(
+      (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) + kOrphansPerBlock - 1) / kOrphansPerBlock);
   ckpt.cp_pack_start_sum = 1 + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
   ckpt.cp_pack_total_block_count =
       2 + data_sum_blocks + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
@@ -479,7 +412,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     superblock_info.ClearCpFlags(CpFlag::kCpUmountFlag);
   }
 
-  if (superblock_info.GetOrphanCount() > 0) {
+  if (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) > 0) {
     superblock_info.SetCpFlags(CpFlag::kCpOrphanPresentFlag);
   } else {
     superblock_info.ClearCpFlags(CpFlag::kCpOrphanPresentFlag);
@@ -511,7 +444,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     cp_page->SetDirty();
   }
 
-  if (superblock_info.GetOrphanCount() > 0) {
+  if (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) > 0) {
     WriteOrphanInodes(start_blk);
     start_blk += orphan_blocks;
   }
@@ -599,11 +532,4 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   }
   UnblockOperations();
 }
-
-void F2fs::InitOrphanInfo() {
-  SuperblockInfo &superblock_info = GetSuperblockInfo();
-  list_initialize(&superblock_info.GetOrphanInodeList());
-  superblock_info.ResetNrOrphans();
-}
-
 }  // namespace f2fs

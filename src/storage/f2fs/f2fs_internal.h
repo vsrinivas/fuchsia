@@ -12,12 +12,6 @@ class VnodeF2fs;
 // For checkpoint manager
 enum class MetaBitmap { kNatBitmap, kSitBitmap };
 
-// for the list of orphan inodes
-struct OrphanInodeEntry {
-  list_node_t list;  // list head
-  nid_t ino = 0;     // inode number
-};
-
 // for the list of directory inodes
 struct DirInodeEntry {
   list_node_t list;            // list head
@@ -90,6 +84,58 @@ enum class PageType {
   kMetaFlush,
 };
 
+// Types of inode number lists
+enum class InoType {
+  kOrphanIno,  // for orphan ino list
+  kNrInoType,
+};
+
+// The VnodeSet stores and manages vnode number that should be specially managed, such as
+// orphan vnodes.
+class VnodeSet {
+ public:
+  VnodeSet() = default;
+  VnodeSet(const VnodeSet &) = delete;
+  VnodeSet &operator=(const VnodeSet &) = delete;
+  VnodeSet(VnodeSet &&) = delete;
+  VnodeSet &operator=(const VnodeSet &&) = delete;
+
+  void AddVnode(nid_t ino) __TA_EXCLUDES(vnode_mutex_) {
+    std::lock_guard lock(vnode_mutex_);
+    // std::set removes duplicate insertion.
+    vnodes.insert(ino);
+  }
+
+  void RemoveVnode(nid_t ino) __TA_EXCLUDES(vnode_mutex_) {
+    std::lock_guard lock(vnode_mutex_);
+    vnodes.erase(ino);
+  }
+
+  bool FindVnode(nid_t ino) __TA_EXCLUDES(vnode_mutex_) {
+    fs::SharedLock lock(vnode_mutex_);
+    if (vnodes.find(ino) == vnodes.end()) {
+      return false;
+    }
+    return true;
+  }
+
+  void ForAllVnodes(fit::function<void(nid_t)> callback) __TA_EXCLUDES(vnode_mutex_) {
+    std::lock_guard lock(vnode_mutex_);
+    for (auto ino : vnodes) {
+      callback(ino);
+    }
+  }
+
+  uint64_t GetSize() const __TA_EXCLUDES(vnode_mutex_) {
+    fs::SharedLock lock(vnode_mutex_);
+    return vnodes.size();
+  }
+
+ private:
+  mutable fs::SharedMutex vnode_mutex_;  // for vnode set
+  std::set<nid_t> vnodes __TA_GUARDED(vnode_mutex_); // vnode set
+};
+
 class SuperblockInfo {
  public:
   // Not copyable or moveable
@@ -160,15 +206,25 @@ class SuperblockInfo {
 
   void ClearOnRecovery() { on_recovery_ = false; }
 
-  list_node_t &GetOrphanInodeList() { return orphan_inode_list_; }
+  void AddVnodeToVnodeSet(InoType type, nid_t ino) {
+    vnode_set_[static_cast<uint8_t>(type)].AddVnode(ino);
+  }
 
-  std::mutex &GetOrphanInodeMutex() { return orphan_inode_mutex_; }
+  void RemoveVnodeFromVnodeSet(InoType type, nid_t ino) {
+    vnode_set_[static_cast<uint8_t>(type)].RemoveVnode(ino);
+  }
 
-  uint64_t GetOrphanCount() const { return n_orphans_; }
+  bool FindVnodeFromVnodeSet(InoType type, nid_t ino) {
+    return vnode_set_[static_cast<uint8_t>(type)].FindVnode(ino);
+  }
 
-  void IncNrOrphans();
-  void DecNrOrphans();
-  void ResetNrOrphans() { n_orphans_ = 0; }
+  uint64_t GetVnodeSetSize(InoType type)  {
+    return vnode_set_[static_cast<uint8_t>(type)].GetSize();
+  }
+
+  void ForAllVnodesInVnodeSet(InoType type, fit::function<void(nid_t)> callback) {
+    vnode_set_[static_cast<uint8_t>(type)].ForAllVnodes(std::move(callback));
+  }
 
   block_t GetLogSectorsPerBlock() const { return log_sectors_per_block_; }
 
@@ -358,10 +414,8 @@ class SuperblockInfo {
 #endif
   bool on_recovery_ = false;  // recovery is doing or not
 
-  // for orphan inode management
-  list_node_t orphan_inode_list_;  // orphan inode list
-  std::mutex orphan_inode_mutex_;  // for orphan inode list
-  uint64_t n_orphans_ = 0;         // # of orphan inodes
+  // for inode number management
+  VnodeSet vnode_set_[static_cast<uint8_t>(InoType::kNrInoType)];
 
   uint64_t n_dirty_dirs = 0;           // # of dir inodes
   block_t log_sectors_per_block_ = 0;  // log2 sectors per block
