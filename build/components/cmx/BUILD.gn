@@ -563,7 +563,6 @@ group("cmx_allowlist") {
     "//src/sys/pkg/lib/isolated-swd:isolated-swd-tests-component_manifest_compile",
     "//src/sys/pkg/tests/isolated-ota:isolated-ota-integration-test_manifest_compile",
     "//src/sys/pkg/tests/pkgctl:pkgctl-component_manifest_compile",
-    "//src/sys/pkg/tests/pkgctl:pkgctl_integration_test-component_manifest_compile",
     "//src/sys/run_test_component/test:component_to_test_standard_out-component_manifest_compile",
     "//src/sys/run_test_component/test:coverage_component-component_manifest_compile",
     "//src/sys/run_test_component/test:error_logging_component-component_manifest_compile",

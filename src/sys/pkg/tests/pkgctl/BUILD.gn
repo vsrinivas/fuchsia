@@ -42,7 +42,7 @@ rustc_test("driver") {
 
 fuchsia_test_component("pkgctl_integration_test-component") {
   component_name = "pkgctl-integration-test"
-  manifest = "meta/pkgctl-integration-test.cmx"
+  manifest = "meta/pkgctl-integration-test.cml"
   deps = [ ":driver" ]
 }
 
@@ -62,9 +62,9 @@ fuchsia_test_package("pkgctl-integration-tests") {
   test_components = [ ":pkgctl_integration_test-component" ]
   deps = [
     ":pkgctl-component",
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/http-client:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/http-client:component",
+    "//src/connectivity/network/netstack:component",
   ]
 }
 

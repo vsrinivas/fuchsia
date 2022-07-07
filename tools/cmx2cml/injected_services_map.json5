@@ -33,7 +33,7 @@
         "fuchsia.memorypressure.Provider": "#meta/memory_monitor.cm",
         "fuchsia.net.http.Loader": "#meta/http-client.cm",
         "fuchsia.net.interfaces.State": "#meta/netstack.cm",
-        "fuchsia.net.name.Lookup": "#meta/dns-resolver.cm",
+        "fuchsia.net.name.Lookup": "#meta/dns_resolver.cm",
         "fuchsia.net.routes.State": "#meta/netstack.cm",
         "fuchsia.net.stack.Stack": "#meta/netstack.cm",
         "fuchsia.net.tun.Control": "#meta/network-tun.cm",
@@ -67,7 +67,7 @@
             name: "codec_factory",
             gn_target: "//src/media/codec/factory:fake_codec_factory",
         },
-        "#meta/dns-resolver.cm": {
+        "#meta/dns_resolver.cm": {
             name: "dns_resolver",
             gn_target: "//src/connectivity/network/dns:component",
         },

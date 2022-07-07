@@ -1,0 +1,97 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/pkgctl_integration_test",
+    },
+    children: [
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+        {
+            name: "http_client",
+            url: "#meta/http-client.cm",
+        },
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+        },
+        {
+            protocol: [ "fuchsia.net.http.Loader" ],
+            from: "#http_client",
+        },
+        {
+            protocol: [
+                "fuchsia.net.routes.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+        },
+
+        // TODO(https://fxbug.dev/102175) remove these v1 protocols once pkgctl itself is migrated
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#dns_resolver",
+                "#http_client",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.routes.State" ],
+            from: "#netstack",
+            to: [ "#dns_resolver" ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: [
+                "#dns_resolver",
+                "#http_client",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+            to: [ "#http_client" ],
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#http_client",
+            rights: [ "r*" ],
+        },
+    ],
+}

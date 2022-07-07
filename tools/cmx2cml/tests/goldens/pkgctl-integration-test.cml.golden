@@ -22,7 +22,7 @@
             //     //src/connectivity/network/dns:component
             // Note that you may need to route additional capabilities to this child.
             name: "dns_resolver",
-            url: "#meta/dns-resolver.cm",
+            url: "#meta/dns_resolver.cm",
         },
         {
             // WARNING: This child must be packaged with your component. The package should depend on:
