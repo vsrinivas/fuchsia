@@ -22,7 +22,8 @@ TEST_P(SparseAllocationTest, CheckSparseFileOccupyingMultipleBitmapBlocks) {
   fbl::unique_fd sparse_fd(open(sparse_file.c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(sparse_fd);
 
-  std::vector<uint8_t> data(minfs::kMinfsBlockSize * minfs::kMinfsBlockBits, 0xaa);
+  std::vector<uint8_t> data(static_cast<size_t>(minfs::kMinfsBlockSize) * minfs::kMinfsBlockBits,
+                            0xaa);
 
   // Create a file that owns blocks in |kBitmapBlocks| different bitmap blocks.
   constexpr uint32_t kBitmapBlocks = 4;

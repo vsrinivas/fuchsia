@@ -281,16 +281,16 @@ TEST_F(CompressorBlobfsTests, CompressSmallCompressibleBlobs) {
 
   TestCase test_cases[] = {
       {
-          16 * 1024 - 1,
-          16 * 1024,
+          16 * static_cast<size_t>(1024) - 1,
+          16 * static_cast<size_t>(1024),
       },
       {
-          16 * 1024,
-          16 * 1024,
+          16 * static_cast<size_t>(1024),
+          16 * static_cast<size_t>(1024),
       },
       {
-          16 * 1024 + 1,
-          16 * 1024,
+          16 * static_cast<size_t>(1024) + 1,
+          16 * static_cast<size_t>(1024),
       },
   };
 
@@ -310,7 +310,10 @@ TEST_F(CompressorBlobfsTests, CompressSmallCompressibleBlobs) {
 
 TEST_F(CompressorBlobfsTests, DoNotInflateIncompressibleBlobs) {
   size_t data_sizes[] = {
-      8 * 1024 - 1, 8 * 1024, 8 * 1024 + 1, 16 * 1024 - 1, 16 * 1024, 16 * 1024 + 1, 128 * 8192 + 1,
+      8 * static_cast<size_t>(1024) - 1,   8 * static_cast<size_t>(1024),
+      8 * static_cast<size_t>(1024) + 1,   16 * static_cast<size_t>(1024) - 1,
+      16 * static_cast<size_t>(1024),      16 * static_cast<size_t>(1024) + 1,
+      128 * static_cast<size_t>(8192) + 1,
   };
 
   for (size_t data_size : data_sizes) {

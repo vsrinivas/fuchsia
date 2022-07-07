@@ -99,7 +99,7 @@ TEST_P(BasicTest, Statvfs) {
   {
     fbl::unique_fd fd(open(test_filename.c_str(), O_CREAT | O_RDWR, 0666));
     ASSERT_TRUE(fd);
-    std::vector<uint8_t> data(128 * 1024);
+    std::vector<uint8_t> data(static_cast<size_t>(128) * 1024);
     std::iota(data.begin(), data.end(), 0);
     EXPECT_EQ(write(fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
     EXPECT_EQ(fsync(fd.get()), 0);

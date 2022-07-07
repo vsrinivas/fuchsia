@@ -409,8 +409,8 @@ TEST(BlobfsInspector, WriteInodes) {
   CreateBlobfsInspector(std::move(handler), &inspector);
   uint64_t start_index = 12;
   // Test inodes in multiple blocks.
-  uint64_t inode_count = 2 * kBlobfsInodesPerBlock;
-  uint64_t end_index = start_index + inode_count;
+  constexpr uint64_t kInodeCount{UINT64_C(2) * kBlobfsInodesPerBlock};
+  uint64_t end_index = start_index + kInodeCount;
 
   // Sanity check that nothing is allocated at the start.
   auto inspect_result = inspector->InspectInodeRange(0, end_index);
@@ -423,12 +423,12 @@ TEST(BlobfsInspector, WriteInodes) {
   }
 
   // Actual write.
-  std::vector<Inode> write_inodes = AlternateAddInodesAndExtentContainers(inode_count);
+  std::vector<Inode> write_inodes = AlternateAddInodesAndExtentContainers(kInodeCount);
   auto write_result = inspector->WriteInodes(write_inodes, start_index);
   ASSERT_TRUE(write_result.is_ok());
 
   // Test reading back the written inodes.
-  auto final_inspect_result = inspector->InspectInodeRange(0, start_index + inode_count);
+  auto final_inspect_result = inspector->InspectInodeRange(0, start_index + kInodeCount);
   ASSERT_TRUE(final_inspect_result.is_ok());
   std::vector<Inode> final_inodes = std::move(final_inspect_result.value());
   ASSERT_EQ(final_inodes.size(), end_index);
@@ -437,7 +437,7 @@ TEST(BlobfsInspector, WriteInodes) {
     EXPECT_FALSE(final_inodes[i].header.IsAllocated());
   }
 
-  for (uint64_t i = 0; i < inode_count; ++i) {
+  for (uint64_t i = 0; i < kInodeCount; ++i) {
     Inode inode = final_inodes[start_index + i];
     EXPECT_TRUE(inode.header.IsAllocated());
     if (i % 2 == 0) {

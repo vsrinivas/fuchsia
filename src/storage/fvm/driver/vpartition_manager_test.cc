@@ -52,7 +52,7 @@ class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
         if ((operation->rw.offset_dev + operation->rw.length) * kBlockSize <= data_.size()) {
           result = zx_vmo_write(operation->rw.vmo, &data_[operation->rw.offset_dev * kBlockSize],
                                 operation->rw.offset_vmo * kBlockSize,
-                                operation->rw.length * kBlockSize);
+                                static_cast<size_t>(operation->rw.length) * kBlockSize);
         } else {
           result = ZX_ERR_OUT_OF_RANGE;
         }
@@ -60,9 +60,9 @@ class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
       case BLOCK_OP_WRITE:
         // Write to device, read from VMO.
         if ((operation->rw.offset_dev + operation->rw.length) * kBlockSize <= data_.size()) {
-          result =
-              zx_vmo_read(operation->rw.vmo, &data_[operation->rw.offset_dev * kBlockSize],
-                          operation->rw.offset_vmo * kBlockSize, operation->rw.length * kBlockSize);
+          result = zx_vmo_read(operation->rw.vmo, &data_[operation->rw.offset_dev * kBlockSize],
+                               operation->rw.offset_vmo * kBlockSize,
+                               static_cast<size_t>(operation->rw.length) * kBlockSize);
         } else {
           result = ZX_ERR_OUT_OF_RANGE;
         }

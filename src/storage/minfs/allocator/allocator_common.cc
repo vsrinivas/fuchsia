@@ -53,7 +53,9 @@ zx::status<std::unique_ptr<Allocator>> Allocator::Create(fs::BufferedOperationsB
 
   blk_t total_blocks = allocator->storage_->PoolTotal();
   blk_t pool_blocks = allocator->storage_->PoolBlocks();
-  if (zx_status_t status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits); status != ZX_OK) {
+  if (zx_status_t status =
+          allocator->map_.Reset(static_cast<size_t>(pool_blocks) * kMinfsBlockBits);
+      status != ZX_OK) {
     return zx::error(status);
   }
   if (zx_status_t status = allocator->map_.Shrink(total_blocks); status != ZX_OK) {

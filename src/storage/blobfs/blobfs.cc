@@ -662,8 +662,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
 
   const uint32_t kInodesPerSlice =
       safemath::checked_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
-  uint64_t inodes64 =
-      (info_.ino_slices + safemath::checked_cast<uint32_t>(length)) * kInodesPerSlice;
+  uint64_t inodes64 = (info_.ino_slices + length) * kInodesPerSlice;
   ZX_DEBUG_ASSERT(inodes64 <= std::numeric_limits<uint32_t>::max());
   uint32_t inodes = safemath::checked_cast<uint32_t>(inodes64);
   uint32_t inoblks = (inodes + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;

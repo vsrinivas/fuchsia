@@ -89,10 +89,14 @@ zx::status<uint64_t> UsedSize(std::unique_ptr<Bcache>& bc);
 zx::status<std::unique_ptr<Bcache>> Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options);
 
 // Returns number of blocks required to store inode_count inodes
-uint32_t BlocksRequiredForInode(uint64_t inode_count);
+constexpr uint64_t BlocksRequiredForInode(uint64_t inode_count) {
+  return (inode_count + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+}
 
 // Returns number of blocks required to store bit_count bits
-uint32_t BlocksRequiredForBits(uint64_t bit_count);
+constexpr uint64_t BlocksRequiredForBits(uint64_t bit_count) {
+  return (bit_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+}
 
 #ifndef __Fuchsia__
 // Copies into |out_size| the number of bytes used by data in fs contained in a partition between

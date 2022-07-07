@@ -29,7 +29,7 @@ HealthCheckService::HealthCheckService(async_dispatcher_t* dispatcher, Blobfs& b
       blobfs_(blobfs) {}
 
 void HealthCheckService::Verify(VerifyRequestView request, VerifyCompleter::Sync& completer) {
-  constexpr size_t kMaxBytesToVerify = 1024 * 1024;
+  constexpr size_t kMaxBytesToVerify{static_cast<size_t>(1024) * 1024};
   size_t bytes_verified = 0;
   zx_status_t status = blobfs_.GetCache().ForAllOpenNodes([&](fbl::RefPtr<CacheNode> node) {
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(node));

@@ -10,7 +10,7 @@
 namespace memfs {
 
 // Artificially cap the maximum in-memory file size to 512MB.
-constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
+constexpr size_t kMemfsMaxFileSize{static_cast<size_t>(512) * 1024 * 1024};
 
 VnodeFile::VnodeFile(PlatformVfs* vfs) : Vnode(vfs) {}
 

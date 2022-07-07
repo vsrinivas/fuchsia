@@ -77,7 +77,7 @@ uint64_t EmptyFilesystemImageSize(const minfs::Superblock& info) {
   constexpr uint64_t kExtractedImageBlockCount = 2;
   uint64_t block_count = kExtractedImageBlockCount;
 
-  block_count += (2 * minfs::kSuperblockBlocks);
+  block_count += UINT64_C(2) * minfs::kSuperblockBlocks;
   block_count += minfs::NonDataBlocks(info);
 
   // One block for root directory.
@@ -187,13 +187,14 @@ void LargeFileTestRunner(fs_test::FilesystemTest* test, bool dump_pii) {
     ASSERT_EQ(write(test_file.get(), buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
     // Write at indirect offset
-    ASSERT_EQ(pwrite(test_file.get(), buffer, sizeof(buffer), 1024 * 1024),
+    ASSERT_EQ(pwrite(test_file.get(), buffer, sizeof(buffer), static_cast<off_t>(1024) * 1024),
               static_cast<ssize_t>(sizeof(buffer)));
     dumped_metadata_blocks++;
 
     // Write at double indirect offset
-    ASSERT_EQ(pwrite(test_file.get(), buffer, sizeof(buffer), 1024 * 1024 * 1024),
-              static_cast<ssize_t>(sizeof(buffer)));
+    ASSERT_EQ(
+        pwrite(test_file.get(), buffer, sizeof(buffer), static_cast<off_t>(1024) * 1024 * 1024),
+        static_cast<ssize_t>(sizeof(buffer)));
     dumped_metadata_blocks += 2;
   }
 

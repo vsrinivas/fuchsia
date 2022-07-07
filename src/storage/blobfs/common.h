@@ -61,10 +61,10 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet = f
 uint32_t CalculateVsliceCount(const Superblock& info);
 
 // Returns number of blocks required for inode_count inodes
-uint32_t BlocksRequiredForInode(uint64_t inode_count);
+uint64_t BlocksRequiredForInode(uint64_t inode_count);
 
 // Returns number of blocks required for bit_count bits
-uint32_t BlocksRequiredForBits(uint64_t bit_count);
+uint64_t BlocksRequiredForBits(uint64_t bit_count);
 
 // Calling this method will initialize the superblock's common fields with non-fvm values but leave
 // all of the size-related fields set to zero. It is the caller's responsibility to set the

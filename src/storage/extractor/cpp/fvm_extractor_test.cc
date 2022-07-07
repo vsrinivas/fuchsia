@@ -44,8 +44,9 @@ void CreateInputAndOutputStream(storage::RamDisk& ramdisk, fbl::unique_fd& input
                                 fbl::unique_fd& output) {
   input.reset(open(ramdisk.path().c_str(), O_RDWR));
 
-  ASSERT_EQ(fs_management::FvmInitPreallocated(input.get(), kBlockCount * kBlockSize,
-                                               kBlockCount * kBlockSize, kSliceSize),
+  ASSERT_EQ(fs_management::FvmInitPreallocated(
+                input.get(), static_cast<uint64_t>(kBlockCount) * kBlockSize,
+                static_cast<uint64_t>(kBlockCount) * kBlockSize, kSliceSize),
             ZX_OK);
   ASSERT_TRUE(input);
   char out_path[] = "/tmp/fvm-extraction.XXXXXX";

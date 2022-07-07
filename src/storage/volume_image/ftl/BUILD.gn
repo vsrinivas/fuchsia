@@ -126,6 +126,7 @@ executable("ftl-volume-extractor") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl:ftl",
     "//zircon/system/ulib/zxc:zxc",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

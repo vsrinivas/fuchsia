@@ -33,7 +33,7 @@ void CreateBadBlockMap(void* buffer) {
     uint16_t generation;
   };
 
-  const size_t oob_offset = kPageSize * kPagesPerBlock * kNumBlocks;
+  constexpr size_t oob_offset{static_cast<size_t>(kPageSize) * kPagesPerBlock * kNumBlocks};
   auto* oob = reinterpret_cast<OobMetadata*>(reinterpret_cast<uintptr_t>(buffer) + oob_offset);
   oob->magic = 0x7462626E;  // "nbbt"
   oob->program_erase_cycles = 0;
@@ -71,8 +71,9 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
                              std::unique_ptr<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;
   zx::vmo vmo;
-  ASSERT_OK(mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
-                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+  ASSERT_OK(
+      mapper.CreateAndMap(static_cast<size_t>(kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
   memset(mapper.start(), 0xff, mapper.size());
   CreateBadBlockMap(mapper.start());
   vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, mapper.size(), nullptr, 0);

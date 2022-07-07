@@ -893,7 +893,8 @@ zx::status<Superblock> ReadBackupSuperblock(fs::TransactionHandler* transaction_
                                             uint32_t backup_location) {
   Superblock backup;
   block_client::Reader reader(*device);
-  if (zx_status_t status = reader.Read(backup_location * kMinfsBlockSize, kMinfsBlockSize, &backup);
+  if (zx_status_t status = reader.Read(static_cast<uint64_t>(backup_location) * kMinfsBlockSize,
+                                       kMinfsBlockSize, &backup);
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -1024,7 +1025,7 @@ zx::status<uint32_t> CalculateBitsSetBitmap(fs::TransactionHandler* transaction_
                                             blk_t start_block, uint32_t num_blocks) {
 #endif
   minfs::RawBitmap bitmap;
-  zx_status_t status = bitmap.Reset(num_blocks * kMinfsBlockBits);
+  zx_status_t status = bitmap.Reset(static_cast<size_t>(num_blocks) * kMinfsBlockBits);
   if (status != ZX_OK) {
     return zx::error(status);
   }

@@ -1255,7 +1255,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
   // Non-journal:
   // - One Inode table block
   // - One Data block
-  constexpr int kBlockCountToWrite = 5;
+  constexpr uint64_t kBlockCountToWrite = 5;
 
   // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be needed to write out
   // the entire blob. This ensures that writing the blob will ultimately fail, but the write

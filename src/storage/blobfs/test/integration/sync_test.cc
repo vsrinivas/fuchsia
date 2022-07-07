@@ -71,7 +71,7 @@ TEST_F(SyncFdioTest, Sync) {
 // device, and FTL layers.
 TEST(SyncNandTest, Sync) {
   // Make a VMO to give to the RAM-NAND.
-  const size_t kVmoSize = 100 * (4096 + 8) * 64;
+  constexpr size_t kVmoSize{100 * static_cast<size_t>(4096 + 8) * 64};
   fzl::OwnedVmoMapper vmo;
   ASSERT_EQ(vmo.CreateAndMap(kVmoSize, "vmo"), ZX_OK);
   memset(vmo.start(), 0xff, kVmoSize);

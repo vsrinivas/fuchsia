@@ -71,16 +71,16 @@ int parse_size(const char* s, size_t* out) {
     return 0;
   }
 
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "G", 1UL << 30);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "GB", 1000 * 1000 * 1000UL);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "xM", 1UL << 20);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "M", 1UL << 20);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "MB", 1000 * 1000UL);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "K", 1UL << 10);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "kB", 1000UL);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "b", 512UL);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "w", 2UL);
-  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "c", 1UL);
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "G", UINT64_C(1) << 30);
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "GB", UINT64_C(1000) * UINT64_C(1000) * UINT64_C(1000));
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "xM", UINT64_C(1) << 20);
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "M", UINT64_C(1) << 20);
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "MB", UINT64_C(1000) * UINT64_C(1000));
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "K", UINT64_C(1) << 10);
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "kB", UINT64_C(1000));
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "b", UINT64_C(512));
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "w", UINT64_C(2));
+  MAYBE_MULTIPLY_SUFFIX(endptr, *out, "c", UINT64_C(1));
 
 done:
   fprintf(stderr, "Couldn't parse size string: %s\n", s);

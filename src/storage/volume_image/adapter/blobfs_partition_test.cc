@@ -42,7 +42,7 @@ FvmOptions MakeFvmOptions(uint64_t slice_size) {
   return options;
 }
 
-constexpr uint64_t kSliceSize = 32u * (1u << 10);
+constexpr uint64_t kSliceSize = UINT64_C(32) * (1u << 10);
 
 class FakeReader final : public Reader {
  public:

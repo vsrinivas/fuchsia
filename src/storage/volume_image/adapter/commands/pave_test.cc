@@ -25,8 +25,8 @@
 namespace storage::volume_image {
 namespace {
 
-constexpr uint64_t kImageSize = 150 * (1 << 20);
-constexpr uint64_t kInitialImageSize = 5 * (1 << 20);
+constexpr uint64_t kImageSize = UINT64_C(150) * (1 << 20);
+constexpr uint64_t kInitialImageSize = UINT64_C(5) * (1 << 20);
 
 constexpr std::string_view kFvmSparseImagePath =
     STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH "test_fvm_small.sparse.blk";

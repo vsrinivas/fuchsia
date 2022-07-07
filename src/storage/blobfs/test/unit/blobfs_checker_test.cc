@@ -200,7 +200,7 @@ class BlobfsCheckerTest : public testing::Test {
 
     // This should end up creating a blob that typically (depending on compression) uses 7 extents.
     std::string name;
-    AddRandomBlob(*root, 6 * 8192, nullptr, nullptr, &name);
+    AddRandomBlob(*root, static_cast<size_t>(6) * 8192, nullptr, nullptr, &name);
 
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Lookup(name, &file), ZX_OK);

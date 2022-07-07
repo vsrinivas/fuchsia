@@ -131,8 +131,8 @@ FvmOptions MakeFvmOptions(uint64_t slice_size) {
   return options;
 }
 
-constexpr uint64_t kSliceSize = 32u * (1u << 10);
-constexpr uint64_t kImageSize = 500u * (1u << 20);
+constexpr uint64_t kSliceSize = UINT64_C(32) * (1u << 10);
+constexpr uint64_t kImageSize = UINT64_C(500) * (1u << 20);
 constexpr uint64_t kBlockSize = 512;
 
 fpromise::result<Partition, std::string> GetBlobfsPartition(const PartitionOptions& options,

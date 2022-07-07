@@ -33,7 +33,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd((open(GetPath("query-test").c_str(), O_CREAT | O_RDWR, 0666))))
       << strerror(errno);
-  const size_t buf_size = info1.block_size * 7;
+  const size_t buf_size{static_cast<size_t>(info1.block_size) * 7};
   auto buf = std::make_unique<uint8_t[]>(buf_size);
   std::iota(&buf[0], &buf[buf_size], 0);
   EXPECT_EQ(write(fd.get(), buf.get(), buf_size), static_cast<ssize_t>(buf_size))

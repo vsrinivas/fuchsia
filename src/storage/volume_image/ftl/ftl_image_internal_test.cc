@@ -131,7 +131,7 @@ std::vector<uint32_t> GetMappingsFromPage(cpp20::span<const uint8_t> contents,
   uint32_t mappings_per_page = static_cast<uint32_t>(options.page_size / sizeof(uint32_t));
   std::vector<uint32_t> actual_mappings;
   for (uint32_t i = 0; i < mappings_per_page; ++i) {
-    size_t offset = i * 4;
+    size_t offset = i * static_cast<size_t>(4);
     uint32_t value = contents[offset] | contents[offset + 1] << 8 | contents[offset + 2] << 16 |
                      contents[offset + 3] << 24;
     actual_mappings.push_back(value);

@@ -36,7 +36,7 @@ class JournalIntegrationTest : public JournalIntegrationFixture {
 // The important properties to preserve are:
 // - Fsck (without journal replay) should fail.
 // - Fsck (with journal replay) should succeed.
-constexpr uint64_t kCreateEntryCutoff = 4 * JournalIntegrationTest::kDiskBlocksPerFsBlock;
+constexpr uint64_t kCreateEntryCutoff{UINT64_C(4) * JournalIntegrationTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalIntegrationTest, FsckWithRepairDoesReplayJournal) {
   zx::status<std::unique_ptr<Bcache>> bcache_or =
@@ -103,7 +103,7 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
 // data structures.
 //
 // See note at beginning regarding tuning these numbers.
-constexpr uint64_t kUnlinkCutoff = 3 * JournalUnlinkTest::kDiskBlocksPerFsBlock;
+constexpr uint64_t kUnlinkCutoff{UINT64_C(3) * JournalUnlinkTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
   zx::status<std::unique_ptr<Bcache>> bcache_or =
@@ -153,7 +153,7 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
 };
 
 // See note at beginning regarding tuning these numbers.
-constexpr uint64_t kGrowFvmCutoff = 32 * JournalGrowFvmTest::kDiskBlocksPerFsBlock;
+constexpr uint64_t kGrowFvmCutoff{UINT64_C(32) * JournalGrowFvmTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
   zx::status<std::unique_ptr<Bcache>> bcache_or = zx::ok(CutOffDevice(write_count()));

@@ -55,8 +55,9 @@ TEST(RawNandImageUtilsTest, RawNandImageGetNextEraseBlockOffsetWhenStartIsTheOff
   options.pages_per_block = 64;
 
   EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(0, options), 0u);
-  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(4104u * 64, options), 4104u * 64);
-  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(8208u * 64, options), 4104u * 2 * 64);
+  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(UINT64_C(4104) * 64, options), UINT64_C(4104) * 64);
+  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(UINT64_C(8208) * 64, options),
+            UINT64_C(4104) * 2 * 64);
 }
 
 TEST(RawNandImageUtilsTest, RawNandImageGetNextEraseBlockOffsetBumpsToNextBlockStartWhenUnaligned) {
@@ -66,8 +67,10 @@ TEST(RawNandImageUtilsTest, RawNandImageGetNextEraseBlockOffsetBumpsToNextBlockS
   options.pages_per_block = 64;
 
   EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(1, options), 4104u * 64);
-  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(4104u * 64 + 1, options), 4104u * 2 * 64);
-  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(4104u * 2 * 64 + 1, options), 4104u * 3 * 64);
+  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(UINT64_C(4104) * 64 + 1, options),
+            UINT64_C(4104) * 2 * 64);
+  EXPECT_EQ(RawNandImageGetNextEraseBlockOffset(UINT64_C(4104) * 2 * 64 + 1, options),
+            UINT64_C(4104) * 3 * 64);
 }
 
 TEST(RawNandImageUtilsTest, RawNandImageWritePageCompliesWithFormat) {

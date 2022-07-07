@@ -536,15 +536,15 @@ TEST_F(FvmTest, TestTooSmall) {
 // Test initializing the FVM on a large partition, with metadata size > the max transfer size
 TEST_F(FvmTest, TestLarge) {
   char fvm_path[PATH_MAX];
-  uint64_t block_size = 512;
-  uint64_t block_count = 8 * (1 << 20);
-  CreateRamdisk(block_size, block_count);
+  constexpr uint64_t kBlockSize = 512;
+  constexpr uint64_t kBlockCount{UINT64_C(8) * (1 << 20)};
+  CreateRamdisk(kBlockSize, kBlockCount);
   fbl::unique_fd fd(ramdisk_device());
   ASSERT_TRUE(fd);
 
-  size_t slice_size = 16 * (1 << 10);
+  constexpr size_t kSliceSize{static_cast<size_t>(16) * (1 << 10)};
   fvm::Header fvm_header =
-      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, block_size * block_count, slice_size);
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
   zx::unowned_channel channel(disk_connection.borrow_channel());
@@ -554,7 +554,7 @@ TEST_F(FvmTest, TestLarge) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
-  ASSERT_EQ(fs_management::FvmInit(fd.get(), slice_size), ZX_OK);
+  ASSERT_EQ(fs_management::FvmInit(fd.get(), kSliceSize), ZX_OK);
 
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel->get()))
                   ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
@@ -1340,7 +1340,7 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
 
   {
     auto vc = fbl::MakeRefCounted<VmoClient>(vp_fd.get());
-    VmoBuf vb(vc, block_info.block_size * 2);
+    VmoBuf vb(vc, block_info.block_size * static_cast<size_t>(2));
     vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
     vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
 
@@ -1361,7 +1361,8 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
     // ... We can still access the previous slice...
     vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
     // ... And we can cross slices
-    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size * 2);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block,
+                  block_info.block_size * static_cast<size_t>(2));
   }
 
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1453,10 +1454,10 @@ TEST_F(FvmTest, TestSliceAccessMany) {
 // virtually contiguously (they appear sequential to the client) but are
 // actually noncontiguous on the FVM partition.
 TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 16;
-  constexpr uint64_t kSliceSize = kBlockSize * 64;
-  constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
+  constexpr uint64_t kBlockSize{512};
+  constexpr uint64_t kBlockCount{1 << 16};
+  constexpr uint64_t kSliceSize{kBlockSize * 64};
+  constexpr uint64_t kDiskSize{kBlockSize * kBlockCount};
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
@@ -1505,7 +1506,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     size_t last_block = (vparts[i].slices_used * (kSliceSize / block_info.block_size)) - 1;
 
     auto vc = fbl::MakeRefCounted<VmoClient>(vfd);
-    VmoBuf vb(vc, block_info.block_size * 2);
+    VmoBuf vb(vc, block_info.block_size * static_cast<size_t>(2));
 
     vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
     vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
@@ -1532,7 +1533,8 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     // ... We can still access the previous slice...
     vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
     // ... And we can cross slices
-    vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size * 2);
+    vc->CheckRead(vb, 0, block_info.block_size * last_block,
+                  block_info.block_size * static_cast<size_t>(2));
 
     vparts[i].slices_used++;
     i = (i + 1) % kNumVParts;
@@ -1595,10 +1597,10 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
 // Test allocating and accessing slices which are
 // allocated noncontiguously from the client's perspective.
 TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  constexpr uint64_t kSliceSize = 64 * (1 << 20);
-  constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
+  constexpr uint64_t kBlockSize{512};
+  constexpr uint64_t kBlockCount{1 << 20};
+  constexpr uint64_t kSliceSize{UINT64_C(64) * (1 << 20)};
+  constexpr uint64_t kDiskSize{kBlockSize * kBlockCount};
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
@@ -1686,9 +1688,9 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
 
 // Test that the FVM driver actually persists updates.
 TEST_F(FvmTest, TestPersistenceSimple) {
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = 1 << 20;
-  constexpr uint64_t kSliceSize = 64 * (1 << 20);
+  constexpr uint64_t kBlockSize{512};
+  constexpr uint64_t kBlockCount{1 << 20};
+  constexpr uint64_t kSliceSize{UINT64_C(64) * (1 << 20)};
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
@@ -1726,7 +1728,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * 2]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * static_cast<size_t>(2)]);
 
   // Check that we can read from / write to it
   CheckWrite(vp_fd.get(), 0, block_info.block_size, buf.get());
@@ -1788,7 +1790,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   // ... We can still access the previous slice...
   CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
   // ... And we can cross slices
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size * 2, buf.get());
+  CheckRead(vp_fd.get(), block_info.block_size * last_block,
+            block_info.block_size * static_cast<size_t>(2), buf.get());
 
   // Try allocating the rest of the slices, rebinding, and ensuring
   // that the size stays updated.

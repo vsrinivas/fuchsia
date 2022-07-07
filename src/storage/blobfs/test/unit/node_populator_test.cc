@@ -110,7 +110,7 @@ TEST(NodePopulatorTest, WalkOne) {
 TEST(NodePopulatorTest, WalkAllInlineExtents) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  constexpr size_t kBlockCount = kInlineMaxExtents * 3;
+  constexpr size_t kBlockCount{kInlineMaxExtents * static_cast<size_t>(3)};
   InitializeAllocator(kBlockCount, 1, &space_manager, &allocator);
   ForceFragmentation(allocator.get(), kBlockCount);
 
@@ -166,7 +166,7 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
 TEST(NodePopulatorTest, WalkManyNodes) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  constexpr size_t kBlockCount = kInlineMaxExtents * 5;
+  constexpr size_t kBlockCount{kInlineMaxExtents * static_cast<size_t>(5)};
   constexpr size_t kNodeCount = 2;
   InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator);
   ForceFragmentation(allocator.get(), kBlockCount);

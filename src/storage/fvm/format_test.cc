@@ -66,8 +66,8 @@ TEST(FvmFormat, SliceConstructors) {
 TEST(FvmFormat, SizeConstructors) {
   // A growable partition that starts off with no slices.
   constexpr size_t kInitialDiskSize = 1;  // Too small for anything.
-  constexpr size_t kMaxDiskSize = static_cast<size_t>(1024) * 1024 * 1024 * 1024;  // 1TB
-  constexpr size_t kBigSliceSize = 1024 * 1024;
+  constexpr size_t kMaxDiskSize{static_cast<size_t>(1024) * 1024 * 1024 * 1024};  // 1TB
+  constexpr size_t kBigSliceSize{static_cast<size_t>(1024) * 1024};
   Header header = Header::FromGrowableDiskSize(kMaxUsablePartitions, kInitialDiskSize, kMaxDiskSize,
                                                kBigSliceSize);
   // No allocated slices since it's too small.
@@ -150,7 +150,8 @@ TEST(FvmFormat, IsValid) {
   EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
 
   // Normal valid header.
-  Header valid_header = Header::FromDiskSize(kMaxUsablePartitions, 1028 * 1024 * 1024, 8192);
+  Header valid_header =
+      Header::FromDiskSize(kMaxUsablePartitions, static_cast<size_t>(1028) * 1024 * 1024, 8192);
   EXPECT_TRUE(valid_header.IsValid(kMaxDiskSize, kBlockSize, error_message));
 
   // Magic is incorrect.
@@ -186,14 +187,15 @@ TEST(FvmFormat, IsValid) {
 
   // Allocation table size too small.
   header = valid_header;
-  header.pslice_count = 1024 * 1024;  // Requires lots of allocation table entries.
+  header.pslice_count =
+      static_cast<uint64_t>(1024) * 1024;  // Requires lots of allocation table entries.
   header.allocation_table_size = kBlockSize;
   EXPECT_FALSE(header.IsValid(16384, kBlockSize, error_message));
   EXPECT_TRUE(StringBeginsWith(error_message, "Expected allocation table to be at least"));
 
   // Data won't fit on the disk.
   header = valid_header;
-  header.fvm_partition_size = 1024 * 1024 + kBlockSize;
+  header.fvm_partition_size = UINT64_C(1024) * 1024 + kBlockSize;
   EXPECT_FALSE(header.IsValid(header.fvm_partition_size - kBlockSize, kBlockSize, error_message));
   EXPECT_TRUE(StringBeginsWith(error_message,
                                "Block device (1048576 bytes) too small for fvm_partition_size"));
@@ -219,7 +221,8 @@ TEST(FvmFormat, HasValidTableSizes) {
       error_message);
 
   // Normal valid header.
-  header = Header::FromDiskSize(kMaxUsablePartitions, 1028 * 1024 * 1024, 8192);
+  header =
+      Header::FromDiskSize(kMaxUsablePartitions, static_cast<size_t>(1028) * 1024 * 1024, 8192);
   EXPECT_TRUE(header.HasValidTableSizes(error_message));
 
   // Allocation table needs to be an even multiple.

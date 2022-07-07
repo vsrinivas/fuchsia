@@ -24,7 +24,7 @@ using DeviceTest = fs_test::FilesystemTest;
 void CreateFxFile(const std::string& kFilename) {
   fbl::unique_fd fd(open(kFilename.c_str(), O_CREAT | O_RDWR, 0666));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(ftruncate(fd.get(), 1024 * 1024), 0);
+  ASSERT_EQ(ftruncate(fd.get(), static_cast<off_t>(1024) * 1024), 0);
 }
 
 TEST_P(DeviceTest, TestValidDiskFormat) {

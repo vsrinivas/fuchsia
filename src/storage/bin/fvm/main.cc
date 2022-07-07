@@ -176,12 +176,12 @@ int parse_size(const char* size_str, size_t* out) {
       break;
     case 'M':
     case 'm':
-      size *= (1024 * 1024);
+      size *= static_cast<size_t>(1024) * 1024;
       end++;
       break;
     case 'G':
     case 'g':
-      size *= (1024 * 1024 * 1024);
+      size *= static_cast<size_t>(1024) * 1024 * 1024;
       end++;
       break;
   }
@@ -261,7 +261,7 @@ zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
 }
 
 zx_status_t CopyFile(const char* dst, const char* src) {
-  constexpr size_t kBufferLength = 1024 * 1024;
+  constexpr size_t kBufferLength{static_cast<size_t>(1024) * 1024};
   fbl::unique_fd fd_src(open(src, O_RDONLY, 0644));
   if (!fd_src) {
     fprintf(stderr, "Unable to open source file %s\n", src);

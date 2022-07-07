@@ -219,7 +219,7 @@ zx::status<> CreateFvmData(const MountOptions& options, Superblock* info,
 
   // The inode bitmap should be big enough to hold all the inodes we reserved. If this triggers we
   // need to write logic to compute the proper ibm_slices size.
-  ZX_DEBUG_ASSERT(info->ibm_slices * info->slice_size * 8 >=
+  ZX_DEBUG_ASSERT(info->ibm_slices * info->slice_size * static_cast<size_t>(8) >=
                   info->ino_slices * kBlocksPerSlice * kMinfsInodesPerBlock);
 
   // Journal.
@@ -585,7 +585,7 @@ zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_
 
   if (transaction_or.is_error()) {
     FX_LOGS_FIRST_N(ERROR, 10) << "Failed to reserve blocks for transaction (status: "
-                   << transaction_or.status_string() << ")";
+                               << transaction_or.status_string() << ")";
     if (transaction_or.error_value() == ZX_ERR_NO_SPACE) {
       inspect_tree_.OnOutOfSpace();
     }
@@ -1376,15 +1376,6 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
 }
 
 #endif
-
-uint32_t BlocksRequiredForInode(uint64_t inode_count) {
-  return safemath::checked_cast<uint32_t>((inode_count + kMinfsInodesPerBlock - 1) /
-                                          kMinfsInodesPerBlock);
-}
-
-uint32_t BlocksRequiredForBits(uint64_t bit_count) {
-  return safemath::checked_cast<uint32_t>((bit_count + kMinfsBlockBits - 1) / kMinfsBlockBits);
-}
 
 zx::status<> Mkfs(const MountOptions& options, Bcache* bc) {
   Superblock info;

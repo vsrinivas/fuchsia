@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
+#include <safemath/safe_math.h>
 
 #include "src/devices/block/drivers/ftl/tests/ndm-ram-driver.h"
 #include "zircon/system/ulib/ftl/include/lib/ftl/volume.h"
@@ -310,14 +311,14 @@ int main(int argc, char** argv) {
     return 3;
   }
 
-  if (file_size % ((page_size + spare_size) * block_pages) != 0) {
+  if (file_size % (static_cast<size_t>(page_size + spare_size) * block_pages) != 0) {
     fprintf(stderr, "Input file of size %lu is not divisible by block size of %u\n", file_size,
             (page_size + spare_size) * block_pages);
     return 3;
   }
 
   ftl::VolumeOptions options = {
-      static_cast<uint32_t>(file_size / ((page_size + spare_size) * block_pages)),
+      safemath::checked_cast<uint32_t>(file_size) / ((page_size + spare_size) * block_pages),
       bad_blocks,
       page_size * block_pages,
       page_size,

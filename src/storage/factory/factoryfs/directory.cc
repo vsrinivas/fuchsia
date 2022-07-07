@@ -85,8 +85,10 @@ zx_status_t Directory::GetAttributes(fs::VnodeAttributes* attributes) {
   *attributes = fs::VnodeAttributes();
   attributes->mode = (V_TYPE_DIR | V_IRUSR);
   attributes->inode = fuchsia_io::wire::kInoUnknown;
-  attributes->content_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
-  attributes->storage_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
+  attributes->content_size =
+      static_cast<uint64_t>(Info().directory_ent_blocks) * kFactoryfsBlockSize;
+  attributes->storage_size =
+      static_cast<uint64_t>(Info().directory_ent_blocks) * kFactoryfsBlockSize;
   attributes->link_count = 1;
   attributes->creation_time = 0;
   attributes->modification_time = 0;

@@ -337,14 +337,14 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   }
 
   void SetAbr(const AbrData& data) {
-    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
-                (60 * kKilobyte);
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) +
+                (static_cast<size_t>(14) * kSkipBlockSize) + (static_cast<size_t>(60) * kKilobyte);
     *reinterpret_cast<AbrData*>(buf) = data;
   }
 
   AbrData GetAbr() {
-    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
-                (60 * kKilobyte);
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) +
+                (static_cast<size_t>(14) * kSkipBlockSize) + (static_cast<size_t>(60) * kKilobyte);
     return *reinterpret_cast<AbrData*>(buf);
   }
 
@@ -352,8 +352,9 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   // Since there can be multiple pages in abr sub-partition that may have valid abr data,
   // argument |copy_index| is used to read a specific one.
   AbrData GetAbrInWearLeveling(const sysconfig_header& header, size_t copy_index) {
-    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
-                header.abr_metadata.offset + copy_index * 4 * kKilobyte;
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) +
+                (static_cast<size_t>(14) * kSkipBlockSize) + header.abr_metadata.offset +
+                copy_index * 4 * kKilobyte;
     AbrData ret;
     memcpy(&ret, buf, sizeof(ret));
     return ret;
@@ -371,19 +372,19 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   }
 
   void ValidateWritten(uint32_t block, size_t num_blocks) {
-    AssertContents(block * kSkipBlockSize, num_blocks * kSkipBlockSize, 0x4A);
+    AssertContents(static_cast<size_t>(block) * kSkipBlockSize, num_blocks * kSkipBlockSize, 0x4A);
   }
 
   void ValidateUnwritten(uint32_t block, size_t num_blocks) {
-    AssertContents(block * kSkipBlockSize, num_blocks * kSkipBlockSize, 0xFF);
+    AssertContents(static_cast<size_t>(block) * kSkipBlockSize, num_blocks * kSkipBlockSize, 0xFF);
   }
 
   void ValidateWrittenPages(uint32_t page, size_t num_pages) {
-    AssertContents(page * kPageSize, num_pages * kPageSize, 0x4A);
+    AssertContents(static_cast<size_t>(page) * kPageSize, num_pages * kPageSize, 0x4A);
   }
 
   void ValidateUnwrittenPages(uint32_t page, size_t num_pages) {
-    AssertContents(page * kPageSize, num_pages * kPageSize, 0xFF);
+    AssertContents(static_cast<size_t>(page) * kPageSize, num_pages * kPageSize, 0xFF);
   }
 
   void ValidateWrittenBytes(size_t offset, size_t num_bytes) {
@@ -1067,7 +1068,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(2 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(2) * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kA,
@@ -1082,7 +1083,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(2 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(2) * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kB,
@@ -1098,7 +1099,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(2 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(2) * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::kRecovery,
@@ -1343,7 +1344,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(2 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(2) * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   {
@@ -1351,7 +1352,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
                                          fuchsia_paver::wire::Asset::kKernel, std::move(payload));
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
-    CreatePayload(2 * kPagesPerBlock, &payload);
+    CreatePayload(static_cast<size_t>(2) * kPagesPerBlock, &payload);
     ValidateWritten(8, 2);
     ValidateUnwritten(10, 4);
   }
@@ -1368,27 +1369,31 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareConfigA) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  WriteData(kBootloaderFirstBlock * kPagesPerBlock, kBootloaderBlocks * kPagesPerBlock, 0x4a);
+  WriteData(kBootloaderFirstBlock * kPagesPerBlock,
+            static_cast<size_t>(kBootloaderBlocks) * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kA,
                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result.value().is_ok());
-  ValidateWritten(result.value().value()->firmware, kBootloaderBlocks * kPagesPerBlock);
+  ValidateWritten(result.value().value()->firmware,
+                  static_cast<size_t>(kBootloaderBlocks) * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigBFallBackToA) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  WriteData(kBootloaderFirstBlock * kPagesPerBlock, kBootloaderBlocks * kPagesPerBlock, 0x4a);
+  WriteData(kBootloaderFirstBlock * kPagesPerBlock,
+            static_cast<size_t>(kBootloaderBlocks) * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kB,
                                          fidl::StringView::FromExternal(kFirmwareTypeBootloader));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result.value().is_ok());
-  ValidateWritten(result.value().value()->firmware, kBootloaderBlocks * kPagesPerBlock);
+  ValidateWritten(result.value().value()->firmware,
+                  static_cast<size_t>(kBootloaderBlocks) * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigR) {
@@ -1416,7 +1421,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kA,
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
@@ -1424,7 +1429,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
   ASSERT_TRUE(result.value().result.is_status());
   ASSERT_OK(result.value().result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
-  WriteData(kBootloaderFirstBlock, 4 * kPagesPerBlock, 0xff);
+  WriteData(kBootloaderFirstBlock, static_cast<size_t>(4) * kPagesPerBlock, 0xff);
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
@@ -1432,7 +1437,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kB,
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
@@ -1440,7 +1445,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
   ASSERT_TRUE(result.value().result.is_status());
   ASSERT_OK(result.value().result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
-  WriteData(kBootloaderFirstBlock, 4 * kPagesPerBlock, 0xff);
+  WriteData(kBootloaderFirstBlock, static_cast<size_t>(4) * kPagesPerBlock, 0xff);
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
@@ -1448,7 +1453,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kRecovery,
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
@@ -1460,8 +1465,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
   // BL2 special handling: we should always leave the first 4096 bytes intact.
-  constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
-  constexpr size_t kBl2SkipLength = 4096;
+  constexpr size_t kBl2StartByte{static_cast<size_t>(kBl2FirstBlock) * kPageSize * kPagesPerBlock};
+  constexpr size_t kBl2SkipLength{4096};
 
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
@@ -1479,8 +1484,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA) {
   // BL2 special handling: we should always leave the first 4096 bytes intact.
-  constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
-  constexpr size_t kBl2SkipLength = 4096;
+  constexpr size_t kBl2StartByte{static_cast<size_t>(kBl2FirstBlock) * kPageSize * kPagesPerBlock};
+  constexpr size_t kBl2SkipLength{4096};
 
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
@@ -1498,8 +1503,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA)
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
   // BL2 special handling: we should always leave the first 4096 bytes intact.
-  constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
-  constexpr size_t kBl2SkipLength = 4096;
+  constexpr size_t kBl2StartByte{static_cast<size_t>(kBl2FirstBlock) * kPageSize * kPagesPerBlock};
+  constexpr size_t kBl2SkipLength{4096};
 
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
@@ -1527,7 +1532,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   for (auto config : kAllConfigs) {
     fuchsia_mem::wire::Buffer payload;
-    CreatePayload(4 * kPagesPerBlock, &payload);
+    CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
     auto result = data_sink_->WriteFirmware(
         config, fidl::StringView::FromExternal(kFirmwareTypeUnsupported), std::move(payload));
     ASSERT_OK(result.status());
@@ -1547,7 +1552,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
   auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::kA,
                                           fidl::StringView::FromExternal(kFirmwareTypeBootloader),
                                           std::move(payload));
@@ -1560,40 +1565,40 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  WriteData(8 * kPagesPerBlock, static_cast<size_t>(2) * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kA,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->is_ok());
-  ValidateWritten(result->value()->asset, 2 * kPagesPerBlock);
+  ValidateWritten(result->value()->asset, static_cast<size_t>(2) * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  WriteData(10 * kPagesPerBlock, static_cast<size_t>(2) * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kB,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->is_ok());
-  ValidateWritten(result->value()->asset, 2 * kPagesPerBlock);
+  ValidateWritten(result->value()->asset, static_cast<size_t>(2) * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
-  WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
+  WriteData(12 * kPagesPerBlock, static_cast<size_t>(2) * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::kRecovery,
                                       fuchsia_paver::wire::Asset::kKernel);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->is_ok());
-  ValidateWritten(result->value()->asset, 2 * kPagesPerBlock);
+  ValidateWritten(result->value()->asset, static_cast<size_t>(2) * kPagesPerBlock);
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
@@ -1660,7 +1665,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
@@ -1676,16 +1681,16 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
   fuchsia_mem::wire::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock - 1, &payload);
+  CreatePayload(static_cast<size_t>(4) * kPagesPerBlock - 1, &payload);
 
-  WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
+  WriteData(4 * kPagesPerBlock, static_cast<size_t>(4) * kPagesPerBlock - 1, 0x4a);
   WriteData(8 * kPagesPerBlock - 1, 1, 0xff);
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  ValidateWrittenPages(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1);
+  ValidateWrittenPages(4 * kPagesPerBlock, static_cast<size_t>(4) * kPagesPerBlock - 1);
   ValidateUnwrittenPages(8 * kPagesPerBlock - 1, 1);
 }
 
@@ -1845,8 +1850,9 @@ void PaverServiceSkipBlockTest::TestSysconfigWipeBufferedClient(uint32_t offset_
     auto result = sysconfig_->Flush();
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
-    ASSERT_NO_FATAL_FAILURE(AssertContents(14 * kSkipBlockSize + offset_in_pages * kPageSize,
-                                           sysconfig_pages * kPageSize, 0));
+    ASSERT_NO_FATAL_FAILURE(AssertContents(
+        static_cast<size_t>(14) * kSkipBlockSize + offset_in_pages * static_cast<size_t>(kPageSize),
+        sysconfig_pages * static_cast<size_t>(kPageSize), 0));
   }
 }
 

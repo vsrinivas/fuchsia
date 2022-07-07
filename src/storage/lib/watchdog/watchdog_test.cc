@@ -106,7 +106,7 @@ class TestOperationTracker : public FsOperationTracker {
 };
 
 std::unique_ptr<std::string> GetData(int fd) {
-  constexpr size_t kBufferSize = 1024 * 1024;
+  constexpr size_t kBufferSize{static_cast<size_t>(1024) * 1024};
   auto buffer = std::make_unique<char[]>(kBufferSize);
   memset(buffer.get(), 0, kBufferSize);
   ssize_t read_length;

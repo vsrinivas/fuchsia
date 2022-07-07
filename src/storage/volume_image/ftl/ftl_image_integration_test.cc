@@ -235,9 +235,11 @@ std::unique_ptr<InMemoryRawNand> CombinePages(uint32_t logical_pages_per_physica
     auto& stitched_data = stitched_raw_nand->page_data[page_number];
     auto& stitched_oob = stitched_raw_nand->page_oob[page_number];
 
-    memcpy(stitched_data.data() + page_relative_offset * raw_nand->options.page_size,
+    memcpy(stitched_data.data() +
+               static_cast<size_t>(page_relative_offset) * raw_nand->options.page_size,
            original_data.data(), raw_nand->options.page_size);
-    memcpy(stitched_oob.data() + page_relative_offset * raw_nand->options.oob_bytes_size,
+    memcpy(stitched_oob.data() +
+               static_cast<size_t>(page_relative_offset) * raw_nand->options.oob_bytes_size,
            original_oob.data(), raw_nand->options.oob_bytes_size);
   }
 

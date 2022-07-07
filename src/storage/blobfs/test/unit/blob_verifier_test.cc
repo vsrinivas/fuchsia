@@ -116,7 +116,9 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   EXPECT_EQ(verifier->VerifyPartial(buf, 8191, 0, 8191), ZX_ERR_INVALID_ARGS);
 
   // Verify past the end
-  EXPECT_EQ(verifier->VerifyPartial(buf, 2 * 8192, 0, 2 * 8192), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(
+      verifier->VerifyPartial(buf, static_cast<size_t>(2) * 8192, 0, static_cast<size_t>(2) * 8192),
+      ZX_ERR_INVALID_ARGS);
 }
 
 TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
@@ -169,7 +171,8 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
   EXPECT_EQ(verifier->VerifyPartial(buf.data(), 8191, 0, 8191), ZX_ERR_INVALID_ARGS);
 
   // Verify past the end
-  EXPECT_EQ(verifier->VerifyPartial(buf.data() + (sz - 8192), 2 * 8192, sz - 8192, 2 * 8192),
+  EXPECT_EQ(verifier->VerifyPartial(buf.data() + (sz - 8192), static_cast<size_t>(2) * 8192,
+                                    sz - 8192, static_cast<size_t>(2) * 8192),
             ZX_ERR_INVALID_ARGS);
 
   // Should be no corruptions.

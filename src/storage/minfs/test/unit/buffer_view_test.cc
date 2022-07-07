@@ -14,15 +14,15 @@ namespace {
 
 using ::testing::_;
 
-constexpr int kArraySize = 100;
+constexpr size_t kArraySize = 100;
 constexpr uint8_t kFill = 0x56;
 constexpr uint32_t kFill32 = 0x56565656;
 
 TEST(BufferViewTest, UpdatesOnBufferAreReflectedOnView) {
   std::array<uint8_t, kArraySize> array;
   array.fill(kFill);
-  constexpr int kIndex = 13;
-  constexpr int kLength = 3;
+  constexpr size_t kIndex = 13;
+  constexpr size_t kLength = 3;
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), kIndex, kLength);
   EXPECT_EQ(kFill32, *view);
   EXPECT_EQ(kFill32, view[2]);
@@ -50,8 +50,8 @@ TEST(BufferViewTest, FlushOnDirtyViewIssuesFlush) {
   std::array<uint8_t, kArraySize> array;
   array.fill(kFill);
   bool flushed = false;
-  constexpr int kIndex = 13;
-  constexpr int kLength = 4;
+  constexpr size_t kIndex = 13;
+  constexpr size_t kLength = 4;
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), kIndex, kLength,
                             [&](BaseBufferView* view) {
                               flushed = true;

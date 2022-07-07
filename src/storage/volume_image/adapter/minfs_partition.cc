@@ -138,10 +138,12 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
   superblock_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
 
   AddressMap inode_bitmap_mapping;
-  inode_bitmap_mapping.source = superblock.ibm_block * minfs::kMinfsBlockSize;
-  inode_bitmap_mapping.target = minfs::kFVMBlockInodeBmStart * minfs::kMinfsBlockSize;
+  inode_bitmap_mapping.source =
+      static_cast<uint64_t>(superblock.ibm_block) * minfs::kMinfsBlockSize;
+  inode_bitmap_mapping.target =
+      static_cast<uint64_t>(minfs::kFVMBlockInodeBmStart) * minfs::kMinfsBlockSize;
   inode_bitmap_mapping.count =
-      (superblock.abm_block - superblock.ibm_block) * minfs::kMinfsBlockSize;
+      static_cast<uint64_t>(superblock.abm_block - superblock.ibm_block) * minfs::kMinfsBlockSize;
   inode_bitmap_mapping.size =
       std::max(inode_bitmap_mapping.count, static_cast<uint64_t>(minfs::BlocksRequiredForBits(
                                                partition_options.min_inode_count.value_or(0))) *
@@ -149,32 +151,34 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
   inode_bitmap_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
 
   AddressMap data_bitmap_mapping;
-  data_bitmap_mapping.source = superblock.abm_block * minfs::kMinfsBlockSize;
-  data_bitmap_mapping.target = minfs::kFVMBlockDataBmStart * minfs::kMinfsBlockSize;
+  data_bitmap_mapping.source = static_cast<uint64_t>(superblock.abm_block) * minfs::kMinfsBlockSize;
+  data_bitmap_mapping.target =
+      static_cast<uint64_t>(minfs::kFVMBlockDataBmStart * minfs::kMinfsBlockSize);
   data_bitmap_mapping.count =
-      (superblock.ino_block - superblock.abm_block) * minfs::kMinfsBlockSize;
+      static_cast<uint64_t>(superblock.ino_block - superblock.abm_block) * minfs::kMinfsBlockSize;
   data_bitmap_mapping.size =
       std::max(data_bitmap_mapping.count,
-               static_cast<uint64_t>(minfs::BlocksRequiredForBits(GetBlockCount(
+               minfs::BlocksRequiredForBits(GetBlockCount(
                    minfs::kFVMBlockDataBmStart * minfs::kMinfsBlockSize,
-                   partition_options.min_data_bytes.value_or(0), minfs::kMinfsBlockSize))));
+                   partition_options.min_data_bytes.value_or(0), minfs::kMinfsBlockSize)));
   data_bitmap_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
 
   AddressMap inode_mapping;
-  inode_mapping.source = superblock.ino_block * minfs::kMinfsBlockSize;
-  inode_mapping.target = minfs::kFVMBlockInodeStart * minfs::kMinfsBlockSize;
+  inode_mapping.source = static_cast<uint64_t>(superblock.ino_block) * minfs::kMinfsBlockSize;
+  inode_mapping.target = static_cast<uint64_t>(minfs::kFVMBlockInodeStart) * minfs::kMinfsBlockSize;
   inode_mapping.count =
-      (superblock.integrity_start_block - superblock.ino_block) * minfs::kMinfsBlockSize;
+      static_cast<uint64_t>(superblock.integrity_start_block - superblock.ino_block) *
+      minfs::kMinfsBlockSize;
   inode_mapping.size =
-      std::max(inode_mapping.count, static_cast<uint64_t>(minfs::BlocksRequiredForInode(
-                                        partition_options.min_inode_count.value_or(0))) *
-                                        minfs::kMinfsBlockSize);
+      std::max(inode_mapping.count,
+               minfs::BlocksRequiredForInode(partition_options.min_inode_count.value_or(0)) *
+                   minfs::kMinfsBlockSize);
   inode_mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
 
   AddressMap data_mapping;
-  data_mapping.source = superblock.dat_block * minfs::kMinfsBlockSize;
-  data_mapping.target = minfs::kFVMBlockDataStart * minfs::kMinfsBlockSize;
-  data_mapping.count = superblock.block_count * minfs::kMinfsBlockSize;
+  data_mapping.source = static_cast<uint64_t>(superblock.dat_block) * minfs::kMinfsBlockSize;
+  data_mapping.target = static_cast<uint64_t>(minfs::kFVMBlockDataStart) * minfs::kMinfsBlockSize;
+  data_mapping.count = static_cast<uint64_t>(superblock.block_count) * minfs::kMinfsBlockSize;
   data_mapping.size =
       std::max(data_mapping.count,
                GetBlockCount(superblock.dat_block, partition_options.min_data_bytes.value_or(0),
@@ -182,10 +186,13 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
                    minfs::kMinfsBlockSize);
 
   AddressMap integrity_mapping;
-  integrity_mapping.source = superblock.integrity_start_block * minfs::kMinfsBlockSize;
-  integrity_mapping.target = minfs::kFvmSuperblockBackup * minfs::kMinfsBlockSize;
+  integrity_mapping.source =
+      static_cast<uint64_t>(superblock.integrity_start_block) * minfs::kMinfsBlockSize;
+  integrity_mapping.target =
+      static_cast<uint64_t>(minfs::kFvmSuperblockBackup) * minfs::kMinfsBlockSize;
   integrity_mapping.count =
-      (superblock.dat_block - superblock.integrity_start_block) * minfs::kMinfsBlockSize;
+      static_cast<uint64_t>(superblock.dat_block - superblock.integrity_start_block) *
+      minfs::kMinfsBlockSize;
 
   auto patched_superblock_reader =
       std::make_unique<PatchedSuperblockReader>(std::move(source_image), 0);

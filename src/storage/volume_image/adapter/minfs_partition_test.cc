@@ -36,7 +36,7 @@ FvmOptions MakeFvmOptions(uint64_t slice_size) {
   return options;
 }
 
-constexpr uint64_t kSliceSize = 32u * (1u << 10);
+constexpr uint64_t kSliceSize{UINT64_C(32) * (1u << 10)};
 
 class FakeReader final : public Reader {
  public:
@@ -224,7 +224,7 @@ void CheckSuperblock(const minfs::Superblock& actual_superblock,
   }
 
   uint64_t data_bitmap_blocks =
-      std::max(original_superblock.ino_block - original_superblock.abm_block,
+      std::max(static_cast<uint64_t>(original_superblock.ino_block - original_superblock.abm_block),
                minfs::BlocksRequiredForBits(data_blocks));
 
   uint64_t integrity_blocks =
@@ -358,8 +358,8 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHig
   // required for the requested options.
   auto expected_inode_count =
       GetBlockCount(minfs::kFVMBlockInodeStart,
-                    minfs::BlocksRequiredForInode(partition_options.min_inode_count.value()) *
-                        minfs::kMinfsBlockSize,
+                    minfs::BlocksRequiredForInode(partition_options.min_inode_count.value() *
+                                                  minfs::kMinfsBlockSize),
                     minfs::kMinfsInodeSize);
   ASSERT_EQ(actual_sb->inode_count, expected_inode_count);
   ASSERT_NO_FATAL_FAILURE(

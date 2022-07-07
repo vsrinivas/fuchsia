@@ -287,7 +287,7 @@ fpromise::result<void, std::string> Create(const CreateParams& params) {
           return trim_size_or.take_error_result();
         }
         if (truncate(params.output_path.c_str(),
-                     static_cast<off_t>(params.offset.value_or(0) + trim_size_or.value())) == -1) {
+                     static_cast<off_t>(params.offset.value_or(0)) + trim_size_or.value()) == -1) {
           return fpromise::error("Resize to fit image failed. Trimming " + params.output_path +
                                  " to length " + std::to_string(trim_size_or.value()) +
                                  ". More specifically: " + Errno() + ".");

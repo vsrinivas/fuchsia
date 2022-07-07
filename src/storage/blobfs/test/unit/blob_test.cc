@@ -262,7 +262,7 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
 
 TEST_P(BlobTest, WriteErrorsAreFused) {
   std::unique_ptr<BlobInfo> info =
-      GenerateRandomBlob("", kTestDeviceBlockSize * kTestDeviceNumBlocks);
+      GenerateRandomBlob("", static_cast<size_t>(kTestDeviceBlockSize) * kTestDeviceNumBlocks);
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);

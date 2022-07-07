@@ -94,8 +94,8 @@ class DelegateWriter final : public Writer {
 
 FvmOptions MakeOptions() {
   static const FvmOptions kOptions = {
-      .target_volume_size = 20u * (1u << 20),
-      .slice_size = 32 * (1u << 10),
+      .target_volume_size = UINT64_C(20) * (1u << 20),
+      .slice_size = UINT64_C(32) * (1u << 10),
   };
 
   return kOptions;
@@ -103,8 +103,8 @@ FvmOptions MakeOptions() {
 
 using internal::MakeHeader;
 
-constexpr uint64_t kDefaultSliceCount = 200;
-constexpr uint64_t kDefaultImageSize = 20u * (1 << 20);
+constexpr uint64_t kDefaultSliceCount{200};
+constexpr uint64_t kDefaultImageSize{UINT64_C(20) * (1 << 20)};
 
 void StreamContents(uint64_t offset, cpp20::span<const uint8_t> contents,
                     cpp20::span<uint8_t> buffer) {

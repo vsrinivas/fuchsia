@@ -27,7 +27,7 @@ namespace block = fuchsia_hardware_block;
 namespace device = fuchsia_device;
 
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
-  constexpr size_t kReservedEntryBlocks = (16 * 1024);
+  constexpr size_t kReservedEntryBlocks{static_cast<size_t>(16) * 1024};
   return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
 }
 

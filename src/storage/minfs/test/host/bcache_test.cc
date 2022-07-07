@@ -76,7 +76,7 @@ TEST_F(BcacheTest, RunOperation) {
   operation.vmo_offset = 0;
 
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));
-  EXPECT_BYTES_EQ(buffer.Data(2), buffer.Data(0), buffer.BlockSize() * 2);
+  EXPECT_BYTES_EQ(buffer.Data(2), buffer.Data(0), buffer.BlockSize() * static_cast<size_t>(2));
 }
 
 }  // namespace

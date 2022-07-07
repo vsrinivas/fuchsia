@@ -55,9 +55,9 @@ namespace {
 constexpr fidl::UnownedClientEnd<fuchsia_io::Directory> kInvalidSvcRoot =
     fidl::UnownedClientEnd<fuchsia_io::Directory>(ZX_HANDLE_INVALID);
 
-constexpr uint64_t kMebibyte = 1024 * 1024;
-constexpr uint64_t kGibibyte = kMebibyte * 1024;
-constexpr uint64_t kTebibyte = kGibibyte * 1024;
+constexpr uint64_t kMebibyte{UINT64_C(1024) * 1024};
+constexpr uint64_t kGibibyte{kMebibyte * 1024};
+constexpr uint64_t kTebibyte{kGibibyte * 1024};
 
 using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
@@ -218,7 +218,7 @@ uint8_t* PartitionStart(const fzl::VmoMapper& mapper,
   }
 
   return reinterpret_cast<uint8_t*>(mapper.start()) +
-         (part->first_block * kPageSize * kPagesPerBlock);
+         (part->first_block * static_cast<size_t>(kPageSize) * kPagesPerBlock);
 }
 
 struct PartitionDescription {
@@ -1934,7 +1934,7 @@ TEST_F(NelsonPartitionerTests, ValidatePayload) {
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
                                    cpp20::span<uint8_t>(payload_bl2_size)));
 
-  std::vector<uint8_t> payload_bl2_tpl_size(2 * 1024 * 1024);
+  std::vector<uint8_t> payload_bl2_tpl_size(static_cast<size_t>(2) * 1024 * 1024);
   ASSERT_OK(
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
                                    cpp20::span<uint8_t>(payload_bl2_tpl_size)));

@@ -274,12 +274,14 @@ TEST_F(VnodeIteratorTest, WholeFileIsSparse) {
   EXPECT_TRUE(iterator.Advance(kMinfsDirect).is_ok());
   EXPECT_EQ(kMinfsIndirect * kMinfsDirectPerIndirect, iterator.GetContiguousBlockCount());
   EXPECT_EQ(kMinfsDirect, iterator.file_block());
-  EXPECT_TRUE(iterator.Advance(kMinfsIndirect * kMinfsDirectPerIndirect).is_ok());
+  EXPECT_TRUE(
+      iterator.Advance(static_cast<uint64_t>(kMinfsIndirect) * kMinfsDirectPerIndirect).is_ok());
   EXPECT_EQ(kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect,
             iterator.GetContiguousBlockCount());
-  EXPECT_TRUE(
-      iterator.Advance(kMinfsDoublyIndirect * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect)
-          .is_ok());
+  EXPECT_TRUE(iterator
+                  .Advance(static_cast<uint64_t>(kMinfsDoublyIndirect) * kMinfsDirectPerIndirect *
+                           kMinfsDirectPerIndirect)
+                  .is_ok());
   EXPECT_EQ(iterator.GetContiguousBlockCount(), 0ul);
 }
 

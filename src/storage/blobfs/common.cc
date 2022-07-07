@@ -205,14 +205,12 @@ uint32_t CalculateVsliceCount(const Superblock& superblock) {
                                           static_cast<uint64_t>(superblock.journal_slices));
 }
 
-uint32_t BlocksRequiredForInode(uint64_t inode_count) {
-  return safemath::checked_cast<uint32_t>(fbl::round_up(inode_count, kBlobfsInodesPerBlock) /
-                                          kBlobfsInodesPerBlock);
+uint64_t BlocksRequiredForInode(uint64_t inode_count) {
+  return fbl::round_up(inode_count, kBlobfsInodesPerBlock) / kBlobfsInodesPerBlock;
 }
 
-uint32_t BlocksRequiredForBits(uint64_t bit_count) {
-  return safemath::checked_cast<uint32_t>(fbl::round_up(bit_count, kBlobfsBlockBits) /
-                                          kBlobfsBlockBits);
+uint64_t BlocksRequiredForBits(uint64_t bit_count) {
+  return fbl::round_up(bit_count, kBlobfsBlockBits) / kBlobfsBlockBits;
 }
 
 void InitializeSuperblockOptions(const FilesystemOptions& options, Superblock* info) {

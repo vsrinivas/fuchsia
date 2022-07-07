@@ -817,8 +817,8 @@ TEST(FvmDescriptorTest, WriteBlockImageWithMultiplePartitionsAndExtentsIsOk) {
 
 // Added due to OOB read uncovered by integration test.
 TEST(FvmDescriptorTest, WriteBlockImageOOBRegressionTest) {
-  constexpr uint64_t kSliceSize = 32u * (1u << 10);
-  constexpr uint64_t kImageSize = 500u * (1u << 20);
+  constexpr uint64_t kSliceSize = UINT64_C(32) * (1u << 10);
+  constexpr uint64_t kImageSize = UINT64_C(500) * (1u << 20);
 
   auto options = ValidOptions();
   options.slice_size = kSliceSize;
@@ -896,8 +896,8 @@ TEST(FvmDescriptorTest, WriteBlockImageOOBRegressionTest) {
 
 // Added due Off By one in certain configurations on unfilled mappings.
 TEST(FvmDescriptorTest, WriteBlockImagesOffByOneRegressionTest) {
-  constexpr uint64_t kSliceSize = 32u * (1u << 10);
-  constexpr uint64_t kImageSize = 500u * (1u << 20);
+  constexpr uint64_t kSliceSize = UINT64_C(32) * (1u << 10);
+  constexpr uint64_t kImageSize = UINT64_C(500) * (1u << 20);
 
   auto options = ValidOptions();
   options.slice_size = kSliceSize;

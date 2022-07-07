@@ -211,15 +211,15 @@ TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
 
 // Verify that we compress small files.
 TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
-  constexpr size_t all_zero_size = 12 * 1024;
-  auto file = CreateEmptyFile(all_zero_size);
+  constexpr size_t kAllZeroSize{static_cast<size_t>(12) * 1024};
+  auto file = CreateEmptyFile(kAllZeroSize);
 
   auto blob_info = BlobInfo::CreateCompressed(
       file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
 
   EXPECT_TRUE(blob_info->IsCompressed());
-  EXPECT_LE(blob_info->GetData().size(), all_zero_size);
+  EXPECT_LE(blob_info->GetData().size(), kAllZeroSize);
 }
 
 TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
@@ -229,8 +229,8 @@ TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
   ASSERT_TRUE(blobfs != nullptr);
 
   // In the padded format the Merkle tree can't share a block with the data.
-  Inode inode =
-      AddUncompressedBlob(blobfs->GetBlockSize() * 2 - digest::kSha256Length * 2, *blobfs);
+  Inode inode = AddUncompressedBlob(
+      blobfs->GetBlockSize() * UINT64_C(2) - digest::kSha256Length * 2, *blobfs);
   EXPECT_FALSE(inode.IsCompressed());
   EXPECT_EQ(inode.block_count, 3u);
 
@@ -246,8 +246,8 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
 
   // In the compact format the Merkle tree will fit perfectly into the end of the data.
   ASSERT_EQ(blobfs->GetBlockSize(), digest::kDefaultNodeSize);
-  Inode inode =
-      AddUncompressedBlob(blobfs->GetBlockSize() * 2 - digest::kSha256Length * 2, *blobfs);
+  Inode inode = AddUncompressedBlob(
+      blobfs->GetBlockSize() * UINT64_C(2) - digest::kSha256Length * 2, *blobfs);
   EXPECT_FALSE(inode.IsCompressed());
   EXPECT_EQ(inode.block_count, 2u);
 
@@ -278,7 +278,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect
   ASSERT_TRUE(blobfs != nullptr);
 
   // The blob is compressed to well under 1 block which leaves plenty of room for the Merkle tree.
-  Inode inode = AddCompressedBlob(blobfs->GetBlockSize() * 2, *blobfs);
+  Inode inode = AddCompressedBlob(blobfs->GetBlockSize() * UINT64_C(2), *blobfs);
   EXPECT_TRUE(inode.IsCompressed());
   EXPECT_EQ(inode.block_count, 1u);
 
@@ -294,7 +294,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
   ASSERT_TRUE(blobfs != nullptr);
 
   // The Merkle tree requires 1 block and the blob is compressed to under 1 block.
-  Inode inode = AddCompressedBlob(blobfs->GetBlockSize() * 2, *blobfs);
+  Inode inode = AddCompressedBlob(blobfs->GetBlockSize() * UINT64_C(2), *blobfs);
   EXPECT_TRUE(inode.IsCompressed());
   EXPECT_EQ(inode.block_count, 2u);
 
@@ -533,21 +533,21 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
 }
 
 TEST(BlobfsHostTest, WriteBlobThatRequiresMultipleExtentsIsCorrect) {
-  constexpr uint64_t data_block_count = kInlineMaxExtents * kBlockCountMax + 1;
-  constexpr uint64_t extent_count = kInlineMaxExtents + 1;
+  constexpr uint64_t kDataBlockCount{kInlineMaxExtents * kBlockCountMax + 1};
+  constexpr uint64_t kExtentCount{kInlineMaxExtents + 1};
   BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
 
   std::unique_ptr<Blobfs> blobfs = CreateBlobfs(
-      /*block_count=*/500 + data_block_count, CreateFilesystemOptions(blob_layout_format));
+      /*block_count=*/500 + kDataBlockCount, CreateFilesystemOptions(blob_layout_format));
 
   // Filling a 500MB file with random data takes a long time so use an empty file instead.
-  auto file = CreateEmptyFile(data_block_count * kBlobfsBlockSize);
+  auto file = CreateEmptyFile(kDataBlockCount * kBlobfsBlockSize);
   auto blob_info = BlobInfo::CreateUncompressed(file->fd(), blob_layout_format, kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_TRUE(blobfs->AddBlob(*blob_info).is_ok());
   Inode inode = FindInodeByMerkleDigest(*blobfs, blob_info->GetDigest()).value();
 
-  EXPECT_EQ(inode.extent_count, extent_count);
+  EXPECT_EQ(inode.extent_count, kExtentCount);
 
   auto extent_container = blobfs->GetNode(inode.header.next_node);
   ASSERT_TRUE(extent_container.is_ok());

@@ -34,9 +34,9 @@ constexpr std::string_view kBlobfsImagePath =
 constexpr std::string_view kMinfsImagePath =
     STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH "test_minfs.blk";
 
-constexpr uint64_t kImageSize = 350 * (1 << 20);
-constexpr uint64_t kInitialImageSize = 150 * (1 << 20);
-constexpr uint64_t kSliceSize = 32 * (1u << 10);
+constexpr uint64_t kImageSize{UINT64_C(350) * (1 << 20)};
+constexpr uint64_t kInitialImageSize{UINT64_C(150) * (1 << 20)};
+constexpr uint64_t kSliceSize{UINT64_C(32) * (1u << 10)};
 
 CreateParams MakeParams() {
   CreateParams params;
@@ -411,7 +411,7 @@ TEST(CreateCommandTest, CreateEmbeddedFvmImageIsOk) {
   auto output_file_or = TempFile::Create();
   ASSERT_TRUE(output_file_or.is_ok());
 
-  constexpr uint64_t kImageSize = 10 * (1 << 20);
+  constexpr uint64_t kImageSize{UINT64_C(10) * (1 << 20)};
 
   CreateParams params = MakeParams();
   params.output_path = output_file_or.value().path();

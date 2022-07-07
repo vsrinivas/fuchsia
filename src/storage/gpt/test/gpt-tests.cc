@@ -560,10 +560,10 @@ uint64_t GptMinimumBlockCount(uint64_t block_size) {
   uint64_t block_count = kPrimaryHeaderStartBlock;
 
   // Two copies of gpt_header_t. A block for each.
-  block_count += (2 * kHeaderBlocks);
+  block_count += (UINT64_C(2) * kHeaderBlocks);
 
   // Two copies of entries array.
-  block_count += (2 * EntryArrayBlockCount(block_size));
+  block_count += (UINT64_C(2) * EntryArrayBlockCount(block_size));
 
   // We need at least one block as usable block.
   return block_count + 1;
@@ -945,15 +945,15 @@ void DiffsTestHelper(LibGptTest* libGptTest, uint32_t total_partitions) {
   EXPECT_EQ(diffs, 0, "Diffs not zero after syncing partition");
 }
 
-uint64_t ComputePerCopySize(uint64_t block_size) {
-  return block_size + (kPartitionCount * kEntrySize);
+constexpr uint64_t ComputePerCopySize(uint64_t block_size) {
+  return block_size + (static_cast<uint64_t>(kPartitionCount) * kEntrySize);
 }
 
-uint64_t ComputePerCopyBlockCount(uint64_t block_size) {
+constexpr uint64_t ComputePerCopyBlockCount(uint64_t block_size) {
   return (ComputePerCopySize(block_size) + block_size - 1) / block_size;
 }
 
-uint64_t ComputeMinimumBlockDeviceSize(uint64_t block_size) {
+constexpr uint64_t ComputeMinimumBlockDeviceSize(uint64_t block_size) {
   // One mbr block.
   return 1 + (2 * ComputePerCopyBlockCount(block_size));
 }

@@ -35,8 +35,8 @@ namespace {
 constexpr int kCompressionLevel = 5;
 constexpr double kDataRandomnessRatio = 0.25;
 
-constexpr size_t kDataSize = 500 * 1024;  // 500KiB
-constexpr size_t kMapSize = kDataSize * 2;
+constexpr size_t kDataSize{static_cast<size_t>(500) * 1024};  // 500KiB
+constexpr size_t kMapSize{kDataSize * static_cast<size_t>(2)};
 
 // Generates a data set of size with sequences of the same bytes and random
 // values appearing with frequency kDataRandomnessRatio.

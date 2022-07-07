@@ -40,7 +40,7 @@ TEST(ResizeableArrayBufferTest, Shrink) {
 TEST(ResizeableArrayBufferTest, Zero) {
   constexpr int kBlocks = 5;
   ResizeableArrayBuffer buffer(kBlocks, kBlockSize);
-  memset(buffer.Data(0), 'a', kBlocks * kBlockSize);
+  memset(buffer.Data(0), 'a', static_cast<size_t>(kBlocks) * kBlockSize);
   ASSERT_EQ(buffer.Zero(1, 2), ZX_OK);
   const char* p = reinterpret_cast<const char*>(buffer.Data(0));
   for (unsigned i = 0; i < kBlocks * kBlockSize; ++i) {

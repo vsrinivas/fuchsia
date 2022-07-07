@@ -122,7 +122,7 @@ TEST(CreateMetadata, HeaderPartitionTableCapacityTooSmallFails) {
 */
 
 TEST(CreateMetadata, HeaderSliceTableCapacityTooSmallFails) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, 0, kSliceSize);
 
   std::vector<VPartitionEntry> partitions{
@@ -146,7 +146,7 @@ TEST(CreateMetadata, HeaderHasZeroSizedSlicesFails) {
 
 TEST(CreateMetadata, HeaderHasBadMagicFails) {
   constexpr size_t kSlices = 1024;
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
   header.magic = 0u;
 
@@ -156,7 +156,7 @@ TEST(CreateMetadata, HeaderHasBadMagicFails) {
 
 TEST(CreateMetadata, HeaderHasBadVersionFails) {
   constexpr size_t kSlices = 1024;
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
   header.major_version = kCurrentMajorVersion + 1;
 
@@ -165,7 +165,7 @@ TEST(CreateMetadata, HeaderHasBadVersionFails) {
 }
 
 TEST(CreateMetadata, ZeroSizedSliceTable) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, 0, kSliceSize);
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
@@ -174,7 +174,7 @@ TEST(CreateMetadata, ZeroSizedSliceTable) {
 }
 
 TEST(CreateMetadata, NoPartitionsAndSlices) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -187,7 +187,7 @@ TEST(CreateMetadata, NoPartitionsAndSlices) {
 }
 
 TEST(CreateMetadata, OnePartitionNoSlices) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -202,7 +202,7 @@ TEST(CreateMetadata, OnePartitionNoSlices) {
 }
 
 TEST(CreateMetadata, OnePartitionNoSlicesOverloadCheck) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -216,7 +216,7 @@ TEST(CreateMetadata, OnePartitionNoSlicesOverloadCheck) {
 }
 
 TEST(CreateMetadata, SeveralPartitionsAndSlices) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -237,7 +237,7 @@ TEST(CreateMetadata, SeveralPartitionsAndSlices) {
 }
 
 TEST(MoveMetadata, EmptyInstance) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, 0, kSliceSize);
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
@@ -250,7 +250,7 @@ TEST(MoveMetadata, EmptyInstance) {
 }
 
 TEST(MoveMetadata, NonemptyInstance) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -276,7 +276,7 @@ TEST(MoveMetadata, NonemptyInstance) {
 }
 
 TEST(CopyMetadata, SmallerDimensionsFails) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -289,7 +289,7 @@ TEST(CopyMetadata, SmallerDimensionsFails) {
 }
 
 TEST(CopyMetadata, MetadataWithZeroSlicesToSameDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, 0, kSliceSize);
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
@@ -302,7 +302,7 @@ TEST(CopyMetadata, MetadataWithZeroSlicesToSameDimensions) {
 }
 
 TEST(CopyMetadata, MetadataWithZeroSlicesToBiggerDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, 0, kSliceSize);
 
   auto result = Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
@@ -316,7 +316,7 @@ TEST(CopyMetadata, MetadataWithZeroSlicesToBiggerDimensions) {
 }
 
 TEST(CopyMetadata, EmptyMetadataSameDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -330,7 +330,7 @@ TEST(CopyMetadata, EmptyMetadataSameDimensions) {
 }
 
 TEST(CopyMetadata, EmptyMetadataBiggerDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -344,7 +344,7 @@ TEST(CopyMetadata, EmptyMetadataBiggerDimensions) {
 }
 
 TEST(CopyMetadata, NonemptyMetadataSameDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -369,7 +369,7 @@ TEST(CopyMetadata, NonemptyMetadataSameDimensions) {
 }
 
 TEST(CopyMetadata, NonemptyMetadataBiggerDimensions) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -394,9 +394,9 @@ TEST(CopyMetadata, NonemptyMetadataBiggerDimensions) {
 }
 
 TEST(CopyMetadata, CopyAllocationTableWithEnoughPadding) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
-  constexpr size_t kMaxSlices = 4 * kSlices;
+  constexpr size_t kMaxSlices{4 * kSlices};
   Header header =
       Header::FromGrowableSliceCount(kMaxUsablePartitions, kSlices, kMaxSlices, kSliceSize);
 
@@ -424,9 +424,9 @@ TEST(CopyMetadata, CopyAllocationTableWithEnoughPadding) {
 }
 
 TEST(CopyMetadata, CopyAllocationTableWithoutEnoughPadding) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
-  constexpr size_t kMaxSlices = 4 * kSlices;
+  constexpr size_t kMaxSlices{4 * kSlices};
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
   std::vector<SliceEntry> slices(8);
@@ -453,7 +453,7 @@ TEST(CopyMetadata, CopyAllocationTableWithoutEnoughPadding) {
 }
 
 TEST(CopyMetadata, CopyFullPartitionTable) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 
@@ -475,7 +475,7 @@ TEST(CopyMetadata, CopyFullPartitionTable) {
 }
 
 TEST(CopyMetadata, CopyFullAllocationTable) {
-  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSliceSize{static_cast<size_t>(32) * 1024};
   constexpr size_t kSlices = 1024;
   Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
 

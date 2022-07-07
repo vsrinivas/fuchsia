@@ -48,7 +48,9 @@ std::vector<uint8_t> LoadTemplateData() {
 
   std::vector<uint8_t> compressed(sz);
   EXPECT_EQ(StreamAll(read, fd.get(), compressed.data(), sz), 0);
-  std::vector<uint8_t> uncompressed(128 * 1024);
+
+  constexpr size_t kUncompressedReserveSize{static_cast<size_t>(128) * 1024};
+  std::vector<uint8_t> uncompressed(kUncompressedReserveSize);
   uncompressed.resize(ZSTD_decompress(uncompressed.data(), uncompressed.size(), compressed.data(),
                                       compressed.size()));
   return uncompressed;

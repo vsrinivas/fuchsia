@@ -105,8 +105,9 @@ zx::status<> VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
     } else if (start <= VnodeMapper::kDoubleIndirectFileStartBlock) {
       indirect_block_pointers = start - VnodeMapper::kIndirectFileStartBlock;
     } else {
-      indirect_block_pointers = (start - VnodeMapper::kDoubleIndirectFileStartBlock) +
-                                (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsDirectPerIndirect;
+      indirect_block_pointers =
+          (start - VnodeMapper::kDoubleIndirectFileStartBlock) +
+          static_cast<uint64_t>(kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsDirectPerIndirect;
     }
     indirect_file_->Shrink(
         fbl::round_up(indirect_block_pointers * sizeof(blk_t), fs_->BlockSize()) /

@@ -55,9 +55,11 @@ namespace minfs {
 namespace {
 
 // These constants are the offsets in terms of block pointers to (b) and (c) above, respectively.
-constexpr uint64_t kDoubleIndirectViewStart = kMinfsIndirect * kMinfsDirectPerIndirect;
-constexpr uint64_t kDoubleIndirectLeafViewStart =
-    kDoubleIndirectViewStart + kMinfsDoublyIndirect * kMinfsDirectPerIndirect;
+constexpr uint64_t kDoubleIndirectViewStart{static_cast<uint64_t>(kMinfsIndirect) *
+                                            kMinfsDirectPerIndirect};
+constexpr uint64_t kDoubleIndirectLeafViewStart{kDoubleIndirectViewStart +
+                                                static_cast<uint64_t>(kMinfsDoublyIndirect) *
+                                                    kMinfsDirectPerIndirect};
 
 // Scans |array| for a contiguous range of blocks of at most |max_blocks|.
 uint64_t Coalesce(const blk_t* array, uint64_t max_blocks) {
@@ -191,9 +193,9 @@ zx::status<DeviceBlockRange> VnodeIndirectMapper::Map(BlockRange range) {
 
 zx::status<BufferView<blk_t>> VnodeIndirectMapper::GetView(PendingWork* transaction,
                                                            BlockRange range) {
-  constexpr uint64_t kDoubleIndirectLeafStart = kMinfsIndirect + kMinfsDoublyIndirect;
-  constexpr uint64_t kMax =
-      kDoubleIndirectLeafStart + kMinfsDoublyIndirect * kMinfsDirectPerIndirect;
+  constexpr uint64_t kDoubleIndirectLeafStart{kMinfsIndirect + kMinfsDoublyIndirect};
+  constexpr uint64_t kMax{kDoubleIndirectLeafStart +
+                          static_cast<uint64_t>(kMinfsDoublyIndirect) * kMinfsDirectPerIndirect};
   if (range.Start() < kMinfsIndirect) {
     // Region (a) -- Pointers are to be found in the inum field in the inode.
     return GetInodeIndirectView(

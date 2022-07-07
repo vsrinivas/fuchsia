@@ -73,7 +73,7 @@ class MemfsFilesystem : public fs_test::FilesystemImpl<MemfsFilesystem> {
         .supports_mmap = true,
         .supports_mmap_shared_write = true,
         .supports_resize = false,
-        .max_file_size = 512 * 1024 * 1024,
+        .max_file_size = INT64_C(512) * 1024 * 1024,
         .in_memory = true,
         .is_case_sensitive = true,
         .supports_sparse_files = true,

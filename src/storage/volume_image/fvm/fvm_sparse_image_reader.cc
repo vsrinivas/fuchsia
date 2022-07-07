@@ -98,7 +98,7 @@ class DecompressionHelper {
   }
 
  private:
-  static constexpr size_t kBufferSize = 64 * (1u << 10);
+  static constexpr size_t kBufferSize{static_cast<size_t>(64) * (1u << 10)};
 
   const Reader& base_reader_;
   Lz4Decompressor decompressor_ = Lz4Decompressor(kBufferSize);

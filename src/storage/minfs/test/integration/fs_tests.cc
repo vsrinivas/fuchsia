@@ -96,7 +96,7 @@ void FillPartition(const TestFilesystem& fs, int fd, uint32_t max_remaining_bloc
     } else if (blocks == 2) {
       --blocks;
     }
-    size_t bytes = std::min<size_t>(data.size(), blocks * minfs::kMinfsBlockSize);
+    size_t bytes = std::min(data.size(), static_cast<size_t>(blocks) * minfs::kMinfsBlockSize);
     ASSERT_EQ(write(fd, data.data(), bytes), static_cast<ssize_t>(bytes));
   }
 
@@ -196,7 +196,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
 
 class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {
  public:
-  static constexpr uint64_t kSliceSize = 1024 * 1024 * 8;
+  static constexpr uint64_t kSliceSize{UINT64_C(1024) * 1024 * 8};
 
   static TestFilesystemOptions GetOptions() {
     auto options = OptionsWithDescription("MinfsWithFvm");
@@ -257,7 +257,7 @@ TEST_F(MinfsFvmTest, QueryInitialState) {
 
     fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_EQ(ftruncate(fd.get(), 30 * 1024), 0);
+    ASSERT_EQ(ftruncate(fd.get(), static_cast<off_t>(30) * 1024), 0);
   }
 
   // Adjust our query expectations: We should see the new nodes.
@@ -402,7 +402,8 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   // We should now have exactly 1 free block remaining. Attempt to write into the indirect
   // section of the file so we ensure that at least 2 blocks are required.
   // This is expected to fail.
-  ASSERT_EQ(lseek(med_fd.get(), minfs::kMinfsBlockSize * minfs::kMinfsDirect, SEEK_SET),
+  ASSERT_EQ(lseek(med_fd.get(), static_cast<off_t>(minfs::kMinfsBlockSize) * minfs::kMinfsDirect,
+                  SEEK_SET),
             minfs::kMinfsBlockSize * minfs::kMinfsDirect);
   ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
   ASSERT_LT(write(med_fd.get(), data.data(), data.size()), 0);

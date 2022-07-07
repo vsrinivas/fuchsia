@@ -91,10 +91,10 @@ TEST(BlockDeviceManager, MinfsLimit) {
 // which in turn sets the fshost variable kMinfsMaxBytes. This test is checking that this setting
 // actually was sent to fshost and applies to FVM.
 TEST_F(BlockDeviceManagerIntegration, MaxSize) {
-  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
-  constexpr uint32_t kBlockSize = 512;
-  constexpr uint32_t kSliceSize = 32'768;
-  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+  constexpr uint64_t kBlockCount{UINT64_C(9) * 1024 * 256};
+  constexpr uint64_t kBlockSize{UINT64_C(512)};
+  constexpr uint64_t kSliceSize{UINT64_C(32'768)};
+  constexpr uint64_t kDeviceSize{kBlockCount * kBlockSize};
 
   PauseWatcher();  // Pause whilst we create a ramdisk.
 
@@ -155,15 +155,15 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // The partition limit should match the value set in the integration test fshost configuration
   // (see the BUILD.gn file).
-  constexpr uint64_t kMaxRuntimeBytes = 117440512u;
+  constexpr uint64_t kMaxRuntimeBytes = UINT64_C(117440512);
   EXPECT_EQ(limit_result.value().slice_count, kMaxRuntimeBytes / kSliceSize);
 }
 
 TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
-  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
-  constexpr uint32_t kBlockSize = 512;
-  constexpr uint32_t kSliceSize = 32'768;
-  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+  constexpr uint64_t kBlockCount{UINT64_C(9) * 1024 * 256};
+  constexpr uint64_t kBlockSize{UINT64_C(512)};
+  constexpr uint64_t kSliceSize{UINT64_C(32'768)};
+  constexpr uint64_t kDeviceSize{kBlockCount * kBlockSize};
 
   if (DataFilesystemFormat() == "fxfs") {
     // Fxfs partitions use a new matcher which does not have the logic to migrate legacy names.
@@ -222,10 +222,10 @@ TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
 }
 
 TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
-  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
-  constexpr uint32_t kBlockSize = 512;
-  constexpr uint32_t kSliceSize = 32'768;
-  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+  constexpr uint64_t kBlockCount{UINT64_C(9) * 1024 * 256};
+  constexpr uint64_t kBlockSize{UINT64_C(512)};
+  constexpr uint64_t kSliceSize{UINT64_C(32'768)};
+  constexpr uint64_t kDeviceSize{kBlockCount * kBlockSize};
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread("blobfs test caller thread"), ZX_OK);

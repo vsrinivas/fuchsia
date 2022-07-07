@@ -182,7 +182,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
 
 TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
   fs::VnodeAttributes file_stat = {};
-  file_stat = CreateAndWrite("file", 2 * kMinfsBlockSize, 0, kMinfsBlockSize);
+  file_stat = CreateAndWrite("file", static_cast<size_t>(2) * kMinfsBlockSize, 0, kMinfsBlockSize);
 
   std::unique_ptr<Bcache> bcache;
   DestroyMinfs(&bcache);
@@ -210,7 +210,8 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoOffsetsPointToABlock) {
 TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
   fs::VnodeAttributes file_stat = {};
   uint64_t double_indirect_offset =
-      (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect) + 1) * kMinfsBlockSize;
+      static_cast<uint64_t>(kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect) + 1) *
+      kMinfsBlockSize;
   file_stat = CreateAndWrite("file", double_indirect_offset, 0, kMinfsBlockSize);
 
   std::unique_ptr<Bcache> bcache;

@@ -36,8 +36,8 @@ zx::status<std::unique_ptr<InodeManager>> InodeManager::Create(
   }
   mgr->inode_allocator_ = std::move(inode_allocator_or.value());
 
-  uint32_t inoblks =
-      (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+  uint64_t inoblks =
+      (static_cast<uint64_t>(inodes) + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
   if (zx_status_t status =
           mgr->inode_table_.CreateAndMap(inoblks * sb->BlockSize(), "minfs-inode-table");
       status != ZX_OK) {
@@ -72,7 +72,8 @@ void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inod
   const blk_t inoblock_abs = inoblock_rel + start_block_;
   ZX_DEBUG_ASSERT(inoblock_abs < kFVMBlockDataStart);
 
-  char* inodata = reinterpret_cast<char*>(inode_table_.start()) + inoblock_rel * BlockSize();
+  char* inodata = reinterpret_cast<char*>(inode_table_.start()) +
+                  inoblock_rel * static_cast<size_t>(BlockSize());
   memcpy(inodata + off_of_ino, inode, kMinfsInodeSize);
 
   storage::Operation operation = {
@@ -91,14 +92,13 @@ void InodeManager::Load(ino_t ino, Inode* out) const {
   // Obtain the block of the inode table we need.
   uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   const char* inodata = reinterpret_cast<const char*>(inode_table_.start()) +
-                        ino / kMinfsInodesPerBlock * BlockSize();
+                        ino / kMinfsInodesPerBlock * static_cast<size_t>(BlockSize());
   const Inode* inode = reinterpret_cast<const Inode*>(inodata + off_of_ino);
   memcpy(out, inode, kMinfsInodeSize);
 }
 
 zx_status_t InodeManager::Grow(size_t inodes) {
-  uint32_t inoblks =
-      (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+  size_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
   if (zx_status_t status = inode_table_.Grow(inoblks * BlockSize()); status != ZX_OK) {
     FX_LOGS(WARNING) << "InodeManager::Grow: failed: " << status;
     return ZX_ERR_NO_SPACE;

@@ -134,7 +134,7 @@ TEST(Extractor, AddUnaligned) {
 }
 
 TEST(Extractor, Write) {
-  constexpr uint16_t kBlockSize = 8192;
+  constexpr uint64_t kBlockSize = 8192;
   ExtractorOptions options = {
       .force_dump_pii = false,
       .add_checksum = false,
@@ -162,7 +162,7 @@ TEST(Extractor, Write) {
   EXPECT_EQ(fstat(out.get(), &stats), 0);
 
   // We should have 5 block in image file. Header, extent cluster, and 3 data blocks.
-  ASSERT_EQ(stats.st_size, 5 * kBlockSize);
+  ASSERT_EQ(stats.st_size, static_cast<off_t>(kBlockSize) * 5);
 
   // We know the content of data blocks written. Verify that those blocks are
   // in the image file.

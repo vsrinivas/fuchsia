@@ -72,8 +72,8 @@ zx::status<fs::FilesystemInfo> Factoryfs::GetFilesystemInfo() {
   info.block_size = kFactoryfsBlockSize;
   info.max_filename_size = kFactoryfsMaxNameSize;
   info.fs_type = VFS_TYPE_FACTORYFS;
-  info.total_bytes = superblock_.data_blocks * kFactoryfsBlockSize;
-  info.used_bytes = superblock_.data_blocks * kFactoryfsBlockSize;
+  info.total_bytes = static_cast<uint64_t>(superblock_.data_blocks) * kFactoryfsBlockSize;
+  info.used_bytes = static_cast<uint64_t>(superblock_.data_blocks) * kFactoryfsBlockSize;
   info.total_nodes = superblock_.directory_entries;
   info.used_nodes = superblock_.directory_entries;
   info.SetFsId(fs_id_);
@@ -171,7 +171,8 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
       .vmoid = vmoid.get(),
       .length = dev_blocks,
       .vmo_offset = 0,
-      .dev_offset = info.directory_ent_start_block * (kFactoryfsBlockSize / dev_block_size),
+      .dev_offset = info.directory_ent_start_block *
+                    static_cast<uint64_t>(kFactoryfsBlockSize / dev_block_size),
   };
 
   return Device().FifoTransaction(&request, 1);

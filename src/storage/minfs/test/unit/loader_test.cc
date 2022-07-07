@@ -96,7 +96,9 @@ TEST(InspectorLoader, LoadInodeBitmap) {
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
   ASSERT_EQ(loader.LoadInodeBitmap(superblock, &client_buffer), ZX_OK);
-  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length), 0);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0),
+                   static_cast<size_t>(kMinfsBlockSize) * block_length),
+            0);
 }
 
 TEST(InspectorLoader, LoadInodeTable) {
@@ -120,7 +122,9 @@ TEST(InspectorLoader, LoadInodeTable) {
 
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
   ASSERT_EQ(loader.LoadInodeTable(superblock, &client_buffer), ZX_OK);
-  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0), kMinfsBlockSize * block_length), 0);
+  EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(0),
+                   static_cast<size_t>(kMinfsBlockSize) * block_length),
+            0);
 }
 
 TEST(InspectorLoader, LoadJournal) {
@@ -144,7 +148,7 @@ TEST(InspectorLoader, LoadJournal) {
   storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
   ASSERT_EQ(loader.LoadJournal(superblock, &client_buffer), ZX_OK);
   EXPECT_EQ(memcmp(client_buffer.Data(0), device.Data(kBackupSuperblockBlocks),
-                   kMinfsBlockSize * block_length),
+                   static_cast<size_t>(kMinfsBlockSize) * block_length),
             0);
 }
 
