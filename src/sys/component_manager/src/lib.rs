@@ -6,6 +6,8 @@
 #![allow(elided_lifetimes_in_paths)]
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "256"]
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
 
 pub mod bootfs;
 pub mod builtin;
