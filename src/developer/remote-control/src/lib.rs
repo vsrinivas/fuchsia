@@ -468,8 +468,8 @@ async fn forward_traffic(
     // closure, so we'll just use a oneshot channel to signal to the other task
     // when the tcp stream closes.
     let (tcp_closed_tx, mut tcp_closed_rx) = futures::channel::oneshot::channel::<()>();
-    let mut zx_closed =
-        fasync::OnSignals::new(&zx_side, zx::Signals::SOCKET_PEER_CLOSED).extend_lifetime().fuse();
+    let mut zx_closed = fasync::OnSignals::new(&zx_side, zx::Signals::SOCKET_PEER_CLOSED).fuse();
+    let zx_side = &zx_side;
 
     let (mut tcp_read, mut tcp_write) = tcp_side.split();
     let (mut zx_read, mut zx_write) = zx_side.split();
