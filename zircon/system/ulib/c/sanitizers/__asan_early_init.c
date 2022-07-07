@@ -11,11 +11,17 @@
 #include "libc.h"
 #include "zircon_impl.h"
 
-#define ASAN_SHADOW_SHIFT 3
-
-#define SHADOW_VMO_NAME "asan-shadow"
-
 #if __has_feature(address_sanitizer)
+#define ASAN_SHADOW_SHIFT 3
+#define SHADOW_VMO_NAME "asan-shadow"
+#elif __has_feature(hwaddress_sanitizer)
+// This represents the granule size. For every 2^4 bytes of data, we will have one byte of shadow
+// for recording the tag.
+#define ASAN_SHADOW_SHIFT 4
+#define SHADOW_VMO_NAME "hwasan-shadow"
+#endif
+
+#ifdef SHADOW_VMO_NAME
 
 static sanitizer_shadow_bounds_t shadow_bounds ATTR_RELRO;
 static zx_handle_t shadow_vmo ATTR_RELRO;
@@ -153,7 +159,7 @@ NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
 #else
 
 static const char kBadDepsMessage[] =
-    "module compiled with -fsanitize=address loaded in process without it";
+    "module compiled with -fsanitize=[hw]address loaded in process without it";
 
 // This should never be called in the unsanitized runtime.
 // But it's still part of the ABI.
@@ -169,4 +175,4 @@ void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, uintptr
   CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
-#endif  // __has_feature(address_sanitizer)
+#endif  // SHADOW_VMO_NAME

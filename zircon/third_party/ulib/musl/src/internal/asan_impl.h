@@ -27,6 +27,8 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 // Expose the hwasan interface.
 #include <sanitizer/hwasan_interface.h>
 
+void __asan_early_init(void) __attribute__((visibility("hidden")));
+
 // In the sanitized build, the __hwasan_mem* names provided by the
 // sanitizer runtime must have weak definitions in libc to satisfy
 // its own references before the sanitizer runtime is loaded.
@@ -35,5 +37,10 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 #else  // !__has_feature(address_sanitizer)
 
 #define __asan_weak_alias(name)  // Do nothing in unsanitized build.
+
+// Allow this to be an empty inline for non-sanitized cases so we don't need to
+// stick `!__has_feature(address_sanitizer) && !__has_feature(hwaddress_sanitizer)`
+// in a bunch of places.
+static inline void __asan_early_init(void) {}
 
 #endif  // __has_feature(address_sanitizer)
