@@ -20,7 +20,6 @@ source_set("src") {
     "avb.c",
     "bootimg.c",
     "cmdline.c",
-    "compression.c",
     "device_id.c",
     "diskio.c",
     "fastboot.c",
@@ -52,7 +51,6 @@ source_set("src") {
     "//zircon/system/ulib/gfx-font",
     "//zircon/system/ulib/tftp",
     "//zircon/third_party/ulib/cksum",
-    "//zircon/third_party/ulib/lz4",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -79,8 +77,6 @@ if (!is_mac) {
       "avb_test.cc",
       "bootbyte_fake.cc",
       "cmdline.c",
-      "compression.c",
-      "compression_test.cc",
       "diskio.c",
       "diskio_test.cc",
       "fastboot.c",
@@ -113,7 +109,6 @@ if (!is_mac) {
       "//zircon/kernel/lib/efi/testing",
       "//zircon/system/ulib/gfx-font",
       "//zircon/third_party/ulib/cksum",
-      "//zircon/third_party/ulib/lz4",
     ]
     configs += [ ":config" ]
   }
