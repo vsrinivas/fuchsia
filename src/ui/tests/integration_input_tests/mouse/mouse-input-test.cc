@@ -677,7 +677,8 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
 // Flutter.
 // 1. expect Flutter app receive 2 events: ADD - Scroll, but got 3 events: Move - Scroll - Scroll.
 // 2. the first event flutter app received has random value in buttons field
-TEST_F(FlutterInputTest, FlutterMouseWheelIssue103098) {
+// Disabled until flutter rolls, since it changes the behavior of this issue.
+TEST_F(FlutterInputTest, DISABLED_FlutterMouseWheelIssue103098) {
   LaunchClient();
 
   auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
