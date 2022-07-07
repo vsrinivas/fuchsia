@@ -17,15 +17,6 @@ group("tests") {
   ]
 }
 
-group("configs") {
-  deps = [ ":ui_sysmgr.config" ]
-}
-
-config_data("ui_sysmgr.config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/ui_sysmgr.config" ]
-}
-
 rustc_binary("bin") {
   name = "shortcut"
   with_unit_tests = true
