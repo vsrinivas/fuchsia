@@ -24,8 +24,6 @@ use ffx_emulator_config::{
     RuntimeConfig,
 };
 
-pub use femu::FemuEngine as TestEngineDoNotUseOutsideOfTests;
-
 /// The EngineBuilder is used to create and configure an EmulatorEngine, while ensuring the
 /// configuration will result in a valid emulation instance.
 ///
