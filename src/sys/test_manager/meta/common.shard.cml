@@ -588,6 +588,24 @@
             from: "parent",
             to: [ "#system-tests" ],
         },
+
+        // CPU Profiling tests require access to ktrace data to parse results
+        {
+            protocol: [
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+            ],
+            from: "parent",
+            to: [ "#system-tests" ],
+        },
+
+        // CPU Profiling tests require access to the /dev/sys/cpu-trace device
+        {
+            directory: "sys",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "r*" ],
+        },
     ],
     expose: [
         {

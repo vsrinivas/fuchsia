@@ -331,5 +331,22 @@
             from: "#network",
             to: "#test_manager",
         },
+
+        // Profiling tests need access to the ktrace data
+        {
+            protocol: [
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "sys",
+            to: "#test_manager",
+            subdir: "sys",
+        },
     ],
 }

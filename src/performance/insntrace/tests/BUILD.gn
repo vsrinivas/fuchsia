@@ -29,7 +29,7 @@ executable("insntrace_integration_tests") {
 
 fuchsia_test_component("insntrace_integration_tests_component") {
   component_name = "insntrace_integration_tests"
-  manifest = "meta/insntrace_integration_tests.cmx"
+  manifest = "meta/insntrace_integration_tests.cml"
   deps = [
     ":insntrace_integration_tests",
     "//src/performance/insntrace:bin",
